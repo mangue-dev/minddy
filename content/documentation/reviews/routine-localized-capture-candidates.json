@@ -1,0 +1,676 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/automation_account_documentation",
+  "publicationApproved": false,
+  "translations": {
+    "en": [
+      "Weekly security review",
+      "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+      "Monthly dependency inventory",
+      "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+      "Daily issue triage",
+      "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason."
+    ],
+    "fr": [
+      "Revue de sécurité hebdomadaire",
+      "Examinez les tickets ouverts et les modifications du dépôt de la semaine passée pour identifier leurs conséquences sur la sécurité. Signalez ce qui pourrait exposer les données des utilisateurs et proposez une correction concrète pour chaque problème.",
+      "Inventaire mensuel des dépendances",
+      "Listez les dépendances obsolètes ou abandonnées du dépôt, indiquez les tickets ouverts concernés et suggérez celles qui méritent un ticket de mise à jour ce mois-ci.",
+      "Triage quotidien des tickets",
+      "Examinez les nouveaux tickets, distinguez les bugs évidents des fonctionnalités et signalez ceux qui semblent urgents avec une justification en une ligne."
+    ],
+    "de": [
+      "Wöchentliche Sicherheitsprüfung",
+      "Prüfen Sie die offenen Tickets und die Repository-Änderungen der letzten Woche auf Sicherheitsfolgen. Kennzeichnen Sie alles, was Nutzerdaten offenlegen könnte, und schlagen Sie für jeden Befund eine konkrete Korrektur vor.",
+      "Monatliche Bestandsaufnahme der Abhängigkeiten",
+      "Listen Sie veraltete oder aufgegebene Abhängigkeiten im Repository auf, nennen Sie die betroffenen offenen Tickets und schlagen Sie vor, welche diesen Monat ein Aktualisierungsticket erhalten sollten.",
+      "Tägliche Ticket-Triage",
+      "Prüfen Sie neue Tickets, unterscheiden Sie offensichtliche Fehler von Funktionen und markieren Sie dringend wirkende Tickets mit einer einzeiligen Begründung."
+    ],
+    "es": [
+      "Revisión semanal de seguridad",
+      "Revise las incidencias abiertas y los cambios del repositorio de la última semana para identificar sus efectos sobre la seguridad. Señale lo que podría exponer datos de usuarios y proponga una corrección concreta para cada problema.",
+      "Inventario mensual de dependencias",
+      "Enumere las dependencias obsoletas o abandonadas del repositorio, indique qué incidencias abiertas afectan y sugiera cuáles merecen una incidencia de actualización este mes.",
+      "Triage diario de incidencias",
+      "Revise las incidencias nuevas, distinga los errores evidentes de las funcionalidades y señale las que parecen urgentes con una justificación de una línea."
+    ],
+    "it": [
+      "Revisione settimanale della sicurezza",
+      "Esamina i ticket aperti e le modifiche al repository dell’ultima settimana per identificarne le conseguenze sulla sicurezza. Segnala ciò che potrebbe esporre dati degli utenti e proponi una correzione concreta per ogni problema.",
+      "Inventario mensile delle dipendenze",
+      "Elenca le dipendenze obsolete o abbandonate del repository, indica i ticket aperti interessati e suggerisci quelle che meritano un ticket di aggiornamento questo mese.",
+      "Triage quotidiano dei ticket",
+      "Esamina i nuovi ticket, distingui i bug evidenti dalle funzionalità e segnala quelli che sembrano urgenti con una motivazione di una riga."
+    ],
+    "pt-BR": [
+      "Revisão semanal de segurança",
+      "Revise as issues abertas e as mudanças do repositório na última semana para identificar impactos na segurança. Sinalize o que pode expor dados de usuários e proponha uma correção concreta para cada problema.",
+      "Inventário mensal de dependências",
+      "Liste as dependências desatualizadas ou abandonadas do repositório, indique quais issues abertas elas afetam e sugira quais merecem uma issue de atualização neste mês.",
+      "Triagem diária de issues",
+      "Revise as novas issues, diferencie erros evidentes de funcionalidades e sinalize as que parecem urgentes com uma justificativa de uma linha."
+    ]
+  },
+  "original": [
+    "Weekly security review",
+    "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+    "Monthly dependency inventory",
+    "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+    "Daily issue triage",
+    "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason."
+  ],
+  "captures": [
+    {
+      "article": "scheduled-routines",
+      "locale": "en",
+      "url": "http://localhost:3000/routines",
+      "output": "public/documentation/en/scheduled-routines-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1447,
+        1085
+      ],
+      "lang": "en",
+      "text": "Weekly security review\nPaused\nCancel\nSave\nInstruction\nReview the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.\nNumo work\n\nIf Numo delegates code work, the worker uses the model and reasoning currently configured in Account settings.\n\nSpending cap\n15% max\nSchedule\nEvery day\nEvery week\nEvery month\nDay\nMonday\nTime\nTimezone\nEurope/Paris\n\nEvery Monday at 09:00 AM (Europe/Paris)",
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1113,
+        "height": 1003
+      },
+      "fixture": [
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Daily issue triage"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Monthly dependency inventory"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Weekly security review"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding."
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Daily issue triage"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Monthly dependency inventory"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Weekly security review"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding."
+        }
+      ],
+      "readResponseReplacements": 12,
+      "blockedMutationRequests": 0,
+      "source": "captures/world/seed/016-routines.mjs",
+      "action": "Open paused seeded routine and its actual editing form without saving. Translate only existing demo title/prompt fields in GET responses; preserve IDs, schedule, ownership, enabled state, budget and runs. No execution performed.",
+      "reviewed": true,
+      "sha256": "db93bb0b6c2ac3533a1f4001c983fa1e22184034bd931e34a25a0fa7301ea445",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "fr",
+      "url": "http://localhost:3000/routines?routine=0db167ae-55df-4ce8-9544-6b35dbe5021d",
+      "output": "public/documentation/fr/scheduled-routines-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1447,
+        1085
+      ],
+      "lang": "fr",
+      "text": "Revue de sécurité hebdomadaire\nEn pause\nAnnuler\nEnregistrer\nInstruction\nExaminez les tickets ouverts et les modifications du dépôt de la semaine passée pour identifier leurs conséquences sur la sécurité. Signalez ce qui pourrait exposer les données des utilisateurs et proposez une correction concrète pour chaque problème.\nTravail de Numo\n\nSi Numo délègue du code, le worker utilise le modèle et le raisonnement configurés dans les paramètres du compte.\n\nPlafond de dépense\n15 % au plus\nCadence\nChaque jour\nChaque semaine\nChaque mois\nJour\nLundi\nHeure\nFuseau\nEurope/Paris\n\nChaque lundi à 09:00 (Europe/Paris)",
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1113,
+        "height": 1003
+      },
+      "fixture": [
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triage quotidien des tickets"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Examinez les nouveaux tickets, distinguez les bugs évidents des fonctionnalités et signalez ceux qui semblent urgents avec une justification en une ligne."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventaire mensuel des dépendances"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Listez les dépendances obsolètes ou abandonnées du dépôt, indiquez les tickets ouverts concernés et suggérez celles qui méritent un ticket de mise à jour ce mois-ci."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revue de sécurité hebdomadaire"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Examinez les tickets ouverts et les modifications du dépôt de la semaine passée pour identifier leurs conséquences sur la sécurité. Signalez ce qui pourrait exposer les données des utilisateurs et proposez une correction concrète pour chaque problème."
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triage quotidien des tickets"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Examinez les nouveaux tickets, distinguez les bugs évidents des fonctionnalités et signalez ceux qui semblent urgents avec une justification en une ligne."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventaire mensuel des dépendances"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Listez les dépendances obsolètes ou abandonnées du dépôt, indiquez les tickets ouverts concernés et suggérez celles qui méritent un ticket de mise à jour ce mois-ci."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revue de sécurité hebdomadaire"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Examinez les tickets ouverts et les modifications du dépôt de la semaine passée pour identifier leurs conséquences sur la sécurité. Signalez ce qui pourrait exposer les données des utilisateurs et proposez une correction concrète pour chaque problème."
+        }
+      ],
+      "readResponseReplacements": 12,
+      "blockedMutationRequests": 0,
+      "source": "captures/world/seed/016-routines.mjs",
+      "action": "Open paused seeded routine and its actual editing form without saving. Translate only existing demo title/prompt fields in GET responses; preserve IDs, schedule, ownership, enabled state, budget and runs. No execution performed.",
+      "reviewed": true,
+      "sha256": "1bdc98b5b1e40f22ca49eeed55b8b3a600c9d36a80bf7939f0a9ebf7c4af3e8c",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "de",
+      "url": "http://localhost:3000/routines?routine=0db167ae-55df-4ce8-9544-6b35dbe5021d",
+      "output": "public/documentation/de/scheduled-routines-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1447,
+        1085
+      ],
+      "lang": "de",
+      "text": "Wöchentliche Sicherheitsprüfung\nPausiert\nAbbrechen\nSpeichern\nAnleitung\nPrüfen Sie die offenen Tickets und die Repository-Änderungen der letzten Woche auf Sicherheitsfolgen. Kennzeichnen Sie alles, was Nutzerdaten offenlegen könnte, und schlagen Sie für jeden Befund eine konkrete Korrektur vor.\nNumo-Arbeit\n\nWenn Numo Codearbeit delegiert, nutzt der Worker Modell und Denkstufe aus den Kontoeinstellungen.\n\nAusgabenobergrenze\nmax. 15%\nZeitplan\nJeden Tag\nJede Woche\nJeden Monat\nTag\nMontag\nZeit\nZeitzone\nEurope/Paris\n\nJeden Montag um 09:00 (Europe/Paris)",
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1113,
+        "height": 1003
+      },
+      "fixture": [
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Tägliche Ticket-Triage"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Prüfen Sie neue Tickets, unterscheiden Sie offensichtliche Fehler von Funktionen und markieren Sie dringend wirkende Tickets mit einer einzeiligen Begründung."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Monatliche Bestandsaufnahme der Abhängigkeiten"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Listen Sie veraltete oder aufgegebene Abhängigkeiten im Repository auf, nennen Sie die betroffenen offenen Tickets und schlagen Sie vor, welche diesen Monat ein Aktualisierungsticket erhalten sollten."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Wöchentliche Sicherheitsprüfung"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Prüfen Sie die offenen Tickets und die Repository-Änderungen der letzten Woche auf Sicherheitsfolgen. Kennzeichnen Sie alles, was Nutzerdaten offenlegen könnte, und schlagen Sie für jeden Befund eine konkrete Korrektur vor."
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Tägliche Ticket-Triage"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Prüfen Sie neue Tickets, unterscheiden Sie offensichtliche Fehler von Funktionen und markieren Sie dringend wirkende Tickets mit einer einzeiligen Begründung."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Monatliche Bestandsaufnahme der Abhängigkeiten"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Listen Sie veraltete oder aufgegebene Abhängigkeiten im Repository auf, nennen Sie die betroffenen offenen Tickets und schlagen Sie vor, welche diesen Monat ein Aktualisierungsticket erhalten sollten."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Wöchentliche Sicherheitsprüfung"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Prüfen Sie die offenen Tickets und die Repository-Änderungen der letzten Woche auf Sicherheitsfolgen. Kennzeichnen Sie alles, was Nutzerdaten offenlegen könnte, und schlagen Sie für jeden Befund eine konkrete Korrektur vor."
+        }
+      ],
+      "readResponseReplacements": 12,
+      "blockedMutationRequests": 0,
+      "source": "captures/world/seed/016-routines.mjs",
+      "action": "Open paused seeded routine and its actual editing form without saving. Translate only existing demo title/prompt fields in GET responses; preserve IDs, schedule, ownership, enabled state, budget and runs. No execution performed.",
+      "reviewed": true,
+      "sha256": "d6c3fbe80175649458f865ee683028d45cc18268c8c8ae775c1df915a8ec1365",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "es",
+      "url": "http://localhost:3000/routines?routine=0db167ae-55df-4ce8-9544-6b35dbe5021d",
+      "output": "public/documentation/es/scheduled-routines-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1447,
+        1085
+      ],
+      "lang": "es",
+      "text": "Revisión semanal de seguridad\nEn pausa\nCancelar\nGuardar\nInstrucción\nRevise las incidencias abiertas y los cambios del repositorio de la última semana para identificar sus efectos sobre la seguridad. Señale lo que podría exponer datos de usuarios y proponga una corrección concreta para cada problema.\nTrabajo de Numo\n\nSi Numo delega código, el worker usa el modelo y el razonamiento configurados en la cuenta.\n\nLímite de gasto\n15% máximo\nProgramación\nTodos los días\nCada semana\nTodos los meses\nDía\nLunes\nHora\nZona horaria\nEurope/Paris\n\nCada lunes a las 09:00 (Europe/Paris)",
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1113,
+        "height": 1003
+      },
+      "fixture": [
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triage diario de incidencias"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Revise las incidencias nuevas, distinga los errores evidentes de las funcionalidades y señale las que parecen urgentes con una justificación de una línea."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventario mensual de dependencias"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Enumere las dependencias obsoletas o abandonadas del repositorio, indique qué incidencias abiertas afectan y sugiera cuáles merecen una incidencia de actualización este mes."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revisión semanal de seguridad"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Revise las incidencias abiertas y los cambios del repositorio de la última semana para identificar sus efectos sobre la seguridad. Señale lo que podría exponer datos de usuarios y proponga una corrección concreta para cada problema."
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triage diario de incidencias"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Revise las incidencias nuevas, distinga los errores evidentes de las funcionalidades y señale las que parecen urgentes con una justificación de una línea."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventario mensual de dependencias"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Enumere las dependencias obsoletas o abandonadas del repositorio, indique qué incidencias abiertas afectan y sugiera cuáles merecen una incidencia de actualización este mes."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revisión semanal de seguridad"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Revise las incidencias abiertas y los cambios del repositorio de la última semana para identificar sus efectos sobre la seguridad. Señale lo que podría exponer datos de usuarios y proponga una corrección concreta para cada problema."
+        }
+      ],
+      "readResponseReplacements": 12,
+      "blockedMutationRequests": 0,
+      "source": "captures/world/seed/016-routines.mjs",
+      "action": "Open paused seeded routine and its actual editing form without saving. Translate only existing demo title/prompt fields in GET responses; preserve IDs, schedule, ownership, enabled state, budget and runs. No execution performed.",
+      "reviewed": true,
+      "sha256": "799846addd00432866812b29014616d5ca4e6520672402aec041094c57f9cfd8",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/routines?routine=0db167ae-55df-4ce8-9544-6b35dbe5021d",
+      "output": "public/documentation/pt-BR/scheduled-routines-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1447,
+        1085
+      ],
+      "lang": "pt-BR",
+      "text": "Revisão semanal de segurança\nPausado\nCancelar\nSalvar\nInstruções\nRevise as issues abertas e as mudanças do repositório na última semana para identificar impactos na segurança. Sinalize o que pode expor dados de usuários e proponha uma correção concreta para cada problema.\nTrabalho do Numo\n\nSe Numo delegar código, o worker usa o modelo e o raciocínio configurados na conta.\n\nLimite de gastos\n15% max\nProgramação\nTodos os dias\nTodas as semanas\nTodo mês\nDia\nSegunda-feira\nHora\nFuso horário\nEurope/Paris\n\nToda segunda-feira às 09:00 (Europe/Paris)",
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1113,
+        "height": 1003
+      },
+      "fixture": [
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triagem diária de issues"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Revise as novas issues, diferencie erros evidentes de funcionalidades e sinalize as que parecem urgentes com uma justificativa de uma linha."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventário mensal de dependências"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Liste as dependências desatualizadas ou abandonadas do repositório, indique quais issues abertas elas afetam e sugira quais merecem uma issue de atualização neste mês."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revisão semanal de segurança"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Revise as issues abertas e as mudanças do repositório na última semana para identificar impactos na segurança. Sinalize o que pode expor dados de usuários e proponha uma correção concreta para cada problema."
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triagem diária de issues"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Revise as novas issues, diferencie erros evidentes de funcionalidades e sinalize as que parecem urgentes com uma justificativa de uma linha."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventário mensal de dependências"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Liste as dependências desatualizadas ou abandonadas do repositório, indique quais issues abertas elas afetam e sugira quais merecem uma issue de atualização neste mês."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revisão semanal de segurança"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Revise as issues abertas e as mudanças do repositório na última semana para identificar impactos na segurança. Sinalize o que pode expor dados de usuários e proponha uma correção concreta para cada problema."
+        }
+      ],
+      "readResponseReplacements": 12,
+      "blockedMutationRequests": 0,
+      "source": "captures/world/seed/016-routines.mjs",
+      "action": "Open paused seeded routine and its actual editing form without saving. Translate only existing demo title/prompt fields in GET responses; preserve IDs, schedule, ownership, enabled state, budget and runs. No execution performed.",
+      "reviewed": true,
+      "sha256": "3e2b80090cc19c84903139a42613b6a51f402f504818703c0ccd226cbfaa74eb",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "scheduled-routines",
+      "locale": "it",
+      "url": "http://localhost:3000/routines?routine=0db167ae-55df-4ce8-9544-6b35dbe5021d",
+      "output": "public/documentation/it/scheduled-routines-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1447,
+        1085
+      ],
+      "lang": "it",
+      "text": "Revisione settimanale della sicurezza\nIn pausa\nAnnulla\nSalva\nIstruzione\nEsamina i ticket aperti e le modifiche al repository dell’ultima settimana per identificarne le conseguenze sulla sicurezza. Segnala ciò che potrebbe esporre dati degli utenti e proponi una correzione concreta per ogni problema.\nLavoro di Numo\n\nSe Numo delega il codice, il worker usa il modello e il ragionamento configurati nell’account.\n\nLimite di spesa\n15% max\nCalendario\nOgni giorno\nOgni settimana\nOgni mese\nGiorno\nLunedì\nTempo\nFuoco orario\nEurope/Paris\n\nTutti lunedì in 09:00 (Europe/Paris)",
+      "bounds": {
+        "x": 321,
+        "y": 45,
+        "width": 1113,
+        "height": 1003
+      },
+      "fixture": [
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triage quotidiano dei ticket"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Esamina i nuovi ticket, distingui i bug evidenti dalle funzionalità e segnala quelli che sembrano urgenti con una motivazione di una riga."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventario mensile delle dipendenze"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Elenca le dipendenze obsolete o abbandonate del repository, indica i ticket aperti interessati e suggerisci quelle che meritano un ticket di aggiornamento questo mese."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revisione settimanale della sicurezza"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Esamina i ticket aperti e le modifiche al repository dell’ultima settimana per identificarne le conseguenze sulla sicurezza. Segnala ciò che potrebbe esporre dati degli utenti e proponi una correzione concreta per ogni problema."
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "title",
+          "original": "Daily issue triage",
+          "localized": "Triage quotidiano dei ticket"
+        },
+        {
+          "id": "c80deeff-6b66-48a7-99d5-4b090b01ff10",
+          "field": "prompt",
+          "original": "Scan newly opened issues, label obvious bugs versus features, and flag the ones that look urgent with a one-line reason.",
+          "localized": "Esamina i nuovi ticket, distingui i bug evidenti dalle funzionalità e segnala quelli che sembrano urgenti con una motivazione di una riga."
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "title",
+          "original": "Monthly dependency inventory",
+          "localized": "Inventario mensile delle dipendenze"
+        },
+        {
+          "id": "e4737913-f886-486e-85cd-7f5d60260653",
+          "field": "prompt",
+          "original": "List outdated or abandoned dependencies in the repository, note which open issues they affect, and suggest which ones deserve an upgrade ticket this month.",
+          "localized": "Elenca le dipendenze obsolete o abbandonate del repository, indica i ticket aperti interessati e suggerisci quelle che meritano un ticket di aggiornamento questo mese."
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "title",
+          "original": "Weekly security review",
+          "localized": "Revisione settimanale della sicurezza"
+        },
+        {
+          "id": "0db167ae-55df-4ce8-9544-6b35dbe5021d",
+          "field": "prompt",
+          "original": "Review the open issues and last week's repository changes for security implications. Flag anything that could expose user data, and propose a concrete fix for each finding.",
+          "localized": "Esamina i ticket aperti e le modifiche al repository dell’ultima settimana per identificarne le conseguenze sulla sicurezza. Segnala ciò che potrebbe esporre dati degli utenti e proponi una correzione concreta per ogni problema."
+        }
+      ],
+      "readResponseReplacements": 12,
+      "blockedMutationRequests": 0,
+      "source": "captures/world/seed/016-routines.mjs",
+      "action": "Open paused seeded routine and its actual editing form without saving. Translate only existing demo title/prompt fields in GET responses; preserve IDs, schedule, ownership, enabled state, budget and runs. No execution performed.",
+      "reviewed": true,
+      "sha256": "efa167e3d000144b45ee768a3a40ca94d0a955312f48e313d265459c398a2ffb",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    }
+  ],
+  "visualReview": {
+    "date": "2026-10-08",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "method": "Inspected each final locale image, actual controls, locale, masked secrets and demonstration data. These images do not establish workflow execution or publication approval."
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/automation_account_documentation",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "external-minddy-mcp-accesses",
+      "locale": "en",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-connected-apps",
+      "output": "public/documentation/en/external-minddy-mcp-accesses-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "en",
+      "text": "Connected apps\n\nNo connected apps yet.",
+      "bounds": {
+        "x": 490,
+        "y": 355,
+        "width": 768,
+        "height": 182.796875
+      },
+      "action": "Read the real empty list of authorized applications. No grant creation or revocation; no consent execution.",
+      "reviewed": true,
+      "sha256": "6c062e244eace809acc0a9bcd342bf75d368a67479f0d0346635ed1a2e3e9a2d",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "external-minddy-mcp-accesses",
+      "locale": "fr",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-connected-apps",
+      "output": "public/documentation/fr/external-minddy-mcp-accesses-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "fr",
+      "text": "Applications connectées\n\nAucune application connectée.",
+      "bounds": {
+        "x": 490,
+        "y": 355,
+        "width": 768,
+        "height": 182.796875
+      },
+      "action": "Read the real empty list of authorized applications. No grant creation or revocation; no consent execution.",
+      "reviewed": true,
+      "sha256": "c756f895f37ba07e432f4e81c42cbe3c4c551cdf372741af590833ea89d41e4f",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "external-minddy-mcp-accesses",
+      "locale": "de",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-connected-apps",
+      "output": "public/documentation/de/external-minddy-mcp-accesses-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "de",
+      "text": "Verbundene Apps\n\nNoch keine verbundenen Apps.",
+      "bounds": {
+        "x": 490,
+        "y": 355,
+        "width": 768,
+        "height": 182.796875
+      },
+      "action": "Read the real empty list of authorized applications. No grant creation or revocation; no consent execution.",
+      "reviewed": true,
+      "sha256": "848d1eeaa1a4cea6736bdd94b89f560d2621f39e720d7d84012b812ace67fa19",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "external-minddy-mcp-accesses",
+      "locale": "es",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-connected-apps",
+      "output": "public/documentation/es/external-minddy-mcp-accesses-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "es",
+      "text": "Aplicaciones conectadas\n\nTodavía no hay aplicaciones conectadas.",
+      "bounds": {
+        "x": 490,
+        "y": 355,
+        "width": 768,
+        "height": 182.796875
+      },
+      "action": "Read the real empty list of authorized applications. No grant creation or revocation; no consent execution.",
+      "reviewed": true,
+      "sha256": "792ed2bde48997dadd3d26c5a42728ef07e1c9c5dac86cc6928c1454ee06c664",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "external-minddy-mcp-accesses",
+      "locale": "it",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-connected-apps",
+      "output": "public/documentation/it/external-minddy-mcp-accesses-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "it",
+      "text": "Apps connesse\n\nNessuna app connessa ancora.",
+      "bounds": {
+        "x": 490,
+        "y": 355,
+        "width": 768,
+        "height": 182.796875
+      },
+      "action": "Read the real empty list of authorized applications. No grant creation or revocation; no consent execution.",
+      "reviewed": true,
+      "sha256": "ccaf2bc77590f70748ac94f866026c44eabd17be3a11ada5b52a689dff680d26",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "external-minddy-mcp-accesses",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/settings?tab=mcp&section=account-connected-apps",
+      "output": "public/documentation/pt-BR/external-minddy-mcp-accesses-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "pt-BR",
+      "text": "Aplicativos conectados\n\nAinda não há aplicativos conectados.",
+      "bounds": {
+        "x": 490,
+        "y": 355,
+        "width": 768,
+        "height": 182.796875
+      },
+      "action": "Read the real empty list of authorized applications. No grant creation or revocation; no consent execution.",
+      "reviewed": true,
+      "sha256": "2e7bb4344739c3430e40407c64838c8a0004a3756476866b72e0ee8b6966b610",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    }
+  ],
+  "visualReview": {
+    "date": "2026-10-08",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "method": "Inspected all six final empty-list screenshots; locale, real account state and no loading indicator verified. This is a settings location, not authorization or revocation execution."
+  }
+}

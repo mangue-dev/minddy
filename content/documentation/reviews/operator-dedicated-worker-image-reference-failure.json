@@ -1,0 +1,32 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "workerImage": "sha256:1167b6a17b017925c23682e11b5af3f52fe87484291e18e6c556cf97a85f459f",
+  "source": "deploy/self-hosted/Dockerfile.agent-sandbox",
+  "sourceSHA256": "e13e758193b83e158a5499dbd38d923ac7bcd0d97cc8485e5d7963e77c17ecf9",
+  "requests": [
+    {
+      "method": "POST",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "action": "/v1/sandboxes/<disposable-sandbox>/commands",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "action": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    }
+  ],
+  "failure": "Toolchain command did not complete",
+  "sandboxDeleted": true,
+  "qualification": "Actual fresh sandbox and toolchain only. No OpenCode bootstrap, AI code execution, repository write, test or PR success is inferred from this probe."
+}

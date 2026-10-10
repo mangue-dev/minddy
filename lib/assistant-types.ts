@@ -1,6 +1,7 @@
 import type { ReasoningLevel } from "./agent-reasoning";
 import type { ResourceInput } from "./types";
 import type { IssueStatus } from "./issue-constants";
+import type { SelfHostingHelpContext } from "./self-hosting-help-context";
 
 // ── Numo (AI assistant) shared types ─────────────────────────────────
 
@@ -267,6 +268,8 @@ export interface AssistantSkillSelection {
  * Client-set, server-validated.
  */
 export interface AssistantPageContext {
+  /** Public guide context; this surface only permits documentation help. */
+  documentation?: { articleId: string | null; locale: string; selfHosting?: SelfHostingHelpContext };
   projectId?: string;
   /** The account-level inbox is the current ambient surface. */
   inbox?: true;

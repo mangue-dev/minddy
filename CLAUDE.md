@@ -40,14 +40,44 @@ See [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 
 ## Language policy: English-owned prose
 
-Comments, docstrings, test descriptions, documentation, configuration prose, and
-developer-facing CLI messages use idiomatic English. Preserve runtime
+Comments, docstrings, test descriptions, internal documentation, configuration
+prose, and developer-facing CLI messages use idiomatic English. Preserve runtime
 translations in every supported catalog, intentional locale fixtures and
 branches, proper names, legal credits, identifiers, URLs, and API values.
 
 Translate existing French owned prose when editing it. Do not change runtime
 translations or test semantics to satisfy the language policy. Run
 `npm run check:owned-english` and `git diff --check` after changing owned prose.
+
+Official reader documentation in `content/documentation/<locale>/` and its
+assets in `public/documentation/<locale>/` use the declared reader language.
+
+## Keep documentation current
+
+Review documentation impact for every code change. Edit documentation only
+when the change affects documented behavior, controls, configuration or
+contributor workflows. Small fixes, refactors, formatting and test-only PRs
+that leave documentation accurate need no documentation edit, new illustration
+or article review record. Add guides for new features, update changed
+behavior and remove retired instructions and figures in the same PR. Review
+affected public articles, technical references and internal instructions; do
+not leave documentation work for later.
+
+Follow the [maintenance contract](content/documentation/README.md#release-maintenance)
+and [editorial guide](docs/documentation-editorial-guide.md). Keep all six public
+locales complete, including examples, UI labels, captions, alt text, screenshots
+and responsive diagrams. Respect the existing illustration and capture rules.
+Internal contributor instructions remain English.
+
+Before freezing a desktop release candidate, review the release delta against
+the manual and update affected content, visuals, compatibility and verified
+review evidence. Run `npm run check:documentation`, `npm run check:knowledge`,
+`npm run check:owned-english` and `git diff --check`; require
+`npm run check:documentation:release` before publication. Report affected
+article/workflow/figure IDs when documentation changes. A brief note suffices
+for a PR with no documentation impact; it needs no release-wide checks.
+An accurate manual may need no prose edit, but it always needs an impact review.
+Do not invent review evidence or mark work complete with unresolved gaps.
 
 ## Internationalization: catalog and call-site contract
 

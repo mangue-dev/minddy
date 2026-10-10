@@ -1,0 +1,657 @@
+{
+  "reviewer": "Codex agent automation_account_documentation",
+  "date": "2026-10-08",
+  "method": "Source-derived localized diagrams for accepted N02, N11 and F06 diagram requirements. Not screenshots, execution records or deployed-state claims.",
+  "reviewed": true,
+  "diagrams": [
+    {
+      "locale": "en",
+      "id": "numo-permissions-and-approvals-workflow",
+      "article": "numo-permissions-and-approvals",
+      "src": "public/documentation/en/numo-permissions-and-approvals-workflow.svg",
+      "title": "Numo: access and authorization",
+      "dimensions": [
+        1100,
+        790
+      ],
+      "content": [
+        "Numo: access and authorization",
+        "Action or context",
+        "Who authorizes it",
+        "Boundary",
+        [
+          "Project work",
+          "Member with project access",
+          "Existing project permissions still apply"
+        ],
+        [
+          "Owner settings",
+          "Project owner",
+          "Membership, repository and feedback settings"
+        ],
+        [
+          "Credentials and security",
+          "Account holder, in settings",
+          "Configure keys, Git and two-factor authentication directly"
+        ],
+        [
+          "Public feedback reply",
+          "An explicit user request",
+          "Reading a request does not authorize a public reply"
+        ],
+        [
+          "Personal MCP",
+          "The conversation caller",
+          "No other member’s personal connections"
+        ],
+        [
+          "Scheduled routine",
+          "Current project owner",
+          "Owner’s connections and AI budget"
+        ],
+        [
+          "Remote MCP result",
+          "Untrusted service content",
+          "Cannot authorize additional actions"
+        ]
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/en/numo-permissions-and-approvals-workflow.png",
+      "imageHash": "3fe329585041e9cc8922a9e5c1ae3779c19ab1ba232da53116b6ebc429a9e714"
+    },
+    {
+      "locale": "en",
+      "id": "forge-issue-sync-mapping",
+      "article": "forge-issue-sync",
+      "src": "public/documentation/en/forge-issue-sync-mapping.svg",
+      "title": "GitHub issue synchronization",
+      "dimensions": [
+        1100,
+        720
+      ],
+      "content": [
+        "GitHub issue synchronization",
+        "1. Owner setup",
+        "Link repository, grant Issues read/write and enable issue synchronization.",
+        "2. Incoming events",
+        "Deduplicate delivery IDs; reject payloads older than newer local edits.",
+        "3. Import and mapping",
+        "Imported issues enter triage. Title/body become title/description; labels supply categories and recognized priority/effort.",
+        "4. State mirroring",
+        "Open and closed states mirror in both directions. Compare timestamps when changes compete.",
+        "Comments retain remote identity; repeated comments do not duplicate. GitLab field mappings may differ."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/en/forge-issue-sync-mapping.png",
+      "imageHash": "7862e449ac32441e5b76d5c2ae3f00064bbe5d12adf6526f9f7ae72fb3a61309"
+    },
+    {
+      "locale": "en",
+      "id": "feedback-ingestion-and-sso-workflow",
+      "article": "feedback-ingestion-and-sso",
+      "src": "public/documentation/en/feedback-ingestion-and-sso-workflow.svg",
+      "title": "Two separate feedback flows",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "content": [
+        "Two separate feedback flows",
+        "Server-side ingestion",
+        "Backend keeps the feedback key",
+        "POST /api/v1/feedback with Bearer key and stable user identity",
+        "HTTP 201: saved post in team inbox; board may be disabled",
+        "Browser visitor SSO",
+        "Backend keeps the separate board SSO secret",
+        "Sign HS256 JWT with sub, exp and unique jti; lifetime ≤ 600 s",
+        "Redirect browser to /f/<board-token>?sso=<jwt>",
+        "One-time token creates visitor session; open My feedback",
+        "Never send the ingestion key or SSO secret to browser code. Clock skew tolerance: 60 s."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/en/feedback-ingestion-and-sso-workflow.png",
+      "imageHash": "c06044a0fbca5b3da48e57ed902058598c60e3018ad1adb2785f89bc4405ee27"
+    },
+    {
+      "locale": "fr",
+      "id": "numo-permissions-and-approvals-workflow",
+      "article": "numo-permissions-and-approvals",
+      "src": "public/documentation/fr/numo-permissions-and-approvals-workflow.svg",
+      "title": "Numo : accès et autorisation",
+      "dimensions": [
+        1100,
+        790
+      ],
+      "content": [
+        "Numo : accès et autorisation",
+        "Action ou contexte",
+        "Qui autorise",
+        "Limite",
+        [
+          "Travail du projet",
+          "Membre ayant accès au projet",
+          "Les permissions du projet restent applicables"
+        ],
+        [
+          "Réglages du propriétaire",
+          "Propriétaire du projet",
+          "Membres, repository et réglages des retours"
+        ],
+        [
+          "Identifiants et sécurité",
+          "Titulaire du compte, dans les réglages",
+          "Configurer directement clés, Git et double authentification"
+        ],
+        [
+          "Réponse publique à un retour",
+          "Demande explicite de l’utilisateur",
+          "Lire une demande n’autorise pas une réponse publique"
+        ],
+        [
+          "MCP personnel",
+          "Auteur de la conversation",
+          "Pas de connexions personnelles d’un autre membre"
+        ],
+        [
+          "Routine planifiée",
+          "Propriétaire actuel du projet",
+          "Connexions et budget IA du propriétaire"
+        ],
+        [
+          "Résultat MCP distant",
+          "Contenu externe non fiable",
+          "Ne peut pas autoriser des actions supplémentaires"
+        ]
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/fr/numo-permissions-and-approvals-workflow.png",
+      "imageHash": "278c21fd48414fd5036365c9e9da039d9f5cdee1d231a22d421b8b823363d17c"
+    },
+    {
+      "locale": "fr",
+      "id": "forge-issue-sync-mapping",
+      "article": "forge-issue-sync",
+      "src": "public/documentation/fr/forge-issue-sync-mapping.svg",
+      "title": "Synchronisation des tickets GitHub",
+      "dimensions": [
+        1100,
+        720
+      ],
+      "content": [
+        "Synchronisation des tickets GitHub",
+        "1. Configuration du propriétaire",
+        "Relier le repository, autoriser la lecture/écriture Issues et activer la synchronisation.",
+        "2. Événements entrants",
+        "Dédupliquer les identifiants de livraison ; rejeter les données plus anciennes que les modifications locales.",
+        "3. Import et correspondances",
+        "Les tickets importés entrent au triage. Titre/corps deviennent titre/description ; les labels donnent catégories, priorité et effort reconnus.",
+        "4. États synchronisés",
+        "Les états ouvert et fermé se synchronisent dans les deux sens. Comparer les horodatages en cas de modifications concurrentes.",
+        "Les commentaires gardent l’identité distante sans duplication. Les correspondances GitLab peuvent différer."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/fr/forge-issue-sync-mapping.png",
+      "imageHash": "345244cebd2d0c43161b94c8bd839c99876b84c597261399379ce38080d534d4"
+    },
+    {
+      "locale": "fr",
+      "id": "feedback-ingestion-and-sso-workflow",
+      "article": "feedback-ingestion-and-sso",
+      "src": "public/documentation/fr/feedback-ingestion-and-sso-workflow.svg",
+      "title": "Deux parcours de retours distincts",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "content": [
+        "Deux parcours de retours distincts",
+        "Ingestion côté serveur",
+        "Le backend garde la clé de retours",
+        "POST /api/v1/feedback avec clé Bearer et identité stable",
+        "HTTP 201 : retour enregistré dans la boîte équipe ; tableau désactivé possible",
+        "SSO du visiteur navigateur",
+        "Le backend garde le secret SSO séparé du tableau",
+        "Signer JWT HS256 : sub, exp, jti unique ; validité ≤ 600 s",
+        "Rediriger le navigateur vers /f/<board-token>?sso=<jwt>",
+        "Le jeton à usage unique crée la session ; ouvrir Mes retours",
+        "Ne jamais envoyer clé d’ingestion ou secret SSO au code navigateur. Tolérance d’horloge : 60 s."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/fr/feedback-ingestion-and-sso-workflow.png",
+      "imageHash": "bae79521ee1d4477b3bfdd832737f5a62fefaa765d0b934ba2c2dec5f5bea53f"
+    },
+    {
+      "locale": "de",
+      "id": "numo-permissions-and-approvals-workflow",
+      "article": "numo-permissions-and-approvals",
+      "src": "public/documentation/de/numo-permissions-and-approvals-workflow.svg",
+      "title": "Numo: Zugriff und Autorisierung",
+      "dimensions": [
+        1100,
+        790
+      ],
+      "content": [
+        "Numo: Zugriff und Autorisierung",
+        "Aktion oder Kontext",
+        "Wer autorisiert",
+        "Grenze",
+        [
+          "Projektarbeit",
+          "Mitglied mit Projektzugriff",
+          "Die bestehenden Projektberechtigungen gelten weiterhin"
+        ],
+        [
+          "Inhabereinstellungen",
+          "Projektinhaber",
+          "Mitglieder, Repository und Feedback-Einstellungen"
+        ],
+        [
+          "Zugangsdaten und Sicherheit",
+          "Kontoinhaber, in den Einstellungen",
+          "Schlüssel, Git und Zwei-Faktor-Authentifizierung direkt einrichten"
+        ],
+        [
+          "Öffentliche Feedback-Antwort",
+          "Ausdrücklicher Benutzerauftrag",
+          "Lesen einer Anfrage erlaubt keine öffentliche Antwort"
+        ],
+        [
+          "Persönliches MCP",
+          "Auftraggeber des Gesprächs",
+          "Keine persönlichen Verbindungen anderer Mitglieder"
+        ],
+        [
+          "Geplante Routine",
+          "Aktueller Projektinhaber",
+          "Verbindungen und KI-Budget des Inhabers"
+        ],
+        [
+          "Entferntes MCP-Ergebnis",
+          "Nicht vertrauenswürdiger Dienstinhalt",
+          "Kann keine weiteren Aktionen autorisieren"
+        ]
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/de/numo-permissions-and-approvals-workflow.png",
+      "imageHash": "df97425fd4f1853ea0d98dd5d46ef9599ff3d9c5d3dad2b2eba8fc218248ad08"
+    },
+    {
+      "locale": "de",
+      "id": "forge-issue-sync-mapping",
+      "article": "forge-issue-sync",
+      "src": "public/documentation/de/forge-issue-sync-mapping.svg",
+      "title": "GitHub-Issue-Synchronisierung",
+      "dimensions": [
+        1100,
+        720
+      ],
+      "content": [
+        "GitHub-Issue-Synchronisierung",
+        "1. Einrichtung durch den Inhaber",
+        "Repository verknüpfen, Issues lesen/schreiben erlauben und Synchronisierung aktivieren.",
+        "2. Eingehende Ereignisse",
+        "Zustellungs-IDs deduplizieren; ältere Daten überschreiben keine neueren lokalen Änderungen.",
+        "3. Import und Zuordnung",
+        "Importierte Issues landen in der Triage. Titel/Text werden Titel/Beschreibung; Labels liefern Kategorien und erkannte Priorität/Aufwand.",
+        "4. Statusabgleich",
+        "Offen/geschlossen wird in beide Richtungen gespiegelt. Bei konkurrierenden Änderungen Zeitstempel vergleichen.",
+        "Kommentare behalten die entfernte Identität und werden nicht doppelt angelegt. GitLab-Zuordnungen können abweichen."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/de/forge-issue-sync-mapping.png",
+      "imageHash": "753fee5e80c293a09169c6e7072ad280572c9d64a55bc51d0082cdadea73057f"
+    },
+    {
+      "locale": "de",
+      "id": "feedback-ingestion-and-sso-workflow",
+      "article": "feedback-ingestion-and-sso",
+      "src": "public/documentation/de/feedback-ingestion-and-sso-workflow.svg",
+      "title": "Zwei getrennte Feedback-Abläufe",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "content": [
+        "Zwei getrennte Feedback-Abläufe",
+        "Serverseitige Erfassung",
+        "Backend verwahrt den Feedback-Schlüssel",
+        "POST /api/v1/feedback mit Bearer-Schlüssel und stabiler Identität",
+        "HTTP 201: gespeicherter Beitrag im Team-Eingang; Board darf deaktiviert sein",
+        "SSO für Browserbesucher",
+        "Backend verwahrt das separate Board-SSO-Geheimnis",
+        "HS256-JWT signieren: sub, exp, eindeutige jti; Gültigkeit ≤ 600 s",
+        "Browser zu /f/<board-token>?sso=<jwt> umleiten",
+        "Einmaliges Token erstellt Besuchersitzung; Mein Feedback öffnen",
+        "Erfassungsschlüssel und SSO-Geheimnis niemals an Browsercode senden. Uhrtoleranz: 60 s."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/de/feedback-ingestion-and-sso-workflow.png",
+      "imageHash": "2a8e682418120fe7f82851e3754190ea6406f3b07fe67a806935e9cf317d3f89"
+    },
+    {
+      "locale": "es",
+      "id": "numo-permissions-and-approvals-workflow",
+      "article": "numo-permissions-and-approvals",
+      "src": "public/documentation/es/numo-permissions-and-approvals-workflow.svg",
+      "title": "Numo: acceso y autorización",
+      "dimensions": [
+        1100,
+        790
+      ],
+      "content": [
+        "Numo: acceso y autorización",
+        "Acción o contexto",
+        "Quién autoriza",
+        "Límite",
+        [
+          "Trabajo del proyecto",
+          "Miembro con acceso al proyecto",
+          "Se siguen aplicando los permisos del proyecto"
+        ],
+        [
+          "Ajustes del propietario",
+          "Propietario del proyecto",
+          "Miembros, repositorio y ajustes de feedback"
+        ],
+        [
+          "Credenciales y seguridad",
+          "Titular de la cuenta, en ajustes",
+          "Configurar claves, Git y doble factor directamente"
+        ],
+        [
+          "Respuesta pública al feedback",
+          "Petición explícita del usuario",
+          "Leer una petición no autoriza una respuesta pública"
+        ],
+        [
+          "MCP personal",
+          "Quien solicita la conversación",
+          "Sin conexiones personales de otros miembros"
+        ],
+        [
+          "Rutina programada",
+          "Propietario actual del proyecto",
+          "Conexiones y presupuesto de IA del propietario"
+        ],
+        [
+          "Resultado MCP remoto",
+          "Contenido externo no fiable",
+          "No puede autorizar acciones adicionales"
+        ]
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/es/numo-permissions-and-approvals-workflow.png",
+      "imageHash": "6caad9ffb9c5f252880fdf24f29e10a5c1c7d97236badc1185607ba33d2a0b9d"
+    },
+    {
+      "locale": "es",
+      "id": "forge-issue-sync-mapping",
+      "article": "forge-issue-sync",
+      "src": "public/documentation/es/forge-issue-sync-mapping.svg",
+      "title": "Sincronización de issues de GitHub",
+      "dimensions": [
+        1100,
+        720
+      ],
+      "content": [
+        "Sincronización de issues de GitHub",
+        "1. Configuración del propietario",
+        "Vincular repositorio, conceder lectura/escritura de Issues y activar sincronización.",
+        "2. Eventos entrantes",
+        "Deduplicar identificadores de entrega; rechazar datos anteriores a cambios locales más recientes.",
+        "3. Importación y correspondencias",
+        "Los issues importados entran en triage. Título/cuerpo se convierten en título/descripción; las etiquetas aportan categorías, prioridad y esfuerzo reconocidos.",
+        "4. Sincronización del estado",
+        "Los estados abierto/cerrado se reflejan en ambos sentidos. Comparar fechas cuando compiten cambios.",
+        "Los comentarios conservan la identidad remota sin duplicarse. Las correspondencias de GitLab pueden variar."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/es/forge-issue-sync-mapping.png",
+      "imageHash": "57f1f57e6e2df5e702e681704da8ca168e2d753dcd131a630e5f76ea75008eec"
+    },
+    {
+      "locale": "es",
+      "id": "feedback-ingestion-and-sso-workflow",
+      "article": "feedback-ingestion-and-sso",
+      "src": "public/documentation/es/feedback-ingestion-and-sso-workflow.svg",
+      "title": "Dos flujos de feedback separados",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "content": [
+        "Dos flujos de feedback separados",
+        "Recogida desde el servidor",
+        "El backend guarda la clave de feedback",
+        "POST /api/v1/feedback con clave Bearer e identidad estable",
+        "HTTP 201: post guardado en la bandeja del equipo; el tablero puede estar desactivado",
+        "SSO del visitante del navegador",
+        "El backend guarda el secreto SSO separado del tablero",
+        "Firmar JWT HS256: sub, exp, jti único; validez ≤ 600 s",
+        "Redirigir navegador a /f/<board-token>?sso=<jwt>",
+        "Token de un solo uso crea sesión; abrir Mis sugerencias",
+        "Nunca enviar la clave de recogida ni el secreto SSO al navegador. Tolerancia de reloj: 60 s."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/es/feedback-ingestion-and-sso-workflow.png",
+      "imageHash": "bef1f3659e56283d772ebd7778e279c12f5813c6028d103d2d1c7abf397d3af8"
+    },
+    {
+      "locale": "it",
+      "id": "numo-permissions-and-approvals-workflow",
+      "article": "numo-permissions-and-approvals",
+      "src": "public/documentation/it/numo-permissions-and-approvals-workflow.svg",
+      "title": "Numo: accesso e autorizzazione",
+      "dimensions": [
+        1100,
+        790
+      ],
+      "content": [
+        "Numo: accesso e autorizzazione",
+        "Azione o contesto",
+        "Chi autorizza",
+        "Limite",
+        [
+          "Lavoro del progetto",
+          "Membro con accesso al progetto",
+          "Restano validi i permessi del progetto"
+        ],
+        [
+          "Impostazioni del proprietario",
+          "Proprietario del progetto",
+          "Membri, repository e impostazioni feedback"
+        ],
+        [
+          "Credenziali e sicurezza",
+          "Titolare dell’account, nelle impostazioni",
+          "Configurare direttamente chiavi, Git e secondo fattore"
+        ],
+        [
+          "Risposta pubblica a un feedback",
+          "Richiesta esplicita dell’utente",
+          "Leggere una richiesta non autorizza una risposta pubblica"
+        ],
+        [
+          "MCP personale",
+          "Autore della conversazione",
+          "Nessuna connessione personale di altri membri"
+        ],
+        [
+          "Routine pianificata",
+          "Proprietario attuale del progetto",
+          "Connessioni e budget IA del proprietario"
+        ],
+        [
+          "Risultato MCP remoto",
+          "Contenuto esterno non affidabile",
+          "Non può autorizzare altre azioni"
+        ]
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/it/numo-permissions-and-approvals-workflow.png",
+      "imageHash": "21372dd5cabb6c71c8797db5d8680c18d509883cb0e5e5ba26a8f528690aba7f"
+    },
+    {
+      "locale": "it",
+      "id": "forge-issue-sync-mapping",
+      "article": "forge-issue-sync",
+      "src": "public/documentation/it/forge-issue-sync-mapping.svg",
+      "title": "Sincronizzazione dei ticket GitHub",
+      "dimensions": [
+        1100,
+        720
+      ],
+      "content": [
+        "Sincronizzazione dei ticket GitHub",
+        "1. Configurazione del proprietario",
+        "Collegare il repository, concedere lettura/scrittura Issues e attivare la sincronizzazione.",
+        "2. Eventi in ingresso",
+        "Deduplicare gli ID di consegna; i dati più vecchi non sovrascrivono modifiche locali più recenti.",
+        "3. Importazione e corrispondenze",
+        "I ticket importati entrano nel triage. Titolo/corpo diventano titolo/descrizione; le etichette forniscono categorie, priorità e impegno riconosciuti.",
+        "4. Stato sincronizzato",
+        "Gli stati aperto/chiuso si riflettono in entrambe le direzioni. Confrontare gli orari in caso di modifiche concorrenti.",
+        "I commenti conservano l’identità remota senza duplicati. Le corrispondenze GitLab possono differire."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/it/forge-issue-sync-mapping.png",
+      "imageHash": "8dd8eb24e2aac43ffb262ae3f727fb4a6d5e30abf8b438c2415c35a547a8a755"
+    },
+    {
+      "locale": "it",
+      "id": "feedback-ingestion-and-sso-workflow",
+      "article": "feedback-ingestion-and-sso",
+      "src": "public/documentation/it/feedback-ingestion-and-sso-workflow.svg",
+      "title": "Due flussi di feedback separati",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "content": [
+        "Due flussi di feedback separati",
+        "Acquisizione dal server",
+        "Il backend conserva la chiave feedback",
+        "POST /api/v1/feedback con chiave Bearer e identità stabile",
+        "HTTP 201: post salvato nella casella team; la bacheca può essere disattivata",
+        "SSO del visitatore nel browser",
+        "Il backend conserva il segreto SSO separato della bacheca",
+        "Firmare JWT HS256: sub, exp, jti unico; validità ≤ 600 s",
+        "Reindirizzare il browser a /f/<board-token>?sso=<jwt>",
+        "Token monouso crea sessione; aprire Il mio feedback",
+        "Mai inviare chiave di acquisizione o segreto SSO al browser. Tolleranza orologio: 60 s."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/it/feedback-ingestion-and-sso-workflow.png",
+      "imageHash": "824c7c2c8911b2efb7c99d4b371eda24f6506ca481cec785f743c1ee609fb991"
+    },
+    {
+      "locale": "pt-BR",
+      "id": "numo-permissions-and-approvals-workflow",
+      "article": "numo-permissions-and-approvals",
+      "src": "public/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
+      "title": "Numo: acesso e autorização",
+      "dimensions": [
+        1100,
+        790
+      ],
+      "content": [
+        "Numo: acesso e autorização",
+        "Ação ou contexto",
+        "Quem autoriza",
+        "Limite",
+        [
+          "Trabalho do projeto",
+          "Membro com acesso ao projeto",
+          "As permissões existentes do projeto continuam válidas"
+        ],
+        [
+          "Configurações do proprietário",
+          "Proprietário do projeto",
+          "Membros, repositório e configurações de feedback"
+        ],
+        [
+          "Credenciais e segurança",
+          "Titular da conta, nas configurações",
+          "Configurar chaves, Git e segundo fator diretamente"
+        ],
+        [
+          "Resposta pública ao feedback",
+          "Pedido explícito do usuário",
+          "Ler uma solicitação não autoriza uma resposta pública"
+        ],
+        [
+          "MCP pessoal",
+          "Autor da conversa",
+          "Sem conexões pessoais de outros membros"
+        ],
+        [
+          "Rotina agendada",
+          "Proprietário atual do projeto",
+          "Conexões e orçamento de IA do proprietário"
+        ],
+        [
+          "Resultado MCP remoto",
+          "Conteúdo externo não confiável",
+          "Não pode autorizar ações adicionais"
+        ]
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/pt-BR/numo-permissions-and-approvals-workflow.png",
+      "imageHash": "306702dbfed10d51ac13deeb73318007b274f81cfee7e9ba5bdb8f3bc17ff221"
+    },
+    {
+      "locale": "pt-BR",
+      "id": "forge-issue-sync-mapping",
+      "article": "forge-issue-sync",
+      "src": "public/documentation/pt-BR/forge-issue-sync-mapping.svg",
+      "title": "Sincronização de tickets do GitHub",
+      "dimensions": [
+        1100,
+        720
+      ],
+      "content": [
+        "Sincronização de tickets do GitHub",
+        "1. Configuração do proprietário",
+        "Vincular repositório, conceder leitura/escrita de Issues e ativar a sincronização.",
+        "2. Eventos recebidos",
+        "Deduplicar IDs de entrega; dados mais antigos não sobrescrevem alterações locais mais recentes.",
+        "3. Importação e mapeamento",
+        "Tickets importados entram na triagem. Título/corpo viram título/descrição; rótulos fornecem categorias, prioridade e esforço reconhecidos.",
+        "4. Sincronização de estado",
+        "Estados aberto/fechado são espelhados nos dois sentidos. Comparar horários quando alterações concorrem.",
+        "Comentários mantêm a identidade remota sem duplicação. O mapeamento do GitLab pode ser diferente."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/pt-BR/forge-issue-sync-mapping.png",
+      "imageHash": "6c20d4a028104ef2ccaeae344f692f55b182b6d3da4c82ffb5d94f192d4d1de9"
+    },
+    {
+      "locale": "pt-BR",
+      "id": "feedback-ingestion-and-sso-workflow",
+      "article": "feedback-ingestion-and-sso",
+      "src": "public/documentation/pt-BR/feedback-ingestion-and-sso-workflow.svg",
+      "title": "Dois fluxos de feedback separados",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "content": [
+        "Dois fluxos de feedback separados",
+        "Ingestão pelo servidor",
+        "O backend guarda a chave de feedback",
+        "POST /api/v1/feedback com chave Bearer e identidade estável",
+        "HTTP 201: post salvo na caixa da equipe; o quadro pode estar desativado",
+        "SSO do visitante no navegador",
+        "O backend guarda o segredo SSO separado do quadro",
+        "Assinar JWT HS256: sub, exp, jti único; validade ≤ 600 s",
+        "Redirecionar navegador a /f/<board-token>?sso=<jwt>",
+        "Token de uso único cria sessão; abrir Meus comentários",
+        "Nunca enviar chave de ingestão ou segredo SSO ao navegador. Tolerância de relógio: 60 s."
+      ],
+      "reviewed": true,
+      "rendered": "public/documentation/pt-BR/feedback-ingestion-and-sso-workflow.png",
+      "imageHash": "a8631a0d50b8110fc9976f88810b7f5e96a2ea3fc50a5ced8ec2eb4187141e1f"
+    }
+  ],
+  "visualReview": "Viewed all 18 rendered locale figures. Checked text, wrapping, routes, conditions, labels and distinct secret boundaries. Diagrams describe source behavior without claiming an executed integration."
+}

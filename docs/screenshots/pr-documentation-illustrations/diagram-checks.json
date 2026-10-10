@@ -1,0 +1,578 @@
+[
+  {
+    "locale": "fr",
+    "article": "git",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "numo",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "api-and-webhooks",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "architecture-and-data-flows",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "git",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "numo",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "api-and-webhooks",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "git",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "numo",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "api-and-webhooks",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "fr",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "git",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "numo",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "api-and-webhooks",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "architecture-and-data-flows",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "git",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "numo",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "api-and-webhooks",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "git",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "numo",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "api-and-webhooks",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "en",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "git",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "numo",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "api-and-webhooks",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "architecture-and-data-flows",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "git",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "numo",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "api-and-webhooks",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "git",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "numo",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "api-and-webhooks",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "de",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "git",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "numo",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "api-and-webhooks",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "architecture-and-data-flows",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "git",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "numo",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "api-and-webhooks",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "git",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "numo",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "api-and-webhooks",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "es",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "git",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "numo",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "api-and-webhooks",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "architecture-and-data-flows",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "git",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "numo",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "api-and-webhooks",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "git",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "numo",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "api-and-webhooks",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "it",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "git",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "numo",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "api-and-webhooks",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "architecture-and-data-flows",
+    "mode": "desktop-light",
+    "width": 736,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "git",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "numo",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "api-and-webhooks",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-light",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "git",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "numo",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "api-and-webhooks",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  },
+  {
+    "locale": "pt-BR",
+    "article": "architecture-and-data-flows",
+    "mode": "mobile-dark",
+    "width": 342,
+    "overflow": false,
+    "renderer": "code"
+  }
+]

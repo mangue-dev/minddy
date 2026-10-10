@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-08",
+  "profile": "Disposable full reference engineering profile; actual published OCI v0.11.0 with same-tag missing runner storage helper mounted read-only; restored backend retained",
+  "scope": "Direct runner contract exercise, no AI key, LLM call, remote repository, forge credentials or external push; not a Numo code delegation test",
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sandboxes/<disposable-sandbox>/files/write",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sandboxes/<disposable-sandbox>/commands",
+      "status": 200,
+      "result": {
+        "exitCode": 0,
+        "stdout": "Initialized empty Git repository in /vercel/sandbox/.git/\n",
+        "stderr": ""
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sandboxes/<disposable-sandbox>/commands",
+      "status": 200,
+      "result": {
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sandboxes/<disposable-sandbox>/files/write",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sandboxes/<disposable-sandbox>/commands",
+      "status": 200,
+      "result": {
+        "exitCode": 0,
+        "stdout": "Localized demo change verified\n",
+        "stderr": ""
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sandboxes/<disposable-sandbox>/commands",
+      "status": 200,
+      "result": {
+        "exitCode": 0,
+        "stdout": "diff --git a/greeting.js b/greeting.js\nindex 709e161..6019756 100644\n--- a/greeting.js\n+++ b/greeting.js\n@@ -1 +1 @@\n-export const greeting = \"Hello\";\n+export const greeting = \"Hello, reader\";\n",
+        "stderr": ""
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sandboxes/<disposable-sandbox>",
+      "status": 200
+    }
+  ],
+  "sandboxDeleted": true,
+  "modifiedFileDiff": "diff --git a/greeting.js b/greeting.js\nindex 709e161..6019756 100644\n--- a/greeting.js\n+++ b/greeting.js\n@@ -1 +1 @@\n-export const greeting = \"Hello\";\n+export const greeting = \"Hello, reader\";\n",
+  "validation": true,
+  "candidateHostTopology": {
+    "date": "2026-10-08",
+    "reason": "The candidate QA Next.js process runs on the host while the reference runner and scheduler run in Docker.",
+    "runnerHostUrl": "http://localhost:6464",
+    "publishedBinding": "127.0.0.1:6464:6464",
+    "healthHttpStatus": 200,
+    "agentControlOrigin": "http://host.docker.internal:3001",
+    "schedulerUrl": "http://host.docker.internal:3001",
+    "schedulerAdditionalNetwork": "agent_egress",
+    "productionChanged": false,
+    "fullNumoDelegationApprovedByThisRecord": false
+  }
+}

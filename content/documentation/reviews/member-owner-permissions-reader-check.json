@@ -1,0 +1,71 @@
+{
+  "reviewer": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "human": false,
+  "instance": "http://localhost:3001",
+  "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+  "profile": "Disposable restored self-hosted candidate 0.11.1 aligned to candidate migrations",
+  "source": "Rendered project-settings UI followed from public documentation. The rejected direct API probe supplements UI observations; readers are not instructed to send it.",
+  "checks": [
+    {
+      "role": "member",
+      "route": "http://localhost:3001/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/settings",
+      "fields": [
+        {
+          "value": "",
+          "readOnly": false,
+          "disabled": false
+        }
+      ],
+      "saveControlPresent": 0,
+      "mainText": "General\nName\nProjet de démonstration documentation\nKey\nDOC\nLeave project\nLeave"
+    },
+    {
+      "role": "member",
+      "action": "Engineering authorization probe: same-name owner-only save on authorized local project",
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+      "status": 403,
+      "error": {
+        "error": "Only the project owner can do this."
+      },
+      "nameUnchanged": true
+    },
+    {
+      "role": "owner",
+      "route": "http://localhost:3001/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/settings",
+      "fields": [
+        {
+          "value": "",
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "value": "Projet de démonstration documentation",
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "value": "DOC",
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "value": "",
+          "readOnly": false,
+          "disabled": false
+        },
+        {
+          "value": "",
+          "readOnly": false,
+          "disabled": false
+        }
+      ],
+      "saveControlPresent": 1,
+      "mainText": "General\nName\nKey\nIcon\nImport\nSave\nDanger zone\nMove project to trash\n\nIts key is freed up right away, and it stops counting toward your plan.\n\nMove to trash"
+    }
+  ],
+  "assertion": "Member general information is displayed as static text without a Save control; owner project-name/key fields and Save are available. A member owner-only same-name save is rejected HTTP403 and the stored name remains unchanged.",
+  "otherMutationPerformed": false,
+  "inputInventoryQualification": "The recorded input inventory includes navigation/search and file controls; it is not an assertion that those inputs are read-only project fields. General-section static member text and absent Save establish the UI boundary."
+}

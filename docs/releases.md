@@ -78,6 +78,31 @@ publishes the content only after the exact SHA's successful production
 deployment. See [the changelog workflow](changelog.md) for the schema, storage
 configuration, performance budgets, and historical backfill.
 
+## Documentation gate
+
+Documentation must remain current with every code change, including feature
+additions, behavior changes and removals. Review impact first: small fixes,
+refactors, formatting and test-only PRs that leave documentation accurate need
+no documentation edit or new illustration. A brief note suffices for that PR;
+the release documentation gate still applies when the desktop version changes.
+Follow the
+[maintenance contract](../content/documentation/README.md#release-maintenance)
+and [editorial guide](documentation-editorial-guide.md). Update affected public
+guides in all six languages, localized examples, captions, alternative text,
+screenshots and responsive diagrams, plus technical references and internal
+instructions, through the same reviewed PR as the change.
+
+Every release that changes the desktop version requires a review of the manual
+against the release delta and intended version before freezing the candidate.
+Update affected articles, visuals, compatibility and genuine review evidence;
+record verified applicability or retained evidence for unchanged guides. A
+changelog entry does not replace these updates. Run
+`npm run check:documentation`, `npm run check:knowledge`,
+`npm run check:owned-english`, `npm run check:documentation:release` and
+`git diff --check`. Unresolved essential content, translation or illustration
+gaps block publication. Include documentation in the immutable candidate;
+later corrections require a new candidate and rebuilt affected artifacts.
+
 ## The single order
 
 From a clean `main` checkout:

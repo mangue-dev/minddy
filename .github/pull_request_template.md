@@ -4,7 +4,7 @@
 
 Closes #
 
-## Changements
+## Changes
 
 <!-- Concise summary. Explicitly mention migrations, APIs, data, and breaking changes. -->
 
@@ -22,9 +22,11 @@ Closes #
 
 ## Checklist
 
-- [ ] The RA has a unique scope and an associated outcome, or explains why it does not have one.
+- [ ] The PR has a unique scope and an associated outcome, or explains why it does not have one.
 - [ ] Each commit is signed with `git commit -s` according to the DCO.
 - [ ] The new or corrected behavior has a test.
-- [ ] The documentation and the two catalogs `messages/en.json` / `messages/fr.json` are up to date if necessary.
+- [ ] Affected documentation workflow/article/figure IDs are listed; all six locales and required illustrations match the source revision.
+- [ ] Factual, language and operational review evidence identifies the actual reviewer, version and installation profile. Agent review is distinguished from human review.
+- [ ] All six message catalogs are up to date where needed.
 - [ ] No keys, customer data, private configuration, or unpatched vulnerability information are included.
 - [ ] Any added dependencies or resources have a documented origin, requirement, and compatible license.

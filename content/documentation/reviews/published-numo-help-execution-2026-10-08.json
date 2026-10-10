@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root using the actual Numo browser flow",
+  "humanAcceptance": false,
+  "locale": "fr",
+  "claims": [
+    "Actual French Numo request retrieved one published official French article through get_help, with current revision and localized source URL.",
+    "The displayed French answer preserves canceled-task and Questions exclusions and links to the official article. No issue or code-worker action was requested."
+  ],
+  "failures": [],
+  "conversationId": "ae5bf9cc-9d54-468a-9993-83b84e8b05b3",
+  "harnessQualification": "An earlier actual request succeeded, but the first harness could not read its SSE body after client navigation. Its persisted tool result and answer were inspected separately. This repeated request validates the source-link instruction through persisted authenticated messages and the actual rendered UI.",
+  "help": {
+    "id": "implementation-plans",
+    "revision": 2,
+    "sourceUrl": "/fr/documentation/implementation-plans",
+    "lastReviewed": "2026-10-08",
+    "characters": 2295
+  },
+  "toolNames": [
+    "get_help"
+  ],
+  "visibleAnswerSHA256": "d7ad76a1512cb2cb6df8fa0d1dc1d6ab69fd8fcd95703508e3b24d0407963319"
+}

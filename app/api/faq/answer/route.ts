@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
   const prompt = buildFaqAnswerPrompt({
     section,
     items,
-    articles: getKnowledgeArticles(),
+    articles: getKnowledgeArticles(locale, question),
     locale,
   });
 

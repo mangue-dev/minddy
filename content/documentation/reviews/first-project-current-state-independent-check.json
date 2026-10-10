@@ -1,0 +1,26 @@
+{
+  "reviewer": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "human": false,
+  "instance": "http://localhost:3001",
+  "profile": "Disposable restored self-hosted candidate 0.11.1 aligned to candidate migrations",
+  "source": "Fresh authenticated read-only browser-context API requests; no display-localization fixture interception",
+  "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+  "issueId": "cad26d0a-7e0c-4037-8a82-fa044a58b133",
+  "number": 1,
+  "status": "done",
+  "objectiveId": "291500d1-2f9d-4725-a972-f38ce57570fd",
+  "commentEvidence": [
+    {
+      "id": "e2f711e9-d837-40f3-bada-7bb672ab8c92",
+      "body": "Demonstration check: this browser preserves the saved manual plan after reload. The member can read it; a non-owner invitation request is rejected with HTTP 403. This comment records the observed application checks, not an email composer test."
+    }
+  ],
+  "httpStatuses": [
+    200,
+    200,
+    200
+  ],
+  "mutationPerformed": false,
+  "assessment": "Confirmed current stored done state, saved comment and objective link; no claim that website email link was tested"
+}

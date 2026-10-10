@@ -16,6 +16,9 @@ vi.mock("next/navigation", () => ({ useRouter: () => state.router }));
 vi.mock("./app-tabs-context", () => ({
   useOptionalAppTabSession: () => state.hasSession ? { reuseDestination: state.reuseDestination } : null,
 }));
+vi.mock("./app-tab-session-context", () => ({
+  useOptionalAppTabSession: () => state.hasSession ? { reuseDestination: state.reuseDestination } : null,
+}));
 
 let root: Root;
 let container: HTMLDivElement;

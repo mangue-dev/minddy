@@ -1,0 +1,2693 @@
+[
+  {
+    "locale": "en",
+    "screen": "resources",
+    "src": "/documentation/en/work-resources.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      164
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "ec804d869ef8b60be9416b32b123b410611474c56453b7ef66a618701347ed17"
+  },
+  {
+    "locale": "en",
+    "screen": "view-filters",
+    "src": "/documentation/en/work-view-filters.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      240,
+      345
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "954e37966e340fe4183bca06a5a84d9cc2b527d7c6f72e52ff48d83c03ba9722"
+  },
+  {
+    "locale": "en",
+    "screen": "statistics",
+    "src": "/documentation/en/work-statistics.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/statistics",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "en",
+    "screen": "trash",
+    "src": "/documentation/en/work-trash.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/trash",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "en",
+    "screen": "dependencies",
+    "src": "/documentation/en/work-dependencies.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      320,
+      104
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "473185cb7bb9c3617329109bbdb63a6c173fcb678c4f9380b3f9528f239b2a77"
+  },
+  {
+    "locale": "en",
+    "screen": "share-view",
+    "src": "/documentation/en/work-share-view.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      182
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "119c92df6df18f3cafc1cc3ad6252efb4ebb5a0ec2ce401501a6f3fd9e0898e8"
+  },
+  {
+    "locale": "en",
+    "screen": "inbox",
+    "src": "/documentation/en/work-inbox.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/home",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      480,
+      600
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "f3273d39b39f1860d470d5956594bea71391775fcc809697d04b585f06ba1656"
+  },
+  {
+    "locale": "fr",
+    "screen": "dependencies",
+    "src": "/documentation/fr/work-dependencies.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      320,
+      104
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "177d7b0cff6ac1c8058ad030251e4e4b1ae1e48c8313f813483c91c1827c044c"
+  },
+  {
+    "locale": "fr",
+    "screen": "resources",
+    "src": "/documentation/fr/work-resources.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      164
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "ad33c5e92b3b8441db79166c33293fd0f6b9fe1f350c2eb9f441deaaa74fcff4"
+  },
+  {
+    "locale": "fr",
+    "screen": "view-filters",
+    "src": "/documentation/fr/work-view-filters.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      240,
+      345
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "e4b312f501beb8d481823c40f729fc325c26003a5307edfd18cbcafb494b02f2"
+  },
+  {
+    "locale": "fr",
+    "screen": "share-view",
+    "src": "/documentation/fr/work-share-view.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      182
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "ae91ea086cc1bbda3e3a670e2767708c8433719b6ea4134574ded514c7eac228"
+  },
+  {
+    "locale": "fr",
+    "screen": "inbox",
+    "src": "/documentation/fr/work-inbox.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/home",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      480,
+      600
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "a9207f8f3d4ac20f9e35325d1381cba238b05ec76d992bd742c5530793a418c8"
+  },
+  {
+    "locale": "fr",
+    "screen": "statistics",
+    "src": "/documentation/fr/work-statistics.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/statistics",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "fr",
+    "screen": "trash",
+    "src": "/documentation/fr/work-trash.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/trash",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "de",
+    "screen": "dependencies",
+    "src": "/documentation/de/work-dependencies.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      320,
+      104
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "0c90be1ffab4eb5278aae1f9b62d0fad4b8df96e6c521123e49913e080ab4848"
+  },
+  {
+    "locale": "de",
+    "screen": "resources",
+    "src": "/documentation/de/work-resources.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      164
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "df4d524def2eee92bdcfb624fa773cc66bff98e302927749c3c8b50774db8473"
+  },
+  {
+    "locale": "de",
+    "screen": "view-filters",
+    "src": "/documentation/de/work-view-filters.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      240,
+      365
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "9c1dd182e18ad58ed873d07dac766f7bfc5b028d8a645bf425e6946038a84292"
+  },
+  {
+    "locale": "de",
+    "screen": "share-view",
+    "src": "/documentation/de/work-share-view.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      182
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "e6d627996a961ed9ca4597dcd54d313289bfc38dbef7efa7c9b7e5518620c9af"
+  },
+  {
+    "locale": "de",
+    "screen": "statistics",
+    "src": "/documentation/de/work-statistics.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/statistics",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "de",
+    "screen": "trash",
+    "src": "/documentation/de/work-trash.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/trash",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "es",
+    "screen": "dependencies",
+    "src": "/documentation/es/work-dependencies.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      320,
+      104
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "6f2991236b10efcc1c92f5a36510a63f57eed9f2b78cc42fe40581aa58a1370c"
+  },
+  {
+    "locale": "es",
+    "screen": "resources",
+    "src": "/documentation/es/work-resources.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      164
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "6732d0573da58a632321792d8ec80e8c517a6ba0ea122b4956e20adaf3ecfdc4"
+  },
+  {
+    "locale": "es",
+    "screen": "view-filters",
+    "src": "/documentation/es/work-view-filters.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      240,
+      385
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "ddaa231ea685b7263e161a1788c26b64db9577696ce76a7132c127c3079c3c33"
+  },
+  {
+    "locale": "es",
+    "screen": "share-view",
+    "src": "/documentation/es/work-share-view.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      182
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "785324027373a2246dd3bef1534b0ac50dc26b37a6f9c2a6660d2d84ef50e510"
+  },
+  {
+    "locale": "es",
+    "screen": "inbox",
+    "src": "/documentation/es/work-inbox.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/home",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      480,
+      600
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "4779bbf3a05cbfa868fd7de0dcb521b238f3665a1003f7451e83b586ccbea541"
+  },
+  {
+    "locale": "es",
+    "screen": "statistics",
+    "src": "/documentation/es/work-statistics.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/statistics",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "es",
+    "screen": "trash",
+    "src": "/documentation/es/work-trash.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/trash",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "it",
+    "screen": "dependencies",
+    "src": "/documentation/it/work-dependencies.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      320,
+      104
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "49aaca2a49a6cfc27bba6400519089058a137249513a22615fb451d63897c3e7"
+  },
+  {
+    "locale": "it",
+    "screen": "resources",
+    "src": "/documentation/it/work-resources.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      164
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "63a43e518f8ad5b7ca18a2b0780d73b1e469258aa0a10958b40dfa5da10aaee0"
+  },
+  {
+    "locale": "it",
+    "screen": "view-filters",
+    "src": "/documentation/it/work-view-filters.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      240,
+      345
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "7a845b564c01827c2cdf15f1ca00b6823efd67d16e210a79894abf2ed6b3302f"
+  },
+  {
+    "locale": "it",
+    "screen": "share-view",
+    "src": "/documentation/it/work-share-view.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      182
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "50f3021563a3d6cf861ebb42a49222e7878a36ed1e9939bfabd5e4fe598220b1"
+  },
+  {
+    "locale": "it",
+    "screen": "statistics",
+    "src": "/documentation/it/work-statistics.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/statistics",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "it",
+    "screen": "trash",
+    "src": "/documentation/it/work-trash.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/trash",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "dependencies",
+    "src": "/documentation/pt-BR/work-dependencies.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      320,
+      104
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "01bcd881ed41b65ededd4574f83a9862e4d7e9c2b3d23f8bed9aba98cb70fb4a"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "resources",
+    "src": "/documentation/pt-BR/work-resources.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      164
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "f85e72fb755ed5933f51d255001bb8367e11179893d7f158020a26b5ebabcde6"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "view-filters",
+    "src": "/documentation/pt-BR/work-view-filters.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      240,
+      345
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "5629e3136551d0587d1c844a3ab237a0450cf4533ac73b7096c103d8f2337ed3"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "share-view",
+    "src": "/documentation/pt-BR/work-share-view.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      448,
+      182
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "3051211a9321ebd6063c4aa2100446efdc006fe7083aaac77b3541f929c30168"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "statistics",
+    "src": "/documentation/pt-BR/work-statistics.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/statistics",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "trash",
+    "src": "/documentation/pt-BR/work-trash.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/trash",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1106,
+      998
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": false,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state."
+  },
+  {
+    "locale": "it",
+    "screen": "inbox",
+    "src": "/documentation/it/work-inbox.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/home",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      480,
+      600
+    ],
+    "displayAdaptation": [],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "1bf9179e9b0d0e5bfad1ba8af6a36b53cfc7cb60ec1bc261f08d4920e86f16e9"
+  },
+  {
+    "locale": "en",
+    "screen": "navigation",
+    "src": "/documentation/en/work-navigation.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1440,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "0d800fef402d8056551e64547cf402858e29ff2e2b79bc16a89a2e74d996a9a0"
+  },
+  {
+    "locale": "en",
+    "screen": "bulk-actions",
+    "src": "/documentation/en/work-bulk-actions.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      458
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "5d801e1f6d5e19a4abd58622cc6a994333baa2f60034fe843866bdfe800f0cb6"
+  },
+  {
+    "locale": "en",
+    "screen": "sub-issues",
+    "src": "/documentation/en/work-sub-issues.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "4b2724af888c195a0a50699896f78dae33e42f491a80da51668fbf832bcf6c13"
+  },
+  {
+    "locale": "en",
+    "screen": "implementation-plan",
+    "src": "/documentation/en/work-implementation-plan.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "b6a0a3d5f88fcfe865558abd748e44015edd591fdabfbe58329e31ac82d7d2a9"
+  },
+  {
+    "locale": "en",
+    "screen": "search",
+    "src": "/documentation/en/work-search.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      316
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "52fea2e0d303020edb453482b29c72632f8f047b15f9fe9f7db46548463d8273"
+  },
+  {
+    "locale": "en",
+    "screen": "task-notebook",
+    "src": "/documentation/en/work-task-notebook.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1108,
+      1000
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "45a8b7a523407c6ebce9eaf672fd1c854850e975b5407f5581f5157d7710b8de"
+  },
+  {
+    "locale": "fr",
+    "screen": "navigation",
+    "src": "/documentation/fr/work-navigation.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1440,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "0952285874bfd7437f34d958a51b7f4f70dc0b9f61e1beeede93a1f2ef1cdda3"
+  },
+  {
+    "locale": "fr",
+    "screen": "bulk-actions",
+    "src": "/documentation/fr/work-bulk-actions.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      458
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "efd37000c517e6f0f35480918760ce34d5574f0b41c61f996848462997c5fc2e"
+  },
+  {
+    "locale": "fr",
+    "screen": "sub-issues",
+    "src": "/documentation/fr/work-sub-issues.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "57cf36a6ef36f4747b439c8c5960acd1dbdb49b31ac5d0f2a997c31a1ac2be93"
+  },
+  {
+    "locale": "fr",
+    "screen": "implementation-plan",
+    "src": "/documentation/fr/work-implementation-plan.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "bb5859810ef34a3bb74f34a00ea03735b6ff0f59f7f7e1eae2c93b0d9fdfa1b7"
+  },
+  {
+    "locale": "fr",
+    "screen": "search",
+    "src": "/documentation/fr/work-search.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      316
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/329eb552-570b-45e4-8be6-f56e30056bd1"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "21a4a2e260ce273c0cadc080a6b6175bf6a4f55b7d070f5dadbff7d6b0da0aa7"
+  },
+  {
+    "locale": "fr",
+    "screen": "task-notebook",
+    "src": "/documentation/fr/work-task-notebook.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1108,
+      1000
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "322cacca9ad956a14ce5b5415b8ac31298f8fd984ec12a34baa20562bfe1dd19"
+  },
+  {
+    "locale": "de",
+    "screen": "navigation",
+    "src": "/documentation/de/work-navigation.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1440,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "16010cc6b4738085a94397cba9d5c86bfdb4c002093ffed0004c0ca1cbeb14eb"
+  },
+  {
+    "locale": "de",
+    "screen": "bulk-actions",
+    "src": "/documentation/de/work-bulk-actions.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      458
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "0702dd1e6b3e32484d17f5e10e03095bf13d40914acfbea24f9c97b1c99dc4b2"
+  },
+  {
+    "locale": "de",
+    "screen": "sub-issues",
+    "src": "/documentation/de/work-sub-issues.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "8554ef2d8dcfc59362ab6f78a1ca8cfd72a66da8fc7c7b95f93eef5222cb3d63"
+  },
+  {
+    "locale": "de",
+    "screen": "search",
+    "src": "/documentation/de/work-search.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      316
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/329eb552-570b-45e4-8be6-f56e30056bd1"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "38697cd5ef13963d59b8225f05e64bacf15cb9e4f82c140867a29907512cdbbe"
+  },
+  {
+    "locale": "de",
+    "screen": "task-notebook",
+    "src": "/documentation/de/work-task-notebook.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1108,
+      1000
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "f1e0acb0ccb420900c9759898e0ca62c3ec31947f5057aac50e78bfb399d359d"
+  },
+  {
+    "locale": "es",
+    "screen": "navigation",
+    "src": "/documentation/es/work-navigation.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1440,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "703e14f3273e4c9ebf2484c40be73d51f425251ad149a32b256a6b46bd4edb83"
+  },
+  {
+    "locale": "es",
+    "screen": "bulk-actions",
+    "src": "/documentation/es/work-bulk-actions.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      458
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "8910beacd705d57de580ea4dd945e7c8d662bc163e032179da101980758be739"
+  },
+  {
+    "locale": "es",
+    "screen": "sub-issues",
+    "src": "/documentation/es/work-sub-issues.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "aa2605fc0baca562dce5fbf97afaa54a446b1f0d7523d6c63b963960c72fe6fd"
+  },
+  {
+    "locale": "es",
+    "screen": "implementation-plan",
+    "src": "/documentation/es/work-implementation-plan.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "bc1a278f0876543be8f4c858bb1811bfb9846e670911ce7863e65ab46d6f6b01"
+  },
+  {
+    "locale": "es",
+    "screen": "search",
+    "src": "/documentation/es/work-search.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      316
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/329eb552-570b-45e4-8be6-f56e30056bd1"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "2a0e7550fa80ba48a74627ccb6fbfcb7af6d5bf89515220f2af51df43a195346"
+  },
+  {
+    "locale": "es",
+    "screen": "task-notebook",
+    "src": "/documentation/es/work-task-notebook.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1108,
+      1000
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "54496a2e5c82dbce5775240ee7931bdb230c047da289a84ef4d39a5254d29fd7"
+  },
+  {
+    "locale": "it",
+    "screen": "navigation",
+    "src": "/documentation/it/work-navigation.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1440,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "92bb8bbed2d5c6fd3f084efab74762f6e8b2008ab6e2e9bb3563e1c5c4725fff"
+  },
+  {
+    "locale": "it",
+    "screen": "bulk-actions",
+    "src": "/documentation/it/work-bulk-actions.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      458
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "39320ce5fce83ece70bccffc06a1537b284e8c771d4ff85356e43820638e0c15"
+  },
+  {
+    "locale": "it",
+    "screen": "sub-issues",
+    "src": "/documentation/it/work-sub-issues.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "bca07d392f503393b228d145a7d91e6a79f2928eb5980b540e7268a87594cece"
+  },
+  {
+    "locale": "it",
+    "screen": "search",
+    "src": "/documentation/it/work-search.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      316
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/329eb552-570b-45e4-8be6-f56e30056bd1"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "4d498b282f97cbaca4a56ff8a28c8f68a047e66aca8c79cf8cef423b5f9720e6"
+  },
+  {
+    "locale": "it",
+    "screen": "task-notebook",
+    "src": "/documentation/it/work-task-notebook.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1108,
+      1000
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "cad5e481daca322de863e62e29e03a63c3c91d41a23d9e58120c7fa317d16a8c"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "navigation",
+    "src": "/documentation/pt-BR/work-navigation.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1440,
+      1080
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "1c0e496d3af7b9d85d9d2563a4e1522e45a0056359b5c7d05777dddac1c06de5"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "bulk-actions",
+    "src": "/documentation/pt-BR/work-bulk-actions.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      458
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "05476b38bb7d0d272a3a0fc38ddcfb3942acc6eeaedebc59da76efbff5b06749"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "sub-issues",
+    "src": "/documentation/pt-BR/work-sub-issues.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "9dab93661cf3d7a88a4153b301ae0f072ca87d050852a8035ca1fe5676e2dd79"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "implementation-plan",
+    "src": "/documentation/pt-BR/work-implementation-plan.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      460,
+      1048
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "13bb6a900fa857f5996f420a461a719b1525d822983154d0c8bfed1db27c96f9"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "search",
+    "src": "/documentation/pt-BR/work-search.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      740,
+      316
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages/329eb552-570b-45e4-8be6-f56e30056bd1"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "35f20115083ad3d2c41dfff46e8309bdc3401c2033038f5be91d87cd6d320c16"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "task-notebook",
+    "src": "/documentation/pt-BR/work-task-notebook.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      1108,
+      1000
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "27bb932233ae04b1908aa14c866bf0ba4ffc1d1086f4788716719ee9519126a8"
+  },
+  {
+    "locale": "de",
+    "screen": "implementation-plan",
+    "src": "/documentation/de/work-implementation-plan.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1400
+    ],
+    "viewport": [
+      460,
+      1368
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "ac5ad07469da3c6ea1f4bb52714081d599c7592850f548c4e96468ce1a4de39e"
+  },
+  {
+    "locale": "it",
+    "screen": "implementation-plan",
+    "src": "/documentation/it/work-implementation-plan.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1400
+    ],
+    "viewport": [
+      460,
+      1368
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/views",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "96bfdf82bcd69edc246e4e7ed435fe7e31353c2c4ff9801e34286b56ff50f4af"
+  },
+  {
+    "locale": "de",
+    "screen": "inbox",
+    "src": "/documentation/de/work-inbox.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/home",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      480,
+      600
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/me/scratchpad"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "85c2cff402c21838f22a85ec753c6ca89af5798cc782df5f46cbc8edf15d8702"
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "inbox",
+    "src": "/documentation/pt-BR/work-inbox.png",
+    "sourceCommit": "50a34a52e3b65239262361a7a874eea22b4217bf",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "route": "/home",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      480,
+      600
+    ],
+    "displayAdaptation": [
+      "/api/me/scratchpad",
+      "/api/me/scratchpad"
+    ],
+    "blockedWrites": [
+      "/api/me/local-snapshots",
+      "/api/me/local-snapshots"
+    ],
+    "submitted": false,
+    "reviewed": true,
+    "limitation": "Actual controls only, without a saved action outcome. Exact demo prose translations preserve identifiers and state.",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "reviewDate": "2026-10-08",
+    "pngSha256": "afb0dfacbe544665abd48dbc29182162fef5938efcd8148426cf60ffa17e553d"
+  }
+]

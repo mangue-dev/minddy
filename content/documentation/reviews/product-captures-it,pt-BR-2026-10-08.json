@@ -1,0 +1,110 @@
+[
+  {
+    "locale": "it",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/it/issue-date-recurrence.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      300,
+      520
+    ],
+    "language": "it",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/4da53183-a1a0-468a-b451-e22fe02ba4d1"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "issue-date-recurrence",
+    "src": "/documentation/pt-BR/issue-date-recurrence.png",
+    "sourceCommit": "7fee59e8d7b86d892d9232a9beb07dd2ad800c38",
+    "candidateVersion": "0.11.1",
+    "date": "2026-10-08",
+    "workingTreeChanges": true,
+    "route": "/projects/6cd36606-c297-4920-8ce3-31b5f3697be8",
+    "theme": "light",
+    "browserViewport": [
+      1440,
+      1080
+    ],
+    "viewport": [
+      314,
+      520
+    ],
+    "language": "pt-BR",
+    "submitted": false,
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/local-snapshots"
+      }
+    ],
+    "navigationWrites": [
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs"
+      },
+      {
+        "method": "PATCH",
+        "route": "/api/me/app-tabs/50bab640-c16d-41d8-9603-7f89fd721806"
+      },
+      {
+        "method": "POST",
+        "route": "/api/me/app-tabs/metadata"
+      }
+    ],
+    "reviewed": false,
+    "limitation": "Visible controls only. No completed save, share, restore, import or release outcome is claimed."
+  }
+]

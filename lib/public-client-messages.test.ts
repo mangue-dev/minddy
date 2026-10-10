@@ -81,10 +81,10 @@ function scanEntries(entries: readonly string[]): Scan {
       // Without a literal, we cannot conclude anything — and the test must say so
       // instead of allowing a missing namespace through.
       if (/useTranslations\(\s*(\)|[^"'`)\s])/.test(source)) {
-        scan.undecidable.push(`${relative} : useTranslations() sans namespace littéral`);
+        scan.undecidable.push(`${relative}: useTranslations() has no literal namespace`);
       }
       if (/\buseMessages\(/.test(source)) {
-        scan.undecidable.push(`${relative} : useMessages() lit tout le catalogue`);
+        scan.undecidable.push(`${relative}: useMessages() reads the full catalog`);
       }
     }
 
@@ -106,13 +106,13 @@ function scanEntries(entries: readonly string[]): Scan {
 
   for (const entry of entries) {
     const file = path.join(REPO_ROOT, entry);
-    if (!existsSync(file)) throw new Error(`racine introuvable : ${entry}`);
+    if (!existsSync(file)) throw new Error(`Entry not found: ${entry}`);
     walk(file);
   }
   return scan;
 }
 
-describe("messages du site public", () => {
+describe("public site messages", () => {
   const scan = scanEntries(PUBLIC_ENTRIES);
 
   it("starts from real client components", () => {
@@ -130,13 +130,13 @@ describe("messages du site public", () => {
 
     // The failure message says what to add to PUBLIC_CLIENT_NAMESPACES, and which
     // asked for it.
-    expect(missing, `namespaces absents de PUBLIC_CLIENT_NAMESPACES : ${missing.join(" · ")}`)
+    expect(missing, `Namespaces missing from PUBLIC_CLIENT_NAMESPACES: ${missing.join(" · ")}`)
       .toEqual([]);
   });
 
-  it("n'en déclare aucun dont plus personne ne se sert", () => {
+  it("declares only namespaces used by clients", () => {
     const unused = PUBLIC_CLIENT_NAMESPACES.filter((ns) => !scan.namespaces.has(ns));
-    expect(unused, `namespaces à retirer : ${unused.join(", ")}`).toEqual([]);
+    expect(unused, `Unused namespaces: ${unused.join(", ")}`).toEqual([]);
   });
 
   it("finds no undecidable call", () => {
@@ -162,7 +162,7 @@ describe("messages du site public", () => {
     expect(trimmed / full).toBeLessThan(0.2);
   });
 
-  it("ignore un namespace absent du catalogue au lieu de poser undefined", () => {
+  it("omits missing namespaces instead of setting undefined", () => {
     const scoped = publicClientMessages({ Landing: { a: "1" } });
     expect(scoped).toEqual({ Landing: { a: "1" } });
     expect("Billing" in scoped).toBe(false);
@@ -198,7 +198,7 @@ function layoutChain(page: string): string[] {
  * The root layout only broadcasts `PUBLIC_CLIENT_NAMESPACES`, and it does so on
  * ALL routes: what it sends cannot depend on the request, a shared
  * layout is not re-rendered during a client navigation. Any page
- * which translates elsewhere must therefore find `FullCatalogMessages` above it.
+ * which translates elsewhere must find a full or scoped catalog provider above it.
  *
  * Without this test, the sanction for an oversight is a `MISSING_MESSAGE` in production —
  * and only on visitors arriving from the public site, which makes
@@ -224,15 +224,22 @@ describe("each page receives the messages it translates", () => {
     );
     if (servesFullCatalog) return;
 
-    // No provider above: the page only has the public set.
+    // A scoped segment provider supplies only the namespaces named in its literal catalog.
+    const available = new Set<string>(PUBLIC_CLIENT_NAMESPACES);
+    for (const layout of chain) {
+      const source = readFileSync(path.join(REPO_ROOT, layout), "utf8");
+      for (const provider of source.matchAll(/<InheritedIntlProvider\s+messages=\{\{([\s\S]*?)\}\}/g)) {
+        for (const field of provider[1].matchAll(/\b(\w+):\s*messages\.\1\b/g)) available.add(field[1]);
+      }
+    }
     const scan = scanEntries([page, ...chain]);
     const missing = [...scan.namespaces]
-      .filter(([namespace]) => !PUBLIC_CLIENT_NAMESPACES.includes(namespace as never))
+      .filter(([namespace]) => !available.has(namespace))
       .map(([namespace, users]) => `${namespace} (${[...users].join(", ")})`);
 
     expect(
       missing,
-      `${page} traduit hors du jeu public sans <FullCatalogMessages> au-dessus : ${missing.join(" · ")}`,
+      `${page} uses namespaces missing from its providers: ${missing.join(" · ")}`,
     ).toEqual([]);
     expect(scan.undecidable, `${page} : ${scan.undecidable.join(" | ")}`).toEqual([]);
   });

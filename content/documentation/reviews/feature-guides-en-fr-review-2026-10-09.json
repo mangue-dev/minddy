@@ -1,0 +1,2026 @@
+{
+  "date": "2026-10-09",
+  "reviewer": "agent:/root/english_french_review",
+  "locales": [
+    "en",
+    "fr"
+  ],
+  "scope": "Review the feature-guide consolidation against docs/documentation-editorial-guide.md: titles, summaries, openings, reader scope, section hierarchy, retained procedures and warnings, localized meaning and precise links to relocated task sections.",
+  "method": [
+    "Read the editorial guide and all EN/FR guide titles, summaries and section headings; reviewed the consolidated feature prose and operational caveats with their EN/FR counterparts.",
+    "Before editing, compare every original body block with the corresponding consolidated guide after ignoring heading text, whitespace and Markdown link destinations. All 549 English and 551 French non-heading baseline blocks were present, including executable examples, limitations and warnings.",
+    "Review the new EN/FR feature openings together, tying their claims to the retained body. Single-source guides retain focused task/explanation openings and summaries rather than receiving filler introductions.",
+    "After editing, verify every original fenced code block and image reference is still present, workflow coverage is preserved, and EN/FR heading IDs and levels remain identical.",
+    "Review installation redundancy by keeping complete explanations at the first location and adding section links at later locations. Keep the missing-npm prerequisite before worker-image build commands."
+  ],
+  "limitations": [
+    "This is an editorial and retained-meaning review, not execution of the described UI tasks, server installation, update, backup, restore, provider setup or release validation.",
+    "Prior procedure, screenshot and release evidence is inherited. No new capture, external-provider backup or restoration was performed by this reviewer.",
+    "The parent runs repository-wide automated checks and rendered navigation validation. These checks do not establish successful execution of every documented workflow."
+  ],
+  "findings": [
+    {
+      "finding": "Merged guides opened with their first old task rather than their overall feature scope.",
+      "resolution": "Added concise paired feature openings to the 19 multi-source guides, with meaningful distinctions and prerequisites drawn from the retained procedures."
+    },
+    {
+      "finding": "The Pages summary and export heading implied a general page import control absent from its procedure.",
+      "resolution": "Describe page export/printing, and explicitly direct supported imports to the empty-database workflow. Preserve the legacy section ID."
+    },
+    {
+      "finding": "The French database-schema heading promised no data loss despite irreversible column deletion and value-clearing conversion.",
+      "resolution": "Remove the no-data-loss promise while retaining the warnings, confirmation requirements and conversion checks."
+    },
+    {
+      "finding": "The English API failure heading addressed a writer instead of an integrator.",
+      "resolution": "Rename it to Handle failed requests and delivery limits, retaining the stable section ID."
+    },
+    {
+      "finding": "Installation repeated runner blockers, missing package managers and storage-helper explanations in one guide.",
+      "resolution": "Retain each complete explanation once, replace later copies with concise same-page links, and place the missing-npm condition before the worker image commands."
+    },
+    {
+      "finding": "Some retained prose still referred to separate compatibility, network, cold-backup, desktop, device or database-import articles.",
+      "resolution": "Replace those references with explicit links to current guide sections, including same-page links when the material is now on the current guide."
+    },
+    {
+      "finding": "Several French headings and expressions were awkward or ambiguous, including recovering a failure, a possessed project, a bimensual cycle and an empty present day.",
+      "resolution": "Use natural failure/conflict wording, name project ownership, express one- or two-week cycles directly, and clarify the current-streak and checkbox actions without changing behavior."
+    }
+  ],
+  "baselineBlockRetentionBeforeEditorialEdits": {
+    "en": {
+      "blocks": 549,
+      "missing": 0
+    },
+    "fr": {
+      "blocks": 551,
+      "missing": 0
+    }
+  },
+  "articles": [
+    {
+      "id": "first-project",
+      "legacySources": [
+        "first-project"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "S01"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Getting started",
+          "readerOutcomeEnglishSource": "Create or join a project, record one task and close it when its result is verified."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "S01"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Getting started",
+          "readerOutcomeEnglishSource": "Create or join a project, record one task and close it when its result is verified."
+        }
+      }
+    },
+    {
+      "id": "choose-an-instance",
+      "legacySources": [
+        "choose-an-instance"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "workflows": [
+            "S07"
+          ],
+          "compatibility": "v0.11.0",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Cloud and self-hosted instances",
+          "readerOutcomeEnglishSource": "Compare who operates the service, where data goes, and which optional providers you configure."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "workflows": [
+            "S07"
+          ],
+          "compatibility": "v0.11.0",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Cloud and self-hosted instances",
+          "readerOutcomeEnglishSource": "Compare who operates the service, where data goes, and which optional providers you configure."
+        }
+      }
+    },
+    {
+      "id": "accounts",
+      "legacySources": [
+        "account-access",
+        "account-security",
+        "account-recovery",
+        "profile-and-preferences",
+        "privacy-and-account-deletion"
+      ],
+      "locales": {
+        "en": {
+          "revision": 6,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "S02",
+            "A02",
+            "S03",
+            "A01",
+            "A09"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 10,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 8,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Accounts",
+          "readerOutcomeEnglishSource": "Create and protect your account, recover access, change preferences and understand account deletion."
+        },
+        "fr": {
+          "revision": 6,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "S02",
+            "A02",
+            "S03",
+            "A01",
+            "A09"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 10,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 8,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Accounts",
+          "readerOutcomeEnglishSource": "Create and protect your account, recover access, change preferences and understand account deletion."
+        }
+      }
+    },
+    {
+      "id": "transfer-between-instances",
+      "legacySources": [
+        "transfer-between-instances"
+      ],
+      "locales": {
+        "en": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "A07"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Account data transfers",
+          "readerOutcomeEnglishSource": "Export a private JSON file, import additively and inspect conflicts and exclusions."
+        },
+        "fr": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "A07"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Account data transfers",
+          "readerOutcomeEnglishSource": "Export a private JSON file, import additively and inspect conflicts and exclusions."
+        }
+      }
+    },
+    {
+      "id": "applications",
+      "legacySources": [
+        "web-and-mobile",
+        "install-the-pwa",
+        "desktop-app",
+        "devices-and-notifications"
+      ],
+      "locales": {
+        "en": {
+          "revision": 4,
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "workflows": [
+            "A10",
+            "A11",
+            "A12",
+            "A03"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 8,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 5,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Web, mobile and desktop apps",
+          "readerOutcomeEnglishSource": "Use Minddy in a browser, install the mobile or desktop app and configure device notifications."
+        },
+        "fr": {
+          "revision": 4,
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "workflows": [
+            "A10",
+            "A11",
+            "A12",
+            "A03"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 8,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 5,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Web, mobile and desktop apps",
+          "readerOutcomeEnglishSource": "Use Minddy in a browser, install the mobile or desktop app and configure device notifications."
+        }
+      }
+    },
+    {
+      "id": "projects",
+      "legacySources": [
+        "project-settings",
+        "project-members"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "owner",
+            "member"
+          ],
+          "workflows": [
+            "S05",
+            "S06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 5,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Projects and members",
+          "readerOutcomeEnglishSource": "Configure a project, invite collaborators and manage membership with the appropriate permissions."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "owner",
+            "member"
+          ],
+          "workflows": [
+            "S05",
+            "S06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 5,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Projects and members",
+          "readerOutcomeEnglishSource": "Configure a project, invite collaborators and manage membership with the appropriate permissions."
+        }
+      }
+    },
+    {
+      "id": "issues",
+      "legacySources": [
+        "create-an-issue",
+        "triage-incoming-work",
+        "issue-statuses",
+        "issue-discussion-and-resources",
+        "issue-dependencies",
+        "sub-issues",
+        "implementation-plans",
+        "recurring-issues",
+        "bulk-issue-actions",
+        "import-issues"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "workflows": [
+            "W01",
+            "W03",
+            "W02",
+            "W08",
+            "W05",
+            "W06",
+            "W07",
+            "W09",
+            "W04",
+            "A06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 20,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 10,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Issues",
+          "readerOutcomeEnglishSource": "Create and organize issues, track their lifecycle, maintain dependencies and plans, and import or update work in bulk."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "workflows": [
+            "W01",
+            "W03",
+            "W02",
+            "W08",
+            "W05",
+            "W06",
+            "W07",
+            "W09",
+            "W04",
+            "A06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 20,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 10,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Issues",
+          "readerOutcomeEnglishSource": "Create and organize issues, track their lifecycle, maintain dependencies and plans, and import or update work in bulk."
+        }
+      }
+    },
+    {
+      "id": "objectives",
+      "legacySources": [
+        "objectives",
+        "objective-dependencies-and-momentum"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W10",
+            "W11"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Objectives",
+          "readerOutcomeEnglishSource": "Define a project outcome, attach its work and interpret progress, dependencies and momentum."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W10",
+            "W11"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Objectives",
+          "readerOutcomeEnglishSource": "Define a project outcome, attach its work and interpret progress, dependencies and momentum."
+        }
+      }
+    },
+    {
+      "id": "views",
+      "legacySources": [
+        "views-and-filters",
+        "share-a-view"
+      ],
+      "locales": {
+        "en": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W13",
+            "W14"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Views and filters",
+          "readerOutcomeEnglishSource": "Save a filtered view of accessible work, share it read-only and revoke public access when needed."
+        },
+        "fr": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W13",
+            "W14"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Views and filters",
+          "readerOutcomeEnglishSource": "Save a filtered view of accessible work, share it read-only and revoke public access when needed."
+        }
+      }
+    },
+    {
+      "id": "navigation",
+      "legacySources": [
+        "navigation",
+        "search-and-shortcuts"
+      ],
+      "locales": {
+        "en": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "S04",
+            "W15"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 5,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Navigation and search",
+          "readerOutcomeEnglishSource": "Navigate personal and project work, use tabs and panels, and find accessible items with search and keyboard shortcuts."
+        },
+        "fr": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "S04",
+            "W15"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 5,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Navigation and search",
+          "readerOutcomeEnglishSource": "Navigate personal and project work, use tabs and panels, and find accessible items with search and keyboard shortcuts."
+        }
+      }
+    },
+    {
+      "id": "notifications-and-inbox",
+      "legacySources": [
+        "notifications-and-inbox"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W16"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Inbox and notifications",
+          "readerOutcomeEnglishSource": "Review unread activity and mentions, then adjust account notification preferences."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W16"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Inbox and notifications",
+          "readerOutcomeEnglishSource": "Review unread activity and mentions, then adjust account notification preferences."
+        }
+      }
+    },
+    {
+      "id": "personal-cycle",
+      "legacySources": [
+        "personal-cycle"
+      ],
+      "locales": {
+        "en": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W12"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Personal cycles",
+          "readerOutcomeEnglishSource": "Select work across projects for a weekly or fortnightly planning period."
+        },
+        "fr": {
+          "revision": 4,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W12"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Personal cycles",
+          "readerOutcomeEnglishSource": "Select work across projects for a weekly or fortnightly planning period."
+        }
+      }
+    },
+    {
+      "id": "task-notebook",
+      "legacySources": [
+        "task-notebook"
+      ],
+      "locales": {
+        "en": {
+          "revision": 3,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W17"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Task notebook",
+          "readerOutcomeEnglishSource": "Write quick notes and turn a selected task into project work when it needs tracking."
+        },
+        "fr": {
+          "revision": 3,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W17"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Task notebook",
+          "readerOutcomeEnglishSource": "Write quick notes and turn a selected task into project work when it needs tracking."
+        }
+      }
+    },
+    {
+      "id": "personal-statistics",
+      "legacySources": [
+        "personal-statistics"
+      ],
+      "locales": {
+        "en": {
+          "revision": 3,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W18"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Personal statistics",
+          "readerOutcomeEnglishSource": "Compare completion activity and time measurements within their actual scope."
+        },
+        "fr": {
+          "revision": 3,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "W18"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Personal statistics",
+          "readerOutcomeEnglishSource": "Compare completion activity and time measurements within their actual scope."
+        }
+      }
+    },
+    {
+      "id": "trash-and-recovery",
+      "legacySources": [
+        "trash-and-recovery"
+      ],
+      "locales": {
+        "en": {
+          "revision": 4,
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "workflows": [
+            "W19"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Trash and recovery",
+          "readerOutcomeEnglishSource": "Find a deleted object, restore its dependencies and distinguish permanent removal."
+        },
+        "fr": {
+          "revision": 4,
+          "audiences": [
+            "member",
+            "owner"
+          ],
+          "workflows": [
+            "W19"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Trash and recovery",
+          "readerOutcomeEnglishSource": "Find a deleted object, restore its dependencies and distinguish permanent removal."
+        }
+      }
+    },
+    {
+      "id": "pages",
+      "legacySources": [
+        "create-and-organize-pages",
+        "page-editor",
+        "page-comments-and-collaboration",
+        "page-files",
+        "page-history",
+        "publish-a-page",
+        "import-export-and-print-pages"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "member",
+            "visitor"
+          ],
+          "workflows": [
+            "P01",
+            "P02",
+            "P03",
+            "P04",
+            "P05",
+            "P06",
+            "P07"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 14,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 7,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Pages",
+          "readerOutcomeEnglishSource": "Build a project wiki, edit and discuss pages, manage files and history, publish or export content, and find the supported database import workflow."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "member",
+            "visitor"
+          ],
+          "workflows": [
+            "P01",
+            "P02",
+            "P03",
+            "P04",
+            "P05",
+            "P06",
+            "P07"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 14,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 7,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Pages",
+          "readerOutcomeEnglishSource": "Build a project wiki, edit and discuss pages, manage files and history, publish or export content, and find the supported database import workflow."
+        }
+      }
+    },
+    {
+      "id": "databases",
+      "legacySources": [
+        "create-a-database",
+        "database-cells-and-entries",
+        "change-a-database-schema",
+        "import-a-database"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "P08",
+            "P09",
+            "P10",
+            "P11"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 9,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 4,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Databases",
+          "readerOutcomeEnglishSource": "Create a database, edit values and entry pages, change its schema and import a complete database safely."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "P08",
+            "P09",
+            "P10",
+            "P11"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 9,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 4,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Databases",
+          "readerOutcomeEnglishSource": "Create a database, edit values and entry pages, change its schema and import a complete database safely."
+        }
+      }
+    },
+    {
+      "id": "feedback",
+      "legacySources": [
+        "publish-a-feedback-board",
+        "submit-and-follow-feedback",
+        "moderate-feedback",
+        "feedback-to-issue",
+        "feedback-pages-and-views"
+      ],
+      "locales": {
+        "en": {
+          "revision": 3,
+          "audiences": [
+            "owner",
+            "visitor",
+            "member"
+          ],
+          "workflows": [
+            "F01",
+            "F02",
+            "F03",
+            "F04",
+            "F05"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 10,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 5,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Feedback",
+          "readerOutcomeEnglishSource": "Publish a feedback board, follow requests, moderate submissions and connect accepted feedback to project work."
+        },
+        "fr": {
+          "revision": 3,
+          "audiences": [
+            "owner",
+            "visitor",
+            "member"
+          ],
+          "workflows": [
+            "F01",
+            "F02",
+            "F03",
+            "F04",
+            "F05"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 10,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 5,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Feedback",
+          "readerOutcomeEnglishSource": "Publish a feedback board, follow requests, moderate submissions and connect accepted feedback to project work."
+        }
+      }
+    },
+    {
+      "id": "numo",
+      "legacySources": [
+        "work-with-numo",
+        "numo-permissions-and-approvals",
+        "numo-execution-model",
+        "numo-mcp-connections",
+        "recover-numo-work"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "owner",
+            "integrator",
+            "operator"
+          ],
+          "workflows": [
+            "N01",
+            "N02",
+            "T05",
+            "N08",
+            "N05"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 12,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 6,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Numo",
+          "readerOutcomeEnglishSource": "Work with Numo, understand its permissions and execution, connect MCP services and recover waiting or interrupted work."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "owner",
+            "integrator",
+            "operator"
+          ],
+          "workflows": [
+            "N01",
+            "N02",
+            "T05",
+            "N08",
+            "N05"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 12,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 6,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Numo",
+          "readerOutcomeEnglishSource": "Work with Numo, understand its permissions and execution, connect MCP services and recover waiting or interrupted work."
+        }
+      }
+    },
+    {
+      "id": "code-work",
+      "legacySources": [
+        "delegate-code-work",
+        "review-pull-requests"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "N03",
+            "N04"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Code work and pull requests",
+          "readerOutcomeEnglishSource": "Delegate issue implementation to a code worker, continue the work and review the linked pull request."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "N03",
+            "N04"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Code work and pull requests",
+          "readerOutcomeEnglishSource": "Delegate issue implementation to a code worker, continue the work and review the linked pull request."
+        }
+      }
+    },
+    {
+      "id": "git",
+      "legacySources": [
+        "git-accounts-and-repositories",
+        "forge-issue-sync"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "owner",
+            "member",
+            "integrator"
+          ],
+          "workflows": [
+            "N10",
+            "N11"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 4,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Git repositories and issue sync",
+          "readerOutcomeEnglishSource": "Connect a Git account, link a project repository and configure issue synchronization with its provider."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "owner",
+            "member",
+            "integrator"
+          ],
+          "workflows": [
+            "N10",
+            "N11"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 4,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Git repositories and issue sync",
+          "readerOutcomeEnglishSource": "Connect a Git account, link a project repository and configure issue synchronization with its provider."
+        }
+      }
+    },
+    {
+      "id": "scheduled-routines",
+      "legacySources": [
+        "scheduled-routines"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "owner"
+          ],
+          "workflows": [
+            "N06"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Scheduled routines",
+          "readerOutcomeEnglishSource": "Set project context, a timezone and an AI cap, then inspect each occurrence."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "owner"
+          ],
+          "workflows": [
+            "N06"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Scheduled routines",
+          "readerOutcomeEnglishSource": "Set project context, a timezone and an AI cap, then inspect each occurrence."
+        }
+      }
+    },
+    {
+      "id": "repository-skills",
+      "legacySources": [
+        "repository-skills"
+      ],
+      "locales": {
+        "en": {
+          "revision": 3,
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "workflows": [
+            "N07"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Repository skills",
+          "readerOutcomeEnglishSource": "Publish reusable instructions in the linked repository and select only the skills needed."
+        },
+        "fr": {
+          "revision": 3,
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "workflows": [
+            "N07"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Repository skills",
+          "readerOutcomeEnglishSource": "Publish reusable instructions in the linked repository and select only the skills needed."
+        }
+      }
+    },
+    {
+      "id": "ai-settings-and-usage",
+      "legacySources": [
+        "ai-keys-and-models",
+        "plans-and-ai-usage"
+      ],
+      "locales": {
+        "en": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "A04",
+            "A08"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 5,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "AI settings and usage",
+          "readerOutcomeEnglishSource": "Configure personal AI keys and model defaults, and understand Cloud plan limits and usage accounting."
+        },
+        "fr": {
+          "revision": 5,
+          "audiences": [
+            "member"
+          ],
+          "workflows": [
+            "A04",
+            "A08"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 5,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "AI settings and usage",
+          "readerOutcomeEnglishSource": "Configure personal AI keys and model defaults, and understand Cloud plan limits and usage accounting."
+        }
+      }
+    },
+    {
+      "id": "automation-settings",
+      "legacySources": [
+        "automation-settings"
+      ],
+      "locales": {
+        "en": {
+          "revision": 4,
+          "audiences": [
+            "owner"
+          ],
+          "workflows": [
+            "A05"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Issue automation",
+          "readerOutcomeEnglishSource": "Separate account automation preferences from owner-only project rules."
+        },
+        "fr": {
+          "revision": 4,
+          "audiences": [
+            "owner"
+          ],
+          "workflows": [
+            "A05"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 2,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Issue automation",
+          "readerOutcomeEnglishSource": "Separate account automation preferences from owner-only project rules."
+        }
+      }
+    },
+    {
+      "id": "minddy-mcp",
+      "legacySources": [
+        "external-minddy-mcp",
+        "mcp-tool-reference"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "integrator",
+            "member"
+          ],
+          "workflows": [
+            "N09",
+            "T06"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 6,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Minddy MCP",
+          "readerOutcomeEnglishSource": "Connect an external assistant to Minddy, control its access and discover the available MCP tools and safe update patterns."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "integrator",
+            "member"
+          ],
+          "workflows": [
+            "N09",
+            "T06"
+          ],
+          "compatibility": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 6,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Minddy MCP",
+          "readerOutcomeEnglishSource": "Connect an external assistant to Minddy, control its access and discover the available MCP tools and safe update patterns."
+        }
+      }
+    },
+    {
+      "id": "installation",
+      "legacySources": [
+        "self-hosted-compatibility",
+        "install-a-server",
+        "managed-or-source-installation"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H01",
+            "H03",
+            "H04"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 13,
+          "baselineFencedBlocksPreserved": 7,
+          "baselineImageReferencesPreserved": 4,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Self-hosted installation",
+          "readerOutcomeEnglishSource": "Choose a verified release and installation profile, install the full, managed or source profile and check its operating limits."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H01",
+            "H03",
+            "H04"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 13,
+          "baselineFencedBlocksPreserved": 7,
+          "baselineImageReferencesPreserved": 4,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Self-hosted installation",
+          "readerOutcomeEnglishSource": "Choose a verified release and installation profile, install the full, managed or source profile and check its operating limits."
+        }
+      }
+    },
+    {
+      "id": "install-locally",
+      "legacySources": [
+        "install-locally"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H02"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Local instances",
+          "readerOutcomeEnglishSource": "Use a dedicated clone for evaluation with Node.js 24, pnpm 10.28.0, Git, Supabase CLI and a running Docker daemon."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H02"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Local instances",
+          "readerOutcomeEnglishSource": "Use a dedicated clone for evaluation with Node.js 24, pnpm 10.28.0, Git, Supabase CLI and a running Docker daemon."
+        }
+      }
+    },
+    {
+      "id": "instance-configuration",
+      "legacySources": [
+        "instance-configuration",
+        "optional-providers",
+        "proxy-network-and-jobs"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H05",
+            "H09",
+            "H08"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 9,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance configuration",
+          "readerOutcomeEnglishSource": "Configure origins, secrets and optional providers, expose the intended network endpoints and keep scheduled jobs running."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H05",
+            "H09",
+            "H08"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 9,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance configuration",
+          "readerOutcomeEnglishSource": "Configure origins, secrets and optional providers, expose the intended network endpoints and keep scheduled jobs running."
+        }
+      }
+    },
+    {
+      "id": "authentication-and-email",
+      "legacySources": [
+        "authentication-and-email"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Authentication and email",
+          "readerOutcomeEnglishSource": "Auth email belongs to Supabase/GoTrue."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Authentication and email",
+          "readerOutcomeEnglishSource": "Auth email belongs to Supabase/GoTrue."
+        }
+      }
+    },
+    {
+      "id": "storage-and-attachments",
+      "legacySources": [
+        "storage-and-attachments"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H07"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 2,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Storage and attachments",
+          "readerOutcomeEnglishSource": "PostgreSQL stores Storage object metadata and application file references."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H07"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 2,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Storage and attachments",
+          "readerOutcomeEnglishSource": "PostgreSQL stores Storage object metadata and application file references."
+        }
+      }
+    },
+    {
+      "id": "workspace-encryption",
+      "legacySources": [
+        "workspace-encryption"
+      ],
+      "locales": {
+        "en": {
+          "revision": 3,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H10"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Workspace encryption",
+          "readerOutcomeEnglishSource": "Check encryption behavior for your release and preserve credential and workspace recovery keys."
+        },
+        "fr": {
+          "revision": 3,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H10"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Workspace encryption",
+          "readerOutcomeEnglishSource": "Check encryption behavior for your release and preserve credential and workspace recovery keys."
+        }
+      }
+    },
+    {
+      "id": "backups-and-restoration",
+      "legacySources": [
+        "back-up-the-reference-instance",
+        "logical-and-provider-backups",
+        "restore-and-roll-back"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H11",
+            "H12",
+            "H14"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 13,
+          "baselineFencedBlocksPreserved": 12,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Backups and restoration",
+          "readerOutcomeEnglishSource": "Preserve database, Storage, configuration and encryption keys, choose a backup method and restore a complete set to a blank target."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H11",
+            "H12",
+            "H14"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "new paired opening",
+          "headingCount": 13,
+          "baselineFencedBlocksPreserved": 12,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Backups and restoration",
+          "readerOutcomeEnglishSource": "Preserve database, Storage, configuration and encryption keys, choose a backup method and restore a complete set to a blank target."
+        }
+      }
+    },
+    {
+      "id": "update-an-instance",
+      "legacySources": [
+        "update-an-instance"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H13"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 2,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance updates",
+          "readerOutcomeEnglishSource": "Upgrade one published release at a time."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H13"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 2,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance updates",
+          "readerOutcomeEnglishSource": "Upgrade one published release at a time."
+        }
+      }
+    },
+    {
+      "id": "self-hosted-diagnostics",
+      "legacySources": [
+        "self-hosted-diagnostics"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H15"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 0,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance diagnostics",
+          "readerOutcomeEnglishSource": "Run the read-only doctor from the exact release checkout and installed environment."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H15"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 1,
+          "baselineImageReferencesPreserved": 0,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance diagnostics",
+          "readerOutcomeEnglishSource": "Run the read-only doctor from the exact release checkout and installed environment."
+        }
+      }
+    },
+    {
+      "id": "instance-administration",
+      "legacySources": [
+        "instance-administration"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H16"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance administration",
+          "readerOutcomeEnglishSource": "Instance administration is separate from project ownership."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator"
+          ],
+          "workflows": [
+            "H16"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 3,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Instance administration",
+          "readerOutcomeEnglishSource": "Instance administration is separate from project ownership."
+        }
+      }
+    },
+    {
+      "id": "architecture-and-data-flows",
+      "legacySources": [
+        "architecture-and-data-flows"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "operator",
+            "integrator"
+          ],
+          "workflows": [
+            "T03"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Architecture and data flows",
+          "readerOutcomeEnglishSource": "The Next.js application serves the interface and authorized server APIs."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "operator",
+            "integrator"
+          ],
+          "workflows": [
+            "T03"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Architecture and data flows",
+          "readerOutcomeEnglishSource": "The Next.js application serves the interface and authorized server APIs."
+        }
+      }
+    },
+    {
+      "id": "glossary-and-data-model",
+      "legacySources": [
+        "glossary-and-data-model"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "workflows": [
+            "T01"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Glossary and data model",
+          "readerOutcomeEnglishSource": "A project is the shared workspace for members, issues, categories, saved views, pages, integrations and its feedback board."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "integrator"
+          ],
+          "workflows": [
+            "T01"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Glossary and data model",
+          "readerOutcomeEnglishSource": "A project is the shared workspace for members, issues, categories, saved views, pages, integrations and its feedback board."
+        }
+      }
+    },
+    {
+      "id": "permissions-and-public-links",
+      "legacySources": [
+        "permissions-and-public-links"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "owner",
+            "integrator"
+          ],
+          "workflows": [
+            "T02"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Permissions and public links",
+          "readerOutcomeEnglishSource": "The server checks project access on every scoped operation."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "owner",
+            "integrator"
+          ],
+          "workflows": [
+            "T02"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Permissions and public links",
+          "readerOutcomeEnglishSource": "The server checks project access on every scoped operation."
+        }
+      }
+    },
+    {
+      "id": "encryption-and-data-boundaries",
+      "legacySources": [
+        "encryption-and-data-boundaries"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "workflows": [
+            "T04"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Encryption and data boundaries",
+          "readerOutcomeEnglishSource": "When configured and migrated, Minddy encrypts workspace content and files before durable writes with authenticated server-side encryption."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "member",
+            "operator"
+          ],
+          "workflows": [
+            "T04"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 3,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Encryption and data boundaries",
+          "readerOutcomeEnglishSource": "When configured and migrated, Minddy encrypts workspace content and files before durable writes with authenticated server-side encryption."
+        }
+      }
+    },
+    {
+      "id": "api-and-webhooks",
+      "legacySources": [
+        "integration-api-and-webhooks",
+        "feedback-ingestion-and-sso"
+      ],
+      "locales": {
+        "en": {
+          "revision": 3,
+          "audiences": [
+            "integrator"
+          ],
+          "workflows": [
+            "T07",
+            "F06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 7,
+          "baselineFencedBlocksPreserved": 2,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "API, webhooks and feedback SSO",
+          "readerOutcomeEnglishSource": "Create issues or feedback through the integration API, verify signed webhooks and authenticate feedback visitors with SSO."
+        },
+        "fr": {
+          "revision": 3,
+          "audiences": [
+            "integrator"
+          ],
+          "workflows": [
+            "T07",
+            "F06"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+          "featureOpening": "new paired opening",
+          "headingCount": 7,
+          "baselineFencedBlocksPreserved": 2,
+          "baselineImageReferencesPreserved": 2,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "API, webhooks and feedback SSO",
+          "readerOutcomeEnglishSource": "Create issues or feedback through the integration API, verify signed webhooks and authenticate feedback visitors with SSO."
+        }
+      }
+    },
+    {
+      "id": "integration-troubleshooting",
+      "legacySources": [
+        "integration-troubleshooting"
+      ],
+      "locales": {
+        "en": {
+          "revision": 2,
+          "audiences": [
+            "integrator"
+          ],
+          "workflows": [
+            "T08"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Connection troubleshooting",
+          "readerOutcomeEnglishSource": "Minddy MCP connects an external assistant to Minddy; personal MCP connections let Numo call another server."
+        },
+        "fr": {
+          "revision": 2,
+          "audiences": [
+            "integrator"
+          ],
+          "workflows": [
+            "T08"
+          ],
+          "compatibility": "0.11.1 candidate (89ebb59a5)",
+          "featureOpening": "retained focused opening and summary",
+          "headingCount": 4,
+          "baselineFencedBlocksPreserved": 0,
+          "baselineImageReferencesPreserved": 1,
+          "reviewOutcome": "Editorial and retained-meaning review completed; operational verification inherited, not rerun.",
+          "titleEnglishSource": "Connection troubleshooting",
+          "readerOutcomeEnglishSource": "Minddy MCP connects an external assistant to Minddy; personal MCP connections let Numo call another server."
+        }
+      }
+    }
+  ],
+  "auditTotals": {
+    "en": {
+      "guides": 42,
+      "legacyArticlesCovered": 90,
+      "fencedCodeBlocksPreserved": 30,
+      "imageReferencesPreserved": 102,
+      "headingParity": "matching IDs, levels and order in EN/FR"
+    },
+    "fr": {
+      "guides": 42,
+      "legacyArticlesCovered": 90,
+      "fencedCodeBlocksPreserved": 30,
+      "imageReferencesPreserved": 102,
+      "headingParity": "matching IDs, levels and order in EN/FR"
+    }
+  },
+  "revisionFinalization": "Parent raised current guide, English source and figure revisions above the highest inherited revision in every locale. Article wording was unchanged by this metadata correction; this record identifies the resulting guide revisions."
+}

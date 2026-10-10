@@ -1,0 +1,70 @@
+[
+  [
+    "Project navigation beside the demonstration issue board.",
+    "Use the project sidebar to switch between issues, objectives, pages and triage."
+  ],
+  [
+    "Action menu for two selected demonstration issues.",
+    "The menu applies an action to the selected issues. No grouped change was submitted in this capture."
+  ],
+  [
+    "Search for a blocker by issue identifier.",
+    "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation."
+  ],
+  [
+    "Sub-issue creation field in a demonstration parent issue.",
+    "The inline field creates a child under this parent; a child keeps its own status and discussion."
+  ],
+  [
+    "Demonstration plan showing two of six work tasks complete.",
+    "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed."
+  ],
+  [
+    "Add-link dialog with an example contact URL.",
+    "Review the destination before adding a resource. This example link has not been submitted."
+  ],
+  [
+    "Manual view filters and the sorting menu.",
+    "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls."
+  ],
+  [
+    "View-sharing dialog with private access selected.",
+    "Private, password-protected and public access are distinct choices. This capture keeps the view private."
+  ],
+  [
+    "Search results for a demonstration issue identifier.",
+    "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules."
+  ],
+  [
+    "Inbox tabs and the empty unread state.",
+    "An empty Unread tab means no unread items in this view; use All to inspect other retained notifications."
+  ],
+  [
+    "Localized demonstration tasks in the personal notebook.",
+    "The notebook keeps personal steps outside the project issue hierarchy. The sample task states remain unchanged."
+  ],
+  [
+    "Personal statistics for the demonstration account.",
+    "The displayed sample is the account’s recorded activity. A missing duration estimate is not zero working time."
+  ],
+  [
+    "Completed demonstration issue with its description and saved comment.",
+    "The completed state records the application reader check. It does not assert that the example website’s email link was tested."
+  ],
+  [
+    "Unsubmitted objective-creation dialog with a demonstration result name.",
+    "Name the result before choosing the lead, target date and status. This dialog has not created a second objective."
+  ],
+  [
+    "Objective momentum after an actual demonstration completion.",
+    "Read momentum alongside the linked work. This history is insufficient to show an estimated finish date."
+  ],
+  [
+    "A demonstration issue in the personal cycle’s backlog.",
+    "Adding the issue to this cycle assigned its owner while preserving backlog status."
+  ],
+  [
+    "Recoverable demonstration issue with thirty days remaining in trash.",
+    "Use the row’s actions to restore the issue. Emptying trash is a separate permanent operation."
+  ]
+]

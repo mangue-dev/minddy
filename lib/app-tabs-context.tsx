@@ -14,6 +14,7 @@ import { prefetchAppTabDestination, isPreparedAppTabDestination } from "./prefet
 import { PrBackgroundSync } from "./use-pr-background";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
+import { SessionContext, useOptionalAppTabSession } from "./app-tab-session-context";
 import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 
 interface AppTabsValue extends AppTabsSnapshot {
@@ -28,7 +29,6 @@ const Context = createContext<AppTabsValue | null>(null);
 // `NavigationContext` itself lives in ./app-tab-navigation-context (imported
 // here and re-exported below) so lower-level modules can read it without a
 // dependency cycle through this provider.
-const SessionContext = createContext<AppTabsSession | null>(null);
 
 const emptySnapshot = () => null;
 const noSubscription = () => () => {};
@@ -211,7 +211,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
 
 export const useOptionalAppTabs = () => useContext(Context);
 export { useOptionalAppTabNavigation };
-export const useOptionalAppTabSession = () => useContext(SessionContext);
+export { useOptionalAppTabSession };
 
 /** A retained board keeps its tab's local filters while another tab is active. */
 export function AppTabNavigationScope({ activeId, children }: { activeId: string | null; children: ReactNode }) {

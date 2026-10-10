@@ -1,7 +1,10 @@
+import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
+import { documentationPath, resolveDocumentationPath } from "@/lib/documentation-core.mjs";
+import { documentationMarkdownPath, prefersDocumentationMarkdown, resolveDocumentationDelivery } from "@/lib/documentation-delivery";
 import { detectFromAcceptLanguage } from "@/lib/accept-language";
 import {
   PUBLIC_ROUTE_PATHS,
@@ -205,14 +208,27 @@ function sessionUserMetadata(
 function serveLocalizedPublicRoute(request: NextRequest, pathname: string): NextResponse {
   const route = routeByPath(pathname);
   const locale = localeForPublicPath(pathname) ?? "en";
-  const englishPath = route?.en ?? pathname;
+  const documentation = resolveDocumentationPath(pathname);
+  const englishPath = documentation ? documentationPath(documentation.id, "en") : route?.en ?? pathname;
   const headers: Record<string, string> = {
     [PUBLIC_THEME_HEADER]: "1",
     [LOCALE_HEADER]: locale,
     ...(route ? { [ROUTE_HEADER]: route.key } : {}),
   };
 
-  const markdownPath = route ? `/md?route=${route.key}&locale=${locale}` : null;
+  if (documentation) {
+    const markdown = documentationMarkdownPath(documentation.id, documentation.locale);
+    const response = prefersDocumentationMarkdown(request.headers.get("accept"))
+      ? NextResponse.rewrite(rewriteTo(request, "/md/documentation"), withRequestHeaders(request, headers))
+      : pathname !== englishPath
+        ? NextResponse.rewrite(rewriteTo(request, englishPath), withRequestHeaders(request, headers))
+        : NextResponse.next(withRequestHeaders(request, headers));
+    response.headers.append("Vary", "Accept");
+    response.headers.append("Link", `<${markdown}>; rel="alternate"; type="text/markdown", <${documentationPath(null, documentation.locale)}/llms.txt>; rel="describedby"`);
+    return response;
+  }
+
+  const markdownPath = route && !documentation ? `/md?route=${route.key}&locale=${locale}` : null;
 
   // Content negotiation (MIN-88). An agent who explicitly requests
   // Markdown receives the content of the page without the 440 KB of markup it
@@ -322,6 +338,25 @@ async function routeRequest(request: NextRequest) {
   const supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY;
 
+  const delivery = resolveDocumentationDelivery(pathname);
+  if (delivery && delivery.format !== "html") {
+    return NextResponse.rewrite(rewriteTo(request, "/md/documentation"), withRequestHeaders(request));
+  }
+
+  // Official documentation is independent of sessions and backend availability.
+  if (resolveDocumentationPath(pathname)) {
+    if (pathname === "/docs" && !prefersDocumentationMarkdown(request.headers.get("accept"))) {
+      const preferred = supportedLocaleForTag(request.cookies.get("NEXT_LOCALE")?.value)
+        ?? detectFromAcceptLanguage(request.headers.get("accept-language"));
+      if (preferred && preferred !== "en") {
+        const target = request.nextUrl.clone();
+        target.pathname = documentationPath(null, preferred);
+        return NextResponse.redirect(target, 307);
+      }
+    }
+    return serveLocalizedPublicRoute(request, pathname);
+  }
+
   // Supabase not configured (empty .env) → don't block navigation.
   if (!supabaseUrl || !supabaseKey) {
     return nextClean(request);
@@ -399,7 +434,11 @@ async function routeRequest(request: NextRequest) {
       );
       applySession = applyCookies;
       if (session && !awaitsMfaChallenge(session)) {
-        return applySession(NextResponse.redirect(new URL("/home", process.env.MINDDY_PUBLIC_APP_URL || request.url)));
+        const redirect = sanitizeInternalRedirectPath(request.nextUrl.searchParams.get("redirect"));
+        const targetPath = new URL(redirect, request.url).pathname;
+        const guideRoute = routeByPath(targetPath)?.key;
+        const destination = resolveDocumentationPath(targetPath) || guideRoute === "selfHosting" || guideRoute === "selfHostingInstall" ? redirect : "/home";
+        return applySession(NextResponse.redirect(new URL(destination, process.env.MINDDY_PUBLIC_APP_URL || request.url)));
       }
     }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
-import packageJson from "@/package.json";
+import { selfHostingRelease } from "@/lib/self-hosting-release";
+import { documentationPath } from "@/lib/documentation-core.mjs";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { loadMessages } from "@/i18n/messages";
@@ -28,7 +29,7 @@ export default async function SelfHostingInstallPage({
   const locale = (await getLocale()) as Locale;
   const messages = await loadMessages(locale);
   const copy = messages.SelfHostingInstall as SelfHostingInstallCopy;
-  const releaseTag = `v${packageJson.version}`;
+  const releaseTag = selfHostingRelease.tag;
   const [confirmSignupTemplate, resetPasswordTemplate] = await Promise.all([
     readSelfHostingEmailTemplate("confirm-signup"),
     readSelfHostingEmailTemplate("reset-password"),
@@ -44,6 +45,11 @@ export default async function SelfHostingInstallPage({
         guidePath={localizedHref("/self-hosting", locale)}
         initialPath={initialPath}
         links={{
+          compatibility: documentationPath("self-hosted-compatibility", locale),
+          encryption: documentationPath("workspace-encryption", locale),
+          localInstallation: documentationPath("install-locally", locale),
+          serverInstallation: documentationPath("install-a-server", locale),
+          mcpAccess: `${documentationPath("minddy-mcp", locale)}#network-access`,
           guide: `${SITE_URL}${localizedHref("/self-hosting/install", locale)}`,
           download: `${SITE_URL}${localizedHref("/download", locale)}`,
           release: `${MINDDY_REPOSITORY_URL}/releases/tag/${releaseTag}`,
@@ -61,7 +67,7 @@ export default async function SelfHostingInstallPage({
         }}
         repositoryUrl={MINDDY_REPOSITORY_URL}
         releaseTag={releaseTag}
-        pnpmVersion="10.28.0"
+        pnpmVersion={selfHostingRelease.application.pnpm}
       />
     </div>
   );

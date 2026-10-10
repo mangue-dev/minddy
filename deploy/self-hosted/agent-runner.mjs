@@ -8,7 +8,7 @@ import {
   gitRelayConfig,
   gitRelayTarget,
 } from "./agent-runner-git-relay.mjs";
-import { agentSandboxStorage } from "./agent-runner-storage.mjs";
+import { agentSandboxStorage, base64FileChunks } from "./agent-runner-storage.mjs";
 
 const socketPath = process.env.DOCKER_HOST?.replace(/^unix:\/\//, "") || "/var/run/docker.sock";
 const secret = process.env.AGENT_RUNNER_SECRET?.trim();
@@ -56,7 +56,7 @@ function parseJson(buffer) {
 }
 
 function sandboxContainerName(name) {
-  if (!/^agent-(?:v2-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)) {
+  if (!/^agent-(?:v2-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-[0-9a-f]{12})?$/i.test(name)) {
     throw Object.assign(new Error("invalid sandbox name"), { status: 400 });
   }
   return `minddy-${name}`;
@@ -131,13 +131,16 @@ async function ensureSandbox(name) {
     await docker("POST", `/v1.44/containers/${encodeURIComponent(containerName)}/start`);
   }
   if (created) {
-    await createExec(name, {
+    const initialized = await createExec(name, {
       cmd: "sh",
-      args: ["-c", "mkdir -p /vercel/sandbox /vercel/oc /vercel/home /vercel/npm-cache && chown -R 10001:10001 /vercel"],
+      args: ["-c", "mkdir -p /vercel/sandbox /vercel/oc /vercel/home /vercel/npm-cache"],
       cwd: "/",
       timeoutMs: 30_000,
-      _user: "0:0",
     });
+    if (initialized.exitCode !== 0) {
+      await removeSandbox(name, await inspectContainer(name));
+      throw new Error("sandbox initialization failed");
+    }
   }
   return { created };
 }
@@ -332,6 +335,8 @@ async function relayLlmCompletion(name, request, response) {
 async function relayGit(name, action, request, response, url) {
   const relay = gitRelays.get(name);
   if (!relay || !authorizedGitRelay(request.headers.authorization, relay.controlToken)) {
+    // Git waits for the HTTP challenge before sending URL credentials.
+    response.setHeader("www-authenticate", 'Basic realm="Minddy Git relay"');
     return json(response, 401, { error: "unauthorized" });
   }
   const target = gitRelayTarget(relay, action, url.search, request.method);
@@ -440,11 +445,11 @@ const server = createServer(async (request, response) => {
         if (typeof file.content !== "string") throw Object.assign(new Error("file content must be base64"), { status: 400 });
         const temporary = `${target}.minddy-write`;
         await runUtility(name, `mkdir -p ${shellQuote(path.dirname(target))}; : > ${shellQuote(temporary)}`);
-        for (let offset = 0; offset < file.content.length; offset += 262_144) {
+        for (const chunk of base64FileChunks(file.content)) {
           await runUtility(
             name,
             `printf %s "$MINDDY_FILE" | base64 -d >> ${shellQuote(temporary)}`,
-            { MINDDY_FILE: file.content.slice(offset, offset + 262_144) },
+            { MINDDY_FILE: chunk },
           );
         }
         await runUtility(name, `mv ${shellQuote(temporary)} ${shellQuote(target)}`);

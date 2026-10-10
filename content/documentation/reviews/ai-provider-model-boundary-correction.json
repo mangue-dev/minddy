@@ -1,0 +1,78 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "sources": [
+    "lib/server/agent/model.ts:141",
+    "lib/server/agent/model.ts:514",
+    "lib/server/ai-runtime.ts:104"
+  ],
+  "scope": "Distinguish configured managed AI fallback from explicitly chosen provider-bound worker models and frozen BYOK payer. Same-provider choices are not incorrectly promised to fail; mismatched provider choices require account re-selection. No command or runtime test claimed.",
+  "records": [
+    {
+      "locale": "en",
+      "article": "ai-keys-and-models",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a02e8341c42df01508f0ae3aaaa358e7eddbee30f97f941715538d1820c637b1",
+      "before": "An unconfirmed key leaves runs on Minddy's quota until the provider can be reached.",
+      "after": "For AI calls with managed fallback available, an unconfirmed or unreachable key leaves usage on Minddy. This depends on configured managed AI; code workers have the provider-bound model rules below.",
+      "modelsAddition": "Code-model choices are tied to their provider. After changing, disabling or losing a personal key, the previous choice may no longer match the active provider. A new worker then refuses to start until you choose a compatible code model in account AI settings; it does not silently select a cheaper model or a platform default. An already frozen BYOK run does not switch payer when its key becomes unavailable.",
+      "independentReviewPending": true
+    },
+    {
+      "locale": "fr",
+      "article": "ai-keys-and-models",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "8b71432ec8077702576ba4664d7864b9eb85dab2ad432cc07d433d971aefad0a",
+      "before": "Tant qu’une clé n’est pas confirmée et que le fournisseur n’est pas joignable, les exécutions continuent à utiliser le quota Minddy.",
+      "after": "Pour les appels IA disposant d’un recours géré, une clé non confirmée ou injoignable laisse l’utilisation sur Minddy. Ce recours exige une IA gérée configurée ; les workers de code suivent les règles de modèle lié au fournisseur ci-dessous.",
+      "modelsAddition": "Le choix du modèle de code est lié à son fournisseur. Après le changement, la désactivation ou la perte d’une clé personnelle, le choix précédent peut ne plus correspondre au fournisseur actif. Un nouveau worker refuse alors de démarrer jusqu’au choix d’un modèle compatible dans les réglages IA du compte ; il ne sélectionne pas automatiquement un modèle moins cher ou une valeur par défaut de la plateforme. Une exécution BYOK déjà fixée ne change pas de payeur lorsque sa clé devient indisponible.",
+      "independentReviewPending": true
+    },
+    {
+      "locale": "de",
+      "article": "ai-keys-and-models",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "57f1a148959a3f11b2e53f6a8f251b26a090e6222deb5773b9d3580587855633",
+      "before": "Solange ein Schlüssel nicht bestätigt ist und der Anbieter nicht erreicht werden kann, verwenden Ausführungen weiterhin das Minddy-Kontingent.",
+      "after": "Bei KI-Aufrufen mit verfügbarer verwalteter Alternative bleibt der Verbrauch bei Minddy, wenn ein Schlüssel unbestätigt oder nicht erreichbar ist. Dies setzt konfigurierte verwaltete KI voraus; Codeworker folgen den unten beschriebenen anbietergebundenen Modellregeln.",
+      "modelsAddition": "Die Wahl des Codemodells ist an seinen Anbieter gebunden. Nach dem Ändern, Deaktivieren oder Verlust eines persönlichen Schlüssels passt die bisherige Auswahl möglicherweise nicht mehr zum aktiven Anbieter. Ein neuer Worker startet dann erst, wenn Sie in den KI-Kontoeinstellungen ein kompatibles Codemodell wählen. Er wählt nicht stillschweigend ein günstigeres Modell oder einen Plattformstandard. Ein bereits festgelegter BYOK-Lauf wechselt den Kostenträger nicht, wenn sein Schlüssel nicht mehr verfügbar ist.",
+      "independentReviewPending": true
+    },
+    {
+      "locale": "es",
+      "article": "ai-keys-and-models",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "b320bd2f80da727bba237286fe8ea2cd5fc3e51eed4ae30b6ed143e58a33ddce",
+      "before": "Una clave sin confirmar mantiene las ejecuciones en la cuota de Minddy hasta que se pueda contactar con el proveedor.",
+      "after": "Para las llamadas de IA con una alternativa gestionada disponible, una clave sin confirmar o inaccesible mantiene el consumo en Minddy. Esto exige IA gestionada configurada; los workers de código siguen las reglas de modelo vinculado al proveedor que se explican a continuación.",
+      "modelsAddition": "La elección del modelo de código está vinculada a su proveedor. Después de cambiar, desactivar o perder una clave personal, la elección anterior puede dejar de corresponder al proveedor activo. Entonces un nuevo worker rechaza el inicio hasta que elija un modelo compatible en la configuración de IA de la cuenta; no selecciona automáticamente un modelo más barato ni un valor predeterminado de la plataforma. Una ejecución BYOK ya fijada no cambia de pagador cuando su clave deja de estar disponible.",
+      "independentReviewPending": true
+    },
+    {
+      "locale": "it",
+      "article": "ai-keys-and-models",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "a087eb9838f3553a139ca5e2be966c268a288cc79f3a276d1ade3d56fd67f3ef",
+      "before": "Finché una chiave non è confermata e il provider non è raggiungibile, le esecuzioni continuano a usare il contingente di Minddy.",
+      "after": "Per le chiamate IA con un’alternativa gestita disponibile, una chiave non confermata o irraggiungibile mantiene l’utilizzo su Minddy. Questo richiede IA gestita configurata; i worker di codice seguono le regole del modello legato al provider riportate sotto.",
+      "modelsAddition": "La scelta del modello di codice è legata al suo provider. Dopo la modifica, la disattivazione o la perdita di una chiave personale, la scelta precedente potrebbe non corrispondere più al provider attivo. Un nuovo worker rifiuta quindi di avviarsi finché non scegli un modello compatibile nelle impostazioni IA dell’account; non seleziona automaticamente un modello più economico o un valore predefinito della piattaforma. Un’esecuzione BYOK già fissata non cambia chi paga quando la sua chiave diventa indisponibile.",
+      "independentReviewPending": true
+    },
+    {
+      "locale": "pt-BR",
+      "article": "ai-keys-and-models",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "a2560221ce66438e1b87140b9b99f0f59ab777260453886675671914877755f2",
+      "before": "Enquanto uma chave não estiver confirmada e o provedor não puder ser alcançado, as execuções continuam usando a cota do Minddy.",
+      "after": "Nas chamadas de IA com alternativa gerenciada disponível, uma chave não confirmada ou inacessível mantém o consumo no Minddy. Isso exige IA gerenciada configurada; os workers de código seguem as regras de modelo vinculado ao provedor descritas abaixo.",
+      "modelsAddition": "A escolha do modelo de código está vinculada ao provedor. Depois de alterar, desativar ou perder uma chave pessoal, a escolha anterior pode deixar de corresponder ao provedor ativo. Nesse caso, um novo worker recusa o início até que você escolha um modelo compatível nas configurações de IA da conta; ele não seleciona automaticamente um modelo mais barato nem um padrão da plataforma. Uma execução BYOK já fixada não muda quem paga quando sua chave fica indisponível.",
+      "independentReviewPending": true
+    }
+  ]
+}

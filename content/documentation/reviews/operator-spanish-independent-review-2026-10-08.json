@@ -1,0 +1,258 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "humanReview": false,
+  "scope": "All 24 H/T Spanish bodies and complete English sources, preserving actions, limits, warnings, profile distinctions, source/release caveats and executable block identity. Language/source comparison, not an operational acceptance or visual review.",
+  "findingsCorrected": [
+    "H01 base de datos and mutable image tag meaning",
+    "H08/H10 caption grammar",
+    "T01 linked-feedback public status follows issue automatically",
+    "T02 optional-password access condition",
+    "H15 database reset precaution",
+    "T03 deployment platform distinction",
+    "T04 unattended authorized AI processing",
+    "T05 code model and reasoning defaults distinction"
+  ],
+  "articles": [
+    {
+      "workflow": "T03",
+      "article": "architecture-and-data-flows",
+      "sourceRevision": 1,
+      "sourceBodySha256": "cb45c14a14dc26bf14e4cc163e1b995fedf54655307dbe42b125d10940bfd91e",
+      "bodySha256": "3463236ba5fb9f7d4973b4de5b7c968b7b1428575d5900922ea2dce55c7550c4",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H06",
+      "article": "authentication-and-email",
+      "sourceRevision": 1,
+      "sourceBodySha256": "d2cf9d41001c5f38ad2e060e460f5d978aedcb7bd15fecf250110f2955513271",
+      "bodySha256": "9a842750de2e7c3e4dca0064851d459804bc6914f25d9e2d2a537ea771ce5910",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H11",
+      "article": "back-up-the-reference-instance",
+      "sourceRevision": 1,
+      "sourceBodySha256": "a5f8e0e809a866f4759462d5d3b236225a0ea7f4874981f3dc272c999c1fccc4",
+      "bodySha256": "f295221ff0ede840ccf510942838e0ad69bb2c23dbee2644e966d18a2e0a955f",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "T04",
+      "article": "encryption-and-data-boundaries",
+      "sourceRevision": 1,
+      "sourceBodySha256": "a20aafef616f752bee04f7415a2e17a40041f2643d60e48535d8098e6910cc2b",
+      "bodySha256": "b03f3b1148bc7135115f0ad2c852c2aa7a66469567dd6df93f546578bfa173aa",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "T01",
+      "article": "glossary-and-data-model",
+      "sourceRevision": 1,
+      "sourceBodySha256": "8fae658b95e0c3c80075bcb08d4e1864e5eb8027a3c0b839cc26b2fdc7d72612",
+      "bodySha256": "20ebc102ca2795f79103302704dcc88033ea8c67f2c358262b9ab4bd910d5ec3",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H03",
+      "article": "install-a-server",
+      "sourceRevision": 1,
+      "sourceBodySha256": "66d5746153d956c5cd8de3608c04baa31c12640c8194073581cf76f6d7455914",
+      "bodySha256": "ef40ef7c17ff047d3cba4f9de9edab8aaf29d0aa412cb2da3565199e82bbee68",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H02",
+      "article": "install-locally",
+      "sourceRevision": 1,
+      "sourceBodySha256": "17bc8f169e116569a684ef6ee8bad952aeb5a3e7ab73765c64d9bfeffdee2500",
+      "bodySha256": "df6f187498e4f7c068cbf68ad0e4da22c41e87fb38996102c403aa4f1643f6c7",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H16",
+      "article": "instance-administration",
+      "sourceRevision": 1,
+      "sourceBodySha256": "9a72cae08db61d583f0828b759624e61118c575c9efac846823383cd0b2c45da",
+      "bodySha256": "0765ef7abaf459b277dd493b7cb5cbe437b0992ea685d1b42ffe6221c24bbaf4",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H05",
+      "article": "instance-configuration",
+      "sourceRevision": 1,
+      "sourceBodySha256": "ca2e2986b4ff236b9c5b8d3b0ffdabfb7f4bba4b39a8bda2ccb31b44d55a5650",
+      "bodySha256": "5b2b8f8e28d0ce16b0750f91b3b653c9b67e4f35ead8cfdc62cbdc18f3ab2bd5",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "T07",
+      "article": "integration-api-and-webhooks",
+      "sourceRevision": 1,
+      "sourceBodySha256": "5b998a1df2ccaa39e5ef34533ecc1e3b6b26ea98143d8fdf2af2da82733fb911",
+      "bodySha256": "3d196e70b89b4019a0ff2f00886c6f792c525f9b0faa28683331e946264172c1",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": false,
+      "exception": "T07 changes only intentional demonstration JSON title/description text; endpoint, headers, priority and effort preserved"
+    },
+    {
+      "workflow": "T08",
+      "article": "integration-troubleshooting",
+      "sourceRevision": 1,
+      "sourceBodySha256": "a82f8221f66b58d54700c5debc0e4783c31873b872ce12f965e0e916fb1b3bfb",
+      "bodySha256": "8afd01ac558e8aa47d45c85cdfa2c1fb7a9ae031571172dc88ace7ddbac3e003",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H12",
+      "article": "logical-and-provider-backups",
+      "sourceRevision": 1,
+      "sourceBodySha256": "0ab41d800d9d514179f7560a3041af6ffb13f3ca8f28e089750866bee50914c3",
+      "bodySha256": "60f9c728ee8452708078e299a4c3d1a0f1034bcbc407ad925d5ce7cf67172faa",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H04",
+      "article": "managed-or-source-installation",
+      "sourceRevision": 1,
+      "sourceBodySha256": "a6fb88de468b73b7ad3546c6714f10d378d84efa39050372616bd594f4d481a1",
+      "bodySha256": "b630f76cbf8e3b90680d207ec0e7dc95138906cb5e0879607071cad16968b938",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "T06",
+      "article": "mcp-tool-reference",
+      "sourceRevision": 1,
+      "sourceBodySha256": "67d6818a284fe1f0ea307cd6fc58151aac59c67ca53e1d0eb636ad99c42b2dc9",
+      "bodySha256": "07021b44020437a3f2be6f2551c9a01b79e2ec0aa3f13f72438eb61a2a824ff2",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "T05",
+      "article": "numo-execution-model",
+      "sourceRevision": 1,
+      "sourceBodySha256": "24699888b6504d68e28be6ae26545b20e324340bc4293554d29b0b6f04e395e6",
+      "bodySha256": "bfbffa785ea5ab050856e6b73ef70499a06fec2baf452bcaa7c0850798157cbc",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H09",
+      "article": "optional-providers",
+      "sourceRevision": 1,
+      "sourceBodySha256": "ae07cb4b70400654657a92ecf0558a9a663c881554e96ac22c8ac64aefb336e2",
+      "bodySha256": "91d01488b81a0fe00de01c0203c7fca045d2489b48df578c56471760ec6f81eb",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "T02",
+      "article": "permissions-and-public-links",
+      "sourceRevision": 1,
+      "sourceBodySha256": "468a5ffc8a88d3523df48a8bc68ebc75579a9f8fbe9b6857f18908da4f19df82",
+      "bodySha256": "c80f549bf52f67a7f86d39efd8286ca6e8ac4a8c7566d51f59ffec6fb859182a",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H08",
+      "article": "proxy-network-and-jobs",
+      "sourceRevision": 1,
+      "sourceBodySha256": "b42f779c60bb3f99b367deb45095f6b549f357fd1822394672a4ee862594982c",
+      "bodySha256": "c5f1906b13942abb4253d3c62edf79c451eec1f3acb9eff8d5a068a8703bd4e8",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H14",
+      "article": "restore-and-roll-back",
+      "sourceRevision": 1,
+      "sourceBodySha256": "8ca0d3b45232950df19bbe8dfce3aee8ca7d44bea7013e870aa638f3984ed30a",
+      "bodySha256": "33e50fedb1ee3790426d921b4886d429101f5b235e46a551c8e686b8b8d62010",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H01",
+      "article": "self-hosted-compatibility",
+      "sourceRevision": 1,
+      "sourceBodySha256": "5a561d3b409bf55ff253eed6d75143347b88d364dd282464778bd6fde902df33",
+      "bodySha256": "ea4c9a85a4a8464a6efcbf315c562d89177e6e05ab28b7a6d29301126a077ddf",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H15",
+      "article": "self-hosted-diagnostics",
+      "sourceRevision": 1,
+      "sourceBodySha256": "c1af0b79b49b5dab985c8f823d5c20a672fe798689c2e1c1a06ea9c308002b6c",
+      "bodySha256": "8209eef71e5e19093f55eb09f580ad2690300b08f4c1ffe91ab95cb408873234",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H07",
+      "article": "storage-and-attachments",
+      "sourceRevision": 1,
+      "sourceBodySha256": "e499d857fa0599b40c949dce6cb9db0894b63f3ebfaac2392c99a982a34aed06",
+      "bodySha256": "e86b515593044265faaf9a856e6e3386db9ded41628c7bbe24b46bed291deaa1",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H13",
+      "article": "update-an-instance",
+      "sourceRevision": 1,
+      "sourceBodySha256": "e4e60e0db072ab888d7d0658e7f4948f2767b8ef832310d0d9f5c506572ffc89",
+      "bodySha256": "0e47a8c20645494ccd92c8bfceb52fe5979cad822010f7f09f4b46ca743f4898",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    },
+    {
+      "workflow": "H10",
+      "article": "workspace-encryption",
+      "sourceRevision": 1,
+      "sourceBodySha256": "670f973048fe63745d9471fed400857d8b27f1c461f8bce131bdb0615ff75746",
+      "bodySha256": "0c0a1f283f000a01eb66c506c9d682aa6c46888aaef3417e8d83b0b72a638290",
+      "completeProseCompared": true,
+      "commandBlocksIdentical": true,
+      "exception": null
+    }
+  ]
+}

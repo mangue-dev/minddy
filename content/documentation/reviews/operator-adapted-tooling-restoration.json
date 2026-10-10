@@ -1,0 +1,81 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "release": "v0.11.0 with explicitly pinned89ab tooling",
+  "stages": [
+    {
+      "stage": "restore-download-pinned-worker-recipe",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "restore-saved-worker-image-load",
+      "exitCode": 0,
+      "diagnosticSHA256": "dd8579d4a5c4092f3344ef20ed7378d95b0370dd5e3cc24ecd8323fbdfccb24c"
+    },
+    {
+      "stage": "restore-source-frozen-install",
+      "exitCode": 0,
+      "diagnosticSHA256": "0163fb3d5d19e4161078248a1c4f3e8189f5baf1ce72a71bd831b5c3351dd4f3"
+    },
+    {
+      "stage": "restore-pinned-upstream-checkout",
+      "exitCode": 0,
+      "diagnosticSHA256": "bdd63cee2bc81405a0663759996b47ce206ba80708c8b407a46c85bf2976c6c7"
+    },
+    {
+      "stage": "restore-fresh-checkout-pinned-compiler",
+      "exitCode": 0,
+      "diagnosticSHA256": "b2b9462c92773c9a0a700974cacfcd5eddbef271ae4008cc435f7dacf166e309"
+    },
+    {
+      "stage": "restore-QA-context-validation",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "restore-QA-resolved-binds-private",
+      "exitCode": 0,
+      "diagnosticSHA256": "8e1bbcf775be938e9536c0114d22e21fdc38ffa27bfaca1a433e2da19d9f74dc"
+    },
+    {
+      "stage": "restore-QA-runner-only-recreate",
+      "exitCode": 0,
+      "diagnosticSHA256": "46271be5041a5948ebc76a246f12d42485826c7f620fe9fbf1d2a99ab726b7be"
+    },
+    {
+      "stage": "restore-QA-runner-actual-mounts",
+      "exitCode": 0,
+      "diagnosticSHA256": "d2ebbfcccb03781bed330dbc3d2049caf248011a7f883d48850444a4cc84c12c"
+    },
+    {
+      "stage": "restore-QA-runner-health",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "restore-QA-ordinary-doctor",
+      "exitCode": 0,
+      "diagnosticSHA256": "71ac0b2a37f9d2efcf447f7c77b8417912cb69da0515725bb546724bf1f3e258"
+    }
+  ],
+  "sealedHelperArchiveChecksumsVerified": true,
+  "helperDestinationNewAndDifferentFromSource": true,
+  "sourceOverridePreservedAsEvidence": true,
+  "overrideRebuiltFromRestoredDirectoryAndSavedImage": true,
+  "sourceBindPathsNotReused": true,
+  "savedWorkerImageLoadedAndIdentityVerified": "sha256:c323824e2f17acc5fe8bc17eea0a827f9bfc342b61b69137fdd827ea7c6c2e05",
+  "sourceCheckoutFreshFromVerifiedPublishedArchive": true,
+  "frozenJoseVersion": "6.2.12",
+  "restoredFunctionPinSHA256": "7fae1ec49c6a75fcd34d3fae7513e140eead1c2146753f2a4200f30eeb2bf202",
+  "offlineCompilationPassed": true,
+  "QAActualReadonlyMountsTargetExtractedHelpers": true,
+  "runnerOnlyRuntimeRecreationPassed": true,
+  "runnerHealthPassed": true,
+  "ordinaryDoctorPassed": true,
+  "QAApplicationAndDatabaseNotRestarted": true,
+  "QA242MigrationsPreserved": true,
+  "qualifier": "Adapted tooling recovery branch executed separately from the physical v0.10.30 rollback. This does not claim a second database restore, another Docker daemon, off-host backup, or unchanged published-tag success.",
+  "publicationApproval": false,
+  "QAPersistentRunnerOverrideUpdatedToRestoredPaths": true
+}

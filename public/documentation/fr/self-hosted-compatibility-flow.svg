@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="640" viewBox="0 0 720 640" role="img" aria-labelledby="title desc">
+<title id="title">Choisir une version et un profil d’installation pris en charge</title>
+<desc id="desc">Schéma: Tag source annoté. Assets et SHA256SUMS. Signature et digest OCI officiels. Profil de compatibilité choisi.</desc>
+<rect width="720" height="640" rx="20" fill="#fafaf9" />
+<rect x="24" y="24" width="672" height="128" rx="16" fill="#e6edf5" stroke="#293d56" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="88" r="20" fill="#60706b" />
+<text x="60" y="98" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">1</text>
+<text x="98" y="98" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Tag source annoté</text>
+<path d="M360 156v16m-7-5 7 7 7-7" fill="none" stroke="#60706b" stroke-width="1.5" />
+<rect x="24" y="178" width="672" height="128" rx="16" fill="#e0efe8" stroke="#1e4436" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="242" r="20" fill="#60706b" />
+<text x="60" y="252" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">2</text>
+<text x="98" y="252" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Assets et SHA256SUMS</text>
+<path d="M360 310v16m-7-5 7 7 7-7" fill="none" stroke="#60706b" stroke-width="1.5" />
+<rect x="24" y="332" width="672" height="128" rx="16" fill="#f0ecf6" stroke="#433352" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="396" r="20" fill="#60706b" />
+<text x="60" y="406" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">3</text>
+<text x="98" y="406" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Signature et digest OCI officiels</text>
+<path d="M360 464v16m-7-5 7 7 7-7" fill="none" stroke="#60706b" stroke-width="1.5" />
+<rect x="24" y="486" width="672" height="128" rx="16" fill="#f7ecdf" stroke="#573e28" stroke-width="1" stroke-opacity="0.12" />
+<circle cx="60" cy="550" r="20" fill="#60706b" />
+<text x="60" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffffff">4</text>
+<text x="98" y="560" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Profil de compatibilité choisi</text>
+</svg>

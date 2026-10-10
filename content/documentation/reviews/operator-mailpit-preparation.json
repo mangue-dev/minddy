@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-08",
+  "author": "agent:/root/operator_documentation",
+  "scope": "Local email sink for actual signup confirmation and password recovery; no external recipient/provider delivery",
+  "image": "axllent/mailpit@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48",
+  "upstreamRelease": "https://github.com/axllent/mailpit/releases/tag/v1.31.4",
+  "prepared": true,
+  "started": true,
+  "authRestartPendingCoordination": false,
+  "publicPorts": [
+    "127.0.0.1:18025 (local mail API)",
+    "127.0.0.1:11025 (local SMTP)"
+  ],
+  "applicationOrigin": "http://localhost:3001",
+  "privateConfiguration": "$DISPOSABLE_ROOT/private-mailpit-override.yml",
+  "constraints": [
+    "Confirmation links and mail bodies contain login capabilities; retain them only in private artifacts, never screenshots or tool output.",
+    "The browser first-use path must be executed after Auth restart; preparation alone is not a delivery test.",
+    "Mailpit handles Gotrue authentication SMTP only. Feedback OTP uses EMAIL_PROVIDER=resend or development console separately; no Mailpit feedback-OTP claim."
+  ],
+  "startExit": 0,
+  "startAttempts": [
+    {
+      "exit": 1,
+      "reason": "The restored profile consolidates upstream variables in private-restored.env; no separate upstream .env exists."
+    },
+    {
+      "exit": 0,
+      "context": "Protected consolidated restored env and persistent restore override; only auth and local mail sink selected with --no-deps."
+    }
+  ],
+  "networkAdaptation": {
+    "cause": "The default Compose network is internal and prevented effective host port publication.",
+    "change": "Mailpit alone also joins the existing maintenance network; API/UI 18025 and SMTP 11025 bind to loopback only.",
+    "apiHealthStatus": 200,
+    "authRecreatedForThisCorrection": false
+  }
+}

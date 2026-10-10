@@ -1,5 +1,10 @@
 # Self-host minddy
 
+Start a new installation with the
+[step-by-step installer](https://www.minddy.app/self-hosting/install), which
+guides you through the local or shared-server choices. Use this document as
+the technical reference for prerequisites, configuration, and verification.
+
 This guide installs a functional minddy instance from a clean clone. It is
 written as an execution contract: an operator or an AI agent can follow it
 without access to Minddy Cloud, a Minddy account, or any Minddy-managed
@@ -201,6 +206,13 @@ procedure for a running instance.
 ## Installation: Supabase Cloud or self-hosted Supabase
 
 ### Guided reference-profile installation
+
+For the published v0.11.0 OCI image, both `managed` and `full` profiles have a
+missing runner helper. Generate configuration with `--skip-start` and follow the
+[known distribution checks](#known-v0110-distribution-checks) before attempting
+startup. The examples below require a corrected, matching release/tooling
+combination for a complete installation; the retained full-profile engineering
+rehearsal does not establish acceptance of the managed profile.
 
 For either versioned Compose profile, use the guided installer from the release
 directory. It asks for the deployment mode, app address, administrator, and
@@ -515,3 +527,52 @@ never decrypts or permits plaintext writes to already protected data. Replacing
 a root requires the guarded offline rewrap procedure in
 `docs/security/encryption/root-key-rotation.md`. Rehearse database, Storage and
 matching-key recovery in an isolated environment, and protect retained backups.
+
+
+## Known v0.11.0 distribution checks
+
+The v0.11.0 deployment template still records `MINDDY_RELEASE=0.10.30`.
+For a new v0.11.0 instance, generate configuration with `--skip-start`, compare
+its release and image fields against the selected compatibility row and verified
+container asset, then explicitly set `MINDDY_RELEASE=0.11.0` in the protected file.
+`--image` changes only the immutable image reference; the installer has no
+`--release` option. Preserve generated credentials and encryption keys.
+
+If the released installer stops after a large image progress log, use the exact
+installed Compose context to run `compose pull --quiet`, then resume the same
+installer with `--skip-pull`. This was exercised on a disposable full profile.
+The current installer requests quiet pulls and has an explicit subprocess output
+buffer. Registry and signature failures still require their own remedy.
+
+The released offline function compiler expects jose 6.2.3 while the frozen direct
+dependency resolves to 6.2.12. The current source pin now matches that frozen
+dependency. The released OCI runner also lacks `agent-runner-storage.mjs`; the
+current Dockerfile includes it. The disposable engineering rehearsal used the
+locked 6.2.3 dependency and a read-only mount of the tagged helper. Those are
+explicit adaptations, not acceptance of the unchanged published release. Obtain
+a corrected release/tooling combination before accepting the standard deployment.
+Never bypass identity checks or remove runner isolation.
+
+The v0.11.0 scheduler does not include `/api/cron/numo-turns`; the current candidate
+scheduler now calls it every minute. A candidate package version does not create
+a published compatibility row.
+
+The published runner also rejects allocation-suffixed sandbox names, transfers
+base64 file chunks above Linux's per-environment-value limit, and initializes a
+UID-10001 mode-0700 temporary store as root with every capability dropped. The
+unverified initialization result can leave `/vercel/sandbox` absent, so a healthy
+runner endpoint does not establish working repository cloning. Current candidate
+fixes must be exercised with a fresh sandbox, a large file round trip and a real
+code-workflow acceptance check. The local engineering rehearsal mounts the current
+runner and storage helper read-only on the immutable v0.11.0 image; it is not an
+acceptance of the untouched release or a newly published compatibility row.
+
+### Pinned runner engineering workaround
+
+For the published v0.11.0 image, the following explicit tooling variant also supplies the Basic authentication challenge required by Git HTTP clients. It is a workaround pinned to source commit 89ab340cb10ec729948fc6e596fb7ab0326fc470, not a newly published image or compatibility row. Use it only after completing the base installation. The two files must stay together, at their verified hashes, on persistent storage. These commands expose no runner port. The complete public [procedure](https://www.minddy.app/docs/install-a-server#runner-workaround) includes both verified download URLs, checksums, persistent mounts and operational limitations.
+
+The published application image includes Node.js and Git but deliberately removes npm, npx and Corepack. The reference Compose profile also selects that image for workers through AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE. This is insufficient for a fresh code worker: the OpenCode bootstrap uses npm to install its pinned runtime and plugin, even for a repository with no project dependencies. Without npm, execution stops at bootstrap; no project edit or test success can be inferred from the conversation. Use an operator-built and verified dedicated worker image with Node.js 24, npm, Git and the project’s required tools, selected by overriding AGENT_RUNNER_SANDBOX_IMAGE in the runner service. Keep the runner’s isolation constraints. Verify bootstrap, repository cloning, actual tests and the resulting diff before enabling code delegation. Fixing the runner files alone does not supply this worker toolchain.
+
+This procedure also builds a separate code-worker image. The base is pinned, but Debian packages are resolved at build time; inspect the resulting Docker image ID and retain that exact image with the backup. Never substitute the application image after a restore. Building requires access to the base registry and Debian package repositories; fresh OpenCode bootstrap also needs the npm registry. The recipe supplies the bootstrap tools, not every project’s dependencies. Additional build tools require an explicitly maintained variant. The Compose overlay below sets the runner service’s image environment directly because the historical reference Compose file ignores a standalone AGENT_RUNNER_SANDBOX_IMAGE value in the protected file. The inline recipe and overlay are included in the linked public installation article.
+
+The pinned storage helper also makes the sandbox workspace executable. Docker otherwise mounts this tmpfs with noexec, preventing the native OpenCode binary from starting and potentially surfacing a misleading musl-package fallback error. The correction retains nosuid, nodev, UID/GID 10001, mode 0700, read-only root filesystem, dropped capabilities and the disposable per-sandbox store. It does not grant executable access to host data or make the application image a suitable worker image.

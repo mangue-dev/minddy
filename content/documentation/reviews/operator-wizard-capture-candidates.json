@@ -1,0 +1,219 @@
+{
+  "date": "2026-10-08",
+  "author": "agent:/root/operator_documentation",
+  "profile": "Actual anonymous public wizard UI; screenshot navigation only; desktop native dialog not captured or executed",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "install-locally",
+      "locale": "en",
+      "url": "http://localhost:3000/self-hosting/install?route=local",
+      "output": "public/documentation/en/install-locally-wizard.png",
+      "lang": "en",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Where will you run minddy?\n\nChoose a personal installation or a shared server. The guide will show the steps for your choice.\n\nFor personal use\nJust me, on this computer\n\nKeep a personal minddy installation on this computer. The desktop app starts and stops it; no domain name or remote server is needed.\n\nSeveral people, on a server\n\nGive your team access to the same minddy installation on a dedicated server. Keep it on your private network or add a domain and HTTPS for remote access.\n\nBack\nContinue",
+      "reviewed": true,
+      "action": "Anonymous public wizard: local profile selected; no installation or command executed.",
+      "sha256": "0d1c212a9453eec4ac80f628b5cf2b0067f4b7b09a1e93b071ca2f3b9d96ad6c"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "en",
+      "url": "http://localhost:3000/self-hosting/install?route=team",
+      "output": "public/documentation/en/install-a-server-wizard.png",
+      "lang": "en",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Where will accounts and data be stored?\n\nminddy uses Supabase to manage sign-in, project data, attachments and live updates. Choose who hosts this service.\n\nRecommended\nSupabase Cloud (supabase.com)\n\nCreate or connect a project hosted by Supabase. It is the simplest option and uses less memory on your server.\n\nMore control\nOn the same server\n\nRun Supabase on the same server as minddy. You maintain and back up both the application and its data services.\n\nminddy and the complete Supabase stack run on this server. The Supabase API uses the server's private IP on port 8000; keep it available to your LAN only.\n\nWhich extra services do you need?\n\nThe server includes Numo conversations, delegated code work, and scheduled routines. Connect GitHub or GitLab from the app when needed. Choose whether to add email delivery and browser notifications below.\n\nTeam and feedback emails\nUse your own Resend account to send team invitations and sign-in codes for the feedback board.\nBrowser notifications\nNotify signed-in users through Web Push in supported browsers.\n\nAI work runs on your server in separate Docker containers. Configure an AI provider before using it. minddy Cloud billing and product analytics are not part of this installation.\n\nBack\nContinue",
+      "reviewed": true,
+      "action": "Anonymous public wizard: demonstration private IP/email entered in client-only state; backend choice displayed; no installation, provider configuration, or command executed.",
+      "sha256": "4125cac1f640ae7c3aafd41015766075405ff19db6bfaf97d084119e0d421f56"
+    },
+    {
+      "article": "install-locally",
+      "locale": "fr",
+      "url": "http://localhost:3000/fr/auto-hebergement/installer?route=local",
+      "output": "public/documentation/fr/install-locally-wizard.png",
+      "lang": "fr",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Où allez-vous lancer minddy ?\n\nChoisissez une installation personnelle ou un serveur partagé. Le guide affichera les étapes adaptées à votre choix.\n\nPour un usage personnel\nSeulement moi, sur cet ordinateur\n\nGardez une installation personnelle de minddy sur cet ordinateur. L’application de bureau la démarre et l’arrête, sans nom de domaine ni serveur distant.\n\nPlusieurs personnes, sur un serveur\n\nDonnez à votre équipe accès à une même installation de minddy sur un serveur dédié. Gardez-la sur votre réseau privé ou ajoutez un domaine et HTTPS pour l’accès à distance.\n\nRetour\nContinuer",
+      "reviewed": true,
+      "action": "Anonymous public wizard: local profile selected; no installation or command executed.",
+      "sha256": "0f3bc0b1d03388a600bde177c54fe0ba420aafd3ada58ee83662ef09f381dac2"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "fr",
+      "url": "http://localhost:3000/fr/auto-hebergement/installer?route=team",
+      "output": "public/documentation/fr/install-a-server-wizard.png",
+      "lang": "fr",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Où seront stockés les comptes et les données ?\n\nminddy utilise Supabase pour gérer la connexion, les données des projets, les pièces jointes et les mises à jour en direct. Choisissez qui héberge ce service.\n\nRecommandé\nSupabase Cloud (supabase.com)\n\nCréez ou connectez un projet hébergé par Supabase. C'est l'option la plus simple et elle utilise moins de mémoire sur votre serveur.\n\nPlus de contrôle\nSur le même serveur\n\nHébergez Supabase sur le même serveur que minddy. Vous assurez la maintenance et les sauvegardes de l’application comme de ses services de données.\n\nminddy et toute la pile Supabase fonctionnent sur ce serveur. L'API Supabase utilise l'IP privée du serveur sur le port 8000 ; gardez-la accessible uniquement sur votre réseau local.\n\nQuels services supplémentaires vous faut-il ?\n\nLe serveur inclut les conversations Numo, le travail de code délégué et les routines planifiées. Connectez GitHub ou GitLab depuis l’application si nécessaire. Choisissez ci-dessous si vous ajoutez l’envoi d’e-mails et les notifications du navigateur.\n\nE-mails d'équipe et de feedback\nUtilisez votre propre compte Resend pour envoyer les invitations d’équipe et les codes de connexion au tableau de retours.\nNotifications navigateur\nPrévenez les utilisateurs connectés par Web Push dans les navigateurs compatibles.\n\nLes tâches d’IA s’exécutent sur votre serveur dans des conteneurs Docker séparés. Configurez un fournisseur d’IA avant de les utiliser. La facturation minddy Cloud et les statistiques produit ne font pas partie de cette installation.\n\nRetour\nContinuer",
+      "reviewed": true,
+      "action": "Anonymous public wizard: demonstration private IP/email entered in client-only state; backend choice displayed; no installation, provider configuration, or command executed.",
+      "sha256": "98a94b03e20f0fe8c9d91e008408056fb958483bfe0b7de75eb3259174330da3"
+    },
+    {
+      "article": "install-locally",
+      "locale": "de",
+      "url": "http://localhost:3000/de/selbst-hosten/installieren?route=local",
+      "output": "public/documentation/de/install-locally-wizard.png",
+      "lang": "de",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Wo möchtest du minddy installieren?\n\nWähle eine persönliche Installation oder einen gemeinsamen Server. Die Anleitung zeigt die passenden Schritte.\n\nFür die persönliche Nutzung\nNur ich, auf diesem Computer\n\nNutze eine persönliche minddy-Installation auf diesem Computer. Die Desktop-App startet und beendet sie; eine Domain oder ein entfernter Server ist nicht nötig.\n\nMehrere Personen auf einem Server\n\nGib deinem Team Zugriff auf dieselbe minddy-Installation auf einem eigenen Server. Nutze dein privates Netzwerk oder richte für den Fernzugriff eine Domain und HTTPS ein.\n\nZurück\nWeiter",
+      "reviewed": true,
+      "action": "Anonymous public wizard: local profile selected; no installation or command executed.",
+      "sha256": "b6b433ebe86c597ec74b87b133c7d4ca1884c2dc14a3f52cc6d33d09f2c33489"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "de",
+      "url": "http://localhost:3000/de/selbst-hosten/installieren?route=team",
+      "output": "public/documentation/de/install-a-server-wizard.png",
+      "lang": "de",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Wo werden Konten und Daten gespeichert?\n\nminddy nutzt Supabase für Anmeldung, Projektdaten, Anhänge und Live-Updates. Wähle, wer diesen Dienst hostet.\n\nEmpfohlen\nSupabase Cloud (supabase.com)\n\nErstelle oder verbinde ein von Supabase gehostetes Projekt. Dies ist die einfachste Option und benötigt weniger Arbeitsspeicher auf deinem Server.\n\nMehr Kontrolle\nAuf demselben Server\n\nBetreibe Supabase auf demselben Server wie minddy. Du wartest und sicherst sowohl die Anwendung als auch ihre Datendienste.\n\nminddy und der vollständige Supabase-Stack laufen auf diesem Server. Die Supabase-API verwendet die private IP-Adresse des Servers an Port 8000; halte sie ausschließlich in deinem LAN erreichbar.\n\nWelche zusätzlichen Dienste brauchst du?\n\nDer Server umfasst Numo-Unterhaltungen, delegierte Codearbeit und geplante Routinen. Verbinde bei Bedarf GitHub oder GitLab in der App. Wähle unten, ob E-Mail-Versand und Browser-Benachrichtigungen eingerichtet werden sollen.\n\nTeam- und Feedback-E-Mails\nSende Teameinladungen und Anmeldecodes für das Feedback-Board über dein eigenes Resend-Konto.\nBrowser-Benachrichtigungen\nAngemeldete Benutzer über Web Push in unterstützten Browsern benachrichtigen.\n\nKI-Aufgaben laufen auf deinem Server in getrennten Docker-Containern. Richte vor der Nutzung einen KI-Anbieter ein. minddy-Cloud-Abrechnung und Produktanalysen sind nicht Teil dieser Installation.\n\nZurück\nWeiter",
+      "reviewed": true,
+      "action": "Anonymous public wizard: demonstration private IP/email entered in client-only state; backend choice displayed; no installation, provider configuration, or command executed.",
+      "sha256": "ae82ed9387c837f64b5e5cf5e8715926926e613845305fd67a74d0a36d9e79fb"
+    },
+    {
+      "article": "install-locally",
+      "locale": "es",
+      "url": "http://localhost:3000/es/autoalojamiento/instalar?route=local",
+      "output": "public/documentation/es/install-locally-wizard.png",
+      "lang": "es",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "¿Dónde vas a correr minddy?\n\nElige una instalación personal o un servidor compartido. La guía mostrará los pasos correspondientes.\n\nPara uso personal\nSólo yo, en este ordenador\n\nMantén una instalación personal de minddy en este ordenador. La aplicación de escritorio la inicia y detiene; no necesitas un dominio ni un servidor remoto.\n\nVarias personas, en un servidor\n\nDa a tu equipo acceso a la misma instalación de minddy en un servidor dedicado. Úsala en tu red privada o añade un dominio y HTTPS para el acceso remoto.\n\nVolver\nContinúa",
+      "reviewed": true,
+      "action": "Anonymous public wizard: local profile selected; no installation or command executed.",
+      "sha256": "9e29942c026eeea50b4865abae20d714667fabb3fbf64be01fccc0ddca754a07"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "es",
+      "url": "http://localhost:3000/es/autoalojamiento/instalar?route=team",
+      "output": "public/documentation/es/install-a-server-wizard.png",
+      "lang": "es",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "¿Dónde se guardarán las cuentas y los datos?\n\nminddy usa Supabase para gestionar el inicio de sesión, los datos de proyectos, los archivos adjuntos y las actualizaciones en directo. Elige quién aloja este servicio.\n\nRecomendado\nSupabase Cloud (supabase.com)\n\nCrea o conecta un proyecto alojado por Supabase. Es la opción más sencilla y usa menos memoria en tu servidor.\n\nMás control\nEn el mismo servidor\n\nEjecuta Supabase en el mismo servidor que minddy. Tú mantienes y respaldas tanto la aplicación como sus servicios de datos.\n\nminddy y la pila completa de Supabase se ejecutan en este servidor. El Supabase API utiliza la IP privada del servidor en el puerto 8000; mantenla disponible sólo para tu LAN.\n\n¿Qué servicios adicionales necesitas?\n\nEl servidor incluye conversaciones con Numo, trabajo de código delegado y rutinas programadas. Conecta GitHub o GitLab desde la aplicación cuando sea necesario. Elige abajo si quieres añadir correo y notificaciones del navegador.\n\nCorreos del equipo y del tablero de comentarios\nUsa tu propia cuenta de Resend para enviar invitaciones al equipo y códigos de acceso al tablero de comentarios.\nNotificaciones del navegador\nEnvía notificaciones a los usuarios conectados mediante Web Push en navegadores compatibles.\n\nLas tareas de IA se ejecutan en tu servidor en contenedores Docker separados. Configura un proveedor de IA antes de usarlas. La facturación de minddy Cloud y las estadísticas de producto no forman parte de esta instalación.\n\nVolver\nContinúa",
+      "reviewed": true,
+      "action": "Anonymous public wizard: demonstration private IP/email entered in client-only state; backend choice displayed; no installation, provider configuration, or command executed.",
+      "sha256": "3672b1dfd662b14e3309bf900cc1eaa511411b46eea0307fa8a412d01aa13892"
+    },
+    {
+      "article": "install-locally",
+      "locale": "it",
+      "url": "http://localhost:3000/it/hosting-autonomo/installa?route=local",
+      "output": "public/documentation/it/install-locally-wizard.png",
+      "lang": "it",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Dove vuoi installare minddy?\n\nScegli un’installazione personale o un server condiviso. La guida mostrerà i passaggi adatti alla tua scelta.\n\nPer uso personale\nSolo io, su questo computer\n\nUsa un’installazione personale di minddy su questo computer. L’app desktop la avvia e la arresta, senza dominio né server remoto.\n\nDiverse persone, su un server\n\nOffri al team l’accesso alla stessa installazione di minddy su un server dedicato. Usala nella rete privata oppure aggiungi un dominio e HTTPS per l’accesso da remoto.\n\nIndietro\nContinua",
+      "reviewed": true,
+      "action": "Anonymous public wizard: local profile selected; no installation or command executed.",
+      "sha256": "86ba78d2b97ee48ccb2418aae816a19351997c407b90ab6e02071692802e8aaf"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "it",
+      "url": "http://localhost:3000/it/hosting-autonomo/installa?route=team",
+      "output": "public/documentation/it/install-a-server-wizard.png",
+      "lang": "it",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Dove saranno conservati account e dati?\n\nminddy usa Supabase per gestire accesso, dati dei progetti, allegati e aggiornamenti in tempo reale. Scegli chi ospita questo servizio.\n\nConsigliato\nCloud Supabase (supabase.com)\n\nCrea o collega un progetto ospitato da Supabase. È l'opzione più semplice e utilizza meno memoria sul tuo server.\n\nPiù controllo\nSullo stesso server\n\nEsegui Supabase sullo stesso server di minddy. Ti occupi della manutenzione e dei backup sia dell’applicazione sia dei servizi dati.\n\nminddy e la pila completa Supabase eseguino su questo server. Il Supabase API utilizza l'IP privato del server sulla porta 8000; tienilo a disposizione solo per la tua LAN.\n\nQuali servizi aggiuntivi ti servono?\n\nIl server include conversazioni con Numo, lavoro sul codice delegato e routine pianificate. Collega GitHub o GitLab dall’app quando serve. Scegli qui sotto se aggiungere l’invio email e le notifiche del browser.\n\nE-mail di squadra e feedback\nUsa il tuo account Resend per inviare inviti al team e codici di accesso alla bacheca dei feedback.\nNotifiche del browser\nAvvisa gli utenti connessi tramite Web Push in browser supportati.\n\nLe attività IA vengono eseguite sul server in container Docker separati. Configura un fornitore IA prima di usarle. La fatturazione minddy Cloud e le analisi di utilizzo non fanno parte di questa installazione.\n\nIndietro\nContinua",
+      "reviewed": true,
+      "action": "Anonymous public wizard: demonstration private IP/email entered in client-only state; backend choice displayed; no installation, provider configuration, or command executed.",
+      "sha256": "90a3f7ed9df8debf42da916901830480fa91f004742b8548e072c80405f65754"
+    },
+    {
+      "article": "install-locally",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/pt-br/auto-hospedagem/instalar?route=local",
+      "output": "public/documentation/pt-BR/install-locally-wizard.png",
+      "lang": "pt-BR",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Onde você executará minddy?\n\nEscolha uma instalação pessoal ou um servidor compartilhado. O guia mostrará as etapas correspondentes.\n\nPara uso pessoal\nSó eu, neste computador\n\nMantenha uma instalação pessoal do minddy neste computador. O aplicativo de desktop a inicia e encerra; não é necessário domínio nem servidor remoto.\n\nVárias pessoas, em um servidor\n\nDê à equipe acesso à mesma instalação do minddy em um servidor dedicado. Use a rede privada ou adicione um domínio e HTTPS para acesso remoto.\n\nVoltar\nContinuar",
+      "reviewed": true,
+      "action": "Anonymous public wizard: local profile selected; no installation or command executed.",
+      "sha256": "85c17a3c841addaf05f47529a666676e5feb30987241bf4a3cf7644d885cedc3"
+    },
+    {
+      "article": "install-a-server",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/pt-br/auto-hospedagem/instalar?route=team",
+      "output": "public/documentation/pt-BR/install-a-server-wizard.png",
+      "lang": "pt-BR",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1280,
+        1100
+      ],
+      "theme": "light",
+      "text": "Onde as contas e os dados serão armazenados?\n\nO minddy usa o Supabase para gerenciar login, dados dos projetos, anexos e atualizações em tempo real. Escolha quem hospeda esse serviço.\n\nRecomendado\nSupabase Cloud (supabase.com)\n\nCrie ou conecte um projeto hospedado por Supabase. É a opção mais simples e usa menos memória no seu servidor.\n\nMais controle\nNo mesmo servidor\n\nExecute o Supabase no mesmo servidor do minddy. Você cuida da manutenção e dos backups do aplicativo e dos serviços de dados.\n\nO minddy e a pilha completa do Supabase são executados neste servidor. A API do Supabase usa o IP privado do servidor na porta 8000; mantenha-a disponível somente para sua LAN.\n\nDe quais serviços extras você precisa?\n\nO servidor inclui conversas com o Numo, trabalho de código delegado e rotinas agendadas. Conecte GitHub ou GitLab pelo aplicativo quando necessário. Escolha abaixo se deseja adicionar envio de e-mail e notificações do navegador.\n\nE-mails de equipe e de feedback\nUse sua própria conta do Resend para enviar convites à equipe e códigos de acesso ao painel de feedback.\nNotificações do navegador\nNotifica usuários conectados através do Web Push em navegadores suportados.\n\nAs tarefas de IA rodam no seu servidor em contêineres Docker separados. Configure um provedor de IA antes de usá-las. O faturamento do minddy Cloud e as análises de uso não fazem parte desta instalação.\n\nVoltar\nContinuar",
+      "reviewed": true,
+      "action": "Anonymous public wizard: demonstration private IP/email entered in client-only state; backend choice displayed; no installation, provider configuration, or command executed.",
+      "sha256": "76a936cea6762b1323d6fb748f348d909f05c36c219d4d50f2f4f13595a7273f"
+    }
+  ],
+  "visualReview": {
+    "reviewer": "agent:/root/operator_documentation",
+    "date": "2026-10-08",
+    "method": "Viewed all 12 final captures in six 720-pixel-wide contact sheets after selecting local and full profiles. Checked locale, selected profile, complete readable controls, demo/private data, and accurate captions.",
+    "result": "approved-author-visual-review",
+    "humanReview": false
+  }
+}

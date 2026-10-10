@@ -103,11 +103,13 @@ export async function resolveAiRuntime(params: {
   surface?: AiSurface;
   /** A conversation choice, frozen by the caller before the turn is admitted. */
   modelOverride?: string | null;
+  /** Public documentation help always uses the account's managed allowance. */
+  managedOnly?: boolean;
 }): Promise<ResolvedAiRuntime> {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
   const modelOverride = params.modelOverride?.trim() || null;
   const [byok, rootModel] = await Promise.all([
-    getUserByok(
+    params.managedOnly ? Promise.resolve(null) : getUserByok(
       params.userId,
       surface,
       modelCatalogCapabilityForKey(params.modelKey),

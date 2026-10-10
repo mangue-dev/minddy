@@ -1,6 +1,49 @@
 title = "Minddy public-repository secret and data-marker policy"
 
 [[allowlists]]
+description = "Exact synthetic scheduler credential used only by its scheduling regression."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(?:^|/)scripts/self-hosted-scheduler\.test\.mjs$''']
+regexTarget = "secret"
+regexes = ['''^scheduler-test-secret-with-32-characters$''']
+
+[[allowlists]]
+description = "Exact non-routable recovery-form address used by the documentation capture."
+targetRules = ["minddy-personal-email-marker"]
+condition = "AND"
+paths = ['''(?:^|/)captures/shots/documentation-auth/shot\.mjs$''']
+regexTarget = "secret"
+regexes = ['''^demo@example\.invalid$''']
+
+[[allowlists]]
+description = "Exact illustrative LAN address inherited from the verified self-hosting guide, in six localized installation articles."
+targetRules = ["minddy-internal-network-url"]
+condition = "AND"
+paths = ['''(?:^|/)content/documentation/(?:en|fr|de|es|it|pt-BR)/install-a-server\.md$''']
+regexTarget = "secret"
+regexes = ['''^192\.168\.1\.50$''']
+
+[[allowlists]]
+description = "Exact illustrative LAN origin and MCP endpoint in the six localized installation and MCP network guides, including closing inline-code punctuation."
+targetRules = ["minddy-internal-network-url"]
+condition = "AND"
+paths = ['''(?:^|/)content/documentation/(?:en|fr|de|es|it|pt-BR)/(?:install-locally|installation|minddy-mcp)\.md$''']
+regexTarget = "secret"
+regexes = ['''^192\.168\.1\.50(?:/api/mcp(?:`[,.]?)?)?$''']
+
+[[allowlists]]
+description = "Exact wizard demonstration origin and its two documented callback/health paths, retained in the parser and release-boundary evidence. Punctuation and the escaped next-step delimiter belong to generated prose."
+targetRules = ["minddy-internal-network-url"]
+condition = "AND"
+paths = ['''(?:^|/)content/documentation/reviews/(?:public-wizard-published-parser-check|public-wizard-release-boundary-2026-10-08)\.json$''']
+regexTarget = "secret"
+regexes = [
+  '''^192\.168\.1\.50(?:/(?:auth/callback|api/health))?,?$''',
+  '''^192\.168\.1\.50/auth/callback\\n\\n2\.$''',
+]
+
+[[allowlists]]
 description = "Exact illustrative address in the German admin search placeholder, not an account or contact."
 targetRules = ["minddy-personal-email-marker"]
 condition = "AND"

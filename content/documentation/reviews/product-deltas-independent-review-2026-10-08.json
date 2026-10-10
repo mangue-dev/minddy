@@ -1,0 +1,253 @@
+{
+  "reviewer": "agent:/root",
+  "date": "2026-10-08",
+  "notHuman": true,
+  "method": "Full reading of each new English and French passage, original complete bodies, and the cited repository implementation. Clarified per-tier objective ordering, weighted parent indicators versus raw sub-issue counts, and French blocking and due-date terminology before approval. This records source and editorial review; runtime execution evidence is separate.",
+  "articles": [
+    {
+      "article": "account-access",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "0b67674e34d7aaa4b46bd4cccd8624bc5aaa898013b584dfb352b6d48d7a3e35"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "0c7981fcc42bea6f4b75d874d05eefd6e6cf759449998849bcfcaf8a6e173473"
+    },
+    {
+      "article": "triage-incoming-work",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "536652a9f6ccf941e5b3cf2d21cae2e53553a84d26fb4f059805ef7c62495fb5"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "787a280e79bd8ab21dc269d8d8086fe346e8c8cae82e4bee123a06f7b168729a"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "bf40907e76c95a5e511c256127d658551f462b8729977b67f8863700ecbc3f92"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "64cab9b8a471551544747464366f69e1584b6f7a7c6bf347559552edfffe5bae"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "518f5e49f3e1f6d647706b8706713d270ba90505188ed1c2d698baad842b7681"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "8b816e491f8f91dcaa33556d708041f85bb396758262459e28cff175cbc6a2dc"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "bbcaf596d521de49521bf4bae3faa9cbe31b0d93567aa5229fad3f4e589480b6"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "696e88b1fa7f11307add8dbb1d4040cec3fbb45ba6d94172cc2432a0626f189b"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "06ab476b0f50a1325805e24559dde2949bdf9f7c6d3bd9a57c5752987f7a7474"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "ada2117bfc7cd22c797b6faaf8319200e7cd6f590ca9eabfbc7aa7a03287c7ab"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "42139bf928fec1199d42c5b46f79173f51589c5221c055ea668857cb6aa840dc"
+    },
+    {
+      "article": "issue-dependencies",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "469d7e486db54c40ae879a74ef77212d4300108251bfa7309b4e88cfbe1c861a"
+    },
+    {
+      "article": "sub-issues",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "6270f1736f8aa03702908329a5fb195dd1d2e5be2d6f867532d20d9dff07bdfd"
+    },
+    {
+      "article": "implementation-plans",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a47579e5b21f9d92c7954ec70ebbbcf5fe7f5f2a9de648fdf0d049ffe60338ae"
+    },
+    {
+      "article": "recurring-issues",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "f2bda7e17cfca2a784ca5affd012ff9cd05a7f00eb9bc020085760cc1bfd5e60"
+    },
+    {
+      "article": "objective-dependencies-and-momentum",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "0654471fbd631c1fd7ee0ebe282745b30fb797d1a6171967d28d3a0ddf228580"
+    },
+    {
+      "article": "search-and-shortcuts",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "a684f2a78f10a1ec83d2198938b98113243284431c2815858731c6a9eb0ec644"
+    },
+    {
+      "article": "task-notebook",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "bb44b5f48a47f4ac735d1bf8f7cd00b2fea7b2b9e339de2256c9a5a647d59e8b"
+    },
+    {
+      "article": "page-comments-and-collaboration",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "90a242f526df6944e1cd769eb47658f5f78972cd7c727ccc07f38d3f1e2530d8"
+    },
+    {
+      "article": "create-a-database",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "d4e23f96003b7f3f5ee5d546a96fc2e6bb476a2423fad246a04843add7d2033c"
+    },
+    {
+      "article": "import-a-database",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "840aa56071c0c0cc75c0cec1b5b4ad91786b65d1e02decd2b13e47f43429ca9f"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "5dee5bca2cf9719f0e39da2100ef8bf6d16227226344081d4ad88cfb08d1c956"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "75194fabeea57219f6870efbca7425869ecef39dd5d21fa8f54a51bea64259f2"
+    },
+    {
+      "article": "personal-statistics",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "332e8b6c4e8e7adf09ec7c38ecd9dbb6ce0f3273e0c2994f4e1eb0f658801e2b"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "b91a892f81880a0fe24494b25dbede3c3924a8d4bf3c138df817c34c345fdcca"
+    },
+    {
+      "article": "page-files",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "0cf20fa37a74f97d21c1e830901bc8ceb271c7045ae9d0566e996e0f3412eadb"
+    },
+    {
+      "article": "share-a-view",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "ce9bcd7f9999b334a38e8e5a0aafb9be75fddb92e76474e084787ae90830ed6f"
+    },
+    {
+      "article": "notifications-and-inbox",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "b145e869d7815a2c45cd79bfde517a98f53bcafb9937d7a10f95bd1a40387568"
+    },
+    {
+      "article": "page-files",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "edce80946d94f5fcf31d87495292d50f4df34dc95a60d703e474db5c37fd2685"
+    },
+    {
+      "article": "project-members",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "b717d8551910ce7b1bdd5c0caf3cfdc4c06d2efc72199ef3917418ce039ad7da"
+    },
+    {
+      "article": "project-members",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "906579edba01664cf95f8d5ecdbb5569ef18e4778f19c81f0e4fd6e10b969ead"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "0d79c507eee0c26021280bafd9f12cf9d23df6b8ecabdb9fea1e79eb0dc2cb64"
+    },
+    {
+      "article": "publish-a-page",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "617d3c8d26f34814f683dc09c5dc1e7339b8e20a686575828da072e3526594fa"
+    }
+  ]
+}

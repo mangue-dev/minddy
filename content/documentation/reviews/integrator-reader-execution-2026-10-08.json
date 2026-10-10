@@ -1,0 +1,194 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "role": "Representative integrator, actual agent execution rather than human acceptance",
+  "candidateVersion": "0.11.1",
+  "sourceCommit": "d29222b173fedaf316cf5b7706410ad11d11c723",
+  "workingTreeChanges": true,
+  "profile": "Disposable restored backend and candidate localhost:3001; no Cloud content or deployment",
+  "publicGuidesReadAnonymously": [
+    {
+      "url": "http://localhost:3001/docs/mcp-tool-reference",
+      "httpStatus": 200
+    },
+    {
+      "url": "http://localhost:3001/docs/external-minddy-mcp",
+      "httpStatus": 200
+    },
+    {
+      "url": "http://localhost:3001/mcp",
+      "httpStatus": 200
+    }
+  ],
+  "procedure": "Essential reader instructions came from rendered public documentation and setup page: instance endpoint, browser OAuth consent, live schema and accessible-project discovery, issue/page reads, access failure and account-settings revocation. Protocol details came from the published OAuth metadata and live tool schemas. Fixture IDs were setup inputs.",
+  "authentication": {
+    "clientName": "MIN-664 local reader validation",
+    "registration": "Real local dynamic OAuth client registration",
+    "pkce": "S256; callback state verified",
+    "scope": "minddy",
+    "scopeBoundary": "Account-wide consent with no project selector. No project-restricted token is claimed. The disposable account discovers only the demonstration project.",
+    "authorization": "Actual browser Authorize click, local callback and token exchange",
+    "initializeHttpStatus": 200,
+    "protocolVersion": "2025-03-26",
+    "toolsListHttpStatus": 200,
+    "toolCount": 59
+  },
+  "verifiedDiscovery": {
+    "accessibleProjectIds": [
+      "3bdf5b04-ed54-40cd-b65f-10086fed72c1"
+    ],
+    "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "issueIdentifier": "DOC-1",
+    "issueProjectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+    "pageIdDiscoveredAndRead": "a0fb9f3a-4421-4af0-a018-82074e21aff8"
+  },
+  "calls": [
+    {
+      "tool": "minddy_list_projects",
+      "arguments": {},
+      "httpStatus": 200,
+      "isError": false,
+      "protocolError": null,
+      "resultKeys": [
+        "projects"
+      ],
+      "resultSha256": "d0679d613f9d202bebe30f603149247ec320975cad8d771ab17c652bd4bf0b6b"
+    },
+    {
+      "tool": "minddy_get_project",
+      "arguments": {
+        "project_id": "3bdf5b04-ed54-40cd-b65f-10086fed72c1"
+      },
+      "httpStatus": 200,
+      "isError": false,
+      "protocolError": null,
+      "resultKeys": [
+        "project"
+      ],
+      "resultSha256": "1f7becae2c30d2dd5f612232cdf231a73140e19bf3527ef10844a279021bd36d"
+    },
+    {
+      "tool": "minddy_get_issue",
+      "arguments": {
+        "project_id": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+        "issue": "DOC-1"
+      },
+      "httpStatus": 200,
+      "isError": false,
+      "protocolError": null,
+      "resultKeys": [
+        "issue",
+        "comments",
+        "sub_issues",
+        "relations",
+        "activity",
+        "plan_tasks",
+        "plan_progress"
+      ],
+      "resultSha256": "75e2ab5ef79d9ef3450238fc06ee9ac5164485830186c0aa94baf25a603e3c60"
+    },
+    {
+      "tool": "minddy_list_pages",
+      "arguments": {
+        "project_id": "3bdf5b04-ed54-40cd-b65f-10086fed72c1"
+      },
+      "httpStatus": 200,
+      "isError": false,
+      "protocolError": null,
+      "resultKeys": [
+        "project_id",
+        "count",
+        "pages"
+      ],
+      "resultSha256": "e8ab55187db52e2473d34c576aa591c4cbaf10a5a5c111f019e61df262bdc13b"
+    },
+    {
+      "tool": "minddy_get_page",
+      "arguments": {
+        "project_id": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+        "page_id": "a0fb9f3a-4421-4af0-a018-82074e21aff8"
+      },
+      "httpStatus": 200,
+      "isError": false,
+      "protocolError": null,
+      "resultKeys": [
+        "page_id",
+        "title",
+        "icon",
+        "parent_page_id",
+        "updated_at",
+        "database_schema",
+        "database_revision",
+        "database_title_name",
+        "property_values",
+        "created_at",
+        "last_edited_by",
+        "last_edited_kind",
+        "markdown",
+        "version",
+        "subpages",
+        "backlinks",
+        "threads"
+      ],
+      "resultSha256": "0911f706888ba64639d0b53a29641f4991664478b7d390a4525ce8ed574338df"
+    },
+    {
+      "tool": "minddy_get_project",
+      "arguments": {
+        "project_id": "8534b056-fd55-46ee-aca5-a259510a80b8"
+      },
+      "httpStatus": 200,
+      "isError": true,
+      "protocolError": null,
+      "resultKeys": [
+        "error"
+      ],
+      "resultSha256": "a790ae1b876fcb195d7e231d296d1ed3c616e3eb7d3793d382b1ce2fae55d494",
+      "errorCode": "project_not_found"
+    },
+    {
+      "tool": "minddy_get_issue",
+      "arguments": {
+        "project_id": "8534b056-fd55-46ee-aca5-a259510a80b8",
+        "issue": "DOC-1"
+      },
+      "httpStatus": 200,
+      "isError": true,
+      "protocolError": null,
+      "resultKeys": [
+        "error"
+      ],
+      "resultSha256": "37212b3229a37dc1e515617d5b4450a7dbfd61f7ae11d27ce24156ffe379cb55",
+      "errorCode": "project_not_found"
+    }
+  ],
+  "outOfScopeProof": {
+    "projectId": "8534b056-fd55-46ee-aca5-a259510a80b8",
+    "setupEvidence": "Operator confirmed a real disposable project owned by a different transfer-source account with no memberships.",
+    "httpStatus": 200,
+    "isError": true,
+    "errorCode": "project_not_found",
+    "meaning": "JSON-RPC transport succeeded; project and issue tools denied object access. This is not an HTTP403 claim."
+  },
+  "revocation": {
+    "uiPath": "Account settings → Minddy MCP → Disconnect → confirmation Disconnect",
+    "deleteHttpStatus": 200,
+    "uiOutcome": "No connected apps yet.",
+    "oldAccessTokenHttpStatus": 401,
+    "oldAccessTokenError": "invalid_token"
+  },
+  "writes": [
+    "Local OAuth client registration and grant, followed by actual UI grant revocation.",
+    "Normal application-tab metadata and local-snapshot persistence during settings navigation. No business-content write."
+  ],
+  "retainedFailures": [
+    "Initial harness after token exchange treated fetch Response.status as a function. Corrected numeric property, then reinitialized with the same genuine token; no second grant or fabricated result.",
+    "Initial Disconnect only opened an alertdialog. Confirmation was then submitted, DELETE200 observed and revoked-token401 verified."
+  ],
+  "limitations": [
+    "No AI/provider call, forge/content write, webhook delivery or desktop-client installation claimed.",
+    "Validates the local OAuth account boundary, not project-scoped OAuth grants.",
+    "Tokens, codes, browser authentication storage and complete object responses remain outside the repository; only selected sanitized outcomes and response hashes are recorded."
+  ],
+  "humanAcceptance": false
+}

@@ -1,0 +1,351 @@
+{
+  "date": "2026-10-08",
+  "humanReview": false,
+  "scope": "Complete idiomatic Spanish prose revision of H01-H16 and T01-T08 after independent review. All executable examples and semantic cautions retained. Publication remains pending separate independent review and operational evidence.",
+  "records": [
+    {
+      "article": "self-hosted-compatibility",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "03a83a9bd51c026f313817a6a0540054ddc0d1385c3fa68184116daf62297d99",
+      "sections": [
+        "self-hosted-compatibility",
+        "verify-release",
+        "support"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "install-locally",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "9e0b39d798f87c2f6328f3acc9bfe56b10388a5941f695b35bb4686b228c64ae",
+      "sections": [
+        "install-locally",
+        "launch",
+        "recover"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "install-a-server",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "7f0f8adc0a8c770ad1a0e247be3225f4b69049a7111735b68771d11067c9c98f",
+      "sections": [
+        "install-a-server",
+        "install",
+        "accept"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "managed-or-source-installation",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "13d1482871715168640e4ca6ee7b67a7c0b0aed189396c6258931144879a072c",
+      "sections": [
+        "managed-or-source-installation",
+        "managed",
+        "source"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "instance-configuration",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "7061907c034e969704302f7c235c1c87c62dab5e5d44e7e830b6622a072d4264",
+      "sections": [
+        "instance-configuration",
+        "secrets",
+        "capabilities"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "authentication-and-email",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "001259230450323bd21baba5c72561542ba6c8493a45730b1ff1fd0bfb955259",
+      "sections": [
+        "authentication-and-email",
+        "managed",
+        "verify"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "storage-and-attachments",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "203cdaf17fce4410ac991b13d80171011363cdf3a70fa623de40d84c687c5675",
+      "sections": [
+        "storage-and-attachments",
+        "access",
+        "recover"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "proxy-network-and-jobs",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "de21e55fa694ea3dfee8ec0a1d9e24294e666d07a661f77689b6fce5c36a97b4",
+      "sections": [
+        "proxy-network-and-jobs",
+        "schedules",
+        "maintenance"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "optional-providers",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "ba835e58e443ede104318f50c37dabab38b1c5fd33ad4c801952bd2620b87317",
+      "sections": [
+        "optional-providers",
+        "configure",
+        "git-and-code"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "f59e129834af84acc266658559c4f9579b11ac4c38658ddde042986ab0801164",
+      "sections": [
+        "workspace-encryption",
+        "existing-data",
+        "recovery"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "back-up-the-reference-instance",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "b663d6efaf1c1b400c69cf9c459cf8469fcd4bd93f4254d354c23c770e311e09",
+      "sections": [
+        "back-up-the-reference-instance",
+        "context",
+        "backup",
+        "verify"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "logical-and-provider-backups",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "d6a365af999784a7dd8f36353a44fedde4bfe79fda2f58f743157dba54555455",
+      "sections": [
+        "logical-and-provider-backups",
+        "provider",
+        "outage",
+        "bytes",
+        "verify"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "update-an-instance",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "021dac005c3d4299fffaa9cd88dec57318927e52e7e6f68132a288cbc0377927",
+      "sections": [
+        "update-an-instance",
+        "full",
+        "managed-source",
+        "verify"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "restore-and-roll-back",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "c53479a2a3b99873166a90351592f9c0e7f671aea595f20f2fa502d55da8374d",
+      "sections": [
+        "restore-and-roll-back",
+        "physical",
+        "logical",
+        "verify"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "self-hosted-diagnostics",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "d4e5f598b1c7f2fb6994a8dae85bd236e7330b1a0dbc49619b4bb643ed5d6dbe",
+      "sections": [
+        "self-hosted-diagnostics",
+        "symptoms",
+        "recovery"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "instance-administration",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "5184113c7b53fad5c5c97406a40c3e0b7581f52ca29bc19343361397899cd245",
+      "sections": [
+        "instance-administration",
+        "panels",
+        "responsibilities"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "glossary-and-data-model",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "142cc82d467ca8f5e275b2fb7103e14f088d30886503c333590eabc8149e77a1",
+      "sections": [
+        "glossary-and-data-model",
+        "knowledge-and-feedback",
+        "example"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "permissions-and-public-links",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "3b88edabeb6a79ae9263331fd4a76f1ae6968e4c79753418d2426c6edec1ecee",
+      "sections": [
+        "permissions-and-public-links",
+        "publication",
+        "revocation"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "architecture-and-data-flows",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "ddde384cd9488995af0f809e9b233201781d57917c17471d54ce8fc318345a87",
+      "sections": [
+        "architecture-and-data-flows",
+        "requests",
+        "providers"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "encryption-and-data-boundaries",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "4dafa3e6527089e058b4bd9edf92482ffb7037b8cc36b13d4ab83d3e44b2b99e",
+      "sections": [
+        "encryption-and-data-boundaries",
+        "exceptions",
+        "recovery"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "numo-execution-model",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "aa9af5b71935547c0eca42d0fa960b98e0b762607d7f6003a5ce83d2a4598937",
+      "sections": [
+        "numo-execution-model",
+        "state",
+        "mutations"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "mcp-tool-reference",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "1bd2dee3ed9003b28d68098ac40a3309071b83ae9b5a682ca8c515969f1f9c69",
+      "sections": [
+        "mcp-tool-reference",
+        "issue-plans",
+        "pages-and-routines",
+        "example"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "integration-api-and-webhooks",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "539fcbe10bca7e411fc31a4c6cc4ab6154a094f0974ab2f991db1f12d8ee0d24",
+      "sections": [
+        "integration-api-and-webhooks",
+        "send",
+        "receive",
+        "limits"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    },
+    {
+      "article": "integration-troubleshooting",
+      "locale": "es",
+      "author": "agent:/root/automation_account_documentation",
+      "sha256": "118093818c46dc9e69e08103e20c524a662a0a2c1a2d08a413dc36964aa8335b",
+      "sections": [
+        "integration-troubleshooting",
+        "oauth",
+        "webhooks",
+        "git"
+      ],
+      "codeBlocksRetainedByteForByte": true,
+      "conditionsRetained": true,
+      "independentLanguageApproval": false
+    }
+  ]
+}

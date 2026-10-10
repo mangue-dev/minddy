@@ -1,0 +1,192 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "profile": "Candidate Next.js source at localhost:3001 with disposable restored/aligned Supabase backend.",
+  "source": "A genuine personal account export, with no project UUID collisions, is imported unchanged twice by each of three local destination accounts. No inter-instance project transfer is claimed. An earlier separate real project export was rejected with HTTP400 across different owners on this same backend; the scope barrier remains intact.",
+  "identity": "Auth users were created through the local Admin API with email_confirm=true; SMTP registration is not claimed here.",
+  "sourceChanges": [
+    "components/settings/account-data-section.tsx",
+    "messages/{en,fr,de,es,it,pt-BR}.json"
+  ],
+  "apiPayloadChanged": false,
+  "sessionStorageAdded": false,
+  "humanReview": false,
+  "publicationApproved": false,
+  "captures": [
+    {
+      "locale": "en",
+      "article": "transfer-between-instances",
+      "output": "public/documentation/en/transfer-between-instances-result.png",
+      "sha256": "6a4cf13e19be5bcdeac254e25024bc766654562d618dca90a2a125c6838b4b43",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1240,
+        860
+      ],
+      "actualImportStatus": 201,
+      "result": {
+        "remappedIds": 0,
+        "skippedMemberships": 0
+      },
+      "reviewed": true,
+      "authorVisualReview": "All six real dialogs inspected at original resolution; both actual API count values are zero, readable labels and reload control retained."
+    },
+    {
+      "locale": "fr",
+      "article": "transfer-between-instances",
+      "output": "public/documentation/fr/transfer-between-instances-result.png",
+      "sha256": "d1f64b30fa81887731a4d747c77c572320393430eb795aa56961684d49274351",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1240,
+        860
+      ],
+      "actualImportStatus": 201,
+      "result": {
+        "remappedIds": 0,
+        "skippedMemberships": 0
+      },
+      "reviewed": true,
+      "authorVisualReview": "All six real dialogs inspected at original resolution; both actual API count values are zero, readable labels and reload control retained."
+    },
+    {
+      "locale": "de",
+      "article": "transfer-between-instances",
+      "output": "public/documentation/de/transfer-between-instances-result.png",
+      "sha256": "fdc5adc947b81974a5450a28267ac9280220457f6899bf1847f9c61357f669cd",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1240,
+        860
+      ],
+      "actualImportStatus": 201,
+      "result": {
+        "remappedIds": 0,
+        "skippedMemberships": 0
+      },
+      "reviewed": true,
+      "authorVisualReview": "All six real dialogs inspected at original resolution; both actual API count values are zero, readable labels and reload control retained."
+    },
+    {
+      "locale": "es",
+      "article": "transfer-between-instances",
+      "output": "public/documentation/es/transfer-between-instances-result.png",
+      "sha256": "e8b3d838604c7151bb4f150fc9d549381c18590c085025bda5e20a683318adb2",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1240,
+        860
+      ],
+      "actualImportStatus": 201,
+      "result": {
+        "remappedIds": 0,
+        "skippedMemberships": 0
+      },
+      "reviewed": true,
+      "authorVisualReview": "All six real dialogs inspected at original resolution; both actual API count values are zero, readable labels and reload control retained."
+    },
+    {
+      "locale": "it",
+      "article": "transfer-between-instances",
+      "output": "public/documentation/it/transfer-between-instances-result.png",
+      "sha256": "c9b9a358f177b00729cc36a72d27c3f98c3af21b803dfeeffcadb74a0cb545c8",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1240,
+        860
+      ],
+      "actualImportStatus": 201,
+      "result": {
+        "remappedIds": 0,
+        "skippedMemberships": 0
+      },
+      "reviewed": true,
+      "authorVisualReview": "All six real dialogs inspected at original resolution; both actual API count values are zero, readable labels and reload control retained."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "transfer-between-instances",
+      "output": "public/documentation/pt-BR/transfer-between-instances-result.png",
+      "sha256": "a031622089408a1f3e53e8cb63509c4467f546784302002d00b56c6205578f4a",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1240,
+        860
+      ],
+      "actualImportStatus": 201,
+      "result": {
+        "remappedIds": 0,
+        "skippedMemberships": 0
+      },
+      "reviewed": true,
+      "authorVisualReview": "All six real dialogs inspected at original resolution; both actual API count values are zero, readable labels and reload control retained."
+    }
+  ],
+  "checks": [
+    {
+      "locale": "en",
+      "personalAccountExportAccepted": true,
+      "navigationBeforeAcknowledgement": 0,
+      "reloadAfterAcknowledgement": true,
+      "resultDismissedAfterReload": true,
+      "accountImportRequestsThisHour": 1
+    },
+    {
+      "locale": "fr",
+      "personalAccountExportAccepted": true,
+      "navigationBeforeAcknowledgement": 0,
+      "reloadAfterAcknowledgement": true,
+      "resultDismissedAfterReload": true,
+      "accountImportRequestsThisHour": 2
+    },
+    {
+      "locale": "de",
+      "personalAccountExportAccepted": true,
+      "navigationBeforeAcknowledgement": 0,
+      "reloadAfterAcknowledgement": true,
+      "resultDismissedAfterReload": true,
+      "accountImportRequestsThisHour": 1
+    },
+    {
+      "locale": "es",
+      "personalAccountExportAccepted": true,
+      "navigationBeforeAcknowledgement": 0,
+      "reloadAfterAcknowledgement": true,
+      "resultDismissedAfterReload": true,
+      "accountImportRequestsThisHour": 2
+    },
+    {
+      "locale": "it",
+      "personalAccountExportAccepted": true,
+      "navigationBeforeAcknowledgement": 0,
+      "reloadAfterAcknowledgement": true,
+      "resultDismissedAfterReload": true,
+      "accountImportRequestsThisHour": 1
+    },
+    {
+      "locale": "pt-BR",
+      "personalAccountExportAccepted": true,
+      "navigationBeforeAcknowledgement": 0,
+      "reloadAfterAcknowledgement": true,
+      "resultDismissedAfterReload": true,
+      "accountImportRequestsThisHour": 2
+    },
+    {
+      "invalidJsonStatus": 400,
+      "noSuccessDialog": true,
+      "noReload": true,
+      "destination2RequestsThisHour": 3,
+      "quotaUnchanged": true
+    }
+  ],
+  "capturePreparationLimits": [
+    "An initial successful English capture stopped on a missing optional HTML class attribute while recording theme; the screenshot helper was corrected. No product import failed in that attempt. Final six captures use subsequent real requests.",
+    "The demonstrated personal export contains no projects and no conflicting IDs; zero counts are actual responses, not a projection of a project transfer between physical instances."
+  ]
+}

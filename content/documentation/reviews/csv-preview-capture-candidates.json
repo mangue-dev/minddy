@@ -1,0 +1,210 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/automation_account_documentation",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "import-issues-preview",
+      "locale": "en",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/en/import-issues-preview-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "en",
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 929
+      },
+      "text": "Import\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nIn Linear, open the view holding your issues.\n⌘K → “Export issues as CSV”.\nDrop the file below.\nLinear documentation\n\nminddy-demo.csv\n\nCSV file — 2 issues detected\n\nBacklog · 1\nTodo · 1\nColumn mapping\n7 of 7 columns used\nFile columns\n\ntitle\n\nPrepare the release · Verify the attachment\n\nTitle\n\ndescription\n\nDemonstration checklist\n\nDescription\n\nstatus\n\ntodo · backlog\n\nStatus\n\npriority\n\nhigh · medium\n\nPriority\n\neffort\n\nm · s\n\nEffort\n\nid\n\nDEMO-1 · DEMO-2\n\nIdentifier\n\nparent\n\nDEMO-1\n\nParent issue\nStatus values\n\ntodo\n\nTodo\n\nbacklog\n\nBacklog\nPriority values\n\nhigh\n\nHigh\n\nmedium\n\nMedium\nEffort values\n\nm\n\nM\n\ns\n\nS\nImport 2 issues\nCancel",
+      "fixture": {
+        "csv": "title,description,status,priority,effort,id,parent\n\"Prepare the release\",\"Demonstration checklist\",todo,high,m,DEMO-1,\n\"Verify the attachment\",,backlog,medium,s,DEMO-2,DEMO-1\n",
+        "fileName": "minddy-demo.csv",
+        "rows": 2,
+        "parent": "DEMO-1",
+        "storedInDatabase": false
+      },
+      "blockedAIRequests": 0,
+      "blockedImportWrites": 0,
+      "action": "Parse and preview real localized demonstration CSV using actual browser import code. Automatic optional AI requests blocked to avoid paid execution; no Import button submitted.",
+      "reviewed": true,
+      "sha256": "27f066fb647d89e4046eebb401f0508c02d060764e28b8288e9c57d825b298cb",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues-preview",
+      "locale": "fr",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/fr/import-issues-preview-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "fr",
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 929
+      },
+      "text": "Import\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nDans Linear, ouvrez la vue qui contient vos tickets.\n⌘K → « Export issues as CSV ».\nDéposez le fichier ci-dessous.\nDocumentation Linear\n\nminddy-demo.csv\n\nFichier CSV — 2 tickets détectés\n\nBacklog · 1\nÀ faire · 1\nCorrespondance des colonnes\n7 colonnes sur 7 reprises\nColonnes du fichier\n\ntitle\n\nPréparer la version · Vérifier la pièce jointe\n\nTitre\n\ndescription\n\nListe de contrôle de démonstration\n\nDescription\n\nstatus\n\ntodo · backlog\n\nStatut\n\npriority\n\nhigh · medium\n\nPriorité\n\neffort\n\nm · s\n\nEffort\n\nid\n\nDEMO-1 · DEMO-2\n\nIdentifiant\n\nparent\n\nDEMO-1\n\nTicket parent\nValeurs de statut\n\ntodo\n\nÀ faire\n\nbacklog\n\nBacklog\nValeurs de priorité\n\nhigh\n\nHaute\n\nmedium\n\nMoyenne\nValeurs d'effort\n\nm\n\nM\n\ns\n\nS\nImporter 2 tickets\nAnnuler",
+      "fixture": {
+        "csv": "title,description,status,priority,effort,id,parent\n\"Préparer la version\",\"Liste de contrôle de démonstration\",todo,high,m,DEMO-1,\n\"Vérifier la pièce jointe\",,backlog,medium,s,DEMO-2,DEMO-1\n",
+        "fileName": "minddy-demo.csv",
+        "rows": 2,
+        "parent": "DEMO-1",
+        "storedInDatabase": false
+      },
+      "blockedAIRequests": 0,
+      "blockedImportWrites": 0,
+      "action": "Parse and preview real localized demonstration CSV using actual browser import code. Automatic optional AI requests blocked to avoid paid execution; no Import button submitted.",
+      "reviewed": true,
+      "sha256": "fc6c2c66c58448c407c4876b3bd61698cf32f73d2a75f4a6983fc540a6989ea5",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues-preview",
+      "locale": "de",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/de/import-issues-preview-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "de",
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 929
+      },
+      "text": "Importieren\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nÖffnen Sie in Linear die Ansicht mit Ihren Problemen.\n⌘K → „Probleme als CSV exportieren“.\nLegen Sie die Datei unten ab.\nLinear Dokumentation\n\nminddy-demo.csv\n\nCSV-Datei — 2 Probleme erkannt\n\nRückstand · 1\nTodo · 1\nSpaltenzuordnung\n7 von 7 Spalten verwendet\nDateispalten\n\ntitle\n\nVeröffentlichung vorbereiten · Anhang überprüfen\n\nTitel\n\ndescription\n\nCheckliste für die Demonstration\n\nBeschreibung\n\nstatus\n\ntodo · backlog\n\nStatus\n\npriority\n\nhigh · medium\n\nPriorität\n\neffort\n\nm · s\n\nAufwand\n\nid\n\nDEMO-1 · DEMO-2\n\nBezeichner\n\nparent\n\nDEMO-1\n\nÜbergeordnetes Problem\nStatuswerte\n\ntodo\n\nTodo\n\nbacklog\n\nRückstand\nPrioritätswerte\n\nhigh\n\nHoch\n\nmedium\n\nMittel\nAufwandswerte\n\nm\n\nM\n\ns\n\nS\nImportieren 2 Probleme\nAbbrechen",
+      "fixture": {
+        "csv": "title,description,status,priority,effort,id,parent\n\"Veröffentlichung vorbereiten\",\"Checkliste für die Demonstration\",todo,high,m,DEMO-1,\n\"Anhang überprüfen\",,backlog,medium,s,DEMO-2,DEMO-1\n",
+        "fileName": "minddy-demo.csv",
+        "rows": 2,
+        "parent": "DEMO-1",
+        "storedInDatabase": false
+      },
+      "blockedAIRequests": 0,
+      "blockedImportWrites": 0,
+      "action": "Parse and preview real localized demonstration CSV using actual browser import code. Automatic optional AI requests blocked to avoid paid execution; no Import button submitted.",
+      "reviewed": true,
+      "sha256": "9011775eef5af53da101641a9c801598b6268fe8848a2f23926bb6dd48bc05de",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues-preview",
+      "locale": "es",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/es/import-issues-preview-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "es",
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 929
+      },
+      "text": "Importación\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nEn Linear, abre la vista que contiene tus incidencias.\n⌘K → «Export issues as CSV».\nSuelta el archivo abajo.\nDocumentación de Linear\n\nminddy-demo.csv\n\nArchivo CSV — 2 incidencias detectadas\n\nRegistro · 1\nPendiente · 1\nCartografía de columnas\n7 de 7 Columnas utilizadas\nColumnas de archivo\n\ntitle\n\nPreparar la versión · Verificar el archivo adjunto\n\nTítulo\n\ndescription\n\nLista de comprobación de demostración\n\nDescripción\n\nstatus\n\ntodo · backlog\n\nSituación\n\npriority\n\nhigh · medium\n\nPrioridad\n\neffort\n\nm · s\n\nEsfuerzo\n\nid\n\nDEMO-1 · DEMO-2\n\nIdentificador\n\nparent\n\nDEMO-1\n\nIncidencia con los padres\nValores de estado\n\ntodo\n\nPendiente\n\nbacklog\n\nRegistro\nValores prioritarios\n\nhigh\n\nAlto\n\nmedium\n\nMedio\nValores de esfuerzo\n\nm\n\nM\n\ns\n\nS\nImportación 2 Incidencias\nCancelar",
+      "fixture": {
+        "csv": "title,description,status,priority,effort,id,parent\n\"Preparar la versión\",\"Lista de comprobación de demostración\",todo,high,m,DEMO-1,\n\"Verificar el archivo adjunto\",,backlog,medium,s,DEMO-2,DEMO-1\n",
+        "fileName": "minddy-demo.csv",
+        "rows": 2,
+        "parent": "DEMO-1",
+        "storedInDatabase": false
+      },
+      "blockedAIRequests": 0,
+      "blockedImportWrites": 0,
+      "action": "Parse and preview real localized demonstration CSV using actual browser import code. Automatic optional AI requests blocked to avoid paid execution; no Import button submitted.",
+      "reviewed": true,
+      "sha256": "6824fb1236183f4b957b04a773de1f72bd489fe12a0f94825387437b567dcb8c",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues-preview",
+      "locale": "pt-BR",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/pt-BR/import-issues-preview-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "pt-BR",
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 929
+      },
+      "text": "Importar\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nEm Linear, abra a visualização que contém seus problemas.\n⌘K → “Exportar problemas como CSV”.\nSolte o arquivo abaixo.\nLinear documentação\n\nminddy-demo.csv\n\narquivo CSV — 2 problemas detectados\n\nBacklog · 1\nTarefas · 1\nMapeamento de coluna\n7 de 7 colunas usadas\nColunas do arquivo\n\ntitle\n\nPreparar a versão · Verificar o anexo\n\nTítulo\n\ndescription\n\nLista de verificação de demonstração\n\nDescrição\n\nstatus\n\ntodo · backlog\n\nStatus\n\npriority\n\nhigh · medium\n\nPrioridade\n\neffort\n\nm · s\n\nEsforço\n\nid\n\nDEMO-1 · DEMO-2\n\nIdentificador\n\nparent\n\nDEMO-1\n\nProblema pai\nValores de status\n\ntodo\n\nTarefas\n\nbacklog\n\nBacklog\nValores de prioridade\n\nhigh\n\nAlta\n\nmedium\n\nMédia\nEsforço valores\n\nm\n\nM\n\ns\n\nS\nImportar 2 problemas\nCancelar",
+      "fixture": {
+        "csv": "title,description,status,priority,effort,id,parent\n\"Preparar a versão\",\"Lista de verificação de demonstração\",todo,high,m,DEMO-1,\n\"Verificar o anexo\",,backlog,medium,s,DEMO-2,DEMO-1\n",
+        "fileName": "minddy-demo.csv",
+        "rows": 2,
+        "parent": "DEMO-1",
+        "storedInDatabase": false
+      },
+      "blockedAIRequests": 0,
+      "blockedImportWrites": 0,
+      "action": "Parse and preview real localized demonstration CSV using actual browser import code. Automatic optional AI requests blocked to avoid paid execution; no Import button submitted.",
+      "reviewed": true,
+      "sha256": "300fb7b6c53e67bee2754c6bc9c963a60a33c158047dabae2a3954dfb494196d",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    },
+    {
+      "article": "import-issues-preview",
+      "locale": "it",
+      "url": "http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=import&section=project-import",
+      "output": "public/documentation/it/import-issues-preview-workflow.png",
+      "capturedAt": "2026-10-08",
+      "theme": "light",
+      "viewport": [
+        1440,
+        1800
+      ],
+      "lang": "it",
+      "bounds": {
+        "x": 490,
+        "y": 119,
+        "width": 768,
+        "height": 929
+      },
+      "text": "Importazione\nLinear\nJira\nNotion\nGitHub\nTrello\nminddy\nIn Linear, aprire la vista tenendo i vostri ticket.\n⌘K → «Export issues as CSV».\nLascia il file qui sotto.\nLinear documentazione\n\nminddy-demo.csv\n\nFile CSV — 2 ticket rilevati\n\nBacklog · 1\nDa fare · 1\nMappatura delle colonne\n7 di 7 Colonne utilizzate\nColonne di file\n\ntitle\n\nPreparare la versione · Verificare l’allegato\n\nTitolo\n\ndescription\n\nLista di controllo dimostrativa\n\nDesignazione delle merci\n\nstatus\n\ntodo · backlog\n\nStato\n\npriority\n\nhigh · medium\n\nPriorità\n\neffort\n\nm · s\n\nImpegno\n\nid\n\nDEMO-1 · DEMO-2\n\nIdentificatore\n\nparent\n\nDEMO-1\n\nTicket padre\nValori di stato\n\ntodo\n\nDa fare\n\nbacklog\n\nBacklog\nValori prioritari\n\nhigh\n\nAlta\n\nmedium\n\nMedia\nValori dello sforzo\n\nm\n\nM\n\ns\n\nS\nImporta 2 ticket\nAnnulla",
+      "fixture": {
+        "csv": "title,description,status,priority,effort,id,parent\n\"Preparare la versione\",\"Lista di controllo dimostrativa\",todo,high,m,DEMO-1,\n\"Verificare l’allegato\",,backlog,medium,s,DEMO-2,DEMO-1\n",
+        "fileName": "minddy-demo.csv",
+        "rows": 2,
+        "parent": "DEMO-1",
+        "storedInDatabase": false
+      },
+      "blockedAIRequests": 0,
+      "blockedImportWrites": 0,
+      "action": "Parse and preview real localized demonstration CSV using actual browser import code. Automatic optional AI requests blocked to avoid paid execution; no Import button submitted.",
+      "reviewed": true,
+      "sha256": "d14f09357b9176bd0dcf3bcf49fa2338cb167a9f2ba9ce17a9573d23a40a1729",
+      "visualReviewer": "agent:/root/automation_account_documentation"
+    }
+  ],
+  "visualReview": {
+    "date": "2026-10-08",
+    "reviewer": "agent:/root/automation_account_documentation",
+    "method": "Inspected each final locale image, actual controls, locale, masked secrets and demonstration data. These images do not establish workflow execution or publication approval."
+  }
+}

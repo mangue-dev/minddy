@@ -1,0 +1,3 @@
+→ 227 migrations validated, from 20270106090000_baseline.sql to 20270109200016_page_search_cipher_fingerprints.sql.
+→ existing deployment environment read without modification.
+✓ Supabase instance ready: migrations, storage, initial values, and prerequisites verified.

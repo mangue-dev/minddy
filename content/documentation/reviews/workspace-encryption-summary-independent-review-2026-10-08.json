@@ -1,0 +1,233 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/review_documentation_locales",
+  "scope": "Independent six-language revision2 summary and full-current-body revalidation; no operational encryption execution or human acceptance claimed. Prior lifecycle/runtime records remain distinct.",
+  "sourcesRead": [
+    "scripts/self-hosting-encryption.mjs",
+    "scripts/bootstrap-supabase.mjs",
+    "scripts/self-hosting-install.mjs",
+    "lib/server/encryption/content-config.ts",
+    "git:v0.11.0:scripts/self-hosting-install.mjs",
+    "git:v0.11.0:scripts/bootstrap-supabase.mjs",
+    "git:v0.11.0:deploy/self-hosted/compose.full.yml",
+    "git:v0.11.0:lib/server/encryption/content-config.ts"
+  ],
+  "records": [
+    {
+      "article": "workspace-encryption",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "date": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "summary": "Check encryption behavior for your release and preserve credential and workspace recovery keys.",
+      "summarySha256": "8ad8f6e89cbcbba35d521af6c39577013d277ec9f6616b0e80c947563694a188",
+      "bodySha256": "81bb9925c62b3d6c8fc926bfead9c3d6123e4484cf099a78217599701cb2531c",
+      "articleSha256": "e27af372f23a0929bd280722f8235928aa86fe56e7926a16424f234c9b55a452",
+      "summaryRegisterCorrection": null,
+      "fullCurrentBodyRead": true,
+      "conditionsRetained": [
+        "0.11.1 candidate flags vs published v0.11.0 parser rejection",
+        "v0.11.0 runtime flag recognized and protected env_file transmitted",
+        "recreate application service and verify schema/actual behavior",
+        "root key presence does not prove workspace content encryption",
+        "credential encryption remains distinct from workspace opt-out",
+        "saved choices and original keys retained, conflicting rerun rejected",
+        "partial legacy conversion and disabling flag do not decrypt protected data",
+        "server-authorized/AI decryption; readable metadata, export/provider boundary",
+        "current and historical recovery keys; guarded offline rewrap and matched restore"
+      ],
+      "figures": [
+        {
+          "id": "workspace-encryption-flow",
+          "src": "/documentation/en/workspace-encryption-flow.svg",
+          "sha256": "c4f8b1e8d8200298eb289289f190aa80429797cfab25aebff8c0ff77c070bf9e",
+          "review": "Unchanged diagram source and localized alt/caption reread; remains semantically applicable after summary-only revision. Prior visual inspection retained; no new capture claimed."
+        }
+      ],
+      "humanAcceptance": false,
+      "statusPreserved": "draft"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 2,
+      "date": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "summary": "Vérifiez le chiffrement applicable à votre version et conservez les clés de récupération des identifiants et du contenu.",
+      "summarySha256": "36aefdb0f1e7bc7ba3768435a210ab48fea7c5e78084ddc50d70f697d7175509",
+      "bodySha256": "7261d9d184434f4cf2c47718147b395ce8cf7408a2f4f359fbeaf83121224cb7",
+      "articleSha256": "adbd45fda0df7b1567f6a193dd5087684b2735176240fbc7c0cae61a44f47d8c",
+      "summaryRegisterCorrection": null,
+      "fullCurrentBodyRead": true,
+      "conditionsRetained": [
+        "0.11.1 candidate flags vs published v0.11.0 parser rejection",
+        "v0.11.0 runtime flag recognized and protected env_file transmitted",
+        "recreate application service and verify schema/actual behavior",
+        "root key presence does not prove workspace content encryption",
+        "credential encryption remains distinct from workspace opt-out",
+        "saved choices and original keys retained, conflicting rerun rejected",
+        "partial legacy conversion and disabling flag do not decrypt protected data",
+        "server-authorized/AI decryption; readable metadata, export/provider boundary",
+        "current and historical recovery keys; guarded offline rewrap and matched restore"
+      ],
+      "figures": [
+        {
+          "id": "workspace-encryption-flow",
+          "src": "/documentation/fr/workspace-encryption-flow.svg",
+          "sha256": "07ca1a8f0980ff00fa0241fa436425cd649f3a5da53598918ebbaab749fb44f5",
+          "review": "Unchanged diagram source and localized alt/caption reread; remains semantically applicable after summary-only revision. Prior visual inspection retained; no new capture claimed."
+        }
+      ],
+      "humanAcceptance": false,
+      "statusPreserved": "draft"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "de",
+      "revision": 2,
+      "sourceRevision": 2,
+      "date": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "summary": "Prüfen Sie die Verschlüsselung Ihrer Version und bewahren Sie die Wiederherstellungsschlüssel für Zugangsdaten und Arbeitsbereichsinhalte auf.",
+      "summarySha256": "49a4fe6f2ba776332602b662c67f4dc9fb91f134ebe0b2fae4925573e3719bc6",
+      "bodySha256": "17c1a17ebc7300cc55189d59fe81f1eda6d3ae69bb94853292c853e883683567",
+      "articleSha256": "f860449afd1b84ecaa0eaa68a531c16157a789fce530721237970cd769cd94a8",
+      "summaryRegisterCorrection": {
+        "before": "Prüfe die Verschlüsselung deiner Version und bewahre die Wiederherstellungsschlüssel für Zugangsdaten und Arbeitsbereichsinhalte auf.",
+        "after": "Prüfen Sie die Verschlüsselung Ihrer Version und bewahren Sie die Wiederherstellungsschlüssel für Zugangsdaten und Arbeitsbereichsinhalte auf."
+      },
+      "fullCurrentBodyRead": true,
+      "conditionsRetained": [
+        "0.11.1 candidate flags vs published v0.11.0 parser rejection",
+        "v0.11.0 runtime flag recognized and protected env_file transmitted",
+        "recreate application service and verify schema/actual behavior",
+        "root key presence does not prove workspace content encryption",
+        "credential encryption remains distinct from workspace opt-out",
+        "saved choices and original keys retained, conflicting rerun rejected",
+        "partial legacy conversion and disabling flag do not decrypt protected data",
+        "server-authorized/AI decryption; readable metadata, export/provider boundary",
+        "current and historical recovery keys; guarded offline rewrap and matched restore"
+      ],
+      "figures": [
+        {
+          "id": "workspace-encryption-flow",
+          "src": "/documentation/de/workspace-encryption-flow.svg",
+          "sha256": "f72aefe83a96017d572a0967aaab54ca9c48cdc73d29799bcd33b0986bc70c19",
+          "review": "Unchanged diagram source and localized alt/caption reread; remains semantically applicable after summary-only revision. Prior visual inspection retained; no new capture claimed."
+        }
+      ],
+      "humanAcceptance": false,
+      "statusPreserved": "draft"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 2,
+      "date": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "summary": "Compruebe el cifrado de su versión y conserve las claves de recuperación de credenciales y contenido del espacio de trabajo.",
+      "summarySha256": "34b6b6f01182a470b74223b5941b0f82b46b33ccf5d4dfc9787a87097085af65",
+      "bodySha256": "5ff757b6b4f113dd362f31a3aa58583a01e245c72e2f64b2af73fe66ff75b04a",
+      "articleSha256": "ed77b6668e68a1c598d01b3a4f84c578963ad40153e8bea32b3d242393959e8e",
+      "summaryRegisterCorrection": {
+        "before": "Comprueba el cifrado de tu versión y conserva las claves de recuperación de credenciales y contenido del espacio de trabajo.",
+        "after": "Compruebe el cifrado de su versión y conserve las claves de recuperación de credenciales y contenido del espacio de trabajo."
+      },
+      "fullCurrentBodyRead": true,
+      "conditionsRetained": [
+        "0.11.1 candidate flags vs published v0.11.0 parser rejection",
+        "v0.11.0 runtime flag recognized and protected env_file transmitted",
+        "recreate application service and verify schema/actual behavior",
+        "root key presence does not prove workspace content encryption",
+        "credential encryption remains distinct from workspace opt-out",
+        "saved choices and original keys retained, conflicting rerun rejected",
+        "partial legacy conversion and disabling flag do not decrypt protected data",
+        "server-authorized/AI decryption; readable metadata, export/provider boundary",
+        "current and historical recovery keys; guarded offline rewrap and matched restore"
+      ],
+      "figures": [
+        {
+          "id": "workspace-encryption-flow",
+          "src": "/documentation/es/workspace-encryption-flow.svg",
+          "sha256": "38cf670e615f5c9d06a31055b33d630d665386eb4b29c739b07076827e06615b",
+          "review": "Unchanged diagram source and localized alt/caption reread; remains semantically applicable after summary-only revision. Prior visual inspection retained; no new capture claimed."
+        }
+      ],
+      "humanAcceptance": false,
+      "statusPreserved": "draft"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 2,
+      "date": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "summary": "Verifica la cifratura della tua versione e conserva le chiavi di recupero delle credenziali e dei contenuti dello spazio di lavoro.",
+      "summarySha256": "f1f5cda412d49190593cdd865941be1b1a9c01434ff36204f2098c6e5c9125da",
+      "bodySha256": "084a49fda46a20ffee45eae1fab520173c25e9a4e457b4b519e22e08a02c999c",
+      "articleSha256": "fc4631770aaf537fd160617e6852569319be360c3a5a1f598fd78ada9bf45ce6",
+      "summaryRegisterCorrection": null,
+      "fullCurrentBodyRead": true,
+      "conditionsRetained": [
+        "0.11.1 candidate flags vs published v0.11.0 parser rejection",
+        "v0.11.0 runtime flag recognized and protected env_file transmitted",
+        "recreate application service and verify schema/actual behavior",
+        "root key presence does not prove workspace content encryption",
+        "credential encryption remains distinct from workspace opt-out",
+        "saved choices and original keys retained, conflicting rerun rejected",
+        "partial legacy conversion and disabling flag do not decrypt protected data",
+        "server-authorized/AI decryption; readable metadata, export/provider boundary",
+        "current and historical recovery keys; guarded offline rewrap and matched restore"
+      ],
+      "figures": [
+        {
+          "id": "workspace-encryption-flow",
+          "src": "/documentation/it/workspace-encryption-flow.svg",
+          "sha256": "f55cef242993f2803da772a7a92331f8cbc6448e5f46d11a881993e3a36fb035",
+          "review": "Unchanged diagram source and localized alt/caption reread; remains semantically applicable after summary-only revision. Prior visual inspection retained; no new capture claimed."
+        }
+      ],
+      "humanAcceptance": false,
+      "statusPreserved": "draft"
+    },
+    {
+      "article": "workspace-encryption",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 2,
+      "date": "2026-10-08",
+      "reviewer": "agent:/root/review_documentation_locales",
+      "summary": "Verifique a criptografia da sua versão e preserve as chaves de recuperação das credenciais e do conteúdo do espaço de trabalho.",
+      "summarySha256": "011e02ac3e1b19048e7011640703010f93faa4c4b3a08391123f505f91cfb263",
+      "bodySha256": "f46471c2cfe3ef5cd3f1a72109a187ac71ebb2211a8f248859c7318d5f0165e4",
+      "articleSha256": "d3a379966cb7368b926e6ea357f18fb61f373d0e3f64e71a3792821df37cf20f",
+      "summaryRegisterCorrection": null,
+      "fullCurrentBodyRead": true,
+      "conditionsRetained": [
+        "0.11.1 candidate flags vs published v0.11.0 parser rejection",
+        "v0.11.0 runtime flag recognized and protected env_file transmitted",
+        "recreate application service and verify schema/actual behavior",
+        "root key presence does not prove workspace content encryption",
+        "credential encryption remains distinct from workspace opt-out",
+        "saved choices and original keys retained, conflicting rerun rejected",
+        "partial legacy conversion and disabling flag do not decrypt protected data",
+        "server-authorized/AI decryption; readable metadata, export/provider boundary",
+        "current and historical recovery keys; guarded offline rewrap and matched restore"
+      ],
+      "figures": [
+        {
+          "id": "workspace-encryption-flow",
+          "src": "/documentation/pt-BR/workspace-encryption-flow.svg",
+          "sha256": "1729a4faaa461da9529ce83e85c8e04dc5fca43bd553fa6c64fb13648e5ebfae",
+          "review": "Unchanged diagram source and localized alt/caption reread; remains semantically applicable after summary-only revision. Prior visual inspection retained; no new capture claimed."
+        }
+      ],
+      "humanAcceptance": false,
+      "statusPreserved": "draft"
+    }
+  ]
+}

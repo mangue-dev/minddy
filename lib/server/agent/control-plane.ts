@@ -1402,7 +1402,7 @@ async function runCreatePr(
     generatedAgentBranchName({
       runId: run.id,
       issueIdentifier: identifier,
-      conversationTitle: launch?.title ?? run.title,
+      // Asynchronous title generation must not change the checkout's authority.
       prompt: launch?.prompt ?? run.prompt,
       branchPrefix,
     });

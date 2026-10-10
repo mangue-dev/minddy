@@ -1,0 +1,310 @@
+{
+  "executor": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "profile": "Disposable sequential full OCI, Linux Docker aarch64, loopback ingress, filesystem Storage in named volume",
+  "releasePair": [
+    "v0.10.30",
+    "v0.11.0"
+  ],
+  "stages": [
+    {
+      "stage": "preserve-reader-backend-down",
+      "exitCode": 0,
+      "diagnosticSHA256": "8333cabe851fb414f18fd8e6a4ccc651dcc444b90aaeb7d53caefdce6ca7f1b1"
+    },
+    {
+      "stage": "source-context-valid",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "source-offline-function-compiler",
+      "exitCode": 0,
+      "diagnosticSHA256": "b2b9462c92773c9a0a700974cacfcd5eddbef271ae4008cc435f7dacf166e309"
+    },
+    {
+      "stage": "source-full-services-start",
+      "exitCode": 0,
+      "diagnosticSHA256": "d76dad7d10623658f0adfcf998177e9cc9b7d9b599be9916b8d3bc85796beb2e"
+    },
+    {
+      "stage": "source-bootstrap",
+      "exitCode": 0,
+      "diagnosticSHA256": "dcdcdbf187af799f429e51b50334d5179bf76aea5b6c09abf661980e772ed648"
+    },
+    {
+      "stage": "source-doctor",
+      "exitCode": 0,
+      "diagnosticSHA256": "21e0bb3e0e4f7b905947eb7fd942b2150dad8a58d97ed6acae35297965278079"
+    },
+    {
+      "stage": "source-database-identity",
+      "exitCode": 0,
+      "diagnosticSHA256": "aca057818483357e0dfad5c52f0d693b1904a2bbf2c758b212ab11991293e7a7"
+    },
+    {
+      "stage": "source-seal-cold-stop",
+      "exitCode": 0,
+      "diagnosticSHA256": "a5bbe25c465592175b6504a684448b6bced70106b289d7dedee354c48d2b5454"
+    },
+    {
+      "stage": "cold-backup-supabase-docker.tar.gz",
+      "exitCode": 0,
+      "diagnosticSHA256": "f019f14b4644c727e01c56b33fd6fc0c19680211622aef94d6ff1d5e9296d662"
+    },
+    {
+      "stage": "cold-backup-db-config.tar.gz",
+      "exitCode": 0,
+      "diagnosticSHA256": "c7a4b34de6292f7cbac32ca7e9c433f31d05c49c17c6e101f94a94fc03acf5a5"
+    },
+    {
+      "stage": "cold-backup-storage.tar.gz",
+      "exitCode": 0,
+      "diagnosticSHA256": "32be8f64d586f15387a2c7df805067517b7dcb45c6aaba469eff011d3ab0df7f"
+    },
+    {
+      "stage": "encrypt-cold-backup",
+      "exitCode": 2,
+      "diagnosticSHA256": "54fc62736477c3815ca686ab0cd38f4e479b328f995ab9dfcbdfda76020e9b14"
+    },
+    {
+      "stage": "encrypt-cold-backup",
+      "exitCode": 0,
+      "diagnosticSHA256": "a26851b4cc160d59e716b025f9f4a5ca54fe66ce7f0fd5326d9504e0b2abae1a"
+    },
+    {
+      "stage": "decrypt-cold-backup",
+      "exitCode": 0,
+      "diagnosticSHA256": "ffc707f01a7b14d30b84f83bfe2f4a54a4b7632596e54ef39ac5ae9cc0c7b8ee"
+    },
+    {
+      "stage": "source-project-containers-down",
+      "exitCode": 0,
+      "diagnosticSHA256": "67f20a54dd7525de80662a8e69daa3afc3c0026d501c0f1a4fc5597809f3de2a"
+    },
+    {
+      "stage": "download-target-source-asset",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "target-frozen-dependencies",
+      "exitCode": 0,
+      "diagnosticSHA256": "097c76f079b02d2741bf84aea4c1187f8f13c41a38043af8df0e6abac10cde77"
+    },
+    {
+      "stage": "download-pinned-agent-runner.mjs",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "download-pinned-agent-runner-storage.mjs",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "download-pinned-functions-bundle.json",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "target-context-valid",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "target-pinned-offline-compiler",
+      "exitCode": 0,
+      "diagnosticSHA256": "b2b9462c92773c9a0a700974cacfcd5eddbef271ae4008cc435f7dacf166e309"
+    },
+    {
+      "stage": "target-maintenance-backend-start",
+      "exitCode": 0,
+      "diagnosticSHA256": "8a5defbcfe8f7519ebfd5c4089c66207d006e5e0c24e682b206b423c0701f984"
+    },
+    {
+      "stage": "target-migration-bootstrap",
+      "exitCode": 0,
+      "diagnosticSHA256": "cbdb4f7bf818e4900a9241d7fb0ab893b5a664c7bacfe75d7ac2fdd10075a8b7"
+    },
+    {
+      "stage": "target-full-services-start",
+      "exitCode": 0,
+      "diagnosticSHA256": "c9364993701e4b48661d2091c67d61c0c3f71616fab9b7c559b27c4fcfbfe411"
+    },
+    {
+      "stage": "target-doctor",
+      "exitCode": 0,
+      "diagnosticSHA256": "816c8e45b722e85f53711538ab69bb14439ae4d9a2cbdd5da3387e18ab915704"
+    },
+    {
+      "stage": "upgraded-project-down-for-blank-rollback",
+      "exitCode": 0,
+      "diagnosticSHA256": "13c421a8c3b8d975dd05961baa0cd8d78acf13f0b1acee18e3d372ed98477699"
+    },
+    {
+      "stage": "source-postgres-image-available",
+      "exitCode": 0,
+      "diagnosticSHA256": "28d79051fc81d1c2d01a64957eddd555ad22ab94fb265dd5e8de5b32ee814713"
+    },
+    {
+      "stage": "blank-rollback-cold-files-extract",
+      "exitCode": 0,
+      "diagnosticSHA256": "9e0732956dd00fb5022f49ed713e14acbce622f47ee65834d8ca3f594ae66f75"
+    },
+    {
+      "stage": "blank-rollback-volume-min664-upgrade-rollback-db-config",
+      "exitCode": 0,
+      "diagnosticSHA256": "bcd445f3e1d6777f68a53aa0c80ca17d539c8051e5af3becfb1cd9fe7e13fcdd"
+    },
+    {
+      "stage": "blank-rollback-extract-db-config.tar.gz",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "blank-rollback-volume-min664-upgrade-rollback-storage",
+      "exitCode": 0,
+      "diagnosticSHA256": "e4eaa3606d7360ed738f7008a913636400ce54c44c7f089816ff56fba8873251"
+    },
+    {
+      "stage": "blank-rollback-extract-storage.tar.gz",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "blank-rollback-context-valid",
+      "exitCode": 0,
+      "diagnosticSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "stage": "blank-rollback-db-create-not-start",
+      "exitCode": 0,
+      "diagnosticSHA256": "1a4184546c79de618b1d5d071ac8ab52a2c2374df14a56b039e51256f67a5d56"
+    },
+    {
+      "stage": "blank-rollback-db-image-check",
+      "exitCode": 0,
+      "diagnosticSHA256": "cc7e3db40b3645a07121e28152d28533014ebeea33ea29cc093e178ffc013e8f"
+    },
+    {
+      "stage": "blank-rollback-source-offline-compiler",
+      "exitCode": 0,
+      "diagnosticSHA256": "b2b9462c92773c9a0a700974cacfcd5eddbef271ae4008cc435f7dacf166e309"
+    },
+    {
+      "stage": "blank-rollback-full-start",
+      "exitCode": 0,
+      "diagnosticSHA256": "b692bf5acd29c8d49f02156930cc248e051f7af5641bce529c884aee8d592b67"
+    },
+    {
+      "stage": "blank-rollback-doctor",
+      "exitCode": 0,
+      "diagnosticSHA256": "3e5091abcd57896b88e984b0f5f41278fd67a9778b8e83f7b496e1c4eb429cff"
+    },
+    {
+      "stage": "blank-rollback-fixture-verification",
+      "exitCode": 0,
+      "diagnosticSHA256": "7e884703e5f4da02f1e7a49e543bd7ed203a6b7f04f46a3d04b6929d623a48d2"
+    },
+    {
+      "stage": "blank-rollback-SQL-marker",
+      "exitCode": 0,
+      "diagnosticSHA256": "b6d640bca3521c00c57bd7934642c7bd273b4af63a918bb5b27363e2daf0a170"
+    },
+    {
+      "stage": "rollback-containers-down-preserve-evidence",
+      "exitCode": 0,
+      "diagnosticSHA256": "1049ccfef18cb93bdc8eefb26ed15ba15335daaf00aaeff8aba89e2e4cd8beb7"
+    },
+    {
+      "stage": "original-reader-QA-backend-reopen",
+      "exitCode": 0,
+      "diagnosticSHA256": "595c82bb41e2ffb1fc726c5b5f70e5eb9e8f84c03d089ef2888e892ab0ab10e5"
+    }
+  ],
+  "actualUpgradeExecuted": true,
+  "complete": true,
+  "publicationApproval": false,
+  "sourceColdBackup": {
+    "files": {
+      "private-fixture.json": "e756708bc209be35c8f180f51b9e1efea340e020d1856ee69b2c3fe70e9d34ae",
+      "supabase-docker.tar.gz": "605e8b2e7c1a62141ad1f51131477cc3b11702ae80ab935c2f9232660be69fb2",
+      "db-config.tar.gz": "c7a4b34de6292f7cbac32ca7e9c433f31d05c49c17c6e101f94a94fc03acf5a5",
+      "postgres-image-id.txt": "e977ddbf1ecd0f6b8b790bf8e96fbda43f37187c3cfb4e16879f573f87eeeb8a",
+      "storage.tar.gz": "32be8f64d586f15387a2c7df805067517b7dcb45c6aaba469eff011d3ab0df7f",
+      "instance.env": "6b0dfb765da1b0da94cc43e828e1625a60151951d6363a43e80ca8b71bf3c104"
+    },
+    "encryptedAES256Roundtrip": true,
+    "archiveBytes": 619995764
+  },
+  "sourceSecretsPreserved": true,
+  "targetToolingCommit": "89ab340cb10ec729948fc6e596fb7ab0326fc470",
+  "targetRunnerWorkerImage": "sha256:c323824e2f17acc5fe8bc17eea0a827f9bfc342b61b69137fdd827ea7c6c2e05",
+  "fullProfileDoctorPassed": true,
+  "targetFixtureVerification": {
+    "userIdentityPreserved": true,
+    "passwordLogin": true,
+    "TOTPFactorPreserved": true,
+    "TOTPChallengeVerified": true,
+    "StorageSHA256": "7e8796e9eafcdf33cbc7f0803f1d090184f280fe579578ac51a7bbceecd9b9c0",
+    "projectIssueIdentityAndContentPreserved": true,
+    "appHealth": 200,
+    "SQLMarkerPreserved": true
+  },
+  "blankTargetRollback": {
+    "newDataDirectory": true,
+    "newVaultKeyVolume": true,
+    "newStorageVolume": true,
+    "sourceExactPostgresImageMatchedBeforeStart": true,
+    "sourceProtectedSecretsRestored": true,
+    "bootstrapNotReplayed": true,
+    "preservedUpgradedData": true,
+    "fixture": {
+      "userIdentityPreserved": true,
+      "passwordLogin": true,
+      "TOTPFactorPreserved": true,
+      "TOTPChallengeVerified": true,
+      "StorageSHA256": "7e8796e9eafcdf33cbc7f0803f1d090184f280fe579578ac51a7bbceecd9b9c0",
+      "projectIssueIdentityAndContentPreserved": true,
+      "appHealth": 200
+    },
+    "SQLMarkerPreserved": true
+  },
+  "sourceMigrationCount": 60,
+  "targetMigrationCount": 227,
+  "addedMigrationCount": 167,
+  "existingMigrationFilesModifiedOrDeleted": 0,
+  "newRequiredEnvironmentKeys": [
+    "MINDDY_DATA_ROOT_KEY"
+  ],
+  "legacyCredentialSecretsPreserved": true,
+  "sourceBackupProfile": "Cold physical PostgreSQL + Vault/pgsodium volume + separate filesystem Storage named-volume bytes + protected environment",
+  "sourceImage": "ghcr.io/mangue-dev/minddy@sha256:8d720d570c95fdc1be39649aacbb302cc1717dbae22485512420ded3e4ef1ebd",
+  "targetImage": "ghcr.io/mangue-dev/minddy@sha256:07325c9894ae1d0cb587d870b65abccaf7b9a73f93dba585d8dae6487744615d",
+  "unchangedTargetReleasePassed": false,
+  "adaptations": [
+    "Publicly pinned89ab runner modules/compiler pin + immutable Node/npm/Git sandbox recipe",
+    "Linux filesystem Storage named volume on Docker Desktop; separate byte archive",
+    "Added target-required root without replacing existing credential-encryption secrets"
+  ],
+  "initialBackupEncryptionFailure": {
+    "stage": "encrypt-cold-backup",
+    "exitCode": 2,
+    "reason": "macOS gpg-agent socket path too long",
+    "resolution": "Fresh mode0700 short /tmp GNUPGHOME; AES256 encryption, decryption, identical SHA256 passed"
+  },
+  "originalQARestored": {
+    "migrations": 242,
+    "originalAuthIdentityAndTOTP": true,
+    "originalStorageSHA256": "d832d41b374a941b12ab10d6e594fea6d43bf7726d0ff63105517c058e94d745",
+    "HTTPHealth": 200
+  },
+  "limits": [
+    "No independent off-host copy or physical-host loss test",
+    "No PostgreSQL major upgrade or Supabase image replacement",
+    "No external SMTP/TLS/SSO/provider-backed restore exercised by this operator lot",
+    "No native Windows or Linux host lifecycle exercised",
+    "No human review claimed"
+  ]
+}

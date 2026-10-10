@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { cn } from "mangue-ui/lib/utils";
 import { CARD_TONES } from "./card-tones";
+import { FEATURE_TABLE_PANEL } from "./feature-table-styles";
 
 /**
  * Shared presentation for translated pricing and competitor comparisons.
@@ -60,7 +61,7 @@ export function FeatureTable({
     return (
       <div className="space-y-6 sm:space-y-8">
         {groups.map((group) => (
-          <div key={group.key} role="region" aria-label={`${caption} — ${group.label}`} tabIndex={0} className="overflow-x-auto rounded-2xl bg-[#f7f7f4] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 dark:bg-[#222321]">
+          <div key={group.key} role="region" aria-label={`${caption} — ${group.label}`} tabIndex={0} className={FEATURE_TABLE_PANEL}>
             <table className="w-full min-w-[520px] table-fixed border-separate border-spacing-0 text-sm">
               <caption className="sr-only">{caption} — {group.label}</caption>
               <thead>

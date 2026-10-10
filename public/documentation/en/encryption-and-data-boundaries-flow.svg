@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="640" viewBox="0 0 720 640" role="img" aria-labelledby="title desc">
+<title id="title">Understand encryption and the data it does not hide</title>
+<desc id="desc">Diagram: Encrypted durable content and wrapped keys. Root key stays in protected server configuration. Authorized runtime can decrypt content. Exports and external providers need separate care.</desc>
+<rect width="720" height="640" rx="20" fill="#fafaf9" />
+<rect x="24" y="24" width="672" height="128" rx="16" fill="#e6edf5" stroke="#293d56" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="81" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Encrypted durable content and wrapped</text>
+<text x="48" y="115" font-family="Arial, sans-serif" font-size="29" fill="#293d56">keys</text>
+<rect x="24" y="178" width="672" height="128" rx="16" fill="#e0efe8" stroke="#1e4436" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="235" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Root key stays in protected server</text>
+<text x="48" y="269" font-family="Arial, sans-serif" font-size="29" fill="#293d56">configuration</text>
+<rect x="24" y="332" width="672" height="128" rx="16" fill="#f0ecf6" stroke="#433352" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="406" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Authorized runtime can decrypt content</text>
+<rect x="24" y="486" width="672" height="128" rx="16" fill="#f7ecdf" stroke="#573e28" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Exports and external providers need</text>
+<text x="48" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">separate care</text>
+</svg>

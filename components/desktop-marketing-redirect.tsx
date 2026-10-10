@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { resolveDocumentationPath } from "@/lib/documentation-core.mjs";
 
 import { isDesktop } from "@/lib/desktop/bridge";
 
@@ -25,10 +27,12 @@ import { isDesktop } from "@/lib/desktop/bridge";
  * (desktop/src/main.ts).
  */
 export function DesktopMarketingRedirect() {
+  const pathname = usePathname();
   useEffect(() => {
+    if (resolveDocumentationPath(pathname)) return;
     if (!isDesktop()) return;
     window.location.replace("/home");
-  }, []);
+  }, [pathname]);
 
   return null;
 }

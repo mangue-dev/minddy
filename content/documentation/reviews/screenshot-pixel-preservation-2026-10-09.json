@@ -1,0 +1,3626 @@
+{
+  "date": "2026-10-09",
+  "method": "Compare the decoded UI pixels of all existing screenshots against HEAD, excluding the 60 controls recaptured in the real application. Check every screenshot display dimension and integrated margin.",
+  "screenshotsChecked": 462,
+  "freshCaptures": 60,
+  "records": [
+    {
+      "src": "/documentation/en/auth-signup.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        502
+      ]
+    },
+    {
+      "src": "/documentation/en/auth-login.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        588
+      ]
+    },
+    {
+      "src": "/documentation/en/account-security-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        227
+      ]
+    },
+    {
+      "src": "/documentation/en/account-security-enrollment-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        498
+      ]
+    },
+    {
+      "src": "/documentation/en/auth-recovery.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        326
+      ]
+    },
+    {
+      "src": "/documentation/en/profile-and-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        416
+      ]
+    },
+    {
+      "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        231
+      ]
+    },
+    {
+      "src": "/documentation/en/ai-keys-and-models-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/en/ai-keys-and-models-defaults-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        217
+      ]
+    },
+    {
+      "src": "/documentation/en/plans-and-ai-usage-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1154,
+        1766
+      ]
+    },
+    {
+      "src": "/documentation/en/web-and-mobile-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        438,
+        892
+      ]
+    },
+    {
+      "src": "/documentation/en/install-the-pwa-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1288,
+        713
+      ]
+    },
+    {
+      "src": "/documentation/en/desktop-app-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        287
+      ]
+    },
+    {
+      "src": "/documentation/en/devices-and-notifications-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        196
+      ]
+    },
+    {
+      "src": "/documentation/en/devices-and-notifications-registered.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        208
+      ]
+    },
+    {
+      "src": "/documentation/en/automation-settings-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        201
+      ]
+    },
+    {
+      "src": "/documentation/en/automation-settings-projects-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        176
+      ]
+    },
+    {
+      "src": "/documentation/en/delegate-code-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        179
+      ]
+    },
+    {
+      "src": "/documentation/en/review-pull-requests-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1528,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/en/database-property-types.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        464,
+        336
+      ]
+    },
+    {
+      "src": "/documentation/en/database-entry.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        429
+      ]
+    },
+    {
+      "src": "/documentation/en/database-conversion-warning.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        456,
+        282
+      ]
+    },
+    {
+      "src": "/documentation/en/database-import-review.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        744,
+        511
+      ]
+    },
+    {
+      "src": "/documentation/en/publish-a-feedback-board-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        378
+      ]
+    },
+    {
+      "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        625,
+        369
+      ]
+    },
+    {
+      "src": "/documentation/en/moderate-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/en/feedback-to-issue-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/en/feedback-pages-and-views-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1148,
+        388
+      ]
+    },
+    {
+      "src": "/documentation/en/reader-first-project.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/en/forge-issue-sync-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        278
+      ]
+    },
+    {
+      "src": "/documentation/en/install-locally-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        500
+      ]
+    },
+    {
+      "src": "/documentation/en/install-a-server-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        1044
+      ]
+    },
+    {
+      "src": "/documentation/en/instance-administration-overview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/en/instance-administration-users.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/en/instance-administration-models.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/en/integration-troubleshooting-error.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        782,
+        108
+      ]
+    },
+    {
+      "src": "/documentation/en/triage-incoming.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        866
+      ]
+    },
+    {
+      "src": "/documentation/en/work-sub-issues.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/en/work-implementation-plan.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/en/work-bulk-actions.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        506
+      ]
+    },
+    {
+      "src": "/documentation/en/import-issues-preview-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        977
+      ]
+    },
+    {
+      "src": "/documentation/en/external-minddy-mcp-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        252
+      ]
+    },
+    {
+      "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/en/work-navigation.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1128
+      ]
+    },
+    {
+      "src": "/documentation/en/work-search.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/en/work-with-numo-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        498,
+        648
+      ]
+    },
+    {
+      "src": "/documentation/en/numo-mcp-connections-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        1314
+      ]
+    },
+    {
+      "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        920
+      ]
+    },
+    {
+      "src": "/documentation/en/recover-numo-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        399
+      ]
+    },
+    {
+      "src": "/documentation/en/reader-objectives.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        720,
+        330
+      ]
+    },
+    {
+      "src": "/documentation/en/reader-objective-momentum.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/en/page-create-menu.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        264,
+        152
+      ]
+    },
+    {
+      "src": "/documentation/en/page-editor.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        922
+      ]
+    },
+    {
+      "src": "/documentation/en/page-comments.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        625
+      ]
+    },
+    {
+      "src": "/documentation/en/page-file-states.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        466
+      ]
+    },
+    {
+      "src": "/documentation/en/page-history-preview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        538
+      ]
+    },
+    {
+      "src": "/documentation/en/reader-cycle.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/en/reader-statistics.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/en/project-general.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        563
+      ]
+    },
+    {
+      "src": "/documentation/en/project-members.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        503
+      ]
+    },
+    {
+      "src": "/documentation/en/repository-skills-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        996,
+        888
+      ]
+    },
+    {
+      "src": "/documentation/en/scheduled-routines-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1161,
+        1051
+      ]
+    },
+    {
+      "src": "/documentation/en/work-task-notebook.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1156,
+        1048
+      ]
+    },
+    {
+      "src": "/documentation/en/transfer-between-instances-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/en/transfer-between-instances-export-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/en/reader-trash.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/fr/auth-signup.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        522
+      ]
+    },
+    {
+      "src": "/documentation/fr/auth-login.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        588
+      ]
+    },
+    {
+      "src": "/documentation/fr/account-security-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        227
+      ]
+    },
+    {
+      "src": "/documentation/fr/account-security-enrollment-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        498
+      ]
+    },
+    {
+      "src": "/documentation/fr/auth-recovery.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        326
+      ]
+    },
+    {
+      "src": "/documentation/fr/profile-and-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        416
+      ]
+    },
+    {
+      "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        231
+      ]
+    },
+    {
+      "src": "/documentation/fr/ai-keys-and-models-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/fr/ai-keys-and-models-defaults-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        217
+      ]
+    },
+    {
+      "src": "/documentation/fr/plans-and-ai-usage-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1154,
+        1766
+      ]
+    },
+    {
+      "src": "/documentation/fr/web-and-mobile-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        438,
+        892
+      ]
+    },
+    {
+      "src": "/documentation/fr/install-the-pwa-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1288,
+        762
+      ]
+    },
+    {
+      "src": "/documentation/fr/desktop-app-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        287
+      ]
+    },
+    {
+      "src": "/documentation/fr/devices-and-notifications-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        196
+      ]
+    },
+    {
+      "src": "/documentation/fr/devices-and-notifications-registered.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        208
+      ]
+    },
+    {
+      "src": "/documentation/fr/automation-settings-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        221
+      ]
+    },
+    {
+      "src": "/documentation/fr/automation-settings-projects-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        176
+      ]
+    },
+    {
+      "src": "/documentation/fr/delegate-code-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        179
+      ]
+    },
+    {
+      "src": "/documentation/fr/review-pull-requests-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1528,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/fr/database-property-types.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        464,
+        336
+      ]
+    },
+    {
+      "src": "/documentation/fr/database-entry.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        429
+      ]
+    },
+    {
+      "src": "/documentation/fr/database-conversion-warning.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        456,
+        306
+      ]
+    },
+    {
+      "src": "/documentation/fr/database-import-review.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        744,
+        511
+      ]
+    },
+    {
+      "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        378
+      ]
+    },
+    {
+      "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        625,
+        369
+      ]
+    },
+    {
+      "src": "/documentation/fr/moderate-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/fr/feedback-to-issue-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1148,
+        388
+      ]
+    },
+    {
+      "src": "/documentation/fr/reader-first-project.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/fr/forge-issue-sync-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        278
+      ]
+    },
+    {
+      "src": "/documentation/fr/install-locally-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        553
+      ]
+    },
+    {
+      "src": "/documentation/fr/install-a-server-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        1044
+      ]
+    },
+    {
+      "src": "/documentation/fr/instance-administration-overview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/fr/instance-administration-users.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/fr/instance-administration-models.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/fr/integration-troubleshooting-error.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        782,
+        108
+      ]
+    },
+    {
+      "src": "/documentation/fr/triage-incoming.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        866
+      ]
+    },
+    {
+      "src": "/documentation/fr/work-sub-issues.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/fr/work-implementation-plan.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/fr/work-bulk-actions.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        506
+      ]
+    },
+    {
+      "src": "/documentation/fr/import-issues-preview-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        977
+      ]
+    },
+    {
+      "src": "/documentation/fr/external-minddy-mcp-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        252
+      ]
+    },
+    {
+      "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        380
+      ]
+    },
+    {
+      "src": "/documentation/fr/work-navigation.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1128
+      ]
+    },
+    {
+      "src": "/documentation/fr/work-search.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/fr/work-with-numo-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        498,
+        648
+      ]
+    },
+    {
+      "src": "/documentation/fr/numo-mcp-connections-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        1314
+      ]
+    },
+    {
+      "src": "/documentation/fr/numo-mcp-connections-config-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        920
+      ]
+    },
+    {
+      "src": "/documentation/fr/recover-numo-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        400
+      ]
+    },
+    {
+      "src": "/documentation/fr/reader-objectives.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        720,
+        330
+      ]
+    },
+    {
+      "src": "/documentation/fr/reader-objective-momentum.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/fr/page-create-menu.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        302,
+        152
+      ]
+    },
+    {
+      "src": "/documentation/fr/page-editor.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        922
+      ]
+    },
+    {
+      "src": "/documentation/fr/page-comments.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        625
+      ]
+    },
+    {
+      "src": "/documentation/fr/page-file-states.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        466
+      ]
+    },
+    {
+      "src": "/documentation/fr/page-history-preview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        538
+      ]
+    },
+    {
+      "src": "/documentation/fr/reader-cycle.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/fr/reader-statistics.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/fr/project-general.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        563
+      ]
+    },
+    {
+      "src": "/documentation/fr/project-members.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        503
+      ]
+    },
+    {
+      "src": "/documentation/fr/repository-skills-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        996,
+        888
+      ]
+    },
+    {
+      "src": "/documentation/fr/scheduled-routines-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1161,
+        1051
+      ]
+    },
+    {
+      "src": "/documentation/fr/work-task-notebook.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1156,
+        1048
+      ]
+    },
+    {
+      "src": "/documentation/fr/transfer-between-instances-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/fr/transfer-between-instances-export-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/fr/reader-trash.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/de/auth-signup.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        522
+      ]
+    },
+    {
+      "src": "/documentation/de/auth-login.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        588
+      ]
+    },
+    {
+      "src": "/documentation/de/account-security-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        227
+      ]
+    },
+    {
+      "src": "/documentation/de/account-security-enrollment-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        498
+      ]
+    },
+    {
+      "src": "/documentation/de/auth-recovery.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        326
+      ]
+    },
+    {
+      "src": "/documentation/de/profile-and-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        416
+      ]
+    },
+    {
+      "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        231
+      ]
+    },
+    {
+      "src": "/documentation/de/ai-keys-and-models-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/de/ai-keys-and-models-defaults-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        217
+      ]
+    },
+    {
+      "src": "/documentation/de/plans-and-ai-usage-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1154,
+        1766
+      ]
+    },
+    {
+      "src": "/documentation/de/web-and-mobile-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        438,
+        892
+      ]
+    },
+    {
+      "src": "/documentation/de/install-the-pwa-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1288,
+        762
+      ]
+    },
+    {
+      "src": "/documentation/de/desktop-app-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        287
+      ]
+    },
+    {
+      "src": "/documentation/de/devices-and-notifications-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        196
+      ]
+    },
+    {
+      "src": "/documentation/de/devices-and-notifications-registered.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        208
+      ]
+    },
+    {
+      "src": "/documentation/de/automation-settings-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        201
+      ]
+    },
+    {
+      "src": "/documentation/de/automation-settings-projects-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        176
+      ]
+    },
+    {
+      "src": "/documentation/de/delegate-code-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        180
+      ]
+    },
+    {
+      "src": "/documentation/de/review-pull-requests-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1528,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/de/database-property-types.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        464,
+        336
+      ]
+    },
+    {
+      "src": "/documentation/de/database-entry.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        429
+      ]
+    },
+    {
+      "src": "/documentation/de/database-conversion-warning.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        456,
+        306
+      ]
+    },
+    {
+      "src": "/documentation/de/database-import-review.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        744,
+        511
+      ]
+    },
+    {
+      "src": "/documentation/de/publish-a-feedback-board-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        378
+      ]
+    },
+    {
+      "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        625,
+        369
+      ]
+    },
+    {
+      "src": "/documentation/de/moderate-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/de/feedback-to-issue-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/de/feedback-pages-and-views-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1148,
+        388
+      ]
+    },
+    {
+      "src": "/documentation/de/reader-first-project.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/de/forge-issue-sync-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        278
+      ]
+    },
+    {
+      "src": "/documentation/de/install-locally-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        606
+      ]
+    },
+    {
+      "src": "/documentation/de/install-a-server-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        1044
+      ]
+    },
+    {
+      "src": "/documentation/de/instance-administration-overview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/de/instance-administration-users.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/de/instance-administration-models.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/de/integration-troubleshooting-error.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        782,
+        108
+      ]
+    },
+    {
+      "src": "/documentation/de/triage-incoming.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        866
+      ]
+    },
+    {
+      "src": "/documentation/de/work-sub-issues.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/de/work-implementation-plan.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1416
+      ]
+    },
+    {
+      "src": "/documentation/de/work-bulk-actions.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        506
+      ]
+    },
+    {
+      "src": "/documentation/de/import-issues-preview-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        977
+      ]
+    },
+    {
+      "src": "/documentation/de/external-minddy-mcp-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        252
+      ]
+    },
+    {
+      "src": "/documentation/de/external-minddy-mcp-install-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        380
+      ]
+    },
+    {
+      "src": "/documentation/de/work-navigation.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1128
+      ]
+    },
+    {
+      "src": "/documentation/de/work-search.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/de/work-with-numo-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        498,
+        648
+      ]
+    },
+    {
+      "src": "/documentation/de/numo-mcp-connections-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        1314
+      ]
+    },
+    {
+      "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        940
+      ]
+    },
+    {
+      "src": "/documentation/de/recover-numo-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        422
+      ]
+    },
+    {
+      "src": "/documentation/de/reader-objectives.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        720,
+        330
+      ]
+    },
+    {
+      "src": "/documentation/de/reader-objective-momentum.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/de/page-create-menu.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        264,
+        152
+      ]
+    },
+    {
+      "src": "/documentation/de/page-editor.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        1026
+      ]
+    },
+    {
+      "src": "/documentation/de/page-comments.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        625
+      ]
+    },
+    {
+      "src": "/documentation/de/page-file-states.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        466
+      ]
+    },
+    {
+      "src": "/documentation/de/page-history-preview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        538
+      ]
+    },
+    {
+      "src": "/documentation/de/reader-cycle.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/de/reader-statistics.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/de/project-general.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        563
+      ]
+    },
+    {
+      "src": "/documentation/de/project-members.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        503
+      ]
+    },
+    {
+      "src": "/documentation/de/repository-skills-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        996,
+        888
+      ]
+    },
+    {
+      "src": "/documentation/de/scheduled-routines-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1161,
+        1051
+      ]
+    },
+    {
+      "src": "/documentation/de/work-task-notebook.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1156,
+        1048
+      ]
+    },
+    {
+      "src": "/documentation/de/transfer-between-instances-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/de/transfer-between-instances-export-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/de/reader-trash.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/es/auth-signup.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        522
+      ]
+    },
+    {
+      "src": "/documentation/es/auth-login.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        588
+      ]
+    },
+    {
+      "src": "/documentation/es/account-security-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        227
+      ]
+    },
+    {
+      "src": "/documentation/es/account-security-enrollment-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        498
+      ]
+    },
+    {
+      "src": "/documentation/es/auth-recovery.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        326
+      ]
+    },
+    {
+      "src": "/documentation/es/profile-and-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        416
+      ]
+    },
+    {
+      "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        231
+      ]
+    },
+    {
+      "src": "/documentation/es/ai-keys-and-models-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/es/ai-keys-and-models-defaults-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        217
+      ]
+    },
+    {
+      "src": "/documentation/es/plans-and-ai-usage-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1154,
+        1766
+      ]
+    },
+    {
+      "src": "/documentation/es/web-and-mobile-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        438,
+        892
+      ]
+    },
+    {
+      "src": "/documentation/es/install-the-pwa-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1288,
+        736
+      ]
+    },
+    {
+      "src": "/documentation/es/desktop-app-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        287
+      ]
+    },
+    {
+      "src": "/documentation/es/devices-and-notifications-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        196
+      ]
+    },
+    {
+      "src": "/documentation/es/devices-and-notifications-registered.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        208
+      ]
+    },
+    {
+      "src": "/documentation/es/automation-settings-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        221
+      ]
+    },
+    {
+      "src": "/documentation/es/automation-settings-projects-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        176
+      ]
+    },
+    {
+      "src": "/documentation/es/delegate-code-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        180
+      ]
+    },
+    {
+      "src": "/documentation/es/review-pull-requests-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1528,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/es/database-property-types.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        464,
+        336
+      ]
+    },
+    {
+      "src": "/documentation/es/database-entry.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        429
+      ]
+    },
+    {
+      "src": "/documentation/es/database-conversion-warning.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        456,
+        282
+      ]
+    },
+    {
+      "src": "/documentation/es/database-import-review.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        744,
+        511
+      ]
+    },
+    {
+      "src": "/documentation/es/publish-a-feedback-board-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        378
+      ]
+    },
+    {
+      "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        625,
+        394
+      ]
+    },
+    {
+      "src": "/documentation/es/moderate-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/es/feedback-to-issue-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/es/feedback-pages-and-views-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1148,
+        388
+      ]
+    },
+    {
+      "src": "/documentation/es/reader-first-project.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/es/forge-issue-sync-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        278
+      ]
+    },
+    {
+      "src": "/documentation/es/install-locally-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        500
+      ]
+    },
+    {
+      "src": "/documentation/es/install-a-server-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        1068
+      ]
+    },
+    {
+      "src": "/documentation/es/instance-administration-overview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/es/instance-administration-users.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/es/instance-administration-models.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/es/integration-troubleshooting-error.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        782,
+        108
+      ]
+    },
+    {
+      "src": "/documentation/es/triage-incoming.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        866
+      ]
+    },
+    {
+      "src": "/documentation/es/work-sub-issues.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/es/work-implementation-plan.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/es/work-bulk-actions.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        506
+      ]
+    },
+    {
+      "src": "/documentation/es/import-issues-preview-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        977
+      ]
+    },
+    {
+      "src": "/documentation/es/external-minddy-mcp-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        252
+      ]
+    },
+    {
+      "src": "/documentation/es/external-minddy-mcp-install-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        380
+      ]
+    },
+    {
+      "src": "/documentation/es/work-navigation.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1128
+      ]
+    },
+    {
+      "src": "/documentation/es/work-search.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/es/work-with-numo-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        498,
+        648
+      ]
+    },
+    {
+      "src": "/documentation/es/numo-mcp-connections-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        1314
+      ]
+    },
+    {
+      "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        920
+      ]
+    },
+    {
+      "src": "/documentation/es/recover-numo-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        400
+      ]
+    },
+    {
+      "src": "/documentation/es/reader-objectives.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        720,
+        330
+      ]
+    },
+    {
+      "src": "/documentation/es/reader-objective-momentum.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/es/page-create-menu.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        266,
+        152
+      ]
+    },
+    {
+      "src": "/documentation/es/page-editor.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        948
+      ]
+    },
+    {
+      "src": "/documentation/es/page-comments.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        625
+      ]
+    },
+    {
+      "src": "/documentation/es/page-file-states.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        466
+      ]
+    },
+    {
+      "src": "/documentation/es/page-history-preview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        538
+      ]
+    },
+    {
+      "src": "/documentation/es/reader-cycle.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/es/reader-statistics.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/es/project-general.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        563
+      ]
+    },
+    {
+      "src": "/documentation/es/project-members.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        503
+      ]
+    },
+    {
+      "src": "/documentation/es/repository-skills-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        996,
+        888
+      ]
+    },
+    {
+      "src": "/documentation/es/scheduled-routines-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1161,
+        1051
+      ]
+    },
+    {
+      "src": "/documentation/es/work-task-notebook.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1156,
+        1048
+      ]
+    },
+    {
+      "src": "/documentation/es/transfer-between-instances-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/es/transfer-between-instances-export-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/es/reader-trash.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/it/auth-signup.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        502
+      ]
+    },
+    {
+      "src": "/documentation/it/auth-login.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        588
+      ]
+    },
+    {
+      "src": "/documentation/it/account-security-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        227
+      ]
+    },
+    {
+      "src": "/documentation/it/account-security-enrollment-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        498
+      ]
+    },
+    {
+      "src": "/documentation/it/auth-recovery.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        326
+      ]
+    },
+    {
+      "src": "/documentation/it/profile-and-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        416
+      ]
+    },
+    {
+      "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        231
+      ]
+    },
+    {
+      "src": "/documentation/it/ai-keys-and-models-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/it/ai-keys-and-models-defaults-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        217
+      ]
+    },
+    {
+      "src": "/documentation/it/plans-and-ai-usage-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1154,
+        1766
+      ]
+    },
+    {
+      "src": "/documentation/it/web-and-mobile-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        438,
+        892
+      ]
+    },
+    {
+      "src": "/documentation/it/install-the-pwa-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1288,
+        759
+      ]
+    },
+    {
+      "src": "/documentation/it/desktop-app-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        287
+      ]
+    },
+    {
+      "src": "/documentation/it/devices-and-notifications-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        196
+      ]
+    },
+    {
+      "src": "/documentation/it/devices-and-notifications-registered.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        208
+      ]
+    },
+    {
+      "src": "/documentation/it/automation-settings-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        201
+      ]
+    },
+    {
+      "src": "/documentation/it/automation-settings-projects-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        176
+      ]
+    },
+    {
+      "src": "/documentation/it/delegate-code-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        179
+      ]
+    },
+    {
+      "src": "/documentation/it/review-pull-requests-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1528,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/it/database-property-types.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        464,
+        336
+      ]
+    },
+    {
+      "src": "/documentation/it/database-entry.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        429
+      ]
+    },
+    {
+      "src": "/documentation/it/database-conversion-warning.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        456,
+        282
+      ]
+    },
+    {
+      "src": "/documentation/it/database-import-review.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        744,
+        511
+      ]
+    },
+    {
+      "src": "/documentation/it/publish-a-feedback-board-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        378
+      ]
+    },
+    {
+      "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        625,
+        394
+      ]
+    },
+    {
+      "src": "/documentation/it/moderate-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/it/feedback-to-issue-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/it/feedback-pages-and-views-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1148,
+        388
+      ]
+    },
+    {
+      "src": "/documentation/it/reader-first-project.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/it/forge-issue-sync-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        278
+      ]
+    },
+    {
+      "src": "/documentation/it/install-locally-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        500
+      ]
+    },
+    {
+      "src": "/documentation/it/install-a-server-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        1021
+      ]
+    },
+    {
+      "src": "/documentation/it/instance-administration-overview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/it/instance-administration-users.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/it/instance-administration-models.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/it/integration-troubleshooting-error.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        782,
+        108
+      ]
+    },
+    {
+      "src": "/documentation/it/triage-incoming.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        866
+      ]
+    },
+    {
+      "src": "/documentation/it/work-sub-issues.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/it/work-implementation-plan.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1416
+      ]
+    },
+    {
+      "src": "/documentation/it/work-bulk-actions.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        506
+      ]
+    },
+    {
+      "src": "/documentation/it/import-issues-preview-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        977
+      ]
+    },
+    {
+      "src": "/documentation/it/external-minddy-mcp-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        252
+      ]
+    },
+    {
+      "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/it/work-navigation.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1128
+      ]
+    },
+    {
+      "src": "/documentation/it/work-search.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/it/work-with-numo-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        498,
+        648
+      ]
+    },
+    {
+      "src": "/documentation/it/numo-mcp-connections-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        1314
+      ]
+    },
+    {
+      "src": "/documentation/it/numo-mcp-connections-config-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        920
+      ]
+    },
+    {
+      "src": "/documentation/it/recover-numo-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        400
+      ]
+    },
+    {
+      "src": "/documentation/it/reader-objectives.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        720,
+        330
+      ]
+    },
+    {
+      "src": "/documentation/it/reader-objective-momentum.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/it/page-create-menu.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        264,
+        152
+      ]
+    },
+    {
+      "src": "/documentation/it/page-editor.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        974
+      ]
+    },
+    {
+      "src": "/documentation/it/page-comments.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        625
+      ]
+    },
+    {
+      "src": "/documentation/it/page-file-states.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        466
+      ]
+    },
+    {
+      "src": "/documentation/it/page-history-preview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        538
+      ]
+    },
+    {
+      "src": "/documentation/it/reader-cycle.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/it/reader-statistics.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/it/project-general.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        563
+      ]
+    },
+    {
+      "src": "/documentation/it/project-members.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        503
+      ]
+    },
+    {
+      "src": "/documentation/it/repository-skills-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        996,
+        888
+      ]
+    },
+    {
+      "src": "/documentation/it/scheduled-routines-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1161,
+        1051
+      ]
+    },
+    {
+      "src": "/documentation/it/work-task-notebook.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1156,
+        1048
+      ]
+    },
+    {
+      "src": "/documentation/it/transfer-between-instances-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/it/transfer-between-instances-export-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/it/reader-trash.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/auth-signup.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        502
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/auth-login.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        588
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/account-security-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        227
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/account-security-enrollment-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        498
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/auth-recovery.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        428,
+        326
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        416
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        231
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/ai-keys-and-models-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        212
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/ai-keys-and-models-defaults-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        217
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/plans-and-ai-usage-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1154,
+        1766
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/web-and-mobile-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        438,
+        892
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/install-the-pwa-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1288,
+        736
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/desktop-app-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        287
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/devices-and-notifications-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        196
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/devices-and-notifications-registered.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        208
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/automation-settings-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        221
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/automation-settings-projects-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        176
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/delegate-code-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        179
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1528,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/database-property-types.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        464,
+        336
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/database-entry.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        429
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/database-conversion-warning.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        456,
+        282
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/database-import-review.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        744,
+        511
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        378
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/submit-and-follow-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        625,
+        369
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/moderate-feedback-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/feedback-to-issue-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        874
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/feedback-pages-and-views-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1148,
+        388
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/reader-first-project.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/forge-issue-sync-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        278
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/install-locally-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        500
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/install-a-server-wizard.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        944,
+        1044
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/instance-administration-overview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/instance-administration-users.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/instance-administration-models.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1148
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/integration-troubleshooting-error.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        782,
+        108
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/triage-incoming.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        866
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/work-sub-issues.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/work-implementation-plan.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        508,
+        1096
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/work-bulk-actions.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        506
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        977
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        252
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/work-navigation.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1488,
+        1128
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/work-search.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        788,
+        364
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/work-with-numo-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        498,
+        648
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        1314
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        560,
+        920
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/recover-numo-work-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        912,
+        400
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/reader-objectives.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        720,
+        330
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/reader-objective-momentum.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/page-create-menu.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        272,
+        152
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/page-editor.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        948
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/page-comments.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        625
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/page-file-states.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        466
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/page-history-preview.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        632,
+        538
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/reader-cycle.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/reader-statistics.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/project-general.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        563
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/project-members.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1178,
+        503
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/repository-skills-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        996,
+        888
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/scheduled-routines-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1161,
+        1051
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/work-task-notebook.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        1156,
+        1048
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/transfer-between-instances-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/transfer-between-instances-export-workflow.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        816,
+        148
+      ]
+    },
+    {
+      "src": "/documentation/pt-BR/reader-trash.png",
+      "uiPixelsPreserved": true,
+      "padding": 24,
+      "viewport": [
+        994,
+        1046
+      ]
+    }
+  ]
+}

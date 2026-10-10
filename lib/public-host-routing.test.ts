@@ -15,6 +15,17 @@ function request(host: string, path: string) {
 }
 
 describe("application host routing", () => {
+  it.each(["/docs", "/fr/documentation/first-project", "/de/dokumentation/create-a-database", "/pt-br/documentacao/restore-and-roll-back"])(
+    "serves official documentation at %s anonymously without reading Supabase",
+    async path => {
+      const response = await proxy(request("tickets.example.test", path));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("x-middleware-request-x-minddy-public")).toBe("1");
+      expect(response.headers.get("x-robots-tag")).toBeNull();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(["/", "/f/board-token", "/share/view-token", "/p/page-token"])(
     "rejects an unconfigured host at %s without a database lookup or rewrite",
     async (path) => {

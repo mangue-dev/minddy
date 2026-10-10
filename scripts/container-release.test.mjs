@@ -10,6 +10,15 @@ const containerArtifact = readFileSync(
 );
 const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
 
+test("the runtime image includes every local runner dependency", () => {
+  const runner = readFileSync(new URL("../deploy/self-hosted/agent-runner.mjs", import.meta.url), "utf8");
+  const imports = [...runner.matchAll(/from ["']\.\/([^"']+)["']/g)].map((match) => match[1]);
+  assert.ok(imports.length > 0);
+  for (const name of imports) {
+    assert.ok(dockerfile.includes(`/app/deploy/self-hosted/${name} ./${name}`), `Missing runner dependency ${name}`);
+  }
+});
+
 test("keeps runtime email templates in the container build context", () => {
   assert.match(dockerignore, /^supabase\/\*$/m);
   assert.match(dockerignore, /^!supabase\/email-templates$/m);

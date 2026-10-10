@@ -1,0 +1,1761 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "method": "Complete N01–N11 six-language bodies independently read and compared with implementation passages, knowledge and identified source contracts; A04/A05/A07/A08 six-language deltas independently reread, with complete Spanish A04/A05/A07/A08/A09 reviewed against sources. Sources are listed per claim and exact body hashes bind the review.",
+  "hashContract": "SHA-256 of UTF-8 article body after the closing frontmatter delimiter and its newline, retaining the following blank line.",
+  "resolvedFindings": [
+    "Provider-bound code models must fail closed instead of an unconditional managed fallback promise.",
+    "Validated BYOK worker quota exemption and actual sandbox cost recording are separate mechanisms.",
+    "Smart Fill eligible triage scope is projects owned by the user, not ticket ownership.",
+    "Real account import result is acknowledged before reload, with exact current zero counters in separate visual evidence."
+  ],
+  "records": [
+    {
+      "workflow": "A04",
+      "article": "ai-keys-and-models",
+      "locale": "en",
+      "revision": 3,
+      "sourceRevision": 3,
+      "bodySha256": "d5592dfa988f174c87306ca0060717b999ec7afd27d482cb4b591425e70ebb6e",
+      "reviewedClaims": "Managed fallback is conditional; provider-bound selected code model fails closed when incompatible; frozen BYOK payer; account defaults versus conversation/local desktop/server surfaces; compute cost recording does not establish a BYOK account ceiling.",
+      "sourcesRead": [
+        "app/api/account/ai-keys/route.ts",
+        "lib/server/ai-runtime.ts:104",
+        "lib/server/agent/model.ts:45",
+        "lib/server/agent/model.ts:315",
+        "lib/server/agent/model.ts:514",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:627"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A05",
+      "article": "automation-settings",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "27fbaa6758267a7909fc02090616b8cee3ed9b97fb8c609caf4b64671bfeabf2",
+      "reviewedClaims": "Four Smart Fill fields and omitted assignee/status/date; creation versus owned-project eligible triage; separate self-assignment/project Smart Assign/static Triage; applicable AI quota and separate routine cap.",
+      "sourcesRead": [
+        "lib/server/smart-fill.ts:50",
+        "lib/server/smart-fill.ts:128",
+        "lib/server/assistant/tools-contract.test.ts",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N03",
+      "article": "delegate-code-work",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "519f66b3643b008a18b46cea5b81aaa9b2dc27b3f2f15265c74a3214b44b496b",
+      "reviewedClaims": "Repository providers, write authorization and sandbox prerequisites, account worker defaults, delegated branch edits, checks and checkpoint limits.",
+      "sourcesRead": [
+        "lib/server/agent/launch.ts:495",
+        "lib/server/agent/launch.ts:570",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N09",
+      "article": "external-minddy-mcp",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "8a13bed96c532dd5023b42096dd5d2fa436a2cf41765ded7eb4dd58f9b8aabc6",
+      "reviewedClaims": "OAuth remote endpoint with caller identity and no billing-plan gate, private response caching, scoped tools and access revocation distinct from personal Numo connections.",
+      "sourcesRead": [
+        "app/api/mcp/route.ts",
+        "lib/server/mcp/auth.ts",
+        "lib/server/mcp/tools.ts",
+        "content/knowledge/agents-and-mcp.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N11",
+      "article": "forge-issue-sync",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "7d25ad667d8877c25f3ee661bf959a935c65c1a089cfa149f1f1234a12cca25b",
+      "reviewedClaims": "GitHub triage import, field mappings and attachment limits, mirrored state, comments/dependencies identity and same-project boundary, webhook permissions and stale-update safeguards.",
+      "sourcesRead": [
+        "docs/github-issue-sync.md",
+        "lib/server/git/issue-sync-core.ts",
+        "lib/server/git/issue-sync.ts:300",
+        "lib/server/git/issue-push.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Six exact new disabled-sync control crops and localized alt/captions independently inspected. Article body otherwise unchanged (prior SHA verified after removing the new image)."
+    },
+    {
+      "workflow": "N10",
+      "article": "git-accounts-and-repositories",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "414ee8dc1d50c5fa949763cc277b0c131e5c2feaafde93b2ba10957af5f996f1",
+      "reviewedClaims": "Personal forge connection versus owner-only project link, separate synchronization, available authorization, explicit managed relay and operator-owned provider alternatives.",
+      "sourcesRead": [
+        "components/settings/project-git-section.tsx",
+        "content/knowledge/integrations.md",
+        "docs/managed-forge-relay-plan.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N08",
+      "article": "numo-mcp-connections",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "2e9bccb74bf97b11da4b449002eae866a74c13d8377bfa72ed72c90d7d08c19f",
+      "reviewedClaims": "Caller-owned connections, public HTTPS and private-network rejection, authentication/transport choices, encrypted secrets, preservation/reset semantics, 30s/1MiB/64000-byte limits and unattended creation restriction.",
+      "sourcesRead": [
+        "app/api/account/mcp-connections/route.ts",
+        "lib/server/mcp-settings.ts",
+        "lib/server/mcp-client.ts:145",
+        "lib/server/mcp-http.ts",
+        "lib/mcp-client-tools.ts",
+        "lib/server/safe-fetch.ts",
+        "components/settings/account-mcp-clients.tsx:560",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N02",
+      "article": "numo-permissions-and-approvals",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "8628bcaa7aa217c859a21d1b27a0b392514ed5abe3418fe050d69489e33d76ac",
+      "reviewedClaims": "Caller access, owner-only settings, supported preferences, explicit authorization for public feedback replies, personal connection isolation and current routine owner boundary.",
+      "sourcesRead": [
+        "lib/server/assistant/tools.ts",
+        "lib/server/assistant/execute-tool.ts:820",
+        "lib/server/agent/mcp-client.ts",
+        "lib/server/routine-occurrences.ts:128"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A08",
+      "article": "plans-and-ai-usage",
+      "locale": "en",
+      "revision": 2,
+      "sourceRevision": 2,
+      "bodySha256": "c3b31e21f060feea57ec817ed96e9f137d521fe5760d99579a61a33c695962d4",
+      "reviewedClaims": "Candidate plan capacities and owner storage/guest scope, no purchase outcome claimed; Minddy-funded monthly limit versus validated BYOK bypass and real separately recorded sandbox cost, separate routine cap.",
+      "sourcesRead": [
+        "lib/billing-plans.ts:75",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/ai-usage.ts:144",
+        "lib/server/agent/execute.ts:627",
+        "lib/server/agent/execute.ts:824",
+        "lib/server/agent/byok-quota.test.ts:230"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N05",
+      "article": "recover-numo-work",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "c2e425db5a49f0b8877a32849ef7a9727432ad3e6e1194a5f927d510ba35cc13",
+      "reviewedClaims": "Live question completeness/past-card disabling/skip behavior; account/routine/operation cards; real compute cost versus checkpoint and uncertain-write recovery.",
+      "sourcesRead": [
+        "components/assistant/ask-user-card.tsx:103",
+        "components/assistant/usage-exhausted-card.tsx",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N07",
+      "article": "repository-skills",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "5b66ddb18142e09ee731ef1be6d644c5bdf04ea8fcf448fdf72b34fbbc11d891",
+      "reviewedClaims": "Six ordered roots, SKILL.md discovery, cloud skill source in Numo shell, five selections, slash/dollar menus, turn-specific selection and safety authority.",
+      "sourcesRead": [
+        "lib/repository-skills.ts:1",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/skills.ts",
+        "content/knowledge/repository-skills.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Complete current body and new six-locale pixels/text independently read; exact provenance in remaining-guide-figures-independent-review-2026-10-08.json. No OS install/banner claim."
+    },
+    {
+      "workflow": "N04",
+      "article": "review-pull-requests",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "e236b82f8c06f7b6f3e8cf09ab41304585ea1670bc61212a8550618a248e85f5",
+      "reviewedClaims": "PR files/discussions/checks/readiness/reviewer and merge actions; provider permissions and real deployment prerequisites remain explicit.",
+      "sourcesRead": [
+        "components/pull-requests/pr-detail.tsx",
+        "components/pull-requests/pr-reviews-details.tsx",
+        "lib/server/assistant/tools.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N06",
+      "article": "scheduled-routines",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "898da02ed55e2930ac5c24cea8d2978e79ff51e7ef74b5084176dbeb16a1411e",
+      "reviewedClaims": "Owner-only routine creation, timezone/schedule/budget inputs, new occurrence context, current-owner AI/MCP identity, manual run and pause/inspection.",
+      "sourcesRead": [
+        "lib/server/routines.ts:225",
+        "lib/server/routine-occurrences.ts:128",
+        "lib/server/agent/mcp-client.ts",
+        "components/routines/create-routine-wizard.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A07",
+      "article": "transfer-between-instances",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "1914ef4b569130cb80f4dd120a2516f33ce9e339cb83eff12d46e5ebb1e46ca0",
+      "reviewedClaims": "Additive account JSON import, remapping and authorized existing-project memberships; credential/subscription exclusions; private transfer file is not operational Storage backup; genuine result dialog acknowledges before reload.",
+      "sourcesRead": [
+        "app/api/account/export/route.ts",
+        "lib/server/account-export.ts",
+        "lib/server/account-import.ts:1146",
+        "components/settings/account-data-section.tsx",
+        "content/documentation/reviews/account-transfer-execution.json",
+        "content/documentation/reviews/account-import-result-independent-review-2026-10-08.json"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N01",
+      "article": "work-with-numo",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "f002d02d6f9caddfba80b92b7be4bc9f1dd5ecdabbed49afeda57283e3fe86e8",
+      "reviewedClaims": "Page context, explicit context precedence, project access, conversation settings distinct from worker defaults, server execution rather than desktop files.",
+      "sourcesRead": [
+        "components/assistant-panel.tsx:40",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/project-scope.ts:1"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A04",
+      "article": "ai-keys-and-models",
+      "locale": "fr",
+      "revision": 4,
+      "sourceRevision": 3,
+      "bodySha256": "04d2ae66b63d96e4032cb04d8df25a380719f31fd4bae3ccc2aa9f68684f75b3",
+      "reviewedClaims": "Managed fallback is conditional; provider-bound selected code model fails closed when incompatible; frozen BYOK payer; account defaults versus conversation/local desktop/server surfaces; compute cost recording does not establish a BYOK account ceiling.",
+      "sourcesRead": [
+        "app/api/account/ai-keys/route.ts",
+        "lib/server/ai-runtime.ts:104",
+        "lib/server/agent/model.ts:45",
+        "lib/server/agent/model.ts:315",
+        "lib/server/agent/model.ts:514",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:627"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A05",
+      "article": "automation-settings",
+      "locale": "fr",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "7f15d16ac25b81adb6825db05aae59f2505dc3af573516d25857d753113d4abc",
+      "reviewedClaims": "Four Smart Fill fields and omitted assignee/status/date; creation versus owned-project eligible triage; separate self-assignment/project Smart Assign/static Triage; applicable AI quota and separate routine cap.",
+      "sourcesRead": [
+        "lib/server/smart-fill.ts:50",
+        "lib/server/smart-fill.ts:128",
+        "lib/server/assistant/tools-contract.test.ts",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N03",
+      "article": "delegate-code-work",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "56de8889f197e6c15b2b66e6bcd3d361a6aa0755d1e0866b69d92c1d97303654",
+      "reviewedClaims": "Repository providers, write authorization and sandbox prerequisites, account worker defaults, delegated branch edits, checks and checkpoint limits.",
+      "sourcesRead": [
+        "lib/server/agent/launch.ts:495",
+        "lib/server/agent/launch.ts:570",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N09",
+      "article": "external-minddy-mcp",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "04820ac3126553c2ac32956afe0d0d34720383cab485fc769d464e4ad0424cd2",
+      "reviewedClaims": "OAuth remote endpoint with caller identity and no billing-plan gate, private response caching, scoped tools and access revocation distinct from personal Numo connections.",
+      "sourcesRead": [
+        "app/api/mcp/route.ts",
+        "lib/server/mcp/auth.ts",
+        "lib/server/mcp/tools.ts",
+        "content/knowledge/agents-and-mcp.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N11",
+      "article": "forge-issue-sync",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "554657eb9045227b89bec619aee3e3f19f227a873e679e04eef83e7980d92eaf",
+      "reviewedClaims": "GitHub triage import, field mappings and attachment limits, mirrored state, comments/dependencies identity and same-project boundary, webhook permissions and stale-update safeguards.",
+      "sourcesRead": [
+        "docs/github-issue-sync.md",
+        "lib/server/git/issue-sync-core.ts",
+        "lib/server/git/issue-sync.ts:300",
+        "lib/server/git/issue-push.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Six exact new disabled-sync control crops and localized alt/captions independently inspected. Article body otherwise unchanged (prior SHA verified after removing the new image)."
+    },
+    {
+      "workflow": "N10",
+      "article": "git-accounts-and-repositories",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "431dbd464876fe52f8326e5d26d1de90700abbf5cbcd6293e7fbfd3045a5403c",
+      "reviewedClaims": "Personal forge connection versus owner-only project link, separate synchronization, available authorization, explicit managed relay and operator-owned provider alternatives.",
+      "sourcesRead": [
+        "components/settings/project-git-section.tsx",
+        "content/knowledge/integrations.md",
+        "docs/managed-forge-relay-plan.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N08",
+      "article": "numo-mcp-connections",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "ce02ac5127e41179d9fec22c9edfbc4bf4648f852a17acce9cea025e4e5f77d6",
+      "reviewedClaims": "Caller-owned connections, public HTTPS and private-network rejection, authentication/transport choices, encrypted secrets, preservation/reset semantics, 30s/1MiB/64000-byte limits and unattended creation restriction.",
+      "sourcesRead": [
+        "app/api/account/mcp-connections/route.ts",
+        "lib/server/mcp-settings.ts",
+        "lib/server/mcp-client.ts:145",
+        "lib/server/mcp-http.ts",
+        "lib/mcp-client-tools.ts",
+        "lib/server/safe-fetch.ts",
+        "components/settings/account-mcp-clients.tsx:560",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N02",
+      "article": "numo-permissions-and-approvals",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "7945028c171a0b29dd87824b990c102b15fdb92e1803570c175baf201f9beba8",
+      "reviewedClaims": "Caller access, owner-only settings, supported preferences, explicit authorization for public feedback replies, personal connection isolation and current routine owner boundary.",
+      "sourcesRead": [
+        "lib/server/assistant/tools.ts",
+        "lib/server/assistant/execute-tool.ts:820",
+        "lib/server/agent/mcp-client.ts",
+        "lib/server/routine-occurrences.ts:128"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A08",
+      "article": "plans-and-ai-usage",
+      "locale": "fr",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "48c95b0634cc46bd15edbfb76484bb1fd6336cbf534a49aba314339bfa2211c8",
+      "reviewedClaims": "Candidate plan capacities and owner storage/guest scope, no purchase outcome claimed; Minddy-funded monthly limit versus validated BYOK bypass and real separately recorded sandbox cost, separate routine cap.",
+      "sourcesRead": [
+        "lib/billing-plans.ts:75",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/ai-usage.ts:144",
+        "lib/server/agent/execute.ts:627",
+        "lib/server/agent/execute.ts:824",
+        "lib/server/agent/byok-quota.test.ts:230"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N05",
+      "article": "recover-numo-work",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "69352bd5fe026cd66fab3affea09e08484362f2c20b0dc1da436c718074076c6",
+      "reviewedClaims": "Live question completeness/past-card disabling/skip behavior; account/routine/operation cards; real compute cost versus checkpoint and uncertain-write recovery.",
+      "sourcesRead": [
+        "components/assistant/ask-user-card.tsx:103",
+        "components/assistant/usage-exhausted-card.tsx",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N07",
+      "article": "repository-skills",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "f8d739125b4f82e786ab31b980107124c94e8105996adbcccc5ac6f5567a0fc3",
+      "reviewedClaims": "Six ordered roots, SKILL.md discovery, cloud skill source in Numo shell, five selections, slash/dollar menus, turn-specific selection and safety authority.",
+      "sourcesRead": [
+        "lib/repository-skills.ts:1",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/skills.ts",
+        "content/knowledge/repository-skills.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Complete current body and new six-locale pixels/text independently read; exact provenance in remaining-guide-figures-independent-review-2026-10-08.json. No OS install/banner claim."
+    },
+    {
+      "workflow": "N04",
+      "article": "review-pull-requests",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "e3751d11163ec396e5a63356d1efa77a1aede359ff477fdaa10e2a60039497a3",
+      "reviewedClaims": "PR files/discussions/checks/readiness/reviewer and merge actions; provider permissions and real deployment prerequisites remain explicit.",
+      "sourcesRead": [
+        "components/pull-requests/pr-detail.tsx",
+        "components/pull-requests/pr-reviews-details.tsx",
+        "lib/server/assistant/tools.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N06",
+      "article": "scheduled-routines",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "f5c44310472212257998510d2a23f81e51d904bc13ba92d2f6838657daafd96b",
+      "reviewedClaims": "Owner-only routine creation, timezone/schedule/budget inputs, new occurrence context, current-owner AI/MCP identity, manual run and pause/inspection.",
+      "sourcesRead": [
+        "lib/server/routines.ts:225",
+        "lib/server/routine-occurrences.ts:128",
+        "lib/server/agent/mcp-client.ts",
+        "components/routines/create-routine-wizard.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A07",
+      "article": "transfer-between-instances",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "4a4e6483d150f5a99318654c9c6fbfa78639ef078f6c4feaa9c8ad5045661b9c",
+      "reviewedClaims": "Additive account JSON import, remapping and authorized existing-project memberships; credential/subscription exclusions; private transfer file is not operational Storage backup; genuine result dialog acknowledges before reload.",
+      "sourcesRead": [
+        "app/api/account/export/route.ts",
+        "lib/server/account-export.ts",
+        "lib/server/account-import.ts:1146",
+        "components/settings/account-data-section.tsx",
+        "content/documentation/reviews/account-transfer-execution.json",
+        "content/documentation/reviews/account-import-result-independent-review-2026-10-08.json"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N01",
+      "article": "work-with-numo",
+      "locale": "fr",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "eca95dcbe10bca986b046d9cd2519cc3ce6aa4e55c8246cc2c6289aa8415c35c",
+      "reviewedClaims": "Page context, explicit context precedence, project access, conversation settings distinct from worker defaults, server execution rather than desktop files.",
+      "sourcesRead": [
+        "components/assistant-panel.tsx:40",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/project-scope.ts:1"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A04",
+      "article": "ai-keys-and-models",
+      "locale": "de",
+      "revision": 4,
+      "sourceRevision": 3,
+      "bodySha256": "cf9ccf00a472ef3bff510f43585d0e6df27d6cf0ef12e64d47b8aada528e6bfa",
+      "reviewedClaims": "Managed fallback is conditional; provider-bound selected code model fails closed when incompatible; frozen BYOK payer; account defaults versus conversation/local desktop/server surfaces; compute cost recording does not establish a BYOK account ceiling.",
+      "sourcesRead": [
+        "app/api/account/ai-keys/route.ts",
+        "lib/server/ai-runtime.ts:104",
+        "lib/server/agent/model.ts:45",
+        "lib/server/agent/model.ts:315",
+        "lib/server/agent/model.ts:514",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:627"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A05",
+      "article": "automation-settings",
+      "locale": "de",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "ade27ebcf4199aab6f856d951ba74caf2896c8ba064a3e4335a05d69b2988259",
+      "reviewedClaims": "Four Smart Fill fields and omitted assignee/status/date; creation versus owned-project eligible triage; separate self-assignment/project Smart Assign/static Triage; applicable AI quota and separate routine cap.",
+      "sourcesRead": [
+        "lib/server/smart-fill.ts:50",
+        "lib/server/smart-fill.ts:128",
+        "lib/server/assistant/tools-contract.test.ts",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N03",
+      "article": "delegate-code-work",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "5e617f070a1b9f7c218c633ac0a51efc386eaa26d1b7c49ca5da92c7c949c7ae",
+      "reviewedClaims": "Repository providers, write authorization and sandbox prerequisites, account worker defaults, delegated branch edits, checks and checkpoint limits.",
+      "sourcesRead": [
+        "lib/server/agent/launch.ts:495",
+        "lib/server/agent/launch.ts:570",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N09",
+      "article": "external-minddy-mcp",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "cebfdf6367ea64057aa75dae6c38e241426e603ee6aa9f47d11da84556630e5f",
+      "reviewedClaims": "OAuth remote endpoint with caller identity and no billing-plan gate, private response caching, scoped tools and access revocation distinct from personal Numo connections.",
+      "sourcesRead": [
+        "app/api/mcp/route.ts",
+        "lib/server/mcp/auth.ts",
+        "lib/server/mcp/tools.ts",
+        "content/knowledge/agents-and-mcp.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N11",
+      "article": "forge-issue-sync",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "6543a66b5b2630255aa7d9b7d3ba16456d87567b22f5d99048645c9ca96ff424",
+      "reviewedClaims": "GitHub triage import, field mappings and attachment limits, mirrored state, comments/dependencies identity and same-project boundary, webhook permissions and stale-update safeguards.",
+      "sourcesRead": [
+        "docs/github-issue-sync.md",
+        "lib/server/git/issue-sync-core.ts",
+        "lib/server/git/issue-sync.ts:300",
+        "lib/server/git/issue-push.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Six exact new disabled-sync control crops and localized alt/captions independently inspected. Article body otherwise unchanged (prior SHA verified after removing the new image)."
+    },
+    {
+      "workflow": "N10",
+      "article": "git-accounts-and-repositories",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "5828e538539144cd15d54120f0850ad75bca79b1500d1cabc6ecca14fb198fee",
+      "reviewedClaims": "Personal forge connection versus owner-only project link, separate synchronization, available authorization, explicit managed relay and operator-owned provider alternatives.",
+      "sourcesRead": [
+        "components/settings/project-git-section.tsx",
+        "content/knowledge/integrations.md",
+        "docs/managed-forge-relay-plan.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N08",
+      "article": "numo-mcp-connections",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "0b0ae8be7134b934004735fe97378cbfc8b248d0d470e1bc310d548e7f5233b1",
+      "reviewedClaims": "Caller-owned connections, public HTTPS and private-network rejection, authentication/transport choices, encrypted secrets, preservation/reset semantics, 30s/1MiB/64000-byte limits and unattended creation restriction.",
+      "sourcesRead": [
+        "app/api/account/mcp-connections/route.ts",
+        "lib/server/mcp-settings.ts",
+        "lib/server/mcp-client.ts:145",
+        "lib/server/mcp-http.ts",
+        "lib/mcp-client-tools.ts",
+        "lib/server/safe-fetch.ts",
+        "components/settings/account-mcp-clients.tsx:560",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N02",
+      "article": "numo-permissions-and-approvals",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "509c098ade610433ff9b3021815e0a60b31f22be4792fc53a7c9ac2b1dc46298",
+      "reviewedClaims": "Caller access, owner-only settings, supported preferences, explicit authorization for public feedback replies, personal connection isolation and current routine owner boundary.",
+      "sourcesRead": [
+        "lib/server/assistant/tools.ts",
+        "lib/server/assistant/execute-tool.ts:820",
+        "lib/server/agent/mcp-client.ts",
+        "lib/server/routine-occurrences.ts:128"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A08",
+      "article": "plans-and-ai-usage",
+      "locale": "de",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "d15b14329fd1e81907a4cb06b6149c74988a65c11ed978e2d81548fd27655b5c",
+      "reviewedClaims": "Candidate plan capacities and owner storage/guest scope, no purchase outcome claimed; Minddy-funded monthly limit versus validated BYOK bypass and real separately recorded sandbox cost, separate routine cap.",
+      "sourcesRead": [
+        "lib/billing-plans.ts:75",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/ai-usage.ts:144",
+        "lib/server/agent/execute.ts:627",
+        "lib/server/agent/execute.ts:824",
+        "lib/server/agent/byok-quota.test.ts:230"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N05",
+      "article": "recover-numo-work",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "41e17504e5ad848624a3044e0fee75fc42c98cce02b96fe40ff20ca9d45a2f2f",
+      "reviewedClaims": "Live question completeness/past-card disabling/skip behavior; account/routine/operation cards; real compute cost versus checkpoint and uncertain-write recovery.",
+      "sourcesRead": [
+        "components/assistant/ask-user-card.tsx:103",
+        "components/assistant/usage-exhausted-card.tsx",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N07",
+      "article": "repository-skills",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "2e21597da73ac2bea2332058d847c30eb2eded9e6724d189b8fc339c21a49c9b",
+      "reviewedClaims": "Six ordered roots, SKILL.md discovery, cloud skill source in Numo shell, five selections, slash/dollar menus, turn-specific selection and safety authority.",
+      "sourcesRead": [
+        "lib/repository-skills.ts:1",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/skills.ts",
+        "content/knowledge/repository-skills.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Complete current body and new six-locale pixels/text independently read; exact provenance in remaining-guide-figures-independent-review-2026-10-08.json. No OS install/banner claim."
+    },
+    {
+      "workflow": "N04",
+      "article": "review-pull-requests",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "ff522257fe401883bfddff1daf66366c112695a78ade88c2be529311e9d9785f",
+      "reviewedClaims": "PR files/discussions/checks/readiness/reviewer and merge actions; provider permissions and real deployment prerequisites remain explicit.",
+      "sourcesRead": [
+        "components/pull-requests/pr-detail.tsx",
+        "components/pull-requests/pr-reviews-details.tsx",
+        "lib/server/assistant/tools.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N06",
+      "article": "scheduled-routines",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "e88df87ab1b5d859eb1e15f9a13bea0a00e44f2af56ae3b484575de23059f539",
+      "reviewedClaims": "Owner-only routine creation, timezone/schedule/budget inputs, new occurrence context, current-owner AI/MCP identity, manual run and pause/inspection.",
+      "sourcesRead": [
+        "lib/server/routines.ts:225",
+        "lib/server/routine-occurrences.ts:128",
+        "lib/server/agent/mcp-client.ts",
+        "components/routines/create-routine-wizard.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A07",
+      "article": "transfer-between-instances",
+      "locale": "de",
+      "revision": 3,
+      "sourceRevision": 1,
+      "bodySha256": "327cd10f978476778434e04da6f3d6242da6a6d7c5b6aeca0ba3b69a58f27290",
+      "reviewedClaims": "Additive account JSON import, remapping and authorized existing-project memberships; credential/subscription exclusions; private transfer file is not operational Storage backup; genuine result dialog acknowledges before reload.",
+      "sourcesRead": [
+        "app/api/account/export/route.ts",
+        "lib/server/account-export.ts",
+        "lib/server/account-import.ts:1146",
+        "components/settings/account-data-section.tsx",
+        "content/documentation/reviews/account-transfer-execution.json",
+        "content/documentation/reviews/account-import-result-independent-review-2026-10-08.json"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N01",
+      "article": "work-with-numo",
+      "locale": "de",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "078bd280c030088b38a6bd05cb1b7a0abc2ef297747dc77a92864486df15532b",
+      "reviewedClaims": "Page context, explicit context precedence, project access, conversation settings distinct from worker defaults, server execution rather than desktop files.",
+      "sourcesRead": [
+        "components/assistant-panel.tsx:40",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/project-scope.ts:1"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A04",
+      "article": "ai-keys-and-models",
+      "locale": "es",
+      "revision": 4,
+      "sourceRevision": 3,
+      "bodySha256": "652fa23b972ae9989a1e3a2ee151396df6c30770e00b8df42023381dacecd2f3",
+      "reviewedClaims": "Managed fallback is conditional; provider-bound selected code model fails closed when incompatible; frozen BYOK payer; account defaults versus conversation/local desktop/server surfaces; compute cost recording does not establish a BYOK account ceiling.",
+      "sourcesRead": [
+        "app/api/account/ai-keys/route.ts",
+        "lib/server/ai-runtime.ts:104",
+        "lib/server/agent/model.ts:45",
+        "lib/server/agent/model.ts:315",
+        "lib/server/agent/model.ts:514",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:627"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A05",
+      "article": "automation-settings",
+      "locale": "es",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "e36c9a9c3dee63e16b2ad893427b6b1147c3c1d5b1204dd0886f85c73964b87e",
+      "reviewedClaims": "Four Smart Fill fields and omitted assignee/status/date; creation versus owned-project eligible triage; separate self-assignment/project Smart Assign/static Triage; applicable AI quota and separate routine cap.",
+      "sourcesRead": [
+        "lib/server/smart-fill.ts:50",
+        "lib/server/smart-fill.ts:128",
+        "lib/server/assistant/tools-contract.test.ts",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N03",
+      "article": "delegate-code-work",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "70130061c6533b35fb05705e70ef6421e13ea4ac2edc747ec09c228771e75c78",
+      "reviewedClaims": "Repository providers, write authorization and sandbox prerequisites, account worker defaults, delegated branch edits, checks and checkpoint limits.",
+      "sourcesRead": [
+        "lib/server/agent/launch.ts:495",
+        "lib/server/agent/launch.ts:570",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N09",
+      "article": "external-minddy-mcp",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "f84ea47fc983a80bc006592061ba24b352a08046d7337826632755de53ea07d6",
+      "reviewedClaims": "OAuth remote endpoint with caller identity and no billing-plan gate, private response caching, scoped tools and access revocation distinct from personal Numo connections.",
+      "sourcesRead": [
+        "app/api/mcp/route.ts",
+        "lib/server/mcp/auth.ts",
+        "lib/server/mcp/tools.ts",
+        "content/knowledge/agents-and-mcp.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N11",
+      "article": "forge-issue-sync",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "decce05ff19637985b39ec84b1bf456ff68d9919ac1c8921b6a24717ae3e46b8",
+      "reviewedClaims": "GitHub triage import, field mappings and attachment limits, mirrored state, comments/dependencies identity and same-project boundary, webhook permissions and stale-update safeguards.",
+      "sourcesRead": [
+        "docs/github-issue-sync.md",
+        "lib/server/git/issue-sync-core.ts",
+        "lib/server/git/issue-sync.ts:300",
+        "lib/server/git/issue-push.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Six exact new disabled-sync control crops and localized alt/captions independently inspected. Article body otherwise unchanged (prior SHA verified after removing the new image)."
+    },
+    {
+      "workflow": "N10",
+      "article": "git-accounts-and-repositories",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "e665a5e0b45133a3258007fb02b0582e0631548c957ba9b5400e829be4071e39",
+      "reviewedClaims": "Personal forge connection versus owner-only project link, separate synchronization, available authorization, explicit managed relay and operator-owned provider alternatives.",
+      "sourcesRead": [
+        "components/settings/project-git-section.tsx",
+        "content/knowledge/integrations.md",
+        "docs/managed-forge-relay-plan.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N08",
+      "article": "numo-mcp-connections",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "7075edc5edc122b5a8c39b4063759db72078d7439b56b0ccd076e3efc7485ccb",
+      "reviewedClaims": "Caller-owned connections, public HTTPS and private-network rejection, authentication/transport choices, encrypted secrets, preservation/reset semantics, 30s/1MiB/64000-byte limits and unattended creation restriction.",
+      "sourcesRead": [
+        "app/api/account/mcp-connections/route.ts",
+        "lib/server/mcp-settings.ts",
+        "lib/server/mcp-client.ts:145",
+        "lib/server/mcp-http.ts",
+        "lib/mcp-client-tools.ts",
+        "lib/server/safe-fetch.ts",
+        "components/settings/account-mcp-clients.tsx:560",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N02",
+      "article": "numo-permissions-and-approvals",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "f88188169ad84508c9577638676a97ffe824d15deda51b3dd6e17fe5e3cb45c1",
+      "reviewedClaims": "Caller access, owner-only settings, supported preferences, explicit authorization for public feedback replies, personal connection isolation and current routine owner boundary.",
+      "sourcesRead": [
+        "lib/server/assistant/tools.ts",
+        "lib/server/assistant/execute-tool.ts:820",
+        "lib/server/agent/mcp-client.ts",
+        "lib/server/routine-occurrences.ts:128"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A08",
+      "article": "plans-and-ai-usage",
+      "locale": "es",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "8152acd562c21e933a70a6c08b1c14c3503b11f4d9f34a38a5b1816c1f89f216",
+      "reviewedClaims": "Candidate plan capacities and owner storage/guest scope, no purchase outcome claimed; Minddy-funded monthly limit versus validated BYOK bypass and real separately recorded sandbox cost, separate routine cap.",
+      "sourcesRead": [
+        "lib/billing-plans.ts:75",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/ai-usage.ts:144",
+        "lib/server/agent/execute.ts:627",
+        "lib/server/agent/execute.ts:824",
+        "lib/server/agent/byok-quota.test.ts:230"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A09",
+      "article": "privacy-and-account-deletion",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "ce8f9c07cd1c9ba25fdc62469ea18e2cbbcce9e8538481fd35486ec2b2feaad9",
+      "reviewedClaims": "Configured analytics and account/device consent precedence; destructive account deletion preview, password/recent-auth condition, owned-project consequences, sign-out and irreversibility.",
+      "sourcesRead": [
+        "lib/cookie-consent.ts:68",
+        "app/api/account/route.ts",
+        "lib/server/account-deletion.ts",
+        "components/settings/account-data-section.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N05",
+      "article": "recover-numo-work",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "5756fa8268c7589a868ab3a6cc331c3dd700b96724e2801b99ac00bf2f60b3bc",
+      "reviewedClaims": "Live question completeness/past-card disabling/skip behavior; account/routine/operation cards; real compute cost versus checkpoint and uncertain-write recovery.",
+      "sourcesRead": [
+        "components/assistant/ask-user-card.tsx:103",
+        "components/assistant/usage-exhausted-card.tsx",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N07",
+      "article": "repository-skills",
+      "locale": "es",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "7b2cda7d9f9ca86bd53a81dde1b97fcfbe4ab8c59e7d3c496dad9dd743eed2fd",
+      "reviewedClaims": "Six ordered roots, SKILL.md discovery, cloud skill source in Numo shell, five selections, slash/dollar menus, turn-specific selection and safety authority.",
+      "sourcesRead": [
+        "lib/repository-skills.ts:1",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/skills.ts",
+        "content/knowledge/repository-skills.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Complete current body and new six-locale pixels/text independently read; exact provenance in remaining-guide-figures-independent-review-2026-10-08.json. No OS install/banner claim."
+    },
+    {
+      "workflow": "N04",
+      "article": "review-pull-requests",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "a9af8806f23741009aaf15ec6ac7cc4e6e2f01be4d54e12ba629c96d7c484217",
+      "reviewedClaims": "PR files/discussions/checks/readiness/reviewer and merge actions; provider permissions and real deployment prerequisites remain explicit.",
+      "sourcesRead": [
+        "components/pull-requests/pr-detail.tsx",
+        "components/pull-requests/pr-reviews-details.tsx",
+        "lib/server/assistant/tools.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N06",
+      "article": "scheduled-routines",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "78023f85b0550a2e8b8b5c23c8f0839da35b69f306a9be89ea135fb993bde0c7",
+      "reviewedClaims": "Owner-only routine creation, timezone/schedule/budget inputs, new occurrence context, current-owner AI/MCP identity, manual run and pause/inspection.",
+      "sourcesRead": [
+        "lib/server/routines.ts:225",
+        "lib/server/routine-occurrences.ts:128",
+        "lib/server/agent/mcp-client.ts",
+        "components/routines/create-routine-wizard.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A07",
+      "article": "transfer-between-instances",
+      "locale": "es",
+      "revision": 3,
+      "sourceRevision": 1,
+      "bodySha256": "8b409cd7cc8ab8299b0ce198dfa63a62521f6dc865c529a01f4398c18850a8a1",
+      "reviewedClaims": "Additive account JSON import, remapping and authorized existing-project memberships; credential/subscription exclusions; private transfer file is not operational Storage backup; genuine result dialog acknowledges before reload.",
+      "sourcesRead": [
+        "app/api/account/export/route.ts",
+        "lib/server/account-export.ts",
+        "lib/server/account-import.ts:1146",
+        "components/settings/account-data-section.tsx",
+        "content/documentation/reviews/account-transfer-execution.json",
+        "content/documentation/reviews/account-import-result-independent-review-2026-10-08.json"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N01",
+      "article": "work-with-numo",
+      "locale": "es",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "cbba4753fabd11231b01a7f012568b2ad5f70c1ee8528d8f81972e052164a229",
+      "reviewedClaims": "Page context, explicit context precedence, project access, conversation settings distinct from worker defaults, server execution rather than desktop files.",
+      "sourcesRead": [
+        "components/assistant-panel.tsx:40",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/project-scope.ts:1"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A04",
+      "article": "ai-keys-and-models",
+      "locale": "it",
+      "revision": 4,
+      "sourceRevision": 3,
+      "bodySha256": "2cd83d058b4e88008b25ef91423d4c941454b5fd981512bbf38c741d3b298000",
+      "reviewedClaims": "Managed fallback is conditional; provider-bound selected code model fails closed when incompatible; frozen BYOK payer; account defaults versus conversation/local desktop/server surfaces; compute cost recording does not establish a BYOK account ceiling.",
+      "sourcesRead": [
+        "app/api/account/ai-keys/route.ts",
+        "lib/server/ai-runtime.ts:104",
+        "lib/server/agent/model.ts:45",
+        "lib/server/agent/model.ts:315",
+        "lib/server/agent/model.ts:514",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:627"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A05",
+      "article": "automation-settings",
+      "locale": "it",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "c4997aefba8925ff2903c8e3be593e68ba456390b4b0d3eb501fd930b7fb08eb",
+      "reviewedClaims": "Four Smart Fill fields and omitted assignee/status/date; creation versus owned-project eligible triage; separate self-assignment/project Smart Assign/static Triage; applicable AI quota and separate routine cap.",
+      "sourcesRead": [
+        "lib/server/smart-fill.ts:50",
+        "lib/server/smart-fill.ts:128",
+        "lib/server/assistant/tools-contract.test.ts",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N03",
+      "article": "delegate-code-work",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "278450f2a6ed2c9869559d42d7d7ab32b5f18b7cabedfb869777f01a40d34036",
+      "reviewedClaims": "Repository providers, write authorization and sandbox prerequisites, account worker defaults, delegated branch edits, checks and checkpoint limits.",
+      "sourcesRead": [
+        "lib/server/agent/launch.ts:495",
+        "lib/server/agent/launch.ts:570",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N09",
+      "article": "external-minddy-mcp",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "81360d885d5fa1ff3bd4c157fd22f95ea2be20b5d912112b1ff95d761b8db5d2",
+      "reviewedClaims": "OAuth remote endpoint with caller identity and no billing-plan gate, private response caching, scoped tools and access revocation distinct from personal Numo connections.",
+      "sourcesRead": [
+        "app/api/mcp/route.ts",
+        "lib/server/mcp/auth.ts",
+        "lib/server/mcp/tools.ts",
+        "content/knowledge/agents-and-mcp.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N11",
+      "article": "forge-issue-sync",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "d1bbb801a6820b6182180673973e3535e65582c0755fffec1ad129059ffc76b6",
+      "reviewedClaims": "GitHub triage import, field mappings and attachment limits, mirrored state, comments/dependencies identity and same-project boundary, webhook permissions and stale-update safeguards.",
+      "sourcesRead": [
+        "docs/github-issue-sync.md",
+        "lib/server/git/issue-sync-core.ts",
+        "lib/server/git/issue-sync.ts:300",
+        "lib/server/git/issue-push.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Six exact new disabled-sync control crops and localized alt/captions independently inspected. Article body otherwise unchanged (prior SHA verified after removing the new image)."
+    },
+    {
+      "workflow": "N10",
+      "article": "git-accounts-and-repositories",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "b38c5c0829ff9fd0102fc488ff53f5c9449a827d3207083b568cc60cc2788b77",
+      "reviewedClaims": "Personal forge connection versus owner-only project link, separate synchronization, available authorization, explicit managed relay and operator-owned provider alternatives.",
+      "sourcesRead": [
+        "components/settings/project-git-section.tsx",
+        "content/knowledge/integrations.md",
+        "docs/managed-forge-relay-plan.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N08",
+      "article": "numo-mcp-connections",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "935867bbda1a4aca6bf6e6e3391a00e0fd2dc9fd44b7dd1653938faf47225f63",
+      "reviewedClaims": "Caller-owned connections, public HTTPS and private-network rejection, authentication/transport choices, encrypted secrets, preservation/reset semantics, 30s/1MiB/64000-byte limits and unattended creation restriction.",
+      "sourcesRead": [
+        "app/api/account/mcp-connections/route.ts",
+        "lib/server/mcp-settings.ts",
+        "lib/server/mcp-client.ts:145",
+        "lib/server/mcp-http.ts",
+        "lib/mcp-client-tools.ts",
+        "lib/server/safe-fetch.ts",
+        "components/settings/account-mcp-clients.tsx:560",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N02",
+      "article": "numo-permissions-and-approvals",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "32a7223a8f03ec14803dea8af8b6dc9286ad8ace58cdb85e4bc286b4296833eb",
+      "reviewedClaims": "Caller access, owner-only settings, supported preferences, explicit authorization for public feedback replies, personal connection isolation and current routine owner boundary.",
+      "sourcesRead": [
+        "lib/server/assistant/tools.ts",
+        "lib/server/assistant/execute-tool.ts:820",
+        "lib/server/agent/mcp-client.ts",
+        "lib/server/routine-occurrences.ts:128"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A08",
+      "article": "plans-and-ai-usage",
+      "locale": "it",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "130d23faf4ce999a2cd1e400843a28053fd4044c458a65841ac6c75c8f5a7280",
+      "reviewedClaims": "Candidate plan capacities and owner storage/guest scope, no purchase outcome claimed; Minddy-funded monthly limit versus validated BYOK bypass and real separately recorded sandbox cost, separate routine cap.",
+      "sourcesRead": [
+        "lib/billing-plans.ts:75",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/ai-usage.ts:144",
+        "lib/server/agent/execute.ts:627",
+        "lib/server/agent/execute.ts:824",
+        "lib/server/agent/byok-quota.test.ts:230"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N05",
+      "article": "recover-numo-work",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "48dcb944b4d1d027c94471cc99e28c81825922c5fd001931611b83a1a8558d38",
+      "reviewedClaims": "Live question completeness/past-card disabling/skip behavior; account/routine/operation cards; real compute cost versus checkpoint and uncertain-write recovery.",
+      "sourcesRead": [
+        "components/assistant/ask-user-card.tsx:103",
+        "components/assistant/usage-exhausted-card.tsx",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N07",
+      "article": "repository-skills",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "971a2b781cbd3b0f97b6c59a5e5dea16723e3b66ed2df8e2d9cd97729931240b",
+      "reviewedClaims": "Six ordered roots, SKILL.md discovery, cloud skill source in Numo shell, five selections, slash/dollar menus, turn-specific selection and safety authority.",
+      "sourcesRead": [
+        "lib/repository-skills.ts:1",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/skills.ts",
+        "content/knowledge/repository-skills.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Complete current body and new six-locale pixels/text independently read; exact provenance in remaining-guide-figures-independent-review-2026-10-08.json. No OS install/banner claim."
+    },
+    {
+      "workflow": "N04",
+      "article": "review-pull-requests",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "dda3f823493e8b5cac9982b40c3215e49892873ec7d3dd9671e1666c110cc099",
+      "reviewedClaims": "PR files/discussions/checks/readiness/reviewer and merge actions; provider permissions and real deployment prerequisites remain explicit.",
+      "sourcesRead": [
+        "components/pull-requests/pr-detail.tsx",
+        "components/pull-requests/pr-reviews-details.tsx",
+        "lib/server/assistant/tools.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N06",
+      "article": "scheduled-routines",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "4a45c750e8209aba760fdc525576df46541276e3d4f63325f5bf31e5d9eba008",
+      "reviewedClaims": "Owner-only routine creation, timezone/schedule/budget inputs, new occurrence context, current-owner AI/MCP identity, manual run and pause/inspection.",
+      "sourcesRead": [
+        "lib/server/routines.ts:225",
+        "lib/server/routine-occurrences.ts:128",
+        "lib/server/agent/mcp-client.ts",
+        "components/routines/create-routine-wizard.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A07",
+      "article": "transfer-between-instances",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "9dca1eca5da58871c210cf770e3a7864b91ddf6cdc1e16d9f659736ae722c817",
+      "reviewedClaims": "Additive account JSON import, remapping and authorized existing-project memberships; credential/subscription exclusions; private transfer file is not operational Storage backup; genuine result dialog acknowledges before reload.",
+      "sourcesRead": [
+        "app/api/account/export/route.ts",
+        "lib/server/account-export.ts",
+        "lib/server/account-import.ts:1146",
+        "components/settings/account-data-section.tsx",
+        "content/documentation/reviews/account-transfer-execution.json",
+        "content/documentation/reviews/account-import-result-independent-review-2026-10-08.json"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N01",
+      "article": "work-with-numo",
+      "locale": "it",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "74feb0b0a5e9d8aac431ec4d831bea7005c72b67575d1bbea411752a1b02a46c",
+      "reviewedClaims": "Page context, explicit context precedence, project access, conversation settings distinct from worker defaults, server execution rather than desktop files.",
+      "sourcesRead": [
+        "components/assistant-panel.tsx:40",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/project-scope.ts:1"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A04",
+      "article": "ai-keys-and-models",
+      "locale": "pt-BR",
+      "revision": 4,
+      "sourceRevision": 3,
+      "bodySha256": "740c31031acaa831c8d7113b98b2502ab7cadbc8bc1434bdd9693291568fbe57",
+      "reviewedClaims": "Managed fallback is conditional; provider-bound selected code model fails closed when incompatible; frozen BYOK payer; account defaults versus conversation/local desktop/server surfaces; compute cost recording does not establish a BYOK account ceiling.",
+      "sourcesRead": [
+        "app/api/account/ai-keys/route.ts",
+        "lib/server/ai-runtime.ts:104",
+        "lib/server/agent/model.ts:45",
+        "lib/server/agent/model.ts:315",
+        "lib/server/agent/model.ts:514",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:627"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A05",
+      "article": "automation-settings",
+      "locale": "pt-BR",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "b5a3c47004aec26a94537bd414c159f5da47c2673ff17eb52fc12372acdc39a4",
+      "reviewedClaims": "Four Smart Fill fields and omitted assignee/status/date; creation versus owned-project eligible triage; separate self-assignment/project Smart Assign/static Triage; applicable AI quota and separate routine cap.",
+      "sourcesRead": [
+        "lib/server/smart-fill.ts:50",
+        "lib/server/smart-fill.ts:128",
+        "lib/server/assistant/tools-contract.test.ts",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N03",
+      "article": "delegate-code-work",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "4d20adcb3053614ccee0aeb96779c7564228fa434fe9bc6a94ea67a29d80dad9",
+      "reviewedClaims": "Repository providers, write authorization and sandbox prerequisites, account worker defaults, delegated branch edits, checks and checkpoint limits.",
+      "sourcesRead": [
+        "lib/server/agent/launch.ts:495",
+        "lib/server/agent/launch.ts:570",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N09",
+      "article": "external-minddy-mcp",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "f7ecbae5b7ba591f317f96348fbfe93ae52bfb93d365f30c59738e2116d181e6",
+      "reviewedClaims": "OAuth remote endpoint with caller identity and no billing-plan gate, private response caching, scoped tools and access revocation distinct from personal Numo connections.",
+      "sourcesRead": [
+        "app/api/mcp/route.ts",
+        "lib/server/mcp/auth.ts",
+        "lib/server/mcp/tools.ts",
+        "content/knowledge/agents-and-mcp.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N11",
+      "article": "forge-issue-sync",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "7cdaea827fa52028a838d7ab896c8e8d45fe42c455aa51b800281535db2053f7",
+      "reviewedClaims": "GitHub triage import, field mappings and attachment limits, mirrored state, comments/dependencies identity and same-project boundary, webhook permissions and stale-update safeguards.",
+      "sourcesRead": [
+        "docs/github-issue-sync.md",
+        "lib/server/git/issue-sync-core.ts",
+        "lib/server/git/issue-sync.ts:300",
+        "lib/server/git/issue-push.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Six exact new disabled-sync control crops and localized alt/captions independently inspected. Article body otherwise unchanged (prior SHA verified after removing the new image)."
+    },
+    {
+      "workflow": "N10",
+      "article": "git-accounts-and-repositories",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "0cee298109702f72034289d9c834fde4b2a6c9a83e899ef3c2ead71cd858d707",
+      "reviewedClaims": "Personal forge connection versus owner-only project link, separate synchronization, available authorization, explicit managed relay and operator-owned provider alternatives.",
+      "sourcesRead": [
+        "components/settings/project-git-section.tsx",
+        "content/knowledge/integrations.md",
+        "docs/managed-forge-relay-plan.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N08",
+      "article": "numo-mcp-connections",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "7e3648584062002a3cd2146bc954b714a53e223988005bec4f36a94384e2b715",
+      "reviewedClaims": "Caller-owned connections, public HTTPS and private-network rejection, authentication/transport choices, encrypted secrets, preservation/reset semantics, 30s/1MiB/64000-byte limits and unattended creation restriction.",
+      "sourcesRead": [
+        "app/api/account/mcp-connections/route.ts",
+        "lib/server/mcp-settings.ts",
+        "lib/server/mcp-client.ts:145",
+        "lib/server/mcp-http.ts",
+        "lib/mcp-client-tools.ts",
+        "lib/server/safe-fetch.ts",
+        "components/settings/account-mcp-clients.tsx:560",
+        "lib/server/assistant/tools-contract.test.ts:350"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N02",
+      "article": "numo-permissions-and-approvals",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "cdce7f3e2b325cddec423e6350cf2baf3da9bf2597cd32832c984c178af8b8ca",
+      "reviewedClaims": "Caller access, owner-only settings, supported preferences, explicit authorization for public feedback replies, personal connection isolation and current routine owner boundary.",
+      "sourcesRead": [
+        "lib/server/assistant/tools.ts",
+        "lib/server/assistant/execute-tool.ts:820",
+        "lib/server/agent/mcp-client.ts",
+        "lib/server/routine-occurrences.ts:128"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A08",
+      "article": "plans-and-ai-usage",
+      "locale": "pt-BR",
+      "revision": 3,
+      "sourceRevision": 2,
+      "bodySha256": "ce53ea5915422021a9447142dae6f5f80b69a61c4c023d76941b87daa6457d24",
+      "reviewedClaims": "Candidate plan capacities and owner storage/guest scope, no purchase outcome claimed; Minddy-funded monthly limit versus validated BYOK bypass and real separately recorded sandbox cost, separate routine cap.",
+      "sourcesRead": [
+        "lib/billing-plans.ts:75",
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/ai-usage.ts:144",
+        "lib/server/agent/execute.ts:627",
+        "lib/server/agent/execute.ts:824",
+        "lib/server/agent/byok-quota.test.ts:230"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N05",
+      "article": "recover-numo-work",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "5d2b3834dd58df532632e5d05acab03af3d74ce08a2efcfd87150c47d95283e0",
+      "reviewedClaims": "Live question completeness/past-card disabling/skip behavior; account/routine/operation cards; real compute cost versus checkpoint and uncertain-write recovery.",
+      "sourcesRead": [
+        "components/assistant/ask-user-card.tsx:103",
+        "components/assistant/usage-exhausted-card.tsx",
+        "docs/architecture/numo-durable-turns.md",
+        "lib/server/usage.ts:273"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N07",
+      "article": "repository-skills",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "51db596f3cc9bdb025787613059ef11c5b0d3d1ce29a43e58c5f76483be5ddb1",
+      "reviewedClaims": "Six ordered roots, SKILL.md discovery, cloud skill source in Numo shell, five selections, slash/dollar menus, turn-specific selection and safety authority.",
+      "sourcesRead": [
+        "lib/repository-skills.ts:1",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/skills.ts",
+        "content/knowledge/repository-skills.md"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Complete current body and new six-locale pixels/text independently read; exact provenance in remaining-guide-figures-independent-review-2026-10-08.json. No OS install/banner claim."
+    },
+    {
+      "workflow": "N04",
+      "article": "review-pull-requests",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "c39856dcfd82aca597d2cdc6299a632f4188512e947b2866f7286d9faaa14183",
+      "reviewedClaims": "PR files/discussions/checks/readiness/reviewer and merge actions; provider permissions and real deployment prerequisites remain explicit.",
+      "sourcesRead": [
+        "components/pull-requests/pr-detail.tsx",
+        "components/pull-requests/pr-reviews-details.tsx",
+        "lib/server/assistant/tools.ts"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available.",
+      "imageAdditionReview": "Current real-run screenshot individually inspected, localized visible narrative/title and complete article read, exact figure caption reviewed. Record: code-delegation-real-independent-review-2026-10-08.json; no six-worker-execution or human acceptance claim."
+    },
+    {
+      "workflow": "N06",
+      "article": "scheduled-routines",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "3097b6df2e21933bdd94054af9ccaa80d33686f731e9dbc7e892183954cf6eec",
+      "reviewedClaims": "Owner-only routine creation, timezone/schedule/budget inputs, new occurrence context, current-owner AI/MCP identity, manual run and pause/inspection.",
+      "sourcesRead": [
+        "lib/server/routines.ts:225",
+        "lib/server/routine-occurrences.ts:128",
+        "lib/server/agent/mcp-client.ts",
+        "components/routines/create-routine-wizard.tsx"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "A07",
+      "article": "transfer-between-instances",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "90d30f458afa054ae3edd00b100c58d8883ee5824abd9c67c62adf651913f71c",
+      "reviewedClaims": "Additive account JSON import, remapping and authorized existing-project memberships; credential/subscription exclusions; private transfer file is not operational Storage backup; genuine result dialog acknowledges before reload.",
+      "sourcesRead": [
+        "app/api/account/export/route.ts",
+        "lib/server/account-export.ts",
+        "lib/server/account-import.ts:1146",
+        "components/settings/account-data-section.tsx",
+        "content/documentation/reviews/account-transfer-execution.json",
+        "content/documentation/reviews/account-import-result-independent-review-2026-10-08.json"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    },
+    {
+      "workflow": "N01",
+      "article": "work-with-numo",
+      "locale": "pt-BR",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "0b7fe9e21cf2ef144c26a6dafccc1395674d1fc7ddff4751ab2fcff8a35f119f",
+      "reviewedClaims": "Page context, explicit context precedence, project access, conversation settings distinct from worker defaults, server execution rather than desktop files.",
+      "sourcesRead": [
+        "components/assistant-panel.tsx:40",
+        "components/assistant/assistant-shell.tsx:350",
+        "components/assistant/chat-input.tsx:725",
+        "lib/server/assistant/project-scope.ts:1"
+      ],
+      "reviewedAt": "2026-10-08",
+      "humanAcceptance": false,
+      "runtimeLimit": "Independent source-level factual review, not an assertion of successful AI calls, provider authorization, external delivery or universal platform execution. Separate local runtime evidence is cited when available."
+    }
+  ],
+  "humanAcceptance": false
+}

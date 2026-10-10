@@ -1,0 +1,253 @@
+{
+  "reviewer": "Codex agent automation_account_documentation",
+  "date": "2026-10-08",
+  "profile": "local candidate, guarded demo account, adapted read responses",
+  "executionValidated": false,
+  "captures": [
+    {
+      "article": "work-with-numo",
+      "locale": "en",
+      "output": "public/documentation/en/work-with-numo-workflow.png",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "25f4acc6b18b893ba2ea79195d0d0d900899c4d2f56548367d433a2fff7792b0",
+          "adaptedHash": "25f4acc6b18b893ba2ea79195d0d0d900899c4d2f56548367d433a2fff7792b0"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "25f4acc6b18b893ba2ea79195d0d0d900899c4d2f56548367d433a2fff7792b0",
+          "adaptedHash": "25f4acc6b18b893ba2ea79195d0d0d900899c4d2f56548367d433a2fff7792b0"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "e00b66edbdc820f1f3dba6154e63352c59bf47cb93d41ba5ef27625ee90cb72e",
+          "adaptedHash": "e00b66edbdc820f1f3dba6154e63352c59bf47cb93d41ba5ef27625ee90cb72e"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "b77293465ea4ef05f8f6a466ab9bb9259cfdfb2db8b69b17faa225788d01ed7c",
+          "adaptedHash": "b77293465ea4ef05f8f6a466ab9bb9259cfdfb2db8b69b17faa225788d01ed7c"
+        }
+      ],
+      "viewport": [
+        1200,
+        900
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "conversationId": "c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "reviewed": true,
+      "imageHash": "b3ca2df7fa75f32439c0dba7e8bf431c1df1372318374001d6c0afac630cb67b"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "fr",
+      "output": "public/documentation/fr/work-with-numo-workflow.png",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "3a08a612e92a3460d84616766721f8fb903a79ec8cd1dff53c8784410c3b3d83",
+          "adaptedHash": "15781d5be1e4dd3a8b14c3eb2e5eefae9322e581efb5a729f6b2c97bf2f3ab1e"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "3a08a612e92a3460d84616766721f8fb903a79ec8cd1dff53c8784410c3b3d83",
+          "adaptedHash": "15781d5be1e4dd3a8b14c3eb2e5eefae9322e581efb5a729f6b2c97bf2f3ab1e"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "39658d83d8831abe457cc1d2435584fadff4c4539e7206b6aab489cc42ceec0d",
+          "adaptedHash": "67685d16c3370214a316336dcc81aef52152ee521c9a7cecc23acff6343ef5ef"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "cb79af1362ad6d2716159d4ce07a7cc21a03e5072847fb243a27e32cb3d8e06f",
+          "adaptedHash": "e4d2b121f969b93de25c7934b48d278b6684f1fca043a68faf467a8aa4fcdddd"
+        }
+      ],
+      "viewport": [
+        1200,
+        900
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "conversationId": "c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "reviewed": true,
+      "imageHash": "bd2490cb3b5e332abc6fed2b2819d5737fe3e434cc09cfb2246704f8b3fead44"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "de",
+      "output": "public/documentation/de/work-with-numo-workflow.png",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "4cda453b548facd6d2abe2fed95eaf9d0b019fbb8db43d49d09877ce5f95ede8",
+          "adaptedHash": "862e66e6001b1d309ffa41dfc768e5b11b7d4acac4c9a0128be4ade230354d87"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "4cda453b548facd6d2abe2fed95eaf9d0b019fbb8db43d49d09877ce5f95ede8",
+          "adaptedHash": "862e66e6001b1d309ffa41dfc768e5b11b7d4acac4c9a0128be4ade230354d87"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "d1a32f6c1089f8c5687f896ed612c951ae7f8877b1779ccf1ed07b77ea011b62",
+          "adaptedHash": "5b11ab40bde3fc987c7f76b16789c87887b58743e88e1bc742c93a1af38e4cb2"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "d1a32f6c1089f8c5687f896ed612c951ae7f8877b1779ccf1ed07b77ea011b62",
+          "adaptedHash": "5b11ab40bde3fc987c7f76b16789c87887b58743e88e1bc742c93a1af38e4cb2"
+        }
+      ],
+      "viewport": [
+        1200,
+        900
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "conversationId": "c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "reviewed": true,
+      "imageHash": "8dae6b3f83a521f9c087a673a597e70f22949d221e51c67dbe63bd91ce564d02"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "es",
+      "output": "public/documentation/es/work-with-numo-workflow.png",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "0d8335a8eb0fa1806d428eaca9e4d3fe0811edbd0f8f06d9810f68bd0dfc35dc",
+          "adaptedHash": "a1bdc03f3e6f50db6decd1a016f12ecd9659400313ee36eb1cfa6150f8a522cd"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "0d8335a8eb0fa1806d428eaca9e4d3fe0811edbd0f8f06d9810f68bd0dfc35dc",
+          "adaptedHash": "a1bdc03f3e6f50db6decd1a016f12ecd9659400313ee36eb1cfa6150f8a522cd"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "40eb3febca100f522f35359c59fb197c6a06297e5c9c0a60aa33c80ac2dc6b95",
+          "adaptedHash": "c418663697861d9dfd7697270c8b62a304eaffb2eacbf60f936e8a4de9ccc313"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "2b1095abb7dd54578877489b09033c2bdb0ffd5948428ea3b24cf266be540dc3",
+          "adaptedHash": "42f42d1934d17a229fd1c43fdfee2bf0d0cbcec639c801a22f6a4b30040d4f1a"
+        }
+      ],
+      "viewport": [
+        1200,
+        900
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "conversationId": "c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "reviewed": true,
+      "imageHash": "51843818b0208d1fe9d90485a6bbbfadf9906fe0352e4ac3634d8a865424bb13"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "it",
+      "output": "public/documentation/it/work-with-numo-workflow.png",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "e293f9ac805b209b926e104e3814d6b9470b00620e986b55ddd32de2509fb0bd",
+          "adaptedHash": "bee5834d6554832b9f5aaf04e9cd2321dec9283c077c23da92a13dd412e5c0ae"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "e293f9ac805b209b926e104e3814d6b9470b00620e986b55ddd32de2509fb0bd",
+          "adaptedHash": "bee5834d6554832b9f5aaf04e9cd2321dec9283c077c23da92a13dd412e5c0ae"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "2b1095abb7dd54578877489b09033c2bdb0ffd5948428ea3b24cf266be540dc3",
+          "adaptedHash": "923d881409faa54089d14046ae2c7ce2c5a88e2d0f83968362e6443a6426a6ba"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "387fb88079faa133e03fb87f6b8f325e05c02227dff2c70862614e857dc62284",
+          "adaptedHash": "737593bb14b098299652a889831c32bb1c9ae6e2d7e156c865a374d64421d347"
+        }
+      ],
+      "viewport": [
+        1200,
+        900
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "conversationId": "c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "reviewed": true,
+      "imageHash": "5e6ad3310849aec398b44bb21c9ec01b1c865fc6c89133ac44a17bf17c8d1f04"
+    },
+    {
+      "article": "work-with-numo",
+      "locale": "pt-BR",
+      "output": "public/documentation/pt-BR/work-with-numo-workflow.png",
+      "exchanges": [
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "2d76138cc9e8cb8ec6f4e96eea60ff151d3324ee9abd01fe1e6b6a4e59d362b2",
+          "adaptedHash": "efb595b5c2f06ac9ab2067e60ef600f4ac3ddddb9d5cef4ba3a7fbdc203da633"
+        },
+        {
+          "path": "/api/assistant/conversations",
+          "replacements": 1,
+          "originalHash": "2d76138cc9e8cb8ec6f4e96eea60ff151d3324ee9abd01fe1e6b6a4e59d362b2",
+          "adaptedHash": "efb595b5c2f06ac9ab2067e60ef600f4ac3ddddb9d5cef4ba3a7fbdc203da633"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "9d94c2aa68649a3115caa5ed341056045b2f0752f8d10dd4db2ef54eea17854a",
+          "adaptedHash": "6d9283f7361edab19f403f8ed46a12f38fb54ff2afe9d6decdb0f43eff724099"
+        },
+        {
+          "path": "/api/numo/conversations/c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+          "replacements": 8,
+          "originalHash": "39116d24768eb27c903f9d3b03bd4fdd0daa7c88a49c800eda3e857107706ae7",
+          "adaptedHash": "8c117f0d7cb2128fa985bea931c53c1a86ab8258db0548f9a75c71e8d7bb4d5c"
+        }
+      ],
+      "viewport": [
+        1200,
+        900
+      ],
+      "theme": "light",
+      "capturedAt": "2026-10-08",
+      "conversationId": "c307cbc4-5e55-4eb6-9cc7-f9361f2dee24",
+      "reviewed": true,
+      "imageHash": "2f54805fe9aaf200140b6a9ab27d37b0ed171b42affc1159b7518105d88ab84a"
+    }
+  ],
+  "visualReview": {
+    "reviewer": "Codex agent automation_account_documentation",
+    "date": "2026-10-08",
+    "method": "Viewed all locale image pixels after final capture. Checked UI labels, readable controls, correct locale, no loading state or secrets. Entry-point figures do not establish workflow execution."
+  }
+}

@@ -22,7 +22,8 @@ import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { documentationPath } from "@/lib/documentation-core.mjs";
 import {
   Button,
   DropdownMenu,
@@ -743,6 +744,7 @@ function ChangelogButton({
   portalOwner: string;
 }) {
   const t = useTranslations("Nav");
+  const documentationHref = documentationPath(null, useLocale());
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
@@ -776,6 +778,10 @@ function ChangelogButton({
       <DialogContent aria-describedby={undefined}>
         <DialogTitle>{t("whatsNew")}</DialogTitle>
         <MobileSheetScrollArea>
+          <a href={documentationHref} target="_blank" rel="noopener noreferrer" onClick={() => handleMenuOpenChange(false)}
+            className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
+            <AppIcon icon={HelpCircleIcon} className="size-[18px] shrink-0" />{t("documentation")}
+          </a>
           <button
             type="button"
             className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted"
@@ -817,6 +823,11 @@ function ChangelogButton({
           <DropdownMenuLabel className="font-normal text-muted-foreground">
             {t("whatsNew")}
           </DropdownMenuLabel>
+          <DropdownMenuItem asChild>
+            <a href={documentationHref} target="_blank" rel="noopener noreferrer">
+              <HugeiconsIcon icon={HelpCircleIcon} className="size-4 shrink-0 text-muted-foreground" />{t("documentation")}
+            </a>
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => {
               handleMenuOpenChange(false);

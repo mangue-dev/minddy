@@ -1,0 +1,125 @@
+import assert from "node:assert/strict";
+import { afterEach, test } from "node:test";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { documentationLocales } from "../lib/documentation-core.mjs";
+
+const directories = [];
+afterEach(() => { while (directories.length) rmSync(directories.pop(), { recursive: true, force: true }); });
+function fixture(transform = article => article, content = "## Start {#start}\n\nRead the complete task.\n") {
+  const root = mkdtempSync(path.join(tmpdir(), "minddy-documentation-check-"));
+  directories.push(root);
+  mkdirSync(path.join(root, "docs/plans"), { recursive: true });
+  writeFileSync(path.join(root, "docs/plans/min-664-coverage.md"), "| S01 `guide` | Task |\n");
+  writeFileSync(path.join(root, "source.txt"), "Verified test fixture.\n");
+  mkdirSync(path.join(root, "content/documentation"), { recursive: true });
+  writeFileSync(path.join(root, "content/documentation/coverage.json"), JSON.stringify([{ workflow: "S01", article: "guide", section: "start", requiresFigures: false }]));
+  for (const locale of documentationLocales) {
+    const directory = path.join(root, "content/documentation", locale);
+    mkdirSync(directory);
+    const article = transform({ id: "guide", locale, title: "Task", summary: "Complete a task.", topic: "Work", type: "guide", audiences: ["member"], workflows: ["S01"], visibility: "public", status: "published", revision: 1, sourceRevision: 1, owner: "@maintainer", updatedAt: "2026-10-08", compatibility: { version: "test fixture", editions: ["Cloud"], profiles: ["web"], evidence: ["source.txt"] }, review: { revision: 1, fact: "Agent test fixture", language: "Agent test fixture", date: "2026-10-08" }, related: [], aliases: [], tags: [], figures: [], requiredFigures: [] });
+    writeFileSync(path.join(directory, "guide.md"), `---\n${JSON.stringify(article)}\n---\n${content}`);
+  }
+  return root;
+}
+function check(root, release = true) {
+  const result = spawnSync(process.execPath, ["scripts/documentation-check.mjs", "--root", root, ...(release ? ["--release"] : [])], { encoding: "utf8" });
+  return { status: result.status, output: result.stdout + result.stderr };
+}
+
+test("a coherent release set passes and a draft check does not imply release acceptance", () => {
+  assert.equal(check(fixture()).status, 0);
+  const drafts = fixture(article => ({ ...article, status: "draft", review: { revision: 1, fact: null, language: null, date: null } }));
+  assert.equal(check(drafts, false).status, 0);
+  assert.notEqual(check(drafts).status, 0);
+});
+test("reference-style links and anchors are checked with the Markdown parser", () => {
+  const root = fixture(undefined, "## Start {#start}\n\nRead [the task][task].\n\n[task]: /docs/guide#missing\n");
+  assert.match(check(root).output, /missing anchor/);
+});
+test("code examples do not create false links or headings", () => {
+  const root = fixture(undefined, "## Start {#start}\n\n```md\n## Not a heading\n[private](/secret)\n```\n");
+  assert.equal(check(root).status, 0);
+});
+test("empty metadata, invalid dates and stale translations block publication", () => {
+  const root = fixture(article => article.locale === "fr" ? { ...article, title: " ", sourceRevision: 0, review: { ...article.review, date: "2026-02-31" } } : article);
+  const result = check(root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.output, /empty title/);
+  assert.match(result.output, /stale translation revision/);
+});
+test("private links and missing required locale images block release", () => {
+  const root = fixture(article => ({ ...article, requiredFigures: ["steps"] }), "## Start {#start}\n\n[Private](/share/secret) and ![steps][image].\n\n[image]: /documentation/en/missing.png\n");
+  const result = check(root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.output, /unresolved local link/);
+  assert.match(result.output, /unregistered image/);
+});
+
+test("responsive diagrams preserve readable content and complete matrix rows", () => {
+  function diagramFixture(diagram) {
+    const root = fixture(article => ({ ...article, figures: [{ id: "flow", kind: "diagram", diagram,
+      src: `/documentation/${article.locale}/flow.svg`, alt: "A verified workflow.", caption: "The workflow steps.",
+      revision: 1, reviewed: true, capturedAt: "2026-10-09", theme: "neutral", viewport: [720, 640] }] }),
+    "## Start {#start}\n\n![Workflow](/documentation/en/flow.svg)\n");
+    for (const locale of documentationLocales) {
+      const directory = path.join(root, "public/documentation", locale);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(path.join(directory, "flow.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\" />");
+      const filename = path.join(root, "content/documentation", locale, "guide.md");
+      // Use the local figure in every translated body.
+      const body = readFileSync(filename, "utf8").replace("![Workflow](/documentation/en/flow.svg)", `![Workflow](/documentation/${locale}/flow.svg)`);
+      writeFileSync(filename, body);
+    }
+    return root;
+  }
+  assert.equal(check(diagramFixture({ layout: "sequence", items: [{ title: "Authorize" }, { title: "Link" }] })).status, 0);
+  assert.match(check(diagramFixture({ layout: "sequence", items: [{ title: "" }] })).output, /invalid responsive diagram/);
+  assert.match(check(diagramFixture({ layout: "matrix", headers: ["Action", "Actor", "Boundary"], rows: [["Link", "Owner"]] })).output, /invalid responsive diagram/);
+});
+
+
+test("translations preserve publication identities and operating conditions", () => {
+  const root = fixture(article => article.locale === "de" ? { ...article, aliases: ["retired-guide"], audiences: ["operator"], compatibility: { ...article.compatibility, profiles: ["desktop"] } } : article);
+  const result = check(root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.output, /aliases parity differs/);
+  assert.match(result.output, /audiences parity differs/);
+  assert.match(result.output, /compatibility parity differs/);
+});
+
+test("legacy task routes require a declared alias and complete target sections in every locale", () => {
+  const root = fixture(article => ({ ...article, aliases: ["old-task"] }));
+  const filename = path.join(root, "content/documentation/legacy-routes.json");
+  writeFileSync(filename, JSON.stringify({ "old-task": { article: "guide", section: "start", sections: { recovery: "start" } } }));
+  assert.equal(check(root).status, 0);
+  writeFileSync(filename, JSON.stringify({ "old-task": { article: "guide", section: "start", sections: { recovery: "missing" } } }));
+  assert.match(check(root).output, /missing destination section missing/);
+  writeFileSync(filename, JSON.stringify({ "undeclared-task": { article: "guide", section: "start", sections: { recovery: "start" } } }));
+  assert.match(check(root).output, /not a declared article alias/);
+});
+
+test("screenshot publication rejects dark themes and falsely declared native density", () => {
+  function screenshotFixture(theme, density = 2, width = 400) {
+    const root = fixture(article => ({ ...article, figures: [{ id: "control", kind: "screenshot",
+      src: `/documentation/${article.locale}/control.png`, alt: "Account controls.", caption: "Visible controls only.",
+      revision: 1, reviewed: true, capturedAt: "2026-10-09", theme, viewport: [200, 100], deviceScaleFactor: density }] }));
+    for (const locale of documentationLocales) {
+      const directory = path.join(root, "public/documentation", locale);
+      mkdirSync(directory, { recursive: true });
+      // Only the PNG signature and dimensions are read by this metadata check.
+      const header = Buffer.alloc(24); Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(header);
+      header.writeUInt32BE(width, 16); header.writeUInt32BE(200, 20);
+      writeFileSync(path.join(directory, "control.png"), header);
+      const filename = path.join(root, "content/documentation", locale, "guide.md");
+      writeFileSync(filename, readFileSync(filename, "utf8") + `\n![Controls](/documentation/${locale}/control.png)\n`);
+    }
+    return root;
+  }
+  assert.equal(check(screenshotFixture("light")).status, 0);
+  assert.match(check(screenshotFixture("dark")).output, /screenshots must use light mode/);
+  assert.match(check(screenshotFixture("light", 1)).output, /native density of at least 2/);
+  assert.match(check(screenshotFixture("light", 2, 200)).output, /pixels do not match declared density/);
+});

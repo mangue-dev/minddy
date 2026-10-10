@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root",
+  "humanAcceptance": false,
+  "productionDeployment": false,
+  "release": {
+    "articles": 540,
+    "workflows": 90,
+    "locales": 6,
+    "reviewedFigurePlacements": 612,
+    "requiredFigurePlacements": 582
+  },
+  "checks": [
+    {
+      "command": "npm run check:documentation:release",
+      "result": "PASS 90/90 six-locale workflows"
+    },
+    {
+      "command": "npm run check:owned-english",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run check:knowledge",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run test:documentation-check",
+      "result": "PASS 6/6"
+    },
+    {
+      "command": "vitest documentation/public-routes/legacy and official knowledge/FAQ",
+      "result": "PASS 48/48 in five suites"
+    },
+    {
+      "command": "vitest public-client-messages/documentation/official knowledge",
+      "result": "PASS 69/69 in three suites after localized error-report fix"
+    },
+    {
+      "command": "vitest prompt-distress/official knowledge/FAQ",
+      "result": "PASS 26/26 in three suites after source-citation guidance"
+    },
+    {
+      "command": "vitest agent authority/branch/PR landing",
+      "result": "PASS 124/124 in three suites"
+    },
+    {
+      "command": "npm run test:self-hosted-tools",
+      "result": "49 PASS, one database rewrap integration SKIP because no integration database was configured"
+    },
+    {
+      "command": "npm run lint",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS, TypeScript passed and163staticroutes generated",
+      "logSHA256": "9c9396fa4ddf86c4beb1fdcf81afe6c42828c3bf71395fea061a2a6ddc29ee4a"
+    },
+    {
+      "command": "npm run check:public-repo -- --worktree",
+      "result": "PASS 6320files,25773blobs,42892reachableobjects"
+    },
+    {
+      "command": "gitleaks dir content/documentation --redact --no-banner --exit-code1",
+      "result": "PASS no leaks in5.98MB scanned"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "command": "node --test scripts/gitleaks-policy.test.mjs",
+      "result": "PASS 3/3; actual scanner integration executed, not skipped; 15 counterexamples rejected"
+    }
+  ],
+  "overlappingTestCountsNotAggregated": true,
+  "anonymousProductionArticles": 540,
+  "browserThemeLocaleViewportCases": 24,
+  "browserScreenshots": 48,
+  "additionalAudienceContentsRelatedTopicCases": 12,
+  "applicationHelpEntrances": 12,
+  "secretPageNoindexAndRevocationVerified": true,
+  "productionLogMissingTranslationErrorsAfterFix": 0,
+  "provider": {
+    "capUsd": 0.25,
+    "observedUsageUsd": 0.2363476,
+    "accountCredentialRemoved": true,
+    "providerRevoked": true
+  },
+  "independentReviewAuthorization": "Owner authorized sub-agent review because human reviewers were unavailable; personal French reread offered.",
+  "operationalEvidence": [
+    "operator-adapted-clean-install.json",
+    "operator-upgrade-execution.json",
+    "operator-adapted-tooling-restoration.json"
+  ],
+  "operationalScope": "Explicitly adapted identified fullOCI aarch64 Docker Desktop profile; native host/provider/off-host/publicTLS/externalSMTP not inferred.",
+  "configuredSecretScan": {
+    "scanner": "Gitleaks 8.30.1",
+    "policy": ".gitleaks.toml",
+    "initialCiRun": 37840938098,
+    "initialCiFindings": 26,
+    "cause": "Exact documented LAN examples and synthetic capture/scheduler fixtures; not provider credentials.",
+    "resolution": "Four value-and-path constrained allowlists, with 15 rejected counterexamples covering changed values, undocumented paths and unrelated files.",
+    "newCommitRange": "PASS 13 commits, zero findings before policy follow-up commit",
+    "publicCloneAllRefs": "PASS 1541 commits, 70.11 MB, zero findings before policy follow-up commit",
+    "canonicalPrivateExtraRefs": "Not asserted clean; ten unrelated historical findings remain outside the publishable clone. No exceptions added for those findings.",
+    "githubUnitShards": "Both shards passed in initial CI; required aggregate failed because validation stopped at the scanner.",
+    "rerun": "Pending after policy follow-up commit"
+  }
+}

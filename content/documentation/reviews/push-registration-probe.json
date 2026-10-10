@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-08",
+  "profile": "Disposable headed Chromium persistent profile on local candidate, newly generated local VAPID keys; explicit automation notification permission, no production credentials.",
+  "permission": "granted",
+  "subscriptionCreated": true,
+  "switches": 2,
+  "listStatus": 200,
+  "deviceCount": 2,
+  "sectionText": "Push notifications\nNotify this device\n\nYour browser will ask for permission.\n\nChrome sur macOS\nThis device · Added Oct 8, 2026 · no notification yet\nSend a test\nChrome sur macOS\nAdded Oct 8, 2026 · no notification yet",
+  "deviceIds": [
+    "8c85439e-baf9-4c58-a7e6-dd636196a5bd",
+    "892c9423-a9d7-4f58-ad0b-5d6a31b32d18"
+  ]
+}

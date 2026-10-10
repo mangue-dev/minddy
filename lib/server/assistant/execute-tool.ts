@@ -1,3 +1,4 @@
+import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
 import { abortableReadClient } from "./abortable-read-client";
 import { randomUUID } from "node:crypto";
@@ -245,6 +246,8 @@ import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 // every event/notification stays attributed to the human who asked.
 
 export interface ToolContext {
+  /** The public documentation surface can only read the help corpus. */
+  documentationHelp?: boolean;
   /** Cancels the database transport of project and issue listing tools. */
   readAbortSignal?: AbortSignal;
   /** Context project for legacy comment entry points. */
@@ -863,6 +866,9 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
+  if (ctx.documentationHelp && toolName !== "get_help") {
+    return toolError("Only public documentation help is available in this conversation.");
+  }
   if (ctx.readAbortSignal && (toolName === "list_projects" || toolName === "list_issues")) {
     ctx = { ...ctx,
       service: abortableReadClient(ctx.service, ctx.readAbortSignal),
@@ -878,13 +884,15 @@ export async function executeTool(
     }
     if (toolName === "get_help") {
       const topic = typeof args.topic === "string" ? args.topic : "";
-      const article = getKnowledgeArticle(topic);
+      const article = getKnowledgeArticle(topic, resolveApplicationLocale(ctx.locale));
       return article
-        ? { result: article, success: true }
+        ? { result: ctx.documentationHelp && article.sourceUrl
+            ? { ...article, sourceUrl: new URL(article.sourceUrl, DOCUMENTATION_HELP_ORIGIN).href }
+            : article, success: true }
         : {
             result: {
               error: `No knowledge article found for "${topic}".`,
-              topics: getKnowledgeTopicList(),
+              topics: getKnowledgeTopicList(resolveApplicationLocale(ctx.locale)),
             },
             success: false,
           };

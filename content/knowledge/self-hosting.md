@@ -5,12 +5,17 @@ summary: Choose a supported topology, install minddy, configure its services, an
 category: deployment
 audience: both
 tags: [self-hosting, self host, deployment, docker, supabase, installation, local, server, numo]
-lastReviewed: 2026-10-07
+lastReviewed: 2026-10-09
 ---
 
 minddy is open source under the GNU AGPL v3.0 only. The only supported distribution is the public `mangue-dev/minddy` repository and its immutable tagged release assets. Do not use a moving branch, an unofficial deployment repository, or a third-party image. The exact release row in `deploy/self-hosted/compatibility.json` is the source of truth for the supported image tag, Supabase Compose revision, host architectures, and Docker minimums; the immutable image digest comes from the matching GitHub Release manifest.
 
 ## Install the desktop app first
+
+For a new installation, start with the
+[step-by-step self-hosting installer](https://www.minddy.app/self-hosting/install).
+It guides the local or shared-server setup. Use this article for the supporting
+topology, configuration, and verification details.
 
 The supported self-host flow starts in the signed minddy desktop app. Install it
 from [minddy.app/download](https://www.minddy.app/download) before preparing a

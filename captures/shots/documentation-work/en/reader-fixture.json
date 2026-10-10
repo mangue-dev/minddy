@@ -1,0 +1,14 @@
+{
+  "locale": "en",
+  "method": "Exact demo prose translations in GET responses only; identifiers, states, dates and observed outcomes are unchanged.",
+  "mapping": {
+    "Projet de démonstration documentation": "Documentation demo project",
+    "Check the website contact link": "Check the website contact link",
+    "Check keyboard navigation": "Check keyboard navigation",
+    "Check the mobile navigation": "Check the mobile navigation",
+    "Make the website usable without a mouse": "Make the website usable without a mouse",
+    "Open the contact link from the website footer. It should open the email composer with the published contact address. Record the browser and result before closing this demonstration task.": "Open the contact link from the website footer. It should open the email composer with the published contact address. Record the browser and result before closing this demonstration task.",
+    "Demonstration check: this browser preserves the saved manual plan after reload. The member can read it; a non-owner invitation request is rejected with HTTP 403. This comment records the observed application checks, not an email composer test.": "Demonstration check: this browser preserves the saved manual plan after reload. The member can read it; a non-owner invitation request is rejected with HTTP 403. This comment records the observed application checks, not an email composer test.",
+    "Use Tab to reach the navigation links, search field and issue controls. Check that focus is visible.": "Use Tab to reach the navigation links, search field and issue controls. Check that focus is visible."
+  }
+}

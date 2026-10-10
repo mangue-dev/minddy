@@ -100,6 +100,27 @@ Current: c28ea4e2f76e
 
 ---
 
+## Documentation before a desktop version change
+
+Every release that changes the desktop version requires a documentation review
+and any necessary updates before freezing the release candidate. Individual
+small fixes, refactors, formatting and test-only PRs that leave documentation
+accurate need no documentation edit or new illustration. Compare the release
+delta with the manual, including changes delivered through the web application.
+Add guides for new features, correct changed instructions and remove retired
+content and figures. Keep all six public languages, examples, captions,
+alternative text, screenshots and responsive diagrams current together.
+Update compatibility and actual review evidence, and review technical
+references and internal instructions as well.
+
+Follow the [maintenance contract](../content/documentation/README.md#release-maintenance)
+and [editorial guide](documentation-editorial-guide.md), including illustration
+and capture rules. Complete these changes through the normal reviewed PR and
+include them in the candidate. Require `npm run check:documentation`,
+`npm run check:knowledge`, `npm run check:owned-english`,
+`npm run check:documentation:release` and `git diff --check` before publication.
+Do not mark the release complete with unresolved documentation or visual gaps.
+
 ## The normal flow: `npm run deploy`
 
 The desktop step of `deploy.sh` uses the version of the core that the wizard comes from

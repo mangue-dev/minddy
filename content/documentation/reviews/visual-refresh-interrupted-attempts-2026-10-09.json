@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-09",
+  "note": "Historical failed capture attempts; not published figure evidence. Capture jobs now stop on the first failure.",
+  "attempts": [
+    {
+      "locale": "en",
+      "screen": "forge-issue-sync-workflow",
+      "error": "page.setViewportSize: Target page, context or browser has been closed"
+    },
+    {
+      "locale": "en",
+      "screen": "forge-issue-sync-workflow",
+      "error": "locator.waitFor: Target page, context or browser has been closed"
+    },
+    {
+      "locale": "en",
+      "screen": "forge-issue-sync-workflow",
+      "error": "The screenshot cropped the documentation control."
+    },
+    {
+      "locale": "de",
+      "screen": "forge-issue-sync-workflow",
+      "error": "page.goto: Timeout 20000ms exceeded."
+    },
+    {
+      "locale": "pt-BR",
+      "screen": "forge-issue-sync-workflow",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git"
+    },
+    {
+      "locale": "it",
+      "screen": "forge-issue-sync-workflow",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git"
+    },
+    {
+      "locale": "es",
+      "screen": "forge-issue-sync-workflow",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/settings?tab=git&section=project-git"
+    }
+  ]
+}

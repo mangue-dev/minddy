@@ -1,0 +1,116 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "publicationApproved": false,
+  "nativeInstallationObserved": false,
+  "captures": [
+    {
+      "locale": "en",
+      "article": "install-the-pwa",
+      "output": "public/documentation/en/install-the-pwa-workflow.png",
+      "sha256": "b760e22bac63ece7239d274a770a579a4e53bebe8ff467c6ac2ac58172c9810e",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        940
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "source": "components/marketing/mobile-pwa-install-guide.tsx",
+      "qualification": "Real anonymous rendered product installation guide with intentionally illustrated Safari steps, not an OS screenshot or a completed iOS/Android installation.",
+      "text": "iPhone and iPad\n\nOpen minddy in Safari, then follow these three steps to add it to your Home Screen.\n\n1\nOpen Share\n\nIn Safari, tap Share in the toolbar. Depending on your tab layout, tap More first, then Share.\n\nminddy\n\nminddy.app\n\nShare\n\n2\nChoose Home Screen\n\nScroll through the actions and tap “Add to Home Screen”. If it is missing, add it from Edit Actions.\n\nminddy\n\nminddy.app\n\nCopy\nAdd to Home Screen\n3\nConfirm installation\n\nKeep “Open as Web App” turned on, then tap Add. minddy opens in its own window from then on.\n\nCancel\nAdd to Home Screen\nAdd\n\nminddy\n\nhttps://www.minddy.app\n\nOpen as Web App\nAdd",
+      "reviewedBy": "agent:/root/operator_documentation",
+      "reviewScope": "Actual rendered pixels, legibility and fidelity to the intentionally illustrated product guide; native OS installation was not observed."
+    },
+    {
+      "locale": "fr",
+      "article": "install-the-pwa",
+      "output": "public/documentation/fr/install-the-pwa-workflow.png",
+      "sha256": "a5c8233133ad7f845369f9a8186d6e2fec97116557de22a87b22443213b0a9ad",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        940
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "source": "components/marketing/mobile-pwa-install-guide.tsx",
+      "qualification": "Real anonymous rendered product installation guide with intentionally illustrated Safari steps, not an OS screenshot or a completed iOS/Android installation.",
+      "text": "iPhone et iPad\n\nOuvrez minddy dans Safari, puis suivez ces trois étapes pour l’ajouter à votre écran d’accueil.\n\n1\nOuvrez Partager\n\nDans Safari, touchez Partager dans la barre d'outils. Selon la disposition des onglets, touchez d'abord Plus, puis Partager.\n\nminddy\n\nminddy.app\n\nPartager\n\n2\nChoisissez l'écran d'accueil\n\nFaites défiler les actions et touchez « Sur l'écran d'accueil ». Si l'option manque, ajoutez-la depuis Modifier les actions.\n\nminddy\n\nminddy.app\n\nCopier\nSur l'écran d'accueil\n3\nConfirmez l’installation\n\nGardez « Ouvrir comme app web » activé, puis touchez Ajouter. minddy s'ouvrira ensuite dans sa propre fenêtre.\n\nAnnuler\nSur l'écran d'accueil\nAjouter\n\nminddy\n\nhttps://www.minddy.app\n\nOuvrir comme app web\nAjouter",
+      "reviewedBy": "agent:/root/operator_documentation",
+      "reviewScope": "Actual rendered pixels, legibility and fidelity to the intentionally illustrated product guide; native OS installation was not observed."
+    },
+    {
+      "locale": "de",
+      "article": "install-the-pwa",
+      "output": "public/documentation/de/install-the-pwa-workflow.png",
+      "sha256": "19b57079ffb767f32524404446f9eea986d0f92b02cbccfb82c38be933cec926",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        940
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "source": "components/marketing/mobile-pwa-install-guide.tsx",
+      "qualification": "Real anonymous rendered product installation guide with intentionally illustrated Safari steps, not an OS screenshot or a completed iOS/Android installation.",
+      "text": "iPhone und iPad\n\nÖffne minddy in Safari und folge diesen drei Schritten, um es deinem Home-Bildschirm hinzuzufügen.\n\n1\n„Teilen“ öffnen\n\nÖffne in Safari das Menü „Teilen“. Je nach Anordnung der Tabs findest du es direkt in der Symbolleiste oder unter „Mehr“.\n\nminddy\n\nminddy.app\n\nTeilen\n\n2\nZum Home-Bildschirm hinzufügen\n\nSuche im Teilen-Menü nach „Zu Home-Bildschirm hinzufügen“. Eine fehlende Option kannst du unter „Aktionen bearbeiten“ ergänzen.\n\nminddy\n\nminddy.app\n\nKopieren\nZu Home-Bildschirm hinzufügen\n3\nInstallation bestätigen\n\nLass die Option „Als Web-App öffnen“ eingeschaltet und bestätige mit „Hinzufügen“. minddy wird danach in einem eigenen Fenster geöffnet.\n\nAbbrechen\nZu Home-Bildschirm hinzufügen\nHinzufügen\n\nminddy\n\nhttps://www.minddy.app\n\nAls Web-App öffnen\nHinzufügen",
+      "reviewedBy": "agent:/root/operator_documentation",
+      "reviewScope": "Actual rendered pixels, legibility and fidelity to the intentionally illustrated product guide; native OS installation was not observed."
+    },
+    {
+      "locale": "es",
+      "article": "install-the-pwa",
+      "output": "public/documentation/es/install-the-pwa-workflow.png",
+      "sha256": "610e643af3a047fa49eec9926b51bc96e16dc52d87316de13542c2782dd644db",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        940
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "source": "components/marketing/mobile-pwa-install-guide.tsx",
+      "qualification": "Real anonymous rendered product installation guide with intentionally illustrated Safari steps, not an OS screenshot or a completed iOS/Android installation.",
+      "text": "iPhone y iPad\n\nAbre minddy en Safari y sigue estos tres pasos para añadirlo a tu pantalla de inicio.\n\n1\nAbre Compartir\n\nEn Safari, toca Compartir en la barra de herramientas. Según la disposición de las pestañas, puede que necesites tocar Más antes de Compartir.\n\nminddy\n\nminddy.app\n\nCompartir\n\n2\nElige «Añadir a pantalla de inicio»\n\nDesplázate por las acciones y toca «Añadir a pantalla de inicio». Si no aparece, añádela desde «Editar acciones».\n\nminddy\n\nminddy.app\n\nCopiar\nAñadir a pantalla de inicio\n3\nConfirma la instalación\n\nMantén activado «Abrir como app web» y toca Añadir. A partir de entonces, minddy se abrirá en su propia ventana.\n\nCancelar\nAñadir a pantalla de inicio\nAñadir\n\nminddy\n\nhttps://www.minddy.app\n\nAbrir como app web\nAñadir",
+      "reviewedBy": "agent:/root/operator_documentation",
+      "reviewScope": "Actual rendered pixels, legibility and fidelity to the intentionally illustrated product guide; native OS installation was not observed."
+    },
+    {
+      "locale": "it",
+      "article": "install-the-pwa",
+      "output": "public/documentation/it/install-the-pwa-workflow.png",
+      "sha256": "095f99751a45982be9451c9bf572c41afa19f771408ceef5ea4b62928e0f7464",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        940
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "source": "components/marketing/mobile-pwa-install-guide.tsx",
+      "qualification": "Real anonymous rendered product installation guide with intentionally illustrated Safari steps, not an OS screenshot or a completed iOS/Android installation.",
+      "text": "iPhone e iPad\n\nApri minddy in Safari e segui questi tre passaggi per aggiungerlo alla schermata Home.\n\n1\nApri Condividi\n\nIn Safari, tocca Condividi nella barra degli strumenti. A seconda della disposizione dei pannelli, potrebbe essere necessario toccare prima Altro e poi Condividi.\n\nminddy\n\nminddy.app\n\nCondividi\n\n2\nScegli «Aggiungi alla schermata Home»\n\nScorri l'elenco delle azioni e tocca «Aggiungi alla schermata Home». Se non compare, aggiungila da Modifica azioni.\n\nminddy\n\nminddy.app\n\nCopia\nAggiungi alla schermata Home\n3\nConferma l’installazione\n\nLascia attiva l'opzione «Apri come app web», quindi tocca Aggiungi. Da quel momento minddy si aprirà in una finestra dedicata.\n\nAnnulla\nAggiungi alla schermata Home\nAggiungi\n\nminddy\n\nhttps://www.minddy.app\n\nApri come app web\nAggiungi",
+      "reviewedBy": "agent:/root/operator_documentation",
+      "reviewScope": "Actual rendered pixels, legibility and fidelity to the intentionally illustrated product guide; native OS installation was not observed."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "install-the-pwa",
+      "output": "public/documentation/pt-BR/install-the-pwa-workflow.png",
+      "sha256": "f9217bd8fe80fe05d6cf0f52e0d078e5744955239d930655a48d450ab9197a4e",
+      "capturedAt": "2026-10-08",
+      "viewport": [
+        1240,
+        940
+      ],
+      "theme": "light",
+      "reviewed": true,
+      "source": "components/marketing/mobile-pwa-install-guide.tsx",
+      "qualification": "Real anonymous rendered product installation guide with intentionally illustrated Safari steps, not an OS screenshot or a completed iOS/Android installation.",
+      "text": "iPhone e iPad\n\nAbra o minddy no Safari e siga estas três etapas para adicioná-lo à tela inicial.\n\n1\nAbra Compartilhar\n\nNo Safari, toque em Compartilhar na barra de ferramentas. Dependendo da disposição das abas, toque primeiro em Mais e depois em Compartilhar.\n\nminddy\n\nminddy.app\n\nCompartilhar\n\n2\nEscolha “Adicionar à Tela de Início”\n\nPercorra as ações e toque em “Adicionar à Tela de Início”. Se essa opção não aparecer, adicione-a em Editar Ações.\n\nminddy\n\nminddy.app\n\nCopiar\nAdicionar à Tela de Início\n3\nConfirme a instalação\n\nMantenha “Abrir como App da Web” ativado e toque em Adicionar. A partir de então, o minddy será aberto em uma janela própria.\n\nCancelar\nAdicionar à Tela de Início\nAdicionar\n\nminddy\n\nhttps://www.minddy.app\n\nAbrir como App da Web\nAdicionar",
+      "reviewedBy": "agent:/root/operator_documentation",
+      "reviewScope": "Actual rendered pixels, legibility and fidelity to the intentionally illustrated product guide; native OS installation was not observed."
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMobileNavigation } from "@/lib/mobile-navigation-context";
 import Link from "next/link";
 import { useRef, type ComponentProps } from "react";
-import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
+import { useOptionalAppTabSession } from "@/lib/app-tab-session-context";
 
 /** Next calls onNavigate only for an unmodified same-window navigation. */
 export default function AppLink({ onClick, onNavigate, ...props }: ComponentProps<typeof Link>) {

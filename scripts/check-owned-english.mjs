@@ -14,6 +14,8 @@ import path from "node:path";
 
 const root = process.cwd();
 const ignoredPaths = [
+  /^content\/documentation\/(?:fr|de|es|it|pt-BR)\/[a-z0-9-]+\.md$/,
+  /^public\/documentation\/(?:fr|de|es|it|pt-BR)\//,
   /^messages\/fr\.json$/,
   /^\.claude\//,
   /(^|\/)(?:LICENSE|NOTICE)(?:\.|$)/,

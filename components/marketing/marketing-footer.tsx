@@ -50,11 +50,12 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     titleKey: "footerColResources",
     links: [
+      { href: "/docs", labelKey: "navDocumentation" },
       // The MCP server doc at the top of the column (MIN-93): it is the only one
       // site resource which is really one, and the internal link which must
       // be seen from all pages — a crawler counts incoming links.
       { href: "/mcp", labelKey: "navMenu_mcp_title" },
-      { href: "/self-hosting", labelKey: "navMenu_selfHosting_title" },
+      { href: "/self-hosting/install", labelKey: "navMenu_selfHosting_title" },
       { href: MINDDY_REPOSITORY_URL, labelKey: "footerRepository", external: true },
       { href: "/changelog", labelKey: "footerChangelog" },
       // Comparisons (MIN-93). They are NOWHERE else in the

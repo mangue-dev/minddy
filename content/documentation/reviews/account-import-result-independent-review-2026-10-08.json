@@ -1,0 +1,86 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "records": [
+    {
+      "article": "transfer-between-instances",
+      "locale": "en",
+      "revision": 1,
+      "sourceRevision": 1,
+      "bodySha256": "1914ef4b569130cb80f4dd120a2516f33ce9e339cb83eff12d46e5ebb1e46ca0",
+      "src": "/documentation/en/transfer-between-instances-result.png",
+      "imageSha256": "6a4cf13e19be5bcdeac254e25024bc766654562d618dca90a2a125c6838b4b43",
+      "captionSha256": "47e34dd6d3cef888b30c5af56d8dca9ad5204d3b0183bb0eb94400b83a851b9d",
+      "observed": "Six exact images individually inspected: genuine import complete dialog, 0 remapped IDs, 0 skipped memberships; closing or Reload account acknowledges then reloads. No credentials visible.",
+      "source": "components/settings/account-data-section.tsx:handleImport and finishImport; genuine HTTP201 records in account-transfer-execution.json",
+      "humanAcceptance": false
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "4a4e6483d150f5a99318654c9c6fbfa78639ef078f6c4feaa9c8ad5045661b9c",
+      "src": "/documentation/fr/transfer-between-instances-result.png",
+      "imageSha256": "d1f64b30fa81887731a4d747c77c572320393430eb795aa56961684d49274351",
+      "captionSha256": "cb43df09c2f16be0c2d29b99b3d4efe9ab11cc30793ffb60d3569bfdbf8273f4",
+      "observed": "Six exact images individually inspected: genuine import complete dialog, 0 remapped IDs, 0 skipped memberships; closing or Reload account acknowledges then reloads. No credentials visible.",
+      "source": "components/settings/account-data-section.tsx:handleImport and finishImport; genuine HTTP201 records in account-transfer-execution.json",
+      "humanAcceptance": false
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "de",
+      "revision": 3,
+      "sourceRevision": 1,
+      "bodySha256": "327cd10f978476778434e04da6f3d6242da6a6d7c5b6aeca0ba3b69a58f27290",
+      "src": "/documentation/de/transfer-between-instances-result.png",
+      "imageSha256": "fdc5adc947b81974a5450a28267ac9280220457f6899bf1847f9c61357f669cd",
+      "captionSha256": "fe6c7022aa328fa8a06402cedaf04015c03154109b89896fe2cb57e41f7476d6",
+      "observed": "Six exact images individually inspected: genuine import complete dialog, 0 remapped IDs, 0 skipped memberships; closing or Reload account acknowledges then reloads. No credentials visible.",
+      "source": "components/settings/account-data-section.tsx:handleImport and finishImport; genuine HTTP201 records in account-transfer-execution.json",
+      "humanAcceptance": false
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "es",
+      "revision": 3,
+      "sourceRevision": 1,
+      "bodySha256": "8b409cd7cc8ab8299b0ce198dfa63a62521f6dc865c529a01f4398c18850a8a1",
+      "src": "/documentation/es/transfer-between-instances-result.png",
+      "imageSha256": "e8b3d838604c7151bb4f150fc9d549381c18590c085025bda5e20a683318adb2",
+      "captionSha256": "bce386b44c159dae36116e029fe84ae7a036d45ef8c3cf1d416f9814f213ae4f",
+      "observed": "Six exact images individually inspected: genuine import complete dialog, 0 remapped IDs, 0 skipped memberships; closing or Reload account acknowledges then reloads. No credentials visible.",
+      "source": "components/settings/account-data-section.tsx:handleImport and finishImport; genuine HTTP201 records in account-transfer-execution.json",
+      "humanAcceptance": false
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "it",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "9dca1eca5da58871c210cf770e3a7864b91ddf6cdc1e16d9f659736ae722c817",
+      "src": "/documentation/it/transfer-between-instances-result.png",
+      "imageSha256": "c9b9a358f177b00729cc36a72d27c3f98c3af21b803dfeeffcadb74a0cb545c8",
+      "captionSha256": "6e5936e56ba2f60b08c274338679e4bbd7a10e6ea92048a935a0b9121b9edcf7",
+      "observed": "Six exact images individually inspected: genuine import complete dialog, 0 remapped IDs, 0 skipped memberships; closing or Reload account acknowledges then reloads. No credentials visible.",
+      "source": "components/settings/account-data-section.tsx:handleImport and finishImport; genuine HTTP201 records in account-transfer-execution.json",
+      "humanAcceptance": false
+    },
+    {
+      "article": "transfer-between-instances",
+      "locale": "pt-BR",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "90d30f458afa054ae3edd00b100c58d8883ee5824abd9c67c62adf651913f71c",
+      "src": "/documentation/pt-BR/transfer-between-instances-result.png",
+      "imageSha256": "a031622089408a1f3e53e8cb63509c4467f546784302002d00b56c6205578f4a",
+      "captionSha256": "8c90aab137c7454c50f8ff36e9e2a8808c9e19b7e40cb8cf581d8f90472dc9fa",
+      "observed": "Six exact images individually inspected: genuine import complete dialog, 0 remapped IDs, 0 skipped memberships; closing or Reload account acknowledges then reloads. No credentials visible.",
+      "source": "components/settings/account-data-section.tsx:handleImport and finishImport; genuine HTTP201 records in account-transfer-execution.json",
+      "humanAcceptance": false
+    }
+  ],
+  "interfaceReview": "All six new AccountData.importResult strings in six locales read and compared with the actual dialog behavior. German and Spanish article additions adjusted to preserve existing formal address.",
+  "limitations": "Real isolated personal-data imports with no source projects; not evidence of independent physical-instance transfer or successful conflict remapping."
+}

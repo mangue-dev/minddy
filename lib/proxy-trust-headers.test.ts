@@ -88,6 +88,26 @@ beforeEach(() => {
 });
 
 describe("backend outage fallback", () => {
+  it("keeps authenticated documentation readable during a backend outage", async () => {
+    session = { user: { id: "u1" } };
+    sessionError = { name: "AuthRetryableFetchError", status: 522 };
+    const response = await proxy(request("/fr/documentation/numo"));
+    expect(response.headers.get("location")).toBeNull();
+    expect(forwardedHeaders(response)["x-minddy-locale"]).toBe("fr");
+  });
+
+  it("detects the documentation welcome language and preserves the query", async () => {
+    const response = await proxy(request("/docs?q=numo", { "accept-language": "de-DE,de;q=0.9" }));
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/de/dokumentation");
+    expect(new URL(response.headers.get("location")!).search).toBe("?q=numo");
+  });
+
+  it.each(["/fr/documentation/numo?q=help#permissions", "/fr/auto-hebergement/installer?route=team", "/self-hosting"])("returns a connected reader to their public guide from login: %s", async target => {
+    session = { user: { id: "u1" } };
+    const response = await proxy(request("/login?redirect=" + encodeURIComponent(target)));
+    const destination = new URL(response.headers.get("location")!);
+    expect(destination.pathname + destination.search + destination.hash).toBe(target);
+  });
   it.each(["/", "/login", "/home"])(
     "redirects %s to the retryable recovery page on a Supabase 522",
     async (pathname) => {

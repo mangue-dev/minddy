@@ -26,7 +26,7 @@ import type {CyclePrefs} from "@/lib/cycle-prefs";
 export function AccountCyclesSection() {
   const t = useTranslations("Cycles");
   const locale = useLocale();
-  const { user, updateUserMetadata } = useAuth();
+  const { user, updateUserMetadata, refreshUser } = useAuth();
   const queryClient = useQueryClient();
 
   const [prefs, setPrefs] = useState<CyclePrefs>(resolveCyclePrefs(user?.user_metadata));
@@ -46,6 +46,9 @@ export function AccountCyclesSection() {
     setPrefs({ ...prefs, ...next }); // optimistic — revert on failure below
     try {
       await updateUserMetadata({ [metaKey]: value });
+      // The board resolves preferences from verified session claims. Refresh
+      // them before reading it so a saved change applies immediately.
+      await refreshUser();
       // The board read owns the cycle lifecycle — make it reconcile.
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
     } catch (e) {

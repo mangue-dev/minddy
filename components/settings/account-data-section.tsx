@@ -8,6 +8,7 @@ import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, A
 import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 
 /**
  * Account settings → “Personal data” (MIN-119).
@@ -25,6 +26,11 @@ interface DeletionPreview {
   hasActiveSubscription: boolean;
 }
 
+interface ImportSummary {
+  remappedIds: number;
+  skippedMemberships: number;
+}
+
 export function AccountDataSection() {
   const t = useTranslations("AccountData");
   const tc = useTranslations("Common");
@@ -32,6 +38,8 @@ export function AccountDataSection() {
 
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportSummary | null>(null);
+  const [importResultOpen, setImportResultOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<DeletionPreview | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -106,22 +114,22 @@ export function AccountDataSection() {
       });
       const body = (await response.json().catch(() => ({}))) as {
         error?: string;
-        result?: { remappedIds: number; skippedMemberships: number };
+        result?: ImportSummary;
       };
       if (!response.ok) throw new Error(body.error ?? t("genericError"));
-      toast.success(
-        t("importDoneToast", {
-          remapped: body.result?.remappedIds ?? 0,
-          skipped: body.result?.skippedMemberships ?? 0,
-        }),
-      );
-      window.location.reload();
+      setImportResult(body.result ?? null);
+      setImportResultOpen(true);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
       setImporting(false);
       if (importInputRef.current) importInputRef.current.value = "";
     }
+  };
+
+  const finishImport = () => {
+    setImportResultOpen(false);
+    window.location.reload();
   };
 
   const handleDelete = async () => {
@@ -253,6 +261,37 @@ export function AccountDataSection() {
           <p className="text-xs text-muted-foreground">{t("deleteExportFirst")}</p>
         </SettingsRow>
       </SettingsGroup>
+
+      <Dialog
+        open={importResultOpen}
+        onOpenChange={(open) => {
+          if (!open) finishImport();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("importResultTitle")}</DialogTitle>
+            <DialogDescription>{t("importResultDescription")}</DialogDescription>
+          </DialogHeader>
+          {importResult ? (
+            <dl className="space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <dt>{t("importResultRemapped")}</dt>
+                <dd className="font-medium tabular-nums">{importResult.remappedIds}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt>{t("importResultSkipped")}</dt>
+                <dd className="font-medium tabular-nums">{importResult.skippedMemberships}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("importResultUnavailable")}</p>
+          )}
+          <DialogFooter>
+            <Button onClick={finishImport}>{t("importResultContinue")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

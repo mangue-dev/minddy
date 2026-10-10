@@ -1,0 +1,70 @@
+[
+  [
+    "Projektnavigation neben dem Demo-Ticketboard.",
+    "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage."
+  ],
+  [
+    "Aktionsmenü für zwei ausgewählte Demo-Tickets.",
+    "Das Menü wirkt auf die ausgewählten Tickets. In dieser Aufnahme wurde keine Sammeländerung gesendet."
+  ],
+  [
+    "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
+    "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert."
+  ],
+  [
+    "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
+    "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf."
+  ],
+  [
+    "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
+    "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde."
+  ],
+  [
+    "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
+    "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet."
+  ],
+  [
+    "Manuelle Ansichtsfilter und Sortiermenü.",
+    "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional."
+  ],
+  [
+    "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
+    "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat."
+  ],
+  [
+    "Suchergebnisse für die Kennung eines Demo-Tickets.",
+    "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen."
+  ],
+  [
+    "Posteingang-Tabs und leere Liste ungelesener Einträge.",
+    "Ein leerer Tab Ungelesen bedeutet, dass diese Ansicht keine ungelesenen Einträge enthält. Unter Alle findest du weitere gespeicherte Benachrichtigungen."
+  ],
+  [
+    "Übersetzte persönliche Demo-Aufgaben im Notizbuch.",
+    "Das Notizbuch hält persönliche Schritte außerhalb der Tickethierarchie des Projekts fest. Die Zustände der Beispielaufgaben bleiben unverändert."
+  ],
+  [
+    "Persönliche Statistiken des Demokontos.",
+    "Die angezeigte Stichprobe stammt aus der aufgezeichneten Kontoaktivität. Eine fehlende Dauer bedeutet nicht null Arbeitszeit."
+  ],
+  [
+    "Abgeschlossenes Demo-Ticket mit Beschreibung und gespeichertem Kommentar.",
+    "Der abgeschlossene Status dokumentiert die Prüfung des Anwendungsablaufs. Er belegt keine Prüfung des E-Mail-Links der Beispielwebsite."
+  ],
+  [
+    "Noch nicht gesendeter Zieldialog mit einem Beispielnamen.",
+    "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt."
+  ],
+  [
+    "Zieldynamik nach einem tatsächlich abgeschlossenen Demo-Ticket.",
+    "Lies die Dynamik zusammen mit der verknüpften Arbeit. Die verfügbare Historie reicht für ein geschätztes Abschlussdatum noch nicht aus."
+  ],
+  [
+    "Demo-Ticket im Backlog des persönlichen Zyklus.",
+    "Das Hinzufügen hat das Ticket dem Zyklusinhaber zugewiesen und seinen Backlog-Status beibehalten."
+  ],
+  [
+    "Wiederherstellbares Demo-Ticket mit dreißig verbleibenden Tagen im Papierkorb.",
+    "Über die Zeilenaktionen stellst du das Ticket wieder her. Das Leeren des Papierkorbs ist ein eigener endgültiger Vorgang."
+  ]
+]

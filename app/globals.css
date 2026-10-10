@@ -220,6 +220,11 @@ a.markdown-link::before {
   vertical-align: -0.08em;
 }
 
+/* Public guide citations render the matching article icon inside the link. */
+a.markdown-link[data-documentation-citation]::before {
+  display: none;
+}
+
 /* ── Inter arrows, which Google does not serve ──────────────────────────────
    `next/font/google` only loads from Inter the subsets published by
    Google, and NONE covers the arrow block: the Latin range puts “↑” there
@@ -1453,6 +1458,13 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
 .chat-selectable,
 .chat-selectable
   *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Public articles override the design system reset, including nested text. */
+.documentation-selectable,
+.documentation-selectable *:not(button):not(button *):not(input):not(textarea) {
   user-select: text !important;
   -webkit-user-select: text !important;
 }
@@ -3306,4 +3318,58 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 @media (width < 640px) {
   .mobile-kanban-scroller { scrollbar-width: none; }
   .mobile-kanban-scroller::-webkit-scrollbar { display: none; }
+}
+
+/* Keep the article readable beside the documentation help conversation. */
+.documentation-numo-panel {
+  transform: translate3d(100%, 0, 0);
+  visibility: hidden;
+  will-change: transform;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 300ms;
+}
+
+.documentation-numo-panel[data-state="open"] {
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+@starting-style {
+  .documentation-numo-panel[data-state="open"] {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+:root[data-app-layout="mobile"] .documentation-numo-sheet[data-slot="sheet-content"] {
+  height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+  overflow: hidden;
+  padding: 0;
+}
+
+@media (min-width: 1024px) {
+  html[data-app-layout="desktop"] [data-documentation-contents] {
+    transition: opacity 150ms ease, visibility 0s;
+  }
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-main] { padding-right: 24rem; }
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-contents] {
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition-delay: 0s, 150ms;
+  }
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-main] > div { padding-left: 1.5rem; padding-right: 1.5rem; }
+  html[data-app-layout="desktop"] [data-documentation-numo-open="true"] [data-documentation-mobile-contents] { right: 24rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .documentation-numo-panel,
+  html[data-app-layout="desktop"] [data-documentation-contents] {
+    transition: none;
+  }
+  .documentation-numo-panel { will-change: auto; }
+  .documentation-numo-sheet[data-slot="sheet-content"] { animation: none; transition: none; }
+  @starting-style {
+    .documentation-numo-panel[data-state="open"] { transform: translate3d(0, 0, 0); }
+  }
 }

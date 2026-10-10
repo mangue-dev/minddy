@@ -1,0 +1,213 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "source": "Read18 known seeded issue descriptions from GET /api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues after verifying the exact capture demo account with Auth. No writes.",
+  "sourceRows": [
+    {
+      "id": "a4777610-2e54-47ac-8267-46437363833c",
+      "number": 1,
+      "title": "Dark mode flickers on first paint",
+      "description": "The theme is read from localStorage after hydration, so the light palette shows for a frame before the dark one takes over. Most visible on slow connections."
+    },
+    {
+      "id": "41b8abf5-8fdf-458e-ae1b-4d3825f555da",
+      "number": 6,
+      "title": "Weekly activity digest by email",
+      "description": "One email on Monday morning: what shipped, what moved, what stalled. Opt-in per project, unsubscribe in one click."
+    },
+    {
+      "id": "800710cc-b245-420d-a642-53eaae9ecc33",
+      "number": 17,
+      "title": "Inline editing of issue titles on the board",
+      "description": "Renaming a ticket takes four clicks today. Double-click the title, type, press Enter."
+    },
+    {
+      "id": "7b3673a9-ec93-43b7-9fd9-f7779d6bb1f3",
+      "number": 18,
+      "title": "Remember the last used filter per project",
+      "description": "Filters reset on every visit. Keep the last one per project, and let a single click clear it."
+    },
+    {
+      "id": "67369401-282a-4cef-ac5b-de3c280d5814",
+      "number": 5,
+      "title": "Bulk-assign issues from the board",
+      "description": "Select several rows, then assign them in one go instead of opening each ticket."
+    },
+    {
+      "id": "85d2381a-ef32-44d6-bc1f-b825b62dd626",
+      "number": 2,
+      "title": "Add keyboard shortcuts to the command palette",
+      "description": "Power users live in the palette but still reach for the mouse to run an action. Show the shortcut next to each row, and make it work from anywhere in the app."
+    },
+    {
+      "id": "684b4ae7-2fb4-4cb1-b7ea-633c6506f623",
+      "number": 3,
+      "title": "Rework the onboarding checklist",
+      "description": "Only one person in ten finishes the current checklist. Cut it to three steps and let people skip straight to the board."
+    },
+    {
+      "id": "8a9cf149-d782-45b1-89d8-449a39409fcd",
+      "number": 4,
+      "title": "Cache avatar lookups on the members endpoint",
+      "description": "Every board load resolves the same handful of accounts one round-trip at a time. A short in-memory TTL removes the N+1."
+    },
+    {
+      "id": "a278da21-3d6b-43c9-b122-4822d8d28c0d",
+      "number": 8,
+      "title": "Fix timezone drift on due dates",
+      "description": "A due date set at 23:00 in Paris shows as the day before for anyone west of UTC. Store the date, not the instant."
+    },
+    {
+      "id": "6cf0622a-1efc-4153-9c2b-dee879d3eaa2",
+      "number": 9,
+      "title": "Persist the sidebar collapsed state",
+      "description": "Collapsing the sidebar only lasts until the next page load. Remember the choice per account, not per tab."
+    },
+    {
+      "id": "916475b1-00a7-4d99-9a5a-f9fbc2087484",
+      "number": 10,
+      "title": "Slack notifications for mentions",
+      "description": "Being mentioned in a comment should reach people where they already are. Direct message first, channel routing later."
+    },
+    {
+      "id": "af002ff9-71fb-4140-b9dc-3b2b3878b300",
+      "number": 11,
+      "title": "Public roadmap page",
+      "description": "A read-only page showing what shipped, what is in progress and what is planned — fed by the board, with no second list to maintain."
+    },
+    {
+      "id": "ac6dbd3d-e476-4f6b-aa9c-bebe6b6451ef",
+      "number": 12,
+      "title": "Drag issues between columns",
+      "description": "Moving a ticket meant opening it and changing its status. Drag the card, drop it in the column, done."
+    },
+    {
+      "id": "c0f0509a-5056-4395-91e3-f440dc11b0e1",
+      "number": 13,
+      "title": "Invite teammates by email",
+      "description": "Send an invitation from the project settings, with a link that expires after seven days."
+    },
+    {
+      "id": "991d48e2-b5ed-4f08-bf28-b5d9a48ee02d",
+      "number": 14,
+      "title": "Two-factor authentication for the workspace",
+      "description": "Enterprise prospects raise it on every call. TOTP and recovery codes first; single sign-on is a separate conversation."
+    },
+    {
+      "id": "a8bd8f29-6e13-4b2b-898b-13003993e9c9",
+      "number": 15,
+      "title": "Audit log for workspace admins",
+      "description": "Who changed what, and when. Ninety days of retention covers what we sell today."
+    },
+    {
+      "id": "b3ae7280-3058-4645-bb86-a9e68a310b85",
+      "number": 16,
+      "title": "Merge two accounts created with the same email",
+      "description": "People sign up with Google, then again with a password, and end up with two half-empty workspaces."
+    },
+    {
+      "id": "f8b0cd73-21de-4cf1-9864-8e1b39a7a405",
+      "number": 7,
+      "title": "Export a project as CSV",
+      "description": "Board data people can drop into a spreadsheet: one row per ticket, with its status, assignee and effort."
+    }
+  ],
+  "records": [
+    {
+      "locale": "en",
+      "file": "captures/shots/documentation-work/en/fixture.json",
+      "sha256": "b775dc8c3436e6fef98c2598dde39f36a26bc73f6a1ea1bf80653db519de69d8",
+      "descriptionCount": 18,
+      "exactMatchingOnly": true,
+      "preserved": "Actual demo source IDs, issue numbers, state, permissions, outcomes, temporal conditions, quantities and literal identifiers. Display adaptation only.",
+      "notebookFullBodyTranslated": true,
+      "pageTitleCount": 2
+    },
+    {
+      "locale": "fr",
+      "file": "captures/shots/documentation-work/fr/fixture.json",
+      "sha256": "b3f93fb2767d56d3528818c106dd7126ea3322e6291b94ec337d6d9740e73407",
+      "descriptionCount": 18,
+      "exactMatchingOnly": true,
+      "preserved": "Actual demo source IDs, issue numbers, state, permissions, outcomes, temporal conditions, quantities and literal identifiers. Display adaptation only.",
+      "notebookFullBodyTranslated": true,
+      "pageTitleCount": 2
+    },
+    {
+      "locale": "de",
+      "file": "captures/shots/documentation-work/de/fixture.json",
+      "sha256": "c4f0b30c07afaa30a2110455135717dd2157abe696f2c04dfd77663de01ee92f",
+      "descriptionCount": 18,
+      "exactMatchingOnly": true,
+      "preserved": "Actual demo source IDs, issue numbers, state, permissions, outcomes, temporal conditions, quantities and literal identifiers. Display adaptation only.",
+      "notebookFullBodyTranslated": true,
+      "pageTitleCount": 2
+    },
+    {
+      "locale": "es",
+      "file": "captures/shots/documentation-work/es/fixture.json",
+      "sha256": "7cca01e9c77cc6d91cb779261d46b788b1f4f016f43330934fb3d57689b1bf75",
+      "descriptionCount": 18,
+      "exactMatchingOnly": true,
+      "preserved": "Actual demo source IDs, issue numbers, state, permissions, outcomes, temporal conditions, quantities and literal identifiers. Display adaptation only.",
+      "notebookFullBodyTranslated": true,
+      "pageTitleCount": 2
+    },
+    {
+      "locale": "it",
+      "file": "captures/shots/documentation-work/it/fixture.json",
+      "sha256": "9ad3443eecf81fa31ae344775fa7593968d18178e35f46a8dbcc530766b83120",
+      "descriptionCount": 18,
+      "exactMatchingOnly": true,
+      "preserved": "Actual demo source IDs, issue numbers, state, permissions, outcomes, temporal conditions, quantities and literal identifiers. Display adaptation only.",
+      "notebookFullBodyTranslated": true,
+      "pageTitleCount": 2
+    },
+    {
+      "locale": "pt-BR",
+      "file": "captures/shots/documentation-work/pt-BR/fixture.json",
+      "sha256": "32c3328c5f590056c15b38b4df952100523de85bcc8461312a52e1824363868f",
+      "descriptionCount": 18,
+      "exactMatchingOnly": true,
+      "preserved": "Actual demo source IDs, issue numbers, state, permissions, outcomes, temporal conditions, quantities and literal identifiers. Display adaptation only.",
+      "notebookFullBodyTranslated": true,
+      "pageTitleCount": 2
+    }
+  ],
+  "notProductPromises": "These existing seeded narratives include proposed capabilities, timings and marketing anecdotes. They are demonstration task content, not verified product behavior or customer testimony.",
+  "newTranslationReviewRequired": true,
+  "existingFixtureIndependentReview": {
+    "scope": "Read all six original title/description/plan fixtures and all six reader-fixture.json files in full.",
+    "findings": [
+      "German plan omitted twenty actions per day; restored exact quantity.",
+      "Italian sidebar title omitted collapsed-state qualifier; restored."
+    ],
+    "retained": "Original 900ms timer, two-key sequence, literal files, task markers and states, inputs/textareas exclusion, HTTP403 condition and explicit no-email-composer-test qualification retained."
+  },
+  "notebookSource": {
+    "route": "GET /api/me/scratchpad",
+    "guard": "Exact demo Auth email verified before reading. No writes.",
+    "content": "## Before the release\n\n- [x] Bump the changelog to 2.4\n- [x] Check the upgrade notes render on mobile\n- [~] Re-run the seed script on staging\n- [ ] Ask Tom to sanity-check the migration order\n- [ ] Turn the flag on for the two beta accounts\n\n## Loose ends\n\n- [x] Reply to the agency about the invoice\n- [ ] Move the Friday sync half an hour later\n- [ ] Cancel the old error-tracking plan\n- [-] Rewrite the onboarding emails — Alice has it",
+    "rev": 26,
+    "updated_at": "2026-09-30T15:02:42.645789+00:00",
+    "progress": {
+      "done": 3,
+      "total": 8
+    }
+  },
+  "pageTitlesSource": {
+    "route": "GET /api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages",
+    "titles": [
+      "Aurora 2.0 launch",
+      "Release process"
+    ],
+    "noSourceDescription": "Summary response supplies no description or content for these pages; no description invented."
+  },
+  "notebookTranslations": {
+    "fr": "## Avant la release\n\n- [x] Passer le journal des modifications à 2.4\n- [x] Vérifier l’affichage mobile des notes de mise à jour\n- [~] Relancer le script de données initiales sur l’environnement de préproduction\n- [ ] Demander à Tom de vérifier l’ordre des migrations\n- [ ] Activer l’option pour les deux comptes bêta\n\n## Points restants\n\n- [x] Répondre à l’agence au sujet de la facture\n- [ ] Décaler la réunion de vendredi d’une demi-heure\n- [ ] Résilier l’ancien forfait de suivi des erreurs\n- [-] Réécrire les e-mails de démarrage ; Alice s’en occupe",
+    "de": "## Vor der Veröffentlichung\n\n- [x] Das Änderungsprotokoll auf 2.4 aktualisieren\n- [x] Prüfen, ob die Upgrade-Hinweise auf Mobilgeräten korrekt angezeigt werden\n- [~] Das Seed-Skript in der Staging-Umgebung erneut ausführen\n- [ ] Tom bitten, die Reihenfolge der Migrationen zu prüfen\n- [ ] Das Feature-Flag für die beiden Beta-Konten aktivieren\n\n## Offene Punkte\n\n- [x] Der Agentur wegen der Rechnung antworten\n- [ ] Das Treffen am Freitag um eine halbe Stunde nach hinten verschieben\n- [ ] Den alten Tarif für die Fehlerüberwachung kündigen\n- [-] Die E-Mails zum Einstieg neu schreiben; Alice übernimmt das",
+    "es": "## Antes de la publicación\n\n- [x] Actualizar el registro de cambios a 2.4\n- [x] Comprobar que las notas de actualización se muestran bien en el móvil\n- [~] Volver a ejecutar el script de datos iniciales en el entorno de preproducción\n- [ ] Pedir a Tom que compruebe el orden de las migraciones\n- [ ] Activar la opción para las dos cuentas beta\n\n## Asuntos pendientes\n\n- [x] Responder a la agencia sobre la factura\n- [ ] Retrasar media hora la reunión del viernes\n- [ ] Cancelar el antiguo plan de seguimiento de errores\n- [-] Reescribir los correos de primeros pasos; Alice se encarga",
+    "it": "## Prima del rilascio\n\n- [x] Aggiornare il registro delle modifiche a 2.4\n- [x] Verificare che le note di aggiornamento si visualizzino correttamente sui dispositivi mobili\n- [~] Eseguire di nuovo lo script dei dati iniziali nell’ambiente di staging\n- [ ] Chiedere a Tom di controllare l’ordine delle migrazioni\n- [ ] Attivare l’opzione per i due account beta\n\n## Questioni in sospeso\n\n- [x] Rispondere all’agenzia riguardo alla fattura\n- [ ] Spostare la riunione di venerdì mezz’ora più tardi\n- [ ] Annullare il vecchio piano di monitoraggio degli errori\n- [-] Riscrivere le email dei primi passi; se ne occupa Alice",
+    "pt-BR": "## Antes do lançamento\n\n- [x] Atualizar o registro de alterações para 2.4\n- [x] Verificar se as notas de atualização são exibidas corretamente no celular\n- [~] Executar novamente o script de dados iniciais no ambiente de homologação\n- [ ] Pedir a Tom que confira a ordem das migrações\n- [ ] Ativar a opção para as duas contas beta\n\n## Pendências\n\n- [x] Responder à agência sobre a fatura\n- [ ] Adiar a reunião de sexta-feira em meia hora\n- [ ] Cancelar o antigo plano de monitoramento de erros\n- [-] Reescrever os e-mails de primeiros passos; Alice vai cuidar disso"
+  }
+}

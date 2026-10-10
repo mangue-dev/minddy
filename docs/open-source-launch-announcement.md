@@ -13,7 +13,8 @@ applications, and the supported self-hosting path.
 
 - Source and releases: https://github.com/mangue-dev/minddy
 - Current release: https://github.com/mangue-dev/minddy/releases/latest
-- Self-hosting guide:
+- Self-hosting installer: https://www.minddy.app/self-hosting/install
+- Installation reference:
   https://github.com/mangue-dev/minddy/blob/main/docs/self-hosting.md
 - Container image: https://github.com/mangue-dev/minddy/pkgs/container/minddy
 - Contribution guide:

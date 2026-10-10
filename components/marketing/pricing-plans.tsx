@@ -92,7 +92,7 @@ export function PricingPlans({
       <div className="mt-7 flex flex-col gap-3 text-xs leading-relaxed text-muted-foreground sm:flex-row sm:justify-between sm:gap-8">
         <p>{tl("pricingNote")}</p>
         {!compact && <p>{tl("pricingSelfHostedNote")} {" "}
-          <Link href={localizedHref("/self-hosting", locale as Locale)} className="font-medium text-foreground underline underline-offset-4">{tl("pricingSelfHostedCta")}</Link>
+          <Link href={localizedHref("/self-hosting/install", locale as Locale)} className="font-medium text-foreground underline underline-offset-4">{tl("pricingSelfHostedCta")}</Link>
         </p>}
       </div>
     </div>

@@ -1,0 +1,80 @@
+{
+  "reviewer": "Codex agent review_documentation_locales",
+  "date": "2026-10-08",
+  "sourceRecord": "forge-controls-capture-candidates.json",
+  "records": [
+    {
+      "locale": "en",
+      "article": "forge-issue-sync",
+      "src": "/documentation/en/forge-issue-sync-workflow.png",
+      "imageSha256": "8d90c760118efa9d716d9910d35538beb4b3e405b8cbceb2d98a34fc7ea26320",
+      "bodySha256": "7d25ad667d8877c25f3ee661bf959a935c65c1a089cfa149f1f1234a12cca25b",
+      "captionSha256": "623aac62030115748dfe92e313842fd974e2dc6bc45dafcfa91c101708f676f6",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Exact localized Git settings crop individually inspected. Private disposable demo repository linked; synchronization visibly off. Readable setup controls with no credentials. Longer branch-cleanup help truncates with ellipsis but is unrelated to the sync procedure.",
+      "limitation": "Capture shows disabled sync, not a synchronized import or webhook execution; no action submitted during this image review."
+    },
+    {
+      "locale": "fr",
+      "article": "forge-issue-sync",
+      "src": "/documentation/fr/forge-issue-sync-workflow.png",
+      "imageSha256": "89d0f4d31916e1be9c07ced15dd0e5cada61c2c1a524f98b91c1998e4853cda1",
+      "bodySha256": "554657eb9045227b89bec619aee3e3f19f227a873e679e04eef83e7980d92eaf",
+      "captionSha256": "2c5848330519b5dfcee73aa1177701af933dfa4331ee39ab25649c29eaf14981",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Exact localized Git settings crop individually inspected. Private disposable demo repository linked; synchronization visibly off. Readable setup controls with no credentials. Longer branch-cleanup help truncates with ellipsis but is unrelated to the sync procedure.",
+      "limitation": "Capture shows disabled sync, not a synchronized import or webhook execution; no action submitted during this image review."
+    },
+    {
+      "locale": "de",
+      "article": "forge-issue-sync",
+      "src": "/documentation/de/forge-issue-sync-workflow.png",
+      "imageSha256": "4471c146df73ec79f35f423fb25a0dee4235ebe0ebbd0509e85187f13b0eca34",
+      "bodySha256": "6543a66b5b2630255aa7d9b7d3ba16456d87567b22f5d99048645c9ca96ff424",
+      "captionSha256": "3bfb1ac035682cb228adab1b12dab6a7cb009f2c2c37e4c8dbb048e94d6abde8",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Exact localized Git settings crop individually inspected. Private disposable demo repository linked; synchronization visibly off. Readable setup controls with no credentials. Longer branch-cleanup help truncates with ellipsis but is unrelated to the sync procedure.",
+      "limitation": "Capture shows disabled sync, not a synchronized import or webhook execution; no action submitted during this image review."
+    },
+    {
+      "locale": "es",
+      "article": "forge-issue-sync",
+      "src": "/documentation/es/forge-issue-sync-workflow.png",
+      "imageSha256": "5186c91b2c3479d8acdebd8aa375064ba8231c0036a1e8920236b026dc33849f",
+      "bodySha256": "decce05ff19637985b39ec84b1bf456ff68d9919ac1c8921b6a24717ae3e46b8",
+      "captionSha256": "92b5f6650433ec672a8095f574c5b6c0901f25c26bdd69303b8a5cd5f42e915f",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Exact localized Git settings crop individually inspected. Private disposable demo repository linked; synchronization visibly off. Readable setup controls with no credentials. Longer branch-cleanup help truncates with ellipsis but is unrelated to the sync procedure.",
+      "limitation": "Capture shows disabled sync, not a synchronized import or webhook execution; no action submitted during this image review."
+    },
+    {
+      "locale": "it",
+      "article": "forge-issue-sync",
+      "src": "/documentation/it/forge-issue-sync-workflow.png",
+      "imageSha256": "5b5e8e834d1f32b93a254368e47131f2ca9a332da250d2fa34b1898bee3e9d0a",
+      "bodySha256": "d1bbb801a6820b6182180673973e3535e65582c0755fffec1ad129059ffc76b6",
+      "captionSha256": "5ad0e625906d5aea9905561ec78564577769bec1317402141515269946ae7d04",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Exact localized Git settings crop individually inspected. Private disposable demo repository linked; synchronization visibly off. Readable setup controls with no credentials. Longer branch-cleanup help truncates with ellipsis but is unrelated to the sync procedure.",
+      "limitation": "Capture shows disabled sync, not a synchronized import or webhook execution; no action submitted during this image review."
+    },
+    {
+      "locale": "pt-BR",
+      "article": "forge-issue-sync",
+      "src": "/documentation/pt-BR/forge-issue-sync-workflow.png",
+      "imageSha256": "c082c75d7c23423bddd9a9f7834256d55f26296967b17de691c0611c7f999dda",
+      "bodySha256": "7cdaea827fa52028a838d7ab896c8e8d45fe42c455aa51b800281535db2053f7",
+      "captionSha256": "73019814e40096005d3f36adcf8391fcb4b6d0b4272a7749437ba4fd63ec498b",
+      "reviewer": "Codex agent review_documentation_locales",
+      "reviewedAt": "2026-10-08",
+      "observed": "Exact localized Git settings crop individually inspected. Private disposable demo repository linked; synchronization visibly off. Readable setup controls with no credentials. Longer branch-cleanup help truncates with ellipsis but is unrelated to the sync procedure.",
+      "limitation": "Capture shows disabled sync, not a synchronized import or webhook execution; no action submitted during this image review."
+    }
+  ],
+  "humanAcceptance": false
+}

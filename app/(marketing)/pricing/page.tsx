@@ -46,7 +46,7 @@ export default async function PricingPage() {
             </p>
             <p className="mt-5 max-w-2xl text-sm leading-relaxed text-pretty text-muted-foreground">
               {t("cloudNotice")}
-              <Link href={localizedHref("/self-hosting", locale as Locale)} className="mt-2 block w-fit font-medium text-foreground underline underline-offset-4">
+              <Link href={localizedHref("/self-hosting/install", locale as Locale)} className="mt-2 block w-fit font-medium text-foreground underline underline-offset-4">
                 {t("cloudNoticeCta")}
               </Link>
             </p>

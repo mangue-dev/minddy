@@ -1,0 +1,201 @@
+{
+  "date": "2026-10-09",
+  "reviewer": "agent:/root",
+  "baseline": "095ff93bf3ba7685e08155cc9e7cf2d2d66e44fd",
+  "scope": "Complete feature-guide migration across product, operator and technical domains in all six languages.",
+  "retained": [
+    {
+      "locale": "en",
+      "guides": 42,
+      "originalArticles": 90,
+      "mappedSections": 225,
+      "figuresPreserved": 102,
+      "executableExamplesPreserved": 30
+    },
+    {
+      "locale": "fr",
+      "guides": 42,
+      "originalArticles": 90,
+      "mappedSections": 225,
+      "figuresPreserved": 102,
+      "executableExamplesPreserved": 30
+    },
+    {
+      "locale": "de",
+      "guides": 42,
+      "originalArticles": 90,
+      "mappedSections": 225,
+      "figuresPreserved": 102,
+      "executableExamplesPreserved": 30
+    },
+    {
+      "locale": "es",
+      "guides": 42,
+      "originalArticles": 90,
+      "mappedSections": 225,
+      "figuresPreserved": 102,
+      "executableExamplesPreserved": 30
+    },
+    {
+      "locale": "it",
+      "guides": 42,
+      "originalArticles": 90,
+      "mappedSections": 225,
+      "figuresPreserved": 102,
+      "executableExamplesPreserved": 30
+    },
+    {
+      "locale": "pt-BR",
+      "guides": 42,
+      "originalArticles": 90,
+      "mappedSections": 225,
+      "figuresPreserved": 102,
+      "executableExamplesPreserved": 30
+    }
+  ],
+  "checks": {
+    "releaseCoverage": "90/90 workflows; 252 locale guides, all publication gates satisfied",
+    "knowledge": "npm run check:knowledge passed",
+    "ownedEnglish": "npm run check:owned-english passed",
+    "vitest": "41 tests passed in six targeted suites",
+    "tooling": "Seven documentation-check tests passed",
+    "lint": "npm run lint passed",
+    "typecheck": "npm run typecheck passed",
+    "diff": "git diff --check passed",
+    "sitemap": {
+      "canonicalDocumentationURLs": 252,
+      "retiredURLs": 0
+    }
+  },
+  "http": [
+    {
+      "pathname": "/docs/issues",
+      "status": 200,
+      "canonical": "http://localhost:3000/docs/issues",
+      "robots": "index, follow"
+    },
+    {
+      "pathname": "/docs/create-an-issue",
+      "status": 200,
+      "canonical": "http://localhost:3000/docs/issues",
+      "robots": "noindex, follow"
+    },
+    {
+      "pathname": "/fr/documentation/issues",
+      "status": 200,
+      "canonical": "http://localhost:3000/fr/documentation/issues",
+      "robots": "index, follow"
+    },
+    {
+      "pathname": "/fr/documentation/create-an-issue",
+      "status": 200,
+      "canonical": "http://localhost:3000/fr/documentation/issues",
+      "robots": "noindex, follow"
+    },
+    {
+      "pathname": "/de/dokumentation/issues",
+      "status": 200,
+      "canonical": "http://localhost:3000/de/dokumentation/issues",
+      "robots": "index, follow"
+    },
+    {
+      "pathname": "/de/dokumentation/create-an-issue",
+      "status": 200,
+      "canonical": "http://localhost:3000/de/dokumentation/issues",
+      "robots": "noindex, follow"
+    },
+    {
+      "pathname": "/es/documentacion/issues",
+      "status": 200,
+      "canonical": "http://localhost:3000/es/documentacion/issues",
+      "robots": "index, follow"
+    },
+    {
+      "pathname": "/es/documentacion/create-an-issue",
+      "status": 200,
+      "canonical": "http://localhost:3000/es/documentacion/issues",
+      "robots": "noindex, follow"
+    },
+    {
+      "pathname": "/it/documentazione/issues",
+      "status": 200,
+      "canonical": "http://localhost:3000/it/documentazione/issues",
+      "robots": "index, follow"
+    },
+    {
+      "pathname": "/it/documentazione/create-an-issue",
+      "status": 200,
+      "canonical": "http://localhost:3000/it/documentazione/issues",
+      "robots": "noindex, follow"
+    },
+    {
+      "pathname": "/pt-br/documentacao/issues",
+      "status": 200,
+      "canonical": "http://localhost:3000/pt-br/documentacao/issues",
+      "robots": "index, follow"
+    },
+    {
+      "pathname": "/pt-br/documentacao/create-an-issue",
+      "status": 200,
+      "canonical": "http://localhost:3000/pt-br/documentacao/issues",
+      "robots": "noindex, follow"
+    }
+  ],
+  "browser": {
+    "environment": "Existing local development server on localhost:3000; anonymous published-corpus rendering, not a production deployment",
+    "desktop": {
+      "viewport": [
+        1440,
+        1000
+      ],
+      "guides": [
+        "fr/issues",
+        "en/installation"
+      ],
+      "result": "Generic feature titles, lead paragraphs, hierarchical contents and feature sidebar visible; screenshots inspected"
+    },
+    "mobile": {
+      "viewport": [
+        390,
+        844
+      ],
+      "guide": "fr/issues",
+      "result": "Expanded contents reached implementation-plans; target focused at 160px below viewport top; document width 390px, no horizontal overflow"
+    },
+    "localeSwitch": {
+      "from": "/fr/documentation/issues#implementation-plans",
+      "to": "/docs/issues#implementation-plans",
+      "result": "Article and section retained; English heading rendered"
+    },
+    "legacyLink": {
+      "from": "/fr/documentation/forge-issue-sync?q=git#recovery",
+      "to": "/fr/documentation/git?q=git#forge-issue-sync-recovery",
+      "result": "Correct section at 128px, query retained, canonical request index/follow"
+    },
+    "search": {
+      "query": "implementation plan",
+      "selectedGuide": "issues",
+      "result": "/docs/issues#implementation-plans; matching task heading preferred to an earlier prose mention, palette closed"
+    },
+    "console": "No browser errors; development and existing image warnings observed"
+  },
+  "editorialReviews": [
+    "content/documentation/reviews/feature-guides-en-fr-review-2026-10-09.json",
+    "content/documentation/reviews/feature-guides-de-es-review-2026-10-09.json",
+    "content/documentation/reviews/feature-guides-it-pt-BR-review-2026-10-09.json"
+  ],
+  "parentEditorialCorrections": [
+    "Disambiguated the later installation runner heading in all six languages; IDs unchanged.",
+    "Preserved complete procedures and existing evidence rather than treating page length or automated parity as factual approval."
+  ],
+  "screenshots": [
+    "docs/screenshots/pr-feature-guides/feature-guide-desktop-light.png",
+    "docs/screenshots/pr-feature-guides/feature-guide-mobile-contents-light.png",
+    "docs/screenshots/pr-feature-guides/installation-feature-guide-desktop-light.png"
+  ],
+  "limitations": [
+    "No product mutations, installation, backup or restore rerun; inherited dated operational evidence and release conditions retained.",
+    "No human review or production deployment claimed.",
+    "Legacy fragment mapping requires browser JavaScript; without it the full current guide remains readable at the legacy URL."
+  ]
+}

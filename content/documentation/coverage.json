@@ -1,0 +1,1310 @@
+[
+  {
+    "workflow": "S01",
+    "article": "first-project",
+    "outcome": "Complete the first project-to-done-issue workflow",
+    "audiences": [
+      "member"
+    ],
+    "type": "tutorial",
+    "source": "K/core-tracker; `components/sidebar-onboarding.tsx`; `app/(app)/home/page.tsx`",
+    "gaps": "Ordered journey, account/instance prerequisite, join versus create, assignment, done state, first-use recovery",
+    "illustration": "New onboarding; reuse workflowIssue and heroBoard",
+    "requiresFigures": true,
+    "section": "first-project"
+  },
+  {
+    "workflow": "S02",
+    "article": "accounts",
+    "outcome": "Register, confirm email, sign in and sign out",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`app/(auth)/signup/page.tsx`; `app/(auth)/login/page.tsx`; `app/auth/confirm/page.tsx`",
+    "gaps": "Confirmation gesture, email delivery conditions, instance identity, invite-only/configuration limits",
+    "illustration": "New auth flow with disposable identity",
+    "requiresFigures": true,
+    "section": "account-access"
+  },
+  {
+    "workflow": "S03",
+    "article": "accounts",
+    "outcome": "Recover account access after password or MFA problems",
+    "audiences": [
+      "member"
+    ],
+    "type": "troubleshooting",
+    "source": "`app/(auth)/reset-password/page.tsx`; `components/settings/account-security-section.tsx`; D/self-hosting-auth",
+    "gaps": "Safe reset/recovery sequence, expired links, TOTP/recovery codes, escalation and session outcome",
+    "illustration": "New security controls without secrets",
+    "requiresFigures": true,
+    "section": "account-recovery"
+  },
+  {
+    "workflow": "S04",
+    "article": "navigation",
+    "outcome": "Reach personal/project work, switch projects and use tabs",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/app-sidebar.tsx`; `components/secondary-sidebar.tsx`; K/agents-and-mcp; K/productivity",
+    "gaps": "Current rail/secondary navigation, panel behavior, desktop/mobile entry points, legacy links",
+    "illustration": "New current desktop/mobile navigation",
+    "requiresFigures": true,
+    "section": "navigation"
+  },
+  {
+    "workflow": "S05",
+    "article": "projects",
+    "outcome": "Create, rename and configure a project",
+    "audiences": [
+      "owner"
+    ],
+    "type": "guide",
+    "source": "K/settings-and-data; `components/settings/project-general-section.tsx`",
+    "gaps": "Key/color, defaults, owner-only actions, consequences of changes",
+    "illustration": "New project general settings",
+    "requiresFigures": true,
+    "section": "project-settings"
+  },
+  {
+    "workflow": "S06",
+    "article": "projects",
+    "outcome": "Invite, accept/decline and manage collaborators",
+    "audiences": [
+      "owner",
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/inbox-content.tsx`; `components/home/onboarding-join-dialog.tsx`; K/settings-and-data",
+    "gaps": "Invite flow, owner/member permission table, removal/ownership conditions, pending invites and missing access",
+    "illustration": "New invitation/member controls",
+    "requiresFigures": true,
+    "section": "project-members"
+  },
+  {
+    "workflow": "S07",
+    "article": "choose-an-instance",
+    "outcome": "Choose Cloud or self-hosted and understand responsibilities",
+    "audiences": [
+      "member",
+      "operator"
+    ],
+    "type": "explanation",
+    "source": "D/editions; K/open-source; `app/(marketing)/self-hosting/page.tsx`",
+    "gaps": "Same core versus configured capabilities, account/host responsibility, provider costs and support boundary",
+    "illustration": "Diagram of responsibility split",
+    "requiresFigures": false,
+    "section": "choose-an-instance"
+  },
+  {
+    "workflow": "W01",
+    "article": "issues",
+    "outcome": "Create and edit a useful issue with properties",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/core-tracker; `components/create-issue-dialog.tsx`; `components/issue-fields.tsx`",
+    "gaps": "Exact property controls, priority/effort/due date/assignee/categories, validation and save result",
+    "illustration": "Reuse workflowIssue; new detail/property focus",
+    "requiresFigures": true,
+    "section": "create-an-issue"
+  },
+  {
+    "workflow": "W02",
+    "article": "issues",
+    "outcome": "Move work through triage to done or another terminal state",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/core-tracker; `components/kanban-board.tsx`; `components/issue-context-menu.tsx`",
+    "gaps": "Status meanings, review/canceled/duplicate distinction, default rules, board versus detail actions",
+    "illustration": "Reuse heroBoard; new status control",
+    "requiresFigures": true,
+    "section": "issue-statuses"
+  },
+  {
+    "workflow": "W03",
+    "article": "issues",
+    "outcome": "Review incoming work before planning it",
+    "audiences": [
+      "owner",
+      "member"
+    ],
+    "type": "guide",
+    "source": "`app/(app)/projects/[id]/triage/page.tsx`; `components/triage/triage-page.tsx`; `lib/smart-triage.ts`",
+    "gaps": "Intake sources, accept/skip/change behavior, deterministic sorting rules and retired AI-triage distinction",
+    "illustration": "New triage and sorting controls",
+    "requiresFigures": true,
+    "section": "triage-incoming-work"
+  },
+  {
+    "workflow": "W04",
+    "article": "issues",
+    "outcome": "Select and update several issues safely",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/bulk-issue-actions.tsx`; `components/global-board.tsx`",
+    "gaps": "Selection modes, supported fields, multi-project permission limits, partial errors",
+    "illustration": "New selected rows and bulk controls",
+    "requiresFigures": true,
+    "section": "bulk-issue-actions"
+  },
+  {
+    "workflow": "W05",
+    "article": "issues",
+    "outcome": "Model blocking related and duplicate issues",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/core-tracker; `components/issue-side-panel.tsx`; `components/issue-indicators.tsx`; `captures/shots/relations/intent.md`",
+    "gaps": "Direction, inherited blockers, resolved states, cross-project visibility, unlinking and duplicate semantics",
+    "illustration": "New relations in all locales; existing relation shots are candidates only",
+    "requiresFigures": true,
+    "section": "issue-dependencies"
+  },
+  {
+    "workflow": "W06",
+    "article": "issues",
+    "outcome": "Split work into children and change or remove a parent",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/issue-parent-menu.tsx`; `components/issue-family-banner.tsx`",
+    "gaps": "Hierarchy limits, picker/search, inherited context, unlink confirmation and progress effects",
+    "illustration": "New parent menu; current candidate lacks six variants",
+    "requiresFigures": true,
+    "section": "sub-issues"
+  },
+  {
+    "workflow": "W07",
+    "article": "issues",
+    "outcome": "Maintain ordered plan tasks alongside the description",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/plans-and-agents; `components/issue-plan.tsx`; `captures/shots/issue-plan/intent.md`",
+    "gaps": "Separate tabs, task states/nesting, editing without lost progress, concurrent edits and Numo handoff",
+    "illustration": "New localized plan controls; existing en/fr candidate",
+    "requiresFigures": true,
+    "section": "implementation-plans"
+  },
+  {
+    "workflow": "W08",
+    "article": "issues",
+    "outcome": "Discuss work and attach context or files",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/issue-timeline.tsx`; `components/issue-resources-section.tsx`; K/core-tracker",
+    "gaps": "Comments/mentions, live page versus file/link resources, permissions, uploads and failed actions",
+    "illustration": "New comments/resource controls",
+    "requiresFigures": true,
+    "section": "issue-discussion-and-resources"
+  },
+  {
+    "workflow": "W09",
+    "article": "issues",
+    "outcome": "Configure repeated issue creation",
+    "audiences": [
+      "owner"
+    ],
+    "type": "guide",
+    "source": "`components/settings/project-recurrences-section.tsx`; K/core-tracker",
+    "gaps": "Recurrence schedule, creation/ownership rules and disable/change behavior; distinguish Numo routines",
+    "illustration": "New recurrence settings",
+    "requiresFigures": true,
+    "section": "recurring-issues"
+  },
+  {
+    "workflow": "W10",
+    "article": "objectives",
+    "outcome": "Create an objective attach work and track its outcome",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/core-tracker; `components/objective-dialog.tsx`; `components/objective-detail.tsx`",
+    "gaps": "Objective lifecycle, issue membership, resources/discussion, progress and completion",
+    "illustration": "New objective create/detail",
+    "requiresFigures": true,
+    "section": "objectives"
+  },
+  {
+    "workflow": "W11",
+    "article": "objectives",
+    "outcome": "Interpret objective relations progress and forecasts",
+    "audiences": [
+      "member"
+    ],
+    "type": "explanation",
+    "source": "`components/objective-relations-section.tsx`; `components/objective-momentum.tsx`; K/core-tracker",
+    "gaps": "Momentum states, evidence/estimate limits, blocker inheritance, insufficient history",
+    "illustration": "New objective relations plus localized diagram",
+    "requiresFigures": true,
+    "section": "objective-dependencies-and-momentum"
+  },
+  {
+    "workflow": "W12",
+    "article": "personal-cycle",
+    "outcome": "Select cross-project work for a weekly or fortnightly cycle",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/productivity; `components/cycle/cycle-header.tsx`; `components/settings/account-cycles-section.tsx`",
+    "gaps": "Settings, fill/selection, carry-over/completed work, personal ownership and objective distinction",
+    "illustration": "Reuse featureCycle; new settings",
+    "requiresFigures": true,
+    "section": "personal-cycle"
+  },
+  {
+    "workflow": "W13",
+    "article": "views",
+    "outcome": "Create and reuse a view without changing the underlying issues",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/productivity; `components/board-toolbar.tsx`; `components/sidebar-filter-field.tsx`; `app/api/me/saved-views/route.ts`",
+    "gaps": "Scope, filters/sort/group/display, create/edit/delete, personal/project views and empty results",
+    "illustration": "New views/filter controls",
+    "requiresFigures": true,
+    "section": "views-and-filters"
+  },
+  {
+    "workflow": "W14",
+    "article": "views",
+    "outcome": "Publish and revoke a read-only view",
+    "audiences": [
+      "owner",
+      "visitor"
+    ],
+    "type": "guide",
+    "source": "`app/api/views/[id]/share/route.ts`; `app/share/[token]/page.tsx`; K/feedback",
+    "gaps": "Share eligibility, visible fields, secret-link/indexing boundary, password/child links and revocation",
+    "illustration": "New share controls and anonymous result",
+    "requiresFigures": true,
+    "section": "share-a-view"
+  },
+  {
+    "workflow": "W15",
+    "article": "navigation",
+    "outcome": "Find work and act with keyboard commands",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/command-palette.tsx`; `components/keyboard-cheatsheet.tsx`; `components/issue-field-shortcuts.tsx`",
+    "gaps": "Search scope, shortcuts per platform, keyboard focus/panels, field shortcuts and mobile alternatives",
+    "illustration": "Reuse featurePalette; new cheatsheet/detail controls",
+    "requiresFigures": true,
+    "section": "search-and-shortcuts"
+  },
+  {
+    "workflow": "W16",
+    "article": "notifications-and-inbox",
+    "outcome": "Follow mentions activity and pending invitations",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/productivity; `components/inbox-popover.tsx`; `components/inbox-content.tsx`; `components/settings/account-notifications-section.tsx`",
+    "gaps": "Popover entry, date/read/mention filters, read-state and invitation actions, notification preferences",
+    "illustration": "New Inbox and settings",
+    "requiresFigures": true,
+    "section": "notifications-and-inbox"
+  },
+  {
+    "workflow": "W17",
+    "article": "task-notebook",
+    "outcome": "Capture private notes and promote a task to tracked work",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/productivity; `components/scratchpad/scratchpad-modal.tsx`; `components/scratchpad/start-tasks.ts`",
+    "gaps": "Privacy, sections/checkboxes, promotion/context, Numo action and notebook shortcut",
+    "illustration": "Reuse scratchpad; new promotion",
+    "requiresFigures": true,
+    "section": "task-notebook"
+  },
+  {
+    "workflow": "W18",
+    "article": "personal-statistics",
+    "outcome": "Read completion pace and time by project category or objective",
+    "audiences": [
+      "member"
+    ],
+    "type": "explanation",
+    "source": "`app/(app)/statistics/page.tsx`; `components/stats/effort-durations.tsx`; K/productivity",
+    "gaps": "Measurement definitions, date range, estimates/limitations, privacy and empty data",
+    "illustration": "New demo statistics",
+    "requiresFigures": true,
+    "section": "personal-statistics"
+  },
+  {
+    "workflow": "W19",
+    "article": "trash-and-recovery",
+    "outcome": "Restore deleted work or understand permanent removal",
+    "audiences": [
+      "member",
+      "owner"
+    ],
+    "type": "guide",
+    "source": "`app/(app)/trash/page.tsx`; K/productivity",
+    "gaps": "Supported entity types, permissions, retention, restore conflicts, irreversible deletion conditions",
+    "illustration": "New trash/recovery",
+    "requiresFigures": true,
+    "section": "trash-and-recovery"
+  },
+  {
+    "workflow": "P01",
+    "article": "pages",
+    "outcome": "Build a nested project wiki and find favorite pages",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/pages; `components/pages/page-create-menu.tsx`; `components/pages/page-tree.tsx`",
+    "gaps": "Hierarchy, move/reorder/duplicate/delete, favorites and project scope",
+    "illustration": "Reuse pagesEditor; new tree controls",
+    "requiresFigures": true,
+    "section": "create-and-organize-pages"
+  },
+  {
+    "workflow": "P02",
+    "article": "pages",
+    "outcome": "Write a page with blocks callouts and links to work",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/page-editor.tsx`; `components/pages/page-slash-command.tsx`; K/pages",
+    "gaps": "Slash/block controls, headings/tasks/code/callouts, mentions/backlinks, autosave and formatting/export fidelity",
+    "illustration": "New editor/block menus",
+    "requiresFigures": true,
+    "section": "page-editor"
+  },
+  {
+    "workflow": "P03",
+    "article": "pages",
+    "outcome": "Discuss a page and understand live viewing or conflicts",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/page-comment-popover.tsx`; `components/pages/page-presence.tsx`; `components/pages/page-conflict-banner.tsx`",
+    "gaps": "Comment anchors/threads, resolve/reply, mentions, viewing versus editing, save conflict recovery",
+    "illustration": "New comments/presence/conflict",
+    "requiresFigures": true,
+    "section": "page-comments-and-collaboration"
+  },
+  {
+    "workflow": "P04",
+    "article": "pages",
+    "outcome": "Upload and retrieve page attachments",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/page-uploads.tsx`; `lib/server/page-files.ts`; K/pages",
+    "gaps": "Accepted files/size/plan constraints, upload failures, authorization and sharing behavior",
+    "illustration": "New attachment controls",
+    "requiresFigures": true,
+    "section": "page-files"
+  },
+  {
+    "workflow": "P05",
+    "article": "pages",
+    "outcome": "Inspect history and restore a previous page revision",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/page-history.tsx`; `lib/server/page-versions.ts`",
+    "gaps": "Restore permissions, current-state replacement, retention, version/file relationship and failure recovery",
+    "illustration": "New version picker and restore",
+    "requiresFigures": true,
+    "section": "page-history"
+  },
+  {
+    "workflow": "P06",
+    "article": "pages",
+    "outcome": "Share a page read-only and revoke access",
+    "audiences": [
+      "member",
+      "visitor"
+    ],
+    "type": "tutorial",
+    "source": "`components/pages/page-publish-dialog.tsx`; `lib/server/page-publication.ts`; `app/p/[token]/page.tsx`",
+    "gaps": "Password/links, subtree and attachment access, anonymous test, revocation, noindex distinction",
+    "illustration": "New publish dialog plus anonymous result",
+    "requiresFigures": true,
+    "section": "publish-a-page"
+  },
+  {
+    "workflow": "P07",
+    "article": "pages",
+    "outcome": "Move page content or produce a readable export",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/page-document-actions.tsx`; `lib/server/pages-export.ts`; `components/pages/page-print-view.tsx`",
+    "gaps": "Import/export formats, files/links/callouts fidelity, printing, hierarchy and unsupported content",
+    "illustration": "New export/import controls",
+    "requiresFigures": true,
+    "section": "import-export-and-print-pages"
+  },
+  {
+    "workflow": "P08",
+    "article": "databases",
+    "outcome": "Create a database and define its columns",
+    "audiences": [
+      "member"
+    ],
+    "type": "tutorial",
+    "source": "K/pages; `components/pages/database-setup-banner.tsx`; `components/pages/database-property-dialogs.tsx`",
+    "gaps": "Blank schema, Numo-assisted setup conditions, property types/options/limits and read-only Created at",
+    "illustration": "New setup/type chooser",
+    "requiresFigures": true,
+    "section": "create-a-database"
+  },
+  {
+    "workflow": "P09",
+    "article": "databases",
+    "outcome": "Edit values and work with an entry as a full page",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/page-database-view.tsx`; `components/pages/database-cell-editor.tsx`; K/pages",
+    "gaps": "Numeric/text validation, single/multiple options, people/date/checkbox, panel extension and pending saves",
+    "illustration": "New cells and entry panel",
+    "requiresFigures": true,
+    "section": "database-cells-and-entries"
+  },
+  {
+    "workflow": "P10",
+    "article": "databases",
+    "outcome": "Rename reorder hide convert or delete columns",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/database-property-dialogs.tsx`; `components/pages/database-column-name.tsx`; K/pages",
+    "gaps": "Compatible conversions, data-loss confirmation, system columns, option edit/cancel and irreversible deletion",
+    "illustration": "New conversion warnings and column controls",
+    "requiresFigures": true,
+    "section": "change-a-database-schema"
+  },
+  {
+    "workflow": "P11",
+    "article": "databases",
+    "outcome": "Import external database rows with a reviewed mapping",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pages/database-import-dialog.tsx`; `lib/server/database-import.ts`; K/pages",
+    "gaps": "Supported formats/archives, matching/property mapping, preview/validation, rejected rows and limits",
+    "illustration": "New localized import preview",
+    "requiresFigures": true,
+    "section": "import-a-database"
+  },
+  {
+    "workflow": "F01",
+    "article": "feedback",
+    "outcome": "Enable and configure a public feedback board",
+    "audiences": [
+      "owner"
+    ],
+    "type": "guide",
+    "source": "K/feedback; `components/project-feedback-settings.tsx`",
+    "gaps": "Publication/display/privacy, enabled state versus ingestion, identities, comments and optional AI",
+    "illustration": "New settings; reuse feedbackBoard",
+    "requiresFigures": true,
+    "section": "publish-a-feedback-board"
+  },
+  {
+    "workflow": "F02",
+    "article": "feedback",
+    "outcome": "Submit vote comment and follow a request",
+    "audiences": [
+      "visitor"
+    ],
+    "type": "guide",
+    "source": "`components/public-board.tsx`; `app/f/[token]/me/page.tsx`; K/feedback",
+    "gaps": "Anonymous/identified permissions, email-code or SSO journey, My feedback and response visibility",
+    "illustration": "Reuse feedbackBoard; new visitor identification",
+    "requiresFigures": true,
+    "section": "submit-and-follow-feedback"
+  },
+  {
+    "workflow": "F03",
+    "article": "feedback",
+    "outcome": "Review incoming requests privately and respond publicly",
+    "audiences": [
+      "owner",
+      "member"
+    ],
+    "type": "guide",
+    "source": "`app/(app)/projects/[id]/feedback/page.tsx`; K/feedback",
+    "gaps": "Review queue, status/category/spam/privacy, team-only comments versus public replies and permissions",
+    "illustration": "Reuse feedbackInbox; new moderation details",
+    "requiresFigures": true,
+    "section": "moderate-feedback"
+  },
+  {
+    "workflow": "F04",
+    "article": "feedback",
+    "outcome": "Merge duplicates and link requests to delivered work",
+    "audiences": [
+      "owner",
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/feedback; `app/(app)/projects/[id]/feedback/page.tsx`",
+    "gaps": "Merge effects, promotion/link/unlink, issue-driven public statuses and notification behavior",
+    "illustration": "New promotion/merge and linked result",
+    "requiresFigures": true,
+    "section": "feedback-to-issue"
+  },
+  {
+    "workflow": "F05",
+    "article": "feedback",
+    "outcome": "Add published pages or shared views to a public board",
+    "audiences": [
+      "owner",
+      "visitor"
+    ],
+    "type": "guide",
+    "source": "K/feedback; `components/project-feedback-settings.tsx`",
+    "gaps": "Selection, publication prerequisites, visibility/revocation and visitor navigation",
+    "illustration": "New board tabs",
+    "requiresFigures": true,
+    "section": "feedback-pages-and-views"
+  },
+  {
+    "workflow": "F06",
+    "article": "api-and-webhooks",
+    "outcome": "Connect a product to feedback collection and identity",
+    "audiences": [
+      "integrator"
+    ],
+    "type": "guide",
+    "source": "K/integrations; `app/llms-full.txt/route.ts`; K/feedback",
+    "gaps": "Key handling, request example, limits/errors, SSO signing/expiry and visitor state, optional webhook behavior",
+    "illustration": "Localized sequence diagram and sanitized code",
+    "requiresFigures": true,
+    "section": "feedback-ingestion-and-sso"
+  },
+  {
+    "workflow": "N01",
+    "article": "numo",
+    "outcome": "Open a contextual conversation and complete a project task",
+    "audiences": [
+      "member"
+    ],
+    "type": "tutorial",
+    "source": "K/agents-and-mcp; `components/assistant-panel.tsx`; `components/assistant/chat-input.tsx`",
+    "gaps": "Current panel/context, model/reasoning, conversation list, task result and source links; one localized demo request",
+    "illustration": "Reuse numoPanel only after full demo-content localization",
+    "requiresFigures": true,
+    "section": "work-with-numo"
+  },
+  {
+    "workflow": "N02",
+    "article": "numo",
+    "outcome": "Understand actions credentials approvals and context boundaries",
+    "audiences": [
+      "member",
+      "owner"
+    ],
+    "type": "explanation",
+    "source": "K/settings-and-data; K/agents-and-mcp; `lib/server/assistant/tools.ts`",
+    "gaps": "Owner-only settings, credential setup, public reply authorization, remote-MCP trust and cross-user context",
+    "illustration": "Localized permission/action diagram",
+    "requiresFigures": true,
+    "section": "numo-permissions-and-approvals"
+  },
+  {
+    "workflow": "N03",
+    "article": "code-work",
+    "outcome": "Turn an issue into checked repository work and an attached PR",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/plans-and-agents; `components/assistant/delegated-work-card.tsx`; K/agents-and-mcp",
+    "gaps": "Linked repo/configured sandbox, worker model, progress/checks/files, user input and limits; no desktop-local worker promise",
+    "illustration": "Reuse workflowAgent/workflowPr; new localized run details",
+    "requiresFigures": true,
+    "section": "delegate-code-work"
+  },
+  {
+    "workflow": "N04",
+    "article": "code-work",
+    "outcome": "Inspect changes discussions checks reviews and linked work",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/pull-requests/pr-detail.tsx`; `components/pull-requests/pr-reviews-details.tsx`; K/plans-and-agents",
+    "gaps": "Tabs, file/hunk navigation, comments/unresolved threads, review requests/AI review, readiness and merge permissions",
+    "illustration": "New current PR controls; reuse workflowPr as overview only",
+    "requiresFigures": true,
+    "section": "review-pull-requests"
+  },
+  {
+    "workflow": "N05",
+    "article": "numo",
+    "outcome": "Handle interrupted failed waiting or usage-limited work",
+    "audiences": [
+      "member"
+    ],
+    "type": "troubleshooting",
+    "source": "`components/assistant/usage-exhausted-card.tsx`; `components/assistant/ask-user-card.tsx`; D/architecture/numo-durable-turns",
+    "gaps": "Observable states, stop/resume/retry conditions, checkpoints versus guaranteed recovery, existing external-write outcome",
+    "illustration": "New safe failure/input/usage states",
+    "requiresFigures": true,
+    "section": "recover-numo-work"
+  },
+  {
+    "workflow": "N06",
+    "article": "scheduled-routines",
+    "outcome": "Schedule edit pause and inspect recurring Numo requests",
+    "audiences": [
+      "owner"
+    ],
+    "type": "guide",
+    "source": "K/productivity; `components/routines/routine-detail.tsx`; `components/routines/create-routine-wizard.tsx`",
+    "gaps": "Timezone/schedule, occurrence conversations, per-run cap, owner budget/connections, changed ownership and manual runs",
+    "illustration": "Reuse routines; new schedule/cap controls",
+    "requiresFigures": true,
+    "section": "scheduled-routines"
+  },
+  {
+    "workflow": "N07",
+    "article": "repository-skills",
+    "outcome": "Select versioned repository skills for a turn or routine",
+    "audiences": [
+      "member",
+      "integrator"
+    ],
+    "type": "guide",
+    "source": "K/repository-skills; `components/assistant/skill-preview-dialog.tsx`",
+    "gaps": "Discovery roots/ref, selection limits, slash/dollar menus, preview, commit/push prerequisite and safety boundary",
+    "illustration": "New localized skill selection",
+    "requiresFigures": true,
+    "section": "repository-skills"
+  },
+  {
+    "workflow": "N08",
+    "article": "numo",
+    "outcome": "Connect test reconnect disable or remove a personal MCP service",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/agents-and-mcp; `components/settings/account-mcp-section.tsx`; `app/api/account/mcp-connections/route.ts`",
+    "gaps": "OAuth/bearer/no-auth flows, provider prerequisites, secret persistence/removal, transport/network limits and routine-owner access",
+    "illustration": "New connection/status/reconnect controls without secrets",
+    "requiresFigures": true,
+    "section": "numo-mcp-connections"
+  },
+  {
+    "workflow": "N09",
+    "article": "minddy-mcp",
+    "outcome": "Connect an external assistant to authorized minddy work",
+    "audiences": [
+      "integrator",
+      "member"
+    ],
+    "type": "guide",
+    "source": "`app/(marketing)/mcp/page.tsx`; `components/settings/account-mcp-clients.tsx`; `app/api/mcp/route.ts`",
+    "gaps": "Supported clients/endpoint/OAuth, authorized scope, token revocation, self-host origin and difference from Numo connections",
+    "illustration": "New endpoint/auth controls plus sanitized client example",
+    "requiresFigures": true,
+    "section": "external-minddy-mcp"
+  },
+  {
+    "workflow": "N10",
+    "article": "git",
+    "outcome": "Connect GitHub or GitLab and link a project repository",
+    "audiences": [
+      "owner",
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/integrations; `components/settings/account-git-connections-section.tsx`; `components/settings/project-git-section.tsx`",
+    "gaps": "Account/project boundary, provider scopes, OAuth/browser return, repo picker, relay/operator-owned app and reconnect",
+    "illustration": "New connection/repository picker",
+    "requiresFigures": true,
+    "section": "git-accounts-and-repositories"
+  },
+  {
+    "workflow": "N11",
+    "article": "git",
+    "outcome": "Enable issue synchronization and resolve conflicts",
+    "audiences": [
+      "owner",
+      "integrator"
+    ],
+    "type": "guide",
+    "source": "D/github-issue-sync; K/integrations; `components/settings/project-git-section.tsx`",
+    "gaps": "Import/triage, mapped fields, open/closed mirroring, webhook retries/conflicts, disablement and provider boundary",
+    "illustration": "Localized sync diagram; new settings",
+    "requiresFigures": true,
+    "section": "forge-issue-sync"
+  },
+  {
+    "workflow": "A01",
+    "article": "accounts",
+    "outcome": "Configure avatar language theme and send preferences",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/settings-and-data; `components/settings/account-profile-section.tsx`; `components/settings/account-preferences-section.tsx`",
+    "gaps": "Menu entry, save/validation, avatar limits, account versus public-site locale, platform send shortcut",
+    "illustration": "New profile/preferences",
+    "requiresFigures": true,
+    "section": "profile-and-preferences"
+  },
+  {
+    "workflow": "A02",
+    "article": "accounts",
+    "outcome": "Enroll verify and manage two-factor authentication",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/settings/account-security-section.tsx`; D/self-hosting-auth",
+    "gaps": "TOTP steps/recovery storage, disable requirements, sessions and account recovery link",
+    "illustration": "New redacted security flow",
+    "requiresFigures": true,
+    "section": "account-security"
+  },
+  {
+    "workflow": "A03",
+    "article": "applications",
+    "outcome": "Enable and troubleshoot web or native notifications",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/settings/account-push-devices-section.tsx`; `lib/desktop/notification-capabilities.ts`; K/desktop-and-speed",
+    "gaps": "Permission/device registration, platform delivery/requirements, unavailable push and in-app fallback",
+    "illustration": "New browser/PWA/desktop controls",
+    "requiresFigures": true,
+    "section": "devices-and-notifications"
+  },
+  {
+    "workflow": "A04",
+    "article": "ai-settings-and-usage",
+    "outcome": "Configure compatible personal AI providers and model defaults",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/plans-and-billing; `components/settings/account-ai-keys-section.tsx`; `components/settings/account-sandbox-section.tsx`",
+    "gaps": "Surface/model assignments, provider billing, server compute, conversation versus worker defaults, secure edit/remove",
+    "illustration": "New redacted provider/default controls",
+    "requiresFigures": true,
+    "section": "ai-keys-and-models"
+  },
+  {
+    "workflow": "A05",
+    "article": "automation-settings",
+    "outcome": "Configure account and owned-project automatic work",
+    "audiences": [
+      "owner"
+    ],
+    "type": "guide",
+    "source": "`components/settings/account-automations-section.tsx`; `components/settings/smart-assign-section.tsx`; K/settings-and-data",
+    "gaps": "Presets/delay/effort switches, Smart Fill/Assign/Triage differences, member rules, provider and usage prerequisites",
+    "illustration": "New automation settings",
+    "requiresFigures": true,
+    "section": "automation-settings"
+  },
+  {
+    "workflow": "A06",
+    "article": "issues",
+    "outcome": "Import Linear Jira or generic CSV after reviewing field mapping",
+    "audiences": [
+      "owner"
+    ],
+    "type": "guide",
+    "source": "K/desktop-and-speed; `components/settings/csv-import-panel.tsx`; `components/settings/import-mapping-editor.tsx`",
+    "gaps": "Preview/mapping, statuses/people/relationships, duplicates, rejected rows, AI-assisted mapping conditions and limits",
+    "illustration": "New all-locale import preview",
+    "requiresFigures": true,
+    "section": "import-issues"
+  },
+  {
+    "workflow": "A07",
+    "article": "transfer-between-instances",
+    "outcome": "Export account data and restore it on another instance",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "K/settings-and-data; `components/settings/account-data-section.tsx`; `lib/server/account-import.ts`",
+    "gaps": "Additive transfer, ID conflicts/report, memberships, exclusions/credentials/billing, file handling and privacy",
+    "illustration": "New export/import/result controls",
+    "requiresFigures": true,
+    "section": "transfer-between-instances"
+  },
+  {
+    "workflow": "A08",
+    "article": "ai-settings-and-usage",
+    "outcome": "Choose a Cloud plan and understand budget consumption",
+    "audiences": [
+      "member"
+    ],
+    "type": "explanation",
+    "source": "K/plans-and-billing; `app/(app)/billing/page.tsx`; `app/(marketing)/pricing/page.tsx`",
+    "gaps": "Current capacities, checkout/portal actions, included calls/compute, caps/no overage, BYOK and self-host costs",
+    "illustration": "New billing/usage with demo amounts",
+    "requiresFigures": true,
+    "section": "plans-and-ai-usage"
+  },
+  {
+    "workflow": "A09",
+    "article": "accounts",
+    "outcome": "Manage analytics consent and understand data/deletion choices",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/settings/account-analytics-section.tsx`; `components/settings/account-data-section.tsx`; `app/api/account/deletion-preview/route.ts`",
+    "gaps": "Consent effects, data destinations, deletion preview/consequences, export-before-delete and operator policies",
+    "illustration": "New consent/deletion preview without executing deletion",
+    "requiresFigures": true,
+    "section": "privacy-and-account-deletion"
+  },
+  {
+    "workflow": "A10",
+    "article": "applications",
+    "outcome": "Use browser and mobile layouts to finish core tasks",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/mobile-sidebar-reveal.tsx`; `components/issue-side-panel.tsx`; `components/assistant-panel.tsx`",
+    "gaps": "Touch navigation/panels, keyboard alternatives, viewport-dependent controls, connectivity limitations",
+    "illustration": "New current mobile issue/page/Numo entry points",
+    "requiresFigures": true,
+    "section": "web-and-mobile"
+  },
+  {
+    "workflow": "A11",
+    "article": "applications",
+    "outcome": "Install and use the PWA on supported mobile browsers",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/marketing/mobile-pwa-install-guide.tsx`; `components/marketing/mobile-install-guide-copy.ts`; `public/sw.js`",
+    "gaps": "Browser/platform requirements, iOS/Android steps, offline/cache promise, updates and push prerequisites",
+    "illustration": "New localized OS/browser install steps",
+    "requiresFigures": true,
+    "section": "install-the-pwa"
+  },
+  {
+    "workflow": "A12",
+    "article": "applications",
+    "outcome": "Install desktop choose an instance use tabs and update it",
+    "audiences": [
+      "member",
+      "operator"
+    ],
+    "type": "guide",
+    "source": "K/desktop-and-speed; `app/(marketing)/download/page.tsx`; `components/settings/account-desktop-section.tsx`; D/linux-desktop",
+    "gaps": "Cloud/server/local picker, OAuth return, app/OS shortcuts, tabs/window close versus quit, OS-specific update paths",
+    "illustration": "New current localized native controls",
+    "requiresFigures": true,
+    "section": "desktop-app"
+  },
+  {
+    "workflow": "H01",
+    "article": "installation",
+    "outcome": "Select a supported topology release and host",
+    "audiences": [
+      "operator"
+    ],
+    "type": "reference",
+    "source": "D/self-hosting-distribution; D/editions; `deploy/self-hosted/compatibility.json`; D/container-image",
+    "gaps": "Exact release/architecture/Docker/Supabase matrix, artifact verification and unsupported variants",
+    "illustration": "Localized topology diagram and version table",
+    "requiresFigures": true,
+    "section": "self-hosted-compatibility"
+  },
+  {
+    "workflow": "H02",
+    "article": "install-locally",
+    "outcome": "Install a private local instance and connect desktop",
+    "audiences": [
+      "operator"
+    ],
+    "type": "tutorial",
+    "source": "D/self-hosting; K/self-hosting; `components/marketing/self-hosting-install-wizard.tsx`; `scripts/self-hosting-local.mjs`",
+    "gaps": "Runtime versus development stack, prerequisites/ports/encryption, verification/retry and persisted data",
+    "illustration": "New wizard/native setup, sanitized command output",
+    "requiresFigures": true,
+    "section": "install-locally"
+  },
+  {
+    "workflow": "H03",
+    "article": "installation",
+    "outcome": "Install the full reference profile for a shared instance",
+    "audiences": [
+      "operator"
+    ],
+    "type": "tutorial",
+    "source": "D/self-hosting; `scripts/self-hosting-install.mjs`; `deploy/self-hosted/compose.full.yml`",
+    "gaps": "Release pin/origins/TLS/secrets, upstream exact pin, bootstrap/auth/Storage checks and interruption recovery",
+    "illustration": "Localized deployment diagram; wizard capture",
+    "requiresFigures": true,
+    "section": "install-a-server"
+  },
+  {
+    "workflow": "H04",
+    "article": "installation",
+    "outcome": "Use managed Supabase or the supported source path",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/self-hosting; D/self-hosting-distribution; `deploy/self-hosted/compose.managed.yml`",
+    "gaps": "Distinguish managed OCI and source topology, provider API verification, scheduler/storage responsibility and acceptance",
+    "illustration": "Localized deployment diagram plus sanitized commands",
+    "requiresFigures": true,
+    "section": "managed-or-source-installation"
+  },
+  {
+    "workflow": "H05",
+    "article": "instance-configuration",
+    "outcome": "Configure public origins environment secrets and capabilities",
+    "audiences": [
+      "operator"
+    ],
+    "type": "reference",
+    "source": "`.env.example`; D/self-hosting; `lib/capabilities.ts`; D/editions",
+    "gaps": "Required/optional values, public/server separation, restart/build behavior, secret preservation, fail-closed diagnostics",
+    "illustration": "Text tables and sanitized examples",
+    "requiresFigures": false,
+    "section": "instance-configuration"
+  },
+  {
+    "workflow": "H06",
+    "article": "authentication-and-email",
+    "outcome": "Configure and verify signup recovery MFA and SMTP",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/self-hosting-auth; `supabase/email-templates/`; `lib/self-hosting-email-templates.ts`",
+    "gaps": "Managed/full configuration, exact redirects, template language, provider limitations, real delivery/account checks",
+    "illustration": "New redacted settings or localized auth sequence",
+    "requiresFigures": true,
+    "section": "authentication-and-email"
+  },
+  {
+    "workflow": "H07",
+    "article": "storage-and-attachments",
+    "outcome": "Operate durable Storage and diagnose file access",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/self-hosting; D/self-hosting-operations; D/self-hosting-logical-operations; `lib/server/page-files.ts`",
+    "gaps": "Backend/metadata/byte boundary, persistence/capacity, provider setup, signed/file authorization and recovery checks",
+    "illustration": "Localized data-flow diagram",
+    "requiresFigures": true,
+    "section": "storage-and-attachments"
+  },
+  {
+    "workflow": "H08",
+    "article": "instance-configuration",
+    "outcome": "Expose the right origins and operate scheduled jobs",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/self-hosting-distribution; `vercel.json`; `deploy/self-hosted/compose.full.yml`; D/self-hosting",
+    "gaps": "Public TLS versus private/local HTTP, internal ports, authenticated job schedule, maintenance shutdown and failures",
+    "illustration": "Localized network/jobs diagram",
+    "requiresFigures": true,
+    "section": "proxy-network-and-jobs"
+  },
+  {
+    "workflow": "H09",
+    "article": "instance-configuration",
+    "outcome": "Enable chosen AI Git MCP push or analytics capabilities",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/editions; K/self-hosting; `lib/capabilities.ts`; `.env.example`",
+    "gaps": "Provider-specific setup/restrictions/costs/data paths, local AI endpoints, code runner, relay opt-out and disabled behavior",
+    "illustration": "Localized optional-provider diagram and sanitized config",
+    "requiresFigures": true,
+    "section": "optional-providers"
+  },
+  {
+    "workflow": "H10",
+    "article": "workspace-encryption",
+    "outcome": "Configure content encryption and preserve recovery keys",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "K/self-hosting; D/self-hosting; `lib/server/encryption.ts`; `scripts/self-hosting-encryption.mjs`",
+    "gaps": "At-rest scope, metadata/export/provider boundaries, enabled/disabled/rerun behavior, old data progress and matching keys",
+    "illustration": "Localized encryption/backup diagram",
+    "requiresFigures": true,
+    "section": "workspace-encryption"
+  },
+  {
+    "workflow": "H11",
+    "article": "backups-and-restoration",
+    "outcome": "Create and verify a complete consistent full-profile backup",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/self-hosting-operations",
+    "gaps": "Outage/context, exact filesystem/image/architecture assumptions, DB/bytes/secrets/keys/identity, off-host retention and restore rehearsal",
+    "illustration": "Text commands and checklist; no real environment output",
+    "requiresFigures": false,
+    "section": "back-up-the-reference-instance"
+  },
+  {
+    "workflow": "H12",
+    "article": "backups-and-restoration",
+    "outcome": "Back up a source or managed database and object storage",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/self-hosting-logical-operations; K/self-hosting-operations",
+    "gaps": "Preflight versus actual action, provider-specific bytes/metadata consistency, complete manifest and encrypted key/config storage",
+    "illustration": "Text commands and provider conditions",
+    "requiresFigures": false,
+    "section": "logical-and-provider-backups"
+  },
+  {
+    "workflow": "H13",
+    "article": "update-an-instance",
+    "outcome": "Upgrade one supported release while preserving recovery",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "D/self-hosting-operations; D/self-hosting-logical-operations; D/self-hosting-distribution",
+    "gaps": "Next-release compatibility, forward-only migrations, outage/backup/abort gates, profile-specific commands and reopen checks",
+    "illustration": "Localized update sequence; sanitized examples",
+    "requiresFigures": true,
+    "section": "update-an-instance"
+  },
+  {
+    "workflow": "H14",
+    "article": "backups-and-restoration",
+    "outcome": "Restore a complete matching set to a blank target",
+    "audiences": [
+      "operator"
+    ],
+    "type": "tutorial",
+    "source": "D/self-hosting-operations; D/self-hosting-logical-operations; K/self-hosting-operations",
+    "gaps": "Physical versus logical target, matching versions/keys, jobs/provider isolation, data/files/Auth verification and rollback without down migrations",
+    "illustration": "Localized restore sequence and sample checklist",
+    "requiresFigures": true,
+    "section": "restore-and-roll-back"
+  },
+  {
+    "workflow": "H15",
+    "article": "self-hosted-diagnostics",
+    "outcome": "Diagnose incomplete installation and operational failures",
+    "audiences": [
+      "operator"
+    ],
+    "type": "troubleshooting",
+    "source": "`scripts/self-hosting-doctor.mjs`; D/self-hosting; D/self-hosting-clean-room",
+    "gaps": "Symptom-to-check mapping, missing capability versus core failure, sanitized logs, restart/retry, support escalation",
+    "illustration": "Sanitized diagnostic example with translated explanation",
+    "requiresFigures": false,
+    "section": "self-hosted-diagnostics"
+  },
+  {
+    "workflow": "H16",
+    "article": "instance-administration",
+    "outcome": "Manage authorized instance-wide settings and responsibilities",
+    "audiences": [
+      "operator"
+    ],
+    "type": "guide",
+    "source": "`app/(app)/admin/page.tsx`; `components/admin/admin-dashboard.tsx`; D/self-hosting-auth",
+    "gaps": "ADMIN_EMAILS/MFA boundary, available panels, quotas/models/defaults, commercial opt-ins and operator data duties; exclude Cloud internal support processes",
+    "illustration": "New demo administrator panels without other-user private data",
+    "requiresFigures": true,
+    "section": "instance-administration"
+  },
+  {
+    "workflow": "T01",
+    "article": "glossary-and-data-model",
+    "outcome": "Distinguish project issue objective cycle page database and feedback",
+    "audiences": [
+      "member",
+      "integrator"
+    ],
+    "type": "explanation",
+    "source": "K/core-tracker; K/productivity; K/pages; K/feedback",
+    "gaps": "Consistent translated terminology, relationships/ownership, examples and links to task guides",
+    "illustration": "Localized entity diagram",
+    "requiresFigures": true,
+    "section": "glossary-and-data-model"
+  },
+  {
+    "workflow": "T02",
+    "article": "permissions-and-public-links",
+    "outcome": "Predict who can read change or share an object",
+    "audiences": [
+      "owner",
+      "integrator"
+    ],
+    "type": "explanation",
+    "source": "`lib/server/pages.ts`; `lib/server/page-publication.ts`; `lib/server/mcp/auth.ts`; `proxy.ts`; K/settings-and-data",
+    "gaps": "Role/action matrix, server checks, project boundaries, token/password/revocation/indexing and attachment inheritance",
+    "illustration": "Localized access diagram and table",
+    "requiresFigures": true,
+    "section": "permissions-and-public-links"
+  },
+  {
+    "workflow": "T03",
+    "article": "architecture-and-data-flows",
+    "outcome": "Understand application Supabase Storage jobs and optional providers",
+    "audiences": [
+      "operator",
+      "integrator"
+    ],
+    "type": "explanation",
+    "source": "D/editions; D/self-hosting-distribution; `lib/server/capabilities.ts`",
+    "gaps": "Useful request/realtime/job paths, durable state, trust/data destinations and edition/configuration differences",
+    "illustration": "Localized architecture diagram",
+    "requiresFigures": true,
+    "section": "architecture-and-data-flows"
+  },
+  {
+    "workflow": "T04",
+    "article": "encryption-and-data-boundaries",
+    "outcome": "Understand protected content and remaining exposure",
+    "audiences": [
+      "member",
+      "operator"
+    ],
+    "type": "explanation",
+    "source": "K/self-hosting; `lib/server/encryption.ts`; D/editions",
+    "gaps": "At-rest versus end-to-end, keys/runtime/metadata, exports/backups and external-model boundaries without publishing audits",
+    "illustration": "Localized encryption boundary diagram",
+    "requiresFigures": true,
+    "section": "encryption-and-data-boundaries"
+  },
+  {
+    "workflow": "T05",
+    "article": "numo",
+    "outcome": "Understand conversation turns tools routines and workers",
+    "audiences": [
+      "integrator",
+      "operator"
+    ],
+    "type": "explanation",
+    "source": "K/agents-and-mcp; D/architecture/numo-persistence; D/architecture/numo-durable-turns",
+    "gaps": "Durable state versus UI projection, owner context, sandbox data access, checkpoints/limits and source freshness",
+    "illustration": "Localized execution/state diagram",
+    "requiresFigures": true,
+    "section": "numo-execution-model"
+  },
+  {
+    "workflow": "T06",
+    "article": "minddy-mcp",
+    "outcome": "Use minddy MCP discovery issue plans pages and routines",
+    "audiences": [
+      "integrator"
+    ],
+    "type": "reference",
+    "source": "`lib/server/mcp/catalog.ts`; `lib/server/mcp/tools.ts`; `lib/server/mcp/page-tools.ts`; `app/llms-full.txt/route.ts`",
+    "gaps": "Supported tools/parameters/scopes/errors, read-before-write, task states, concurrency and sanitized examples tied to released catalog",
+    "illustration": "Text reference; optional localized sequence",
+    "requiresFigures": false,
+    "section": "mcp-tool-reference"
+  },
+  {
+    "workflow": "T07",
+    "article": "api-and-webhooks",
+    "outcome": "Send issues or feedback and receive signed event updates",
+    "audiences": [
+      "integrator"
+    ],
+    "type": "tutorial",
+    "source": "K/integrations; `lib/server/integrations.ts`; `lib/server/integration-auth.ts`; `app/llms-full.txt/route.ts`",
+    "gaps": "Issuance/revocation/scope, HTTP examples, event verification/retries/deduplication/limits and permission errors",
+    "illustration": "Localized sequence diagram plus sanitized code",
+    "requiresFigures": true,
+    "section": "integration-api-and-webhooks"
+  },
+  {
+    "workflow": "T08",
+    "article": "integration-troubleshooting",
+    "outcome": "Recover failed OAuth MCP webhook or Git synchronization",
+    "audiences": [
+      "integrator"
+    ],
+    "type": "troubleshooting",
+    "source": "K/agents-and-mcp; D/github-issue-sync; `lib/server/integration-auth.ts`; `lib/mcp-authorization.ts`",
+    "gaps": "Missing/expired scopes, provider prerequisites, diagnostics, outcome-before-retry, callback and unsupported-network errors",
+    "illustration": "New redacted reconnect/error controls",
+    "requiresFigures": false,
+    "section": "integration-troubleshooting"
+  },
+  {
+    "workflow": "A10",
+    "article": "ai-settings-and-usage",
+    "outcome": "Record and transcribe voice, review dictated drafts and apply issue edits",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/ai-elements/dictate-button.tsx`; `app/api/transcribe/route.ts`; `lib/use-issue-dictation.ts`; `components/routines/routine-prompt-field.tsx`",
+    "gaps": "Microphone permissions, entry points, draft versus immediate edits, provider/budget attribution, audio/request limits and recovery",
+    "illustration": "Text: ordered gestures and recovery checks are sufficient",
+    "requiresFigures": false,
+    "section": "voice-dictation"
+  },
+  {
+    "workflow": "A11",
+    "article": "issues",
+    "outcome": "Export accessible issues as CSV and verify scope and completeness before re-import",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`components/export-issues-dialog.tsx`; `components/app-shell-chrome.tsx`; `app/api/me/issues/export/route.ts`; `lib/export/issues-csv.ts`",
+    "gaps": "Command entry point, project/status scope, default exclusions, 20000-row cap, truncation, data privacy and re-import limitations",
+    "illustration": "Text: explicit scope and status instructions are sufficient",
+    "requiresFigures": false,
+    "section": "export-issues"
+  }
+]

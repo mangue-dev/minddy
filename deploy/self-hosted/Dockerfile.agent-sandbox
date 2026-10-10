@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1.7
+
+# Code workers bootstrap the pinned OpenCode runtime with npm. The application
+# image deliberately omits package managers and cannot serve as this image.
+FROM node:24-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates git libpcre2-8-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 minddy \
+    && useradd --uid 10001 --gid minddy --create-home --shell /usr/sbin/nologin minddy
+
+ENV HOME=/vercel/home
+ENV npm_config_cache=/vercel/npm-cache
+USER minddy
+WORKDIR /
+
+CMD ["node", "-e", "setInterval(() => {}, 2147483647)"]

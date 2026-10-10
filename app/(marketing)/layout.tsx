@@ -2,6 +2,7 @@ import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { DesktopMarketingRedirect } from "@/components/desktop-marketing-redirect";
 import { AcquisitionContext } from "@/components/marketing/acquisition-context";
+import { MarketingChrome } from "@/components/marketing/marketing-chrome";
 
 /** Public marketing chrome. The root PostHog integration measures page traffic. */
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -10,9 +11,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       {/* The desktop shell returns to the app instead of showing the public site. */}
       <DesktopMarketingRedirect />
       <AcquisitionContext />
-      <MarketingNav />
-      <main className="flex-1">{children}</main>
-      <MarketingFooter />
+      <MarketingChrome navigation={<MarketingNav />} footer={<MarketingFooter />}>{children}</MarketingChrome>
     </div>
   );
 }

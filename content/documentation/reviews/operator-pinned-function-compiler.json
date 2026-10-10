@@ -1,0 +1,18 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "sourceRelease": "v0.11.0",
+  "adaptation": "Isolated copy uses functions-bundle.json from public candidate fdaff66b145396b884fa5cbf1992522d7c7998f9 with jose6.2.12 frozen dependency; original tagged source/backend untouched",
+  "pinFileSHA256": "7fae1ec49c6a75fcd34d3fae7513e140eead1c2146753f2a4200f30eeb2bf202",
+  "joseVersion": "6.2.12",
+  "compileExitCode": 0,
+  "outputCreated": true,
+  "runtimeActivated": false,
+  "identity": {
+    "upstreamMainSha256": "5fb63babd5ebe7fda6f2e541fa9b4e3513a7514f8fa511ad7fdb37f46d2b9a95",
+    "importSpecifier": "jsr:@panva/jose@6",
+    "joseVersion": "6.2.12",
+    "image": "supabase/edge-runtime:v1.74.0",
+    "sha256": "2ba03b3639d0b27e8f632e968ed72dd2ad06bff425dfdf2065187a8eff32b288"
+  }
+}

@@ -12,6 +12,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "mangu
 import { cn } from "mangue-ui/lib/utils";
 import { MinddyLogo } from "@/components/minddy-logo";
 import styles from "./nav-wordmark.module.css";
+import { WordmarkLetters } from "./wordmark-letters";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -44,7 +45,7 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "feedback", href: "/#feedback" },
   { key: "more", href: "/#more" },
   { key: "mcp", href: "/mcp" },
-  { key: "selfHosting", href: "/self-hosting" },
+  { key: "selfHosting", href: "/self-hosting/install" },
   // The desktop app is last because it describes where Minddy runs rather than
   // what it does. It remains discoverable without displacing the product story.
   { key: "download", href: "/download" },
@@ -52,6 +53,7 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
 
 /** Direct navigation complements the product menu with an overview and pricing. */
 const LINKS: ReadonlyArray<NavLink> = [
+  { href: "/docs", key: "navDocumentation" },
   { href: "/#workspace", key: "navHowItWorks" },
   { href: "/pricing", key: "navPricing" },
   { href: "https://github.com/mangue-dev/minddy", key: "navOpenSource", external: true },
@@ -60,21 +62,12 @@ const LINKS: ReadonlyArray<NavLink> = [
 const MOBILE_ROW =
   "flex min-h-11 items-center justify-between gap-4 rounded-lg py-2 text-xl leading-snug tracking-tight transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring";
 
-const WORDMARK_COLORS = ["#cbd9e6", "#ccdccb", "#e7d3c4", "#c9dedd", "#c9dedd", "#dfd9b8"];
-
 function NavLogo() {
   return (
     <span className={cn("flex items-center gap-2", styles.brand)}>
       <MinddyLogo className={cn("h-7 w-auto text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
       <span className="font-display text-lg font-semibold tracking-tight" aria-hidden>
-        {Array.from("minddy", (letter, index) => (
-          <span key={index} className={styles.letter} style={{
-            "--letter-color": WORDMARK_COLORS[index],
-            "--letter-index": index,
-          } as React.CSSProperties}>
-            {letter}
-          </span>
-        ))}
+        <WordmarkLetters text="minddy" />
       </span>
     </span>
   );

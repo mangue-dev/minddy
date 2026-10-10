@@ -1,0 +1,380 @@
+[
+  {
+    "locale": "en",
+    "article": "accounts",
+    "figure": "account-access-steps",
+    "src": "/documentation/en/auth-signup.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "en",
+    "article": "accounts",
+    "figure": "account-access-login",
+    "src": "/documentation/en/auth-login.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "en",
+    "article": "accounts",
+    "figure": "account-security-enrollment-workflow",
+    "src": "/documentation/en/account-security-enrollment-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "en",
+    "article": "accounts",
+    "figure": "account-recovery-steps",
+    "src": "/documentation/en/auth-recovery.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "en",
+    "article": "choose-an-instance",
+    "figure": "responsibilities",
+    "src": "/documentation/en/responsibilities.svg",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "en",
+    "article": "feedback",
+    "figure": "feedback-to-issue-workflow",
+    "src": "/documentation/en/feedback-to-issue-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "fr",
+    "article": "accounts",
+    "figure": "account-access-steps",
+    "src": "/documentation/fr/auth-signup.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "fr",
+    "article": "accounts",
+    "figure": "account-access-login",
+    "src": "/documentation/fr/auth-login.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "fr",
+    "article": "accounts",
+    "figure": "account-security-enrollment-workflow",
+    "src": "/documentation/fr/account-security-enrollment-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "fr",
+    "article": "accounts",
+    "figure": "account-recovery-steps",
+    "src": "/documentation/fr/auth-recovery.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "fr",
+    "article": "choose-an-instance",
+    "figure": "responsibilities",
+    "src": "/documentation/fr/responsibilities.svg",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "fr",
+    "article": "feedback",
+    "figure": "feedback-to-issue-workflow",
+    "src": "/documentation/fr/feedback-to-issue-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "de",
+    "article": "accounts",
+    "figure": "account-access-steps",
+    "src": "/documentation/de/auth-signup.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "de",
+    "article": "accounts",
+    "figure": "account-access-login",
+    "src": "/documentation/de/auth-login.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "de",
+    "article": "accounts",
+    "figure": "account-security-enrollment-workflow",
+    "src": "/documentation/de/account-security-enrollment-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "de",
+    "article": "accounts",
+    "figure": "account-recovery-steps",
+    "src": "/documentation/de/auth-recovery.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "de",
+    "article": "choose-an-instance",
+    "figure": "responsibilities",
+    "src": "/documentation/de/responsibilities.svg",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "de",
+    "article": "feedback",
+    "figure": "feedback-to-issue-workflow",
+    "src": "/documentation/de/feedback-to-issue-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "es",
+    "article": "accounts",
+    "figure": "account-access-steps",
+    "src": "/documentation/es/auth-signup.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "es",
+    "article": "accounts",
+    "figure": "account-access-login",
+    "src": "/documentation/es/auth-login.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "es",
+    "article": "accounts",
+    "figure": "account-security-enrollment-workflow",
+    "src": "/documentation/es/account-security-enrollment-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "es",
+    "article": "accounts",
+    "figure": "account-recovery-steps",
+    "src": "/documentation/es/auth-recovery.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "es",
+    "article": "choose-an-instance",
+    "figure": "responsibilities",
+    "src": "/documentation/es/responsibilities.svg",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "es",
+    "article": "feedback",
+    "figure": "feedback-to-issue-workflow",
+    "src": "/documentation/es/feedback-to-issue-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "it",
+    "article": "accounts",
+    "figure": "account-access-steps",
+    "src": "/documentation/it/auth-signup.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "it",
+    "article": "accounts",
+    "figure": "account-access-login",
+    "src": "/documentation/it/auth-login.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "it",
+    "article": "accounts",
+    "figure": "account-security-enrollment-workflow",
+    "src": "/documentation/it/account-security-enrollment-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "it",
+    "article": "accounts",
+    "figure": "account-recovery-steps",
+    "src": "/documentation/it/auth-recovery.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "it",
+    "article": "choose-an-instance",
+    "figure": "responsibilities",
+    "src": "/documentation/it/responsibilities.svg",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "it",
+    "article": "feedback",
+    "figure": "feedback-to-issue-workflow",
+    "src": "/documentation/it/feedback-to-issue-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "accounts",
+    "figure": "account-access-steps",
+    "src": "/documentation/pt-BR/auth-signup.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "accounts",
+    "figure": "account-access-login",
+    "src": "/documentation/pt-BR/auth-login.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "accounts",
+    "figure": "account-security-enrollment-workflow",
+    "src": "/documentation/pt-BR/account-security-enrollment-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "accounts",
+    "figure": "account-recovery-steps",
+    "src": "/documentation/pt-BR/auth-recovery.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "choose-an-instance",
+    "figure": "responsibilities",
+    "src": "/documentation/pt-BR/responsibilities.svg",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "feedback",
+    "figure": "feedback-to-issue-workflow",
+    "src": "/documentation/pt-BR/feedback-to-issue-workflow.png",
+    "reason": "Redundant basic form, masked enrollment, duplicate moderation capture, or responsibilities already covered by the article table."
+  },
+  {
+    "locale": "en",
+    "article": "numo",
+    "figure": "recover-numo-work-workflow",
+    "src": "/documentation/en/recover-numo-work-workflow.png",
+    "reason": "The plain-text partial response repeats the recovery guidance; keep branch, checkpoint and uncertain-write checks in searchable text."
+  },
+  {
+    "locale": "en",
+    "article": "integration-troubleshooting",
+    "figure": "integration-troubleshooting-flow",
+    "src": "/documentation/en/integration-troubleshooting-error.png",
+    "reason": "A generic loading error and retry button add no context beyond the troubleshooting instructions."
+  },
+  {
+    "locale": "en",
+    "article": "instance-administration",
+    "figure": "instance-administration-users",
+    "src": "/documentation/en/instance-administration-users.png",
+    "reason": "The empty account lookup form does not explain more than the administrator prerequisites and panel description."
+  },
+  {
+    "locale": "fr",
+    "article": "numo",
+    "figure": "recover-numo-work-workflow",
+    "src": "/documentation/fr/recover-numo-work-workflow.png",
+    "reason": "The plain-text partial response repeats the recovery guidance; keep branch, checkpoint and uncertain-write checks in searchable text."
+  },
+  {
+    "locale": "fr",
+    "article": "integration-troubleshooting",
+    "figure": "integration-troubleshooting-flow",
+    "src": "/documentation/fr/integration-troubleshooting-error.png",
+    "reason": "A generic loading error and retry button add no context beyond the troubleshooting instructions."
+  },
+  {
+    "locale": "fr",
+    "article": "instance-administration",
+    "figure": "instance-administration-users",
+    "src": "/documentation/fr/instance-administration-users.png",
+    "reason": "The empty account lookup form does not explain more than the administrator prerequisites and panel description."
+  },
+  {
+    "locale": "de",
+    "article": "numo",
+    "figure": "recover-numo-work-workflow",
+    "src": "/documentation/de/recover-numo-work-workflow.png",
+    "reason": "The plain-text partial response repeats the recovery guidance; keep branch, checkpoint and uncertain-write checks in searchable text."
+  },
+  {
+    "locale": "de",
+    "article": "integration-troubleshooting",
+    "figure": "integration-troubleshooting-flow",
+    "src": "/documentation/de/integration-troubleshooting-error.png",
+    "reason": "A generic loading error and retry button add no context beyond the troubleshooting instructions."
+  },
+  {
+    "locale": "de",
+    "article": "instance-administration",
+    "figure": "instance-administration-users",
+    "src": "/documentation/de/instance-administration-users.png",
+    "reason": "The empty account lookup form does not explain more than the administrator prerequisites and panel description."
+  },
+  {
+    "locale": "es",
+    "article": "numo",
+    "figure": "recover-numo-work-workflow",
+    "src": "/documentation/es/recover-numo-work-workflow.png",
+    "reason": "The plain-text partial response repeats the recovery guidance; keep branch, checkpoint and uncertain-write checks in searchable text."
+  },
+  {
+    "locale": "es",
+    "article": "integration-troubleshooting",
+    "figure": "integration-troubleshooting-flow",
+    "src": "/documentation/es/integration-troubleshooting-error.png",
+    "reason": "A generic loading error and retry button add no context beyond the troubleshooting instructions."
+  },
+  {
+    "locale": "es",
+    "article": "instance-administration",
+    "figure": "instance-administration-users",
+    "src": "/documentation/es/instance-administration-users.png",
+    "reason": "The empty account lookup form does not explain more than the administrator prerequisites and panel description."
+  },
+  {
+    "locale": "it",
+    "article": "numo",
+    "figure": "recover-numo-work-workflow",
+    "src": "/documentation/it/recover-numo-work-workflow.png",
+    "reason": "The plain-text partial response repeats the recovery guidance; keep branch, checkpoint and uncertain-write checks in searchable text."
+  },
+  {
+    "locale": "it",
+    "article": "integration-troubleshooting",
+    "figure": "integration-troubleshooting-flow",
+    "src": "/documentation/it/integration-troubleshooting-error.png",
+    "reason": "A generic loading error and retry button add no context beyond the troubleshooting instructions."
+  },
+  {
+    "locale": "it",
+    "article": "instance-administration",
+    "figure": "instance-administration-users",
+    "src": "/documentation/it/instance-administration-users.png",
+    "reason": "The empty account lookup form does not explain more than the administrator prerequisites and panel description."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "numo",
+    "figure": "recover-numo-work-workflow",
+    "src": "/documentation/pt-BR/recover-numo-work-workflow.png",
+    "reason": "The plain-text partial response repeats the recovery guidance; keep branch, checkpoint and uncertain-write checks in searchable text."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "integration-troubleshooting",
+    "figure": "integration-troubleshooting-flow",
+    "src": "/documentation/pt-BR/integration-troubleshooting-error.png",
+    "reason": "A generic loading error and retry button add no context beyond the troubleshooting instructions."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "instance-administration",
+    "figure": "instance-administration-users",
+    "src": "/documentation/pt-BR/instance-administration-users.png",
+    "reason": "The empty account lookup form does not explain more than the administrator prerequisites and panel description."
+  }
+]

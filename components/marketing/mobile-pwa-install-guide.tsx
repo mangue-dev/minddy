@@ -145,10 +145,10 @@ function IosShareSheetVisual({ copy }: { copy: MobileInstallGuideCopy }) {
 function IosAddVisual({ copy }: { copy: MobileInstallGuideCopy }) {
   return (
     <div aria-hidden className="h-64 bg-[#f2f2f7] px-3 pt-3">
-      <div className="flex items-center justify-between text-xs font-medium text-[#007aff]">
-        <span>{copy.uiCancel}</span>
-        <span className="text-sm font-semibold text-[#1c1c1e]">{copy.uiAddToHome}</span>
-        <span className="font-semibold">{copy.uiAdd}</span>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-xs font-medium text-[#007aff]">
+        <span className="whitespace-nowrap">{copy.uiCancel}</span>
+        <span className="text-center text-sm leading-tight font-semibold text-[#1c1c1e]">{copy.uiAddToHome}</span>
+        <span className="whitespace-nowrap font-semibold">{copy.uiAdd}</span>
       </div>
       <div className="mt-5 flex items-center gap-3">
         <Image

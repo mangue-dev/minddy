@@ -1,0 +1,8 @@
+{
+  "previousMacOSBindDownload": "HTTP 500 ENOTSUP extended attributes",
+  "blankLinuxVolumeChecked": true,
+  "sameArchiveExtractedWithXattrs": true,
+  "linuxVolume": "min664-restored-storage-linux",
+  "storageHealthy": true,
+  "adaptedProfile": true
+}

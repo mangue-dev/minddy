@@ -12,13 +12,13 @@ import { SectionHeading } from "./section-heading";
 
 /** Two hosting choices share one source code story and one aligned layout. */
 export async function SectionEditions() {
-  const [t, locale] = await Promise.all([getTranslations("Landing"), getLocale()]);
+  const [t, locale, td] = await Promise.all([getTranslations("Landing"), getLocale(), getTranslations("Documentation")]);
   const href = (path: string) => localizedHref(path, locale as Locale);
   const editions = [
     { title: t("cloudTitle"), body: t("cloudBody"), icon: CloudIcon, tone: CARD_TONES.sky,
       points: [t("cloudPointOne"), t("cloudPointTwo"), t("cloudPointThree")], href: href("/pricing"), cta: t("cloudCta") },
     { title: t("selfHostedTitle"), body: t("selfHostedBody"), icon: Server, tone: CARD_TONES.lavender,
-      points: [t("selfHostedPointOne"), t("selfHostedPointTwo"), t("selfHostedPointThree")], href: href("/self-hosting"), cta: t("selfHostedCta") },
+      points: [t("selfHostedPointOne"), t("selfHostedPointTwo"), t("selfHostedPointThree")], href: href("/self-hosting/install"), cta: t("selfHostedCta"), referenceHref: href("/docs/installation") },
   ];
   return (
     <section id="editions" className="scroll-mt-24 bg-[#f6f3ef] px-4 py-16 sm:px-6 sm:py-24 dark:bg-[#211f20]">
@@ -36,6 +36,9 @@ export async function SectionEditions() {
               <Link href={edition.href} className="mt-auto inline-flex min-h-12 items-center justify-between gap-4 rounded-lg border border-current/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current dark:hover:bg-black/10">
                 {edition.cta}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
               </Link>
+              {edition.referenceHref && <Link href={edition.referenceHref} prefetch={false} className="mt-3 inline-flex min-h-11 w-fit items-center rounded text-sm underline underline-offset-4 opacity-80 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
+                {td("installReference")}
+              </Link>}
             </article>
           ))}
         </div>

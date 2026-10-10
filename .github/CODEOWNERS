@@ -17,4 +17,8 @@
 /desktop/package.json @mangue-dev
 /desktop/package-lock.json @mangue-dev
 /scripts/ @mangue-dev
+/content/documentation/ @mangue-dev
+/public/documentation/ @mangue-dev
+/components/documentation/ @mangue-dev
+/lib/server/documentation.ts @mangue-dev
 /supabase/migrations/ @mangue-dev

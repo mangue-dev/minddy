@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-08",
+  "reviewer": "agent:/root/operator_documentation",
+  "profile": "Local candidate; disposable demonstration project; actual owner/member/anonymous HTTP requests",
+  "requests": [
+    {
+      "name": "Member reads board settings",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Member cannot disable board",
+      "status": 403,
+      "expected": 403
+    },
+    {
+      "name": "Anonymous team API rejected",
+      "status": 401,
+      "expected": 401
+    },
+    {
+      "name": "Protect only new demonstration page",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Keep protected page selected in board configuration",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Protected selected page title absent from anonymous board tabs",
+      "passed": true
+    },
+    {
+      "name": "Restore demo page publication",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Disable demo board",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Disabled anonymous board returns 404",
+      "status": 404,
+      "expected": 404
+    },
+    {
+      "name": "Restore demo board after boundary test",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Linked issue status follows todo as planned",
+      "passed": true
+    },
+    {
+      "name": "Temporarily make own demo feedback private",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Private post hidden from anonymous visitor",
+      "status": 404,
+      "expected": 404
+    },
+    {
+      "name": "Restore own demo feedback public",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Create distinct local duplicate",
+      "status": 201,
+      "expected": 201
+    },
+    {
+      "name": "Merge local duplicate into canonical",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Duplicate visitor route redirects to canonical",
+      "status": 308,
+      "targetMatchesCanonical": true
+    },
+    {
+      "name": "Undo local merge",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "name": "Trash disposable duplicate after undo",
+      "status": 200,
+      "expected": 200
+    }
+  ],
+  "notExecuted": [
+    "Email code delivery",
+    "External SSO provider",
+    "Paid AI review",
+    "Push or external repository writes"
+  ],
+  "publicationApproved": false
+}

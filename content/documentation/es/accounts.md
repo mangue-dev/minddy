@@ -1,0 +1,250 @@
+---
+{
+  "id": "accounts",
+  "locale": "es",
+  "title": "Cuentas",
+  "summary": "Crea y protege tu cuenta, recupera el acceso, cambia tus preferencias y conoce las consecuencias de eliminarla.",
+  "topic": "Primeros pasos",
+  "type": "guide",
+  "audiences": [
+    "member"
+  ],
+  "workflows": [
+    "S02",
+    "A02",
+    "S03",
+    "A01",
+    "A09"
+  ],
+  "visibility": "public",
+  "status": "published",
+  "revision": 7,
+  "sourceRevision": 7,
+  "owner": "@mangue-dev",
+  "updatedAt": "2026-10-09",
+  "compatibility": {
+    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+    "editions": [
+      "Cloud",
+      "self-hosted"
+    ],
+    "profiles": [
+      "web",
+      "mobile",
+      "desktop"
+    ],
+    "evidence": [
+      "app/(auth)/signup/page.tsx",
+      "components/auth/signup-wizard.tsx",
+      "lib/signup-wizard.ts",
+      "lib/password-policy.ts",
+      "app/(auth)/login/page.tsx",
+      "app/auth/confirm/page.tsx",
+      "components/settings/account-security-section.tsx",
+      "app/api/account/mfa/route.ts",
+      "app/api/account/mfa/recovery-codes/route.ts",
+      "app/api/account/mfa/recover/route.ts",
+      "lib/server/mfa.ts",
+      "content/documentation/reviews/mfa-enrollment-capture-candidates.json",
+      "app/(auth)/reset-password/page.tsx",
+      "docs/self-hosting-auth.md",
+      "content/knowledge/settings-and-data.md",
+      "components/settings/account-profile-section.tsx",
+      "components/settings/account-preferences-section.tsx",
+      "app/api/me/avatar/route.ts",
+      "lib/server/avatar-seeds.ts",
+      "components/settings/account-analytics-section.tsx",
+      "components/settings/account-data-section.tsx",
+      "app/api/account/deletion-preview/route.ts",
+      "app/api/account/route.ts",
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+    ]
+  },
+  "review": {
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
+    "date": "2026-10-09"
+  },
+  "related": [
+    "choose-an-instance",
+    "projects",
+    "authentication-and-email",
+    "applications",
+    "automation-settings",
+    "transfer-between-instances"
+  ],
+  "aliases": [
+    "account-access",
+    "account-security",
+    "account-recovery",
+    "profile-and-preferences",
+    "settings-and-data",
+    "privacy-and-account-deletion"
+  ],
+  "tags": [
+    "Crear una cuenta e iniciar sesión",
+    "Proteger la cuenta con un segundo factor",
+    "Recuperar el acceso a tu cuenta",
+    "Cambiar perfil y preferencias",
+    "Controlar analítica y eliminar una cuenta"
+  ],
+  "figures": [
+    {
+      "id": "account-security-workflow",
+      "kind": "screenshot",
+      "src": "/documentation/es/account-security-workflow.png",
+      "alt": "Tarjeta de autenticación de dos factores con botón de activación.",
+      "caption": "Empieza aquí, verifica después el autenticador y guarda los códigos de recuperación de forma privada.",
+      "revision": 7,
+      "reviewed": true,
+      "capturedAt": "2026-10-09",
+      "viewport": [
+        816,
+        227
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "profile-and-preferences-workflow",
+      "kind": "screenshot",
+      "src": "/documentation/es/profile-and-preferences-workflow.png",
+      "alt": "Controles del perfil para avatar, nombre de usuario y correo de solo lectura.",
+      "caption": "Guarda los cambios del perfil tras validarlos; el correo sigue siendo de solo lectura.",
+      "revision": 7,
+      "reviewed": true,
+      "capturedAt": "2026-10-09",
+      "viewport": [
+        816,
+        416
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "profile-and-preferences-preferences-workflow",
+      "kind": "screenshot",
+      "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
+      "alt": "Selector de idioma y controles de tema claro, oscuro y del sistema.",
+      "caption": "El idioma de la cuenta se configura por separado del idioma del sitio público.",
+      "revision": 7,
+      "reviewed": true,
+      "capturedAt": "2026-10-09",
+      "viewport": [
+        816,
+        212
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "privacy-and-account-deletion-workflow",
+      "kind": "screenshot",
+      "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
+      "alt": "Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.",
+      "caption": "Lee la vista previa y exporta los datos que quieras conservar antes de abrir la confirmación.",
+      "revision": 7,
+      "reviewed": true,
+      "capturedAt": "2026-10-09",
+      "viewport": [
+        816,
+        231
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    }
+  ],
+  "requiredFigures": [
+    "account-security-workflow",
+    "profile-and-preferences-workflow",
+    "profile-and-preferences-preferences-workflow",
+    "privacy-and-account-deletion-workflow"
+  ]
+}
+---
+
+Cada cuenta pertenece a la instancia en la que te registraste. Aquí puedes gestionar el acceso, la autenticación de dos factores, la recuperación y tus preferencias. Antes de eliminarla, revisa la exportación de datos y las consecuencias para tus proyectos.
+
+## Crear una cuenta e iniciar sesión {#account-access}
+
+Abre la pantalla de inicio de sesión o registro en la instancia que quieres utilizar. Cloud y otra instancia autoalojada tienen cuentas separadas. Los métodos de acceso disponibles y la posibilidad de registrarse dependen de la configuración de autenticación de la instancia.
+
+Para registrarte por email, introduce tu dirección y continúa al paso de identidad. Escribe tu nombre completo; no puede estar vacío ni contener solo espacios. También puedes elegir un avatar. Continúa al paso de contraseña, introduce una de al menos ocho caracteres con una minúscula (a–z), una mayúscula (A–Z) y un dígito, y repítela en el campo de confirmación. Envía este último paso para crear la cuenta. Abandonar los pasos anteriores no crea ninguna cuenta. Si es necesario confirmar el email, abre el mensaje enviado por esa instancia. Sigue su enlace y pulsa el botón de confirmación en la página que se abre. Abrir el enlace no basta: minddy exige esa acción deliberada antes de consumir el token de email.
+
+Vuelve a la aplicación que quieres utilizar e inicia sesión. Una cuenta recién autenticada puede crear su propio proyecto o aceptar una invitación. Conocer la URL de un proyecto no concede la condición de miembro.
+
+
+### Cerrar sesión y comprobar el correo que falta {#session-and-mail}
+
+Abre el menú de la cuenta, elige cerrar sesión y confirma. En la aplicación de escritorio, cerrar una pestaña o ventana no equivale a cerrar sesión. Utiliza el menú de la cuenta si quieres terminar la sesión.
+
+Si el correo no llega, comprueba la dirección, la carpeta de spam y la identidad de la instancia. El operador de una instancia autoalojada debe haber configurado un envío de correo de Auth que funcione; el correo opcional de notificaciones de la aplicación y la confirmación de Auth son funciones distintas. Una página de confirmación caducada permite volver al inicio de sesión para solicitar un enlace nuevo. No reenvíes enlaces de confirmación o recuperación como prueba para diagnosticar un problema: autorizan el acceso a la cuenta.
+
+
+## Proteger la cuenta con un segundo factor {#account-security}
+
+Abre la sección Seguridad en la configuración de la cuenta y activa la autenticación de dos factores. El segundo factor también se aplica al iniciar sesión mediante Google o GitHub; la autenticación del proveedor no lo sustituye.
+
+1. Escanea el código QR con un autenticador TOTP o introduce manualmente la clave de configuración mostrada. Nunca incluyas ni el código QR ni la clave en una captura.
+2. Introduce el código actual de seis dígitos y confirma. Si ha caducado, prueba el siguiente. Después de demasiados intentos, espera antes de volver a intentarlo.
+3. Guarda los códigos de recuperación en un lugar protegido al que puedas acceder sin el teléfono. Cada código funciona una sola vez y la lista solo se muestra una vez. Confirma que los has guardado antes de terminar.
+
+La activación actualiza la sesión actual e intenta cerrar las demás sesiones. Si se solicita una nueva autenticación después de aceptar el código, vuelve a iniciar sesión y sigue las indicaciones mostradas.
+
+![Tarjeta de autenticación de dos factores con botón de activación.](/documentation/es/account-security-workflow.png)
+
+### Recuperación y cambios {#recovery}
+
+Si no tienes el teléfono, utiliza al iniciar sesión uno de los códigos de recuperación que guardaste. Usarlo desactiva la autenticación de dos factores e invalida los códigos restantes. Una vez dentro, configura de nuevo el autenticador y guarda los nuevos códigos de recuperación. Este proceso no garantiza que el soporte humano pueda restaurar la cuenta.
+
+Sustituir los códigos de recuperación invalida la lista anterior. Tanto la sustitución como la desactivación voluntaria requieren las comprobaciones de autenticación reciente del servidor. Lee la confirmación: al desactivar la función, el factor adicional deja de solicitarse, incluso al entrar por Google o GitHub.
+
+
+## Recuperar el acceso a tu cuenta {#account-recovery}
+
+En la pantalla de acceso de la instancia correcta, utiliza la recuperación de contraseña e introduce el correo asociado a tu cuenta. Abre el mensaje de restablecimiento, sigue el enlace y confirma la acción. Introduce la nueva contraseña en la pantalla de restablecimiento y envíala. Comprueba después que puedas iniciar sesión en la misma instancia.
+
+Un enlace puede caducar o dejar de tener una sesión activa. La pantalla de restablecimiento identifica esa situación y permite solicitar otro enlace. Empieza desde un mensaje nuevo en lugar de volver a intentar un marcador antiguo. No envíes el enlace, las cookies ni la contraseña al servicio de asistencia.
+
+
+### MFA y acceso sin resolver {#mfa-recovery}
+
+Si la autenticación de dos factores está activada, restablecer la contraseña no elimina ese requisito. Utiliza tu aplicación de autenticación. También puedes usar un código de recuperación guardado al activar MFA; su uso desactiva MFA. Trata los códigos como secretos y vuelve a configurar MFA en los ajustes de seguridad cuando recuperes el acceso.
+
+Si no dispones ni del segundo factor ni de un código de recuperación, contacta con el operador de la instancia por su canal de asistencia. Incluye la dirección de la instancia y el fallo que ves, sin tokens de autenticación ni contenido privado del proyecto. Si falta el correo de recuperación, pide al operador que verifique las URL de redirección de Auth y el envío SMTP. No crees una segunda cuenta suponiendo que heredará los proyectos o conexiones de la original.
+
+## Cambiar perfil y preferencias {#profile-and-preferences}
+
+Abre los ajustes desde el menú de la cuenta. En el perfil, escribe un nombre que no esté vacío y guárdalo. El correo es de solo lectura. Genera otro avatar o sube una imagen con los controles correspondientes. Espera el resultado y comprueba el avatar en un comentario o en la lista de miembros; es el mismo en todos los proyectos y conversaciones. Si se rechaza un archivo, sigue el mensaje de validación en vez de subirlo repetidamente.
+
+La imagen fuente no debe superar 10 MiB. El servidor comprueba que la imagen pueda leerse, aplica su orientación y la recorta por el centro para crear un avatar WebP de 256 × 256 píxeles.
+
+![Controles del perfil para avatar, nombre de usuario y correo de solo lectura.](/documentation/es/profile-and-preferences-workflow.png)
+
+### Elegir el comportamiento {#preferences}
+
+Selecciona idioma y tema en preferencias y comprueba otra página. El idioma de cuenta gobierna el producto autenticado; el sitio público tiene su propio selector. El tema se guarda en la cuenta entre dispositivos.
+
+Elige el atajo de envío en los ajustes de teclado. Se aplica a comentarios y Numo. Usa el botón de enviar si la plataforma intercepta el atajo; las teclas modificadoras varían según el sistema. Preferencias como asignación automática y estado de incidencias creadas por Numo también pertenecen a la cuenta y no cambian los ajustes de otros miembros.
+
+![Selector de idioma y controles de tema claro, oscuro y del sistema.](/documentation/es/profile-and-preferences-preferences-workflow.png)
+
+## Controlar analítica y eliminar una cuenta {#privacy-and-account-deletion}
+
+Cuando hay un servicio de analítica configurado, los ajustes de la cuenta muestran su interruptor de consentimiento y un enlace a la política de cookies. Desactivarlo cambia inmediatamente el consentimiento de medición en este dispositivo y guarda la elección en la cuenta. En otro dispositivo puede seguir aplicándose una elección local ya existente. Si no se ha configurado ningún servicio de analítica, esta sección no aparece.
+
+El consentimiento para analítica se distingue de los datos necesarios para utilizar la cuenta. Consulta la política de privacidad de la instancia y los proveedores externos que hayas activado. En una instalación self-hosted, la configuración y las políticas del operador determinan los destinos de los servicios; desactivar la analítica no elimina las integraciones de IA ni de Git.
+
+
+![Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.](/documentation/es/privacy-and-account-deletion-workflow.png)
+
+### Revisar la eliminación antes de confirmar {#deletion}
+
+Antes de eliminar la cuenta, exporta los datos que necesites conservar desde la sección de datos. Lee la vista previa de tus proyectos, los miembros afectados, los tickets, los comentarios y la suscripción activa. Resuelve antes de confirmar las consecuencias para otras personas que participan en tus proyectos.
+
+Abre la confirmación de eliminación solo cuando estés preparado. Escribe el correo de tu cuenta y, si tienes una cuenta con contraseña, introduce también esa contraseña. Las cuentas sin contraseña necesitan un inicio de sesión reciente. Si se exige volver a autenticarte, sigue esa indicación antes de repetir la solicitud. Una eliminación completada cierra la sesión y vuelve al sitio público. Esta acción no envía la cuenta a una papelera recuperable. Mantén las exportaciones privadas y resuelve cualquier cuestión pendiente de suscripción o proveedores desde los controles de facturación y de servicio.

@@ -2,10 +2,13 @@
 
 ## Language
 
-- All new comments, docstrings, test descriptions, documentation, configuration
-  prose, and developer-facing CLI messages must be written in idiomatic English.
+- All new comments, docstrings, test descriptions, internal documentation,
+  configuration prose, and developer-facing CLI messages must be written in
+  idiomatic English.
 - Do not add French prose to application code, tests, documentation, scripts, or
-  configuration. The only normal French catalog is `messages/fr.json`.
+  configuration. French runtime copy belongs in `messages/fr.json`; official
+  reader documentation and its assets use their declared locale under
+  `content/documentation/<locale>/` and `public/documentation/<locale>/`.
 - Preserve intentional runtime translations, language-specific test fixtures,
   locale branches, proper names, legal credits, identifiers, URLs, API values,
   and behavior. Do not translate those into English copies.
@@ -26,6 +29,36 @@ make the exception obvious from its surrounding code or fixture path.
 - Run the smallest relevant test or lint command after source/configuration
   changes.
 - Review `git diff --check` and confirm that excluded paths are untouched.
+
+## Review documentation impact
+
+- Always review documentation impact when modifying code. Add documentation
+  for new features, correct it when behavior changes, and remove obsolete
+  instructions and illustrations when a feature is removed. Complete affected
+  public guides, technical references and internal instructions in the same PR;
+  do not defer documentation to a later release or separate task.
+- Documentation edits are required only when the change affects documented
+  behavior, controls, configuration or contributor workflows. A small fix,
+  refactor, formatting change or test-only PR that leaves documentation accurate
+  needs no documentation edit, new illustration or article review record.
+- Follow the [documentation maintenance contract](content/documentation/README.md#release-maintenance)
+  and [editorial guide](docs/documentation-editorial-guide.md), including their
+  writing, technical inline-code, factual review and illustration rules.
+- Keep the public manual equally complete in `en`, `fr`, `de`, `es`, `it`, and
+  `pt-BR`. Update full translations, localized UI labels, examples, captions,
+  alt text, screenshots and responsive diagrams together. Internal contributor
+  documentation remains English.
+- Every release that changes the desktop version requires a documentation
+  review against the release delta and intended version before freezing the
+  candidate. Update affected articles, illustrations, compatibility and actual
+  review evidence; a version bump or changelog entry alone is insufficient.
+- Run `npm run check:documentation`, `npm run check:knowledge` and
+  `npm run check:owned-english` for documentation changes, and require
+  `npm run check:documentation:release` before publication. Record affected
+  article/workflow/figure IDs and checks when documentation changes. For a PR
+  with no documentation impact, a brief note is sufficient; do not require
+  article IDs or release-wide checks. Avoid cosmetic edits or invented review
+  dates. Unresolved documentation gaps caused by the change block completion.
 
 ## Git workflow (this repository only)
 

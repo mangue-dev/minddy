@@ -1,0 +1,111 @@
+{
+  "author": "agent:/root/operator_documentation",
+  "date": "2026-10-08",
+  "profile": "Actual local candidate UI with real localized demo issues; mobile Chromium viewport and touch emulation, not native iOS/Android installation",
+  "publicationApproved": false,
+  "captures": [
+    {
+      "article": "web-and-mobile",
+      "locale": "en",
+      "output": "public/documentation/en/web-and-mobile-workflow.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "theme": "dark",
+      "sha256": "9090d46f23fced7e0a485b61653bf2dfcb04405a543e14c38271f15f152d38f9",
+      "capturedAt": "2026-10-08",
+      "reviewed": true,
+      "action": "Real responsive issue details at a touch viewport; no native phone or installed PWA claimed",
+      "dialogCount": 1,
+      "horizontalOverflow": false
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "fr",
+      "output": "public/documentation/fr/web-and-mobile-workflow.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "theme": "dark",
+      "sha256": "caa088159683d6f7123b90b270451a9c174be3daa117c9c72caf5157991b9c19",
+      "capturedAt": "2026-10-08",
+      "reviewed": true,
+      "action": "Real responsive issue details at a touch viewport; no native phone or installed PWA claimed",
+      "dialogCount": 1,
+      "horizontalOverflow": false
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "de",
+      "output": "public/documentation/de/web-and-mobile-workflow.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "theme": "dark",
+      "sha256": "05e2b12969553f62de4c3ee7ef09c52506928db4228320453d4a813314b7408b",
+      "capturedAt": "2026-10-08",
+      "reviewed": true,
+      "action": "Real responsive issue details at a touch viewport; no native phone or installed PWA claimed",
+      "dialogCount": 1,
+      "horizontalOverflow": false
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "es",
+      "output": "public/documentation/es/web-and-mobile-workflow.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "theme": "dark",
+      "sha256": "46885b8b5e923ebc13737b3c60e767db5bbe75ce35b13ea9e7020e2d7084decf",
+      "capturedAt": "2026-10-08",
+      "reviewed": true,
+      "action": "Real responsive issue details at a touch viewport; no native phone or installed PWA claimed",
+      "dialogCount": 1,
+      "horizontalOverflow": false
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "it",
+      "output": "public/documentation/it/web-and-mobile-workflow.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "theme": "dark",
+      "sha256": "e147c95f05ccd7143cd497605b2b073fb85e89b807761c543e4bad31479b3b14",
+      "capturedAt": "2026-10-08",
+      "reviewed": true,
+      "action": "Real responsive issue details at a touch viewport; no native phone or installed PWA claimed",
+      "dialogCount": 1,
+      "horizontalOverflow": false
+    },
+    {
+      "article": "web-and-mobile",
+      "locale": "pt-BR",
+      "output": "public/documentation/pt-BR/web-and-mobile-workflow.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "theme": "dark",
+      "sha256": "80f61f96a4ef02cf2bf545b184f138c499075ea6c4174040ba6ee2c6b50b7c17",
+      "capturedAt": "2026-10-08",
+      "reviewed": true,
+      "action": "Real responsive issue details at a touch viewport; no native phone or installed PWA claimed",
+      "dialogCount": 1,
+      "horizontalOverflow": false
+    }
+  ],
+  "visualReview": {
+    "reviewer": "agent:/root/operator_documentation",
+    "date": "2026-10-08",
+    "result": "approved-author-visual-review",
+    "humanReview": false,
+    "method": "Viewed all six actual 390\u00d7844 mobile issue panels at original resolution in a contact sheet. Checked full localized title/body, readable fields and close/comment/Numo controls, no horizontal overflow, correct actual dark theme and absence of credentials. Mobile viewport and touch emulation are distinct from a native phone or installed-PWA test."
+  }
+}

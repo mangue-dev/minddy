@@ -1,0 +1,4326 @@
+{
+  "date": "2026-10-09",
+  "method": "Browser capture with transparent margins. Existing screenshot UI pixels are preserved exactly; original capture dates and prose remain unchanged.",
+  "records": [
+    {
+      "src": "/documentation/en/external-minddy-mcp-workflow.png",
+      "sourceSha256": "5a052def9bcd5b936f24b9676389bdb585fd47d672ef154828946a01a2ab0acc",
+      "framedSha256": "e3f8953fd6b4f45c3ddb8529d03062ad5ca11c67509989f5f941d7ce20f61a9b",
+      "viewport": [
+        816,
+        252
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
+      "sourceSha256": "1b49abedd0401aa739154f8d1d6683ec5ee8fbb03485c40bf1744863e49b0443",
+      "framedSha256": "8a40b83b4d58dc5c49a37b619468a0d83c3f9808bd572c43f516692b1bf98fa8",
+      "viewport": [
+        560,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/work-navigation.png",
+      "sourceSha256": "0d800fef402d8056551e64547cf402858e29ff2e2b79bc16a89a2e74d996a9a0",
+      "framedSha256": "3891c11ecf26056fe385a1c683f9caf9b3754585414051e1ef61adaec0ab778e",
+      "viewport": [
+        1488,
+        1128
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/work-search.png",
+      "sourceSha256": "52fea2e0d303020edb453482b29c72632f8f047b15f9fe9f7db46548463d8273",
+      "framedSha256": "6fa8749b0197f49eeabe44c0b17bbfa22cd6b3e71c342bf13e5532fc1cc7bf07",
+      "viewport": [
+        788,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/work-with-numo-workflow.png",
+      "sourceSha256": "b3ca2df7fa75f32439c0dba7e8bf431c1df1372318374001d6c0afac630cb67b",
+      "framedSha256": "ac2f54601038572ea90015e46f3a8ea7ba8ada994d47fd580d471dab758335d4",
+      "viewport": [
+        498,
+        648
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/numo-mcp-connections-workflow.png",
+      "sourceSha256": "4c45b680343bd1ee089273a534a99fbf8b4e2275e570a112561c90f56fecad1b",
+      "framedSha256": "ee09f9e928b9b0f25127cb0237fec3697ceeb4c7b2cb5f1ab1536cd2ab712bd9",
+      "viewport": [
+        816,
+        1314
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
+      "sourceSha256": "7313515641f1c2d2c003abc5559a2cc009df1d57a51dd46cb7b5303ea5f482ee",
+      "framedSha256": "8a8518ddd6421000bc25dded41d933a59670aa844151da15527f99d0e5738644",
+      "viewport": [
+        560,
+        920
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/recover-numo-work-workflow.png",
+      "sourceSha256": "7c58f669c986d619df407693463d22ea6bacf331cede7b9adbc0c0b6af79adb0",
+      "framedSha256": "53925e9d5903aca5424d238e6068510262e5a0306272865f7c062fa73460ab83",
+      "viewport": [
+        912,
+        399
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/reader-objectives.png",
+      "sourceSha256": "a26ac3dd08c50b4a85d808c16bdf6c8056517db8bd4fbc00cc93b26612bd1635",
+      "framedSha256": "972f83a8fc0ac66057087d0301bd9784fb6395f4469b2670db183e6e165249a2",
+      "viewport": [
+        720,
+        330
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/reader-objective-momentum.png",
+      "sourceSha256": "5750110f11c0132f0deea04d6558a9d3298c6ffc8ff9536b34c5060ba12af24c",
+      "framedSha256": "0ff44cf80ec2006dab8cfa426fce833293f10abacd602dfce1eb5481049c5bcc",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/page-create-menu.png",
+      "sourceSha256": "2757f67aa8e4c2b148d449f2a7998e934b7ab6d7dc711986668cede03cfa1c4f",
+      "framedSha256": "8d96891fd0d2e15441d5a2d35e1240ab6d1fff7a8e2352f923addd4d4f911345",
+      "viewport": [
+        264,
+        152
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/page-editor.png",
+      "sourceSha256": "f650275cce0f4e5f50169d8469d0b6fbde97fd15304c2c81790af248b160e32c",
+      "framedSha256": "99872b454e827acc4301d43c33ac18d9711c28971108312bd256fc5f317f0e7e",
+      "viewport": [
+        1178,
+        922
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/page-comments.png",
+      "sourceSha256": "6f084dd2f8c47438cc38fcf1e2c2255de738442ec8cc39f349529fc0c552e532",
+      "framedSha256": "820e7da9a292617e237609e194e4499847f0e51bdc4e33e2f9bd49d855af7159",
+      "viewport": [
+        632,
+        625
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/page-file-states.png",
+      "sourceSha256": "a269214a00a69433b1fe3341ab7a88e85982f51b62be12f38b0ffe383a354d3d",
+      "framedSha256": "64c0e8be635030c47a90bebaa977aefbc2a8ed6023565ac73d676fd68a7df523",
+      "viewport": [
+        1178,
+        466
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/page-history-preview.png",
+      "sourceSha256": "ce43acb0f7972b151db065946c7caaf13316c7d3a689c9e15eb1b03d07ed3a6e",
+      "framedSha256": "649f3b12737110dd7b0ed63948ef3f4086696cfd984453be7a40dbe8d8bff7e9",
+      "viewport": [
+        632,
+        538
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/reader-cycle.png",
+      "sourceSha256": "f556785e41427820552ecfe08a4eb7ee1e4a61659f94945e92150811360adff7",
+      "framedSha256": "30686bd0fa9213b189c7585352cb75e0c6948e27a9987b4c38fda438bb5b7e1c",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/reader-statistics.png",
+      "sourceSha256": "66b8fc63cdae4ba5a9f6f35c6cdbf0196a1de8d6224722d59e163afdff1f9ed6",
+      "framedSha256": "bff6b8e7609004ce40c3e92cf9a54f0b66889352da9d65484a7f97ed8c77aac2",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/project-general.png",
+      "sourceSha256": "f05129e42dc955db758fbf66377561c6282dae6f4b2f808a6d3ad62f6640865b",
+      "framedSha256": "2a5a4b06b796e4ee399a0b63cbdd7e0270e0af8664a5be509b7356dffd2614f7",
+      "viewport": [
+        1178,
+        563
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/project-members.png",
+      "sourceSha256": "8cf391bec201083259125059d693983cd3ececb2155269697639608bb1a7df97",
+      "framedSha256": "d9f35f2ee8970b3b136dc70b9d86f9e3b54ade2ab5f56a5d52ef066717e6421a",
+      "viewport": [
+        1178,
+        503
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/repository-skills-workflow.png",
+      "sourceSha256": "5535c3da841d1e93156cfec12e80196ce531174a76c7b17278a5c69a62da1911",
+      "framedSha256": "9e73ffaf4cbea5e27810d6e82ffed7774d3d5494e5a6ab6024c466332e2d9c14",
+      "viewport": [
+        996,
+        888
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/scheduled-routines-workflow.png",
+      "sourceSha256": "db93bb0b6c2ac3533a1f4001c983fa1e22184034bd931e34a25a0fa7301ea445",
+      "framedSha256": "95968da7279212b7d25c530b387b1eb5b373c067126621988fda7db2f757e63d",
+      "viewport": [
+        1161,
+        1051
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/work-task-notebook.png",
+      "sourceSha256": "45a8b7a523407c6ebce9eaf672fd1c854850e975b5407f5581f5157d7710b8de",
+      "framedSha256": "9c401c33d3e4c6a0b40ff699ccbebe6139fec6b0942e574fccc86c19816773fd",
+      "viewport": [
+        1156,
+        1048
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/transfer-between-instances-workflow.png",
+      "sourceSha256": "566fe3efb449ce535a8cd07cbe69497120a0f787db85775086e774c016ed10f8",
+      "framedSha256": "f1833199fecc358ca272fe115ee979d0fe908ed794293f52fe65d124f4c8009d",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/transfer-between-instances-export-workflow.png",
+      "sourceSha256": "a6a3aa79dde7abe0233e79bd78c5da7ce2f1d9bd6326f8c297d673c0eda70f24",
+      "framedSha256": "8f186c51030a1d2b9c6d415cf9fda40c84d4ffd79289734a4478610c2ab91446",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/en/reader-trash.png",
+      "sourceSha256": "58ecea73062090c973927e5889ad73d5f44d737c5569c3ef7d9221f1f7b07166",
+      "framedSha256": "1e3ba394537033d64f43396efab98c6acce03e2089db02f1ec09b6ec010f5ca5",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/auth-signup.png",
+      "sourceSha256": "9c259997cc9f9ca62dc2b33da7ccb340c51ba8a46c7b5c709e786ae988ea10bf",
+      "framedSha256": "d2c57b511eaa3d9bf1e84d64c80069e76e915847a568b3c00b51dc9f93097776",
+      "viewport": [
+        428,
+        522
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/auth-login.png",
+      "sourceSha256": "172d5eca58c1d1f7e41191d1958af250ce9d5229cee98c457fb31a20a4734767",
+      "framedSha256": "f0c108e65ee4987fd0a3cfec49fc65aa4691b222924ee62304ca9cd3f9e5129b",
+      "viewport": [
+        428,
+        588
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/account-security-workflow.png",
+      "sourceSha256": "e205002bc36abde05dff0ca8f83838113d49bf42ece058f6eb64722a5f725ce8",
+      "framedSha256": "c79ba74e90a661a6207c1fa17d22ad80751eb8bdf74d5056c9f9de27034c9fe8",
+      "viewport": [
+        816,
+        227
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/account-security-enrollment-workflow.png",
+      "sourceSha256": "15baa5f8f200efae4434583a1fde6a520ff547a1fd1bcd8e9f6251d35334c743",
+      "framedSha256": "666caf55825681c267fbeead2bbbd347c6240bd8da341792c048b080ec914dff",
+      "viewport": [
+        816,
+        498
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/auth-recovery.png",
+      "sourceSha256": "44ae84ee4a40c6033b187576fea491bef48d64fa2a6feb38a927ec35b7c11811",
+      "framedSha256": "e3c2933d9544f04692e10186d0387f0d69b7d194da4d91b9dc4f84f758f8f1c4",
+      "viewport": [
+        428,
+        326
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/profile-and-preferences-workflow.png",
+      "sourceSha256": "e8ee28f31f57f2e619ee691c1488c9ca18a9588d53b7365bba416a84e50aec43",
+      "framedSha256": "c66278bb93466c93a12ab7b74c9066962323500c957518fdd326adc51b97617f",
+      "viewport": [
+        816,
+        416
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
+      "sourceSha256": "8cc2e40de4f7ccfe7c93dbfacad9235e25fd98a4ab8c22f7be2569d5b3e3c73b",
+      "framedSha256": "b12b8e0d2ce2a9be9f48e640ac6a0767eb870cc003ccdfab706d2be04394f4cb",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
+      "sourceSha256": "139cee84848da916684756e426797b43dadd43f43130a426daff55bba920ca25",
+      "framedSha256": "0675f3da7ad7f4322238aceadaa505f4b57ac176cf18fffa4e4626bee2ddd755",
+      "viewport": [
+        816,
+        231
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/ai-keys-and-models-workflow.png",
+      "sourceSha256": "2877fd97235a1fd868ba20ac8eb5c8af929f0644ef02f56d1291f00c2f77f5b5",
+      "framedSha256": "8a1bb3dfef954bb7c229d006bbe1b96620db49c0cad98f2c126d49620a1c9448",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/ai-keys-and-models-defaults-workflow.png",
+      "sourceSha256": "50af412ea7ba5792a260ce769f2f15bc53623381e1b84c7d576f398eab801ab0",
+      "framedSha256": "8ecab544346323a7f500301024412dc099f9650a539a52ec03e057e136c9d897",
+      "viewport": [
+        816,
+        217
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/plans-and-ai-usage-workflow.png",
+      "sourceSha256": "8dc692888e039a1287d093e6c3b836e4a37ec547f658c95b920ecc66549abdf5",
+      "framedSha256": "059091ebb1af8962c931f0ec9de686d15ea7b8dcad39de6260622674dc019c13",
+      "viewport": [
+        1154,
+        1766
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/web-and-mobile-workflow.png",
+      "sourceSha256": "caa088159683d6f7123b90b270451a9c174be3daa117c9c72caf5157991b9c19",
+      "framedSha256": "a39c9e2dda83302a825d1c54c3168fd28bb8605e4a9310a7c4e36811cf88a336",
+      "viewport": [
+        438,
+        892
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/install-the-pwa-workflow.png",
+      "sourceSha256": "a5c8233133ad7f845369f9a8186d6e2fec97116557de22a87b22443213b0a9ad",
+      "framedSha256": "3388d98233b6ad55e05d476a00bb36652e80c39d5f00619ec247866b0f07d5ea",
+      "viewport": [
+        1288,
+        762
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/desktop-app-workflow.png",
+      "sourceSha256": "9aafc8eade0796af3aa8ebb254eca0ff43981904c584ee8fd23f8c45a634c527",
+      "framedSha256": "1e1a5730125872e41ee0ca5297a08d49e3b913d5f0a2296160cb8fa565f069ca",
+      "viewport": [
+        816,
+        287
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/devices-and-notifications-workflow.png",
+      "sourceSha256": "885c219e5701b8e608e20fa6adbc85e45a31bcb4e2b1b40c9c23c0e77047b1a2",
+      "framedSha256": "45defffbd0fbce0807b93be501d602bd1e4c74f270d8ae4f170c384c7e410cf0",
+      "viewport": [
+        816,
+        196
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/devices-and-notifications-registered.png",
+      "sourceSha256": "0f382e401fa351fde2a0df4f90ad264ff0a0bd8261a78b85519b15a77206e9ca",
+      "framedSha256": "115cbe3983bccb17d75127d0ac0e1d502e9dc2343e69c5df218ed792d3052a14",
+      "viewport": [
+        816,
+        208
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/automation-settings-workflow.png",
+      "sourceSha256": "5ae6777765e380611d316733193b2c2e601bd3cc92524f2ce6ab692c3838149c",
+      "framedSha256": "4352dd849b6c9e7233a8e44c260fcfdd3e6a3b623fdd9799fcc2c9ad61b003f9",
+      "viewport": [
+        816,
+        221
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/automation-settings-projects-workflow.png",
+      "sourceSha256": "6cefbe64029dca7900f8674d63d5953241003c52caef59df5f4068fccaf175cc",
+      "framedSha256": "53fde002e16e96a61cf522eb84b1250920ee1ad402294d042bee0d501954d77d",
+      "viewport": [
+        816,
+        176
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/delegate-code-work-workflow.png",
+      "sourceSha256": "44369530cbafd1fb53ed171afab9fbb0dd3027f73d562713e1de0f8c7ec3c1a1",
+      "framedSha256": "6aaed74bf179a1fbf51c68052e95a0b529acd18e0e560453878a9589e77dbc7b",
+      "viewport": [
+        912,
+        179
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/review-pull-requests-workflow.png",
+      "sourceSha256": "e10c5b61c89a0e38c67f844725a36a4cbd44a5a2646e384be72b64d284bf5056",
+      "framedSha256": "3e8bc7518dd18b1d71a74e9fe10144ddd96c412078271b0177ef7caca02e20df",
+      "viewport": [
+        1528,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/database-property-types.png",
+      "sourceSha256": "19a72a6d6e958036de30a8ec1d38a5d25ecbc2564e8796f11c140458a6c33084",
+      "framedSha256": "7fb965bad92caad639a26627b995c4bc22c0d3bebc58212c8739ce84dd03b256",
+      "viewport": [
+        464,
+        336
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/database-entry.png",
+      "sourceSha256": "37b5d4701ec05a4c8600304bcbeacb24a288683eb2b6eb38110c25104d19972b",
+      "framedSha256": "0ffc8fea64fcfab5e9c6b7d37a6dca47c693de657baba636b09170076280a4fb",
+      "viewport": [
+        1178,
+        429
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/database-conversion-warning.png",
+      "sourceSha256": "4e13e75cef4d6fee35115131cc834f8b2192019773becb8514c8c692828da350",
+      "framedSha256": "8882ca6f7d500dee5478ca13ce2fae2b6e554b4b1ebd36acc0628be56f818f80",
+      "viewport": [
+        456,
+        306
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/database-import-review.png",
+      "sourceSha256": "3f5c1a50550690738565cc34eccadad4f45127a0deedd79b2e3f4c9a614d5e87",
+      "framedSha256": "696b7c625dba97ac47d1deacde99580f3fcc81bcad0acd3eb0b269e9cac95a27",
+      "viewport": [
+        744,
+        511
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
+      "sourceSha256": "951b181087d1ba54597028bb9af30f9cabb5ce3e2de5a6ad678bd907042bad5c",
+      "framedSha256": "5c140ed758606afa0613a53692ca07cf4afae2cc7b6a7c0f131a23e8649cdd54",
+      "viewport": [
+        816,
+        378
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
+      "sourceSha256": "dc3a7325e1ea8778490924ecf47c73a2e360aca10fcc0dd6a131a25680252ad4",
+      "framedSha256": "4530e001ad0362eff8232964c2b1d47fa332966380617ccc9a07ddaa8ff5bf1f",
+      "viewport": [
+        625,
+        369
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/moderate-feedback-workflow.png",
+      "sourceSha256": "d8b15ad2bd7ff84f9b6ae7d841a6941b750f867fc5755eef517113d5943cfb32",
+      "framedSha256": "3ca688c3f600fc7546a6381262dac3a11d6a130930017a1bb23e36d102e1c681",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/feedback-to-issue-workflow.png",
+      "sourceSha256": "77cf9e3f2c136c4ea5be67bfe756542b28dbe36d0d00182feeee413407259020",
+      "framedSha256": "b35b11f93dcf48fc4b0d1c3c4e15c3e6ff1cc08015ccce2af570d91df700dd43",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
+      "sourceSha256": "19b624b45ec314111c2681f95aa58ec86e89a0bbf04ef57e24f09dbd4d5e11dc",
+      "framedSha256": "2547e16070f84f2940ccc98c10a8c90195c69582a2549e2e0daec36c848bca16",
+      "viewport": [
+        1148,
+        388
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/reader-first-project.png",
+      "sourceSha256": "69c5a60390d4313bea7c74881767d9b702465f059556826936515517f365117b",
+      "framedSha256": "fd17df8eacfd5c54699d237a164ab974655bbd4b173de2d18917acaed8101d04",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/forge-issue-sync-workflow.png",
+      "sourceSha256": "89d0f4d31916e1be9c07ced15dd0e5cada61c2c1a524f98b91c1998e4853cda1",
+      "framedSha256": "9233721eecbd65cb35fc923890e127346c3c8e09f9e2f47f59a2e4b77d70a845",
+      "viewport": [
+        816,
+        278
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/install-locally-wizard.png",
+      "sourceSha256": "0f3bc0b1d03388a600bde177c54fe0ba420aafd3ada58ee83662ef09f381dac2",
+      "framedSha256": "7a78a6436c386a57b7687249f9f0251b8ee321b429b07e918ef50f68f7945ca6",
+      "viewport": [
+        944,
+        553
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/install-a-server-wizard.png",
+      "sourceSha256": "98a94b03e20f0fe8c9d91e008408056fb958483bfe0b7de75eb3259174330da3",
+      "framedSha256": "c4e049439cee2078340448d08ef90e90117efdec15e79a361dfe83552e0e7890",
+      "viewport": [
+        944,
+        1044
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/instance-administration-overview.png",
+      "sourceSha256": "e6eb69c38b80c2ed15b32acfa8a5953638b22b0a30c807b4f660221792cb2439",
+      "framedSha256": "7af825e9aaff980991efd8ae1fb8c835301c96823c05c3753144f94284d50f86",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/instance-administration-users.png",
+      "sourceSha256": "34e5d3d256b7ff1db65862e2f22eced5ce88782ec3f3e29bd06458f7211c77cf",
+      "framedSha256": "4a9da98b85365f649f6ba549c99efb7f535b56ff242f8813445cb5f9ba1e01cb",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/instance-administration-models.png",
+      "sourceSha256": "495e9c026272ebc15f35f2fd376044625c0aebdc121f1913836dc82cc89a0095",
+      "framedSha256": "27d92bcc70710a722fbf6d4eb10d14ca7e4f252e1699487e03de540c0226e34f",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/integration-troubleshooting-error.png",
+      "sourceSha256": "d830b4011578ddba7354b302e224f392016063b69482b458a8e0d68bc4611173",
+      "framedSha256": "9f054f34ae6dcd4a2b7763f80a2309977bfe9dc9049ef1bb7b9c566dfd00c7ff",
+      "viewport": [
+        782,
+        108
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/triage-incoming.png",
+      "sourceSha256": "b1cb6df1fce673e433284cf10af8abc596de5031c1916ea7be312bffcb5a38bc",
+      "framedSha256": "cc2e5405fd6f9ec0edbdfde32dffff44ec3afb01cc0fa6ea8d8b3637d87a4178",
+      "viewport": [
+        994,
+        866
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/work-sub-issues.png",
+      "sourceSha256": "57cf36a6ef36f4747b439c8c5960acd1dbdb49b31ac5d0f2a997c31a1ac2be93",
+      "framedSha256": "791839a59c986b85110c90c19b0b8e9636be9e3935d12c9b02044e188715fd70",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/work-implementation-plan.png",
+      "sourceSha256": "bb5859810ef34a3bb74f34a00ea03735b6ff0f59f7f7e1eae2c93b0d9fdfa1b7",
+      "framedSha256": "be1a6d856582940920a1a656150f8b4d3bfc58e81c188da8f2512b8e9edc8625",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/work-bulk-actions.png",
+      "sourceSha256": "efd37000c517e6f0f35480918760ce34d5574f0b41c61f996848462997c5fc2e",
+      "framedSha256": "b750becc33e7b4e2e596deba57188232f194496701f39888d29afea0103f057c",
+      "viewport": [
+        788,
+        506
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/import-issues-preview-workflow.png",
+      "sourceSha256": "fc6c2c66c58448c407c4876b3bd61698cf32f73d2a75f4a6983fc540a6989ea5",
+      "framedSha256": "5f7420d85614bd8642d731fedf495a4853acbf99adf194804c89855952a2d3a8",
+      "viewport": [
+        816,
+        977
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/external-minddy-mcp-workflow.png",
+      "sourceSha256": "a0066ecc2d989a868cd2c520825666983d38897094fb9f8107ba62eddd49e939",
+      "framedSha256": "d1945998c037399a48f446423d347a85ca65529efba3051c2257b548c02c1ba7",
+      "viewport": [
+        816,
+        252
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
+      "sourceSha256": "138dceb5030b69abecb3af1a37378c2dfb42f33340db0a650bfd5ff4e5f7566f",
+      "framedSha256": "efbe0117fc1f335bf39fa9d50d813df3f6418b8fe06672671f9453a4860d0e1f",
+      "viewport": [
+        560,
+        380
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/work-navigation.png",
+      "sourceSha256": "0952285874bfd7437f34d958a51b7f4f70dc0b9f61e1beeede93a1f2ef1cdda3",
+      "framedSha256": "6b511f5cbd4302bc4d5e82e033d7337f6e42c2bc58e012690f521bdc9206fdba",
+      "viewport": [
+        1488,
+        1128
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/work-search.png",
+      "sourceSha256": "21a4a2e260ce273c0cadc080a6b6175bf6a4f55b7d070f5dadbff7d6b0da0aa7",
+      "framedSha256": "5af8eab0be66cfbb0fdf9a9e499975061904bc0315e641b604ada8ccf8bc798f",
+      "viewport": [
+        788,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/work-with-numo-workflow.png",
+      "sourceSha256": "bd2490cb3b5e332abc6fed2b2819d5737fe3e434cc09cfb2246704f8b3fead44",
+      "framedSha256": "2286da7cb72ea3662114dcc7f728fd17bed616fb9b4a5275b3be05c156a99048",
+      "viewport": [
+        498,
+        648
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/numo-mcp-connections-workflow.png",
+      "sourceSha256": "6261e7f29e7cd34d81186bd8352c5b8aa51a9b0aff9560410ad6512d71e991fd",
+      "framedSha256": "54e6a8b286566338ca6114ba7e64672427888b502f1938067ddc5a04f2fa3813",
+      "viewport": [
+        816,
+        1314
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/numo-mcp-connections-config-workflow.png",
+      "sourceSha256": "cdc852e70c85c245ecfca4e34bfec1284cb85344b6f46c9f0796b288c69d2677",
+      "framedSha256": "0a78ee8faacc4ca172f05f974dc1d2a328358efec71355d2e0cd5d00e5adbb20",
+      "viewport": [
+        560,
+        920
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/recover-numo-work-workflow.png",
+      "sourceSha256": "68be81ae29e7ebf8a9259977f4c13aaccedfa5bd07d4fe30111fb81932a1b31f",
+      "framedSha256": "5692670e55f842a29f6b51ca6488cbb72552ad1b30eec72cb2458c29712c8c48",
+      "viewport": [
+        912,
+        400
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/reader-objectives.png",
+      "sourceSha256": "5832b5aa8ccc2b38ccbef5f7121e34d6ba634de771f65ca78e2a62325e2fb74b",
+      "framedSha256": "f4c869dd1bcc81b6d1bf0a0742f6abcc0cfb72ee61b88e6e572d3f6fe21e015c",
+      "viewport": [
+        720,
+        330
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/reader-objective-momentum.png",
+      "sourceSha256": "872a32b14511762f9cbb6d7f6d04f5dfd848162b4f5484ac1c4409609603d1c2",
+      "framedSha256": "3afacbef26d0db2984eda58c3303d2eb9b6617a04f3abfc168efcd23d6765dc7",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/page-create-menu.png",
+      "sourceSha256": "1260c2cad197f0b764fb40427643a7931670a88d6bcdd84e9f1ddbf1c79307a8",
+      "framedSha256": "964122c34e9fde2e6707cbafc63acabac47718209b079338fc65645dbad17f36",
+      "viewport": [
+        302,
+        152
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/page-editor.png",
+      "sourceSha256": "6a8eb84895b3da23de56608aab16b70ebee76fbe0b911749bcb96d20c3a4813f",
+      "framedSha256": "d357e17e63fec6d2e553fce88936adca5f0b4a6b57a52c8f88e1da0ab21b7a38",
+      "viewport": [
+        1178,
+        922
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/page-comments.png",
+      "sourceSha256": "3689009bab00f814242ee8d11fa5ece3dc960028a76b2f9f97c6a60100c96871",
+      "framedSha256": "58ce3340de53ca96edb1aadf373ee6df0627715bf505512b998748de1eaa4a63",
+      "viewport": [
+        632,
+        625
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/page-file-states.png",
+      "sourceSha256": "99759729df4bd9d23033fb3054f30cf8b9b54ef278bb2642f5517f7b046fa676",
+      "framedSha256": "cf995b21c83050d33072a915ea40fc8dd080c8c87ba5b4d9e5c8dd0c244b35f9",
+      "viewport": [
+        1178,
+        466
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/page-history-preview.png",
+      "sourceSha256": "b45bb290a36f597ce97060f57937007daff3e20530fa5f9e18542bb0bb05d0c1",
+      "framedSha256": "f2a9231233b4e9166964329c72b2ed87eb309bb91f45afdfe6e00cf0f9ce3376",
+      "viewport": [
+        632,
+        538
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/reader-cycle.png",
+      "sourceSha256": "a109662ba8240f12721c7173ef8a53e98a889b16a93e689974b04e3ece35f594",
+      "framedSha256": "8e26008e867537ba491ea4c2b92ddd13b3008f8c884fe618d4bc39933bebd1f0",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/reader-statistics.png",
+      "sourceSha256": "22d533e01fb58da38b930e3440ad56cb03f07ce7101111719cc4b483aad22335",
+      "framedSha256": "66a687c9ab5ec7cfdaca73e293eac38dc525ee4ecf2a456a54d2f2b874bb3495",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/project-general.png",
+      "sourceSha256": "23ecf66b4413c0f690a01070bae888714f2f981ed4bbbc8219edac6cccb14619",
+      "framedSha256": "06dd7f444da026d8e45c98ca265988d48f433b0d123d32b4fbae3c6b582c1d83",
+      "viewport": [
+        1178,
+        563
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/project-members.png",
+      "sourceSha256": "fcab495ea4a4fb5349e080d5803d9e592e8aa4e3750cfd6b7d607ccb99696ebf",
+      "framedSha256": "b302cf888c1d8ce30fd8389113d41f5ed0a84f3fba63097065acec7b574e71ff",
+      "viewport": [
+        1178,
+        503
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/repository-skills-workflow.png",
+      "sourceSha256": "69af8a89ec242131f5961158bea224ae9e5ec2c0271ca88be95c7de218f3700a",
+      "framedSha256": "3165e5126d2ab6ab2601d7e528777eeb57d479904d5255928fd76c9e89a6ab32",
+      "viewport": [
+        996,
+        888
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/scheduled-routines-workflow.png",
+      "sourceSha256": "1bdc98b5b1e40f22ca49eeed55b8b3a600c9d36a80bf7939f0a9ebf7c4af3e8c",
+      "framedSha256": "62186eaa806c26768d6c9926aba3f22ef67e0c48ea466495bf3e5f709d621a03",
+      "viewport": [
+        1161,
+        1051
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/work-task-notebook.png",
+      "sourceSha256": "322cacca9ad956a14ce5b5415b8ac31298f8fd984ec12a34baa20562bfe1dd19",
+      "framedSha256": "c80eed9d66ec28e5b009b73e29381f54d308b6340fbf52a0cb6437b4e840d45a",
+      "viewport": [
+        1156,
+        1048
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/transfer-between-instances-workflow.png",
+      "sourceSha256": "80f3bebb72b4d1c5096b9e02ef53774bb87be5124a4eb6fe994eab42b59b4e3e",
+      "framedSha256": "49bb5f1e7f13a35d4e0840c99e00f155f67769811821402e6045ed15b4d0b60a",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/transfer-between-instances-export-workflow.png",
+      "sourceSha256": "ab1b251527c17ba382a9f40a64014c2083a28e7e1332091eaa4e30d986e304dc",
+      "framedSha256": "b125c44acaa5d7d78b350f78dbe648f138ab728ffcf705a45c2165e6e5dee636",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/fr/reader-trash.png",
+      "sourceSha256": "140ad50327130f1ff950b89f285cb5bd6cadd298f236965431a19ad5f5be06a6",
+      "framedSha256": "8c4f7f4e48c9fd3ec16575dd50abc76f294fd764e02f3c0de7260aeb044a4df9",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/auth-signup.png",
+      "sourceSha256": "475abb6caebfa0d03ba4c87afb2e9c408e9a2b5c40ec01a84f16ff46ee8ec4a1",
+      "framedSha256": "cbec2d0513740900c572744c7cc04f95a8cda7ed225920ae0e8b30552a508a04",
+      "viewport": [
+        428,
+        522
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/auth-login.png",
+      "sourceSha256": "0a105597f9e5a203fbdaa1f6ef0559e37d4242608db03d26001162b3f703438e",
+      "framedSha256": "21c42b23086f94d4b5c9b8e9aeabff9ec3cba9fffe92784c9b88f4e33dbe8390",
+      "viewport": [
+        428,
+        588
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/account-security-workflow.png",
+      "sourceSha256": "edfcf69d9c5daaf1508983d13c475113c0fc372f14cd8f780840bd7e0a0f67ed",
+      "framedSha256": "7a0ba777e91a2cc948482c2434b66b4b54ba9a3f0651ae97f6e80df7da19406b",
+      "viewport": [
+        816,
+        227
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/account-security-enrollment-workflow.png",
+      "sourceSha256": "390e8d01e4854e078e7911376762316eb5c3b6088d5b18cfd8b37801c6431b29",
+      "framedSha256": "e202784fa91f133bfeaed6ed27e17b29f6872f0f252ff201e3a132d55b529e7d",
+      "viewport": [
+        816,
+        498
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/auth-recovery.png",
+      "sourceSha256": "e20409f418f72ab82d0017ee1aff150a4c997728ae9366b84db3bdd032bde031",
+      "framedSha256": "9d6d2aee34a278c79d41a15486841638359d917cb44efd9bb0b9bac16b1465e1",
+      "viewport": [
+        428,
+        326
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/profile-and-preferences-workflow.png",
+      "sourceSha256": "91b0797f2c98c2a024805e60b5466787fdb2004b893d463fb60f77f3ca3b05cc",
+      "framedSha256": "2464446ed5cb475dbb223584a4818dcc5389dae0af527462d190d71da65fc915",
+      "viewport": [
+        816,
+        416
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
+      "sourceSha256": "e7f465a2751023541d4d0081ef0d5102f01e1918fc9e002fd1300d6159500927",
+      "framedSha256": "d07129cb8d06b3cdcbb65dd41549d136bd7206c8faf09b37dfe8b149a2ab9dcc",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
+      "sourceSha256": "b33e750fa46841d451739cbfe9f785c8351b8128e39e3a62444ad984bb3f192b",
+      "framedSha256": "f3d3dc5cd240f46aa04f0471de8cb46d711a4c1b660d0cef30905b79ea1294e8",
+      "viewport": [
+        816,
+        231
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/ai-keys-and-models-workflow.png",
+      "sourceSha256": "2c7c8df55af0f5b78458df52db13ef2e188e9ba9084b175766e898ba19591afa",
+      "framedSha256": "d5eeb2070875b7ecd519b7a5101c26754a58c0c5f09f70e3cc571022541eb46a",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/ai-keys-and-models-defaults-workflow.png",
+      "sourceSha256": "3d0bcc9424837c8c7c6246bf2984d684c41d12df6061ff5ad263fe89f330b2e7",
+      "framedSha256": "30d4560b0da79b8ed1b683d4ba161871a86b61af16f4e7f58ce6557967aa0af4",
+      "viewport": [
+        816,
+        217
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/plans-and-ai-usage-workflow.png",
+      "sourceSha256": "f9520acb04e32fb72af7d3c872439b89dd29cf29ac0117f73b6be906a95579fc",
+      "framedSha256": "586e89aef9bd93ff4c474a1635d7e3d1c8af5462f2c42cdca6cfdd6d1120f2a3",
+      "viewport": [
+        1154,
+        1766
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/web-and-mobile-workflow.png",
+      "sourceSha256": "05e2b12969553f62de4c3ee7ef09c52506928db4228320453d4a813314b7408b",
+      "framedSha256": "1690dd116de0f274a408baf606908d17862de6cf7a1b832e4d2741186fc9b405",
+      "viewport": [
+        438,
+        892
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/install-the-pwa-workflow.png",
+      "sourceSha256": "19b57079ffb767f32524404446f9eea986d0f92b02cbccfb82c38be933cec926",
+      "framedSha256": "ae3e2a3587b8a800cba0e0216f78337aec47f4d0a80dac4a07cce144a56451db",
+      "viewport": [
+        1288,
+        762
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/desktop-app-workflow.png",
+      "sourceSha256": "30e5de8a7a6cd0080c27e512966bc402705d7b29e4c990e72d5935bb41bd4f22",
+      "framedSha256": "5b30dffbb6dcc23a7f0c050c530b423fbd7b801a0225a8dca906b9602f39561b",
+      "viewport": [
+        816,
+        287
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/devices-and-notifications-workflow.png",
+      "sourceSha256": "b1b1e13f2d890b9baa8bfe433a57bf68711be393f3bb84c5e6310edf636a20bd",
+      "framedSha256": "0a4265c0dccecd8aa8554b9d0ff849bb824a5ed593c0894ed0739e3afc95149c",
+      "viewport": [
+        816,
+        196
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/devices-and-notifications-registered.png",
+      "sourceSha256": "f6ca6e3abd4fbdc5423e0df70b1609d13d70d950faffbf2c95454aa9183652eb",
+      "framedSha256": "140be4444494079efc13b7c3f035b0a15ea9709c445efd23695165c227d3642d",
+      "viewport": [
+        816,
+        208
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/automation-settings-workflow.png",
+      "sourceSha256": "5e5ac8e9297febb01d2a9586c9012c2b155e89984dff68f9a4e62a81d07d2b40",
+      "framedSha256": "2fb74f8961fe68e583ef7bcd87b9450186588ec838f0e37e21b5375daa1ccc62",
+      "viewport": [
+        816,
+        201
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/automation-settings-projects-workflow.png",
+      "sourceSha256": "f98d60751b686b3627c98897ff0ef29ce05baf5d3490f925374e8de265d45fc9",
+      "framedSha256": "3bf496580e903e4ec351bee8672fdae8f46c37280d1b5bf248bab8e74e05b756",
+      "viewport": [
+        816,
+        176
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/delegate-code-work-workflow.png",
+      "sourceSha256": "6ed41df09f8f6ad2081a6f7ee8e9a0f1f64d86c5a11e2fb61a3f7ae77ecf1f99",
+      "framedSha256": "82acec7753f4915f0b1159ffde49327ea30b074a58e75303a647afa3b800ccae",
+      "viewport": [
+        912,
+        180
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/review-pull-requests-workflow.png",
+      "sourceSha256": "0c7a2bba1388d46500d1f30e8db3e014cd542518ad244455af794a7011f98597",
+      "framedSha256": "068004b0153b40566f2de78bfc2c379078edaa5a1cabd89a0e75762fb6dd8020",
+      "viewport": [
+        1528,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/database-property-types.png",
+      "sourceSha256": "c623e1912ccb5cafe1ecaa255506f540efb225ac28b0012ff8f95329fe16cb62",
+      "framedSha256": "82ee2b17cc154af69b773d0399f591f3643732d8b0c6ace6cc13cdf74d986cb4",
+      "viewport": [
+        464,
+        336
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/database-entry.png",
+      "sourceSha256": "76df5a147c6b5b6a28b9d6844e6cdeb07e8a369d2becc27a8e43f5f19a2c2fc5",
+      "framedSha256": "a07c341989a9e2629c096ba00b2c61c687d36e81bf360be0123da03137353943",
+      "viewport": [
+        1178,
+        429
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/database-conversion-warning.png",
+      "sourceSha256": "88f7939dc97d7d37d69ec01f7cb06e2e9e6d6994d653bbdd849dd3a47b0812e5",
+      "framedSha256": "57e8439f01b0cf9899f95462aedbf932a83607f0d6deed861894d8b16fba78ed",
+      "viewport": [
+        456,
+        306
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/database-import-review.png",
+      "sourceSha256": "c85784377dadd51860f633a495d15fac06254ed7dffd8b1f25a4d3dace00275a",
+      "framedSha256": "56a8a31fd6e0a4ecf1f337396df48440efec2064b3c29861354a148023442e17",
+      "viewport": [
+        744,
+        511
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/publish-a-feedback-board-workflow.png",
+      "sourceSha256": "5f0c85d6bb7b68f436e088dc3c587c14a7eedaba6bf2ebf31daf3fcb5e4d1f8c",
+      "framedSha256": "2c3f70bb6fa9c616cc282106d85a831d6e7e37e92c41015a28bf843a6daa9d44",
+      "viewport": [
+        816,
+        378
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
+      "sourceSha256": "0eb41ddc0e6bc87ea296fa288dc27eb51878a1ed15f2f692090c431fa5d1db1c",
+      "framedSha256": "cef7ba0eb320f02f262310a27fc3321a21f180f20e6c4eaf980997112a151543",
+      "viewport": [
+        625,
+        369
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/moderate-feedback-workflow.png",
+      "sourceSha256": "cbbd573bce4a1c38e2c16757710c69709b6d250a763349ba8bc242690752f275",
+      "framedSha256": "7871e11aa5b3fbbd2dd302480eab3089d758b85fb72a0aeff679cdab3ffa388e",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/feedback-to-issue-workflow.png",
+      "sourceSha256": "cbbd573bce4a1c38e2c16757710c69709b6d250a763349ba8bc242690752f275",
+      "framedSha256": "7871e11aa5b3fbbd2dd302480eab3089d758b85fb72a0aeff679cdab3ffa388e",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/feedback-pages-and-views-workflow.png",
+      "sourceSha256": "4f3e7798e117c7f2f5a5ffdc391a3d4bc03b0210988190a10e02e5d09719e04e",
+      "framedSha256": "4dd237a5f882f4adf4cbdb617f006569366d36b10f5acc6df95764f6871c914a",
+      "viewport": [
+        1148,
+        388
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/reader-first-project.png",
+      "sourceSha256": "1b785b850041c4509c3c914e0d420f6f1132fb745c963c69ed085966a1fce92e",
+      "framedSha256": "e4982fd680692be27646685e1e50c87973aa6d8b92906d40dae56fc846277e12",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/forge-issue-sync-workflow.png",
+      "sourceSha256": "4471c146df73ec79f35f423fb25a0dee4235ebe0ebbd0509e85187f13b0eca34",
+      "framedSha256": "60044f0145df8c53ccd2a541fa8ddb023fe58b2f08b3a767799eea17483ec5ea",
+      "viewport": [
+        816,
+        278
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/install-locally-wizard.png",
+      "sourceSha256": "b6b433ebe86c597ec74b87b133c7d4ca1884c2dc14a3f52cc6d33d09f2c33489",
+      "framedSha256": "a3a76f106749bd7823e6b5a3db3081b4322532a6f2b96bed5fe2d4b4b4ba3a99",
+      "viewport": [
+        944,
+        606
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/install-a-server-wizard.png",
+      "sourceSha256": "ae82ed9387c837f64b5e5cf5e8715926926e613845305fd67a74d0a36d9e79fb",
+      "framedSha256": "15c52fec6f8dc4068d4e9f773f53f0d839f21f6e252864c540fea0411bbd02ee",
+      "viewport": [
+        944,
+        1044
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/instance-administration-overview.png",
+      "sourceSha256": "7254b4247f1598faeac50d046b0b9a0ecbf0f9ca7b587330df63722cf852d25a",
+      "framedSha256": "4b1fcded21b8be7c92993b65145959ec035ecc9818295b62ecd18dc8ebe26410",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/instance-administration-users.png",
+      "sourceSha256": "948e3452527c7b7eccf322f89f0eb6f152b64f247c52f048d8bc05e9262ae1fc",
+      "framedSha256": "be05b6359c3f609969df43a711bc11ed656ce54bb6d286f975704d778523a704",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/instance-administration-models.png",
+      "sourceSha256": "0e3079aa67c373a3091269b587bf033235ebc9c9f194224b217232f49d4c37ef",
+      "framedSha256": "9f1421ce5067e045d317ca6ed3f8755e859ce004d29d1a82ab115ea8dcc4b81d",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/integration-troubleshooting-error.png",
+      "sourceSha256": "545f3dbd42b42a808007e5f307c2770e0d5b588afbb05de0dd034489034a2c58",
+      "framedSha256": "862f6914e7b670c83b1b6babbe4d9f28f7f267467cc3a1f83894f269bbc7cad1",
+      "viewport": [
+        782,
+        108
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/triage-incoming.png",
+      "sourceSha256": "de80be9d00f328621bd54f60dd0c4d3fe9da326b0281ed5579f98b80d93f6881",
+      "framedSha256": "f9b8b85d55bfbe3c85ad608fc53ddc02cf7e4348e546bd02daa65cebd82e0e3c",
+      "viewport": [
+        994,
+        866
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/work-sub-issues.png",
+      "sourceSha256": "8554ef2d8dcfc59362ab6f78a1ca8cfd72a66da8fc7c7b95f93eef5222cb3d63",
+      "framedSha256": "677713754f029e02f1d30a48937f49d432f8e559522e45645359ffc26e20de7f",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/work-implementation-plan.png",
+      "sourceSha256": "ac5ad07469da3c6ea1f4bb52714081d599c7592850f548c4e96468ce1a4de39e",
+      "framedSha256": "d6d1cf2108c6cfe63173cfbcfcdd599590fcc865f36ace2ad8e17aeb65b36a59",
+      "viewport": [
+        508,
+        1416
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/work-bulk-actions.png",
+      "sourceSha256": "0702dd1e6b3e32484d17f5e10e03095bf13d40914acfbea24f9c97b1c99dc4b2",
+      "framedSha256": "acb4ef2c62d820f1a5633ef01a736172390f5c5655d1097b204fafc9d84b5f12",
+      "viewport": [
+        788,
+        506
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/import-issues-preview-workflow.png",
+      "sourceSha256": "9011775eef5af53da101641a9c801598b6268fe8848a2f23926bb6dd48bc05de",
+      "framedSha256": "cdeabd4715d41d3dd396ff8fb190bae2a28c6f1a447f7f7d4c6719b52c0eb9f1",
+      "viewport": [
+        816,
+        977
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/external-minddy-mcp-workflow.png",
+      "sourceSha256": "e7abb218fcf7f1de7074b84882d274582439b21f116454fa62e90039d5cbd451",
+      "framedSha256": "254b4466b66459a3317faa1dbcdde47a29d0aca24b0e2cb8c0f3b156523d352b",
+      "viewport": [
+        816,
+        252
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/external-minddy-mcp-install-workflow.png",
+      "sourceSha256": "f29709dbd3ab39c937ecf20dc51ef3bdd0d04f481c2224d1509d4147b174bb8a",
+      "framedSha256": "19ee8bf75ef0f09252b9f0e47ae85461fc56559688eec6f7c2c5c3b50415020e",
+      "viewport": [
+        560,
+        380
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/work-navigation.png",
+      "sourceSha256": "16010cc6b4738085a94397cba9d5c86bfdb4c002093ffed0004c0ca1cbeb14eb",
+      "framedSha256": "0d4df2e4091c02e69c5198d56e79c4e917dac424a19b9a312c8e7b265a3933b5",
+      "viewport": [
+        1488,
+        1128
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/work-search.png",
+      "sourceSha256": "38697cd5ef13963d59b8225f05e64bacf15cb9e4f82c140867a29907512cdbbe",
+      "framedSha256": "0a4d163c4bb84d564c64b52cb9838ebdb78a201c1fba5223c6268fadb89718a6",
+      "viewport": [
+        788,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/work-with-numo-workflow.png",
+      "sourceSha256": "8dae6b3f83a521f9c087a673a597e70f22949d221e51c67dbe63bd91ce564d02",
+      "framedSha256": "bdb9d149bd9d8ce4db28f0963dd5bdacc80351832f0830fb0080cbec27888a0f",
+      "viewport": [
+        498,
+        648
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/numo-mcp-connections-workflow.png",
+      "sourceSha256": "033835de6777e12992687ad9c65e494b5596fb9b27227f044935fe6566c53c22",
+      "framedSha256": "de2f2f69994b71a92186d221b07f25ee4f2397b01ef5cb0c8712287f6fad88f2",
+      "viewport": [
+        816,
+        1314
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
+      "sourceSha256": "2b9de192939db1fdf019cca5b72e410abd3ad8c68f70abcc2284b3ab4217e4ec",
+      "framedSha256": "a9ae74651b594ee38948aeb7d1a60ea980c38b2c0263badd922c9b911d8cb5c4",
+      "viewport": [
+        560,
+        940
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/recover-numo-work-workflow.png",
+      "sourceSha256": "bd755299d0ef0b267ea4e01992623813f8f589af6d594758bee7cf3c1b21edc9",
+      "framedSha256": "eec49e0a22a79341a2c6d21198672cfbbbfb078cf42f507d696b821501dd2e1f",
+      "viewport": [
+        912,
+        422
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/reader-objectives.png",
+      "sourceSha256": "e1f4ddd66ff39a836517c1350492046a7b2b4c26757d9401d4d7f56d53efa313",
+      "framedSha256": "a82a0242dd5a455aa7375d6c8469246af10cef0c8f526565de7d75bb9fc27926",
+      "viewport": [
+        720,
+        330
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/reader-objective-momentum.png",
+      "sourceSha256": "42002264b050cbe5e685ee2f9da72c3a70acc8fe17e19b71829e3548bb544eca",
+      "framedSha256": "babb722da07aaa295de546052a66eb5a5c5f1086a682ec72aeeebea1405d519a",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/page-create-menu.png",
+      "sourceSha256": "86bb8f05d27b8014d632b6136d96657e7ef0397d929d921d8a60df6ee8de4456",
+      "framedSha256": "d4eb7ceb76940c30cc117e7d39f14e3465abb6f042d1219ee0427b12419dfecb",
+      "viewport": [
+        264,
+        152
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/page-editor.png",
+      "sourceSha256": "f8334672e287d9f7fe8c6a9a9c828f75e71d4673fd440da1dadb66ca653e4c72",
+      "framedSha256": "8d1e1c9ad31d671a328fa24e8af9aed9b46bea5861ee7460bd33a667d3e0bd7b",
+      "viewport": [
+        1178,
+        1026
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/page-comments.png",
+      "sourceSha256": "685ddf9f8b343265ef8fa1564406e079c58c595933142bfb839dcade88393c6a",
+      "framedSha256": "6f7e54d8c3f0d76a86c67508bf793ec0b9fad1c20f756724fb739accb74b4d14",
+      "viewport": [
+        632,
+        625
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/page-file-states.png",
+      "sourceSha256": "bdbdfbc59283f41c51b0702ad1bc8216345cc7c512e4139931cab953a8a7fa53",
+      "framedSha256": "f5f58f797678f93f9c0f32fca314df1413fa7eaa8882b6d09477c2e024458248",
+      "viewport": [
+        1178,
+        466
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/page-history-preview.png",
+      "sourceSha256": "eec825af3ff2eb04eed8f306d69fc4926b965117fda01483cb3460830d82aecc",
+      "framedSha256": "55523c3f2ed3b9928261492234cce0b5b3ef448f91d18b5e9a687642bd45c53f",
+      "viewport": [
+        632,
+        538
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/reader-cycle.png",
+      "sourceSha256": "48161eabe2d22ab8372a0e2b8ec9fcdf29d52a19eff6c8e7117086fb3fbd9ee5",
+      "framedSha256": "e7e74a452a462c5514b2e498731aafda38d5d69262bf81ff2a38d0e8d4cfeed3",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/reader-statistics.png",
+      "sourceSha256": "9e0041c0260741386fb1b195256cea3194128a84c0f5a921b8c35609519182c4",
+      "framedSha256": "4765a6aa8fc641b7e61c8a21e1511d8d1a412648740791468968dc1fa8476883",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/project-general.png",
+      "sourceSha256": "34ae1b0a38f230706927b2c76d10b9dca175d427c8ba5a7c706e226d705f61e9",
+      "framedSha256": "860364d70f43956e8a55cb9f77432857f5d612862b198c450c51502f9a203cc9",
+      "viewport": [
+        1178,
+        563
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/project-members.png",
+      "sourceSha256": "6576d589525570c63d79b4cf3767abc7e618b90da836af300b3f6681e9216297",
+      "framedSha256": "d9d179ddaf7d3224c50489e7dcce0d9680777a72bc4020adc0c1814d36d24800",
+      "viewport": [
+        1178,
+        503
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/repository-skills-workflow.png",
+      "sourceSha256": "6c26ae2f9945bb1c421c63bf64de05bb680582a91b3b5363cecf87fcc9c90ddb",
+      "framedSha256": "0f2409edd0a3a6451bf77c4959c89f95f61fe1ab4ab50a6c0be25fb4f5e7fdd8",
+      "viewport": [
+        996,
+        888
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/scheduled-routines-workflow.png",
+      "sourceSha256": "d6c3fbe80175649458f865ee683028d45cc18268c8c8ae775c1df915a8ec1365",
+      "framedSha256": "6729aef56b6f6d73bff0f1c0908112c32e4cef636d5ef9c538cf391c375000cc",
+      "viewport": [
+        1161,
+        1051
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/work-task-notebook.png",
+      "sourceSha256": "f1e0acb0ccb420900c9759898e0ca62c3ec31947f5057aac50e78bfb399d359d",
+      "framedSha256": "19029bb92dccbcb4af0c68eadcde8dd79650281be40752c7653c89b04df1ab8b",
+      "viewport": [
+        1156,
+        1048
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/transfer-between-instances-workflow.png",
+      "sourceSha256": "5cec0ef611af67557d74d113ec8bb633657979920bb039a8bd25f2e76a54bf6f",
+      "framedSha256": "9159e6b44db8b2031ae5089b69795741afcc77a22afb3ab92325ff54f5ae1d74",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/transfer-between-instances-export-workflow.png",
+      "sourceSha256": "417c94dcc049bf9ebb1262c10b91be9d32b1c6cd76712e7fb5ac729af3d62bdf",
+      "framedSha256": "e3189b08086caddf88b2d455704e8b779faec150341ef6b4455f6183ceff0a56",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/de/reader-trash.png",
+      "sourceSha256": "b5e7533d5ff11ae067ff920cc4825a6dd159c4ed43e5e8ed9cdf2d38ca2425f8",
+      "framedSha256": "9f783cadb54982f93d301d2e4c07a0c8d1b4603015026806583a2258cfbcca56",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/auth-signup.png",
+      "sourceSha256": "8a6b8293fc57faa5c840389d3b05f5d43f3c9f898b6dec6b3d369353842f88f4",
+      "framedSha256": "bbee887ee9823222b58e26290eab8e6dc27c5090ee5dde4d7530d744dc25538d",
+      "viewport": [
+        428,
+        522
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/auth-login.png",
+      "sourceSha256": "7d51289b7b93c3c3095f5bb61f3665b9c590c2638d81bc805621d98a7ce7d0ce",
+      "framedSha256": "40cfd6e78ef5b190ff9328dab29e48ff85b7eed3b1d40ff82855fcb629be159a",
+      "viewport": [
+        428,
+        588
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/account-security-workflow.png",
+      "sourceSha256": "5ba119e916b5bb5b20a7c418470a7a7ce0cc90856ed492017ac3969a5d310db9",
+      "framedSha256": "f60dcd1983ed63c3afb672b0178b466d8a1c8f7723d1e619189067fda1ae03b3",
+      "viewport": [
+        816,
+        227
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/account-security-enrollment-workflow.png",
+      "sourceSha256": "74c7337105c093ef299a6203729179908d9f7a905e0b7e73769a0d63f8a65454",
+      "framedSha256": "72ce5294aa5efe286aac10b60bbbdda8fd397e4fc656e04218ed85fe63ce1cd9",
+      "viewport": [
+        816,
+        498
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/auth-recovery.png",
+      "sourceSha256": "c203f30a8b4037d12acba53ff333475f3a10dd38e1f3ab034fc6a486eb45879a",
+      "framedSha256": "dc2002a7c91506e1ba54d63ddcb8562b75f4e584404a1840d585bcb76493f45f",
+      "viewport": [
+        428,
+        326
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/profile-and-preferences-workflow.png",
+      "sourceSha256": "e3560ff75b6ee39883abed933dc48995448e6887ed1c11fb6de31fa9cd484d24",
+      "framedSha256": "c861f05143af59328b65d7c48c626f1f470846e53b2ccd1fad9acb8450102c38",
+      "viewport": [
+        816,
+        416
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
+      "sourceSha256": "c323a2738c179fed6e425ec18b7fa42309cf309c17827f837f0faf1cc779945d",
+      "framedSha256": "3b84b52ddcddc9fc076e1bec28b12d7b2d4b2c3218fa3a23b2efb223c8cc621e",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
+      "sourceSha256": "55fc398beb8dc45912a651403751b61cac2e3c5b481766119712ffe3bd9f13ec",
+      "framedSha256": "bc9dcb29441b37f059bbb5c800996c0399761f8ffa2ce7ee1311ff5762a82d9d",
+      "viewport": [
+        816,
+        231
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/ai-keys-and-models-workflow.png",
+      "sourceSha256": "1466f05018320b715dc4d348edc4b2e3f004bc0dff03738c85e1a07893a2eaf2",
+      "framedSha256": "1f774fa37fafbf364295da45726480bafa2db77a5a0d67209e33363e0a128f8c",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/ai-keys-and-models-defaults-workflow.png",
+      "sourceSha256": "632a554b5b04ca554abb108a2881053178b6e6d5190c56f5fd46187fdc7b0ac5",
+      "framedSha256": "99c0e68bd02637bbc26e6e41043ab6f0b307e48c48f1d9eb29474969c995f6ae",
+      "viewport": [
+        816,
+        217
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/plans-and-ai-usage-workflow.png",
+      "sourceSha256": "c98f221ae8519f5d00f3813086c0e2450bfe5c6a761939ba54fcd3ba5ce00442",
+      "framedSha256": "42144b7a62bfefced2efe100ce32099c69ea1c68f92fe454c59576f5f681b8f0",
+      "viewport": [
+        1154,
+        1766
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/web-and-mobile-workflow.png",
+      "sourceSha256": "46885b8b5e923ebc13737b3c60e767db5bbe75ce35b13ea9e7020e2d7084decf",
+      "framedSha256": "4e6c3ed65ac943433c7d434e8a5a15a3c5c87c7c74deccdd87c8d0c2535631df",
+      "viewport": [
+        438,
+        892
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/install-the-pwa-workflow.png",
+      "sourceSha256": "610e643af3a047fa49eec9926b51bc96e16dc52d87316de13542c2782dd644db",
+      "framedSha256": "dfe58aa4249d2aaa19799878a299c235c614a8414e6a46a4bd038b5246e9be0e",
+      "viewport": [
+        1288,
+        736
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/desktop-app-workflow.png",
+      "sourceSha256": "c86790ecc3205352d09daf97408c4781c0cf0e025f9d56038ba3487f06918ed3",
+      "framedSha256": "d4bd18d103b60ff9f222f20732a1980daf73686a5723f9578c4ca33460d89164",
+      "viewport": [
+        816,
+        287
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/devices-and-notifications-workflow.png",
+      "sourceSha256": "7db086add285c54d4a5454e6bfed3bf253c933002a9604ca7bb9d88f6332f553",
+      "framedSha256": "abeba15f7deb579a028888eb8693cdcaf4fd643ce7ac92bfc76fa8d98f449af0",
+      "viewport": [
+        816,
+        196
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/devices-and-notifications-registered.png",
+      "sourceSha256": "5d133e6c8d067d6d60f54c21641e67536f9de870df7af22d77d99dad077f3771",
+      "framedSha256": "f2e7872d6c7927c07cb2b2129481c0fea04e0e4d602d7e8b16e5eec0e1ef25a8",
+      "viewport": [
+        816,
+        208
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/automation-settings-workflow.png",
+      "sourceSha256": "fd1bc213368e205689a6de1c8982a4afa1c3fae73da4adeca7c2167183832257",
+      "framedSha256": "fdf928d2ed68b4428a15a12721ea3686b02f2b60c10666f1b14b8f417604ab8b",
+      "viewport": [
+        816,
+        221
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/automation-settings-projects-workflow.png",
+      "sourceSha256": "050790ac3e58b96e6de9b38f6d6a3751850f967dbe405c02c8958531f6ca52d5",
+      "framedSha256": "ce8356101b4209689ae7c3e7ffd1e648763d9556778d85ff34ccda79235f993d",
+      "viewport": [
+        816,
+        176
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/delegate-code-work-workflow.png",
+      "sourceSha256": "f300261dec5cecc90f7f88b1b7395b740e6bd0d31feb11a47c1b0be745bfbdbf",
+      "framedSha256": "3502bfc8caaf5238173c772846af868fa10c7f7045493d66359c9d2519d67612",
+      "viewport": [
+        912,
+        180
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/review-pull-requests-workflow.png",
+      "sourceSha256": "6259ef0ee6c1d11b754589dacc22b8b3327b770f56da3867834cf91533ed8d72",
+      "framedSha256": "88322a4db882d5a5f6b9d7c0027606fcef9b90734f6cda427872fd990bc3d2ca",
+      "viewport": [
+        1528,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/database-property-types.png",
+      "sourceSha256": "22d1957d92e29455b3d36f537bdb95eaf920f142cc611ffaa3019dc1d869abc7",
+      "framedSha256": "f83d6ff6b1b5db09d93df78764dbb33cb1f39a2338da57a05d76405c60b37a8d",
+      "viewport": [
+        464,
+        336
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/database-entry.png",
+      "sourceSha256": "5e79bd81b05ee025d14761d28d1d81e3e9cdd10af79b8daf02ced3794cbe3d6b",
+      "framedSha256": "f105709190da085a9ef0bd4e0a4214ce79c71d273138d6cbdf183b68b67978f1",
+      "viewport": [
+        1178,
+        429
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/database-conversion-warning.png",
+      "sourceSha256": "a91465b2baef480bfa5523ac0b34ec9a584197df01a6cb10f2d4fb58a030fd5d",
+      "framedSha256": "967443cb0efa996ba5a906f02414daac14ccd36d4a5b4737237b9b07edc014ed",
+      "viewport": [
+        456,
+        282
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/database-import-review.png",
+      "sourceSha256": "20c59dff4a921aaac05ecdfbac0d85a4eb0d2a7cc2c442d4955c168e8f1c75a6",
+      "framedSha256": "dd92a0e57598609813764c2a05152264246b246dfb38d59457c036640b4245c8",
+      "viewport": [
+        744,
+        511
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/publish-a-feedback-board-workflow.png",
+      "sourceSha256": "1fad49710fd2029751c15069be71cb0b69e4016890394acb8e0bc8b5e3d75209",
+      "framedSha256": "6f0eb03b275d5c49ba108ac569ceab2389f969c8fcde8574b862ee635d0b3313",
+      "viewport": [
+        816,
+        378
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
+      "sourceSha256": "c72ce7e6d92f4cd99d0f38de62ec5c7d2f2115c0151e4f3725a1b8d13c912e31",
+      "framedSha256": "81989307f5a740d35a179147b3781fff153ad0a343ca89d61921267f2a004668",
+      "viewport": [
+        625,
+        394
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/moderate-feedback-workflow.png",
+      "sourceSha256": "d1a0483a47d5fba32f7114bb05e2c13fceaadbe79af62176d9bff056cd38e9ff",
+      "framedSha256": "ae65f2aff0f8c2cc4a0e6313fd5d297f0b283478470487373b18afc0f3dc0ce6",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/feedback-to-issue-workflow.png",
+      "sourceSha256": "58bd4117c6ed9a67777c8de6bc6e617b8a4aae3f3e9c4201bb0bae40febab429",
+      "framedSha256": "847f18ce1b39341e5220c4b0f8065d14a4d4e7c5b260de1a18aa757a6cccdb0f",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/feedback-pages-and-views-workflow.png",
+      "sourceSha256": "895fc717501f35048e61dc307ce7734848f3985c2fe7d5ed58801d9bb481ee58",
+      "framedSha256": "a62bc9c10c76a53612a9992366905f52be7d7719e257612f18fa55e942aee353",
+      "viewport": [
+        1148,
+        388
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/reader-first-project.png",
+      "sourceSha256": "623f9c1779de96fa322a2aab38eabd8e44f114f3e62d56a38da32a5617455875",
+      "framedSha256": "07b137e99fec60818814bdd3a295b6a4b5e2c397f9a6259448401742cf79fce9",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/forge-issue-sync-workflow.png",
+      "sourceSha256": "5186c91b2c3479d8acdebd8aa375064ba8231c0036a1e8920236b026dc33849f",
+      "framedSha256": "3614d88d53c8ca5ba33a6853c7bf42bf6bf94e2c94edea43d6e5749d9738d915",
+      "viewport": [
+        816,
+        278
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/install-locally-wizard.png",
+      "sourceSha256": "9e29942c026eeea50b4865abae20d714667fabb3fbf64be01fccc0ddca754a07",
+      "framedSha256": "49e38cb7e54ada786a75eee96b26a42ee400d86816fb56578741572a314cc13e",
+      "viewport": [
+        944,
+        500
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/install-a-server-wizard.png",
+      "sourceSha256": "3672b1dfd662b14e3309bf900cc1eaa511411b46eea0307fa8a412d01aa13892",
+      "framedSha256": "92815e6b0adb2c9ff9973807b42fe3294efe2fa83a3b8c0c4be5001bac93c34c",
+      "viewport": [
+        944,
+        1068
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/instance-administration-overview.png",
+      "sourceSha256": "1d07d3eb32c6f5043e5f50134124e2443348cf26c92348484d7c4ee410743661",
+      "framedSha256": "6b401bcc346986076f013aea5fb09154109ece8aa50507b1d40b37905b482c04",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/instance-administration-users.png",
+      "sourceSha256": "e7746656aa363a15579d660673cb207078cb01da4e141a6d2bc4dc047891cd89",
+      "framedSha256": "085aa6da101a02616bd1d2af512fd16adeaa83b9473295fb92d45d7d6a510d5a",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/instance-administration-models.png",
+      "sourceSha256": "17e86775657b9e92904e092f0d3add347d3c5878e468595076e155b893f6c74b",
+      "framedSha256": "5ea730f8b441a5e1855bb63c06a367fb71a068d69f33bdc2173a9f5e1298437e",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/integration-troubleshooting-error.png",
+      "sourceSha256": "201e33e3287c62bbad96807be7441e2fa41637e9f5f62b72c7bb67d7ed3e6ee3",
+      "framedSha256": "2fcb12170f3d900c5da973b0efdd4c1e68d5a8e927a7ea00235449190f7756f6",
+      "viewport": [
+        782,
+        108
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/triage-incoming.png",
+      "sourceSha256": "e73584416fa4a9819f369e3f6ef6b6754e502205fba66017664acec34a05fc53",
+      "framedSha256": "f5d817e6a6fadf62ccc0f45e95627779a3b9f5d35bea367469155c90fa45d4f7",
+      "viewport": [
+        994,
+        866
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/work-sub-issues.png",
+      "sourceSha256": "aa2605fc0baca562dce5fbf97afaa54a446b1f0d7523d6c63b963960c72fe6fd",
+      "framedSha256": "ed8543664e6e06d87f6f821f3c5bb54a217c96332dcc032fab52d89b97744581",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/work-implementation-plan.png",
+      "sourceSha256": "bc1a278f0876543be8f4c858bb1811bfb9846e670911ce7863e65ab46d6f6b01",
+      "framedSha256": "b924c7b5c9645d269376fee30193a6ccb9a9b496e4b87914aa06fd5ea85b3672",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/work-bulk-actions.png",
+      "sourceSha256": "8910beacd705d57de580ea4dd945e7c8d662bc163e032179da101980758be739",
+      "framedSha256": "403c6bdd49b479f94f9b0718b07350e6e99940d69c88a53eab44cdc4457e63b4",
+      "viewport": [
+        788,
+        506
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/import-issues-preview-workflow.png",
+      "sourceSha256": "6824fb1236183f4b957b04a773de1f72bd489fe12a0f94825387437b567dcb8c",
+      "framedSha256": "4b2ca2e4952532d2754c762044f53d0cd595074816adcc79f9dbaa1d7a8eeaef",
+      "viewport": [
+        816,
+        977
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/external-minddy-mcp-workflow.png",
+      "sourceSha256": "4d2ac06bcf42e5eb00d000457116e191f0d0fb68fae0ec4f6b8e8b42cac6a732",
+      "framedSha256": "c9fe4ce380036a2f3bf7837f5d085297aa6a36b22e0f21c17ee9a576fa8ba791",
+      "viewport": [
+        816,
+        252
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/external-minddy-mcp-install-workflow.png",
+      "sourceSha256": "63163a48bcff4c26b1094d5df2e81482d379ac187871339ae64f98161be157ad",
+      "framedSha256": "ac2fa2b8be5560d40105030f9b967bf7fc198ba831dc5a65e3f2bd0864c74eb1",
+      "viewport": [
+        560,
+        380
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/work-navigation.png",
+      "sourceSha256": "703e14f3273e4c9ebf2484c40be73d51f425251ad149a32b256a6b46bd4edb83",
+      "framedSha256": "29a46087eb16176d8266368ec9efaff7c6607dd7bf051088bf00fe97da5fc66f",
+      "viewport": [
+        1488,
+        1128
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/work-search.png",
+      "sourceSha256": "2a0e7550fa80ba48a74627ccb6fbfcb7af6d5bf89515220f2af51df43a195346",
+      "framedSha256": "29d6d35dd5570543a7e059c4dbfc090473ed8e99dccf6962a24930ab7826ec36",
+      "viewport": [
+        788,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/work-with-numo-workflow.png",
+      "sourceSha256": "51843818b0208d1fe9d90485a6bbbfadf9906fe0352e4ac3634d8a865424bb13",
+      "framedSha256": "0c0517d38fb64b8c7d56aa7af5a329fb9bbfc1d2cc02741ecc9932de6efaa599",
+      "viewport": [
+        498,
+        648
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/numo-mcp-connections-workflow.png",
+      "sourceSha256": "a1c9a764eb04b52431b4768c31224e92676f4f6c4998e10ee11789913b775b76",
+      "framedSha256": "e02bd0480b898a9a455ed323b9cc45d6d7d3b57bc3770d31f58250cf77c7582a",
+      "viewport": [
+        816,
+        1314
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
+      "sourceSha256": "2449953acd8d55e247caeefd407eab3587ad6ed77de8e410083e34a5d9833f48",
+      "framedSha256": "19da623b1c886b5acaf722da5476eb590b3b57412750927d9dacd38d0feeddae",
+      "viewport": [
+        560,
+        920
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/recover-numo-work-workflow.png",
+      "sourceSha256": "49098d9d714e85a0004bf11fc0e6e8157f8cc234b67cba873475395d620ec134",
+      "framedSha256": "ff5dbf126d9fac059c0bb9f3ae7f80c65362d0e325430265f5a90ceaaebd31e9",
+      "viewport": [
+        912,
+        400
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/reader-objectives.png",
+      "sourceSha256": "ab637e35d5307847d2aec3056efe228ca37bb84264d4500fd4eee181cfdb6f35",
+      "framedSha256": "46318cf407cc61ce0e77bfa27a4ed7bce4f20802cb1ebc5943620f2aa56caedd",
+      "viewport": [
+        720,
+        330
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/reader-objective-momentum.png",
+      "sourceSha256": "d1ee60e93c44fecc46cad36b863378ba4aeb89a45ae705c5fca21de2822bcd99",
+      "framedSha256": "ffdac0e09d7c58f16ffcc095d0c4075d2416cf0752805419d0a80b38c03703f6",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/page-create-menu.png",
+      "sourceSha256": "7a7b297732265ac583453f2e8b4d24909b8b620e13e43667a31b4d0e365faeeb",
+      "framedSha256": "e31b3a2ad0bd9553345680e9532af595f8d68f0954eeed0b53667ba65cfbec77",
+      "viewport": [
+        266,
+        152
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/page-editor.png",
+      "sourceSha256": "685988cba146154ac11e3058f11350af3fee7466a98cbce4d89eeda765e4619a",
+      "framedSha256": "7a4755c3cd8c5b8a13c4be02170a65e4a000459b5d31d65bc008595b4966a4e2",
+      "viewport": [
+        1178,
+        948
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/page-comments.png",
+      "sourceSha256": "1c79f4ed925d0d1b3b0f99b24508f899fa161ed2c448f8037ff8a6aba2e85fb9",
+      "framedSha256": "7bcd7a48d829a31efc8fd64a4c431a840877a74d98f412776e4d922993dd0456",
+      "viewport": [
+        632,
+        625
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/page-file-states.png",
+      "sourceSha256": "930f9fba1a1742db51f4424211d16e63f9dee7672ec6e1d949422ef7b4ad9158",
+      "framedSha256": "85638a3a8c5e5584a6b83fd72f0fd1f9befc130bb4ea3772bc3ba37b06b6078e",
+      "viewport": [
+        1178,
+        466
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/page-history-preview.png",
+      "sourceSha256": "30f881f5711908ef408f1ca06909f41a44f3641cd22dc9f555b494097bd3b3c0",
+      "framedSha256": "2e7bbe0166286533b67dce8e57b9ec94331f61ccd3e065d19e38667a6d93f871",
+      "viewport": [
+        632,
+        538
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/reader-cycle.png",
+      "sourceSha256": "8ee8e2fda8e54fc447fad77ec25685bbcf57d83548fcb7c3abc6d2ed3268f20a",
+      "framedSha256": "2a235c68e07729b156aba666b5e54a5d198f17c7600f25e506335b81c594010c",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/reader-statistics.png",
+      "sourceSha256": "67c01a3ef2a8c03c2f3523103a29f9398041e97c97f486f82437282472b40beb",
+      "framedSha256": "8460976f08c812296a02f2bba954405492cafa0c747a89bb09d0a77988a76329",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/project-general.png",
+      "sourceSha256": "0b0976174c7064853353961a2cd742f1077c71b2f590101ddacaa41483467440",
+      "framedSha256": "7f0589a06f4f48cfc4a6eec88285cfd08c34f4945871968a1c792d9132dd06fd",
+      "viewport": [
+        1178,
+        563
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/project-members.png",
+      "sourceSha256": "99343934d4d4712ddb04aeadc3a900b10566bd77442c4b352f4a7565e88fdafd",
+      "framedSha256": "dbcebb1d194b4f96827b28fdb7bf3248c7582285d5dc11336436419f7e08e01a",
+      "viewport": [
+        1178,
+        503
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/repository-skills-workflow.png",
+      "sourceSha256": "f2b5c3d0101a27d0f56d334e37e3ca8bb955ac8dceaf72aeb3c58c032fe5d64a",
+      "framedSha256": "33ea548c3ebb5f58fbc726d3dce026b9d37757be53893a3155d33b44ebe30fcb",
+      "viewport": [
+        996,
+        888
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/scheduled-routines-workflow.png",
+      "sourceSha256": "799846addd00432866812b29014616d5ca4e6520672402aec041094c57f9cfd8",
+      "framedSha256": "f44306a8c615d1ef5fcf634b7aba9cbd63351a8b209e80481e3949a05c968251",
+      "viewport": [
+        1161,
+        1051
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/work-task-notebook.png",
+      "sourceSha256": "54496a2e5c82dbce5775240ee7931bdb230c047da289a84ef4d39a5254d29fd7",
+      "framedSha256": "9759d7900aab4cc8dc24e795b6ab35dd898d3d6e72bcbd534033d34a56774de8",
+      "viewport": [
+        1156,
+        1048
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/transfer-between-instances-workflow.png",
+      "sourceSha256": "9d36599d75b8e039a8638b66455f5159b19253d5b37984e369e671c689608f1d",
+      "framedSha256": "fccd875ff0ed8cbecf17279b250e7c5c998b7f598bef14c4685866852cd0862b",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/transfer-between-instances-export-workflow.png",
+      "sourceSha256": "da899d9dac2a6628fb52caec8c20c78f879e1fb392cf8ae2d0dbf717cc1a4402",
+      "framedSha256": "38b95162c30957dc981e9b909dc7969c90fdf397d6387f42a434f0f31c96815d",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/es/reader-trash.png",
+      "sourceSha256": "7c05c32f504cffb483d86c1174ec712086861bb41ecf7b36b44e2351bb0df6c0",
+      "framedSha256": "0a1cba28540a62e4f472da210097ff68299abd3020d579fd4483942121fd7139",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/auth-signup.png",
+      "sourceSha256": "8995adffc7ab6050e8e3d94e2bf48e86ca1dd584967043802e3eb453ec0cc44b",
+      "framedSha256": "1451bd3d75cd49891a64e5370334cc95e6cb907c198f0c66a44cf507b583e697",
+      "viewport": [
+        428,
+        502
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/auth-login.png",
+      "sourceSha256": "edbbd58650eded7e4ff38c2861ee6cee1df0b8bd3ba323b3faffbc5f0247800d",
+      "framedSha256": "a3e9f4ac84f0a8613b4a6e80679d67b2b4892c249efdb3ce2611fd369f6210fb",
+      "viewport": [
+        428,
+        588
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/account-security-workflow.png",
+      "sourceSha256": "d34afac2aaf9fd6d4103a2e779d6878d61739b64d7cce76e9a1e78aa067031c8",
+      "framedSha256": "adaf31ebd7239101ef454d1ca6fd0f2658234a121aae4b4670243be2a391ba57",
+      "viewport": [
+        816,
+        227
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/account-security-enrollment-workflow.png",
+      "sourceSha256": "1af79cf526ce1e5c7eabeae6f479b9c57a13667562ab820f91e75f0c17c978bf",
+      "framedSha256": "ee36ef5433ab8e4060d899311c0a198e0a0361da1ff7c535c59c12c279929f2c",
+      "viewport": [
+        816,
+        498
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/auth-recovery.png",
+      "sourceSha256": "9e16ea2f939a717c1dcc4579959ab8ee49898879546335db635b69f0624deb2e",
+      "framedSha256": "0b5da90a01108bed7926eb1e7e3044f268ec70e22dbed1013acf6df892a128b7",
+      "viewport": [
+        428,
+        326
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/profile-and-preferences-workflow.png",
+      "sourceSha256": "95ba97ce467e849033037b59c25744fca75d5974905d5466e938566a8550285d",
+      "framedSha256": "580d283d22802fa46f244bc40c6f7b4e3da2fa9d80567a56c22a21e154e31071",
+      "viewport": [
+        816,
+        416
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
+      "sourceSha256": "a86b363e39cbf9850d1d154c48f875f7178379bc1f288b18c1ee72b34ed6662b",
+      "framedSha256": "9b05af793557c94ff7636ddd2f1a21cb1195ade72196783a491cf020164e0f98",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
+      "sourceSha256": "14836e5f5c9c8b0643890c442b7ab18c5ed4868f37d380b39e2bbce844689889",
+      "framedSha256": "ee90ba1c9f3f5406e8b36e343ba2c80c2a8fc4058263795ddd36c77405ae7d5a",
+      "viewport": [
+        816,
+        231
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/ai-keys-and-models-workflow.png",
+      "sourceSha256": "5a00db4e32a44c0b844a74fa1d0675b612c50e032b0b8e6750a6c586ffdd10be",
+      "framedSha256": "235a7a3fa63daaa0d336d3db0dc82b7c759c503b11bc5bc58f61844d205baf0d",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/ai-keys-and-models-defaults-workflow.png",
+      "sourceSha256": "e02583079f03e4986bf6d87e6c48b932c66c585b554c5284a53cf7ed09e564d8",
+      "framedSha256": "fc3f263603365a65c6bba684d3fb3e7d4e53fd9b98da8a753269bba454bcb9f6",
+      "viewport": [
+        816,
+        217
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/plans-and-ai-usage-workflow.png",
+      "sourceSha256": "e63e8adb3e2caf053852ebcbdd6c8200882ef34aac09ce1c4f0d8f5f19391080",
+      "framedSha256": "27107f37ae7a38b84395b8a4fa8dbe65b541fa4149661cb55f2c5e8beb1399df",
+      "viewport": [
+        1154,
+        1766
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/web-and-mobile-workflow.png",
+      "sourceSha256": "e147c95f05ccd7143cd497605b2b073fb85e89b807761c543e4bad31479b3b14",
+      "framedSha256": "1fdafd49d3796e68f988f9d2a1c68b5decf4a19c0aef6c45e920a6f186eeaa80",
+      "viewport": [
+        438,
+        892
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/install-the-pwa-workflow.png",
+      "sourceSha256": "095f99751a45982be9451c9bf572c41afa19f771408ceef5ea4b62928e0f7464",
+      "framedSha256": "e3dc2fce4b166a3cc6f2101ba0ac04a7a8de335b33343e2375e31f4a4a0666c3",
+      "viewport": [
+        1288,
+        759
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/desktop-app-workflow.png",
+      "sourceSha256": "3febde51e8e87a5e1c5662c4934cd86ebdb86fe24f87f0a410a0b9ff243527a3",
+      "framedSha256": "0e7054e28fa8fc5e1693802177a974a3fdd86dbad42bde0d65fcdf8a075b36b8",
+      "viewport": [
+        816,
+        287
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/devices-and-notifications-workflow.png",
+      "sourceSha256": "f36e8b11afea5716ebea87c45895f5d38e363aaf031f6cbfbf213ca66216b1e8",
+      "framedSha256": "9979a4a8329a6871a9a379f020c96cac4f4f94e76bb57bde8cad20e9d991550e",
+      "viewport": [
+        816,
+        196
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/devices-and-notifications-registered.png",
+      "sourceSha256": "4b74b5aa6938564fd488f278b7af4cde5b4e88689aa983c25796f0a5b54fb5b3",
+      "framedSha256": "f28ef7b3b0d592cf48f5e8d01293d6cc14429038cc9014172471567833dc5565",
+      "viewport": [
+        816,
+        208
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/automation-settings-workflow.png",
+      "sourceSha256": "f76ad4f491df2e244da817841a0194047bff77aab8464038bce053bdde3c4466",
+      "framedSha256": "5f844396a137f124dc5f3def7a26eda4a87e3bd53720d8ec33f578702f0836ac",
+      "viewport": [
+        816,
+        201
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/automation-settings-projects-workflow.png",
+      "sourceSha256": "bda84386f616f4fabc6051a8d4eebf8e0e99592f0687cacc9d43268e0a690237",
+      "framedSha256": "205f3f8c5ab9d07189f2df7594e06866f3bbd4c25a9d664f6ab75cf65cac2dd7",
+      "viewport": [
+        816,
+        176
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/delegate-code-work-workflow.png",
+      "sourceSha256": "0c724187f5ad732fe6d4bf944711d14e620fe818b0aff45b2810f988f69e02d4",
+      "framedSha256": "dac76abc7fc2ebc03b2a3ec733488e216670fd5133c0f480c1b19e2681aa1901",
+      "viewport": [
+        912,
+        179
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/review-pull-requests-workflow.png",
+      "sourceSha256": "4d34c77e6f35f6c698f10367830cb98a89e15532c450b76ca8c6fa5ef574dfb6",
+      "framedSha256": "55e2b90d6b1e0a22f0cf4ffbf5800a40a381a1a61d4331eed0b7e660f23b450f",
+      "viewport": [
+        1528,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/database-property-types.png",
+      "sourceSha256": "95198934dc0035f1a19839c785bfda1405302614f10d15da2822f727542ea115",
+      "framedSha256": "902760d45024e1ff7228ae01b766ae00d7ba7b8fac194ee00aca175e5e4a0668",
+      "viewport": [
+        464,
+        336
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/database-entry.png",
+      "sourceSha256": "7799cebdbeedff9af3a2a60eeae86ea275bcc9d08ab6b3f6a64f0122ff700898",
+      "framedSha256": "6358675553b04b1997804df80ede5b112cf25d4ec0d76f91e37eb7520ef42761",
+      "viewport": [
+        1178,
+        429
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/database-conversion-warning.png",
+      "sourceSha256": "1ca805a25eaf87a2768f1280a1b14077e15e17a9b6799b3568a96be16d9fbc69",
+      "framedSha256": "94f22b6bd6a59e44649be35116ae8f45c507c1e09c772dec7c7d5de2ac669fd7",
+      "viewport": [
+        456,
+        282
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/database-import-review.png",
+      "sourceSha256": "60d6a0fcb74b15a8aac861b03cc43be63c5fda6eb6baa8246302e77f149d5257",
+      "framedSha256": "fb751acecd0b76ad1fc5fcad32ae9719a20b5abd2a45ac951ba4313bb87f738c",
+      "viewport": [
+        744,
+        511
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/publish-a-feedback-board-workflow.png",
+      "sourceSha256": "50ba022f493f0691cf4d293a2d8965c2a1e387b417aa20ee952ee284110b70b3",
+      "framedSha256": "10267257df56b65fc7df75f846f76cdd65d50f53b4c3691603e6aad555f4393c",
+      "viewport": [
+        816,
+        378
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
+      "sourceSha256": "94417aa893930bb719f917ae7a990aaa7e0cd3b1d4ec30838ff61f35a20527fb",
+      "framedSha256": "127a969ff3b391adffb619aa7675bfa174d19802321924e7e755b91c7abb9d3b",
+      "viewport": [
+        625,
+        394
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/moderate-feedback-workflow.png",
+      "sourceSha256": "596492723988158ea3b526f7aec50cdd9abec19a2e5414434b40125737b173ce",
+      "framedSha256": "695a3d6aefbf817e9d76e255aa88f7e656f20c8157330fbba8a179d1fc17050e",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/feedback-to-issue-workflow.png",
+      "sourceSha256": "596492723988158ea3b526f7aec50cdd9abec19a2e5414434b40125737b173ce",
+      "framedSha256": "695a3d6aefbf817e9d76e255aa88f7e656f20c8157330fbba8a179d1fc17050e",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/feedback-pages-and-views-workflow.png",
+      "sourceSha256": "c866ceecc982a1111703488f70508b741f17e792e87b36a555d08c9bce3d5c06",
+      "framedSha256": "633c16e7bdb504a653d3b40c710216b932c3139eff5c4c9d035b715b4a299afd",
+      "viewport": [
+        1148,
+        388
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/reader-first-project.png",
+      "sourceSha256": "cc7151595d589debe296606651b8aed755e44f471c6c9905c86d1fd7c6fae050",
+      "framedSha256": "8edf9e7d466ee7b496a4ea07c86a15d83f1b9ad740b56c1694febd9c068c6bd7",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/forge-issue-sync-workflow.png",
+      "sourceSha256": "5b5e8e834d1f32b93a254368e47131f2ca9a332da250d2fa34b1898bee3e9d0a",
+      "framedSha256": "405b3d4e48c7041146da568596f2eac913ce1c7656758424c293cd708de1d0c9",
+      "viewport": [
+        816,
+        278
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/install-locally-wizard.png",
+      "sourceSha256": "86ba78d2b97ee48ccb2418aae816a19351997c407b90ab6e02071692802e8aaf",
+      "framedSha256": "e24b61cb6b407a927bc2db6c9eea4db7b09e9f2da2ab88e65981a06d33c2ba47",
+      "viewport": [
+        944,
+        500
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/install-a-server-wizard.png",
+      "sourceSha256": "90a3f7ed9df8debf42da916901830480fa91f004742b8548e072c80405f65754",
+      "framedSha256": "181b87e21c560fd702d4381aa92828cd044981376fee1875258af909fb751586",
+      "viewport": [
+        944,
+        1021
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/instance-administration-overview.png",
+      "sourceSha256": "824ab3f1dbdf7f304561dca92b64e41c26db98362dce9a91d64cd4976f3c9d15",
+      "framedSha256": "fc61053defd0cbee9515b004418cc6b961299829dab892199a5576d13895091e",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/instance-administration-users.png",
+      "sourceSha256": "37877b00f447d81048b18259a5836799f3483075282a358969572957e5b976bb",
+      "framedSha256": "61d004fff7f6808c244f446541d29284a70f390b6fc33ffae9cd24432c0a2f77",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/instance-administration-models.png",
+      "sourceSha256": "c498307dea8dcda71c626a9d3e24d235753d73a1e6cb4b147f72157fb928a9e4",
+      "framedSha256": "ed6278f95f51a83142137362b048a0949601f54e4e4eb14f5fb62d1243df40a1",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/integration-troubleshooting-error.png",
+      "sourceSha256": "8c1041d93fea1bfdb1c8b3530eced0a62f95562c00e4a16dde27122d079891dc",
+      "framedSha256": "8afa244ee2e67c1d78a6efc890f6350917c0fd7aacb4547b108cb93217c128a6",
+      "viewport": [
+        782,
+        108
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/triage-incoming.png",
+      "sourceSha256": "e6e3da604fc0451c904a912524537b64d179aeac299b58968d4c8a03f021b114",
+      "framedSha256": "2ccaf6b9f3769f501ba72d29b9ae9b39a3cacd7a9b90c5e76edddd6e0df89456",
+      "viewport": [
+        994,
+        866
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/work-sub-issues.png",
+      "sourceSha256": "bca07d392f503393b228d145a7d91e6a79f2928eb5980b540e7268a87594cece",
+      "framedSha256": "64455b1d59995d9f3d3e365dde8460cab752ba9c0b2200328e7b900d71ae9288",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/work-implementation-plan.png",
+      "sourceSha256": "96bfdf82bcd69edc246e4e7ed435fe7e31353c2c4ff9801e34286b56ff50f4af",
+      "framedSha256": "f93aeef3dba48b158180d3071d8709969cebfe30848089b21fdbcbc179306ec1",
+      "viewport": [
+        508,
+        1416
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/work-bulk-actions.png",
+      "sourceSha256": "39320ce5fce83ece70bccffc06a1537b284e8c771d4ff85356e43820638e0c15",
+      "framedSha256": "64ab27a21482db1881043757e9d586d2c7a42ecfe689b45f7e7dea5c8f5e6eb1",
+      "viewport": [
+        788,
+        506
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/import-issues-preview-workflow.png",
+      "sourceSha256": "d14f09357b9176bd0dcf3bcf49fa2338cb167a9f2ba9ce17a9573d23a40a1729",
+      "framedSha256": "60ac81c9fb480e342d089195bc0be635894eb7a05ee005d9afcdc25229a63629",
+      "viewport": [
+        816,
+        977
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/external-minddy-mcp-workflow.png",
+      "sourceSha256": "b276f60f0e947d7b3089b2356ebb83978dd5be0c7eb746cd9f5433ee33778cf1",
+      "framedSha256": "c159f988d78b3b38f4ab69c4c2506120da76ca4d9ff4f3c486dac8c2fda38d5c",
+      "viewport": [
+        816,
+        252
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
+      "sourceSha256": "5f9e47277a09b421130ee1ebf38b3b334866c86e9cb2c71753569fd3d788e99e",
+      "framedSha256": "df01e27df1bb52d24dc82e6e8b0d164fc7ebfece9f7929afc65598779d321b0b",
+      "viewport": [
+        560,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/work-navigation.png",
+      "sourceSha256": "92bb8bbed2d5c6fd3f084efab74762f6e8b2008ab6e2e9bb3563e1c5c4725fff",
+      "framedSha256": "3e168ebbdae638236ac9b0f91a306ce6af3f0c325ad185375b3e8319c3984272",
+      "viewport": [
+        1488,
+        1128
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/work-search.png",
+      "sourceSha256": "4d498b282f97cbaca4a56ff8a28c8f68a047e66aca8c79cf8cef423b5f9720e6",
+      "framedSha256": "b4204393fab47d11dc00ca5051b9d45af92bf37bcd8f7dd8214a792ce9b314a3",
+      "viewport": [
+        788,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/work-with-numo-workflow.png",
+      "sourceSha256": "5e6ad3310849aec398b44bb21c9ec01b1c865fc6c89133ac44a17bf17c8d1f04",
+      "framedSha256": "9aef1c704331014443133d820c1a43a67e3aa4282df4c66f97c5128488e81b7b",
+      "viewport": [
+        498,
+        648
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/numo-mcp-connections-workflow.png",
+      "sourceSha256": "8db60ffc79db1ca4f93371625c636817830c2bdf4b6afb4e1fd6dd0b9ab34bf6",
+      "framedSha256": "eaf430400a9ba689b5ce36ce4e7753f2f4c2233756cf833a85e694cf1e483f39",
+      "viewport": [
+        816,
+        1314
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/numo-mcp-connections-config-workflow.png",
+      "sourceSha256": "6faa496b48bbab0d122edfc6773cedaccfd036593674a4e06f458f0fd1b8429a",
+      "framedSha256": "93cf6aa049a47cddff58ba93db15b2f02c4e230959abac9ff616821bf1cdf3a4",
+      "viewport": [
+        560,
+        920
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/recover-numo-work-workflow.png",
+      "sourceSha256": "d9f7a7b765ade0078975903155e069ae2b1d2184046edc521016b708611ef873",
+      "framedSha256": "167765c29b434462db9c0269350c2531f364ff77ccc41fa3e4d5036ceee546e2",
+      "viewport": [
+        912,
+        400
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/reader-objectives.png",
+      "sourceSha256": "d0fae6773ed17e4c1ec5a56916a84d0d026861f143359ee206116e74e8c9706d",
+      "framedSha256": "1648fb55f4bb55d94be0b6379e5eea41a5bf2f01fa2a0741ba694f34f1aa67b4",
+      "viewport": [
+        720,
+        330
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/reader-objective-momentum.png",
+      "sourceSha256": "9684580e6537afb1ea2eb91aef6a6b471883acbd07e80eb15543dd0d0ef5fd65",
+      "framedSha256": "a0765881ec31c2a0584d560083c1f61c3d2556ee4ce92092c3c29144fbcbf490",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/page-create-menu.png",
+      "sourceSha256": "6c9ea41c9c7511097fefd3a7a96b063e811672a6db6fdfd98bf8f88585e7aaa3",
+      "framedSha256": "1f3dae401ffb88505ef2771c10274554d4eef023c7b2903a04345014449207a2",
+      "viewport": [
+        264,
+        152
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/page-editor.png",
+      "sourceSha256": "ad001667f8864a56aa250d3a546379a630a253cd3be4eb070c08c9af000368d2",
+      "framedSha256": "234c346d20f104b39cc00e047d8b65faa2dddbddafc6db9b3e1da9b778989919",
+      "viewport": [
+        1178,
+        974
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/page-comments.png",
+      "sourceSha256": "759fbc5a402d07304b1680845f1b18e1430d9971e7abe578e4fefa7f77b5514e",
+      "framedSha256": "5783df6dd3edb6226c2fb71c9ff7d4e922088cd47649df439f41c9fa5d837f83",
+      "viewport": [
+        632,
+        625
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/page-file-states.png",
+      "sourceSha256": "f86ca209af0613620aa4d8b9a5a72ee6a23b51a64e0b3a5f66928b26a39ea291",
+      "framedSha256": "bbe3f1a7684402bb4cc7e5fc43123db9c7fedc405fc2681a8650ca91e7536c81",
+      "viewport": [
+        1178,
+        466
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/page-history-preview.png",
+      "sourceSha256": "772ec664dab18f601445ba4e403bbc64bd10823877461fe00d48ece50286587a",
+      "framedSha256": "9eaed7f7a13940870e7d25025db9bf687039f0aa9a03388771a61fd5f13c8f98",
+      "viewport": [
+        632,
+        538
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/reader-cycle.png",
+      "sourceSha256": "e7fdb09c34f65fbb44e0afc663721d054121f27e24091788eeb160064730c49d",
+      "framedSha256": "4da9fbdb7b8c1039f67f23263cde6d4c6723fa1a51d4bb2d2fd33b8a8239119c",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/reader-statistics.png",
+      "sourceSha256": "bba46d9c3781e0b9c316fa1326933830d244cdeff39602997249092b70593adf",
+      "framedSha256": "220a9b104aa019682b9b05acf232953368dce5e36a0746f86208524f22b49155",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/project-general.png",
+      "sourceSha256": "a636dbc92cc06f43e7b975883123542a17efd54bc070360c097166bba710fb41",
+      "framedSha256": "7cc75793e05a99f7ef25cf066505cbd6f923b7ffcb486af6bde72fd2eb887258",
+      "viewport": [
+        1178,
+        563
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/project-members.png",
+      "sourceSha256": "b0e4ed5c55189f26e517e89cff92411197e8a9aba896512ee57c59abe7086454",
+      "framedSha256": "3db13c168ee25a3e4b179e4496654f67f3efb4dffdedb71f356dcb6c5a3450df",
+      "viewport": [
+        1178,
+        503
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/repository-skills-workflow.png",
+      "sourceSha256": "714e92f595bc9c2d24c72ef98393d7fcf3a22804a3bdaf01b9023a8f38c08736",
+      "framedSha256": "385f31e84fa5f00015f61028639d053d4abf2c432666b5eb772268974a966477",
+      "viewport": [
+        996,
+        888
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/scheduled-routines-workflow.png",
+      "sourceSha256": "efa167e3d000144b45ee768a3a40ca94d0a955312f48e313d265459c398a2ffb",
+      "framedSha256": "7b6334b7ee9d47b108187c69a7bcddb1f3318cf6765d54d189afb9319507fa7d",
+      "viewport": [
+        1161,
+        1051
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/work-task-notebook.png",
+      "sourceSha256": "cad5e481daca322de863e62e29e03a63c3c91d41a23d9e58120c7fa317d16a8c",
+      "framedSha256": "1a1f82ef2f072457f54657723758a41764ccadd0d54a295182e70cc827eb338a",
+      "viewport": [
+        1156,
+        1048
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/transfer-between-instances-workflow.png",
+      "sourceSha256": "5ec79dcdbdf20ec0df6510a5a24ba122c79d62d10eb22c5dfa781cabfe97992c",
+      "framedSha256": "a3f4971a48776bf6e1b6eb201a07787b9284e4ebb53862c8f4a7afc113163548",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/transfer-between-instances-export-workflow.png",
+      "sourceSha256": "1289642ca97eceb989bf4f0824caf82357356c780279c3eb25512fe53e168f54",
+      "framedSha256": "6bfafe393f8430a54d3cd511f7324ab218319c4d57762bf059e2e8402c3b46c6",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/it/reader-trash.png",
+      "sourceSha256": "11876a66a78f87e6bd9d13f8a52fa050342c75fd8f179240be448d1101ecb77b",
+      "framedSha256": "37156ab76f6ea1e447b47c5f3557073eeb5f44598daa594fd026e2c0651afaf2",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/auth-signup.png",
+      "sourceSha256": "12488b995f37333c3fe02370d4422af18cc7fc91e31fbc1cfa54d53b584bcd67",
+      "framedSha256": "816a198e15f2a17e7a96c841346f57c0522630f2bee30ec2fa4ebd4d807fc815",
+      "viewport": [
+        428,
+        502
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/auth-login.png",
+      "sourceSha256": "e19201d08a79bc7ed5f31f9701d34f05c777eae73ff1c0468a3bffa3af683de8",
+      "framedSha256": "c3b0a6ee7d3b83262a849e4ef614c3f0f755d1bb7db92e7f6bed202da4b8e112",
+      "viewport": [
+        428,
+        588
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/account-security-workflow.png",
+      "sourceSha256": "79270408c3a247d8f2588e8a9736fadc1d737ab644387657d2113321ce939b73",
+      "framedSha256": "01e0cd752abe474798a0f10522537dc109c215e24f596e07da09b29f78ff0575",
+      "viewport": [
+        816,
+        227
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/account-security-enrollment-workflow.png",
+      "sourceSha256": "ee56a43671e38bfb35ab282acb46128902b7791192476791f563f16a644d8a54",
+      "framedSha256": "cc685c4e2a86841ab797532ef557b04006dd7a16b453a091e6a29980889bce0d",
+      "viewport": [
+        816,
+        498
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/auth-recovery.png",
+      "sourceSha256": "024a137a27b997adb37f91f5aeed7488ea1c554e9d600785ba6db921b02959de",
+      "framedSha256": "186f8dad255f420be4365c206ad90be4af4436620dc2723e5cd21845e1143c90",
+      "viewport": [
+        428,
+        326
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
+      "sourceSha256": "9d0ee8a8cdbca0d95047dd1a7da284c723a872297c0c531ecd0424923fb78c85",
+      "framedSha256": "70110e2cbe462a4ef2c8c6e2ecc83234f3ca96a17adc56660c0a1fafd1437ac2",
+      "viewport": [
+        816,
+        416
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
+      "sourceSha256": "84e3ce6ad6c3b916d77db381283e64263fa4d560fad35ac6d9d373d4cb28737d",
+      "framedSha256": "28beb8ed33bd08f0a6a3407601b2a310d5912f86607871daedefa21dedb13678",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
+      "sourceSha256": "64671eb4526bb14e104266d024e401c693108e29935ffcf696ac8e70d49436da",
+      "framedSha256": "76e610068fb6a318dbe979d71227b2926c1f292282171159540edc80366f4f90",
+      "viewport": [
+        816,
+        231
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/ai-keys-and-models-workflow.png",
+      "sourceSha256": "06aeade0a7330e92d305e5d42632f5e6f3e988045071c8406b7cd0e129ef377a",
+      "framedSha256": "d4806dd19f52927d3fe18e2da0ce3c0e5b676248afd1c37d21f445ff86a76a09",
+      "viewport": [
+        816,
+        212
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/ai-keys-and-models-defaults-workflow.png",
+      "sourceSha256": "e81bb96b4e9bee5bba49cba1221f169ffce944d1d2789818e9bbb4cdc1cf6f10",
+      "framedSha256": "45b049050951fbe3f0f08f1342dfef3e62c7bb20d6a35806ef442b0bc0b60fe0",
+      "viewport": [
+        816,
+        217
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/plans-and-ai-usage-workflow.png",
+      "sourceSha256": "29eba37f196de6d82d2f5aa641c8d773ac25366a6d7349931fc308027deb81d3",
+      "framedSha256": "1bea6c032cefe07bcde4215064db8687177a504fca94ed32ef09b29cb59cc4d4",
+      "viewport": [
+        1154,
+        1766
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/web-and-mobile-workflow.png",
+      "sourceSha256": "80f61f96a4ef02cf2bf545b184f138c499075ea6c4174040ba6ee2c6b50b7c17",
+      "framedSha256": "7f887ec8a8661176d8b02e1970f4c597d4ff742e285b80ddeebd117a1eed0c46",
+      "viewport": [
+        438,
+        892
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/install-the-pwa-workflow.png",
+      "sourceSha256": "f9217bd8fe80fe05d6cf0f52e0d078e5744955239d930655a48d450ab9197a4e",
+      "framedSha256": "611b387e560b2981338660cc08639eb5ac71f447b6d01c21b21060a9de06af3d",
+      "viewport": [
+        1288,
+        736
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/desktop-app-workflow.png",
+      "sourceSha256": "14c0330bfc7daef6d49f73e249f0d5ab8eaa17f04d89797ac7dc61afd1515039",
+      "framedSha256": "9054ec40cf28b0fa2e7491b33b64b6e541cbd0426d987e7f9e4287c9f61d4d58",
+      "viewport": [
+        816,
+        287
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/devices-and-notifications-workflow.png",
+      "sourceSha256": "71bb7c60e5f9bcbfc556e3099c588e792d16715b761dfd49b0b34bccc8e5ffef",
+      "framedSha256": "2d373bfa9066f8e3102ef9efb89353d9dedf1579d013aeef09b1a61854ba0b90",
+      "viewport": [
+        816,
+        196
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/devices-and-notifications-registered.png",
+      "sourceSha256": "299b159a230b93cdde5bf0818dc6733a8baf236af54c49f486665ae064da882e",
+      "framedSha256": "a56ed40746e04559e2a03558a87e57a0afebb24ff0802eb2bfed5c768885d305",
+      "viewport": [
+        816,
+        208
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/automation-settings-workflow.png",
+      "sourceSha256": "af73b2e15dd084e63529b62047ba5a57616d65b554e72ddf98b867c3ddaa926a",
+      "framedSha256": "107c27d2214f841dcf297d6d22d5da4089863d480da70d6cd2b6d06f2c9ba44c",
+      "viewport": [
+        816,
+        221
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/automation-settings-projects-workflow.png",
+      "sourceSha256": "db7ea6492955d221c6b1c343932d8e124ff4596836e8674e7d3063bb274ac2cb",
+      "framedSha256": "e04145e30254bea58a0c4fd652ef4530518fdba58daccea1ef68c6a87ecb9bbd",
+      "viewport": [
+        816,
+        176
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/delegate-code-work-workflow.png",
+      "sourceSha256": "40fecf84e29ca43393c87b61b696d9cee5865779557a1d1795efc199e2cec40b",
+      "framedSha256": "cfa742975637710748c95c6898d3fb1846af61e55f167b520635a5efc9822092",
+      "viewport": [
+        912,
+        179
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
+      "sourceSha256": "74b9eb451b317e3800521d3f608ce5fd90acc03ebb1842ea03328e1eb1a4c648",
+      "framedSha256": "6fae60cb590c55aaf5bd960ed385bc04c11d1385fb31566d0507da8fe69838a7",
+      "viewport": [
+        1528,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/database-property-types.png",
+      "sourceSha256": "64d1d3966670a3c712b05cfc8fa93910590df396957c763ae3a3658ce4731bd8",
+      "framedSha256": "518d6a4f5a9e9e9fff99f0fc6f54672c01b7f53efd3f84ab7e8561ac1a2c9cb2",
+      "viewport": [
+        464,
+        336
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/database-entry.png",
+      "sourceSha256": "e24f90b2114fffbb46cb8be44e27bff7c2450a42daaf27b0999ca76a4852ce8d",
+      "framedSha256": "4cceebe8029960594cd41d32a54e26f86a9436c76a1d73ad59fbeb8196ae0f7d",
+      "viewport": [
+        1178,
+        429
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/database-conversion-warning.png",
+      "sourceSha256": "25c590cb3f007268e9f9346a7e5f88e9bd40274c578f2d984e7add282fc49e2d",
+      "framedSha256": "cd8ca631f756a67d7174f6787e1117544da1b56145d1aedfb40b09de8ecdbe45",
+      "viewport": [
+        456,
+        282
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/database-import-review.png",
+      "sourceSha256": "5c769570108ffa97d23f3df1e398df388d05b6296cb44ed91e0d3f3fa16cbbb0",
+      "framedSha256": "808487b419893819025987502292f5bae6df72e072a77d1e464d20c91d098357",
+      "viewport": [
+        744,
+        511
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/publish-a-feedback-board-workflow.png",
+      "sourceSha256": "c33bdc90f0057520fd526c13a283e37bc19a03c596e8f5aea1af48a8e562af22",
+      "framedSha256": "0bdfc5f3f6cb649c00a9bce0765da1881264c6cae4aeab298a00f04249ad96c7",
+      "viewport": [
+        816,
+        378
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/submit-and-follow-feedback-workflow.png",
+      "sourceSha256": "a315d28bf2203a1cddf2cf0f84714908ec85c087a6a8b10eb1bd4c5c04bee664",
+      "framedSha256": "12a4ca963043d05ff822c70a93add0c28262f699be14365ade4c325498bd1927",
+      "viewport": [
+        625,
+        369
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/moderate-feedback-workflow.png",
+      "sourceSha256": "2214258353f1a6eb6b8115935c1e7e40b5019fa82d12bc0f138dc763e0fb757d",
+      "framedSha256": "80175610b36040d34f2e3a0802c9c2c1c3fb1f9495918df9c678dd447c706d0b",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/feedback-to-issue-workflow.png",
+      "sourceSha256": "e8addd006a7ae799d654a0214ac15dcd76f49bc436b17262dcc6b5afc6bde4ff",
+      "framedSha256": "591fcd764fdafd5d4e49dc5ed2be7942182c5b7a0861c7cbc65821f39ab562ee",
+      "viewport": [
+        816,
+        874
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/feedback-pages-and-views-workflow.png",
+      "sourceSha256": "467be823b6d94b3e8b8ed00e47839e34f703f00e42e4ec4cd903e7634087055b",
+      "framedSha256": "007d5e5a22b8555f241f678d9d390c38a6afe06f1a894bc3801e1d34da2d6f0d",
+      "viewport": [
+        1148,
+        388
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/reader-first-project.png",
+      "sourceSha256": "1a00aac29c5417d920362005830db831dab308e5356e3bcef951514536e21612",
+      "framedSha256": "9a4586550a4ff18d8bd99825fb7d85de061c61b995df019245cf30ed91efecf7",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/forge-issue-sync-workflow.png",
+      "sourceSha256": "c082c75d7c23423bddd9a9f7834256d55f26296967b17de691c0611c7f999dda",
+      "framedSha256": "4797a7b1e95bd5f04c4381ae7845e23155c088bbf68d3e63ae7795d8b92e5103",
+      "viewport": [
+        816,
+        278
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/install-locally-wizard.png",
+      "sourceSha256": "85c17a3c841addaf05f47529a666676e5feb30987241bf4a3cf7644d885cedc3",
+      "framedSha256": "16542f750e757680d9d786a4ec3abcd049951f040b2f73ab04adc33f981d1b26",
+      "viewport": [
+        944,
+        500
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/install-a-server-wizard.png",
+      "sourceSha256": "76a936cea6762b1323d6fb748f348d909f05c36c219d4d50f2f4f13595a7273f",
+      "framedSha256": "53f2b0c29104d7838971d56116244e97c2ca207a0b5899fb6cd2cc0cd570db16",
+      "viewport": [
+        944,
+        1044
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/instance-administration-overview.png",
+      "sourceSha256": "e2156a8741c078acb46e28c272714d9e36b81c352cc7f561a7d42590eecb8475",
+      "framedSha256": "f7af39e5f153dfcf6c904d5b239ac8cf545968055d917d7750666ccc00356e3c",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/instance-administration-users.png",
+      "sourceSha256": "74f143dd391a3691f01c10f713b4f42b5544c852b37fa2eb62652e2907e9b6e7",
+      "framedSha256": "8f6e9057898287076f4cd8d084de9e5fe0881cd48349e03b7182a2a6aa092c36",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/instance-administration-models.png",
+      "sourceSha256": "cfcaeaa9eeb0348d8c3f562d7b4c6b32b107a3b45a2562ecbed680f8a076de16",
+      "framedSha256": "a73e29e1a070e98f1740165d81a7c0516dbc6f165486d65b242d242a6ea604d9",
+      "viewport": [
+        1488,
+        1148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/integration-troubleshooting-error.png",
+      "sourceSha256": "33dbc63bd01f23df1dd6d310b2c2d15f78511dd4e2ebefb682af049934487031",
+      "framedSha256": "0a47bcb862b341bbce166034d54208f6005e6685a892a2358a33d7cf2fca40fb",
+      "viewport": [
+        782,
+        108
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/triage-incoming.png",
+      "sourceSha256": "de3923bc3f6ce51bcfe95b60d7e0107a73370159cca0dafba74613fe416a0209",
+      "framedSha256": "72cdb2ea8eebabad5bdb170539c6e14f6c08cf7e22ab2295e8af515cef8769fe",
+      "viewport": [
+        994,
+        866
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/work-sub-issues.png",
+      "sourceSha256": "9dab93661cf3d7a88a4153b301ae0f072ca87d050852a8035ca1fe5676e2dd79",
+      "framedSha256": "e8b551e1ecd91506684bb669a447f41f62ae4c981258382ed08d8a71b18e7448",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/work-implementation-plan.png",
+      "sourceSha256": "13bb6a900fa857f5996f420a461a719b1525d822983154d0c8bfed1db27c96f9",
+      "framedSha256": "200ee56f339a399a61463375e0b62bc8386ae3491814a98a05eaf337634a8c3b",
+      "viewport": [
+        508,
+        1096
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/work-bulk-actions.png",
+      "sourceSha256": "05476b38bb7d0d272a3a0fc38ddcfb3942acc6eeaedebc59da76efbff5b06749",
+      "framedSha256": "708fbf8533bec384882e538dbf75c86cdcef2dedd9370e6f6ed3f9514c7425a2",
+      "viewport": [
+        788,
+        506
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
+      "sourceSha256": "300fb7b6c53e67bee2754c6bc9c963a60a33c158047dabae2a3954dfb494196d",
+      "framedSha256": "bd3978b2a455b6b856b38fb960842a88c95849cf62e7dadac24f45c2bb48bdb6",
+      "viewport": [
+        816,
+        977
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
+      "sourceSha256": "83ac41bd5ee8f985f71be29896f44683bdb98745df9fe03522c31df5df58500f",
+      "framedSha256": "317874844bb3dbffa4d2b554d21d03d2343b81b6e8700e17a38071a14b737b59",
+      "viewport": [
+        816,
+        252
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
+      "sourceSha256": "87d25dee04ec0975ec09c3519f806df1af66c8ff6b202bc455cefea0265f5907",
+      "framedSha256": "9399c4581a994510c839f9760a6ea39eecfdc6f8630e998ed147d93d8f4a4e40",
+      "viewport": [
+        560,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/work-navigation.png",
+      "sourceSha256": "1c0e496d3af7b9d85d9d2563a4e1522e45a0056359b5c7d05777dddac1c06de5",
+      "framedSha256": "87663ec33ef4007168c8a975795f9a38031ba330bbea4b06df76decf4e42e094",
+      "viewport": [
+        1488,
+        1128
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/work-search.png",
+      "sourceSha256": "35f20115083ad3d2c41dfff46e8309bdc3401c2033038f5be91d87cd6d320c16",
+      "framedSha256": "7e6d302ae775fd2753b8071c9c11348063f80f63de99134ba274d3055ba41c65",
+      "viewport": [
+        788,
+        364
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/work-with-numo-workflow.png",
+      "sourceSha256": "2f54805fe9aaf200140b6a9ab27d37b0ed171b42affc1159b7518105d88ab84a",
+      "framedSha256": "fa663a343e7593683d6e240d206bb6c3b642ef279d298ed961c0af997e19e87b",
+      "viewport": [
+        498,
+        648
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
+      "sourceSha256": "51c18f2e5fc70bc95a14c1173e4633c0b8287654c5fe492cd8fd5e7efba67cfb",
+      "framedSha256": "921a55da14bc487103b197d68054744bbb74fca60fba9f62213a9242c68d02a8",
+      "viewport": [
+        816,
+        1314
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
+      "sourceSha256": "aa9b6d04ea1bbf750d5c7af3ab0e4c96a5d1b9e8254cab1b70c872bd26a8d0f0",
+      "framedSha256": "48337ce75a5a906e1ec9826a832079e12636f606ab3d7c74b44bcf5a6e3581ed",
+      "viewport": [
+        560,
+        920
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/recover-numo-work-workflow.png",
+      "sourceSha256": "e9f37495da1b8eac1dc9302b2bd294db76cd6460e55b46c9efd84a0d3298408e",
+      "framedSha256": "fd5a40e21ef7901b57fa6611e8307810eb2b66a3db1d84fb70c2620f314f99a4",
+      "viewport": [
+        912,
+        400
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/reader-objectives.png",
+      "sourceSha256": "a7622cfbfe2ad014f945df018f09bd17f954b5a920ae9bd6165a669ff16e6094",
+      "framedSha256": "39253b50cc931367cdf285dfcb09302a75bfcf1c4e2c19e8ae57cfc9c043e490",
+      "viewport": [
+        720,
+        330
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/reader-objective-momentum.png",
+      "sourceSha256": "c9229ebce69ff6430ff532f681458311546fcf1e053b7d2500831f1206345f58",
+      "framedSha256": "5c88862404d5c34a931c6cb079b8ad3d4de8fa88783a6cc94e0d4122f1659e5d",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/page-create-menu.png",
+      "sourceSha256": "c0e6c33dff737ed7cd6c7f487e4dfe2ee818b075147f142a54eca7999d9e0b96",
+      "framedSha256": "6ab382b0b1dd6947e751b52a24e732573be4dc7771f38ed0b59ce8312d79510b",
+      "viewport": [
+        272,
+        152
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/page-editor.png",
+      "sourceSha256": "db1e239eda5c3a1e7b419b06169d0bacb4853971c55500c217baefb01f6356c1",
+      "framedSha256": "4b094aad69ac107a1bfa93d613e0d70541d8950cb1816893e23faf961a65dfca",
+      "viewport": [
+        1178,
+        948
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/page-comments.png",
+      "sourceSha256": "c74b17a267be461f9234195e3d8856bbcafb9ced7a81ffc060f8082271a0face",
+      "framedSha256": "4f5612f29bfa9343757ccf6049e78b76fd4d85880399eec48e12355da4699c9f",
+      "viewport": [
+        632,
+        625
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/page-file-states.png",
+      "sourceSha256": "ba26b50391074ffe871dc28af0af385f9effeaeea642fd971173840cd9c00610",
+      "framedSha256": "056c9f08c7c084c6e2566684505001667b5638a8351be17d9e7df002ff1a1be6",
+      "viewport": [
+        1178,
+        466
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/page-history-preview.png",
+      "sourceSha256": "1a40a161f044c2407d260ba0252fd5b7dc8a3fdecafd4d6a822e467cbd6e9b99",
+      "framedSha256": "ecf1a10ac5413f5e32ea432ede7ba7964336b498bf3e72c6dfcf44613bf2979f",
+      "viewport": [
+        632,
+        538
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/reader-cycle.png",
+      "sourceSha256": "9b36513cd1260a583fb0b7941fa979b2f862ffe17555b2d507d26e397a111614",
+      "framedSha256": "0a82e10e4285f01f4849b180b7de5bfe9cfb1ff9902c5813fb5da62f303dab84",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/reader-statistics.png",
+      "sourceSha256": "fdf652ab912607a83111b964c68e5facb6fda7b7340fec4a2f25a2a8058c6ede",
+      "framedSha256": "ebad340775603b0678f5d554c5b6b28fc1b94c9e55039ff8262a7f575756e6be",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/project-general.png",
+      "sourceSha256": "cf78bdd98eea114939d55b9bb685842936cdaa8c5805875c02acec9beb8a93e1",
+      "framedSha256": "314db95adce98428a586df10b53125d8008415ff26bd43b822a9d631871fc5b6",
+      "viewport": [
+        1178,
+        563
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/project-members.png",
+      "sourceSha256": "5b13ebe200fc0112644ea22194787ae6b2cc93625fe35568121ad8fa15ddad59",
+      "framedSha256": "1cd436e15d4c9648e3ca5150bfb59a705f3df8f1f7395cac34bb0c60775784e3",
+      "viewport": [
+        1178,
+        503
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/repository-skills-workflow.png",
+      "sourceSha256": "9e330f0497ec0418ee3414f5d2b7f9d6b853355f333c6ffd102366c074348e21",
+      "framedSha256": "f193e6dcd4627d8c9dcdd67ffb27be25579bd7775c3919adca36493276b11660",
+      "viewport": [
+        996,
+        888
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/scheduled-routines-workflow.png",
+      "sourceSha256": "3e2b80090cc19c84903139a42613b6a51f402f504818703c0ccd226cbfaa74eb",
+      "framedSha256": "d0b296a59b16ccdead8837487191b55a2ecda058ea70c3b67ee43f8f5e271b62",
+      "viewport": [
+        1161,
+        1051
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/work-task-notebook.png",
+      "sourceSha256": "27bb932233ae04b1908aa14c866bf0ba4ffc1d1086f4788716719ee9519126a8",
+      "framedSha256": "68dc67c31138dfe2c51ba3eb385a05a7984f581f6502b3ec1f1085ca9a74cc09",
+      "viewport": [
+        1156,
+        1048
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/transfer-between-instances-workflow.png",
+      "sourceSha256": "b4cf70529b581c75899461ad7e71c6486c80f19306aa35eee4eb6d4d58a6dc6e",
+      "framedSha256": "ff98a3704860d5d3baba26716690496555204d2d02d10f64ad617971e55aa28b",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/transfer-between-instances-export-workflow.png",
+      "sourceSha256": "170602779d91faa5a8b6e4032b0e95e8a47db72ead51f968b4c2476601143a02",
+      "framedSha256": "bae32ab78fff09088f1b54604a9b05ff3983744fd9a1e20e0e59d0f8efbb42ef",
+      "viewport": [
+        816,
+        148
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 1,
+      "uiPixelsPreserved": true
+    },
+    {
+      "src": "/documentation/pt-BR/reader-trash.png",
+      "sourceSha256": "7573e0c0873c26e1e4d93037fb1f3f7f53464dd060eee8796459d4abed3779ad",
+      "framedSha256": "b75322fedf7901f7180bea3804fa5fc2c0c8a86c1649cfbb48ca78f083c50e19",
+      "viewport": [
+        994,
+        1046
+      ],
+      "padding": 24,
+      "deviceScaleFactor": 2,
+      "uiPixelsPreserved": true
+    }
+  ]
+}

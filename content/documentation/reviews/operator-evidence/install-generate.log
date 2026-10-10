@@ -1,0 +1,6 @@
+This will create $DISPOSABLE_ROOT/private-instance.env (mode 0600), start the full Compose profile, and run Supabase bootstrap.
+Optional integrations: none. Scheduled routines and server agent sandboxes are included.
+→ docker info
+→ docker compose version
+→ checkpoint: configuration.
+✓ Configuration created. Start the stack later with pnpm self-host:doctor after it is running.

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
-import { GLOBAL_BOARD_KEY } from "./use-global-board-query";
+import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 
 type AvatarResponse = { avatar: string };
 

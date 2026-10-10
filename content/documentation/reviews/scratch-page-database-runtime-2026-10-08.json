@@ -1,0 +1,817 @@
+{
+  "projectId": "3bdf5b04-ed54-40cd-b65f-10086fed72c1",
+  "runtime": "0.11.1 candidate on isolated restored adapted v0.11.0 backend",
+  "date": "2026-10-08",
+  "method": "Actual UI creation, no display or success adaptation",
+  "writes": [
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/me/app-tabs/1323f095-3232-41a2-b794-2b5f6c9807e4"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/7f171445-675b-45f4-835c-c475a4f3c1df/database"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/me/app-tabs/1323f095-3232-41a2-b794-2b5f6c9807e4"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/me/app-tabs/63cfa697-8f80-4e90-a78a-52593b3b313e"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/database"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/database"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/database"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/4a7fd286-4eb7-4289-92f8-44848d1b79df/watch"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/me/app-tabs/63cfa697-8f80-4e90-a78a-52593b3b313e"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/me/app-tabs/6f748578-8727-4706-b2ec-c3c7ef5de393"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/undefined/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/me/app-tabs/9cfb144d-d777-4b54-a7ad-e0145e7e6907"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/me/app-tabs/6f748578-8727-4706-b2ec-c3c7ef5de393"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/files"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/files"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/share"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/share"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/versions/27848845-e545-47d9-8c54-f3a69f013a60/restore"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/versions/5aa7b5aa-850d-4014-b48f-4d75ce30ade1/restore"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/a0fb9f3a-4421-4af0-a018-82074e21aff8/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/import"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/import-plan"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/import"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/3bdf5b04-ed54-40cd-b65f-10086fed72c1/pages/0a6f9e42-f3f0-4228-807e-176a6238b2fe/watch"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/app-tabs/metadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/me/local-snapshots"
+    }
+  ],
+  "failures": [
+    "locator.check: Clicking the checkbox did not change its state",
+    "locator.waitFor: Timeout 20000ms exceeded.",
+    "locator.waitFor: Timeout 20000ms exceeded.",
+    "locator.waitFor: Timeout 20000ms exceeded.",
+    "apiRequestContext.get: Invalid URL",
+    "Import HTTP 400"
+  ],
+  "importDatabaseId": "0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+  "documentId": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+  "publication": {
+    "publishedStatus": 200,
+    "anonymousBodyVerified": true,
+    "noindex": "noindex, nofollow",
+    "publicFileLink": 1,
+    "revokedStatus": 404
+  },
+  "restore": [
+    {
+      "step": 0,
+      "status": 200,
+      "title": "",
+      "bodyMatchesOriginal": false
+    },
+    {
+      "step": 1,
+      "status": 200,
+      "title": "Guide de vérification MIN-664",
+      "bodyMatchesOriginal": true
+    }
+  ],
+  "import": {
+    "status": 200,
+    "reportedCount": 2,
+    "persistedEntries": [
+      {
+        "id": "10b8e0b6-2c44-4647-87b6-71243a50dfce",
+        "title": "Vérifier la navigation mobile",
+        "values": {
+          "62d9b08e-a5e3-4139-95bf-47d742456496": 2.5,
+          "e6c31ede-e9a4-455d-99c0-4128191ca40a": true
+        }
+      },
+      {
+        "id": "3a87efe9-b5ea-4993-8013-9fc0d36ab07f",
+        "title": "Vérifier le clavier",
+        "values": {
+          "62d9b08e-a5e3-4139-95bf-47d742456496": 1,
+          "e6c31ede-e9a4-455d-99c0-4128191ca40a": false
+        }
+      }
+    ],
+    "reloaded": true,
+    "optionalAiRecommendation": "omitted by abort; local inferred mapping retained"
+  },
+  "reviewer": "Codex agent review_documentation_locales",
+  "humanReview": false,
+  "attachment": {
+    "name": "MIN-664-verified.txt",
+    "bytes": 67,
+    "sourceSha256": "d1fa8e8f989af51d62475288fda25a74bd4fa203dc7703ef46072429b166aeea",
+    "uploaded": true,
+    "downloadStatus": 200,
+    "downloadSha256": "d1fa8e8f989af51d62475288fda25a74bd4fa203dc7703ef46072429b166aeea",
+    "exactBytes": true
+  },
+  "limitations": [
+    "First upload was abandoned by closing before debounced page persistence; a second upload was saved and reloaded.",
+    "First import returned HTTP400; the second UI attempt succeeded after the candidate Markdown runtime was built. The original refusal is retained.",
+    "Anonymous page access and revocation were checked. An anonymous file link was observed; authenticated download byte identity was verified.",
+    "No external email delivery, AI response, or production deployment was tested."
+  ],
+  "createdObjectsBeforeImport": [
+    {
+      "id": "7f171445-675b-45f4-835c-c475a4f3c1df",
+      "title": "Base de démonstration MIN-664",
+      "databaseSchema": [
+        {
+          "id": "3c235acb-533c-4967-9225-30be8ff14055",
+          "name": "Description",
+          "type": "text"
+        },
+        {
+          "id": "9897e57c-0193-4a3a-b0b9-6e7856bbd52f",
+          "name": "Durée",
+          "type": "number"
+        },
+        {
+          "id": "e1fb0247-dcf8-4aa4-a4a5-a88a4d118618",
+          "name": "Vérifié",
+          "type": "checkbox"
+        },
+        {
+          "id": "a7dcc1f9-283f-4b07-a3ff-7f64c9a532a0",
+          "name": "État",
+          "type": "select"
+        }
+      ]
+    },
+    {
+      "id": "4a7fd286-4eb7-4289-92f8-44848d1b79df",
+      "parentId": "7f171445-675b-45f4-835c-c475a4f3c1df",
+      "title": "Vérifier la navigation mobile",
+      "values": {
+        "3c235acb-533c-4967-9225-30be8ff14055": "Vérifier que les boutons restent accessibles sur un écran étroit.",
+        "9897e57c-0193-4a3a-b0b9-6e7856bbd52f": 2.5,
+        "e1fb0247-dcf8-4aa4-a4a5-a88a4d118618": true
+      }
+    },
+    {
+      "id": "0a6f9e42-f3f0-4228-807e-176a6238b2fe",
+      "title": "Import de démonstration MIN-664",
+      "databaseSchema": [],
+      "role": "empty-import-target"
+    },
+    {
+      "id": "a0fb9f3a-4421-4af0-a018-82074e21aff8",
+      "role": "documentation-demo-document"
+    }
+  ],
+  "guard": "All mutations used the disposable restored local backend and the new MIN-664 demo project. Original Cloud demonstration objects were not changed. Account state, signed links, bearer/publication tokens and credentials are excluded."
+}

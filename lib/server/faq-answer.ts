@@ -23,10 +23,9 @@ import type { KnowledgeArticle } from "@/lib/server/assistant/knowledge";
  * keeps the orchestration: read the configuration, call OpenRouter, write the
  * expense to the ledger.
  *
- * There is no retrieval step: the knowledge base is small (a dozen articles,
- * a few dozen kilobytes), so the prompt carries it whole. One completion per
- * question on the cheap fast model of the registry costs a fraction of a
- * cent — a homemade RAG could not be cheaper, only wrong.
+ * Retrieval selects a bounded relevant subset from published product help.
+ * Prompt construction applies a second character budget independently of
+ * corpus size. Model selection, disablement and spend guards stay in the route.
  */
 
 /** The pages that show a FAQ section, and where their Q/A lives. */
@@ -84,7 +83,7 @@ export function resolveFaqLocale(value: unknown): Locale {
  *
  * The grounding is the page's own FAQ entries first (the visitor is reading
  * that page; its answers are canonical), then the product knowledge base —
- * end-user and both-audience articles in full, developer ones as a topic list
+ * complete end-user sources within the budget, developer ones as a topic list
  * (operational self-hosting details would push the prompt for little gain on
  * public-site questions). The instruction to answer in the visitor's language
  * rides on the shared helper (`responseLanguageInstruction`), like every other
@@ -99,14 +98,25 @@ export function buildFaqAnswerPrompt(params: {
   const faqBlock = params.items
     .map((item) => `Q: ${item.question}\nA: ${item.answer}`)
     .join("\n\n");
-  const fullArticles = params.articles.filter(
+  const fullArticles = params.articles.slice(0, 4).filter(
     (article) => article.audience !== "developer",
   );
-  const developerTopics = params.articles
+  const developerTopics = params.articles.slice(0, 4)
     .filter((article) => article.audience === "developer")
     .map((article) => `- ${article.title} (topic: \`${article.id}\`): ${article.summary}`)
     .join("\n");
 
+  let remainingChars = 16000;
+  const grounding = fullArticles.map(article => {
+    const header = `## ${article.title}${article.sourceUrl ? ` (source: ${article.sourceUrl}, revision: ${article.revision})` : ""}`;
+    const body = article.content.trim();
+    const complete = body.length <= 5000 && header.length + body.length + 2 <= remainingChars;
+    const content = complete ? body : `${article.summary}\n[Full procedure omitted from this budget. Refer to the source; do not infer its steps or conditions.]`;
+    const block = `${header}\n\n${content}`;
+    if (block.length > remainingChars) return "";
+    remainingChars -= block.length;
+    return block;
+  });
   return [
     "You answer questions from visitors of minddy's public website, in the FAQ section of a page.",
     "minddy is an open-source project tracker for teams working with AI: projects, issues, objectives, agents (MCP), plans, self-hosting.",
@@ -115,11 +125,9 @@ export function buildFaqAnswerPrompt(params: {
     "",
     faqBlock,
     "",
-    "You also have minddy's product documentation. End-user and general articles, in full:",
+    "You also have minddy's product documentation. Complete relevant sources or explicitly marked summaries:",
     "",
-    ...fullArticles.map(
-      (article) => `## ${article.title}\n\n${article.content.trim()}`,
-    ),
+    ...grounding,
     "",
     "Developer-oriented topics exist but are not included here; mention them only if the question clearly asks about them:",
     "",
@@ -128,6 +136,8 @@ export function buildFaqAnswerPrompt(params: {
     "Rules:",
     "- Answer ONLY from the material above. If the knowledge does not contain the answer, say so briefly and point the visitor to the FAQ answers above or to the feedback board.",
     "- Never invent prices, limits, dates, or product capabilities.",
+    "- Keep prerequisites, permissions and warnings from a procedure. If its full text was omitted, point to its source instead of reconstructing it.",
+    "- When documentation supports the answer, include its source URL if one is provided.",
     "- Keep the answer short: a few sentences, at most two short paragraphs. Plain text only — no headings, no markdown lists.",
     "- If the question is answered on the page, prefer the page's own wording.",
     "",

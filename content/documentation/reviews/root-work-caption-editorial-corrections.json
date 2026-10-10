@@ -1,0 +1,84 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "scope": "Caption grammar and actual UI name alignment; sparse objective history stated concretely without attributing behavior to history. Screenshot outcomes and limitation boundaries retained.",
+  "changes": [
+    {
+      "locale": "fr",
+      "index": 4,
+      "field": 1,
+      "before": "Le plan enregistré distingue étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
+      "after": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive."
+    },
+    {
+      "locale": "fr",
+      "index": 7,
+      "field": 1,
+      "before": "L’accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
+      "after": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture."
+    },
+    {
+      "locale": "fr",
+      "index": 13,
+      "field": 1,
+      "before": "Nommez le résultat avant de choisir responsable, date cible et état. Ce dialogue n’a pas créé un deuxième objectif.",
+      "after": "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif."
+    },
+    {
+      "locale": "fr",
+      "index": 14,
+      "field": 0,
+      "before": "Dynamique d’un objectif après une réalisation réelle de démonstration.",
+      "after": "Élan d’un objectif après la clôture réelle d’un ticket de démonstration."
+    },
+    {
+      "locale": "fr",
+      "index": 14,
+      "field": 1,
+      "before": "Lisez la dynamique avec le travail associé. L’historique disponible ne fabrique pas de date de fin estimée.",
+      "after": "Consultez l’élan avec le travail associé. L’historique disponible ne suffit pas à afficher une date de fin estimée."
+    },
+    {
+      "locale": "pt-BR",
+      "index": 9,
+      "field": 1,
+      "before": "A aba Não lidas vazia indica que essa visualização não tem itens não lidos. Todos mostra outras notificações mantidas.",
+      "after": "A aba Não lidos vazia indica que essa visualização não tem itens não lidos. Todos mostra outras notificações mantidas."
+    },
+    {
+      "locale": "pt-BR",
+      "index": 14,
+      "field": 1,
+      "before": "Leia o ritmo junto ao trabalho vinculado. O histórico disponível não inventa uma data estimada de conclusão.",
+      "after": "Leia o ritmo junto ao trabalho vinculado. O histórico disponível ainda não é suficiente para mostrar uma data estimada de conclusão."
+    },
+    {
+      "locale": "en",
+      "index": 14,
+      "field": 1,
+      "before": "Read momentum alongside the linked work. The available history does not manufacture an estimated finish date.",
+      "after": "Read momentum alongside the linked work. This history is insufficient to show an estimated finish date."
+    },
+    {
+      "locale": "de",
+      "index": 14,
+      "field": 1,
+      "before": "Lies die Dynamik zusammen mit der verknüpften Arbeit. Aus der verfügbaren Historie wird kein geschätztes Abschlussdatum erfunden.",
+      "after": "Lies die Dynamik zusammen mit der verknüpften Arbeit. Die verfügbare Historie reicht für ein geschätztes Abschlussdatum noch nicht aus."
+    },
+    {
+      "locale": "es",
+      "index": 14,
+      "field": 1,
+      "before": "Lee el ritmo junto al trabajo vinculado. El historial disponible no inventa una fecha estimada de finalización.",
+      "after": "Lee el ritmo junto al trabajo vinculado. El historial disponible aún no permite mostrar una fecha estimada de finalización."
+    },
+    {
+      "locale": "it",
+      "index": 14,
+      "field": 1,
+      "before": "Leggi il ritmo insieme al lavoro collegato. La cronologia disponibile non inventa una data stimata di conclusione.",
+      "after": "Leggi il ritmo insieme al lavoro collegato. La cronologia disponibile non è ancora sufficiente per mostrare una data stimata di conclusione."
+    }
+  ]
+}

@@ -59,7 +59,9 @@ Maintainer releases use `pnpm deploy`; the release process is documented in
 ## Prepare a pull request
 
 1. Branch from an up-to-date `main` and keep one goal per pull request.
-2. Add or update tests, documentation, and locale catalogs as appropriate.
+2. Add or update tests and locale catalogs as appropriate. Always review
+   documentation impact and complete required additions, corrections or removals
+   in the same pull request, including all public locales and illustrations.
 3. Run `pnpm lint`, `pnpm typecheck`, and the smallest relevant tests in an
    environment without secrets.
 4. Explain the motivation, changes, checks, risks, and licenses for new
@@ -114,9 +116,35 @@ merged changes should reach production.
 - Put user-visible strings in the next-intl catalogs and preserve identical
   keys and placeholders across locales. Run the i18n contract test after
   changing a catalog.
-- Write new comments, documentation, tests, configuration prose, and
-  developer-facing messages in idiomatic English.
+- Write new comments, internal documentation, tests, configuration prose, and
+  developer-facing messages in idiomatic English. Official public articles and
+  their assets use their declared reader locale.
 - Review the origin and license of every new dependency or asset.
+
+## Documentation maintenance
+
+Review documentation impact for every code change. Documentation edits are
+required only when documented behavior, controls, configuration or contributor
+workflows change. Small fixes, refactors, formatting and test-only PRs that
+leave documentation accurate need no documentation edit, new illustration or
+article review record. Document added features, correct changed behavior and
+remove retired instructions and visuals before
+the pull request is ready. Follow the
+[maintenance contract](content/documentation/README.md#release-maintenance) and
+[editorial guide](docs/documentation-editorial-guide.md). Keep all six public
+languages, localized examples, captions, alternative text, screenshots and
+responsive diagrams current together; internal instructions remain English.
+List affected article, workflow and figure IDs when documentation changes.
+A brief note suffices for a PR with no documentation impact; it needs no
+article IDs or release-wide checks.
+
+Every release that changes the desktop version requires a documentation review
+and any necessary updates before the candidate is frozen. Run
+`npm run check:documentation`, `npm run check:knowledge`,
+`npm run check:owned-english` and `git diff --check`
+after documentation edits; require `npm run check:documentation:release`
+before publication. Passing structural checks does not replace factual,
+language and visual review.
 
 ## Report a vulnerability
 

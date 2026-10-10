@@ -1,0 +1,2477 @@
+{
+  "reviewer": "agent:/root/german_spanish_review",
+  "reviewDate": "2026-10-09",
+  "scope": "German and Spanish generic feature titles, summaries, multi-source lead paragraphs, heading hierarchy, and source-retention review. All operation, integration, reference and product domains are included.",
+  "method": [
+    "Read the documentation editorial guide, each locale title/summary/heading overview, and source openings for consolidated guides.",
+    "Reviewed localized feature overview prose and corrected reader address and UI entity naming using messages/de.json and messages/es.json.",
+    "Compared every source body to its mapped consolidated guide after excluding headings and normalizing documentation link destinations. New overview paragraphs and documented installer deduplication are excluded from equality comparison.",
+    "Verified original workflow-ID union, figure IDs and source/alt/caption/date/viewport/theme/kind values, and exact mapped anchor order for every guide."
+  ],
+  "limitations": [
+    "No browser workflow, live instance operation, release installation, backup or restoration was executed for this consolidation review. Prior procedural evidence remains the factual basis.",
+    "Figure metadata and inline references were retained; screenshots were not recaptured or visually reapproved.",
+    "This is a structural editorial and retained-meaning review, not a claim that every retained sentence received a new full translation or representative-reader acceptance. Existing source procedures and their wording are preserved except the explicitly listed installer deduplication."
+  ],
+  "changes": [
+    "Added localized scope paragraphs to all 19 consolidated guides in each locale.",
+    "Aligned new German informal product summaries and Spanish formal technical summaries with retained instructions.",
+    "Used existing locale UI names Probleme (German) and Incidencias/Sugerencias (Spanish) in new generic titles and prose.",
+    "Removed the implication of general document import from Pages summaries and explained database-only import in their leads.",
+    "Corrected the Spanish Numo execution heading to include de Numo.",
+    "Replaced duplicated installer warnings with cross-references while keeping all section IDs, the complete warnings and local prerequisites.",
+    "Renamed the Pages export/print heading and its search tag to match the actual procedure; its legacy section ID is retained."
+  ],
+  "articles": [
+    {
+      "locale": "de",
+      "article": "first-project",
+      "revision": 5,
+      "sourceArticles": [
+        "first-project"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S01"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "first-project",
+        "first-use-recovery"
+      ],
+      "figureMetadataPreserved": [
+        "first-project-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "choose-an-instance",
+      "revision": 2,
+      "sourceArticles": [
+        "choose-an-instance"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "choose-an-instance",
+        "responsibilities",
+        "services",
+        "next-step"
+      ],
+      "figureMetadataPreserved": [
+        "responsibilities"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "accounts",
+      "revision": 6,
+      "sourceArticles": [
+        "account-access",
+        "account-security",
+        "account-recovery",
+        "profile-and-preferences",
+        "privacy-and-account-deletion"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A01",
+        "A02",
+        "A09",
+        "S02",
+        "S03"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "account-access",
+        "session-and-mail",
+        "account-security",
+        "recovery",
+        "account-recovery",
+        "mfa-recovery",
+        "profile-and-preferences",
+        "preferences",
+        "privacy-and-account-deletion",
+        "deletion"
+      ],
+      "figureMetadataPreserved": [
+        "account-access-steps",
+        "account-access-login",
+        "account-security-workflow",
+        "account-security-enrollment-workflow",
+        "account-recovery-steps",
+        "profile-and-preferences-workflow",
+        "profile-and-preferences-preferences-workflow",
+        "privacy-and-account-deletion-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "transfer-between-instances",
+      "revision": 4,
+      "sourceArticles": [
+        "transfer-between-instances"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "transfer-between-instances",
+        "exclusions"
+      ],
+      "figureMetadataPreserved": [
+        "transfer-between-instances-workflow",
+        "transfer-between-instances-export-workflow",
+        "transfer-between-instances-result-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "applications",
+      "revision": 4,
+      "sourceArticles": [
+        "web-and-mobile",
+        "install-the-pwa",
+        "desktop-app",
+        "devices-and-notifications"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A03",
+        "A10",
+        "A11",
+        "A12"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "web-and-mobile",
+        "access",
+        "install-the-pwa",
+        "operation",
+        "desktop-app",
+        "desktop-app-operation",
+        "devices-and-notifications",
+        "platforms"
+      ],
+      "figureMetadataPreserved": [
+        "web-and-mobile-workflow",
+        "install-the-pwa-workflow",
+        "desktop-app-workflow",
+        "devices-and-notifications-workflow",
+        "devices-and-notifications-registered-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "projects",
+      "revision": 5,
+      "sourceArticles": [
+        "project-settings",
+        "project-members"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S05",
+        "S06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "project-settings",
+        "project-removal",
+        "project-members",
+        "member-permissions",
+        "invitation-recovery"
+      ],
+      "figureMetadataPreserved": [
+        "project-settings-steps",
+        "project-members-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "issues",
+      "revision": 5,
+      "sourceArticles": [
+        "create-an-issue",
+        "triage-incoming-work",
+        "issue-statuses",
+        "issue-discussion-and-resources",
+        "issue-dependencies",
+        "sub-issues",
+        "implementation-plans",
+        "recurring-issues",
+        "bulk-issue-actions",
+        "import-issues"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A06",
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W09"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "create-an-issue",
+        "issue-save",
+        "triage-incoming-work",
+        "triage-order",
+        "issue-statuses",
+        "closed-work",
+        "issue-discussion-and-resources",
+        "resource-access",
+        "issue-dependencies",
+        "blocker-state",
+        "sub-issues",
+        "change-parent",
+        "implementation-plans",
+        "plan-progress",
+        "recurring-issues",
+        "recurrence-change",
+        "bulk-issue-actions",
+        "bulk-results",
+        "import-issues",
+        "result"
+      ],
+      "figureMetadataPreserved": [
+        "create-an-issue-steps",
+        "triage-incoming-work-steps",
+        "issue-statuses-steps",
+        "issue-discussion-and-resources-steps",
+        "issue-dependencies-steps",
+        "sub-issues-steps",
+        "implementation-plans-steps",
+        "recurring-issues-steps",
+        "bulk-issue-actions-steps",
+        "import-issues-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "objectives",
+      "revision": 5,
+      "sourceArticles": [
+        "objectives",
+        "objective-dependencies-and-momentum"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W10",
+        "W11"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "objectives",
+        "objective-progress",
+        "objective-dependencies-and-momentum",
+        "momentum"
+      ],
+      "figureMetadataPreserved": [
+        "objectives-steps",
+        "objective-dependencies-and-momentum-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "views",
+      "revision": 4,
+      "sourceArticles": [
+        "views-and-filters",
+        "share-a-view"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W13",
+        "W14"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "views-and-filters",
+        "view-recovery",
+        "share-a-view",
+        "revoke-view"
+      ],
+      "figureMetadataPreserved": [
+        "views-and-filters-steps",
+        "share-a-view-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "navigation",
+      "revision": 4,
+      "sourceArticles": [
+        "navigation",
+        "search-and-shortcuts"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S04",
+        "W15"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "navigation",
+        "panels",
+        "tabs",
+        "search-and-shortcuts",
+        "shortcut-alternatives"
+      ],
+      "figureMetadataPreserved": [
+        "navigation-steps",
+        "search-and-shortcuts-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "notifications-and-inbox",
+      "revision": 5,
+      "sourceArticles": [
+        "notifications-and-inbox"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W16"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "notifications-and-inbox",
+        "notification-preferences"
+      ],
+      "figureMetadataPreserved": [
+        "notifications-and-inbox-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "personal-cycle",
+      "revision": 4,
+      "sourceArticles": [
+        "personal-cycle"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W12"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "personal-cycle",
+        "cycle-results"
+      ],
+      "figureMetadataPreserved": [
+        "personal-cycle-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "task-notebook",
+      "revision": 3,
+      "sourceArticles": [
+        "task-notebook"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W17"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "task-notebook",
+        "promote-note"
+      ],
+      "figureMetadataPreserved": [
+        "task-notebook-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "personal-statistics",
+      "revision": 3,
+      "sourceArticles": [
+        "personal-statistics"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W18"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "personal-statistics",
+        "statistics-limits"
+      ],
+      "figureMetadataPreserved": [
+        "personal-statistics-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "trash-and-recovery",
+      "revision": 4,
+      "sourceArticles": [
+        "trash-and-recovery"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W19"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "trash-and-recovery",
+        "permanent-removal"
+      ],
+      "figureMetadataPreserved": [
+        "trash-and-recovery-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "pages",
+      "revision": 5,
+      "sourceArticles": [
+        "create-and-organize-pages",
+        "page-editor",
+        "page-comments-and-collaboration",
+        "page-files",
+        "page-history",
+        "publish-a-page",
+        "import-export-and-print-pages"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "create-and-organize-pages",
+        "page-tree",
+        "page-editor",
+        "editor-save",
+        "page-comments-and-collaboration",
+        "page-conflict",
+        "page-files",
+        "file-access",
+        "page-history",
+        "restore-page-version",
+        "publish-a-page",
+        "revoke-page",
+        "import-export-and-print-pages",
+        "export-fidelity"
+      ],
+      "figureMetadataPreserved": [
+        "create-and-organize-pages-steps",
+        "page-editor-steps",
+        "page-comments-and-collaboration-steps",
+        "page-files-steps",
+        "page-history-steps",
+        "publish-a-page-steps",
+        "import-export-and-print-pages-steps"
+      ],
+      "documentedBodyEdits": [
+        "Export/print heading no longer promises general document import; section ID and procedure remain unchanged."
+      ]
+    },
+    {
+      "locale": "de",
+      "article": "databases",
+      "revision": 5,
+      "sourceArticles": [
+        "create-a-database",
+        "database-cells-and-entries",
+        "change-a-database-schema",
+        "import-a-database"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "P08",
+        "P09",
+        "P10",
+        "P11"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "create-a-database",
+        "database-types",
+        "database-cells-and-entries",
+        "entry-actions",
+        "database-display",
+        "change-a-database-schema",
+        "convert-column",
+        "import-a-database",
+        "database-import-result"
+      ],
+      "figureMetadataPreserved": [
+        "create-a-database-steps",
+        "database-cells-and-entries-steps",
+        "change-a-database-schema-steps",
+        "import-a-database-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "feedback",
+      "revision": 3,
+      "sourceArticles": [
+        "publish-a-feedback-board",
+        "submit-and-follow-feedback",
+        "moderate-feedback",
+        "feedback-to-issue",
+        "feedback-pages-and-views"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "publish-a-feedback-board",
+        "channels",
+        "submit-and-follow-feedback",
+        "follow",
+        "moderate-feedback",
+        "responses",
+        "feedback-to-issue",
+        "work",
+        "feedback-pages-and-views",
+        "visibility"
+      ],
+      "figureMetadataPreserved": [
+        "publish-a-feedback-board-workflow",
+        "submit-and-follow-feedback-workflow",
+        "moderate-feedback-workflow",
+        "feedback-to-issue-workflow",
+        "feedback-pages-and-views-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "numo",
+      "revision": 2,
+      "sourceArticles": [
+        "work-with-numo",
+        "numo-permissions-and-approvals",
+        "numo-execution-model",
+        "numo-mcp-connections",
+        "recover-numo-work"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N01",
+        "N02",
+        "N05",
+        "N08",
+        "T05"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "work-with-numo",
+        "continue",
+        "numo-permissions-and-approvals",
+        "authorization",
+        "context",
+        "numo-execution-model",
+        "state",
+        "mutations",
+        "numo-mcp-connections",
+        "manage",
+        "recover-numo-work",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [
+        "work-with-numo-workflow",
+        "numo-permissions-and-approvals-workflow",
+        "numo-execution-model-flow",
+        "numo-mcp-connections-workflow",
+        "numo-mcp-connections-config-workflow",
+        "recover-numo-work-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "code-work",
+      "revision": 2,
+      "sourceArticles": [
+        "delegate-code-work",
+        "review-pull-requests"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N03",
+        "N04"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "delegate-code-work",
+        "continuation",
+        "review-pull-requests",
+        "decision"
+      ],
+      "figureMetadataPreserved": [
+        "delegate-code-work-workflow",
+        "review-pull-requests-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "git",
+      "revision": 2,
+      "sourceArticles": [
+        "git-accounts-and-repositories",
+        "forge-issue-sync"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N10",
+        "N11"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "git-accounts-and-repositories",
+        "recovery",
+        "forge-issue-sync",
+        "forge-issue-sync-recovery"
+      ],
+      "figureMetadataPreserved": [
+        "git-accounts-and-repositories-workflow",
+        "git-accounts-and-repositories-project-workflow",
+        "forge-issue-sync-mapping",
+        "forge-issue-sync-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "scheduled-routines",
+      "revision": 2,
+      "sourceArticles": [
+        "scheduled-routines"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "scheduled-routines",
+        "runs"
+      ],
+      "figureMetadataPreserved": [
+        "scheduled-routines-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "repository-skills",
+      "revision": 3,
+      "sourceArticles": [
+        "repository-skills"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "repository-skills",
+        "selection"
+      ],
+      "figureMetadataPreserved": [
+        "repository-skills-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "ai-settings-and-usage",
+      "revision": 5,
+      "sourceArticles": [
+        "ai-keys-and-models",
+        "plans-and-ai-usage"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A04",
+        "A08"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "ai-keys-and-models",
+        "models",
+        "plans-and-ai-usage",
+        "consumption",
+        "plan-capacities"
+      ],
+      "figureMetadataPreserved": [
+        "ai-keys-and-models-workflow",
+        "ai-keys-and-models-defaults-workflow",
+        "plans-and-ai-usage-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "automation-settings",
+      "revision": 4,
+      "sourceArticles": [
+        "automation-settings"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A05"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "automation-settings",
+        "mechanisms"
+      ],
+      "figureMetadataPreserved": [
+        "automation-settings-workflow",
+        "automation-settings-projects-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "minddy-mcp",
+      "revision": 2,
+      "sourceArticles": [
+        "external-minddy-mcp",
+        "mcp-tool-reference"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N09",
+        "T06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "external-minddy-mcp",
+        "access",
+        "mcp-tool-reference",
+        "issue-plans",
+        "pages-and-routines",
+        "example"
+      ],
+      "figureMetadataPreserved": [
+        "external-minddy-mcp-workflow",
+        "external-minddy-mcp-install-workflow",
+        "external-minddy-mcp-accesses-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "installation",
+      "revision": 2,
+      "sourceArticles": [
+        "self-hosted-compatibility",
+        "install-a-server",
+        "managed-or-source-installation"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H01",
+        "H03",
+        "H04"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "self-hosted-compatibility",
+        "verify-release",
+        "support",
+        "known-runner-limits",
+        "install-a-server",
+        "install",
+        "accept",
+        "install-a-server-known-runner-limits",
+        "runner-workaround",
+        "adapted-start",
+        "managed-or-source-installation",
+        "managed",
+        "source"
+      ],
+      "figureMetadataPreserved": [
+        "self-hosted-compatibility-flow",
+        "install-a-server-flow",
+        "install-a-server-wizard",
+        "managed-or-source-installation-flow"
+      ],
+      "documentedBodyEdits": [
+        "Removed second verbatim runner-limit paragraph and second verbatim npm-worker warning; retained full earlier paragraphs and both section IDs, added local cross-references and reminders."
+      ]
+    },
+    {
+      "locale": "de",
+      "article": "install-locally",
+      "revision": 2,
+      "sourceArticles": [
+        "install-locally"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H02"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "install-locally",
+        "launch",
+        "recover"
+      ],
+      "figureMetadataPreserved": [
+        "install-locally-flow",
+        "install-locally-wizard"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "instance-configuration",
+      "revision": 2,
+      "sourceArticles": [
+        "instance-configuration",
+        "optional-providers",
+        "proxy-network-and-jobs"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H05",
+        "H08",
+        "H09"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "instance-configuration",
+        "secrets",
+        "capabilities",
+        "optional-providers",
+        "configure",
+        "git-and-code",
+        "proxy-network-and-jobs",
+        "schedules",
+        "maintenance"
+      ],
+      "figureMetadataPreserved": [
+        "optional-providers-flow",
+        "proxy-network-and-jobs-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "authentication-and-email",
+      "revision": 2,
+      "sourceArticles": [
+        "authentication-and-email"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "authentication-and-email",
+        "managed",
+        "verify"
+      ],
+      "figureMetadataPreserved": [
+        "authentication-and-email-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "storage-and-attachments",
+      "revision": 2,
+      "sourceArticles": [
+        "storage-and-attachments"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "storage-and-attachments",
+        "access",
+        "recover",
+        "docker-desktop"
+      ],
+      "figureMetadataPreserved": [
+        "storage-and-attachments-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "workspace-encryption",
+      "revision": 3,
+      "sourceArticles": [
+        "workspace-encryption"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H10"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "workspace-encryption",
+        "existing-data",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [
+        "workspace-encryption-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "backups-and-restoration",
+      "revision": 2,
+      "sourceArticles": [
+        "back-up-the-reference-instance",
+        "logical-and-provider-backups",
+        "restore-and-roll-back"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H11",
+        "H12",
+        "H14"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "back-up-the-reference-instance",
+        "context",
+        "backup",
+        "verify",
+        "logical-and-provider-backups",
+        "provider",
+        "outage",
+        "bytes",
+        "logical-and-provider-backups-verify",
+        "restore-and-roll-back",
+        "physical",
+        "logical",
+        "restore-and-roll-back-verify"
+      ],
+      "figureMetadataPreserved": [
+        "restore-and-roll-back-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "update-an-instance",
+      "revision": 2,
+      "sourceArticles": [
+        "update-an-instance"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H13"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "update-an-instance",
+        "full",
+        "managed-source",
+        "verify"
+      ],
+      "figureMetadataPreserved": [
+        "update-an-instance-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "self-hosted-diagnostics",
+      "revision": 2,
+      "sourceArticles": [
+        "self-hosted-diagnostics"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H15"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "self-hosted-diagnostics",
+        "symptoms",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "instance-administration",
+      "revision": 2,
+      "sourceArticles": [
+        "instance-administration"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H16"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "instance-administration",
+        "panels",
+        "responsibilities"
+      ],
+      "figureMetadataPreserved": [
+        "instance-administration-flow",
+        "instance-administration-users",
+        "instance-administration-models"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "architecture-and-data-flows",
+      "revision": 2,
+      "sourceArticles": [
+        "architecture-and-data-flows"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T03"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "architecture-and-data-flows",
+        "requests",
+        "providers"
+      ],
+      "figureMetadataPreserved": [
+        "architecture-and-data-flows-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "glossary-and-data-model",
+      "revision": 2,
+      "sourceArticles": [
+        "glossary-and-data-model"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T01"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "glossary-and-data-model",
+        "knowledge-and-feedback",
+        "example"
+      ],
+      "figureMetadataPreserved": [
+        "glossary-and-data-model-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "permissions-and-public-links",
+      "revision": 2,
+      "sourceArticles": [
+        "permissions-and-public-links"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T02"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "permissions-and-public-links",
+        "publication",
+        "revocation"
+      ],
+      "figureMetadataPreserved": [
+        "permissions-and-public-links-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "encryption-and-data-boundaries",
+      "revision": 2,
+      "sourceArticles": [
+        "encryption-and-data-boundaries"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T04"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "encryption-and-data-boundaries",
+        "exceptions",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [
+        "encryption-and-data-boundaries-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "api-and-webhooks",
+      "revision": 3,
+      "sourceArticles": [
+        "integration-api-and-webhooks",
+        "feedback-ingestion-and-sso"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "F06",
+        "T07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "integration-api-and-webhooks",
+        "send",
+        "receive",
+        "limits",
+        "feedback-ingestion-and-sso",
+        "errors",
+        "sso"
+      ],
+      "figureMetadataPreserved": [
+        "integration-api-and-webhooks-flow",
+        "feedback-ingestion-and-sso-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "de",
+      "article": "integration-troubleshooting",
+      "revision": 2,
+      "sourceArticles": [
+        "integration-troubleshooting"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T08"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "integration-troubleshooting",
+        "oauth",
+        "webhooks",
+        "git"
+      ],
+      "figureMetadataPreserved": [
+        "integration-troubleshooting-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "first-project",
+      "revision": 5,
+      "sourceArticles": [
+        "first-project"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S01"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "first-project",
+        "first-use-recovery"
+      ],
+      "figureMetadataPreserved": [
+        "first-project-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "choose-an-instance",
+      "revision": 2,
+      "sourceArticles": [
+        "choose-an-instance"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "choose-an-instance",
+        "responsibilities",
+        "services",
+        "next-step"
+      ],
+      "figureMetadataPreserved": [
+        "responsibilities"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "accounts",
+      "revision": 6,
+      "sourceArticles": [
+        "account-access",
+        "account-security",
+        "account-recovery",
+        "profile-and-preferences",
+        "privacy-and-account-deletion"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A01",
+        "A02",
+        "A09",
+        "S02",
+        "S03"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "account-access",
+        "session-and-mail",
+        "account-security",
+        "recovery",
+        "account-recovery",
+        "mfa-recovery",
+        "profile-and-preferences",
+        "preferences",
+        "privacy-and-account-deletion",
+        "deletion"
+      ],
+      "figureMetadataPreserved": [
+        "account-access-steps",
+        "account-access-login",
+        "account-security-workflow",
+        "account-security-enrollment-workflow",
+        "account-recovery-steps",
+        "profile-and-preferences-workflow",
+        "profile-and-preferences-preferences-workflow",
+        "privacy-and-account-deletion-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "transfer-between-instances",
+      "revision": 4,
+      "sourceArticles": [
+        "transfer-between-instances"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "transfer-between-instances",
+        "exclusions"
+      ],
+      "figureMetadataPreserved": [
+        "transfer-between-instances-workflow",
+        "transfer-between-instances-export-workflow",
+        "transfer-between-instances-result-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "applications",
+      "revision": 4,
+      "sourceArticles": [
+        "web-and-mobile",
+        "install-the-pwa",
+        "desktop-app",
+        "devices-and-notifications"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A03",
+        "A10",
+        "A11",
+        "A12"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "web-and-mobile",
+        "access",
+        "install-the-pwa",
+        "operation",
+        "desktop-app",
+        "desktop-app-operation",
+        "devices-and-notifications",
+        "platforms"
+      ],
+      "figureMetadataPreserved": [
+        "web-and-mobile-workflow",
+        "install-the-pwa-workflow",
+        "desktop-app-workflow",
+        "devices-and-notifications-workflow",
+        "devices-and-notifications-registered-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "projects",
+      "revision": 5,
+      "sourceArticles": [
+        "project-settings",
+        "project-members"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S05",
+        "S06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "project-settings",
+        "project-removal",
+        "project-members",
+        "member-permissions",
+        "invitation-recovery"
+      ],
+      "figureMetadataPreserved": [
+        "project-settings-steps",
+        "project-members-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "issues",
+      "revision": 5,
+      "sourceArticles": [
+        "create-an-issue",
+        "triage-incoming-work",
+        "issue-statuses",
+        "issue-discussion-and-resources",
+        "issue-dependencies",
+        "sub-issues",
+        "implementation-plans",
+        "recurring-issues",
+        "bulk-issue-actions",
+        "import-issues"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A06",
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W06",
+        "W07",
+        "W08",
+        "W09"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "create-an-issue",
+        "issue-save",
+        "triage-incoming-work",
+        "triage-order",
+        "issue-statuses",
+        "closed-work",
+        "issue-discussion-and-resources",
+        "resource-access",
+        "issue-dependencies",
+        "blocker-state",
+        "sub-issues",
+        "change-parent",
+        "implementation-plans",
+        "plan-progress",
+        "recurring-issues",
+        "recurrence-change",
+        "bulk-issue-actions",
+        "bulk-results",
+        "import-issues",
+        "result"
+      ],
+      "figureMetadataPreserved": [
+        "create-an-issue-steps",
+        "triage-incoming-work-steps",
+        "issue-statuses-steps",
+        "issue-discussion-and-resources-steps",
+        "issue-dependencies-steps",
+        "sub-issues-steps",
+        "implementation-plans-steps",
+        "recurring-issues-steps",
+        "bulk-issue-actions-steps",
+        "import-issues-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "objectives",
+      "revision": 5,
+      "sourceArticles": [
+        "objectives",
+        "objective-dependencies-and-momentum"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W10",
+        "W11"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "objectives",
+        "objective-progress",
+        "objective-dependencies-and-momentum",
+        "momentum"
+      ],
+      "figureMetadataPreserved": [
+        "objectives-steps",
+        "objective-dependencies-and-momentum-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "views",
+      "revision": 4,
+      "sourceArticles": [
+        "views-and-filters",
+        "share-a-view"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W13",
+        "W14"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "views-and-filters",
+        "view-recovery",
+        "share-a-view",
+        "revoke-view"
+      ],
+      "figureMetadataPreserved": [
+        "views-and-filters-steps",
+        "share-a-view-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "navigation",
+      "revision": 4,
+      "sourceArticles": [
+        "navigation",
+        "search-and-shortcuts"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "S04",
+        "W15"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "navigation",
+        "panels",
+        "tabs",
+        "search-and-shortcuts",
+        "shortcut-alternatives"
+      ],
+      "figureMetadataPreserved": [
+        "navigation-steps",
+        "search-and-shortcuts-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "notifications-and-inbox",
+      "revision": 5,
+      "sourceArticles": [
+        "notifications-and-inbox"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W16"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "notifications-and-inbox",
+        "notification-preferences"
+      ],
+      "figureMetadataPreserved": [
+        "notifications-and-inbox-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "personal-cycle",
+      "revision": 4,
+      "sourceArticles": [
+        "personal-cycle"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W12"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "personal-cycle",
+        "cycle-results"
+      ],
+      "figureMetadataPreserved": [
+        "personal-cycle-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "task-notebook",
+      "revision": 3,
+      "sourceArticles": [
+        "task-notebook"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W17"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "task-notebook",
+        "promote-note"
+      ],
+      "figureMetadataPreserved": [
+        "task-notebook-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "personal-statistics",
+      "revision": 3,
+      "sourceArticles": [
+        "personal-statistics"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W18"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "personal-statistics",
+        "statistics-limits"
+      ],
+      "figureMetadataPreserved": [
+        "personal-statistics-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "trash-and-recovery",
+      "revision": 4,
+      "sourceArticles": [
+        "trash-and-recovery"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "W19"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "trash-and-recovery",
+        "permanent-removal"
+      ],
+      "figureMetadataPreserved": [
+        "trash-and-recovery-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "pages",
+      "revision": 5,
+      "sourceArticles": [
+        "create-and-organize-pages",
+        "page-editor",
+        "page-comments-and-collaboration",
+        "page-files",
+        "page-history",
+        "publish-a-page",
+        "import-export-and-print-pages"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "create-and-organize-pages",
+        "page-tree",
+        "page-editor",
+        "editor-save",
+        "page-comments-and-collaboration",
+        "page-conflict",
+        "page-files",
+        "file-access",
+        "page-history",
+        "restore-page-version",
+        "publish-a-page",
+        "revoke-page",
+        "import-export-and-print-pages",
+        "export-fidelity"
+      ],
+      "figureMetadataPreserved": [
+        "create-and-organize-pages-steps",
+        "page-editor-steps",
+        "page-comments-and-collaboration-steps",
+        "page-files-steps",
+        "page-history-steps",
+        "publish-a-page-steps",
+        "import-export-and-print-pages-steps"
+      ],
+      "documentedBodyEdits": [
+        "Export/print heading no longer promises general document import; section ID and procedure remain unchanged."
+      ]
+    },
+    {
+      "locale": "es",
+      "article": "databases",
+      "revision": 5,
+      "sourceArticles": [
+        "create-a-database",
+        "database-cells-and-entries",
+        "change-a-database-schema",
+        "import-a-database"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "P08",
+        "P09",
+        "P10",
+        "P11"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "create-a-database",
+        "database-types",
+        "database-cells-and-entries",
+        "entry-actions",
+        "database-display",
+        "change-a-database-schema",
+        "convert-column",
+        "import-a-database",
+        "database-import-result"
+      ],
+      "figureMetadataPreserved": [
+        "create-a-database-steps",
+        "database-cells-and-entries-steps",
+        "change-a-database-schema-steps",
+        "import-a-database-steps"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "feedback",
+      "revision": 3,
+      "sourceArticles": [
+        "publish-a-feedback-board",
+        "submit-and-follow-feedback",
+        "moderate-feedback",
+        "feedback-to-issue",
+        "feedback-pages-and-views"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "publish-a-feedback-board",
+        "channels",
+        "submit-and-follow-feedback",
+        "follow",
+        "moderate-feedback",
+        "responses",
+        "feedback-to-issue",
+        "work",
+        "feedback-pages-and-views",
+        "visibility"
+      ],
+      "figureMetadataPreserved": [
+        "publish-a-feedback-board-workflow",
+        "submit-and-follow-feedback-workflow",
+        "moderate-feedback-workflow",
+        "feedback-to-issue-workflow",
+        "feedback-pages-and-views-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "numo",
+      "revision": 2,
+      "sourceArticles": [
+        "work-with-numo",
+        "numo-permissions-and-approvals",
+        "numo-execution-model",
+        "numo-mcp-connections",
+        "recover-numo-work"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N01",
+        "N02",
+        "N05",
+        "N08",
+        "T05"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "work-with-numo",
+        "continue",
+        "numo-permissions-and-approvals",
+        "authorization",
+        "context",
+        "numo-execution-model",
+        "state",
+        "mutations",
+        "numo-mcp-connections",
+        "manage",
+        "recover-numo-work",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [
+        "work-with-numo-workflow",
+        "numo-permissions-and-approvals-workflow",
+        "numo-execution-model-flow",
+        "numo-mcp-connections-workflow",
+        "numo-mcp-connections-config-workflow",
+        "recover-numo-work-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "code-work",
+      "revision": 2,
+      "sourceArticles": [
+        "delegate-code-work",
+        "review-pull-requests"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N03",
+        "N04"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "delegate-code-work",
+        "continuation",
+        "review-pull-requests",
+        "decision"
+      ],
+      "figureMetadataPreserved": [
+        "delegate-code-work-workflow",
+        "review-pull-requests-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "git",
+      "revision": 2,
+      "sourceArticles": [
+        "git-accounts-and-repositories",
+        "forge-issue-sync"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N10",
+        "N11"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "git-accounts-and-repositories",
+        "recovery",
+        "forge-issue-sync",
+        "forge-issue-sync-recovery"
+      ],
+      "figureMetadataPreserved": [
+        "git-accounts-and-repositories-workflow",
+        "git-accounts-and-repositories-project-workflow",
+        "forge-issue-sync-mapping",
+        "forge-issue-sync-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "scheduled-routines",
+      "revision": 2,
+      "sourceArticles": [
+        "scheduled-routines"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "scheduled-routines",
+        "runs"
+      ],
+      "figureMetadataPreserved": [
+        "scheduled-routines-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "repository-skills",
+      "revision": 3,
+      "sourceArticles": [
+        "repository-skills"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "repository-skills",
+        "selection"
+      ],
+      "figureMetadataPreserved": [
+        "repository-skills-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "ai-settings-and-usage",
+      "revision": 5,
+      "sourceArticles": [
+        "ai-keys-and-models",
+        "plans-and-ai-usage"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A04",
+        "A08"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "ai-keys-and-models",
+        "models",
+        "plans-and-ai-usage",
+        "consumption",
+        "plan-capacities"
+      ],
+      "figureMetadataPreserved": [
+        "ai-keys-and-models-workflow",
+        "ai-keys-and-models-defaults-workflow",
+        "plans-and-ai-usage-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "automation-settings",
+      "revision": 4,
+      "sourceArticles": [
+        "automation-settings"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "A05"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "automation-settings",
+        "mechanisms"
+      ],
+      "figureMetadataPreserved": [
+        "automation-settings-workflow",
+        "automation-settings-projects-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "minddy-mcp",
+      "revision": 2,
+      "sourceArticles": [
+        "external-minddy-mcp",
+        "mcp-tool-reference"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "N09",
+        "T06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "external-minddy-mcp",
+        "access",
+        "mcp-tool-reference",
+        "issue-plans",
+        "pages-and-routines",
+        "example"
+      ],
+      "figureMetadataPreserved": [
+        "external-minddy-mcp-workflow",
+        "external-minddy-mcp-install-workflow",
+        "external-minddy-mcp-accesses-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "installation",
+      "revision": 2,
+      "sourceArticles": [
+        "self-hosted-compatibility",
+        "install-a-server",
+        "managed-or-source-installation"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H01",
+        "H03",
+        "H04"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "self-hosted-compatibility",
+        "verify-release",
+        "support",
+        "known-runner-limits",
+        "install-a-server",
+        "install",
+        "accept",
+        "install-a-server-known-runner-limits",
+        "runner-workaround",
+        "adapted-start",
+        "managed-or-source-installation",
+        "managed",
+        "source"
+      ],
+      "figureMetadataPreserved": [
+        "self-hosted-compatibility-flow",
+        "install-a-server-flow",
+        "install-a-server-wizard",
+        "managed-or-source-installation-flow"
+      ],
+      "documentedBodyEdits": [
+        "Removed second verbatim runner-limit paragraph and second verbatim npm-worker warning; retained full earlier paragraphs and both section IDs, added local cross-references and reminders.",
+        "Removed contextless otros from the first runner-limit sentence."
+      ]
+    },
+    {
+      "locale": "es",
+      "article": "install-locally",
+      "revision": 2,
+      "sourceArticles": [
+        "install-locally"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H02"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "install-locally",
+        "launch",
+        "recover"
+      ],
+      "figureMetadataPreserved": [
+        "install-locally-flow",
+        "install-locally-wizard"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "instance-configuration",
+      "revision": 2,
+      "sourceArticles": [
+        "instance-configuration",
+        "optional-providers",
+        "proxy-network-and-jobs"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H05",
+        "H08",
+        "H09"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "instance-configuration",
+        "secrets",
+        "capabilities",
+        "optional-providers",
+        "configure",
+        "git-and-code",
+        "proxy-network-and-jobs",
+        "schedules",
+        "maintenance"
+      ],
+      "figureMetadataPreserved": [
+        "optional-providers-flow",
+        "proxy-network-and-jobs-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "authentication-and-email",
+      "revision": 2,
+      "sourceArticles": [
+        "authentication-and-email"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H06"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "authentication-and-email",
+        "managed",
+        "verify"
+      ],
+      "figureMetadataPreserved": [
+        "authentication-and-email-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "storage-and-attachments",
+      "revision": 2,
+      "sourceArticles": [
+        "storage-and-attachments"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "storage-and-attachments",
+        "access",
+        "recover",
+        "docker-desktop"
+      ],
+      "figureMetadataPreserved": [
+        "storage-and-attachments-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "workspace-encryption",
+      "revision": 3,
+      "sourceArticles": [
+        "workspace-encryption"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H10"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "workspace-encryption",
+        "existing-data",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [
+        "workspace-encryption-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "backups-and-restoration",
+      "revision": 2,
+      "sourceArticles": [
+        "back-up-the-reference-instance",
+        "logical-and-provider-backups",
+        "restore-and-roll-back"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H11",
+        "H12",
+        "H14"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "back-up-the-reference-instance",
+        "context",
+        "backup",
+        "verify",
+        "logical-and-provider-backups",
+        "provider",
+        "outage",
+        "bytes",
+        "logical-and-provider-backups-verify",
+        "restore-and-roll-back",
+        "physical",
+        "logical",
+        "restore-and-roll-back-verify"
+      ],
+      "figureMetadataPreserved": [
+        "restore-and-roll-back-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "update-an-instance",
+      "revision": 2,
+      "sourceArticles": [
+        "update-an-instance"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H13"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "update-an-instance",
+        "full",
+        "managed-source",
+        "verify"
+      ],
+      "figureMetadataPreserved": [
+        "update-an-instance-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "self-hosted-diagnostics",
+      "revision": 2,
+      "sourceArticles": [
+        "self-hosted-diagnostics"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H15"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "self-hosted-diagnostics",
+        "symptoms",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "instance-administration",
+      "revision": 2,
+      "sourceArticles": [
+        "instance-administration"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "H16"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "instance-administration",
+        "panels",
+        "responsibilities"
+      ],
+      "figureMetadataPreserved": [
+        "instance-administration-flow",
+        "instance-administration-users",
+        "instance-administration-models"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "architecture-and-data-flows",
+      "revision": 2,
+      "sourceArticles": [
+        "architecture-and-data-flows"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T03"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "architecture-and-data-flows",
+        "requests",
+        "providers"
+      ],
+      "figureMetadataPreserved": [
+        "architecture-and-data-flows-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "glossary-and-data-model",
+      "revision": 2,
+      "sourceArticles": [
+        "glossary-and-data-model"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T01"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "glossary-and-data-model",
+        "knowledge-and-feedback",
+        "example"
+      ],
+      "figureMetadataPreserved": [
+        "glossary-and-data-model-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "permissions-and-public-links",
+      "revision": 2,
+      "sourceArticles": [
+        "permissions-and-public-links"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T02"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "permissions-and-public-links",
+        "publication",
+        "revocation"
+      ],
+      "figureMetadataPreserved": [
+        "permissions-and-public-links-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "encryption-and-data-boundaries",
+      "revision": 2,
+      "sourceArticles": [
+        "encryption-and-data-boundaries"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T04"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "encryption-and-data-boundaries",
+        "exceptions",
+        "recovery"
+      ],
+      "figureMetadataPreserved": [
+        "encryption-and-data-boundaries-flow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "api-and-webhooks",
+      "revision": 3,
+      "sourceArticles": [
+        "integration-api-and-webhooks",
+        "feedback-ingestion-and-sso"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": true,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "F06",
+        "T07"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "integration-api-and-webhooks",
+        "send",
+        "receive",
+        "limits",
+        "feedback-ingestion-and-sso",
+        "errors",
+        "sso"
+      ],
+      "figureMetadataPreserved": [
+        "integration-api-and-webhooks-flow",
+        "feedback-ingestion-and-sso-workflow"
+      ],
+      "documentedBodyEdits": []
+    },
+    {
+      "locale": "es",
+      "article": "integration-troubleshooting",
+      "revision": 2,
+      "sourceArticles": [
+        "integration-troubleshooting"
+      ],
+      "titleSummaryHeadingsReviewed": true,
+      "leadScopeReviewed": false,
+      "sourceBodiesRetainedAfterDocumentedConsolidationEdits": true,
+      "workflowIDsRetained": [
+        "T08"
+      ],
+      "mappedSectionsInOriginalOrder": [
+        "integration-troubleshooting",
+        "oauth",
+        "webhooks",
+        "git"
+      ],
+      "figureMetadataPreserved": [
+        "integration-troubleshooting-flow"
+      ],
+      "documentedBodyEdits": []
+    }
+  ],
+  "revisionFinalization": "Parent raised current guide, English source and figure revisions above the highest inherited revision in every locale. Article wording was unchanged by this metadata correction; this record identifies the resulting guide revisions."
+}

@@ -1,0 +1,114 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "records": [
+    {
+      "locale": "en",
+      "article": "plans-and-ai-usage",
+      "revision": 2,
+      "sourceRevision": 2,
+      "oldSection": "## Compare the current account {#plans-and-ai-usage}\nCloud offers Free, Go and Pro. All include MCP, Numo conversations, contextual actions, code work and routines. Capacity, included AI, models and storage differ. Open Billing for your current allowance and usage, and compare the public pricing page before choosing a plan; the figures shown there are the current reference.\n\nUse the offered checkout or subscription-management action for your account. Review the amount, billing period and provider confirmation before accepting. A successful plan change should appear in account billing; verify that rather than treating a closed checkout window as proof.\n\n## What consumes budget {#consumption}\nIncluded AI usage covers reasoning, Minddy tool calls, automation, worker model calls and server-sandbox compute. A monthly limit or routine per-run cap pauses work without automatic overage charges; completed work stays in the conversation. Inspect the limit card and reset date when available.\n\nCompatible personal keys bill model calls to their provider instead of included AI usage. Unassigned families or surfaces stay on Minddy usage, and sandbox compute still consumes budget. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core.\n\n\n",
+      "newParagraphs": [
+        "Included AI usage covers reasoning, Minddy tool calls, automation, worker model calls and server-sandbox compute. The monthly included-AI limit applies to work funded by Minddy. A routine’s per-run cap is a separate limit that can pause its execution; completed work stays in the conversation. These limits do not authorize automatic overage charges. Inspect the limit card and reset date when available.",
+        "Compatible personal keys bill model calls to their provider instead of included AI usage. A worker using a validated BYOK key bypasses the account’s plan quota and compute cap. Sandbox compute still has a real cost and is recorded in usage; recording that cost does not mean the monthly plan cap is applied to that BYOK run. Unassigned families or surfaces that use Minddy-funded calls remain subject to their Minddy allowance. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core."
+      ],
+      "bodySha256": "e2afb1880768d4e2a60e19b9fbb4b58a535a656b60b4ccb14168d8865bb62c0d",
+      "sources": [
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:824"
+      ],
+      "assessment": "Author source comparison distinguishes monthly managed quota, per-run budget and actual compute cost recording; independent review pending"
+    },
+    {
+      "locale": "fr",
+      "article": "plans-and-ai-usage",
+      "revision": 3,
+      "sourceRevision": 2,
+      "oldSection": "## Comparer le compte actuel {#plans-and-ai-usage}\n\nCloud propose Free, Go et Pro. Tous incluent MCP, conversations Numo, actions contextuelles, travail sur le code et routines. Les capacités, l’utilisation IA incluse, les modèles et le stockage diffèrent. Ouvrez Facturation pour consulter votre budget et votre consommation actuels, puis comparez la page publique des prix avant de choisir un plan ; ses chiffres constituent la référence actuelle.\n\nUtilisez l’action de paiement ou de gestion d’abonnement proposée à votre compte. Vérifiez le montant, la période de facturation et la confirmation du fournisseur avant d’accepter. Un changement de plan réussi doit apparaître dans la facturation du compte ; vérifiez cet état plutôt que de considérer une fenêtre de paiement fermée comme une preuve.\n\n\n## Ce qui consomme le budget {#consumption}\n\nL’utilisation IA incluse couvre le raisonnement, les appels aux outils Minddy, l’automatisation, les appels au modèle du worker et le calcul de la sandbox serveur. Une limite mensuelle ou le plafond d’une exécution de routine met le travail en pause sans facturation automatique de dépassement ; le travail terminé reste dans la conversation. Consultez la carte de limite et la date de réinitialisation du budget lorsqu’elle est disponible.\n\nLes clés personnelles compatibles font facturer les appels aux modèles par leur fournisseur plutôt que par l’utilisation IA incluse. Les familles ou usages non attribués restent sur l’utilisation Minddy, et le calcul de la sandbox consomme toujours le budget. L’auto-hébergement comporte des coûts d’infrastructure et de fournisseurs facultatifs déterminés par l’installation ; exécuter le même cœur ne le transforme pas en abonnement Cloud.\n\n\n",
+      "newParagraphs": [
+        "L’utilisation IA incluse couvre le raisonnement, les appels aux outils Minddy, l’automatisation, les appels au modèle du worker et le calcul de la sandbox serveur. La limite mensuelle d’IA incluse s’applique au travail financé par Minddy. Le plafond par exécution d’une routine constitue une limite distincte qui peut mettre son exécution en pause ; le travail terminé reste dans la conversation. Ces limites n’autorisent pas la facturation automatique de dépassements. Consultez la carte de limite et la date de réinitialisation du budget lorsqu’elle est disponible.",
+        "Les clés personnelles compatibles font facturer les appels aux modèles par leur fournisseur plutôt que par l’utilisation IA incluse. Un worker qui utilise une clé BYOK validée contourne le quota du forfait et le plafond de calcul du compte. Le calcul de la sandbox conserve un coût réel et reste comptabilisé dans l’utilisation ; cet enregistrement ne signifie pas que le plafond mensuel du forfait s’applique à cette exécution BYOK. Les familles ou usages non attribués qui passent par des appels financés par Minddy restent soumis à leur allocation Minddy. L’auto-hébergement comporte des coûts d’infrastructure et de fournisseurs facultatifs déterminés par l’installation ; exécuter le même cœur ne le transforme pas en abonnement Cloud."
+      ],
+      "bodySha256": "c95b4e5bb2af7e12462557fcd44cba5601154a09cb64b4ce9c8ca35a60b1705d",
+      "sources": [
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:824"
+      ],
+      "assessment": "Author source comparison distinguishes monthly managed quota, per-run budget and actual compute cost recording; independent review pending"
+    },
+    {
+      "locale": "de",
+      "article": "plans-and-ai-usage",
+      "revision": 3,
+      "sourceRevision": 2,
+      "oldSection": "## Das aktuelle Konto vergleichen {#plans-and-ai-usage}\n\nCloud bietet Free, Go und Pro. Alle enthalten MCP, Numo-Konversationen, Kontextaktionen, Codearbeit und Routinen. Kapazität, enthaltene KI, Modelle und Speicher unterscheiden sich. Öffnen Sie Abrechnung für Ihr aktuelles Kontingent und den Verbrauch. Vergleichen Sie vor der Tarifwahl die öffentliche Preisseite; ihre Angaben bilden die aktuelle Referenz.\n\nVerwenden Sie den Ihrem Konto angebotenen Zahlungs- oder Abonnementverwaltungsbefehl. Prüfen Sie Betrag, Abrechnungszeitraum und Anbieterbestätigung, bevor Sie zustimmen. Ein erfolgreicher Tarifwechsel sollte in der Kontoabrechnung erscheinen. Prüfen Sie dies, statt ein geschlossenes Zahlungsfenster als Nachweis zu betrachten.\n\n\n## Budgetverbrauch {#consumption}\n\nDas enthaltene KI-Kontingent umfasst Reasoning, Minddy-Werkzeugaufrufe, Automatisierungen, Worker-Modellaufrufe und Rechenleistung der Serversandbox. Eine Monatsgrenze oder ein Limit pro Routinenlauf pausiert die Arbeit ohne automatische Mehrkosten. Abgeschlossene Arbeit bleibt in der Konversation erhalten. Prüfen Sie die Limitkarte und das Datum der Budgetzurücksetzung, sofern es verfügbar ist.\n\nKompatible persönliche Schlüssel lassen Modellaufrufe beim Anbieter abrechnen, statt das enthaltene KI-Kontingent zu verbrauchen. Nicht zugeordnete Familien oder Bereiche bleiben beim Minddy-Verbrauch; Sandbox-Rechenleistung verbraucht weiterhin Budget. Self-Hosting hat von der Installation abhängige Infrastruktur- und optionale Anbieterkosten. Derselbe Anwendungskern macht daraus kein Cloud-Abonnement.\n\n\n",
+      "newParagraphs": [
+        "Das enthaltene KI-Kontingent umfasst Reasoning, Minddy-Werkzeugaufrufe, Automatisierungen, Worker-Modellaufrufe und Rechenleistung der Serversandbox. Die monatliche Grenze des enthaltenen KI-Kontingents gilt für Arbeit, die Minddy finanziert. Das Limit pro Routinenlauf ist eine eigene Grenze, die den Lauf pausieren kann; abgeschlossene Arbeit bleibt in der Konversation erhalten. Diese Grenzen erlauben keine automatische Abrechnung von Überschreitungen. Prüfen Sie die Limitkarte und das Datum der Budgetzurücksetzung, sofern es verfügbar ist.",
+        "Kompatible persönliche Schlüssel lassen Modellaufrufe beim Anbieter abrechnen, statt das enthaltene KI-Kontingent zu verbrauchen. Für einen Worker mit einem validierten BYOK-Schlüssel gelten weder das Kontingent des Kontotarifs noch dessen Rechenleistungslimit. Die Sandbox-Rechenleistung verursacht weiterhin tatsächliche Kosten und wird im Verbrauch erfasst. Diese Erfassung bedeutet nicht, dass die monatliche Tarifgrenze auf diesen BYOK-Lauf angewendet wird. Nicht zugeordnete Familien oder Bereiche, deren Aufrufe Minddy finanziert, bleiben an ihr Minddy-Kontingent gebunden. Self-Hosting hat von der Installation abhängige Infrastruktur- und optionale Anbieterkosten. Derselbe Anwendungskern macht daraus kein Cloud-Abonnement."
+      ],
+      "bodySha256": "5ccd5878e412c5b84546c5de998ef6ccb11eb053a6277fe9bde7f33be8e05bcf",
+      "sources": [
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:824"
+      ],
+      "assessment": "Author source comparison distinguishes monthly managed quota, per-run budget and actual compute cost recording; independent review pending"
+    },
+    {
+      "locale": "es",
+      "article": "plans-and-ai-usage",
+      "revision": 3,
+      "sourceRevision": 2,
+      "oldSection": "## Comparar el plan de la cuenta {#plans-and-ai-usage}\n\nCloud ofrece los planes Free, Go y Pro. Todos incluyen MCP, conversaciones de Numo, acciones contextuales, trabajo de código y rutinas. Se diferencian en capacidad, IA incluida, modelos y almacenamiento. Abra la sección de facturación para consultar el presupuesto y el uso actuales de su cuenta, y compare la página pública de precios antes de elegir un plan; las cifras que aparecen allí son la referencia vigente.\n\nUse el proceso de compra o la gestión de suscripciones que se ofrece para su cuenta. Antes de aceptar, revise el importe, el periodo de facturación y la confirmación del proveedor. Después, compruebe que el plan actualizado aparece en la facturación de la cuenta; cerrar la ventana de compra no demuestra que el cambio se haya completado.\n\n\n![Página de uso de IA de la cuenta de demostración.](/documentation/es/plans-and-ai-usage-workflow.png)\n\n## Qué consume el presupuesto {#consumption}\n\nEl uso de IA incluido cubre el razonamiento, las llamadas a herramientas de Minddy, las automatizaciones, las llamadas al modelo del worker y el cómputo de la sandbox del servidor. Alcanzar el límite mensual o el límite de una ejecución de rutina pausa el trabajo sin cargos automáticos por exceso; el trabajo ya terminado permanece en la conversación. Consulte la tarjeta de límite y la fecha de restablecimiento del presupuesto cuando esté disponible.\n\nLas claves personales compatibles hacen que el proveedor facture las llamadas al modelo en lugar de consumir la IA incluida. Las familias o funciones sin asignación siguen usando la cuota de Minddy, y el cómputo de la sandbox continúa consumiendo presupuesto. Una instalación self-hosted tiene los costes de infraestructura y de proveedores opcionales que determine su configuración; ejecutar el mismo núcleo no crea una suscripción Cloud.\n\n",
+      "newParagraphs": [
+        "El uso de IA incluido cubre el razonamiento, las llamadas a herramientas de Minddy, las automatizaciones, las llamadas al modelo del worker y el cómputo de la sandbox del servidor. El límite mensual de IA incluida se aplica al trabajo financiado por Minddy. El límite por ejecución de una rutina es independiente y puede pausar esa ejecución; el trabajo ya terminado permanece en la conversación. Estos límites no autorizan cargos automáticos por exceso. Consulte la tarjeta de límite y la fecha de restablecimiento del presupuesto cuando esté disponible.",
+        "Las claves personales compatibles hacen que el proveedor facture las llamadas al modelo en lugar de consumir la IA incluida. Un worker que utiliza una clave BYOK validada no está sujeto a la cuota del plan ni al límite de cómputo de la cuenta. El cómputo de la sandbox sigue teniendo un coste real y se registra en el uso; ese registro no significa que el límite mensual del plan se aplique a esa ejecución BYOK. Las familias o funciones sin asignación cuyas llamadas financia Minddy siguen sujetas a su asignación de Minddy. Una instalación self-hosted tiene los costes de infraestructura y de proveedores opcionales que determine su configuración; ejecutar el mismo núcleo no crea una suscripción Cloud."
+      ],
+      "bodySha256": "ffdac9775361a1b8e1d4d52804d36f5980e29fb0abb45491b484075a66e1eeac",
+      "sources": [
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:824"
+      ],
+      "assessment": "Author source comparison distinguishes monthly managed quota, per-run budget and actual compute cost recording; independent review pending"
+    },
+    {
+      "locale": "it",
+      "article": "plans-and-ai-usage",
+      "revision": 3,
+      "sourceRevision": 2,
+      "oldSection": "## Confrontare l’account attuale {#plans-and-ai-usage}\n\nCloud offre i piani Free, Go e Pro. Tutti includono MCP, conversazioni Numo, azioni contestuali, lavoro sul codice e routine. Cambiano capacità, utilizzo IA incluso, modelli e spazio di archiviazione. Apri Fatturazione per vedere il budget e i consumi correnti e confronta la pagina pubblica dei prezzi prima di scegliere un piano; i dati pubblicati lì costituiscono il riferimento attuale.\n\nUsa il comando di acquisto o di gestione dell’abbonamento offerto al tuo account. Prima di accettare, controlla l’importo, il periodo di fatturazione e la conferma del provider. Un cambio di piano riuscito deve risultare nella fatturazione dell’account: verificalo, invece di considerare la chiusura della finestra di pagamento come una prova.\n\n\n## Consumo del budget {#consumption}\n\nL’utilizzo IA incluso copre ragionamento, chiamate agli strumenti Minddy, automazioni, chiamate al modello del worker e calcolo nella sandbox server. Un limite mensile o il tetto per esecuzione di una routine mette il lavoro in pausa senza addebiti automatici oltre il limite; il lavoro completato rimane nella conversazione. Controlla la scheda del limite e la data di ripristino del budget quando è disponibile.\n\nLe chiavi personali compatibili fanno fatturare al provider le chiamate ai modelli anziché consumare l’utilizzo IA incluso. Famiglie o ambiti non assegnati continuano a usare il budget di Minddy, e il calcolo nella sandbox consuma comunque il budget. L’auto-hosting comporta costi d’infrastruttura e di provider opzionali determinati dall’installazione; eseguire lo stesso nucleo non lo trasforma in un abbonamento Cloud.\n\n\n",
+      "newParagraphs": [
+        "L’utilizzo IA incluso copre ragionamento, chiamate agli strumenti Minddy, automazioni, chiamate al modello del worker e calcolo nella sandbox server. Il limite mensile dell’IA inclusa si applica al lavoro finanziato da Minddy. Il tetto per esecuzione di una routine è un limite distinto che può mettere in pausa quell’esecuzione; il lavoro completato rimane nella conversazione. Questi limiti non autorizzano addebiti automatici per il superamento del budget. Controlla la scheda del limite e la data di ripristino del budget quando è disponibile.",
+        "Le chiavi personali compatibili fanno fatturare al provider le chiamate ai modelli anziché consumare l’utilizzo IA incluso. Un worker che usa una chiave BYOK convalidata non è soggetto alla quota del piano né al limite di calcolo dell’account. Il calcolo nella sandbox continua ad avere un costo reale e viene registrato nell’utilizzo; questa registrazione non significa che il limite mensile del piano si applichi a quell’esecuzione BYOK. Le famiglie o gli ambiti non assegnati le cui chiamate sono finanziate da Minddy restano soggetti al rispettivo budget Minddy. L’auto-hosting comporta costi d’infrastruttura e di provider opzionali determinati dall’installazione; eseguire lo stesso nucleo non lo trasforma in un abbonamento Cloud."
+      ],
+      "bodySha256": "c8bbb760ea777c4cd9c9817a9973fc3459fb7fab1883d720e8497a20a93372bb",
+      "sources": [
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:824"
+      ],
+      "assessment": "Author source comparison distinguishes monthly managed quota, per-run budget and actual compute cost recording; independent review pending"
+    },
+    {
+      "locale": "pt-BR",
+      "article": "plans-and-ai-usage",
+      "revision": 3,
+      "sourceRevision": 2,
+      "oldSection": "## Comparar a conta atual {#plans-and-ai-usage}\n\nO Cloud oferece os planos Free, Go e Pro. Todos incluem MCP, conversas do Numo, ações contextuais, trabalho de código e rotinas. A capacidade, o uso de IA incluído, os modelos e o armazenamento variam. Abra Cobrança para consultar seu saldo e consumo atuais e compare a página pública de preços antes de escolher um plano; os valores publicados ali são a referência atual.\n\nUse a opção de contratação ou de gerenciamento de assinatura oferecida à sua conta. Confira o valor, o período de cobrança e a confirmação do provedor antes de aceitar. Uma mudança de plano bem-sucedida deve aparecer na cobrança da conta; verifique esse estado, em vez de tratar o fechamento da janela de pagamento como uma prova.\n\n\n## Consumo do orçamento {#consumption}\n\nO uso de IA incluído cobre raciocínio, chamadas às ferramentas do Minddy, automações, chamadas ao modelo do worker e processamento da sandbox no servidor. Um limite mensal ou teto por execução de rotina pausa o trabalho sem cobranças automáticas por excedentes; o trabalho concluído continua na conversa. Confira o cartão de limite e a data de redefinição do orçamento quando estiver disponível.\n\nAs chaves pessoais compatíveis fazem o provedor cobrar as chamadas aos modelos, em vez de consumir o uso de IA incluído. Famílias ou usos não associados continuam usando o saldo do Minddy, e o processamento da sandbox também continua consumindo orçamento. O self-hosting tem custos de infraestrutura e de provedores opcionais definidos pela instalação; executar o mesmo núcleo não o transforma em uma assinatura Cloud.\n\n\n",
+      "newParagraphs": [
+        "O uso de IA incluído cobre raciocínio, chamadas às ferramentas do Minddy, automações, chamadas ao modelo do worker e processamento da sandbox no servidor. O limite mensal de IA incluída se aplica ao trabalho financiado pelo Minddy. O teto por execução de uma rotina é um limite separado que pode pausar essa execução; o trabalho concluído continua na conversa. Esses limites não autorizam cobranças automáticas por excedentes. Confira o cartão de limite e a data de redefinição do orçamento quando estiver disponível.",
+        "As chaves pessoais compatíveis fazem o provedor cobrar as chamadas aos modelos, em vez de consumir o uso de IA incluído. Um worker que usa uma chave BYOK validada não está sujeito à cota do plano nem ao limite de processamento da conta. O processamento da sandbox continua tendo um custo real e é registrado no uso; esse registro não significa que o limite mensal do plano se aplique a essa execução BYOK. Famílias ou usos não associados cujas chamadas são financiadas pelo Minddy continuam sujeitos à sua franquia Minddy. O self-hosting tem custos de infraestrutura e de provedores opcionais definidos pela instalação; executar o mesmo núcleo não o transforma em uma assinatura Cloud."
+      ],
+      "bodySha256": "25ec0b2385faa04cbba5c01a37b3a08516fe64369b89444eec2615314f5d7857",
+      "sources": [
+        "lib/server/agent/quota.ts:54",
+        "lib/server/usage.ts:273",
+        "lib/server/agent/execute.ts:824"
+      ],
+      "assessment": "Author source comparison distinguishes monthly managed quota, per-run budget and actual compute cost recording; independent review pending"
+    }
+  ]
+}

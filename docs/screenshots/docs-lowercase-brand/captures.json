@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-09",
+  "browserViewport": [
+    1440,
+    1800
+  ],
+  "method": "Full viewport screenshots of real settings components, cropped to component bounds; empty MCP-connections fixture; no submission or backend validation.",
+  "captures": [
+    {
+      "locale": "en",
+      "dialog": {
+        "height": 870.25,
+        "width": 512,
+        "x": 464,
+        "y": 464.875
+      }
+    },
+    {
+      "locale": "fr",
+      "picker": {
+        "height": 204,
+        "width": 768,
+        "x": 336,
+        "y": 119
+      },
+      "dialog": {
+        "height": 870.25,
+        "width": 512,
+        "x": 464,
+        "y": 464.875
+      }
+    },
+    {
+      "locale": "de",
+      "picker": {
+        "height": 204,
+        "width": 768,
+        "x": 336,
+        "y": 119
+      },
+      "dialog": {
+        "height": 890.25,
+        "width": 512,
+        "x": 464,
+        "y": 454.875
+      }
+    },
+    {
+      "locale": "es",
+      "picker": {
+        "height": 204,
+        "width": 768,
+        "x": 336,
+        "y": 119
+      },
+      "dialog": {
+        "height": 870.25,
+        "width": 512,
+        "x": 464,
+        "y": 464.875
+      }
+    },
+    {
+      "locale": "it",
+      "picker": {
+        "height": 204,
+        "width": 768,
+        "x": 336,
+        "y": 119
+      },
+      "dialog": {
+        "height": 870.25,
+        "width": 512,
+        "x": 464,
+        "y": 464.875
+      }
+    },
+    {
+      "locale": "pt-BR",
+      "picker": {
+        "height": 204,
+        "width": 768,
+        "x": 336,
+        "y": 119
+      },
+      "dialog": {
+        "height": 870.25,
+        "width": 512,
+        "x": 464,
+        "y": 464.875
+      }
+    }
+  ]
+}

@@ -7,9 +7,31 @@ import { createServer as createHttpServer } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { agentSandboxStorage, base64FileChunks } from "../deploy/self-hosted/agent-runner-storage.mjs";
+
+test("the volatile worker store permits its runtime binary and retains mount restrictions", () => {
+  const options = agentSandboxStorage().Tmpfs["/vercel"].split(",");
+  for (const flag of ["exec", "nosuid", "nodev", "uid=10001", "gid=10001", "mode=0700"]) {
+    assert.ok(options.includes(flag), flag);
+  }
+  assert.ok(!options.includes("noexec"));
+});
+
+test("large binary files retain their bytes within Linux exec environment bounds", () => {
+  const original = Buffer.alloc(1_200_000);
+  for (let i = 0; i < original.length; i++) original[i] = i % 256;
+  const chunks = [...base64FileChunks(original.toString("base64"))];
+  assert.ok(chunks.length > 1);
+  for (const chunk of chunks) {
+    assert.equal(chunk.length % 4, 0);
+    assert.ok(Buffer.byteLength(`MINDDY_FILE=${chunk}\0`) < 131_072);
+  }
+  assert.deepEqual(Buffer.concat(chunks.map(chunk => Buffer.from(chunk, "base64"))), original);
+  assert.deepEqual([...base64FileChunks("")], []);
+});
 
 // Exercise the real HTTP boundary without a Docker daemon or production secrets.
-async function startRunner(t, script = "deploy/self-hosted/agent-runner.mjs") {
+async function startRunner(t, script = "deploy/self-hosted/agent-runner.mjs", dockerSocket) {
   const root = await mkdtemp(path.join(tmpdir(), "minddy-runner-http-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const reservation = createServer().listen(0, "127.0.0.1");
@@ -23,7 +45,7 @@ async function startRunner(t, script = "deploy/self-hosted/agent-runner.mjs") {
       AGENT_RUNNER_SECRET: "test-runner-secret",
       AGENT_RUNNER_SANDBOX_IMAGE: "unused:test",
       AGENT_RUNNER_NETWORK: "unused-test-network",
-      DOCKER_HOST: `unix://${path.join(root, "private-docker.sock")}`,
+      DOCKER_HOST: `unix://${dockerSocket ?? path.join(root, "private-docker.sock")}`,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -58,6 +80,79 @@ test("agent runner errors preserve status without exposing internal details", as
   });
   assert.equal(invalid.status, 400);
   assert.deepEqual(await invalid.json(), { error: "invalid request" });
+});
+
+test("Git clients receive a Basic challenge without runner or forge credentials", async (t) => {
+  const { origin } = await startRunner(t);
+  const name = "agent-v2-11111111-1111-1111-1111-111111111111-a1b2c3d4e5f6";
+  const response = await fetch(`${origin}/v1/sandboxes/${name}/git/demo/repo.git/info/refs?service=git-upload-pack`);
+  assert.equal(response.status, 401);
+  assert.equal(response.headers.get("www-authenticate"), 'Basic realm="Minddy Git relay"');
+  assert.deepEqual(await response.json(), { error: "unauthorized" });
+});
+
+test("sandbox initialization uses its unprivileged owner and removes a failed allocation", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "minddy-runner-init-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const socket = path.join(root, "docker.sock");
+  const requests = [];
+  let created = false;
+  const daemon = createHttpServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : null;
+    requests.push({ method: request.method, path: request.url, body });
+    response.setHeader("content-type", "application/json");
+    if (request.url.endsWith("/json") && request.url.includes("/containers/")) {
+      response.statusCode = created ? 200 : 404;
+      return response.end(JSON.stringify(created ? { State: { Running: true }, Mounts: [] } : { message: "missing" }));
+    }
+    if (request.url.startsWith("/v1.44/containers/create")) created = true;
+    if (request.url.endsWith("/exec")) return response.end(JSON.stringify({ Id: "a".repeat(64) }));
+    if (request.url.includes("/exec/") && request.url.endsWith("/json")) {
+      return response.end(JSON.stringify({ ExitCode: 1 }));
+    }
+    if (request.url.includes("/exec/") && request.url.endsWith("/start")) return response.end();
+    return response.end("{}");
+  });
+  daemon.listen(socket);
+  await once(daemon, "listening");
+  t.after(async () => {
+    daemon.closeAllConnections();
+    await new Promise(resolve => daemon.close(resolve));
+  });
+  const { origin } = await startRunner(t, undefined, socket);
+  const name = "agent-v2-11111111-1111-1111-1111-111111111111-a1b2c3d4e5f6";
+  const result = await fetch(`${origin}/v1/sandboxes/${name}`, {
+    method: "POST", headers: { authorization: "Bearer test-runner-secret" },
+  });
+  assert.equal(result.status, 500);
+  const initialization = requests.find(request => request.path.endsWith("/exec"));
+  assert.equal(initialization.body.User, "10001:10001");
+  assert.doesNotMatch(initialization.body.Cmd.join(" "), /chown/);
+  const allocation = requests.find(request => request.path.startsWith("/v1.44/containers/create"));
+  assert.equal(allocation.body.HostConfig.ReadonlyRootfs, true);
+  assert.deepEqual(allocation.body.HostConfig.CapDrop, ["ALL"]);
+  assert.deepEqual(allocation.body.HostConfig.SecurityOpt, ["no-new-privileges"]);
+  assert.ok(requests.some(request => request.method === "DELETE" && request.path.includes("/containers/")));
+  assert.deepEqual(await result.json(), { error: "agent runner request failed" });
+});
+
+test("agent runner accepts allocation identities and rejects malformed suffixes", async (t) => {
+  const { origin } = await startRunner(t);
+  const uuid = "11111111-1111-1111-1111-111111111111";
+  const headers = { authorization: "Bearer test-runner-secret" };
+  for (const name of [`agent-${uuid}`, `agent-v2-${uuid}`, `agent-v2-${uuid}-a1b2c3d4e5f6`]) {
+    const response = await fetch(`${origin}/v1/sandboxes/${name}`, { headers });
+    // Valid names reach the Docker boundary, which this fixture deliberately lacks.
+    assert.equal(response.status, 500, name);
+    assert.deepEqual(await response.json(), { error: "agent runner request failed" });
+  }
+  for (const suffix of ["a", "a1b2c3d4e5f67", "g1b2c3d4e5f6", "a1b2c3d4e5f6-extra"]) {
+    const response = await fetch(`${origin}/v1/sandboxes/agent-v2-${uuid}-${suffix}`, { headers });
+    assert.equal(response.status, 400, suffix);
+    assert.deepEqual(await response.json(), { error: "invalid request" });
+  }
 });
 
 for (const scenario of ["disconnect-before-headers", "disconnect-during-stream", "upstream-error"]) {

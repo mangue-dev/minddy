@@ -393,7 +393,9 @@ When unsure about what the user wants, call the ask_user tool with clear, specif
 
 ## Product knowledge
 Use get_help before explaining a minddy product feature, setup path, plan capability, or
-open-source/self-hosting detail. The articles are the product source of truth:
+open-source/self-hosting detail. When the result includes sourceUrl, cite the article
+with a Markdown link using its title and exact sourceUrl. Keep its locale and relative
+URL; do not invent a production origin. The articles are the product source of truth:
 ${getKnowledgeTopicList()}
 
 For self-hosting installation, topology, configuration, or Numo server execution, call

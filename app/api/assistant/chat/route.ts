@@ -19,6 +19,7 @@ import type {
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { parseCommand } from "@/lib/server/assistant/commands";
 import { parseSelectedSkills } from "@/lib/server/assistant/skills";
+import { parseSelfHostingHelpContext } from "@/lib/self-hosting-help-context";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
 import { encodeConversationTitle, shouldProtectConversationTitle } from
@@ -37,6 +38,7 @@ import {
   resolveNumoTurnConfiguration,
 } from "@/lib/server/assistant/conversation-config";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
+import { supportedLocaleForTag } from "@/i18n/config";
 import type { AttachmentInput } from "@/lib/types";
 import { loadProjectRepositorySkills } from "@/lib/server/repository-skills";
 import { validateMessageContext } from "@/lib/server/assistant/message-context";
@@ -152,6 +154,15 @@ const MENTION_TYPES: ReadonlySet<string> = new Set([
 function parsePageContext(raw: unknown): AssistantPageContext | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
+  if (obj.documentation && typeof obj.documentation === "object") {
+    const documentation = obj.documentation as Record<string, unknown>;
+    const locale = typeof documentation.locale === "string" ? supportedLocaleForTag(documentation.locale) : null;
+    const selfHosting = documentation.selfHosting === undefined ? undefined : parseSelfHostingHelpContext(documentation.selfHosting);
+    if (selfHosting === null) return null;
+    if (locale && (documentation.articleId === null || typeof documentation.articleId === "string" && /^[a-z0-9-]{1,100}$/.test(documentation.articleId))) {
+      return { documentation: { articleId: documentation.articleId as string | null, locale, ...(selfHosting ? { selfHosting } : {}) } };
+    }
+  }
   const pick = (key: string): string | undefined =>
     typeof obj[key] === "string" && (obj[key] as string).length <= 500
       ? (obj[key] as string)
@@ -344,6 +355,12 @@ export async function POST(request: NextRequest) {
   }
   const message = typeof body.message === "string" ? body.message : "";
   let pageContext = parsePageContext(body.pageContext);
+  if (body.pageContext && typeof body.pageContext === "object" && "documentation" in body.pageContext && !pageContext?.documentation) {
+    return Response.json({ error: "Invalid documentation context" }, { status: 400 });
+  }
+  if (pageContext?.documentation && (projectId || workerInput || body.skills || body.skillPaths || body.attachments || body.mentions || body.command)) {
+    return Response.json({ error: "Documentation help does not accept workspace context or actions" }, { status: 400 });
+  }
   if (projectId && !pageContext?.projectId) pageContext = { ...pageContext, projectId };
   let mentions = parseMentions(body.mentions);
   const numoIntent = parseNumoIntent(body.intent);
@@ -496,7 +513,9 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const mediated = workerInput
+    const mediated = pageContext?.documentation
+      ? { action: "none" as const }
+      : workerInput
       ? await answerNumoWorkerInput({
           conversationId: convId,
           userId: user.id,
@@ -553,7 +572,9 @@ export async function POST(request: NextRequest) {
   // Worker answers and steering have their own authorization and quota path.
   let admittedUsage: UserUsage;
   try {
-    admittedUsage = await ensureUsageBudget(user.id, "assistant", "assistant_model");
+    admittedUsage = pageContext?.documentation
+      ? await ensureUsageBudget(user.id)
+      : await ensureUsageBudget(user.id, "assistant", "assistant_model");
     timing("budget_checked");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
@@ -582,12 +603,12 @@ export async function POST(request: NextRequest) {
     : null;
   const effectiveProjectId = routineContinuation?.routine.project_id ?? projectId;
 
-  // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
+  // Help follows the guide locale; other conversations use the app locale.
   // Resolved BEFORE the stream starts — next-intl needs the request context.
-  const locale = await getLocale();
+  const locale = supportedLocaleForTag(pageContext?.documentation?.locale) ?? await getLocale();
   // Same for error messages: the translator is captured here then called
   // from the stream, where the request context is no longer available.
-  const tApi = await getTranslations("ApiErrors");
+  const tApi = await getTranslations({ locale, namespace: "ApiErrors" });
 
   // Where Numo-created issues land without an explicit status — the user's
   // Account → Preferences choice (defaults to triage).
@@ -642,8 +663,9 @@ export async function POST(request: NextRequest) {
     configuration = await resolveNumoTurnConfiguration({
       userId: user.id,
       admittedBilling: admittedUsage.billing,
-      model: body.model !== undefined ? body.model : existingConversation?.model,
-      reasoningLevel: body.reasoningLevel !== undefined
+      ...(pageContext?.documentation ? { managedOnly: true } : {}),
+      model: pageContext?.documentation ? null : body.model !== undefined ? body.model : existingConversation?.model,
+      reasoningLevel: pageContext?.documentation ? null : body.reasoningLevel !== undefined
         ? body.reasoningLevel
         : existingConversation?.reasoning_level,
     });
@@ -712,6 +734,8 @@ export async function POST(request: NextRequest) {
         timezone,
         numoDefaultStatus,
         webSearchEnabled,
+        ...(pageContext?.documentation ? { documentation: { articleId: pageContext.documentation.articleId,
+          ...(pageContext.documentation.selfHosting ? { selfHosting: pageContext.documentation.selfHosting } : {}) } } : {}),
         ...(routineContinuation
           ? {
               routineId: routineContinuation.routine.id,

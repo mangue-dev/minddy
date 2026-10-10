@@ -40,11 +40,12 @@ export async function openPage({
   authed = true,
   viewport = CAPTURE.viewport,
   frozenNow = CAPTURE.frozenNow,
+  launchArgs = [],
 } = {}) {
   loadEnv();
   if (authed) await requireAuthStateForUrl(AUTH_STATE, CAPTURE.baseUrl);
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: launchArgs });
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: CAPTURE.deviceScaleFactor,

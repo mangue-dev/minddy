@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="640" viewBox="0 0 720 640" role="img" aria-labelledby="title desc">
+<title id="title">Seguir los flujos entre aplicación, base y proveedores</title>
+<desc id="desc">Diagrama: Navegador y aplicación autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Planificador independiente y runner fiable. Proveedores opcionales: destinos separados.</desc>
+<rect width="720" height="640" rx="20" fill="#fafaf9" />
+<rect x="24" y="24" width="672" height="128" rx="16" fill="#e6edf5" stroke="#293d56" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="98" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Navegador y aplicación autenticada</text>
+<rect x="24" y="178" width="672" height="128" rx="16" fill="#e0efe8" stroke="#1e4436" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="235" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Supabase: PostgreSQL, Auth, Storage,</text>
+<text x="48" y="269" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Realtime</text>
+<rect x="24" y="332" width="672" height="128" rx="16" fill="#f0ecf6" stroke="#433352" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="389" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Planificador independiente y runner</text>
+<text x="48" y="423" font-family="Arial, sans-serif" font-size="29" fill="#293d56">fiable</text>
+<rect x="24" y="486" width="672" height="128" rx="16" fill="#f7ecdf" stroke="#573e28" stroke-width="1" stroke-opacity="0.12" />
+<text x="48" y="543" font-family="Arial, sans-serif" font-size="29" fill="#293d56">Proveedores opcionales: destinos</text>
+<text x="48" y="577" font-family="Arial, sans-serif" font-size="29" fill="#293d56">separados</text>
+</svg>

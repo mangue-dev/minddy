@@ -1,0 +1,92 @@
+[
+  {
+    "locale": "en",
+    "article": "choose-an-instance",
+    "src": "/documentation/en/responsibilities.svg",
+    "date": "2026-10-08",
+    "reviewer": "agent:/root",
+    "reviewed": true,
+    "humanReview": false,
+    "sha256": "f58f1ede9a0266ad4ff56e47868505e20c0006dacedd201eb0d2d013f2fac82a",
+    "viewport": [
+      360,
+      520
+    ],
+    "method": "Rendered all six SVGs at 360px and inspected their contact sheet for full localized text, intact boxes and legibility."
+  },
+  {
+    "locale": "fr",
+    "article": "choose-an-instance",
+    "src": "/documentation/fr/responsibilities.svg",
+    "date": "2026-10-08",
+    "reviewer": "agent:/root",
+    "reviewed": true,
+    "humanReview": false,
+    "sha256": "79269e61e56b2f0c24060d6f1a830eb1af8c4f3fd782f47e8dea282abe78a6fc",
+    "viewport": [
+      360,
+      520
+    ],
+    "method": "Rendered all six SVGs at 360px and inspected their contact sheet for full localized text, intact boxes and legibility."
+  },
+  {
+    "locale": "de",
+    "article": "choose-an-instance",
+    "src": "/documentation/de/responsibilities.svg",
+    "date": "2026-10-08",
+    "reviewer": "agent:/root",
+    "reviewed": true,
+    "humanReview": false,
+    "sha256": "97fbda6215b0323b9e4794911a9e9869602e241c7b35155b9cea9aeddff25328",
+    "viewport": [
+      360,
+      520
+    ],
+    "method": "Rendered all six SVGs at 360px and inspected their contact sheet for full localized text, intact boxes and legibility."
+  },
+  {
+    "locale": "es",
+    "article": "choose-an-instance",
+    "src": "/documentation/es/responsibilities.svg",
+    "date": "2026-10-08",
+    "reviewer": "agent:/root",
+    "reviewed": true,
+    "humanReview": false,
+    "sha256": "aa4cd7931d602c93f729560a3bffce76c80d1c550f17ea5dcb2730e694494a72",
+    "viewport": [
+      360,
+      520
+    ],
+    "method": "Rendered all six SVGs at 360px and inspected their contact sheet for full localized text, intact boxes and legibility."
+  },
+  {
+    "locale": "it",
+    "article": "choose-an-instance",
+    "src": "/documentation/it/responsibilities.svg",
+    "date": "2026-10-08",
+    "reviewer": "agent:/root",
+    "reviewed": true,
+    "humanReview": false,
+    "sha256": "012b1f483101859790716a6a441dd318a2b5519dd9fdaa810a149b24ae4ce888",
+    "viewport": [
+      360,
+      520
+    ],
+    "method": "Rendered all six SVGs at 360px and inspected their contact sheet for full localized text, intact boxes and legibility."
+  },
+  {
+    "locale": "pt-BR",
+    "article": "choose-an-instance",
+    "src": "/documentation/pt-BR/responsibilities.svg",
+    "date": "2026-10-08",
+    "reviewer": "agent:/root",
+    "reviewed": true,
+    "humanReview": false,
+    "sha256": "006292a5305b0379a08ffae24e4fb8e8cf4030b4365cd778a7f33f0e89791510",
+    "viewport": [
+      360,
+      520
+    ],
+    "method": "Rendered all six SVGs at 360px and inspected their contact sheet for full localized text, intact boxes and legibility."
+  }
+]

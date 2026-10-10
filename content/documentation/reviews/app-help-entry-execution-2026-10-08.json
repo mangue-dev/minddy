@@ -1,0 +1,96 @@
+{
+  "date": "2026-10-08",
+  "executor": "agent:/root with real browser and disposable owner account",
+  "humanAcceptance": false,
+  "base": "http://localhost:3001",
+  "preview": true,
+  "harnessFindings": [
+    "Initial cold-navigation click preceded application hydration and did not open the help menu; repeated after the actual data-app-shell hydration marker. No product failure or completed case was inferred from that timeout. A second harness attempt used the desktop Show sidebar label on mobile; corrected to the observed mobile Go to control."
+  ],
+  "records": [
+    {
+      "locale": "en",
+      "mode": "desktop",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/docs"
+    },
+    {
+      "locale": "en",
+      "mode": "mobile",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/docs"
+    },
+    {
+      "locale": "fr",
+      "mode": "desktop",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/fr/documentation"
+    },
+    {
+      "locale": "fr",
+      "mode": "mobile",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/fr/documentation"
+    },
+    {
+      "locale": "de",
+      "mode": "desktop",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/de/dokumentation"
+    },
+    {
+      "locale": "de",
+      "mode": "mobile",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/de/dokumentation"
+    },
+    {
+      "locale": "es",
+      "mode": "desktop",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/es/documentacion"
+    },
+    {
+      "locale": "es",
+      "mode": "mobile",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/es/documentacion"
+    },
+    {
+      "locale": "it",
+      "mode": "desktop",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/it/documentazione"
+    },
+    {
+      "locale": "it",
+      "mode": "mobile",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/it/documentazione"
+    },
+    {
+      "locale": "pt-BR",
+      "mode": "desktop",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/pt-br/documentacao"
+    },
+    {
+      "locale": "pt-BR",
+      "mode": "mobile",
+      "helpMenuOpened": true,
+      "actualDocumentationNavigation": true,
+      "href": "/pt-br/documentacao"
+    }
+  ]
+}

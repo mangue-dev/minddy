@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "mangue-ui/components/ui/button";
 import { cn } from "mangue-ui/lib/utils";
-import packageJson from "@/package.json";
+import { selfHostingRelease } from "@/lib/self-hosting-release";
 import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { localizedHref } from "@/lib/locale-href";
@@ -14,6 +14,8 @@ import { AppIcon } from "@/components/icon";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
+import { documentationPath } from "@/lib/documentation-core.mjs";
+import { getPublishedDocumentation } from "@/lib/server/documentation";
 
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "selfHosting", locale: (await getLocale()) as Locale });
@@ -34,7 +36,10 @@ export default async function SelfHostingPage() {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("SelfHosting");
   const installHref = localizedHref("/self-hosting/install", locale);
-  const releaseBase = `${MINDDY_REPOSITORY_URL}/blob/v${packageJson.version}`;
+  const releaseBase = `${MINDDY_REPOSITORY_URL}/blob/${selfHostingRelease.tag}`;
+  const documentation = getPublishedDocumentation(locale);
+  const operationsArticle = documentation.find(article => article.id === "back-up-the-reference-instance");
+  const td = await getTranslations("Documentation");
 
   return (
     <>
@@ -47,6 +52,7 @@ export default async function SelfHostingPage() {
               <Button asChild size="lg" className="rounded-full">
                 <a href={installHref}>{t("heroCtaPrimary")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></a>
               </Button>
+              <a href={`${documentationPath(null, locale)}?audience=operator`} className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">{td("title")}</a>
               <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noopener noreferrer"
                 className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
                 <Github className="size-4" aria-hidden />{t("repositoryCta")}
@@ -161,7 +167,7 @@ export default async function SelfHostingPage() {
               </li>
             ))}
           </ul>
-          <a href={`${releaseBase}/docs/self-hosting-operations.md`} target="_blank" rel="noopener noreferrer"
+          <a href={operationsArticle ? documentationPath(operationsArticle.id, locale) : `${releaseBase}/docs/self-hosting-operations.md`}
             className="mt-10 inline-flex min-h-11 items-center gap-3 rounded-full bg-background/70 px-5 py-3 text-sm font-medium transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">
             {t("openOperationsGuide")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />
           </a>

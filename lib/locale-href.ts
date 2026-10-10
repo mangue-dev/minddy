@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/config";
 import { publicPathForLocale, routeByPath } from "@/lib/public-routes";
+import { documentationPath, resolveDocumentationPath, localizeDocumentationLink } from "@/lib/documentation-core.mjs";
 
 /**
  * Translates a public site link into the language served (MIN-88).
@@ -15,11 +16,15 @@ import { publicPathForLocale, routeByPath } from "@/lib/public-routes";
  * unchanged — they only exist in one version.
  */
 export function localizedHref(href: string, locale: Locale): string {
-  if (locale === "en") return href;
-
+  const documentationHref = localizeDocumentationLink(href, locale);
+  if (documentationHref !== href) return documentationHref!;
   const hashAt = href.indexOf("#");
   const path = hashAt === -1 ? href : href.slice(0, hashAt);
   const hash = hashAt === -1 ? "" : href.slice(hashAt);
+
+  const documentation = resolveDocumentationPath(path);
+  if (documentation) return `${documentationPath(documentation.id, locale)}${hash}`;
+  if (locale === "en") return href;
 
   const route = routeByPath(path || "/");
   if (!route) return href;
@@ -35,6 +40,8 @@ export function localizedHref(href: string, locale: Locale): string {
  * localized version (the internal app, `/login`…), in which case we stay put.
  */
 export function switchLocaleHref(pathname: string, next: Locale): string | null {
+  const documentation = resolveDocumentationPath(pathname);
+  if (documentation) return documentationPath(documentation.id, next);
   const route = routeByPath(pathname);
   if (!route) return null;
   return publicPathForLocale(route, next);

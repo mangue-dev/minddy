@@ -1,0 +1,119 @@
+{
+  "author": "agent:/root/automation_account_documentation",
+  "date": "2026-10-08",
+  "scope": "Final idiomatic French articles and complete grammatical subjects/articles, preserving all behavior, commands, limits and section IDs. Pure locale prose changes keep the English source revision. Independent peer review required.",
+  "records": [
+    {
+      "article": "issue-discussion-and-resources",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "16457e9003a77999660a406eb8a3e30fec64c8d3bee01392b58105b937f05a5b",
+      "changes": [
+        {
+          "before": "Expliquez décision, question ou résultat de vérification",
+          "after": "Expliquez une décision, posez une question ou décrivez un résultat de vérification"
+        },
+        {
+          "before": "En auto-hébergement, métadonnées Storage, règles d’accès et fichiers doivent aussi fonctionner.",
+          "after": "En auto-hébergement, les métadonnées Storage, les règles d’accès et les fichiers doivent aussi fonctionner."
+        }
+      ],
+      "independentReviewPending": false,
+      "independentReviewer": "agent:/root",
+      "reviewedAt": "2026-10-08"
+    },
+    {
+      "article": "objectives",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "1cdcd233b71c19a4d9543d861e9de0e25a92522a5daf71a95e2afbd04b466ed8",
+      "changes": [
+        {
+          "before": "Examinez tickets actifs et terminés avec le progrès de l’objectif.",
+          "after": "Examinez les tickets actifs et terminés avec le progrès de l’objectif."
+        },
+        {
+          "before": "Inspectez tâches manquantes, annulations et doublons",
+          "after": "Inspectez les tâches manquantes, les annulations et les doublons"
+        }
+      ],
+      "independentReviewPending": false,
+      "independentReviewer": "agent:/root",
+      "reviewedAt": "2026-10-08"
+    },
+    {
+      "article": "page-editor",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "d766682672a2111e457fc9ee35ec23fe8ca2e8c464c749aaa3f140d137cca9da",
+      "changes": [
+        {
+          "before": "Exports Markdown et lectures par agents préservent",
+          "after": "Les exports Markdown et les lectures par des agents préservent"
+        },
+        {
+          "before": "Fidélité et traitement des pièces jointes varient",
+          "after": "La fidélité du contenu et le traitement des pièces jointes varient"
+        },
+        {
+          "before": "gardez prérequis et avertissements autour d’elles.",
+          "after": "gardez les prérequis et les avertissements autour d’elles."
+        }
+      ],
+      "independentReviewPending": false,
+      "independentReviewer": "agent:/root",
+      "reviewedAt": "2026-10-08"
+    },
+    {
+      "article": "page-history",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "e7be4e42325ea88ce2f891813f2cd98e994bb6528b97f01a12543f4148dd2031",
+      "changes": [
+        {
+          "before": "L’historique identifie auteurs et agents",
+          "after": "L’historique identifie les auteurs et les agents"
+        },
+        {
+          "before": "octets des pièces jointes, fichiers supprimés et objets liés peuvent suivre",
+          "after": "les octets des pièces jointes, les fichiers supprimés et les objets liés peuvent suivre"
+        }
+      ],
+      "independentReviewPending": false,
+      "independentReviewer": "agent:/root",
+      "reviewedAt": "2026-10-08"
+    },
+    {
+      "article": "database-cells-and-entries",
+      "locale": "fr",
+      "revision": 2,
+      "sourceRevision": 1,
+      "bodySha256": "9744d16dac00cef80dd049f92017a06c102889fbcae7423e259517b3a0933dc6",
+      "changes": [
+        {
+          "before": "Sélection choisit une option, Sélection multiple plusieurs.",
+          "after": "Le champ Sélection permet de choisir une option ; Sélection multiple permet d’en choisir plusieurs."
+        },
+        {
+          "before": "Date, Personnes et Case à cocher ont leurs commandes",
+          "after": "Les champs Date, Personnes et Case à cocher ont leurs propres commandes"
+        },
+        {
+          "before": "Les cases de ligne sélectionnent les entrées et Maj-clic une plage.",
+          "after": "Les cases des lignes permettent de sélectionner les entrées ; Maj-clic sélectionne une plage."
+        },
+        {
+          "before": "Option/Alt insère au-dessus.",
+          "after": "Option/Alt permet de l’insérer au-dessus."
+        }
+      ],
+      "independentReviewPending": false,
+      "independentReviewer": "agent:/root",
+      "reviewedAt": "2026-10-08"
+    }
+  ]
+}
