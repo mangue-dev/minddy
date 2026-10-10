@@ -1,5 +1,7 @@
 import "server-only";
 
+import { validateNativeProfile, assertNativeProfileContinuity } from "@/lib/native-agent-profile";
+export { validateNativeProfile } from "@/lib/native-agent-profile";
 import type { NativeCredentialProfile, NativeHarness } from "@/lib/native-agent-prototype";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getEncryptedStore } from "@/lib/server/encryption/registry";
@@ -46,49 +48,10 @@ type StoredConnection = {
   runtime_ciphertext?: string | null;
 };
 
-const PROFILE_LIMIT = 64 * 1024;
 const RUNTIME_LIMIT = 16 * 1024;
-const AUTH_PATHS: Record<NativeHarness, readonly string[]> = {
-  codex: ["auth.json"],
-  claude_code: [".credentials.json", ".claude.json"],
-};
 
 function assertEngine(engine: string): asserts engine is NativeHarness {
   if (engine !== "codex" && engine !== "claude_code") throw new Error("Unsupported native harness");
-}
-
-/** Credentials are limited to native authentication files, never whole home directories. */
-export function validateNativeProfile(profile: unknown, engine: NativeHarness): NativeCredentialProfile {
-  assertEngine(engine);
-  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
-    throw new Error("Invalid native credential profile");
-  }
-  const value = profile as NativeCredentialProfile;
-  if (value.version !== 1 || value.engine !== engine || !Array.isArray(value.files) ||
-      value.files.length < 1 || value.files.length > AUTH_PATHS[engine].length ||
-      Object.keys(value).some((key) => !["version", "engine", "files"].includes(key))) {
-    throw new Error("Invalid native credential profile");
-  }
-  const seen = new Set<string>();
-  for (const file of value.files) {
-    if (!file || typeof file !== "object" || Array.isArray(file) ||
-        !AUTH_PATHS[engine].includes(file.path) || seen.has(file.path) ||
-        typeof file.content !== "string" || file.content.length === 0 ||
-        Object.keys(file).some((key) => !["path", "content"].includes(key))) {
-      throw new Error("Invalid native credential file");
-    }
-    seen.add(file.path);
-    let parsed: unknown;
-    try { parsed = JSON.parse(file.content); } catch { throw new Error("Invalid native credential file"); }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("Invalid native credential file");
-    }
-  }
-  const required = engine === "codex" ? "auth.json" : ".credentials.json";
-  if (!seen.has(required) || Buffer.byteLength(JSON.stringify(value), "utf8") > PROFILE_LIMIT) {
-    throw new Error("Invalid native credential profile");
-  }
-  return value;
 }
 
 function binding(lease: Pick<NativeConnectionLease, "userId" | "connectionId" | "engine">,
@@ -233,8 +196,45 @@ export async function stopNativeWorkerLease(lease: NativeConnectionLease): Promi
 }
 
 export async function saveNativeProfile(lease: NativeConnectionLease, profile: NativeCredentialProfile): Promise<void> {
+  if (lease.kind !== "login") {
+    const before = await loadNativeProfile(lease);
+    if (!before) throw new Error("Native subscription reconnection required");
+    assertNativeProfileContinuity(before, validateNativeProfile(profile, lease.engine));
+  }
   const ciphertext = await encryptNativeProfile(lease, profile);
   const row = await call("write_native_agent_connection", { ...fence(lease), p_runtime: false, p_ciphertext: ciphertext });
+  lease.revision = row.revision;
+}
+
+/** Initial login has the same lost-response and teardown recovery requirements as renewal. */
+export async function commitNativeLoginProfile(lease: NativeConnectionLease,
+  profile: NativeCredentialProfile, runtime: Record<string, unknown>): Promise<void> {
+  if (lease.kind !== "login" || runtime.profileSaved !== true || runtime.phase !== "finalizing") {
+    throw new Error("Native login profile commit invalid");
+  }
+  const profileCiphertext = await encryptNativeProfile(lease, profile);
+  const runtimeCiphertext = await encryptRuntime(lease, runtime);
+  const row = await call("commit_native_login_profile", { ...fence(lease),
+    p_profile_ciphertext: profileCiphertext, p_runtime_ciphertext: runtimeCiphertext });
+  lease.revision = row.revision;
+}
+
+/** Commit renewed tokens and the saved marker together, even if the RPC response is lost. */
+export async function commitNativeWorkerProfile(lease: NativeConnectionLease,
+  profile: NativeCredentialProfile, runtime: Record<string, unknown>): Promise<void> {
+  if (lease.kind !== "worker" || !lease.workerAllocationId || runtime.kind !== "worker" ||
+      runtime.runId !== lease.workerRunId || runtime.allocationId !== lease.workerAllocationId ||
+      runtime.profileImported !== true || runtime.profileSaved !== true) {
+    throw new Error("Native worker profile commit invalid");
+  }
+  const validated = validateNativeProfile(profile, lease.engine);
+  const before = await loadNativeProfile(lease);
+  if (!before) throw new Error("Native subscription reconnection required");
+  assertNativeProfileContinuity(before, validated);
+  const profileCiphertext = await encryptNativeProfile(lease, validated);
+  const runtimeCiphertext = await encryptRuntime(lease, runtime);
+  const row = await call("commit_native_worker_profile", { ...fence(lease),
+    p_profile_ciphertext: profileCiphertext, p_runtime_ciphertext: runtimeCiphertext });
   lease.revision = row.revision;
 }
 

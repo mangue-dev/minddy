@@ -9442,6 +9442,40 @@
         "native_agent_connections"
       ],
       "functionReferences": []
+    },
+    "commit_native_worker_profile(uuid,uuid,text,bigint,uuid,bigint,text,text)": {
+      "sha256": "334fbc8b7d778251aa18fd33cfba022c10d8a71563216cbbd6a9ca620f1a5548",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "commit_native_login_profile(uuid,uuid,text,bigint,uuid,bigint,text,text)": {
+      "sha256": "193cd392465b17553589b261cdc67635367b6e22933e9e45ce64564e73ef3364",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
     }
   },
   "triggers": {

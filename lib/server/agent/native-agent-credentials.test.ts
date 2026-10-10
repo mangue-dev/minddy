@@ -16,7 +16,7 @@ vi.mock("@/lib/server/encryption/registry", () => ({ getEncryptedStore: () => {
 } }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({ from: h.from, rpc: h.rpc }) }));
 const {
-  encryptNativeProfile, decryptNativeProfile, validateNativeProfile, saveNativeProfile,
+  encryptNativeProfile, decryptNativeProfile, validateNativeProfile, saveNativeProfile, commitNativeWorkerProfile, commitNativeLoginProfile,
   setNativeRuntime, releaseNativeConnection, listNativeConnections, getNativeConnectionLease,
   disconnectNativeConnection,
   listNativeCleanupCandidates,
@@ -135,6 +135,47 @@ describe("native subscription credential storage", () => {
     h.single.mockResolvedValue({ data: null, error: { message: "native_connection_stale_lease" } });
     await expect(saveNativeProfile(owned, profile)).rejects.toThrow("operation rejected");
     expect(owned.revision).toBe(3);
+  });
+
+  it("commits initial login and its recovery marker encrypted under one revision fence", async () => {
+    const owned = lease(); const runtime = { phase: "finalizing", profileSaved: true, sandboxId: "synthetic-sandbox" };
+    h.single.mockResolvedValueOnce({ data: { revision: 3 }, error: null });
+    await commitNativeLoginProfile(owned, profile, runtime);
+    expect(h.rpc).toHaveBeenCalledWith("commit_native_login_profile", expect.objectContaining({
+      p_revision: 2, p_generation: 1, p_lease_id: "lease-1", p_user_id: "user-1" }));
+    expect(h.rpc.mock.calls[0][1].p_profile_ciphertext).not.toContain("private-refresh");
+    expect(h.rpc.mock.calls[0][1].p_runtime_ciphertext).not.toContain("synthetic-sandbox");
+    expect(owned.revision).toBe(3);
+    h.single.mockResolvedValue({ data: null, error: { message: "Commit response lost" } });
+    await expect(commitNativeLoginProfile(owned, profile, runtime)).rejects.toThrow("operation rejected");
+    expect(owned.revision).toBe(3);
+    await expect(commitNativeLoginProfile({ ...owned, kind: "worker" }, profile, runtime)).rejects.toThrow("commit invalid");
+  });
+
+  it("encrypts both worker payloads in one fenced commit and rejects account replacement before writing", async () => {
+    const owned = { ...lease(), kind: "worker" as const, workerRunId: "run-1", workerAllocationId: "allocation-1" };
+    const original = { ...profile, files: [{ path: "auth.json", content: JSON.stringify({ tokens: {
+      account_id: "account-1", access_token: "old-access", refresh_token: "old-refresh" } }) }] };
+    const rotated = { ...original, files: [{ path: "auth.json", content: JSON.stringify({ tokens: {
+      account_id: "account-1", access_token: "new-access", refresh_token: "new-refresh" } }) }] };
+    const ciphertext = await encryptNativeProfile(owned, original);
+    const runtime = { kind: "worker", runId: "run-1", allocationId: "allocation-1", profileImported: true, profileSaved: true };
+    h.single.mockResolvedValueOnce({ data: { profile_ciphertext: ciphertext }, error: null })
+      .mockResolvedValueOnce({ data: { revision: 3 }, error: null });
+    await commitNativeWorkerProfile(owned, rotated, runtime);
+    const args = h.rpc.mock.calls[1][1];
+    expect(h.rpc.mock.calls[1][0]).toBe("commit_native_worker_profile");
+    expect(args).toMatchObject({ p_revision: 2, p_generation: 1, p_lease_id: "lease-1" });
+    expect(args.p_profile_ciphertext).not.toContain("new-refresh");
+    expect(args.p_runtime_ciphertext).not.toContain("allocation-1");
+    expect(owned.revision).toBe(3);
+    for (const account_id of ["account-2", undefined]) {
+      h.rpc.mockClear(); h.single.mockResolvedValue({ data: { profile_ciphertext: ciphertext }, error: null });
+      const changed = { ...rotated, files: [{ path: "auth.json", content: JSON.stringify({ tokens: {
+        account_id, access_token: "new-access", refresh_token: "new-refresh" } }) }] };
+      await expect(commitNativeWorkerProfile(owned, changed, runtime)).rejects.toThrow("account changed");
+      expect(h.rpc).toHaveBeenCalledTimes(1); expect(owned.revision).toBe(3);
+    }
   });
 
   it("encrypts control descriptors with a distinct column binding", async () => {

@@ -72,10 +72,22 @@ whether the profile was imported and safely saved. It supports trusted lifecycle
 and cleanup operations; it is never returned to the native model.
 No credential contents are exposed in metadata reads, native output or client
 caches. The native CLI alone owns provider token refresh. A healthy turn exports and
-saves its profile under the revision/generation/lease fence before destruction;
-an ambiguous imported profile is invalidated rather than reused. The next
+saves its profile and encrypted saved-state marker atomically under the
+revision/generation/lease/run/allocation fence before destruction. A lost commit
+response or failed destruction is reconciled using the current descriptor,
+without invalidating a confirmed profile. Initial login uses the same atomic
+profile/descriptor contract; its poll and expired-lease cleanup retry deletion
+without repeating provider authorization. An ambiguous imported profile is invalidated rather than reused. The next
 allocation restores the current encrypted profile through SDK file operations.
 The job and control-plane HTTP channel never carry that profile.
+
+The server vault and VM share one strict subscription-profile validator: corrupt,
+empty and API-only profiles are rejected. Renewal preserves the original Codex
+account ID or optional Claude account UUID when present. Native children share a
+shutdown promise; export waits for physical `close`, including after SIGKILL.
+Unconfirmed shutdown never authorizes export. Private file staging uses exclusive
+unique sibling files, fsync, atomic replacement and failed-staging cleanup; it
+cannot leave a fixed temporary filename blocking the next restore or export.
 
 Account settings select the native worker for new Numo code lineages under the
 private server allowlist; existing runs retain their frozen engine and connection

@@ -246,5 +246,6 @@
   "20270109200034_native_subscription_workers.sql": "85bced30efc92ae341681bcbfb9716f7f47b0710893589ea559b80a024b91786",
   "20270109200035_atomic_agent_preferences.sql": "7e744a3c7ed83bd75c7a3d3edfa2309afc270557388fc52ef35ecf5bf47e0765",
   "20270109200036_native_worker_recovery.sql": "425a44642c66800c2896f2ca201db98a331f40987073cd2eb96bcec8e121687b",
-  "20270109200037_abandoned_native_completion.sql": "9b40f1cdd241fd2d176e89495b609bcd1d8b0fc0bc6b0d7db4dcb0752795165b"
+  "20270109200037_abandoned_native_completion.sql": "9b40f1cdd241fd2d176e89495b609bcd1d8b0fc0bc6b0d7db4dcb0752795165b",
+  "20270109200038_atomic_native_worker_profile.sql": "4965ea1121b983cbe7d4a69cdc94baaad1a7ca0e05388c01e364461bd2baa911"
 }

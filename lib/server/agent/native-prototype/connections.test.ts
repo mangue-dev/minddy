@@ -11,20 +11,20 @@ const h = vi.hoisted(() => ({
   events: [] as string[], allocations: [] as Array<{ name: string; request: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
   imports: [] as NativeCredentialProfile[], mode: "smoke", authHook: null as (() => void) | null,
   list: vi.fn(), acquire: vi.fn(), getLease: vi.fn(), getRuntime: vi.fn(), setRuntime: vi.fn(),
-  cleanupCandidates: vi.fn(), cleanupWorker: vi.fn(),
-  load: vi.fn(), save: vi.fn(), release: vi.fn(), disconnect: vi.fn(),
+  cleanupCandidates: vi.fn(), cleanupWorker: vi.fn(), abortWorker: vi.fn(),
+  load: vi.fn(), save: vi.fn(), commitLogin: vi.fn(), release: vi.fn(), disconnect: vi.fn(),
   create: vi.fn(), open: vi.fn(), budget: vi.fn(), charge: vi.fn(), executeTool: vi.fn(),
 }));
 vi.mock("../native-agent-credentials", () => ({ listNativeConnections: h.list, acquireNativeConnection: h.acquire,
   getNativeConnectionLease: h.getLease, getNativeRuntime: h.getRuntime, setNativeRuntime: h.setRuntime,
-  loadNativeProfile: h.load, saveNativeProfile: h.save, releaseNativeConnection: h.release,
+  loadNativeProfile: h.load, saveNativeProfile: h.save, commitNativeLoginProfile: h.commitLogin, releaseNativeConnection: h.release,
   disconnectNativeConnection: h.disconnect, listNativeCleanupCandidates: h.cleanupCandidates }));
 vi.mock("./access", () => ({ nativePrototypeEnabledFor: (id: string) => h.enabled && id === USER,
   assertNativePrototypeAccess: (id: string) => { if (!h.enabled || id !== USER) throw new Error("private_prototype_unavailable"); } }));
 vi.mock("./sandbox", () => ({ NATIVE_ALLOCATION_TIMEOUT_MS: 15 * 60_000,
   createNativeAllocation: h.create, openNativeAllocation: h.open }));
 vi.mock("@/lib/server/usage", () => ({ ensureUsageBudget: h.budget, recordSandboxUsage: h.charge }));
-vi.mock("../native-worker-connections", () => ({ cleanupNativeWorkerLease: h.cleanupWorker }));
+vi.mock("../native-worker-connections", () => ({ cleanupNativeWorkerLease: h.cleanupWorker, abortNativeWorkerConnection: h.abortWorker }));
 vi.mock("./mcp", () => ({ nativePrototypeMcpTool: () => ({ name: "minddy_list_projects", description: "Actual tool fixture", inputSchema: {} }),
   executeNativePrototypeMcp: h.executeTool }));
 
@@ -74,6 +74,10 @@ beforeEach(() => {
   h.save.mockImplementation(async (lease, value) => {
     fence(lease); h.profile = clone(value); lease.revision++; h.current!.revision = lease.revision;
     h.events.push("profile:saved");
+  });
+  h.commitLogin.mockImplementation(async (lease, value, descriptor) => {
+    fence(lease); h.profile = clone(value); h.runtime = clone(descriptor);
+    lease.revision++; h.current!.revision = lease.revision; h.events.push("profile:saved");
   });
   h.release.mockImplementation(async (lease, confirmation) => {
     fence(lease); expect(confirmation).toEqual({ stopped: true });
@@ -176,6 +180,25 @@ describe("private native subscription orchestration", () => {
     expect(complete.status).toBe("connected"); expect(h.current).toBeNull();
     expect(h.allocations[0].destroy).toHaveBeenCalledTimes(1);
     expect((await pollNativeLogin(USER, "codex", login.attemptId)).status).toBe("connected");
+  });
+
+  it("retains an atomically committed login through lost responses and expired cleanup retries", async () => {
+    h.profile = null; h.mode = "login";
+    const login = await startNativeLogin(USER, "codex");
+    const commit = h.commitLogin.getMockImplementation()!;
+    h.commitLogin.mockImplementationOnce(async (...args) => {
+      await commit(...args); throw new Error("Commit response lost");
+    });
+    expect((await pollNativeLogin(USER, "codex", login.attemptId)).status).toBe("waiting");
+    expect(h.profile).not.toBeNull(); expect(h.disconnect).not.toHaveBeenCalled();
+    h.current!.leaseExpiresAt = "2000-01-01";
+    h.cleanupCandidates.mockResolvedValue([{ userId: USER, engine: "codex" }]);
+    h.allocations[0].destroy.mockRejectedValueOnce(new Error("Provider unavailable"));
+    expect(await reapNativePrototypeConnections()).toEqual({ stopped: 0, pending: 1 });
+    expect(h.profile).not.toBeNull(); expect(h.release).not.toHaveBeenCalled();
+    expect((await pollNativeLogin(USER, "codex", login.attemptId)).status).toBe("connected");
+    expect(h.commitLogin).toHaveBeenCalledTimes(1); expect(h.disconnect).not.toHaveBeenCalled();
+    expect(h.current).toBeNull(); expect(h.profile).not.toBeNull();
   });
 
   it("leaves the winning finalizer running when another poll loses the same-lease revision fence", async () => {
@@ -299,6 +322,17 @@ describe("private native subscription orchestration", () => {
     expect(h.cleanupCandidates).toHaveBeenCalledWith(8);
     expect(h.disconnect).toHaveBeenCalledWith(USER, "codex", expect.objectContaining({ leaseId: ORIGINAL_LEASE }));
     expect(h.current).toBeNull();
+  });
+
+  it("routes expired saved workers through profile-preserving cleanup and retries uncertain destruction", async () => {
+    h.current = { connectionId: "connection-1", userId: USER, engine: "codex", kind: "worker",
+      generation: 1, revision: 4, leaseId: ORIGINAL_LEASE, leaseExpiresAt: "2000-01-01", workerRunId: "worker-run" };
+    h.cleanupCandidates.mockResolvedValue([{ userId: USER, engine: "codex" }]);
+    h.abortWorker.mockRejectedValueOnce(new Error("Provider unavailable"));
+    expect(await reapNativePrototypeConnections()).toEqual({ stopped: 0, pending: 1 });
+    expect(await reapNativePrototypeConnections()).toEqual({ stopped: 1, pending: 0 });
+    expect(h.abortWorker).toHaveBeenCalledWith("worker-run", expect.objectContaining({ leaseId: ORIGINAL_LEASE }));
+    expect(h.disconnect).not.toHaveBeenCalled(); expect(h.profile).not.toBeNull();
   });
 
   it("keeps failed reaper cleanup pending and retries the preserved stop authority", async () => {

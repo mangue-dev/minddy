@@ -1,4 +1,6 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,6 +26,68 @@ const smoke = { mcp, requiredTool: "minddy_list_projects", marker: "MINDDY_FIXTU
 afterEach(async () => { await Promise.all(controllers.splice(0).map((controller) => controller.cancel())); await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
 
 describe("private native credential lifecycle", () => {
+  function stoppedChildFixture() {
+    const child = Object.assign(new EventEmitter(), {
+      stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough(),
+      pid: undefined, exitCode: null, signalCode: null, kill: vi.fn(() => true),
+    });
+    child.stdin.on("data", (chunk: Buffer) => {
+      const request = JSON.parse(chunk.toString());
+      if (request.id === undefined) return;
+      const result = request.method === "account/read" ? { account: { type: "chatgpt" } } : {};
+      queueMicrotask(() => child.stdout.write(`${JSON.stringify({ id: request.id, result })}\n`));
+    });
+    return child;
+  }
+  it("exports the final rotated profile only after a concurrent cancellation physically closes the child", async () => {
+    const { root } = await setup(); const child = stoppedChildFixture();
+    const controller = new NativeController(root, () => child as unknown as ChildProcessWithoutNullStreams);
+    const profile = { version: 1 as const, engine: "codex" as const, files: [{ path: "auth.json", content: JSON.stringify({ tokens: { access_token: "before", refresh_token: "before" } }) }] };
+    await importProfile(root, profile); await controller.check("codex");
+    const cancelling = controller.cancel(); let exported = false;
+    const exporting = controller.export("codex").then((value) => { exported = true; return value; });
+    await Promise.resolve(); expect(exported).toBe(false);
+    await writeFile(join(root, "codex", "auth.json"), JSON.stringify({ tokens: { access_token: "rotated", refresh_token: "rotated" } }));
+    child.emit("close", 0, null);
+    await cancelling;
+    expect((await exporting).files[0].content).toContain("rotated");
+    expect(child.kill).toHaveBeenCalledExactlyOnceWith("SIGTERM");
+  });
+  it("waits after SIGKILL and refuses exports if physical shutdown remains unconfirmed", async () => {
+    const { root } = await setup(); const child = stoppedChildFixture();
+    const controller = new NativeController(root, () => child as unknown as ChildProcessWithoutNullStreams);
+    await controller.check("codex"); vi.useFakeTimers();
+    try {
+      const cancelling = controller.cancel(); const failed = expect(cancelling).rejects.toThrow("stop unconfirmed");
+      await vi.advanceTimersByTimeAsync(1000); expect(child.kill).toHaveBeenLastCalledWith("SIGKILL");
+      let exported = false;
+      const exporting = controller.export("codex").then(() => { exported = true; });
+      const rejected = expect(exporting).rejects.toThrow("stop unconfirmed");
+      await vi.advanceTimersByTimeAsync(4000); await failed; await rejected;
+      expect(exported).toBe(false);
+      await expect(controller.export("codex")).rejects.toThrow("stop unconfirmed");
+    } finally { vi.useRealTimers(); }
+  });
+  it("keeps a timed-out Claude status child fenced until its physical close", async () => {
+    const { root } = await setup(); const child = stoppedChildFixture();
+    const launched = vi.fn(() => child as unknown as ChildProcessWithoutNullStreams);
+    const controller = new NativeController(root, launched);
+    const profile = { version: 1 as const, engine: "claude_code" as const, files: [{ path: ".credentials.json", content: JSON.stringify({ claudeAiOauth: { accessToken: "synthetic-access", refreshToken: "synthetic-refresh" } }) }] };
+    await importProfile(root, profile); vi.useFakeTimers();
+    try {
+      const checking = controller.check("claude_code");
+      const rejected = expect(checking).rejects.toThrow("stop unconfirmed");
+      await vi.waitFor(() => expect(launched).toHaveBeenCalled());
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(child.kill).toHaveBeenLastCalledWith("SIGTERM");
+      const exporting = controller.export("claude_code");
+      const fenced = expect(exporting).rejects.toThrow("stop unconfirmed");
+      await vi.advanceTimersByTimeAsync(5000); await rejected; await fenced;
+      expect(child.kill).toHaveBeenLastCalledWith("SIGKILL");
+      child.emit("close", 0, null);
+      await expect(controller.export("claude_code")).rejects.toThrow("stop unconfirmed");
+    } finally { vi.useRealTimers(); }
+  });
   it("round-trips only the allowlisted native subscription file", async () => {
     const { root } = await setup();
     const profile = { version: 1 as const, engine: "codex" as const, files: [{ path: "auth.json", content: JSON.stringify({ OPENAI_API_KEY: null, tokens: { access_token: "fake-access", refresh_token: "fake-refresh" } }) }] };

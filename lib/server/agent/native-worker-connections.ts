@@ -8,7 +8,7 @@ import { cleanupSandboxAllocation, type SandboxAllocation } from "./sandbox-allo
 import {
   acquireNativeWorkerConnection, bindNativeWorkerConnection, disconnectNativeConnection,
   getNativeRuntime, getNativeWorkerConnection, loadNativeProfile, releaseNativeConnection,
-  renewNativeWorkerLease, saveNativeProfile, setNativeRuntime, validateNativeProfile,
+  renewNativeWorkerLease, commitNativeWorkerProfile, setNativeRuntime, validateNativeProfile,
   stopNativeWorkerLease,
   type NativeConnectionLease,
 } from "./native-agent-credentials";
@@ -47,8 +47,10 @@ export async function restoreNativeWorkerProfile(lease: NativeConnectionLease, s
   const paths = nativeWorkerPaths(layout);
   // A fresh repository allocation has no harness directory until VM launch.
   // Credential restore precedes that launch, so create its parent explicitly.
-  await sandbox.mkDir(layout.harnessDir);
-  await sandbox.mkDir(paths.privateRoot);
+  // The provider SDK mkdir rejects an existing directory; restores can encounter
+  // a harness directory already created by trusted bootstrap or an earlier step.
+  const prepared = await sandbox.runCommand({ cmd: "mkdir", args: ["-p", "--", layout.harnessDir, paths.privateRoot] });
+  if (prepared.exitCode !== 0) throw new Error("Native private directory unavailable");
   const directory = await sandbox.runCommand({ cmd: "chmod", args: ["0700", "--", paths.privateRoot] });
   if (directory.exitCode !== 0) throw new Error("Native private directory unavailable");
   // Mark injection before the external write: a lost response is not proof that
@@ -75,6 +77,8 @@ export async function renewNativeWorkerConnection(runId: string, sandboxName: st
 export async function finalizeNativeWorkerConnection(runId: string, sandbox: AgentSandbox) {
   const lease = await assertNativeWorkerAuthority(runId, sandbox.name);
   const active = descriptor(await getNativeRuntime(lease, { execution: true }), lease);
+  if (!active.profileImported) throw new Error("Native profile was not imported");
+  if (active.profileSaved) return;
   let exported: Buffer | null;
   try { exported = await sandbox.readFileToBuffer({ path: nativeWorkerPaths(cloudLayout()).profileExportPath }); }
   catch { throw new Error("Native profile export unavailable"); }
@@ -82,9 +86,7 @@ export async function finalizeNativeWorkerConnection(runId: string, sandbox: Age
   let parsed: unknown;
   try { parsed = JSON.parse(exported.toString("utf8")); }
   catch { throw new Error("Native profile export invalid"); }
-  await saveNativeProfile(lease, validateNativeProfile(parsed, lease.engine));
-  active.profileSaved = true;
-  await setNativeRuntime(lease, active);
+  await commitNativeWorkerProfile(lease, validateNativeProfile(parsed, lease.engine), { ...active, profileSaved: true });
 }
 
 async function workerAllocation(lease: NativeConnectionLease): Promise<SandboxAllocation | null> {

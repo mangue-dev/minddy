@@ -15,7 +15,7 @@ vi.mock("./native-agent-credentials", async (original) => ({
   ...(await original<typeof import("./native-agent-credentials")>()),
   acquireNativeWorkerConnection: h.acquire, bindNativeWorkerConnection: h.bind,
   getNativeWorkerConnection: h.get, getNativeRuntime: h.runtimeGet, setNativeRuntime: h.runtimeSet,
-  loadNativeProfile: h.load, saveNativeProfile: h.save, renewNativeWorkerLease: h.renew,
+  loadNativeProfile: h.load, commitNativeWorkerProfile: h.save, renewNativeWorkerLease: h.renew,
   releaseNativeConnection: h.release, disconnectNativeConnection: h.disconnect,
   stopNativeWorkerLease: h.stopLease,
 }));
@@ -38,6 +38,7 @@ beforeEach(() => {
   h.get.mockImplementation(async () => h.lease);
   h.load.mockResolvedValue(profile);
   h.runtimeGet.mockImplementation(async () => structuredClone(h.runtime));
+  h.save.mockImplementation(async (_lease, _profile, value) => { h.runtime = structuredClone(value); h.lease!.revision++; });
   h.runtimeSet.mockImplementation(async (_lease, value) => { h.runtime = structuredClone(value); });
   h.rpc.mockReturnValue({ maybeSingle: h.maybeSingle });
   h.maybeSingle.mockResolvedValue({ data: allocation, error: null });
@@ -59,19 +60,15 @@ describe("hosted native worker credential lifecycle", () => {
   it("binds the durable allocation before injection and writes secrets only through SDK private files", async () => {
     await bindNativeWorkerAllocation(h.lease!, allocation);
     expect(h.bind).toHaveBeenCalledWith(h.lease, "allocation");
-    let parentCreated = false;
-    h.mkdir.mockImplementation(async (path: string) => {
-      if (path === cloudLayout().harnessDir) parentCreated = true;
-      if (path === nativeWorkerPaths(cloudLayout()).privateRoot && !parentCreated) {
-        throw new Error("Missing harness parent directory");
-      }
-    });
+    // The SDK refuses existing directories; trusted command setup must be idempotent.
+    h.mkdir.mockRejectedValue(new Error("Directory already exists"));
     await restoreNativeWorkerProfile(h.lease!, sandbox());
     expect(h.get).toHaveBeenCalledWith("run", "sandbox");
     expect(h.runtimeGet).toHaveBeenCalledWith(h.lease, { execution: true });
     expect(h.runtime?.profileImported).toBe(true);
     expect(h.write).toHaveBeenCalledWith([{ path: nativeWorkerPaths(cloudLayout()).profileImportPath, content: JSON.stringify(profile) }]);
-    expect(h.mkdir).toHaveBeenCalledWith(nativeWorkerPaths(cloudLayout()).privateRoot);
+    expect(h.mkdir).not.toHaveBeenCalled();
+    expect(h.command).toHaveBeenCalledWith({ cmd: "mkdir", args: ["-p", "--", cloudLayout().harnessDir, nativeWorkerPaths(cloudLayout()).privateRoot] });
     expect(h.command).toHaveBeenCalledWith({ cmd: "chmod", args: ["0700", "--", nativeWorkerPaths(cloudLayout()).privateRoot] });
     expect(h.command).toHaveBeenCalledWith({ cmd: "chmod", args: ["0600", "--", nativeWorkerPaths(cloudLayout()).profileImportPath] });
     expect(h.runtimeSet.mock.invocationCallOrder.at(-1)).toBeLessThan(h.write.mock.invocationCallOrder[0]);
@@ -98,7 +95,7 @@ describe("hosted native worker credential lifecycle", () => {
     h.runtime!.profileImported = true;
     await finalizeNativeWorkerConnection("run", sandbox());
     expect(h.read).toHaveBeenCalledWith({ path: nativeWorkerPaths(cloudLayout()).profileExportPath });
-    expect(h.save).toHaveBeenCalledWith(h.lease, profile);
+    expect(h.save).toHaveBeenCalledWith(h.lease, profile, expect.objectContaining({ profileImported: true, profileSaved: true }));
     expect(h.cleanup).not.toHaveBeenCalled();
     await releaseNativeWorkerConnection("run", { stopped: true });
     expect(h.save.mock.invocationCallOrder[0]).toBeLessThan(h.cleanup.mock.invocationCallOrder[0]);
@@ -107,12 +104,28 @@ describe("hosted native worker credential lifecycle", () => {
   });
 
   it("rejects corrupt, oversized or provider-swapped SDK exports before vault writes", async () => {
+    h.runtime!.profileImported = true;
     for (const data of ["not-json", "x".repeat(65537), JSON.stringify({ ...profile, engine: "claude_code" })]) {
       h.read.mockResolvedValue(Buffer.from(data));
       await expect(finalizeNativeWorkerConnection("run", sandbox())).rejects.toThrow();
     }
     expect(h.save).not.toHaveBeenCalled();
     expect(h.release).not.toHaveBeenCalled();
+  });
+
+  it("preserves an atomically saved rotation when the commit response is lost and teardown needs a retry", async () => {
+    const captured = { ...h.lease! };
+    h.runtime!.profileImported = true;
+    h.save.mockImplementation(async (_lease, _profile, value) => {
+      h.runtime = structuredClone(value); h.lease!.revision++;
+      throw new Error("Commit response lost");
+    });
+    await expect(finalizeNativeWorkerConnection("run", sandbox())).rejects.toThrow("Commit response lost");
+    h.cleanup.mockRejectedValueOnce(new Error("Provider temporarily unavailable"));
+    await expect(abortNativeWorkerConnection("run", captured)).rejects.toThrow("temporarily unavailable");
+    expect(h.disconnect).not.toHaveBeenCalled(); expect(h.release).not.toHaveBeenCalled();
+    await abortNativeWorkerConnection("run", captured);
+    expect(h.disconnect).not.toHaveBeenCalled(); expect(h.release).toHaveBeenCalled();
   });
 
   it("invalidates potentially rotated authentication and fences late writes before failed-turn teardown", async () => {

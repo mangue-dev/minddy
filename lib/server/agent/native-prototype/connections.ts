@@ -6,11 +6,11 @@ import type { NativeConnectionMetadata, NativeCredentialProfile, NativeHarness, 
 import { NATIVE_HARNESSES } from "@/lib/native-agent-prototype";
 import type { SandboxBilling } from "@/lib/agent-sandbox-config";
 import { ensureUsageBudget, recordSandboxUsage } from "@/lib/server/usage";
-import { acquireNativeConnection, disconnectNativeConnection, getNativeConnectionLease, getNativeRuntime, listNativeConnections, listNativeCleanupCandidates, loadNativeProfile, releaseNativeConnection, saveNativeProfile, setNativeRuntime, type NativeConnectionLease } from "../native-agent-credentials";
+import { acquireNativeConnection, disconnectNativeConnection, getNativeConnectionLease, getNativeRuntime, listNativeConnections, listNativeCleanupCandidates, loadNativeProfile, releaseNativeConnection, saveNativeProfile, commitNativeLoginProfile, setNativeRuntime, type NativeConnectionLease } from "../native-agent-credentials";
 import { assertNativePrototypeAccess, nativePrototypeEnabledFor } from "./access";
 import { createNativeAllocation, openNativeAllocation, NATIVE_ALLOCATION_TIMEOUT_MS, type NativeAllocation, type NativeControllerStatus } from "./sandbox";
 import { nativePrototypeMcpTool, executeNativePrototypeMcp } from "./mcp";
-import { cleanupNativeWorkerLease } from "../native-worker-connections";
+import { abortNativeWorkerConnection, cleanupNativeWorkerLease } from "../native-worker-connections";
 
 const LOGIN_TIMEOUT_MS = 10 * 60_000;
 const TEST_TIMEOUT_MS = 4 * 60_000;
@@ -19,7 +19,7 @@ type Runtime = {
   sandboxId: string; controllerToken: string; attemptId: string; billingRunId: string;
   createdAt: number; expiresAt: number; allocationSeq: number;
   phase: "allocating" | "waiting" | "finalizing" | "testing";
-  billing?: SandboxBilling;
+  billing?: SandboxBilling; profileSaved?: boolean;
 };
 
 /** Errors contain stable public codes only; native output never crosses this boundary. */
@@ -34,6 +34,7 @@ function runtime(value: Record<string, unknown> | null): Runtime | null {
       !UUID.test(item.attemptId) || !UUID.test(item.billingRunId) || !/^[A-Za-z0-9_-]{43}$/.test(item.controllerToken) ||
       !Number.isFinite(item.createdAt) || !Number.isFinite(item.expiresAt) ||
       item.expiresAt <= item.createdAt || item.expiresAt - item.createdAt > NATIVE_ALLOCATION_TIMEOUT_MS ||
+      (item.profileSaved !== undefined && typeof item.profileSaved !== "boolean") ||
       ![0, 1, 2].includes(item.allocationSeq) ||
       !["allocating", "waiting", "finalizing", "testing"].includes(item.phase)) {
     throw new NativePrototypeError("profile_invalid");
@@ -179,6 +180,7 @@ async function loginAttempt(userId: string, engine: NativeHarness, attemptId: st
   if (!lease || lease.kind !== "login") return null;
   const active = runtime(await getNativeRuntime(lease));
   if (!active || active.attemptId !== attemptId) throw new NativePrototypeError("login_failed");
+  if (active.profileSaved) return { lease, active };
   if (Date.now() - active.createdAt > LOGIN_TIMEOUT_MS || Date.parse(lease.leaseExpiresAt) <= Date.now()) {
     await cleanupLease(lease);
     throw new NativePrototypeError("login_expired");
@@ -193,6 +195,10 @@ export async function pollNativeLogin(userId: string, engine: NativeHarness, att
     return { attemptId, status: connected ? "connected" : "failed", ...(connected ? {} : { errorCode: "login_failed" }) };
   }
   const { lease, active } = attempt;
+  if (active.profileSaved) {
+    try { await cleanupLease(lease); return { attemptId, status: "connected" }; }
+    catch { return { attemptId, status: "waiting" }; }
+  }
   if (active.phase === "allocating" || active.phase === "finalizing") return { attemptId, status: "waiting" };
   const allocation = await openNativeAllocation(active.sandboxId, active.controllerToken);
   const status = await allocation.request("/status");
@@ -211,16 +217,22 @@ export async function pollNativeLogin(userId: string, engine: NativeHarness, att
   }
   try {
     const profile = await allocation.request<NativeCredentialProfile>("/profile/export", { engine });
-    await saveNativeProfile(lease, profile);
+    await commitNativeLoginProfile(lease, profile, { ...active, profileSaved: true });
     await stop(lease, active, allocation);
     await releaseNativeConnection(lease, { stopped: true });
     return { attemptId, status: "connected" };
   } catch {
-    // A partial native auth exchange may have rotated the profile; require a
-    // fresh connection instead of keeping an uncertain earlier credential.
-    await stop(lease, active, allocation);
     const current = await getNativeConnectionLease(userId, engine);
-    if (current?.leaseId === lease.leaseId && current.generation === lease.generation) await disconnectNativePrototype(userId, engine, lease);
+    if (current?.leaseId === lease.leaseId && current.generation === lease.generation) {
+      // A lost response can still mean the profile and saved marker committed.
+      if (runtime(await getNativeRuntime(current))?.profileSaved) return { attemptId, status: "waiting" };
+    } else if (!current) {
+      const connected = (await listNativeConnections(userId)).some((item) => item.engine === engine && item.status === "connected" && !item.busy);
+      if (connected) return { attemptId, status: "connected" };
+    }
+    // An uncommitted native exchange may have rotated the earlier profile.
+    await stop(lease, active, allocation);
+    if (current?.leaseId === lease.leaseId && current.generation === lease.generation) await disconnectNativePrototype(userId, engine, current);
     throw new NativePrototypeError("login_failed");
   }
 }
@@ -266,7 +278,9 @@ export async function reapNativePrototypeConnections() {
     try {
       const lease = await getNativeConnectionLease(candidate.userId, candidate.engine);
       if (!lease || (lease.kind !== "stop" && Date.parse(lease.leaseExpiresAt) > Date.now())) continue;
-      await disconnectNativePrototype(candidate.userId, candidate.engine, lease);
+      if (lease.workerRunId) await abortNativeWorkerConnection(lease.workerRunId, lease);
+      else if (lease.kind === "login" && runtime(await getNativeRuntime(lease))?.profileSaved) await cleanupLease(lease);
+      else await disconnectNativePrototype(candidate.userId, candidate.engine, lease);
       summary.stopped++;
     } catch { summary.pending++; }
   }
@@ -275,8 +289,9 @@ export async function reapNativePrototypeConnections() {
 
 function renewalChanged(before: NativeCredentialProfile, after: NativeCredentialProfile) {
   const field = before.engine === "codex" ? "tokens" : "claudeAiOauth";
-  const first = JSON.parse(before.files[0].content)[field];
-  const second = JSON.parse(after.files[0].content)[field];
+  const path = before.engine === "codex" ? "auth.json" : ".credentials.json";
+  const first = JSON.parse(before.files.find((file) => file.path === path)!.content)[field];
+  const second = JSON.parse(after.files.find((file) => file.path === path)!.content)[field];
   return first && second && JSON.stringify(first) !== JSON.stringify(second);
 }
 

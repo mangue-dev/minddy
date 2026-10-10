@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { open, rename, rm } from "node:fs/promises";
-import { randomBytes } from "node:crypto";
+import { dirname } from "node:path";
+import { randomBytes, randomUUID } from "node:crypto";
 import { nativeWorkerPaths, type NativeWorkerMessage } from "@/lib/native-agent-worker";
 import { promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
 import { parseAskUserQuestions } from "@/lib/ask-user";
@@ -65,10 +66,14 @@ async function readImportedProfile(path: string): Promise<NativeProfile> {
 /** Opaque auth files leave only through the SDK after every native child has stopped. */
 export async function writeNativeProfileExport(profileRoot: string, engine: "codex" | "claude_code", target: string): Promise<void> {
   const profile = await exportProfile(profileRoot, engine);
-  const temp = `${target}.pending`;
+  const temp = `${target}.${randomUUID()}.pending`;
   const handle = await open(temp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-  try { await handle.writeFile(JSON.stringify(profile)); await handle.sync(); } finally { await handle.close(); }
-  await rename(temp, target);
+  try {
+    try { await handle.writeFile(JSON.stringify(profile)); await handle.sync(); } finally { await handle.close(); }
+    await rename(temp, target);
+    const directory = await open(dirname(target), constants.O_RDONLY);
+    try { await directory.sync(); } finally { await directory.close(); }
+  } finally { await rm(temp, { force: true }); }
 }
 
 /** Native workers reuse Minddy's guarded bridge and delivery rules in fresh hosted VMs. */
@@ -100,7 +105,9 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
   let lifecycleTask: Promise<void> | undefined;
   let computeBudget = job.budgetUsd ?? Number.POSITIVE_INFINITY; let budgetReadAt = Number.NEGATIVE_INFINITY;
   const checkpoint = (): AgentCheckpoint => ({ messages: [], native: { engine: native.engine, history: boundedNativeHistory(history, outward) }, usageSeq: job.usageSeqStart, lastFilesSha: filesFromSha, instructions: job.instructions, prInlineComments: bridge?.prInlineComments ?? job.prInlineComments, ...(status !== "completed" && delivery ? { editedPaths: delivery.checkpointEditedPaths(), repoTouched: delivery.repoTouched() } : {}) });
-  const stop = async (reason: VmTurnReport["status"], code?: VmTurnReport["errorCode"]) => { if (stopped) return; stopped = true; status = reason; errorCode = code; abort.abort(); await runtime.interrupt().catch(() => {}); await runtime.close(); };
+  const stop = async (reason: VmTurnReport["status"], code?: VmTurnReport["errorCode"]) => { if (stopped) return; stopped = true; status = reason; errorCode = code; abort.abort(); await runtime.interrupt().catch(() => {});
+    try { await runtime.close(); } catch { status = "error"; errorCode = "providerUnavailable"; }
+  };
   const checkComputeBudget = async () => {
     if (now() - budgetReadAt >= 60_000) { budgetReadAt = now(); const remaining = await cp.budgetRemaining().catch(() => null); if (remaining !== null) computeBudget = Math.min(computeBudget, remaining); }
     const compute = (job.bootstrapMs + Math.max(0, now() - started)) / 60_000 * (job.sandboxUsdPerMinute ?? 0);
@@ -203,22 +210,24 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
       try { pushed = await pushWork(`wip(${job.commitRef}): native agent update`); if (pushed.remoteUpdated) await cp.emit("commit", { sha: pushed.headSha }); }
       catch { pushError = "Native repository publication failed safely"; }
     }
-    if (status === "completed" && !pushError) await cp.emit("summary", { text: outward(reply) });
   } catch { if (!stopped) { status = "error"; errorCode = "providerUnavailable"; } }
   finally {
     stopped = true;
     if (beat) clearInterval(beat); if (heartbeat) clearInterval(heartbeat); if (checkpointTimer) clearInterval(checkpointTimer); if (deadlineTimer) clearTimeout(deadlineTimer);
     abort.abort();
-    await runtime.close();
+    let childStopped = false;
+    try { await runtime.close(); childStopped = true; }
+    catch { status = "error"; errorCode = "providerUnavailable"; }
     await lifecycleTask;
     await background?.stopAll();
     await mcp?.close(); await bridge?.close();
     if (status === "completed" && pushed?.headSha) { changed = await changedFiles(host, filesFromSha, pushed.headSha).catch(() => undefined); filesFromSha = pushed.headSha; }
     await host.close();
     if (pendingSteering.length) await cp.pushSteering(pendingSteering).catch(() => {});
-    try { registerNativeProfileSecrets(await exportProfile(native.profileRoot, native.engine), secrets); await writeNativeProfileExport(native.profileRoot, native.engine, native.profileExportPath); authReady = true; } catch { authReady = false; }
+    if (childStopped) try { registerNativeProfileSecrets(await exportProfile(native.profileRoot, native.engine), secrets); await writeNativeProfileExport(native.profileRoot, native.engine, native.profileExportPath); authReady = true; } catch { authReady = false; }
     if (previousPath === undefined) delete process.env.PATH; else process.env.PATH = previousPath;
   }
+  if (status === "completed" && !pushError) await cp.emit("summary", { text: outward(reply) });
   history = boundedNativeHistory(history, outward);
   const state = checkpoint();
   return { status, ...(errorCode ? { errorCode } : {}), ...(reply ? { reply: outward(reply) } : {}), ...(askedUser ? { askedUser } : {}), costUsd: 0, nativeAuthExportReady: authReady, checkpoint: state, checkpointDropped: [], checkpointBytes: Buffer.byteLength(JSON.stringify(state)), pushed, workBranch: job.workBranch, ...(pushError ? { pushError } : {}), ...(changed ? { changed } : {}), sandboxMs: job.bootstrapMs + Math.max(0, now() - started) };

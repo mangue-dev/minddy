@@ -64,6 +64,7 @@ export function claudeSmokeArguments(input: SmokeInput): string[] {
 
 export class NativeController {
   private child?: ChildProcessWithoutNullStreams;
+  private stopping?: Promise<void>;
   private operation = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private state: NativeStatus = { phase: "idle", authenticated: false };
@@ -89,19 +90,31 @@ export class NativeController {
     return { PATH: `${dirname(process.execPath)}:${process.env.PATH ?? "/usr/bin:/bin"}`, HOME: home, LANG: "C.UTF-8", TERM: "dumb", NODE_ENV: "production", ...(engine === "codex" ? { CODEX_HOME: home } : { CLAUDE_CONFIG_DIR: home }), BROWSER: "/bin/false" };
   }
   private fail(message = "Native CLI operation failed") { this.state = { engine: this.state.engine, phase: "failed", authenticated: false, error: message }; }
-  private armDeadline(ms: number) { this.timer = setTimeout(() => { void this.cancel().then(() => this.fail("Native CLI operation timed out")); }, ms); this.timer.unref(); }
+  private armDeadline(ms: number) { this.timer = setTimeout(() => { void this.cancel().then(() => this.fail("Native CLI operation timed out"), () => this.fail("Native CLI process stop unconfirmed")); }, ms); this.timer.unref(); }
   private clearTimer() { if (this.timer) clearTimeout(this.timer); this.timer = undefined; }
-  private async stop() {
+  private stop(): Promise<void> {
     this.clearTimer();
+    if (this.stopping) return this.stopping;
     const child = this.child;
     this.child = undefined;
     this.codexInitialized = false;
     for (const request of this.pending.values()) { clearTimeout(request.timer); request.reject(new Error("Native CLI stopped")); }
     this.pending.clear();
-    if (!child || child.exitCode !== null || child.signalCode !== null) return;
-    const signal = (name: NodeJS.Signals) => { try { if (child.pid) process.kill(-child.pid, name); } catch { child.kill(name); } };
-    signal("SIGTERM");
-    await new Promise<void>((resolve) => { const timeout = setTimeout(() => { signal("SIGKILL"); resolve(); }, 1000); timeout.unref(); child.once("close", () => { clearTimeout(timeout); resolve(); }); });
+    if (!child) return Promise.resolve();
+    const signal = (name: NodeJS.Signals) => { try { if (child.pid) process.kill(-child.pid, name); else child.kill(name); } catch { try { child.kill(name); } catch { /* Only physical close confirms termination. */ } } };
+    this.stopping = new Promise<void>((resolve, reject) => {
+      const forced = setTimeout(() => signal("SIGKILL"), 1000);
+      const deadline = setTimeout(() => {
+        clearTimeout(forced); child.removeListener("close", confirmed);
+        reject(new Error("Native CLI process stop unconfirmed"));
+      }, 5000);
+      const confirmed = () => { clearTimeout(forced); clearTimeout(deadline); resolve(); };
+      child.once("close", confirmed); signal("SIGTERM");
+    });
+    const task = this.stopping;
+    // Keep an uncertain stop fenced rather than authorizing a later export.
+    void task.then(() => { if (this.stopping === task) this.stopping = undefined; }, () => {});
+    return task;
   }
   async cancel() {
     ++this.operation;
@@ -127,6 +140,7 @@ export class NativeController {
     });
   }
   private async startCodex() {
+    if (this.stopping) await this.stopping;
     if (this.child && this.codexInitialized) return;
     await prepareProfileRoot(this.root);
     const child = this.launch("codex", ["app-server", "-c", "cli_auth_credentials_store=\"file\"", "-c", "features.shell_tool=false", "-c", "features.view_image=false", "-c", "features.multi_agent=false", "-c", "web_search=\"disabled\""], this.environment("codex"));
@@ -136,7 +150,7 @@ export class NativeController {
     child.stderr.resume();
     child.stdout.on("data", (chunk: Buffer) => {
       buffer += chunk.toString("utf8");
-      if (buffer.length > 256 * 1024) { void this.stop(); this.fail("Native protocol exceeded its limit"); return; }
+      if (buffer.length > 256 * 1024) { void this.stop().catch(() => {}); this.fail("Native protocol exceeded its limit"); return; }
       let newline: number;
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1);
@@ -245,12 +259,16 @@ export class NativeController {
       this.child = child;
       let output = "";
       const authenticated = await new Promise<boolean>((resolve) => {
-        const timer = setTimeout(() => { child.kill("SIGKILL"); resolve(false); }, 20_000);
+        const timer = setTimeout(() => resolve(false), 20_000);
         child.stdout.on("data", (chunk: Buffer) => { output += chunk.toString("utf8"); if (output.length > 8192) child.kill("SIGKILL"); }); child.stderr.resume();
         child.on("error", () => { clearTimeout(timer); resolve(false); });
-        child.on("close", (code) => { clearTimeout(timer); try { const result = JSON.parse(output); resolve(code === 0 && result.loggedIn === true && result.authMethod === "claude.ai"); } catch { resolve(false); } output = ""; });
+        child.on("close", (code) => { clearTimeout(timer); if (this.child === child) this.child = undefined; try { const result = JSON.parse(output); resolve(code === 0 && result.loggedIn === true && result.authMethod === "claude.ai"); } catch { resolve(false); } output = ""; });
       });
-      if (this.child === child) this.child = undefined;
+      // A status timeout or spawn error must retain the physical-stop fence.
+      if (this.child === child) {
+        try { await this.stop(); }
+        catch { this.fail("Native CLI process stop unconfirmed"); throw new Error("Native CLI process stop unconfirmed"); }
+      }
       this.state = { engine, phase: authenticated ? "authenticated" : "idle", authenticated };
     }
     return this.status();
@@ -293,7 +311,7 @@ export class NativeController {
     child.stderr.resume();
     child.stdout.on("data", (chunk: Buffer) => {
       buffer += chunk.toString("utf8");
-      if (buffer.length > 256 * 1024) { void this.stop(); this.fail("Native protocol exceeded its limit"); return; }
+      if (buffer.length > 256 * 1024) { void this.stop().catch(() => {}); this.fail("Native protocol exceeded its limit"); return; }
       let index: number;
       while ((index = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, index); buffer = buffer.slice(index + 1);
@@ -320,6 +338,7 @@ export class NativeController {
   }
   async isolation(engineValue: unknown) {
     const engine = parseEngine(engineValue);
+    if (this.stopping) await this.stopping;
     if (this.child) throw new Error("Native operation must finish before isolation check");
     if (engine === "claude_code") return { engine, supported: true, isolated: true, mechanism: "builtin-tools-disabled" };
     await prepareProfileRoot(this.root);

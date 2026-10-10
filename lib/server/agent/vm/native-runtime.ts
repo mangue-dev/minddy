@@ -39,12 +39,13 @@ export function nativeCodexConfiguration(input: NativeRuntimeInput) {
 export function createNativeRuntime(engine: NativeHarness, options: { spawn?: NativeRuntimeSpawn } = {}): NativeRuntime {
   const launch = options.spawn ?? ((engine, args, env, cwd) => engine === "codex" ? spawn("setpriv", [...CODEX_CAPABILITY_DROP_ARGS, "codex", ...args], { env, cwd, detached: true, stdio: "pipe" }) : spawn("claude", args, { env, cwd, detached: true, stdio: "pipe" }));
   let child: ChildProcessWithoutNullStreams | undefined;
+  let stopping: Promise<void> | undefined;
   let expectedClaudeTools: string[] = [];
   let nextId = 0; let threadId = ""; let turnId = ""; let reply = ""; let closed = false;
   const pending = new Map<number, { resolve(value: Record<string, unknown>): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
   const queue: NativeEvent[] = [];
   let wake: (() => void) | undefined;
-  const push = (event: NativeEvent) => { if (closed) return; if (queue.length >= 4096) { queue.length = 0; queue.push({ type: "failed", code: "providerUnavailable", nativeCode: "nativeProtocolLimit" }); void stop(); } else queue.push(event); wake?.(); wake = undefined; };
+  const push = (event: NativeEvent) => { if (closed) return; if (queue.length >= 4096) { queue.length = 0; queue.push({ type: "failed", code: "providerUnavailable", nativeCode: "nativeProtocolLimit" }); void stop().catch(() => {}); } else queue.push(event); wake?.(); wake = undefined; };
   const fail = (nativeCode?: string) => push({ type: "failed", code: "providerUnavailable", ...(nativeCode ? { nativeCode } : {}) });
   const rpc = (method: string, params: Record<string, unknown>) => new Promise<Record<string, unknown>>((resolve, reject) => {
     if (!child) { reject(new Error("Native worker process is unavailable")); return; }
@@ -52,12 +53,25 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
     const timer = setTimeout(() => { pending.delete(id); reject(new Error("Native worker protocol request timed out")); }, 25_000);
     pending.set(id, { resolve, reject, timer }); child.stdin.write(`${JSON.stringify({ id, method, params })}\n`);
   });
-  const stop = async () => {
+  const stop = (): Promise<void> => {
+    if (stopping) return stopping;
     const current = child; child = undefined;
     for (const entry of pending.values()) { clearTimeout(entry.timer); entry.reject(new Error("Native worker process stopped")); } pending.clear();
-    if (!current || current.exitCode !== null || current.signalCode !== null) return;
-    const kill = (signal: NodeJS.Signals) => { try { if (current.pid) process.kill(-current.pid, signal); } catch { current.kill(signal); } };
-    await new Promise<void>((resolve) => { const timeout = setTimeout(() => kill("SIGKILL"), 1500); current.once("close", () => { clearTimeout(timeout); resolve(); }); kill("SIGTERM"); });
+    if (!current) return Promise.resolve();
+    const kill = (signal: NodeJS.Signals) => { try { if (current.pid) process.kill(-current.pid, signal); else current.kill(signal); } catch { try { current.kill(signal); } catch { /* Only physical close confirms termination. */ } } };
+    stopping = new Promise<void>((resolve, reject) => {
+      const forced = setTimeout(() => kill("SIGKILL"), 1500);
+      const deadline = setTimeout(() => {
+        clearTimeout(forced); current.removeListener("close", confirmed);
+        reject(new Error("Native worker process stop unconfirmed"));
+      }, 5000);
+      const confirmed = () => { clearTimeout(forced); clearTimeout(deadline); resolve(); };
+      current.once("close", confirmed); kill("SIGTERM");
+    });
+    const task = stopping;
+    // A failed stop remains a fence: later close calls cannot authorize export.
+    void task.then(() => { if (stopping === task) stopping = undefined; }, () => {});
+    return task;
   };
   const envFor = (input: NativeRuntimeInput): NodeJS.ProcessEnv => {
     const home = join(input.profileRoot, engine);
@@ -67,7 +81,7 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
     let buffer = "";
     process.stderr.resume();
     process.stdout.on("data", (chunk: Buffer) => {
-      buffer += chunk.toString("utf8"); if (Buffer.byteLength(buffer) > 1024 * 1024) { fail("nativeProtocolLimit"); void stop(); return; }
+      buffer += chunk.toString("utf8"); if (Buffer.byteLength(buffer) > 1024 * 1024) { fail("nativeProtocolLimit"); void stop().catch(() => {}); return; }
       let newline: number;
       while ((newline = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1);
@@ -88,7 +102,7 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
             const tools = Array.isArray(event.tools) ? event.tools : [];
             const servers = Array.isArray(event.mcp_servers) ? event.mcp_servers : [];
             const permitted = new Set([...expectedClaudeTools, "EndConversation"]);
-            if (tools.some((tool: unknown) => typeof tool !== "string" || !permitted.has(tool)) || expectedClaudeTools.some((tool) => !tools.includes(tool)) || event.plugins?.length || event.plugin_errors?.length || event.mcp_server_errors?.length || !servers.some((server: { name?: unknown; status?: unknown }) => server.name === "minddy" && server.status === "connected")) { fail("nativeMcpUnavailable"); void stop(); }
+            if (tools.some((tool: unknown) => typeof tool !== "string" || !permitted.has(tool)) || expectedClaudeTools.some((tool) => !tools.includes(tool)) || event.plugins?.length || event.plugin_errors?.length || event.mcp_server_errors?.length || !servers.some((server: { name?: unknown; status?: unknown }) => server.name === "minddy" && server.status === "connected")) { fail("nativeMcpUnavailable"); void stop().catch(() => {}); }
           }
           const delta = event.event?.delta;
           if (event.type === "stream_event" && delta?.type === "text_delta" && typeof delta.text === "string") { reply = (reply + delta.text).slice(-64_000); push({ type: "text", text: delta.text, delta: true }); }
@@ -107,6 +121,7 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
   };
   return {
     async start(input) {
+      if (stopping) await stopping;
       push({ type: "status", phase: "starting" });
       expectedClaudeTools = (input.toolNames ?? []).map((name) => `mcp__minddy__${name}`);
       const args = engine === "codex" ? ["app-server", "-c", 'cli_auth_credentials_store="file"', "-c", "project_doc_max_bytes=0", "-c", "features.apps=false", "-c", "features.plugins=false", "-c", "features.hooks=false", "-c", "features.tool_suggest=false", "-c", `projects.${JSON.stringify(input.cwd)}.trust_level="untrusted"`] : nativeClaudeArguments(input);
@@ -128,6 +143,9 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
     async *events() { while (!closed) { if (queue.length) yield queue.shift()!; else await new Promise<void>((resolve) => { wake = resolve; }); } },
     async steer(text) { if (engine === "codex" && turnId) await rpc("turn/steer", { threadId, expectedTurnId: turnId, input: [{ type: "text", text, text_elements: [] }] }); else await prompt(text); },
     async interrupt() { if (engine === "codex" && turnId && child) { await rpc("turn/interrupt", { threadId, turnId }).catch(() => {}); } else await stop(); },
-    async close() { await stop(); closed = true; wake?.(); wake = undefined; queue.length = 0; },
+    async close() {
+      try { await stop(); }
+      finally { closed = true; wake?.(); wake = undefined; queue.length = 0; }
+    },
   };
 }

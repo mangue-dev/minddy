@@ -8,8 +8,11 @@ that the native app-server login route could continue as a hosted private pilot.
 The [Codex app-server authentication reference](https://learn.chatgpt.com/docs/app-server#auth-endpoints)
 explicitly excludes app-server authentication from commercial or hosted services.
 Minddy's hosted sandbox execution falls within that boundary even with no users
-or revenue. Do not start further hosted Codex device logins, native refreshes,
-revocations or inference through this mechanism during the readiness pass.
+or revenue. The earlier readiness pass paused further hosted authentication tests.
+After reviewing that boundary, the owner explicitly requested the private
+subscription reliability follow-up below. That instruction authorizes the
+recorded private tests; it does not establish provider permission or authorize a
+public rollout.
 
 The [Sign in with ChatGPT overview](https://developers.openai.com/siwc/token-sharing-open-source)
 provides the intended integration route, but its public open-source flow covers
@@ -46,7 +49,8 @@ states implemented contracts; live acceptance evidence belongs in the probe log.
    `20270109200034_native_subscription_workers.sql`,
    `20270109200035_atomic_agent_preferences.sql`,
    `20270109200036_native_worker_recovery.sql` and
-   `20270109200037_abandoned_native_completion.sql`, to an isolated local Docker
+   `20270109200037_abandoned_native_completion.sql` and
+   `20270109200038_atomic_native_worker_profile.sql`, to an isolated local Docker
    Supabase database using the repository migration workflow. These add the
    connection vault, account default, frozen worker binding, worker leases,
    atomic compute reservations and fenced watchdog recovery. Do not enable the
@@ -89,7 +93,11 @@ eligibility; a real successful native turn is required to validate that path.
 Choose Connect, complete approval on the provider's own site and keep settings
 open until the UI reports Connected. The server exports only allowlisted native
 authentication JSON, writes it to the encrypted account vault, then stops and
-deletes the login allocation before reporting success. Approval state is
+deletes the login allocation before reporting success. Initial-login credentials
+and their saved-state descriptor commit atomically too. A lost commit response or
+a failed provider deletion leaves the confirmed profile connected and its lease
+busy: the next poll or expired-lease reaper retries physical cleanup. It does not
+repeat provider authorization or revoke a confirmed saved profile. Approval state is
 ephemeral in the client, never stored in a query cache or analytics. Closing the
 panel attempts cancellation; provider-side allocation expiry also bounds an
 abandoned attempt. Login attempts expire after ten minutes, allocations after
@@ -165,9 +173,12 @@ replaces its rest timestamp, and all late native terminal/requeue stamps require
 the original timestamp, allocation identity and no recovery claim. The hosted
 control-plane route has a sixty-second execution bound; elapsed time alone does
 not restore execution authority. Cleanup happens before terminal failure; an interrupted or uncertain cleanup retains the durable claim
-for retry, even if the revoked command still reports alive. A successful rest saves the bounded native auth export before
-landing the turn and physically cleans the allocation before releasing the
-lease. An uncertain imported profile requires reconnect; a stale watchdog cannot
+for retry, even if the revoked command still reports alive. A successful rest
+commits the bounded native auth export and its encrypted `profileSaved` descriptor
+in the same fenced database transaction, before landing the turn. A lost commit
+response is reconciled from the current persisted descriptor during cleanup.
+Expired-worker cleanup preserves a successfully committed profile when physical
+destruction needs a retry, and releases the lease only after confirmed cleanup. An uncertain imported profile requires reconnect; a stale watchdog cannot
 clean a replacement allocation. Physical allocation and account-erasure fences
 remain authoritative even after feature disablement or disconnect.
 
@@ -342,3 +353,71 @@ real-provider lifecycle test was performed in this pass.
 Paid Claude execution is a separate, explicitly untested acceptance path. It
 does not block Codex-specific private validation and must not be presented as a
 validated provider when broader access is considered.
+
+## Private session reliability validation (2026-10-10)
+
+The owner explicitly requested continued private personal-subscription testing
+after reviewing the hosted-authentication boundary. The account allowlist remains
+in place; no production deployment or remote database migration was performed.
+Claude paid execution remains untested.
+
+The follow-up fixes five failure modes:
+
+- Worker renewal and initial login commit the encrypted profile and saved runtime
+  descriptor atomically in migration `20270109200038`. Cleanup reconciles a lost
+  RPC response from the fresh stored revision and preserves a confirmed save.
+- Expired-lease cleanup retries uncertain provider destruction without revoking a
+  saved worker or initial-login profile. Unsaved imported profiles remain fenced
+  and require reconnect when their rotation is uncertain.
+- Concurrent shutdown callers share one promise and wait for physical child
+  closure. SIGKILL alone cannot authorize export; a five-second unconfirmed stop
+  rejects, closes event iteration and still permits host/MCP cleanup. A synthetic
+  Claude status timeout retains the same shutdown fence.
+- The server and VM use one strict subscription-profile validator. Account
+  identity is preserved during renewal when present. Durable sibling staging
+  files use unique names and are cleaned on replacement failure.
+- Restore uses checked `mkdir -p` for trusted private paths. The real Vercel SDK
+  rejects an existing directory; four pre-inference fixture attempts exposed the
+  redundant harness-directory creation before this production fix. Those
+  attempts injected no credentials and all their allocations were cleaned.
+
+The passing probe used the saved encrypted account profile, Docker Supabase and
+published Codex 0.162.1 in two fresh Vercel allocations. It used the production
+worker admission/restore/supervisor/export/cleanup path, with the private SDK
+mailbox forwarding one real owner-authorized Minddy `read_issue` per turn. It also
+verified guarded write/read/command operations and private-directory denial. The
+repository was disposable and the probe did not publish another PR.
+
+| Evidence | First allocation | Second allocation |
+| --- | --- | --- |
+| Run | `3639e69c-6c12-4e09-847a-928a31431b81` | `79928046-851b-4a12-8386-27e626038023` |
+| Allocation | `agent-v2-3639e69c-6c12-4e09-847a-928a31431b81-eb502902b009` | `agent-v2-79928046-851b-4a12-8386-27e626038023-f9a9ece7e05d` |
+| Result | Completed; MCP/read/write/command/marker verified | Completed; MCP/read/write/command/marker verified |
+| Native supervisor time | 22.915 seconds | 22.963 seconds |
+| Access and refresh tokens changed | Both | Both |
+| Provider account identity | Unchanged | Unchanged |
+| SDK deletion | Typed 404 after deletion, checked again before allocation two | Typed 404 after deletion |
+
+The second turn decrypted the updated profile from the account vault instead of
+reusing the first turn's memory or sandbox. Both saved profiles went through the
+new atomic commit. The final connection remained `connected`, generation 2,
+revision 138, with no lease. No user reauthorization was requested. Both passing
+allocation records are `cleaned` with no pending provider operation; the other
+four allocations were also cleaned and the two unused queued fixtures canceled.
+No fixture remained queued or running.
+
+The native `account/read` call requested `refreshToken: true`; access and refresh
+token changes establish actual provider renewal and durable restoration. The
+access JWT was not expired at the start of either turn. Expiration was not forced,
+and JWT expiry metadata was read only for this distinction. This does **not**
+validate recovery after natural token expiry or provider revocation. No provider
+token, hash, authentication transcript or account identifier was published.
+
+Verification: 182 behavior tests across 12 files; all four native SQL suites passed
+in local Docker with `ROLLBACK`. Typecheck, lint, both VM builds, encrypted-access
+and encryption-schema checks passed. Documentation, knowledge, owned-English and
+whitespace checks also passed. Documentation impact is limited to this record,
+`min-676-harness-interface-probes.md`, the encryption lifecycle reference and its
+SQL inventories. The public controls, availability gate and six-locale manual
+remain accurate; no article, workflow or figure revision is required for these
+private lifecycle fixes.

@@ -633,3 +633,33 @@ knowledge, owned-English and whitespace checks pass. These checks do not
 establish real expiry/renewal, remote revocation, a fresh seamless Codex
 UI-to-PR launch, durable HTTPS deployment or authorization of the hosted auth
 mechanism. Claude paid execution remains untested.
+
+### Private renewal and cold-restoration follow-up (2026-10-10)
+
+The owner authorized further private personal-subscription reliability work after
+reviewing the hosted-authentication boundary. The server account allowlist and
+Docker-only database scope remain; no public activation or deployment occurred.
+
+Runs `3639e69c-6c12-4e09-847a-928a31431b81` and
+`79928046-851b-4a12-8386-27e626038023` completed with Codex 0.162.1 in two distinct
+fresh Vercel sandboxes. Each made one successful real Minddy `read_issue` call and
+passed guarded repository write/read/command and marker assertions. Both access
+and refresh tokens changed in each turn with unchanged provider account identity.
+The first allocation returned typed SDK 404 after deletion and again before the
+second was allocated; the second returned typed SDK 404 after deletion. The vault
+remained connected at generation 2/revision 138, with no lease or user re-login.
+
+The test uses production worker lifecycle components with a private SDK MCP
+mailbox, not a new interface-to-PR run. Access JWTs were not expired at either
+start: actual requested native refresh/rotation and durable restoration are
+verified; natural-expiry recovery and provider revocation remain unverified.
+Initial-login lost-response and cleanup-retry behavior is covered synthetically,
+without repeating real provider sign-in. Claude paid execution remains untested.
+
+The final code includes atomic encrypted profile/descriptor commits, saved-state
+cleanup reconciliation, strict shared subscription/account-continuity validation,
+physical-close shutdown fences and retryable durable staging. Four earlier
+pre-inference failures exposed non-idempotent SDK directory creation; production
+restore now uses checked `mkdir -p`. All six allocation records were cleaned and
+unused queued fixtures canceled. The exact allocation IDs, timings and check
+results are recorded in the [private reliability evidence](min-676-private-native-prototype.md#private-session-reliability-validation-2026-10-10).
