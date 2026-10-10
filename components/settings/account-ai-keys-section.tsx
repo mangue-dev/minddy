@@ -21,6 +21,7 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { AccountSandboxSection } from "./account-sandbox-section";
 import { NativeAgentConnections } from "./native-agent-connections";
+import { NativeAgentModelPreferences } from "./native-agent-model-preferences";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import {
   assignAiCapabilityApi,
@@ -64,6 +65,7 @@ export function AccountAiKeysSection() {
   const {
     defaultEngine,
     nativeAgentsEnabled,
+    nativeModelPreferences,
     defaultModel,
     defaultReasoningLevel,
     loading: prefLoading,
@@ -164,6 +166,9 @@ export function AccountAiKeysSection() {
             providerDefaultModel={providerDefaultModel} reasoningLevels={reasoningLevels}
             onModelChange={onModelChange} onReasoningChange={onReasoningChange} />
         </>}
+        {!usesOpenCode && <NativeAgentModelPreferences key={defaultEngine}
+          engine={defaultEngine} enabled={nativeAgentsEnabled} loading={prefLoading}
+          preference={nativeModelPreferences[defaultEngine]} />}
         <AccountSandboxSection embedded />
       </NativeAgentConnections>
     </>

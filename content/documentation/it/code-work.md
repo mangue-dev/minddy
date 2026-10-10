@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement",
+    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,13 +43,16 @@
       "components/agent/agent-engine-badge.tsx",
       "lib/server/assistant/account-worker-context.ts",
       "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
-      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md"
+      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
+      "lib/native-agent-models.ts",
+      "components/settings/native-agent-model-preferences.tsx",
+      "content/documentation/reviews/min-676-model-controls-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance)",
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance)",
     "date": "2026-10-10"
   },
   "related": [
@@ -72,7 +75,7 @@
       "src": "/documentation/it/delegate-code-work-workflow.png",
       "alt": "Scheda del worker completato con modello, ragionamento leggero, due file modificati, branch, PR n. 1 e commit corretto.",
       "caption": "Esempio storico di OpenCode: Scheda della correzione effettiva della PR esistente, con commit aggiornato e collegamento. Verifica diff e controlli prima del merge: lo stato completato da solo non dimostra che i criteri di accettazione siano soddisfatti.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +91,7 @@
       "src": "/documentation/it/review-pull-requests-workflow.png",
       "alt": "Scheda Modifiche della PR dimostrativa aperta, con il diff di greeting e l’avviso di autorizzazione GitHub non disponibile.",
       "caption": "La PR effettivamente corretta rimane aperta, senza merge. Il diff rimuove gli spazi intorno al nome e usa World quando il valore è vuoto. Questa istanza non può richiedere l’autorizzazione dell’utente su GitHub: lo stato di disponibilità non concede il permesso di merge né dimostra che la CI del fornitore sia riuscita.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,9 +113,9 @@ Il lavoro sul codice parte da un ticket e dal repository collegato e viene esegu
 
 ## Delegare un ticket al worker di codice {#delegate-code-work}
 
-Servono un repository GitHub o GitLab collegato, autorizzazioni valide e una sandbox server configurata. Controlla **Agente di codice** nelle impostazioni IA dell’account. OpenCode richiede un modello API di codice compatibile e il ragionamento configurato; l’accesso limitato a Codex e Claude Code richiede la connessione dell’account personale selezionato. I valori del CLI nativo sono indipendenti dal modello della conversazione. Se l’accesso nativo fallisce, ricollega l’account o scegli esplicitamente OpenCode; il lavoro non passa alla fatturazione API.
+Servono un repository GitHub o GitLab collegato, autorizzazioni valide e una sandbox server configurata. Controlla **Agente di codice** nelle impostazioni IA dell’account. OpenCode richiede un modello di codice API compatibile; l’accesso limitato a Codex e Claude Code richiede la connessione dell’account personale selezionato. Imposta lì modello e ragionamento o mantieni **Automatico**. Queste scelte sono indipendenti dal modello di conversazione Numo. Se l’accesso nativo fallisce, ricollega l’account o scegli esplicitamente OpenCode; il lavoro non passa alla fatturazione API.
 
-L’autenticazione Codex tramite abbonamento nei servizi ospitati non è disponibile per uso generale. OpenAI esclude esplicitamente l’autenticazione app-server da questi servizi e li indirizza a Sign in with ChatGPT. Minddy deve usare un’integrazione autorizzata prima del lancio. I test tecnici limitati non dimostrano autorizzazione, rinnovo reale dei token o avvio senza tentativi aggiuntivi. L’esecuzione a pagamento di Claude Code resta non testata. Rimuovere i badge dall’interfaccia non cambia queste condizioni. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
+L’autenticazione Codex tramite abbonamento nei servizi ospitati non è disponibile per uso generale. OpenAI esclude esplicitamente l’autenticazione app-server da questi servizi e li indirizza a Sign in with ChatGPT. Minddy deve usare un’integrazione autorizzata prima del lancio. I test tecnici limitati non dimostrano l’autorizzazione del provider o il recupero dopo la scadenza naturale dei token. L’esecuzione a pagamento di Claude Code resta non testata. Rimuovere i badge dall’interfaccia non cambia queste condizioni. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
 
 La scheda del lavoro delegato, i dettagli dell’agente e la sua conversazione mostrano il motore di quella esecuzione con il suo logo: **Codex**, **Claude Code** oppure **OpenCode**. Questa identità viene salvata all’avvio. Le modifiche alle impostazioni dell’account valgono per i nuovi agenti; non cambiano l’identificazione di un’esecuzione esistente. Le esecuzioni precedenti senza motore salvato mostrano un’etichetta generica di agente di codice.
 

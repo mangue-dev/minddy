@@ -1,3 +1,4 @@
+import { nativeWorkerModelId } from "@/lib/native-worker-model";
 import "server-only";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
@@ -1593,6 +1594,8 @@ export async function executeAgentRun(
       ...(native && run.sandbox_billing ? { sandboxUsdPerMinute: run.sandbox_billing.usdPerMinute } : {}),
       ...(native ? { nativeAgent: {
         engine: run.agent_engine as "codex" | "claude_code",
+        model: nativeWorkerModelId(run.agent_engine as "codex" | "claude_code", run.model),
+        reasoningEffort: run.native_reasoning_effort ?? null,
         privateRoot: nativeWorkerPaths(cloudLayout()).privateRoot,
         profileRoot: nativeWorkerPaths(cloudLayout()).profileRoot,
         profileExportPath: nativeWorkerPaths(cloudLayout()).profileExportPath,

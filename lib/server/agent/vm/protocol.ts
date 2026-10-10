@@ -1,3 +1,4 @@
+import { nativeWorkerModelId, assertNativeWorkerEffort } from "@/lib/native-worker-model";
 import { assertUsableLayout, type HarnessLayout } from "../harness-layout";
 import type { ChangedFile } from "../repo-host";
 import type { AgentCheckpoint } from "../runs";
@@ -155,6 +156,8 @@ export interface VmJob {
   /** Trusted SDK file paths only. Authentication material never enters the job. */
   nativeAgent?: {
     engine: "codex" | "claude_code";
+    model?: string | null;
+    reasoningEffort?: string | null;
     privateRoot: string;
     profileRoot: string;
     profileExportPath: string;
@@ -420,9 +423,14 @@ export function parseVmJob(raw: unknown): VmJob {
     const privateRoot = `${job.layout.harnessDir}/native-private`;
     if (!config || config.engine !== job.engine || config.privateRoot !== privateRoot ||
         config.profileRoot !== `${privateRoot}/profiles` || config.profileExportPath !== `${privateRoot}/profile-export.json` ||
-        Object.keys(config).some((key) => !["engine", "privateRoot", "profileRoot", "profileExportPath", "history"].includes(key)) ||
+        Object.keys(config).some((key) => !["engine", "model", "reasoningEffort", "privateRoot", "profileRoot", "profileExportPath", "history"].includes(key)) ||
         job.controlToken || job.executionEnvironment || job.repoMode !== "clone") {
       throw new Error("vm job: invalid hosted native harness contract");
+    }
+    assertNativeWorkerEffort(config.engine, config.reasoningEffort);
+    const model = nativeWorkerModelId(config.engine, `${config.engine}/${config.model ?? "default"}`);
+    if (job.model !== undefined && nativeWorkerModelId(config.engine, job.model) !== model) {
+      throw new Error("vm job: native model differs from frozen worker model");
     }
     if (config.history !== undefined && (!Array.isArray(config.history) || config.history.length > 512 ||
         JSON.stringify(config.history).length > 1_000_000 || config.history.some((message) => !message ||

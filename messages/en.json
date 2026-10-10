@@ -2796,7 +2796,9 @@
     "localRepoWrongRepo": "That's another repository than the one this project is linked to.",
     "delegatedWorkNoDirectMessages": "You can't send messages directly to a code agent.",
     "errorNativeConnectionRequired": "Connect or reconnect your selected code agent in account AI settings, or choose OpenCode explicitly. No API fallback was used.",
-    "errorNativeAgentUnavailable": "Your selected native code agent is unavailable or its connection is in use. Check account AI settings before retrying; no API fallback was used."
+    "errorNativeAgentUnavailable": "Your selected native code agent is unavailable or its connection is in use. Check account AI settings before retrying; no API fallback was used.",
+    "nativeHarnessModel": "Model: {model}",
+    "nativeHarnessThinking": "Thinking: {level}"
   },
   "Projects": {
     "newProject": "New project",
@@ -6584,9 +6586,33 @@
     "error_subscription_unavailable": "This account cannot use the selected agent. Check your plan and account access.",
     "engineTitle": "Code agent",
     "engineOpenCodeHint": "OpenCode uses Minddy Cloud or the text-model provider configured above.",
-    "engineNativeHint": "The selected CLI chooses its model and reasoning. New workers use your subscription and Minddy tools. If access fails, work stops without switching to an API provider.",
+    "engineNativeHint": "Choose the model and thinking below. New workers use your subscription and Minddy tools. If access fails, work stops without switching to an API provider.",
     "engineUnavailable": "Native agents are unavailable for your account. Choose OpenCode to start code work.",
     "engineReconnect": "Connect this account before starting code work, or choose OpenCode explicitly.",
     "openCodeLabel": "OpenCode ({provider})"
+  },
+  "NativeAgentModels": {
+    "model": "Model",
+    "thinking": "Thinking",
+    "automatic": "Automatic",
+    "refresh": "Refresh models",
+    "refreshing": "Refreshing…",
+    "saved": "Saved for new code agents.",
+    "codexHint": "Codex reports models and supported thinking levels. Availability depends on your account.",
+    "claudeHint": "Claude model aliases follow the installed CLI. Paid Claude execution remains untested.",
+    "thinkingHint": "Choose a model to see its supported levels. Automatic uses the agent’s default.",
+    "empty": "Connect Codex, then refresh the model list. Automatic remains available.",
+    "unavailableModel": "{model} (unavailable)",
+    "unavailableHint": "This saved model is absent from the current list. Refresh or choose another before starting work.",
+    "catalogError": "The model list could not be updated. Check your connection and try again.",
+    "saveError": "These settings could not be saved. Refresh the model list and try again.",
+    "effort_none": "None",
+    "effort_minimal": "Minimal",
+    "effort_low": "Low",
+    "effort_medium": "Medium",
+    "effort_high": "High",
+    "effort_xhigh": "Very high",
+    "effort_max": "Maximum",
+    "effort_ultra": "Ultra"
   }
 }

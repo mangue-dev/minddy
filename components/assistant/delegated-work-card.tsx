@@ -213,6 +213,7 @@ function DelegatedWorkMeta({
   changedFileCount: number;
 }) {
   const t = useTranslations("Agent");
+  const tNativeModels = useTranslations("NativeAgentModels");
   const working = state === "starting" || state === "queued" || state === "running";
   const now = useNow({ updateInterval: working ? 1000 : undefined });
   const StateIcon = STATE_ICONS[state];
@@ -247,6 +248,13 @@ function DelegatedWorkMeta({
         </span>
       ) : null}
       {run ? <AgentEngineBadge engine={run.agent_engine} size={13} /> : null}
+      {run && isNativeAgentEngine(run.agent_engine) ? <>
+        <span>{t("nativeHarnessModel", { model: run.model && !run.model.endsWith("/default")
+          ? run.model.slice(run.agent_engine.length + 1) : tNativeModels("automatic") })}</span>
+        <span>{t("nativeHarnessThinking", { level: run.native_reasoning_effort
+          ? tNativeModels(`effort_${run.native_reasoning_effort}` as Parameters<typeof tNativeModels>[0])
+          : tNativeModels("automatic") })}</span>
+      </> : null}
       {!isNativeAgentEngine(run?.agent_engine) ? <NumoModelLine
         model={run?.model}
         reasoningLevel={run?.reasoning_level}

@@ -24,6 +24,16 @@ describe("native worker launch contract", () => {
       Object.assign(injected.nativeAgent, { credentials: "submitted-private-content" });
       expect(() => parseVmJob(injected)).toThrow();
     });
+    it(`${engine} checks selected model identity and effort without allowing provider overrides`, () => {
+      const model = engine === "codex" ? "gpt-test-codex" : "sonnet";
+      const job = { ...nativeJob(engine), model: `${engine}/${model}`,
+        nativeAgent: { ...nativeJob(engine).nativeAgent, model, reasoningEffort: "high" } };
+      expect(parseVmJob(job).nativeAgent?.reasoningEffort).toBe("high");
+      expect(() => parseVmJob({ ...job, model: `${engine}/different` })).toThrow("frozen worker model");
+      expect(() => parseVmJob({ ...job, nativeAgent: { ...job.nativeAgent, model: "--api-key=secret" } })).toThrow();
+      expect(() => parseVmJob({ ...job, nativeAgent: { ...job.nativeAgent, reasoningEffort: "unsupported" } })).toThrow();
+      expect(() => parseVmJob({ ...job, nativeAgent: { ...job.nativeAgent, apiProvider: "openrouter" } })).toThrow();
+    });
     it(`${engine} rejects local, mismatched and credential-bearing memory`, () => {
       expect(() => parseVmJob({ ...nativeJob(engine), controlToken: "fixture-token" })).toThrow();
       expect(() => parseVmJob({ ...nativeJob(engine), executionEnvironment: "server" })).toThrow();

@@ -2796,7 +2796,9 @@
     "localRepoWrongRepo": "C'est un autre dépôt que celui lié à ce projet.",
     "delegatedWorkNoDirectMessages": "Vous ne pouvez pas envoyer de message directement à un agent de code.",
     "errorNativeConnectionRequired": "Connectez ou reconnectez l’agent de code sélectionné dans les paramètres IA du compte, ou choisissez explicitement OpenCode. Aucun repli vers une API n’a été utilisé.",
-    "errorNativeAgentUnavailable": "L’agent natif sélectionné est indisponible ou sa connexion est utilisée. Vérifiez les paramètres IA du compte avant de réessayer ; aucun repli vers une API n’a été utilisé."
+    "errorNativeAgentUnavailable": "L’agent natif sélectionné est indisponible ou sa connexion est utilisée. Vérifiez les paramètres IA du compte avant de réessayer ; aucun repli vers une API n’a été utilisé.",
+    "nativeHarnessModel": "Modèle : {model}",
+    "nativeHarnessThinking": "Réflexion : {level}"
   },
   "Projects": {
     "newProject": "Nouveau projet",
@@ -6584,9 +6586,33 @@
     "error_subscription_unavailable": "Ce compte ne peut pas utiliser cet agent. Vérifiez votre abonnement et vos accès.",
     "engineTitle": "Agent de code",
     "engineOpenCodeHint": "OpenCode utilise Minddy Cloud ou le fournisseur de modèles de texte configuré ci-dessus.",
-    "engineNativeHint": "Le CLI sélectionné choisit son modèle et son raisonnement. Les nouveaux agents utilisent votre abonnement et les outils Minddy. Si l’accès échoue, le travail s’arrête sans basculer vers un fournisseur API.",
+    "engineNativeHint": "Choisissez le modèle et la réflexion ci-dessous. Les nouveaux agents utilisent votre abonnement et les outils Minddy. Si l’accès échoue, le travail s’arrête sans basculer vers un fournisseur API.",
     "engineUnavailable": "Les agents natifs sont indisponibles pour votre compte. Choisissez OpenCode pour lancer un travail de code.",
     "engineReconnect": "Connectez ce compte avant de lancer un travail de code, ou choisissez explicitement OpenCode.",
     "openCodeLabel": "OpenCode ({provider})"
+  },
+  "NativeAgentModels": {
+    "model": "Modèle",
+    "thinking": "Réflexion",
+    "automatic": "Automatique",
+    "refresh": "Actualiser les modèles",
+    "refreshing": "Actualisation…",
+    "saved": "Enregistré pour les nouveaux agents de code.",
+    "codexHint": "Codex fournit les modèles et niveaux de réflexion pris en charge. Leur accès dépend de votre compte.",
+    "claudeHint": "Les alias Claude suivent le CLI installé. L’exécution avec un abonnement Claude reste non testée.",
+    "thinkingHint": "Choisissez un modèle pour voir ses niveaux disponibles. Automatique utilise le réglage de l’agent.",
+    "empty": "Connectez Codex, puis actualisez la liste des modèles. Le mode automatique reste disponible.",
+    "unavailableModel": "{model} (indisponible)",
+    "unavailableHint": "Ce modèle enregistré est absent de la liste actuelle. Actualisez-la ou choisissez-en un autre avant de lancer un agent.",
+    "catalogError": "Impossible d’actualiser la liste des modèles. Vérifiez votre connexion et réessayez.",
+    "saveError": "Impossible d’enregistrer ces réglages. Actualisez la liste des modèles et réessayez.",
+    "effort_none": "Aucune",
+    "effort_minimal": "Minimale",
+    "effort_low": "Faible",
+    "effort_medium": "Moyenne",
+    "effort_high": "Élevée",
+    "effort_xhigh": "Très élevée",
+    "effort_max": "Maximale",
+    "effort_ultra": "Ultra"
   }
 }

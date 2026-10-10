@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -63,13 +63,16 @@
       "components/agent/agent-engine-badge.tsx",
       "lib/server/assistant/account-worker-context.ts",
       "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
-      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md"
+      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
+      "lib/native-agent-models.ts",
+      "components/settings/native-agent-model-preferences.tsx",
+      "content/documentation/reviews/min-676-model-controls-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance)",
     "date": "2026-10-10"
   },
   "related": [
@@ -92,7 +95,7 @@
       "src": "/documentation/pt-BR/ai-keys-and-models-workflow.png",
       "alt": "Cartão do provedor de IA com minddy Cloud selecionado.",
       "caption": "O provedor Cloud selecionado usa o plano da conta. O seletor permite configurar provedores pessoais.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -109,7 +112,7 @@
       "src": "/documentation/pt-BR/plans-and-ai-usage-workflow.png",
       "alt": "Página de uso de IA da conta de demonstração.",
       "caption": "Página de uso de IA da conta de demonstração. O orçamento, as categorias e o histórico são lidos da conta; nenhuma compra ou execução paga foi iniciada.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -146,9 +149,9 @@ Em **Agente de código**, escolha **OpenCode (Minddy Cloud)** ou OpenCode com o 
 
 Escolha primeiro **Codex** ou **Claude Code** para mostrar apenas seus controles de conexão. Selecionar o agente não conecta a conta nem inicia trabalho. Os controles atuais de login Codex descrevem o protótipo técnico histórico; não os use no Minddy hospedado até que uma integração autorizada substitua esse mecanismo. Para contas Claude habilitadas, **Conectar Claude Code** inicia a autorização no navegador. Autorize apenas na página oficial do Claude e cole somente seu código de autorização no Minddy; escolha **Concluir conexão** quando solicitado. **Cancelar conexão** interrompe uma tentativa. **Desconectar** remove o acesso salvo no Minddy; não cancela a assinatura nem confirma a revogação OAuth remota.
 
-A autenticação Codex por assinatura em serviços hospedados não está disponível para uso geral. A OpenAI exclui explicitamente a autenticação app-server desses serviços e os direciona ao Sign in with ChatGPT. O Minddy precisa usar uma integração autorizada antes do lançamento. Os testes técnicos restritos não comprovam permissão, renovação real de tokens ou início sem novas tentativas. A execução paga do Claude Code continua sem teste. Remover os selos da interface não altera essas condições. [OpenAI app-server](https://learn.chatgpt.com/docs/app-server#auth-endpoints), [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source).
+A autenticação Codex por assinatura em serviços hospedados não está disponível para uso geral. A OpenAI exclui explicitamente a autenticação app-server desses serviços e os direciona ao Sign in with ChatGPT. O Minddy precisa usar uma integração autorizada antes do lançamento. Os testes técnicos restritos não comprovam a permissão do provedor nem a recuperação após a expiração natural de tokens. A execução paga do Claude Code continua sem teste. Remover os selos da interface não altera essas condições. [OpenAI app-server](https://learn.chatgpt.com/docs/app-server#auth-endpoints), [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source).
 
-O seletor e as linhas de conexão mostram o nome e o logo de cada agente de código. As conversas de agentes nativos mostram o mecanismo salvo e os padrões gerenciados pelo CLI, sem controles de modelo ou raciocínio da API OpenCode nem imagens anexadas. As conversas OpenCode mantêm seus controles de modelo e raciocínio da API.
+As conversas de agentes nativos mostram motor, modelo e raciocínio salvos, ou os padrões do agente sem uma escolha explícita. Não oferecem controles API OpenCode nem imagens anexadas. As conversas OpenCode mantêm seus controles API.
 
 Antes de delegar, o Numo recebe a seleção atual da conta e as capacidades do adaptador escolhido. Depois que o agente inicia, seu mecanismo e suas capacidades salvos têm prioridade para aquela execução, mesmo após alterações nas configurações da conta. O Numo identifica esse agente ao explicar o trabalho delegado. Se não conseguir ler a seleção da conta, consulta as configurações em vez de adivinhar.
 
@@ -162,7 +165,9 @@ Assinaturas nativas financiam apenas os modelos de código; chamadas de API do N
 
 **OpenCode:** A escolha do modelo de código está vinculada ao provedor. Depois de alterar, desativar ou perder uma chave pessoal, a escolha anterior pode deixar de corresponder ao provedor ativo. Nesse caso, um novo worker recusa o início até que você escolha um modelo compatível nas configurações de IA da conta; ele não seleciona automaticamente um modelo mais barato nem um padrão da plataforma. Uma execução BYOK já fixada não muda quem paga quando sua chave fica indisponível.
 
-Com **OpenCode**, configure aqui o modelo de código e raciocínio padrão de novos agentes. Com **Codex** ou **Claude Code**, o CLI escolhe esses padrões. Agentes existentes mantêm suas configurações fixadas. Escolha região e tamanho da sandbox separadamente. Essas escolhas não substituem o modelo da conversa.
+Em **Agente de código**, escolha modelo e raciocínio para novos agentes. **Automático** deixa o agente selecionado usar seu padrão. **Atualizar modelos** lê o catálogo da CLI Codex conectada, incluindo os níveis de raciocínio compatíveis. Não usa a lista de modelos API do OpenRouter. Atualize após mudar a conexão ou para ver as opções atuais. Sua conta pode restringir um modelo listado pelo Codex; a execução confirma o acesso. O Claude Code oferece os aliases **Sonnet**, **Opus** e **Haiku**, que seguem as recomendações da CLI instalada. A execução com uma assinatura Claude ainda não foi testada. A atualização inicia uma sandbox por pouco tempo e depois a destrói; o processamento é registrado separadamente dos modelos usados com a assinatura.
+
+Com Codex ou Claude Code, mudar o modelo redefine o raciocínio para **Automático** para não manter um nível incompatível do modelo anterior. Depois escolha um nível compatível. OpenCode, Codex e Claude Code guardam preferências separadas. Agentes existentes mantêm o motor, o modelo e o raciocínio salvos no início, inclusive ao retomar. Essas escolhas não mudam o modelo das conversas Numo. Região e tamanho de sandbox permanecem na mesma seção.
 
 Quando configurados, o Ollama local e endpoints compatíveis com OpenAI podem atender às conversas pela ponte do aplicativo desktop. Eles não podem atender ao trabalho delegado de código nem às rotinas executadas na sandbox do servidor. Para esses usos, escolha um provedor acessível pelo servidor. Remova um provedor pelo controle de confirmação quando ele não for mais necessário e confira o roteamento resultante antes da próxima execução.
 

@@ -1,3 +1,4 @@
+import { nativeWorkerModelId, assertNativeWorkerEffort } from "@/lib/native-worker-model";
 import "server-only";
 
 import type { SandboxBilling } from "@/lib/agent-sandbox-config";
@@ -340,6 +341,8 @@ export interface AgentRun {
   /** Level of reasoning FROZEN at launch (MIN-122), like the model: one run
    * taken up by another invocation must find the same one. */
   reasoning_level: ReasoningLevel;
+  /** Native CLI effort frozen independently from API provider reasoning. */
+  native_reasoning_effort?: string | null;
   key_mode: "platform" | "byok" | "subscription";
   /** Resolution contract frozen at launch. NULL/absent identifies legacy runs. */
   worker_model_source?: "account" | null;
@@ -518,6 +521,7 @@ export interface CreateRunInput {
   engine?: import("@/lib/agent-engines").LiveAgentEngine;
   nativeConnectionId?: string | null;
   nativeConnectionGeneration?: number | null;
+  nativeReasoningEffort?: string | null;
   workerModelProvider: AgentProviderId;
   triggeredBy: AgentRunTrigger;
   /** Step of an automation chain (MIN-147): its id and its ceiling. */
@@ -592,6 +596,12 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   if ((engine === "codex" || engine === "claude_code") !== (input.keyMode === "subscription") ||
       (input.keyMode === "subscription" && (!input.nativeConnectionId || !input.nativeConnectionGeneration))) {
     throw new Error("Invalid native worker funding or connection binding");
+  }
+  if (engine === "codex" || engine === "claude_code") {
+    nativeWorkerModelId(engine, input.model);
+    assertNativeWorkerEffort(engine, input.nativeReasoningEffort);
+  } else if (input.nativeReasoningEffort != null) {
+    throw new Error("API workers cannot use native reasoning effort");
   }
   const loopInVm = true;
   const encryptLaunch = await shouldEncryptAgentLaunch(service, input.projectId);
@@ -687,6 +697,7 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     ...(input.keyMode === "subscription" ? {
       native_connection_id: input.nativeConnectionId,
       native_connection_generation: input.nativeConnectionGeneration,
+      native_reasoning_effort: input.nativeReasoningEffort ?? null,
     } : {}),
     // Historical columns remain readable, but all newly admitted workers use
     // the deployment-selected server sandbox.

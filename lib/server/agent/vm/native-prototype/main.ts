@@ -52,6 +52,7 @@ export function startNativeController(options: { root: string; token: string; po
           case "/login/start": relay.cancel(); result = await controller.login(input.engine); break;
           case "/login/code": result = controller.code(input.code); break;
           case "/cancel": relay.cancel(); result = await controller.cancel(); break;
+          case "/models/list": result = await controller.models(input.engine); break;
           case "/auth/check": result = await controller.check(input.engine); break;
           case "/isolation/check": result = await controller.isolation(input.engine); break;
           case "/profile/import": relay.cancel(); result = await controller.import(input.profile); break;

@@ -50,6 +50,7 @@ import {
   resolveNotificationPrefs,
   type NotificationPrefs,
 } from "@/lib/notification-prefs";
+import { normalizeNativeModelPreferences, type NativeModelPreferences } from "@/lib/native-agent-models";
 import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 import { isLiveAgentEngine, type LiveAgentEngine } from "@/lib/agent-engines";
 import { agentHarnessCapabilities, describeAgentHarnessCapabilities } from "@/lib/agent-harness-capabilities";
@@ -140,6 +141,7 @@ export interface AgentPrefs {
   harness_description: string;
   default_model: string | null;
   default_reasoning_level: ReasoningLevel | null;
+  native_model_preferences: NativeModelPreferences;
   branch_prefix: string;
   /** Where the server sandbox spins up (eu | us) and how big it is
       (standard | performance) — the same `user_agent_preferences` row. */
@@ -169,7 +171,7 @@ export async function readAccountAgentPreferences(
   const { data, error } = await service
     .from("user_agent_preferences")
     .select(
-      "default_engine, default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size"
+      "default_engine, native_model_preferences, default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -205,6 +207,7 @@ export async function readAccountAgentPreferences(
       native_connection: connection,
       harness_capabilities: agentHarnessCapabilities(engine),
       harness_description: describeAgentHarnessCapabilities(engine),
+      native_model_preferences: normalizeNativeModelPreferences(data?.native_model_preferences),
       default_model: (data as { default_model?: string | null } | null)?.default_model ?? null,
       default_reasoning_level: isReasoningLevel(
         (data as { default_reasoning_level?: string | null } | null)?.default_reasoning_level

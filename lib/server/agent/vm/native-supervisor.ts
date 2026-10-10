@@ -13,7 +13,7 @@ import { isSecretFile, scanDiff, scanSecrets } from "../secret-scan";
 import { SecretRedactor, redactDeep } from "../redact";
 import type { AgentCheckpoint } from "../runs";
 import { createIsolatedNativeHost, type IsolatedNativeHost } from "./native-isolation";
-import { createNativeRuntime, type NativeRuntime } from "./native-runtime";
+import { createNativeRuntime, NativeAuthenticationRequired, type NativeRuntime } from "./native-runtime";
 import { installNativeWorkerCli } from "./native-cli-install";
 import { nativeRepositoryInstructions } from "./native-instructions";
 import { nativeBackgroundRunner } from "./native-background";
@@ -94,7 +94,7 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
   let bridge: ToolBridge | undefined; let mcp: Awaited<ReturnType<typeof startNativeWorkerMcp>> | undefined;
   let background: BackgroundJobs | undefined;
   let status: VmTurnReport["status"] = "error"; let errorCode: VmTurnReport["errorCode"] = "providerUnavailable";
-  let reply = ""; let tools = 0; let askedUser = false; let stopped = false; let authReady = false;
+  let reply = ""; let tools = 0; let askedUser = false; let stopped = false; let authReady = false; let authenticationRejected = false;
   let filesFromSha = job.filesFromSha; let pushed: VmPushResult | null = null; let pushError: string | undefined;
   let changed: VmTurnReport["changed"];
   let delivered = job.pullRequestDelivery?.delivered ?? false;
@@ -169,7 +169,7 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
     if (!initial) throw new Error("Native worker requires a user request");
     const conventions = await nativeRepositoryInstructions(host, job.anchor === "pr");
     const initialHistoryIndex = history.length;
-    await runtime.start({ cwd: job.layout.repoDir, anchor: `${input.anchorInstructions}\n\n${conventions}\n\n${describeAgentHarnessCapabilities(native.engine)}\nUse only the guarded Minddy MCP tools for repository work. Native shell, edits, images and subagents are unavailable.`, prompt: initial, history, mcpUrl: mcp.url, mcpToken, privateRoot: native.privateRoot, profileRoot: native.profileRoot, toolNames: mcp.toolNames });
+    await runtime.start({ cwd: job.layout.repoDir, anchor: `${input.anchorInstructions}\n\n${conventions}\n\n${describeAgentHarnessCapabilities(native.engine)}\nUse only the guarded Minddy MCP tools for repository work. Native shell, edits, images and subagents are unavailable.`, prompt: initial, history, mcpUrl: mcp.url, mcpToken, privateRoot: native.privateRoot, profileRoot: native.profileRoot, model: native.model ?? null, reasoningEffort: native.reasoningEffort ?? null, toolNames: mcp.toolNames });
     registerNativeProfileSecrets(await exportProfile(native.profileRoot, native.engine), secrets);
     history.splice(initialHistoryIndex, 0, { role: "user", text: outward(initial) }); pendingSteering = [];
     const tick = async () => {
@@ -193,7 +193,7 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
       if (stopped) break;
       if (event.type === "text") { reply = event.delta ? (reply + event.text).slice(-64_000) : event.text; cp.emitLive({ text: outward(reply), tools, reasoningActive: false, reasoningMs: 0 }); }
       if (event.type === "status") cp.emitLive({ text: outward(reply), tools, reasoningActive: event.phase === "reasoning", reasoningMs: 0 });
-      if (event.type === "failed") { status = "error"; errorCode = "providerUnavailable"; break; }
+      if (event.type === "failed") { authenticationRejected = event.nativeCode === "unauthorized"; status = "error"; errorCode = "providerUnavailable"; break; }
       if (event.type === "completed") {
         reply = event.reply;
         if (askedUser) { status = "interrupted"; errorCode = undefined; history.push({ role: "assistant", text: outward(reply) }); break; }
@@ -210,7 +210,7 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
       try { pushed = await pushWork(`wip(${job.commitRef}): native agent update`); if (pushed.remoteUpdated) await cp.emit("commit", { sha: pushed.headSha }); }
       catch { pushError = "Native repository publication failed safely"; }
     }
-  } catch { if (!stopped) { status = "error"; errorCode = "providerUnavailable"; } }
+  } catch (error) { authenticationRejected ||= error instanceof NativeAuthenticationRequired; if (!stopped) { status = "error"; errorCode = "providerUnavailable"; } }
   finally {
     stopped = true;
     if (beat) clearInterval(beat); if (heartbeat) clearInterval(heartbeat); if (checkpointTimer) clearInterval(checkpointTimer); if (deadlineTimer) clearTimeout(deadlineTimer);
@@ -224,7 +224,8 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
     if (status === "completed" && pushed?.headSha) { changed = await changedFiles(host, filesFromSha, pushed.headSha).catch(() => undefined); filesFromSha = pushed.headSha; }
     await host.close();
     if (pendingSteering.length) await cp.pushSteering(pendingSteering).catch(() => {});
-    if (childStopped) try { registerNativeProfileSecrets(await exportProfile(native.profileRoot, native.engine), secrets); await writeNativeProfileExport(native.profileRoot, native.engine, native.profileExportPath); authReady = true; } catch { authReady = false; }
+    if (authenticationRejected) await rm(native.profileExportPath, { force: true }).catch(() => {});
+    else if (childStopped) try { registerNativeProfileSecrets(await exportProfile(native.profileRoot, native.engine), secrets); await writeNativeProfileExport(native.profileRoot, native.engine, native.profileExportPath); authReady = true; } catch { authReady = false; }
     if (previousPath === undefined) delete process.env.PATH; else process.env.PATH = previousPath;
   }
   if (status === "completed" && !pushError) await cp.emit("summary", { text: outward(reply) });

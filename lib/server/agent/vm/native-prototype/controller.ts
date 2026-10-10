@@ -4,6 +4,8 @@ import { mkdir, open, rm, writeFile } from "node:fs/promises";
 import { randomBytes, randomUUID } from "node:crypto";
 import { exportProfile, importProfile, parseEngine, prepareProfileRoot, type NativeEngine } from "./profile";
 
+import { parseCodexModels } from "@/lib/native-agent-models";
+
 type Json = Record<string, unknown>;
 export type NativeDiagnostics = { rpcMethod?: string; rpcErrorCode?: number; notification?: string; itemType?: string; itemStatus?: string; turnStatus?: string; errorCode?: string; httpStatus?: number; mcpStartupStatus?: string; callbackMethod?: string; registeredTools?: number; mcpToolRegistered?: boolean; receivedEvents: number };
 export type NativeStatus = { engine?: NativeEngine; phase: "idle" | "starting" | "awaiting_user" | "authenticated" | "running" | "completed" | "cancelled" | "failed"; authenticated: boolean; verificationUrl?: string; userCode?: string; toolObserved?: boolean; markerObserved?: boolean; error?: string; diagnostics?: NativeDiagnostics };
@@ -272,6 +274,24 @@ export class NativeController {
       this.state = { engine, phase: authenticated ? "authenticated" : "idle", authenticated };
     }
     return this.status();
+  }
+  async models(engineValue: unknown) {
+    const engine = parseEngine(engineValue);
+    if (engine !== "codex" || this.state.phase === "awaiting_user" || this.state.phase === "running") throw new Error("Native catalog unavailable");
+    const state = await this.check(engine);
+    if (!state.authenticated) throw new Error("Native authentication unavailable");
+    const models: unknown[] = [];
+    let cursor: string | null = null;
+    const seenCursors = new Set<string>();
+    for (let page = 0; page < 10; page++) {
+      const result = await this.rpc("model/list", { limit: 20, includeHidden: false, ...(cursor ? { cursor } : {}) });
+      if (!Array.isArray(result.data) || result.data.length > 20) throw new Error("Native catalog unavailable");
+      models.push(...result.data);
+      if (result.nextCursor === null || result.nextCursor === undefined) return parseCodexModels(models);
+      if (typeof result.nextCursor !== "string" || result.nextCursor.length > 2048 || seenCursors.has(result.nextCursor)) throw new Error("Native catalog unavailable");
+      cursor = result.nextCursor; seenCursors.add(cursor);
+    }
+    throw new Error("Native catalog exceeds page limit");
   }
   async import(value: unknown) { await this.cancel(); await importProfile(this.root, value); return this.status(); }
   async export(engine: unknown) { if (this.state.phase === "running" || this.state.phase === "awaiting_user") throw new Error("Native operation must finish before export"); await this.stop(); return exportProfile(this.root, parseEngine(engine)); }

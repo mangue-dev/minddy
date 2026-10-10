@@ -7303,7 +7303,7 @@
       "functionReferences": []
     },
     "upsert_agent_preferences_protected(uuid,jsonb,text,boolean)": {
-      "sha256": "06bb55517ec1b9ace5faf1836af910a6d61b4c017709d248e98106ea567a4940",
+      "sha256": "fd868e8938f9b6db7b279092f1431f0d28043400a15c757fad66143e106767e1",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8382,7 +8382,7 @@
       "functionReferences": []
     },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
-      "sha256": "bb8ff5ab3237cd0f6a4a0076fbfe899029db803009d3b29ec4ec6e6c272a154a",
+      "sha256": "4e814b989e99afb6fabebda4f47da91b405f8f77c0163cfd456d2e4c2839b59d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -9286,7 +9286,7 @@
       ]
     },
     "guard_native_worker_run_contract()": {
-      "sha256": "8cda3fecb331fc85656531e44846b3fe7ee265145e6cb7901f3b9a33ae42b1dc",
+      "sha256": "a6596f608a4c6576878d17135ea16a8d65988de69ac1ead681bcf2d2e52cbc92",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -9410,7 +9410,7 @@
       ]
     },
     "upsert_agent_preferences_partial(uuid,jsonb)": {
-      "sha256": "322b68fa89ec329387a9ebdf5838cd61c2bf535796367c8a3d5476d253c4113d",
+      "sha256": "82fdd804a866fc550ef9ffce0f82eadf91bde6b9a92a925498afdd239f4bb785",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -9469,6 +9469,35 @@
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "valid_native_model_preferences(jsonb)": {
+      "sha256": "c81f5b69ef86b956a0bd5e16fd89113c0c51830a197d652f12600cf9fa987fb4",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "commit_native_catalog_profile(uuid,uuid,text,bigint,uuid,bigint,text,text,jsonb)": {
+      "sha256": "929ffffddac4acc433a40b23415dfe2aaebb6271d731660f7cd464c84555267a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections",
+        "native_agent_model_catalogs"
       ],
       "protectedRelations": [
         "native_agent_connections"

@@ -107,6 +107,8 @@ export interface AgentRunSummary {
   /** Level of reasoning FROZEN at launch (MIN-122): the selector of a run
    * current displays it as read-only, such as model and branch. */
   reasoning_level: ReasoningLevel;
+  /** Native CLI effort frozen at launch; unrelated to API reasoning settings. */
+  native_reasoning_effort?: string | null;
   key_mode: "platform" | "byok" | "subscription";
   triggered_by: "button" | "chat" | "mention";
   /** Prompt launch (“original” conversation bubble). */

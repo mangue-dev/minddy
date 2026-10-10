@@ -17,6 +17,7 @@ function preferences(engine: LiveAgentEngine) {
     harness_capabilities: agentHarnessCapabilities(engine),
     harness_description: describeAgentHarnessCapabilities(engine),
     default_model: "saved-api-model",
+    native_model_preferences: { codex: { model: "gpt-test-codex", reasoningEffort: "ultra" }, claude_code: { model: "sonnet", reasoningEffort: "high" } },
     default_reasoning_level: "high",
     profile_ciphertext: "private-profile",
     leaseId: "private-lease",
@@ -39,6 +40,8 @@ it.each(["opencode", "codex", "claude_code"] as const)("supplies current %s sele
     expect(result).not.toContain("saved-api-model");
     expect(result).not.toContain("api_reasoning_level");
     expect(result).toContain('"funding":"subscription"');
+    expect(result).toContain(engine === "codex" ? '"native_model":"gpt-test-codex"' : '"native_model":"sonnet"');
+    expect(result).toContain(engine === "codex" ? '"native_reasoning_effort":"ultra"' : '"native_reasoning_effort":"high"');
     expect(result).toContain('"nativeBuiltinTools":false');
   }
   if (engine === "claude_code") expect(result).toContain("Paid Claude execution has not been validated");

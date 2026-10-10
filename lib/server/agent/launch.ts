@@ -51,6 +51,7 @@ import { requestedRunReservationUsd } from "./run-key";
 import { drainAgentRuns } from "./drain";
 import { capability } from "@/lib/server/capabilities";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
+import { nativeWorkerModel } from "@/lib/native-worker-model";
 import { resolveWorkerHarness, NativeWorkerUnavailableError } from "./native-worker-selection";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
@@ -609,8 +610,8 @@ export async function launchAgentRun(
   let model: string;
   let workerModelProvider: AgentProviderId;
   try {
-    const resolved = native
-      ? { model: `${harness.engine}/default`, provider: (harness.engine === "codex" ? "openai" : "anthropic") as AgentProviderId }
+    const resolved = harness.engine !== "opencode"
+      ? { model: nativeWorkerModel(harness.engine, harness.nativeModel), provider: (harness.engine === "codex" ? "openai" : "anthropic") as AgentProviderId }
       : await resolveAgentModel(input.userId);
     model = resolved.model;
     workerModelProvider = resolved.provider;
@@ -699,6 +700,7 @@ export async function launchAgentRun(
       ...(harness.engine !== "opencode" ? {
         nativeConnectionId: harness.nativeConnectionId,
         nativeConnectionGeneration: harness.nativeConnectionGeneration,
+        nativeReasoningEffort: harness.nativeReasoningEffort,
       } : {}),
       workerModelProvider,
       triggeredBy: input.triggeredBy,

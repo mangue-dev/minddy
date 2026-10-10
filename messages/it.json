@@ -2796,7 +2796,9 @@
     "localRepoWrongRepo": "Questo repository è diverso da quello collegato al progetto.",
     "delegatedWorkNoDirectMessages": "Non puoi inviare messaggi direttamente a un agente di codice.",
     "errorNativeConnectionRequired": "Collega o ricollega l’agente di codice selezionato nelle impostazioni IA dell’account, oppure scegli esplicitamente OpenCode. Non è stata usata un’API alternativa.",
-    "errorNativeAgentUnavailable": "L’agente di codice nativo selezionato non è disponibile o la sua connessione è in uso. Controlla le impostazioni IA dell’account prima di riprovare; non è stata usata un’API alternativa."
+    "errorNativeAgentUnavailable": "L’agente di codice nativo selezionato non è disponibile o la sua connessione è in uso. Controlla le impostazioni IA dell’account prima di riprovare; non è stata usata un’API alternativa.",
+    "nativeHarnessModel": "Modello: {model}",
+    "nativeHarnessThinking": "Ragionamento: {level}"
   },
   "Projects": {
     "newProject": "Nuovo progetto",
@@ -6584,9 +6586,33 @@
     "error_subscription_unavailable": "Questo account non può usare l’agente selezionato. Verifica il piano e l’accesso del tuo account.",
     "engineTitle": "Agente di codice",
     "engineOpenCodeHint": "OpenCode usa Minddy Cloud o il provider di modelli di testo configurato sopra.",
-    "engineNativeHint": "Il CLI selezionato sceglie modello e ragionamento. I nuovi agenti usano il tuo abbonamento e gli strumenti Minddy. Se l’accesso fallisce, il lavoro si interrompe senza passare a un provider API.",
+    "engineNativeHint": "Scegli modello e ragionamento qui sotto. I nuovi agenti usano il tuo abbonamento e gli strumenti Minddy. Se l’accesso fallisce, il lavoro si interrompe senza passare a un provider API.",
     "engineUnavailable": "Gli agenti nativi non sono disponibili per il tuo account. Scegli OpenCode per avviare lavori sul codice.",
     "engineReconnect": "Collega questo account prima di avviare lavori sul codice oppure scegli esplicitamente OpenCode.",
     "openCodeLabel": "OpenCode ({provider})"
+  },
+  "NativeAgentModels": {
+    "model": "Modello",
+    "thinking": "Ragionamento",
+    "automatic": "Automatico",
+    "refresh": "Aggiorna modelli",
+    "refreshing": "Aggiornamento…",
+    "saved": "Salvato per i nuovi agenti di codice.",
+    "codexHint": "Codex fornisce modelli e livelli di ragionamento supportati. L’accesso dipende dal tuo account.",
+    "claudeHint": "Gli alias dei modelli Claude seguono la CLI installata. L’esecuzione con un abbonamento Claude non è ancora stata testata.",
+    "thinkingHint": "Scegli un modello per vedere i livelli supportati. Automatico usa il valore predefinito dell’agente.",
+    "empty": "Collega Codex, poi aggiorna l’elenco dei modelli. La modalità automatica resta disponibile.",
+    "unavailableModel": "{model} (non disponibile)",
+    "unavailableHint": "Questo modello salvato non è presente nell’elenco attuale. Aggiornalo o scegli un altro modello prima di avviare il lavoro.",
+    "catalogError": "Impossibile aggiornare l’elenco dei modelli. Controlla la connessione e riprova.",
+    "saveError": "Impossibile salvare queste impostazioni. Aggiorna l’elenco dei modelli e riprova.",
+    "effort_none": "Nessuno",
+    "effort_minimal": "Minimo",
+    "effort_low": "Basso",
+    "effort_medium": "Medio",
+    "effort_high": "Alto",
+    "effort_xhigh": "Molto alto",
+    "effort_max": "Massimo",
+    "effort_ultra": "Ultra"
   }
 }

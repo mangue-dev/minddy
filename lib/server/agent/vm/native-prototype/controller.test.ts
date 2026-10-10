@@ -88,6 +88,15 @@ describe("private native credential lifecycle", () => {
       await expect(controller.export("claude_code")).rejects.toThrow("stop unconfirmed");
     } finally { vi.useRealTimers(); }
   });
+  it("discovers paginated authenticated Codex models without inference or private account metadata", async () => {
+    const { controller } = await setup();
+    const catalog = await controller.models("codex");
+    expect(catalog.map((model) => model.id)).toEqual(["codex-fixture-first", "codex-fixture-second"]);
+    expect(catalog[0].supportedReasoningEfforts).toEqual(["medium", "ultra"]);
+    expect(JSON.stringify(catalog)).not.toContain("private-fixture");
+    expect(controller.status().phase).toBe("authenticated");
+    await expect(controller.models("claude_code")).rejects.toThrow("catalog unavailable");
+  });
   it("round-trips only the allowlisted native subscription file", async () => {
     const { root } = await setup();
     const profile = { version: 1 as const, engine: "codex" as const, files: [{ path: "auth.json", content: JSON.stringify({ OPENAI_API_KEY: null, tokens: { access_token: "fake-access", refresh_token: "fake-refresh" } }) }] };

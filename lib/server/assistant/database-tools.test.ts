@@ -122,10 +122,12 @@ describe("code-worker launch diagnostics", () => {
 
   it.each(["codex", "claude_code"])("reports frozen %s adapter capabilities on a delegated worker", async (engine) => {
     h.launch.mockResolvedValueOnce({ ok: true, run: { id: "native-run", agent_engine: engine,
-      conversation_id: "worker", status: "queued", model: "cli-default", reasoning_level: null } });
+      conversation_id: "worker", status: "queued", model: `${engine}/fixture-model`,
+      native_reasoning_effort: "high", reasoning_level: null } });
     const result = await executeTool("launch_code_agent", { prompt: "Inspect the repository" }, ctx);
     expect(result).toMatchObject({ success: true, result: {
-      engine, harness_capabilities: { funding: "subscription", modelSelection: "cli_default",
+      engine, model: `${engine}/fixture-model`, native_reasoning_effort: "high",
+      harness_capabilities: { funding: "subscription", modelSelection: "native_account_model",
         minddyTools: true, subagents: false, nativeBuiltinTools: false, imageInput: false },
       harness_description: expect.stringContaining("mediate questions"),
     } });

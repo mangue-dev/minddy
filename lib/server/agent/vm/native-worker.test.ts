@@ -9,7 +9,7 @@ import { nativeWorkerPaths } from "@/lib/native-agent-worker";
 import { layoutForRoot } from "../harness-layout";
 import { localHost } from "./local-host";
 import { nativeKernelArguments, nativeToolEnvironment, type IsolatedNativeHost } from "./native-isolation";
-import { createNativeRuntime, nativeClaudeArguments, nativeCodexConfiguration, nativeReplayPrompt, type NativeRuntime, type NativeRuntimeInput } from "./native-runtime";
+import { createNativeRuntime, NativeAuthenticationRequired, nativeClaudeArguments, nativeCodexConfiguration, nativeReplayPrompt, type NativeRuntime, type NativeRuntimeInput } from "./native-runtime";
 import { boundedNativeHistory, runNativeTurn, writeNativeProfileExport } from "./native-supervisor";
 import { nativeWorkerTools, startNativeWorkerMcp } from "./native-worker-mcp";
 import { nativeBackgroundRunner } from "./native-background";
@@ -27,7 +27,7 @@ async function setup(over: Partial<VmJob> = {}) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "minddy-native-worker-test-"))); roots.push(root);
   const layout = layoutForRoot(root, "/fixture/runtime");
   await Promise.all([layout.repoDir, layout.toolOutputDir, layout.typecheckDir, layout.harnessDir].map((dir) => mkdir(dir, { recursive: true })));
-  const job = { protocolVersion: 4, engine: "codex", nativeAgent: { engine: "codex", ...nativeWorkerPaths(layout) }, layout, runId: "run", ledgerRunId: "run", projectId: "project", appOrigin: "https://minddy.invalid", model: "unused-native-default", anchor: "issue", interactive: true, chain: false, writesToRepo: true, authUrl: null, subagents: { models: false, favorites: [], maxParallel: 0, allowedIds: [], abovePlanIds: [], maxMultiplier: null }, webSearch: false, webSearchMax: 0, imageInput: false, prInlineComments: 0, editedPaths: [], repoTouched: false, instructions: { paths: [], bytes: 0 }, usageSeqStart: 0, filesFromSha: "", workBranch: "fixture", baseBranch: "main", commitRef: "MIN-676", committer: { name: "Fixture", email: "fixture@example.test" }, bootstrapMs: 0, locale: "en", feature: "agent_code", ...over } as VmJob;
+  const job = { protocolVersion: 4, engine: "codex", nativeAgent: { engine: "codex", ...nativeWorkerPaths(layout) }, layout, runId: "run", ledgerRunId: "run", projectId: "project", appOrigin: "https://minddy.invalid", model: "codex/default", anchor: "issue", interactive: true, chain: false, writesToRepo: true, authUrl: null, subagents: { models: false, favorites: [], maxParallel: 0, allowedIds: [], abovePlanIds: [], maxMultiplier: null }, webSearch: false, webSearchMax: 0, imageInput: false, prInlineComments: 0, editedPaths: [], repoTouched: false, instructions: { paths: [], bytes: 0 }, usageSeqStart: 0, filesFromSha: "", workBranch: "fixture", baseBranch: "main", commitRef: "MIN-676", committer: { name: "Fixture", email: "fixture@example.test" }, bootstrapMs: 0, locale: "en", feature: "agent_code", ...over } as VmJob;
   const plain = localHost(layout);
   const host: IsolatedNativeHost = { ...plain, processIsolation: "sandbox", verifyIsolation: vi.fn(async () => {}), startProcess: () => { throw new Error("Unused fixture operation"); }, close: vi.fn(async () => {}) };
   await mkdir(job.nativeAgent!.privateRoot, { mode: 0o700, recursive: true });
@@ -63,6 +63,16 @@ describe("native worker boundary", () => {
     const claude = nativeClaudeArguments(runtimeInput("/fixture"));
     expect(claude).toContain("--restricted"); expect(claude).toContain("--strict-mcp-config"); expect(claude).toContain("--disable-slash-commands"); expect(claude).not.toContain("--bare");
     expect(claude[claude.indexOf("--tools") + 1]).toBe(""); expect(claude).toContain("mcp__minddy__read_issue");
+  });
+  it("passes only native CLI model and effort overrides and omits automatic defaults", () => {
+    const input = { ...runtimeInput("/fixture"), model: "sonnet", reasoningEffort: "xhigh" };
+    const claude = nativeClaudeArguments(input);
+    expect(claude[claude.indexOf("--model") + 1]).toBe("sonnet");
+    expect(claude[claude.indexOf("--effort") + 1]).toBe("xhigh");
+    expect(nativeClaudeArguments(runtimeInput("/fixture"))).not.toContain("--model");
+    expect(nativeClaudeArguments(runtimeInput("/fixture"))).not.toContain("--effort");
+    expect(nativeCodexConfiguration({ ...input, model: "gpt-test-codex", reasoningEffort: "ultra" }).model_reasoning_effort).toBe("ultra");
+    expect(nativeCodexConfiguration(runtimeInput("/fixture"))).not.toHaveProperty("model_reasoning_effort");
   });
   it("bounds and redacts portable context instead of exposing opaque native sessions", () => {
     const history = boundedNativeHistory(Array.from({ length: 100 }, () => ({ role: "user" as const, text: "secret".repeat(4000) })), (value) => value.replaceAll("secret", "[redacted]"));
@@ -135,6 +145,30 @@ describe("native worker MCP", () => {
 });
 
 describe("native supervisor lifecycle", () => {
+  it.each(["account_missing", "unauthorized"] as const)("retires reusable authentication after permanent native rejection: %s", async (reason) => {
+    const context = await setup();
+    // The stale export must also be removed if an earlier attempt left one.
+    await writeFile(context.job.nativeAgent!.profileExportPath, JSON.stringify(context.profile), { mode: 0o600 });
+    const runtime: NativeRuntime = {
+      start: async () => { if (reason === "account_missing") throw new NativeAuthenticationRequired(); },
+      async *events() { yield { type: "failed", code: "providerUnavailable", nativeCode: "unauthorized" }; },
+      steer: async () => {}, interrupt: async () => {}, close: vi.fn(async () => {}),
+    };
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(false);
+    expect(runtime.close).toHaveBeenCalled(); expect(context.host.close).toHaveBeenCalled();
+    await expect(readFile(context.job.nativeAgent!.profileExportPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+  it.each(["rateLimitExceeded", "httpConnectionFailed"])("preserves reusable authentication after a transient native error: %s", async (nativeCode) => {
+    const context = await setup();
+    const runtime: NativeRuntime = { start: async () => {}, async *events() { yield { type: "failed", code: "providerUnavailable", nativeCode }; },
+      steer: async () => {}, interrupt: async () => {}, close: async () => {} };
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(true);
+    expect(JSON.parse(await readFile(context.job.nativeAgent!.profileExportPath, "utf8"))).toEqual(context.profile);
+  });
   it("does not publish a success summary when the final repository publication fails", async () => {
     const context = await setup();
     expect((await context.host.exec("git init")).exitCode).toBe(0);
@@ -280,12 +314,39 @@ describe("native CLI protocol", () => {
     } finally { vi.useRealTimers(); }
   });
   const fixture = `const {createInterface}=require('node:readline');const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='thread/start')result={thread:{id:'thread'}};if(r.method==='mcpServerStatus/list')result={data:[{name:'minddy',tools:{read_issue:{name:'read_issue'}}}]};if(r.method==='turn/start'){result={turn:{id:'turn'}};setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:'Native reply'}});send({method:'turn/completed',params:{turn:{status:'completed'}}})},40)}send({id:r.id,result})});`;
+  it("reports permanent authentication loss without starting a native thread", async () => {
+    const { job } = await setup(); let calledThread = false;
+    const child = stoppedChildFixture();
+    child.stdin.removeAllListeners("data");
+    child.stdin.on("data", (chunk: Buffer) => {
+      const request = JSON.parse(chunk.toString()); if (request.id === undefined) return;
+      calledThread ||= request.method === "thread/start";
+      queueMicrotask(() => child.stdout.write(`${JSON.stringify({ id: request.id, result: request.method === "account/read" ? { account: null } : {} })}\n`));
+    });
+    const runtime = createNativeRuntime("codex", { spawn: () => child as unknown as ChildProcessWithoutNullStreams });
+    await expect(runtime.start(runtimeInput(job.layout.repoDir))).rejects.toBeInstanceOf(NativeAuthenticationRequired);
+    expect(calledThread).toBe(false);
+    const closing = runtime.close(); child.emit("close", 0, null); await closing;
+  });
   it("negotiates native auth/thread/MCP and receives completion without provider transcripts", async () => {
     const { job } = await setup(); let args: string[] = [];
     const runtime = createNativeRuntime("codex", { spawn: (_engine, cli, env, cwd) => { args = cli; expect(env).not.toHaveProperty("ANTHROPIC_API_KEY"); return spawn(process.execPath, ["-e", fixture], { env, cwd, detached: true, stdio: "pipe" }); } });
     disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
     const events = []; for await (const event of runtime.events()) { events.push(event); if (event.type === "completed") break; }
     expect(args).toContain("project_doc_max_bytes=0"); expect(events).toContainEqual({ type: "completed", reply: "Native reply" });
+  });
+  it("sends frozen Codex model/effort to thread start and rejects a changed model", async () => {
+    const { job } = await setup();
+    const selected = { ...runtimeInput(job.layout.repoDir), model: "gpt-test-codex", reasoningEffort: "ultra" };
+    const script = fixture.replace("if(r.method==='thread/start')result={thread:{id:'thread'}};",
+      "if(r.method==='thread/start'){if(r.params.model!=='gpt-test-codex'||r.params.config.model_reasoning_effort!=='ultra'){send({id:r.id,error:{code:-1}});return;}result={thread:{id:'thread'},model:'gpt-test-codex'}};");
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(selected);
+    for await (const event of runtime.events()) if (event.type === "completed") break;
+    const changed = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath,
+      ["-e", script.replace("model:'gpt-test-codex'", "model:'different'")], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(changed.close);
+    await expect(changed.start(selected)).rejects.toThrow("changed the frozen model");
   });
   it("refuses a native MCP catalogue that differs from the allowed tool manifest", async () => {
     const { job } = await setup();

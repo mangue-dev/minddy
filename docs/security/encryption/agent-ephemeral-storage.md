@@ -163,3 +163,13 @@ Vercel command output may be retained in provider telemetry outside the sandbox
 filesystem. The application cannot delete that telemetry through the Sandbox
 SDK; obtain its retention and deletion evidence before declaring historical
 copy closure.
+
+Native model discovery uses the same exclusive credential lease as execution.
+Its catalog stores only bounded model metadata tied to owner, connection and
+generation; it is service-written and has no public read policy. Catalog,
+encrypted refreshed profile and encrypted saved marker commit atomically.
+Discovery allocations are destroyed before lease release, including recovery
+from uncertain write responses. Permanent native authentication rejection
+suppresses stale auth export and requires reconnection; transient failures retain
+safe write-back. Neither model discovery nor selected model metadata grants API
+fallback or exposes native credentials to the repository model.

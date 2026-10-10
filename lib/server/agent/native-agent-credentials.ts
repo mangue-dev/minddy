@@ -219,6 +219,20 @@ export async function commitNativeLoginProfile(lease: NativeConnectionLease,
   lease.revision = row.revision;
 }
 
+/** Catalog discovery may refresh credentials; cache publication and write-back are atomic. */
+export async function commitNativeCatalogProfile(lease: NativeConnectionLease,
+  profile: NativeCredentialProfile, runtime: Record<string, unknown>, models: unknown[]): Promise<void> {
+  if (lease.kind !== "test" || lease.engine !== "codex" || runtime.profileSaved !== true || runtime.phase !== "finalizing") throw new Error("Native catalog commit invalid");
+  const before = await loadNativeProfile(lease);
+  if (!before) throw new Error("Native subscription reconnection required");
+  assertNativeProfileContinuity(before, validateNativeProfile(profile, lease.engine));
+  const profileCiphertext = await encryptNativeProfile(lease, profile);
+  const runtimeCiphertext = await encryptRuntime(lease, runtime);
+  const row = await call("commit_native_catalog_profile", { ...fence(lease), p_profile_ciphertext: profileCiphertext,
+    p_runtime_ciphertext: runtimeCiphertext, p_models: models });
+  lease.revision = row.revision;
+}
+
 /** Commit renewed tokens and the saved marker together, even if the RPC response is lost. */
 export async function commitNativeWorkerProfile(lease: NativeConnectionLease,
   profile: NativeCredentialProfile, runtime: Record<string, unknown>): Promise<void> {

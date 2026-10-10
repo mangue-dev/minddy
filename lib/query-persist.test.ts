@@ -16,6 +16,10 @@ import { pullRequestQueryOptions } from "./pull-request-query";
 // either saturates localStorage with the palette index or restores a completed
 // agent run as active after reload.
 describe("isPersistableKey", () => {
+  it("does not restore native subscription model catalogs from disk", () => {
+    expect(isPersistableKey(["native-agent-models", "codex"])).toBe(false);
+    expect(isPersistableKey(["native-agent-models", "claude_code"])).toBe(false);
+  });
   it("keeps unbounded application tabs out of the shared disk snapshot", () => {
     expect(isPersistableKey(appTabsQueryKey("owner"))).toBe(false);
   });

@@ -56,7 +56,7 @@ function wrapper(sandbox: Sandbox, token: string): NativeAllocation {
     name: sandbox.name,
     billing,
     async request<T>(operation: string, body?: unknown): Promise<T> {
-      if (!/^\/(status|login\/start|login\/code|cancel|auth\/check|profile\/import|profile\/export|smoke|tool-result|isolation\/check)$/.test(operation)) {
+      if (!/^\/(status|login\/start|login\/code|cancel|auth\/check|models\/list|profile\/import|profile\/export|smoke|tool-result|isolation\/check)$/.test(operation)) {
         throw new Error("Invalid private controller operation");
       }
       const id = randomUUID();

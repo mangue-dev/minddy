@@ -3,7 +3,7 @@ import { APIError } from "@vercel/sandbox";
 import type { NativeCredentialProfile } from "@/lib/native-agent-prototype";
 import type { NativeConnectionLease } from "../native-agent-credentials";
 import { startNativeLogin, pollNativeLogin, cancelNativeLogin, disconnectNativePrototype,
-  testNativeConnection, nativeConnectionMetadata, eraseNativePrototypeAccount, reapNativePrototypeConnections } from "./connections";
+  discoverNativeCodexModels, testNativeConnection, nativeConnectionMetadata, eraseNativePrototypeAccount, reapNativePrototypeConnections } from "./connections";
 
 const h = vi.hoisted(() => ({
   current: null as NativeConnectionLease | null, profile: null as NativeCredentialProfile | null,
@@ -12,12 +12,12 @@ const h = vi.hoisted(() => ({
   imports: [] as NativeCredentialProfile[], mode: "smoke", authHook: null as (() => void) | null,
   list: vi.fn(), acquire: vi.fn(), getLease: vi.fn(), getRuntime: vi.fn(), setRuntime: vi.fn(),
   cleanupCandidates: vi.fn(), cleanupWorker: vi.fn(), abortWorker: vi.fn(),
-  load: vi.fn(), save: vi.fn(), commitLogin: vi.fn(), release: vi.fn(), disconnect: vi.fn(),
+  load: vi.fn(), save: vi.fn(), commitLogin: vi.fn(), commitCatalog: vi.fn(), release: vi.fn(), disconnect: vi.fn(),
   create: vi.fn(), open: vi.fn(), budget: vi.fn(), charge: vi.fn(), executeTool: vi.fn(),
 }));
 vi.mock("../native-agent-credentials", () => ({ listNativeConnections: h.list, acquireNativeConnection: h.acquire,
   getNativeConnectionLease: h.getLease, getNativeRuntime: h.getRuntime, setNativeRuntime: h.setRuntime,
-  loadNativeProfile: h.load, saveNativeProfile: h.save, commitNativeLoginProfile: h.commitLogin, releaseNativeConnection: h.release,
+  loadNativeProfile: h.load, saveNativeProfile: h.save, commitNativeLoginProfile: h.commitLogin, commitNativeCatalogProfile: h.commitCatalog, releaseNativeConnection: h.release,
   disconnectNativeConnection: h.disconnect, listNativeCleanupCandidates: h.cleanupCandidates }));
 vi.mock("./access", () => ({ nativePrototypeEnabledFor: (id: string) => h.enabled && id === USER,
   assertNativePrototypeAccess: (id: string) => { if (!h.enabled || id !== USER) throw new Error("private_prototype_unavailable"); } }));
@@ -79,6 +79,7 @@ beforeEach(() => {
     fence(lease); h.profile = clone(value); h.runtime = clone(descriptor);
     lease.revision++; h.current!.revision = lease.revision; h.events.push("profile:saved");
   });
+  h.commitCatalog.mockImplementation(h.commitLogin.getMockImplementation()!);
   h.release.mockImplementation(async (lease, confirmation) => {
     fence(lease); expect(confirmation).toEqual({ stopped: true });
     h.events.push(`release:${lease.leaseId}`); h.current = null; h.runtime = null;
@@ -105,6 +106,7 @@ beforeEach(() => {
         if (operation === "/login/start") return { engine: "codex", phase: "awaiting_user", authenticated: false,
           verificationUrl: "https://auth.openai.com/codex/device", userCode: "ABCD-EFGH" };
         if (operation === "/profile/import") { h.imports.push(clone(body.profile)); return {}; }
+        if (operation === "/models/list") return [{ id: "codex-fixture", displayName: "Fixture", supportedReasoningEfforts: ["medium", "ultra"], defaultReasoningEffort: "medium", isDefault: true }];
         if (operation === "/auth/check") { h.authHook?.(); return { authenticated: true }; }
         if (operation === "/smoke") return {};
         if (operation === "/tool-result") { observed = true; return {}; }
@@ -347,5 +349,46 @@ describe("private native subscription orchestration", () => {
     expect(await reapNativePrototypeConnections()).toEqual({ stopped: 1, pending: 0 });
     expect(h.current).toBeNull();
     expect(h.charge).toHaveBeenCalledWith(expect.objectContaining({ runId: ORIGINAL_LEASE, seq: 0 }));
+  });
+});
+
+describe("native catalog allocation lifecycle", () => {
+  it("commits refreshed credentials and metadata before destroying and releasing the lease", async () => {
+    const models = await discoverNativeCodexModels(USER);
+    expect(models[0].id).toBe("codex-fixture");
+    expect(h.commitCatalog).toHaveBeenCalledOnce();
+    expect(h.profile).toEqual(profile("renewed-1"));
+    expect(h.current).toBeNull();
+    expect(h.events.indexOf("profile:saved")).toBeLessThan(h.events.indexOf("destroy:1"));
+    expect(h.events.indexOf("destroy:1")).toBeLessThan(h.events.indexOf(`release:${ORIGINAL_LEASE}`));
+  });
+  it("preserves an atomic saved profile when the commit response is lost", async () => {
+    const commit = h.commitCatalog.getMockImplementation()!;
+    h.commitCatalog.mockImplementation(async (...args) => { await commit(...args); throw new Error("Lost response"); });
+    await expect(discoverNativeCodexModels(USER)).rejects.toThrow("test_failed");
+    expect(h.profile).toEqual(profile("renewed-1"));
+    expect(h.allocations[0].destroy).toHaveBeenCalled();
+    expect(h.disconnect).not.toHaveBeenCalled();
+    expect(h.current).toBeNull();
+  });
+  it("requires reconnection when a refreshed profile cannot be durably saved", async () => {
+    h.commitCatalog.mockRejectedValue(new Error("Database unavailable"));
+    await expect(discoverNativeCodexModels(USER)).rejects.toThrow("test_failed");
+    expect(h.disconnect).toHaveBeenCalled();
+    expect(h.allocations[0].destroy).toHaveBeenCalled();
+    expect(h.profile).toBeNull();
+  });
+  it("retains saved credentials and a cleanup fence when deletion is unconfirmed", async () => {
+    const create = h.create.getMockImplementation()!;
+    h.create.mockImplementation(async (...args) => {
+      const allocation = await create(...args);
+      allocation.destroy.mockRejectedValue(new Error("Deletion unconfirmed"));
+      return allocation;
+    });
+    await expect(discoverNativeCodexModels(USER)).rejects.toThrow("Deletion unconfirmed");
+    expect(h.profile).toEqual(profile("renewed-1"));
+    expect(h.current?.kind).toBe("test");
+    expect(h.runtime?.profileSaved).toBe(true);
+    expect(h.release).not.toHaveBeenCalled();
   });
 });

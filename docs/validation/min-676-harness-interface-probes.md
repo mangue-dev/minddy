@@ -663,3 +663,60 @@ pre-inference failures exposed non-idempotent SDK directory creation; production
 restore now uses checked `mkdir -p`. All six allocation records were cleaned and
 unused queued fixtures canceled. The exact allocation IDs, timings and check
 results are recorded in the [private reliability evidence](min-676-private-native-prototype.md#private-session-reliability-validation-2026-10-10).
+
+## Native model controls and scoped Codex revocation (2026-10-10)
+
+PR #404's existing checks were all successful before this phase. The local
+Docker database received migration `20270109200039`; no linked hosted database
+or production deployment was used. Safe evidence is recorded in
+`assets/min-676-reconnect-model-proof.json`.
+
+The published Codex 0.162.1 CLI's `logout` invokes refresh-token revocation for
+its isolated `CODEX_HOME` profile. Source reviewed:
+[`login.rs`](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/cli/src/login.rs)
+and [`revoke.rs`](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/login/src/auth/revoke.rs).
+One new private allocation restored the pilot profile, ran that official logout,
+then restored the old in-memory profile to ask the native authentication check
+again. Logout succeeded and the old refresh token was rejected. The production
+owner disconnect path fenced account custody, moved generation 2 to 3 and
+released the lease after typed SDK 404 confirmed physical deletion. This was a
+provider auth-check rejection followed by explicit owner disconnect, not a full
+failed worker run. Other ChatGPT sessions were not globally logged out.
+
+The actual Minddy settings showed the disconnected Codex choice. Clicking
+**Connect Codex** started native device approval; the owner manually approved on
+the official provider page, and the settings then displayed **Connected**.
+**Refresh models** retrieved eight model entries through authenticated
+`model/list`. The UI selected `gpt-6.1-sol` and `medium` from supported choices.
+The refreshed catalog and any renewed profile commit atomically under the
+exclusive lease; discovery cleanup destroys its temporary allocation.
+
+Two subsequent real cold workers completed with that exact model and effort:
+
+| Run | Real operations | Renewal and cleanup |
+| --- | --- | --- |
+| `10e74e03-c228-4999-8d0c-f5a8eebabd4d` | One successful Minddy `read_issue`, guarded file write/read/command and exact marker verification. | Access and refresh tokens changed, provider account matched, inference API cost was zero, typed SDK 404 confirmed destruction. |
+| `0770bf5e-fb73-4d70-b90c-99eaa34d435c` | Same real operations, same frozen `gpt-6.1-sol` and `medium`. | Same renewal/account/cost/deletion assertions; the first allocation was confirmed absent again before this allocation was created. |
+
+Natural expired-access recovery remains unvalidated. The authentic token used
+for the revocation test was valid until `2026-10-20T21:06:53Z`; no authentic
+expired snapshot was available. Neither signed JWT claims nor the host clock
+were modified. Forced native refresh and real rotation do not prove natural
+expiry recovery. A future acceptance run needs an authentically expired access
+token with a valid refresh token. Paid Claude execution remains untested.
+
+The runtime now treats missing ChatGPT authentication and structured
+`unauthorized` as permanent authentication failures. It suppresses stale profile
+export after confirmed child stop so existing control-plane recovery requires
+reconnection. Transient network and quota failures retain safe profile write-back.
+Focused fixtures verify that distinction; they are not additional provider runs.
+
+The UI also displayed Claude's `sonnet`, `opus` and `haiku` aliases and its
+supported effort controls without starting Claude login or inference. OpenCode's
+existing active-provider catalog and reasoning controls remained available.
+Changing the account engine during the cold-worker pair did not change the saved
+Codex workers; Codex was restored as the final account default.
+
+![Codex settings with GPT-6.1-Sol, medium thinking and connected subscription](assets/min-676-native-model-codex.png)
+
+![Claude Code model and thinking controls; account disconnected and paid execution untested](assets/min-676-native-model-claude-untested.png)

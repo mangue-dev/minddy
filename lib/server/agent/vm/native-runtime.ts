@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { dirname, join } from "node:path";
 import { mkdir } from "node:fs/promises";
+import { nativeWorkerModelId, assertNativeWorkerEffort } from "@/lib/native-worker-model";
 import type { NativeHarness } from "@/lib/native-agent-prototype";
 import type { NativeWorkerMessage } from "@/lib/native-agent-worker";
 import { CODEX_CAPABILITY_DROP_ARGS, safeNativeError } from "./native-prototype/controller";
@@ -11,7 +12,7 @@ export type NativeEvent =
   | { type: "completed"; reply: string }
   | { type: "failed"; code: "providerUnavailable"; nativeCode?: string }
   | { type: "usage"; input?: number; output?: number; cached?: number };
-export interface NativeRuntimeInput { cwd: string; anchor: string; prompt: string; history: NativeWorkerMessage[]; mcpUrl: string; mcpToken: string; privateRoot: string; profileRoot: string; toolNames?: string[]; }
+export interface NativeRuntimeInput { cwd: string; anchor: string; prompt: string; history: NativeWorkerMessage[]; mcpUrl: string; mcpToken: string; privateRoot: string; profileRoot: string; model?: string | null; reasoningEffort?: string | null; toolNames?: string[]; }
 export interface NativeRuntime {
   start(input: NativeRuntimeInput): Promise<void>;
   events(): AsyncIterable<NativeEvent>;
@@ -21,6 +22,11 @@ export interface NativeRuntime {
 }
 export type NativeRuntimeSpawn = (engine: NativeHarness, args: string[], env: NodeJS.ProcessEnv, cwd: string) => ChildProcessWithoutNullStreams;
 
+/** Permanent subscription rejection must never be saved as a reusable session. */
+export class NativeAuthenticationRequired extends Error {
+  constructor() { super("Native subscription requires reconnection"); }
+}
+
 /** Fresh sandboxes reconstruct bounded context; opaque native session IDs never travel. */
 export function nativeReplayPrompt(prompt: string, history: NativeWorkerMessage[]): string {
   if (!history.length) return prompt;
@@ -29,11 +35,11 @@ export function nativeReplayPrompt(prompt: string, history: NativeWorkerMessage[
 }
 
 export function nativeClaudeArguments(input: NativeRuntimeInput): string[] {
-  return ["--print", "--verbose", "--restricted", "--disable-slash-commands", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--tools", "", "--setting-sources", "", "--strict-mcp-config", "--permission-mode", "dontAsk", ...(input.toolNames?.length ? ["--allowedTools", ...input.toolNames.map((name) => `mcp__minddy__${name}`)] : []), "--append-system-prompt", input.anchor, "--mcp-config", JSON.stringify({ mcpServers: { minddy: { type: "http", url: input.mcpUrl, headers: { Authorization: "${MINDDY_NATIVE_MCP_AUTHORIZATION}" } } } })];
+  return [...(input.model ? ["--model", input.model] : []), ...(input.reasoningEffort ? ["--effort", input.reasoningEffort] : []), "--print", "--verbose", "--restricted", "--disable-slash-commands", "--input-format", "stream-json", "--output-format", "stream-json", "--include-partial-messages", "--tools", "", "--setting-sources", "", "--strict-mcp-config", "--permission-mode", "dontAsk", ...(input.toolNames?.length ? ["--allowedTools", ...input.toolNames.map((name) => `mcp__minddy__${name}`)] : []), "--append-system-prompt", input.anchor, "--mcp-config", JSON.stringify({ mcpServers: { minddy: { type: "http", url: input.mcpUrl, headers: { Authorization: "${MINDDY_NATIVE_MCP_AUTHORIZATION}" } } } })];
 }
 
 export function nativeCodexConfiguration(input: NativeRuntimeInput) {
-  return { default_permissions: "minddy_native_worker", permissions: { minddy_native_worker: { filesystem: { ":root": "read", [input.privateRoot]: "deny", "/proc": "deny", "/sys": "deny" }, network: { enabled: false } } }, features: { shell_tool: false, view_image: false, multi_agent: false, multi_agent_v2: false, code_mode: false, code_mode_only: false, request_permissions_tool: false, apps: false, enable_mcp_apps: false, plugins: false, recommended_plugins: false, hooks: false, tool_suggest: false }, web_search: "disabled", mcp_servers: { minddy: { url: input.mcpUrl, default_tools_approval_mode: "approve", ...(input.toolNames ? { enabled_tools: input.toolNames } : {}), http_headers: { Authorization: `Bearer ${input.mcpToken}` } } } };
+  return { ...(input.reasoningEffort ? { model_reasoning_effort: input.reasoningEffort } : {}), default_permissions: "minddy_native_worker", permissions: { minddy_native_worker: { filesystem: { ":root": "read", [input.privateRoot]: "deny", "/proc": "deny", "/sys": "deny" }, network: { enabled: false } } }, features: { shell_tool: false, view_image: false, multi_agent: false, multi_agent_v2: false, code_mode: false, code_mode_only: false, request_permissions_tool: false, apps: false, enable_mcp_apps: false, plugins: false, recommended_plugins: false, hooks: false, tool_suggest: false }, web_search: "disabled", mcp_servers: { minddy: { url: input.mcpUrl, default_tools_approval_mode: "approve", ...(input.toolNames ? { enabled_tools: input.toolNames } : {}), http_headers: { Authorization: `Bearer ${input.mcpToken}` } } } };
 }
 
 export function createNativeRuntime(engine: NativeHarness, options: { spawn?: NativeRuntimeSpawn } = {}): NativeRuntime {
@@ -121,6 +127,8 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
   };
   return {
     async start(input) {
+      nativeWorkerModelId(engine, `${engine}/${input.model ?? "default"}`);
+      assertNativeWorkerEffort(engine, input.reasoningEffort);
       if (stopping) await stopping;
       push({ type: "status", phase: "starting" });
       expectedClaudeTools = (input.toolNames ?? []).map((name) => `mcp__minddy__${name}`);
@@ -130,8 +138,11 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
       child = launch(engine, args, envFor(input), cwd); observe(child);
       if (engine === "codex") {
         await rpc("initialize", { clientInfo: { name: "minddy_native_worker", version: "1.0.0" } }); child.stdin.write('{"method":"initialized","params":{}}\n');
-        const auth = await rpc("account/read", { refreshToken: true }); if ((auth.account as { type?: string })?.type !== "chatgpt") throw new Error("Native subscription requires reconnection");
-        const thread = await rpc("thread/start", { cwd: input.cwd, developerInstructions: input.anchor, approvalPolicy: "never", ephemeral: true, config: nativeCodexConfiguration(input) });
+        const auth = await rpc("account/read", { refreshToken: true }); if ((auth.account as { type?: string })?.type !== "chatgpt") throw new NativeAuthenticationRequired();
+        const thread = await rpc("thread/start", { ...(input.model ? { model: input.model } : {}), cwd: input.cwd, developerInstructions: input.anchor, approvalPolicy: "never", ephemeral: true, config: nativeCodexConfiguration(input) });
+        if (input.model && typeof thread.model === "string" && thread.model !== input.model) {
+          throw new Error("Native worker changed the frozen model");
+        }
         threadId = (thread.thread as { id?: string })?.id ?? ""; if (!threadId) throw new Error("Native worker thread did not start");
         const catalogue = await rpc("mcpServerStatus/list", { threadId, serverName: "minddy", detail: "toolsAndAuthOnly" });
         const server = Array.isArray(catalogue.data) ? catalogue.data.find((server) => server.name === "minddy") : undefined;

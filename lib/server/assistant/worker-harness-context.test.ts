@@ -30,3 +30,9 @@ it("keeps native capability discovery and question mediation in the Numo prompt"
   expect(prompt).toContain("subscription failures stop\n  work without switching to API billing");
   expect(prompt).toContain("reliable\n  conversation context or ask the user");
 });
+
+
+it("exposes the frozen native model and effort without consulting account defaults", () => {
+  expect(workerHarnessContext({ agent_engine: "codex", model: "codex/gpt-test-codex", native_reasoning_effort: "ultra" }))
+    .toMatchObject({ model: "codex/gpt-test-codex", native_reasoning_effort: "ultra", engine: "codex" });
+});

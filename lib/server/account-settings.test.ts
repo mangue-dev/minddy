@@ -193,7 +193,7 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
     expect(native.list).toHaveBeenCalledWith("user-1");
     expect(result).toMatchObject({ ok: true, settings: { agent: {
       default_engine: "claude_code", native_agents_enabled: true, native_connection: "busy",
-      harness_capabilities: { funding: "subscription", modelSelection: "cli_default",
+      harness_capabilities: { funding: "subscription", modelSelection: "native_account_model",
         minddyTools: true, nativeBuiltinTools: false, subagents: false, imageInput: false,
         paidExecutionValidated: false },
     } } });

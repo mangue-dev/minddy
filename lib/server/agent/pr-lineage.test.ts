@@ -144,6 +144,7 @@ vi.mock("./quota", () => ({
   ),
 }));
 
+vi.mock("./native-prototype/model-catalog", () => ({ assertNativeModelPreference: async () => {} }));
 vi.mock("./native-agent-credentials", () => ({
   listNativeConnections: vi.fn(async () => h.nativeConnections),
 }));
@@ -625,7 +626,7 @@ describe("native subscription worker admission", () => {
   it("continues the frozen native engine after the account explicitly changes to OpenCode", async () => {
     h.selectedEngine = "opencode";
     h.nativeConnections = [connected("codex")];
-    h.continuedRun = { agent_engine: "codex", native_connection_id: connectionId, native_connection_generation: 7,
+    h.continuedRun = { agent_engine: "codex", model: "codex/gpt-test-codex", native_reasoning_effort: "ultra", native_connection_id: connectionId, native_connection_generation: 7,
       id: "previous-native", conversation_id: "native-conversation", created_by: USER_ID,
       project_id: PROJECT_ID, repo_link_id: "link-1", repo_provider: "github", repo_external_id: "repo-1",
       status: "completed", branch_name: "minddy/agent/native-work", base_branch: "main" };
@@ -633,7 +634,7 @@ describe("native subscription worker admission", () => {
       triggeredBy: "chat", continueRunId: "previous-native", prompt: "Continue" });
     expect(result.ok).toBe(true);
     expect(h.created[0]).toMatchObject({ engine: "codex", keyMode: "subscription",
-      nativeConnectionId: connectionId, nativeConnectionGeneration: 7, conversationId: "native-conversation" });
+      nativeConnectionId: connectionId, nativeConnectionGeneration: 7, model: "codex/gpt-test-codex", nativeReasoningEffort: "ultra", conversationId: "native-conversation" });
     noApiCalls();
   });
 

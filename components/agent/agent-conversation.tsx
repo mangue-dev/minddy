@@ -126,6 +126,7 @@ export function AgentConversation({
   headerActions?: ReactNode;
 }) {
   const t = useTranslations("Agent");
+  const tNativeModels = useTranslations("NativeAgentModels");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
   const { mentionables, links, onMentionQuery } =
@@ -804,7 +805,12 @@ export function AgentConversation({
                     leadingControls={
                       isNativeAgentEngine(liveRun.agent_engine) ? <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
                         <AgentEngineBadge engine={liveRun.agent_engine} />
-                        <span className="text-xs text-muted-foreground">{t("nativeHarnessDefault", { agent: agentEngineDisplay(liveRun.agent_engine).name! })}</span>
+                        <span className="text-xs text-muted-foreground">{liveRun.model && !liveRun.model.endsWith("/default")
+                          ? t("nativeHarnessModel", { model: liveRun.model.slice(liveRun.agent_engine.length + 1) })
+                          : t("nativeHarnessDefault", { agent: agentEngineDisplay(liveRun.agent_engine).name! })}</span>
+                        <span className="text-xs text-muted-foreground">{t("nativeHarnessThinking", { level: liveRun.native_reasoning_effort
+                          ? tNativeModels(`effort_${liveRun.native_reasoning_effort}` as Parameters<typeof tNativeModels>[0])
+                          : tNativeModels("automatic") })}</span>
                       </span> : <>
                         {/* Fixed model for the session: locked picker + tooltip. */}
                         <ModelCombobox

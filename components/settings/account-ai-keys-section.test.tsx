@@ -16,6 +16,7 @@ vi.mock("@/lib/use-ai-keys-query", () => ({ aiKeysQueryKey: ["keys"], useAiKeysQ
 vi.mock("@/lib/use-agent-preferences-query", () => ({
   agentPreferencesQueryKey: ["preferences"],
   useAgentPreferencesQuery: () => ({ defaultEngine: h.engine, nativeAgentsEnabled: true,
+    nativeModelPreferences: {},
     defaultModel: "provider/model", defaultReasoningLevel: "high", loading: false }),
 }));
 vi.mock("@/lib/use-agent-models-query", () => ({
@@ -28,6 +29,7 @@ vi.mock("@/lib/agent-keys-api", () => ({
 }));
 vi.mock("@/components/settings/byok-connect-panel", () => ({ ByokConnectPanel: () => <div>General API credentials</div> }));
 vi.mock("./account-sandbox-section", () => ({ AccountSandboxSection: ({ embedded }: { embedded: boolean }) => <div data-embedded={embedded}>Sandbox</div> }));
+vi.mock("./native-agent-model-preferences", () => ({ NativeAgentModelPreferences: ({ engine }: { engine: string }) => <div data-native-models={engine}>Native model and thinking</div> }));
 vi.mock("./native-agent-connections", () => ({
   NativeAgentConnections: ({ children, openCodeProviderLabel }: { children: ReactNode; openCodeProviderLabel: string }) =>
     <section data-code-agent><h2>Code agent</h2><span>OpenCode ({openCodeProviderLabel})</span>{children}</section>,
@@ -113,6 +115,7 @@ it.each(["codex", "claude_code"])("hides API funding and model controls for %s w
   expect(code.querySelector("select")).toBeNull();
   expect(code.querySelector('[data-model-scope="code"]')).toBeNull();
   expect(code.querySelector("[data-reasoning]")).toBeNull();
+  expect(code.querySelector(`[data-native-models="${engine}"]`)).not.toBeNull();
   expect(code.textContent).toContain("Sandbox");
   expect(host.querySelector('[aria-labelledby="minddy-ai-title"]')?.textContent).toContain("Numo conversations and comments");
   expect(h.update).not.toHaveBeenCalled();

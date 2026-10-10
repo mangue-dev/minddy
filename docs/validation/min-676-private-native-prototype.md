@@ -421,3 +421,34 @@ whitespace checks also passed. Documentation impact is limited to this record,
 SQL inventories. The public controls, availability gate and six-locale manual
 remain accurate; no article, workflow or figure revision is required for these
 private lifecycle fixes.
+
+## Engine-specific model preferences and revocation recovery
+
+Native settings now store separate `model` and `reasoningEffort` preferences for
+Codex and Claude Code in `user_agent_preferences.native_model_preferences`.
+OpenCode retains `default_model` and API reasoning. The protected partial RPC
+merges only supplied engines. Native `agent_runs.model` and
+`native_reasoning_effort` are immutable and flow through the VM job into Codex
+`thread/start` model/config or Claude `--model`/`--effort`. Resume ignores changed
+account settings. Model membership and supported effort validation do not prove
+provider entitlement, and no API fallback is allowed.
+
+The settings catalog `GET` reads metadata only. Codex's explicit `POST` refresh
+owns an exclusive native lease, starts a bounded allocation, authenticates with
+the unmodified CLI, pages through `model/list`, commits the refreshed encrypted
+profile, saved marker and account/generation-bound catalog atomically, then
+physically destroys the allocation. A lost commit response reconciles the saved
+marker before cleanup. Unconfirmed destruction retains its fence. The public
+catalog contains bounded model identifiers, display names and supported efforts;
+it contains no auth bytes. Browser disk query persistence excludes this catalog.
+Claude uses documented moving aliases and never claims paid account eligibility.
+
+On 2026-10-10, official scoped Codex logout revoked the pilot refresh token and
+the native CLI rejected its previous profile. The user reconnected through the
+actual settings device flow, selected `gpt-6.1-sol`/`medium`, and two distinct
+cold workers passed actual MCP and repository guard operations with saved token
+rotation and typed SDK deletion proofs. See
+`assets/min-676-reconnect-model-proof.json` and the harness probe report.
+This does not establish natural expiry recovery: no authentic expired access
+token was available and no signed claims were changed. Claude paid execution
+remains untested. Availability and provider authorization conditions above remain.

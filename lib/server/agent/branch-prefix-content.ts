@@ -67,7 +67,7 @@ export async function saveAgentPreferences(
 ): Promise<Row> {
   if (Object.keys(patch).some((key) => ![
     "branch_prefix", "default_engine", "default_model", "default_model_provider",
-    "default_reasoning_level", "sandbox_region", "sandbox_size",
+    "default_reasoning_level", "sandbox_region", "sandbox_size", "native_model_preferences",
   ].includes(key))) throw new Error("Unsupported agent preference field");
   if (Object.hasOwn(patch, "branch_prefix") &&
       (typeof patch.branch_prefix !== "string" ||

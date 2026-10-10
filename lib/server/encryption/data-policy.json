@@ -663,7 +663,8 @@
         "status",
         "triggered_by",
         "worker_model_provider",
-        "worker_model_source"
+        "worker_model_source",
+        "native_reasoning_effort"
       ],
       "encryption_metadata": [
         "checkpoint_ciphertext",
@@ -4327,7 +4328,8 @@
         "default_reasoning_level",
         "sandbox_region",
         "sandbox_size",
-        "default_engine"
+        "default_engine",
+        "native_model_preferences"
       ],
       "routing_identity": [
         "user_id"
@@ -4902,6 +4904,27 @@
       "timestamp": [
         "lease_expires_at",
         "created_at",
+        "updated_at"
+      ]
+    }
+  },
+  "native_agent_model_catalogs": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "user_id",
+        "engine",
+        "connection_id"
+      ],
+      "bounded_metadata": [
+        "connection_generation",
+        "models"
+      ],
+      "timestamp": [
         "updated_at"
       ]
     }

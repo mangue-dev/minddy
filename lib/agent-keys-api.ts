@@ -7,6 +7,7 @@ import type { ModelCatalogCapability } from "./model-catalog-capability";
 import type { AgentProviderId } from "./agent-providers";
 import { trackEvent } from "./analytics";
 import { NativePrototypeRequestError, safeNativeErrorCode } from "./native-agent-prototype-api";
+import type { NativeModelPreferences } from "./native-agent-models";
 import type { LiveAgentEngine } from "./agent-engines";
 
 /**
@@ -127,6 +128,7 @@ export interface AgentPreferences extends SandboxPreferences {
   default_engine: AccountAgentEngine;
   /** Read-only account eligibility for the private native worker preview. */
   native_agents_enabled: boolean;
+  native_model_preferences: NativeModelPreferences;
   default_model: string | null;
   /** null = `off` (MIN-122). */
   default_reasoning_level: ReasoningLevel | null;
@@ -134,7 +136,7 @@ export interface AgentPreferences extends SandboxPreferences {
 }
 
 export type AgentPreferencesPatch = Partial<
-  Omit<AgentPreferences, "branch_prefix" | "native_agents_enabled"> & { branch_prefix: string | null }
+  Omit<AgentPreferences, "branch_prefix" | "native_agents_enabled" | "native_model_preferences"> & { branch_prefix: string | null; native_model_preferences: Partial<NativeModelPreferences> }
 >;
 
 export async function fetchAgentPreferencesApi(): Promise<AgentPreferences> {

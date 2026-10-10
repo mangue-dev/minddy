@@ -1,12 +1,13 @@
 import "server-only";
 
+import { parseCodexModels, type NativeModelOption } from "@/lib/native-agent-models";
 import { randomBytes, randomUUID } from "node:crypto";
 import { APIError } from "@vercel/sandbox";
 import type { NativeConnectionMetadata, NativeCredentialProfile, NativeHarness, NativeLoginStatus, NativePrototypeTestResult } from "@/lib/native-agent-prototype";
 import { NATIVE_HARNESSES } from "@/lib/native-agent-prototype";
 import type { SandboxBilling } from "@/lib/agent-sandbox-config";
 import { ensureUsageBudget, recordSandboxUsage } from "@/lib/server/usage";
-import { acquireNativeConnection, disconnectNativeConnection, getNativeConnectionLease, getNativeRuntime, listNativeConnections, listNativeCleanupCandidates, loadNativeProfile, releaseNativeConnection, saveNativeProfile, commitNativeLoginProfile, setNativeRuntime, type NativeConnectionLease } from "../native-agent-credentials";
+import { acquireNativeConnection, disconnectNativeConnection, getNativeConnectionLease, getNativeRuntime, listNativeConnections, listNativeCleanupCandidates, loadNativeProfile, releaseNativeConnection, saveNativeProfile, commitNativeLoginProfile, commitNativeCatalogProfile, setNativeRuntime, type NativeConnectionLease } from "../native-agent-credentials";
 import { assertNativePrototypeAccess, nativePrototypeEnabledFor } from "./access";
 import { createNativeAllocation, openNativeAllocation, NATIVE_ALLOCATION_TIMEOUT_MS, type NativeAllocation, type NativeControllerStatus } from "./sandbox";
 import { nativePrototypeMcpTool, executeNativePrototypeMcp } from "./mcp";
@@ -279,7 +280,7 @@ export async function reapNativePrototypeConnections() {
       const lease = await getNativeConnectionLease(candidate.userId, candidate.engine);
       if (!lease || (lease.kind !== "stop" && Date.parse(lease.leaseExpiresAt) > Date.now())) continue;
       if (lease.workerRunId) await abortNativeWorkerConnection(lease.workerRunId, lease);
-      else if (lease.kind === "login" && runtime(await getNativeRuntime(lease))?.profileSaved) await cleanupLease(lease);
+      else if (["login", "test"].includes(lease.kind) && runtime(await getNativeRuntime(lease))?.profileSaved) await cleanupLease(lease);
       else await disconnectNativePrototype(candidate.userId, candidate.engine, lease);
       summary.stopped++;
     } catch { summary.pending++; }
@@ -411,5 +412,39 @@ export async function testNativeConnection(userId: string, engine: NativeHarness
     else await cleanupLease(lease);
     result.errorCode = "test_failed";
     return result;
+  }
+}
+
+/** Explicit model refresh owns the same exclusive writer lease as a worker. */
+export async function discoverNativeCodexModels(userId: string): Promise<NativeModelOption[]> {
+  const lease = await claim(userId, "codex", "test");
+  let known: { allocation: NativeAllocation; descriptor: Runtime } | undefined;
+  let imported = false;
+  try {
+    const profile = await loadNativeProfile(lease);
+    if (!profile) throw new NativePrototypeError("reconnect_required");
+    known = await allocate(lease, randomUUID(), 0);
+    await getNativeRuntime(lease, { execution: true });
+    // Mark the exchange uncertain before import, including lost transport responses.
+    imported = true;
+    await known.allocation.request("/profile/import", { profile });
+    await getNativeRuntime(lease, { execution: true });
+    const models = parseCodexModels(await known.allocation.request("/models/list", { engine: "codex" }));
+    const updated = await known.allocation.request<NativeCredentialProfile>("/profile/export", { engine: "codex" });
+    known.descriptor.phase = "finalizing";
+    known.descriptor.profileSaved = true;
+    await commitNativeCatalogProfile(lease, updated, known.descriptor, models);
+    imported = false;
+    await stop(lease, known.descriptor, known.allocation);
+    await releaseNativeConnection(lease, { stopped: true });
+    return models;
+  } catch {
+    const current = await getNativeConnectionLease(userId, "codex");
+    const same = current?.leaseId === lease.leaseId && current.generation === lease.generation;
+    const saved = same && runtime(await getNativeRuntime(current!))?.profileSaved === true;
+    if (known) await stop(lease, known.descriptor, known.allocation);
+    if (same && imported && !saved) await disconnectNativePrototype(userId, "codex", current!);
+    else if (same) await cleanupLease(current!);
+    throw new NativePrototypeError("test_failed");
   }
 }
