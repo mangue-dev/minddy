@@ -147,7 +147,7 @@ Attribuez les familles de modèles de texte, transcription et embeddings à des 
 
 **Claude Code est Expérimental.** Il nécessite une offre incluant Claude Code ; un compte Free ne suffit pas. Son exécution réelle avec abonnement et le renouvellement de ses sessions restent non validés. Connecter un compte ne garantit pas que son offre permet d’utiliser le modèle choisi.
 
-Après une reconnexion, demandez explicitement à Numo de continuer l’agent précédent ou envoyez un nouveau message dans sa conversation de code. Minddy crée un nouveau run avec la nouvelle connexion, en conservant le moteur, le modèle, la réflexion, la branche et le contexte de conversation disponible dans ses limites de taille. Le run précédent conserve sa génération de connexion enregistrée ; la connexion des agents actifs n’est jamais remplacée.
+Après la reconnexion, demandez explicitement à Numo de poursuivre le travail de l’agent précédent. Un nouveau message dans son ancienne conversation de code ouvre Numo avec votre demande et le contexte de cet agent. Minddy crée un nouveau run avec la nouvelle connexion, en conservant le moteur, le modèle, la réflexion, la branche et le contexte de conversation disponible dans ses limites de taille. Le run précédent conserve sa génération de connexion enregistrée ; la connexion des agents actifs n’est jamais remplacée.
 
 Dans **Agent de code**, choisissez **OpenCode (Minddy Cloud)** ou OpenCode avec le fournisseur de modèles de texte configuré ci-dessus. Le contrôle **Fournisseur IA** choisit le financement du travail de code indépendamment des autres usages API. Configurez ici le modèle et le raisonnement OpenCode. La région et la taille de sandbox se trouvent dans la même section et s’appliquent aux agents de code hébergés.
 

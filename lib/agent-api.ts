@@ -496,7 +496,7 @@ export async function steerAgentRunApi(
   mentions: AssistantMention[] = [],
   attachments: ResourceInput[] = [],
   messageId = createUuid(),
-): Promise<{ ok: true; status: AgentRunStatus; messageId: string; runId?: string }> {
+): Promise<{ ok: true; status: AgentRunStatus; messageId: string }> {
   trackEvent("agent_steered", { length_bucket: lengthBucket(message) });
   return parseJson(
     await fetch(`/api/agent-runs/${runId}/steer`, {

@@ -105,15 +105,13 @@ beforeEach(() => {
 });
 
 describe("POST /api/agent-runs/[runId]/steer", () => {
-  it("continues an owned native conversation on a new run after reconnection", async () => {
+  it("hands an owned reconnected conversation to Numo without launching or mutating a worker", async () => {
     caller = OWNER;
     Object.assign(run!, { agent_engine: "codex", key_mode: "subscription", native_connection_generation: 6 });
-    coldLaunch.mockResolvedValue({ ok: true, run: { id: "new-run", status: "queued" } });
     const res = await POST(request(), params);
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ ok: true, runId: "new-run", status: "queued" });
-    expect(coldLaunch).toHaveBeenCalledWith(expect.objectContaining({ userId: OWNER, continueRunId: RUN_ID,
-      projectId: run!.project_id, routineId: run!.routine_id }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "nativeContinuationRequiresNumo" });
+    expect(coldLaunch).not.toHaveBeenCalled();
     expect(messages).toHaveLength(0); expect(stamped).toHaveLength(0);
   });
   it("refuses disconnected native access without re-queuing or changing payer", async () => {

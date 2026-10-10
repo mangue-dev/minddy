@@ -23,6 +23,7 @@ import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import { unechoedMessages } from "@/lib/agent-pending";
 import {
+  ApiError,
   heartbeatAgentRunApi,
   interruptAgentRunApi,
   isAgentRunActive,
@@ -59,7 +60,7 @@ import { AgentDiffSheet } from "./agent-diff-sheet";
 import { AgentActivityPill } from "./agent-activity-pill";
 import { turnSubagents } from "@/lib/agent-subagents";
 import { livePlan } from "@/lib/agent-plan";
-import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions, useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
@@ -170,7 +171,7 @@ export function AgentConversation({
   // Explicitly open run: `initialRunId`, a run chosen from the history,
   // or the one we just launched. `null` → we fall back on the ACTIVE run of the outcome.
   const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
-  const [continuedNoteRunId, setContinuedNoteRunId] = useState<string | null>(null);
+  const { openIntent } = useAssistantPanelActions();
   // Messages sent for which the server echo has not yet arrived (optimistic bubbles).
   const [pendingMessages, setPendingMessages] = useState<
     Array<{ id: string; text: string; mentions: AssistantMention[] }>
@@ -191,15 +192,14 @@ export function AgentConversation({
   // chooses from the LIST, and the host passes it to us as prop.
   useEffect(() => {
     setSelectedId(initialRunId);
-    setContinuedNoteRunId(null);
-  }, [initialRunId, noteRunId]);
+  }, [initialRunId]);
 
   const { runs: issueRuns, loading: issueLoading } = useIssueAgentRunsQuery(
     active && issueId ? issueId : null,
   );
   // NOTEBOOK session: a single run, queried directly (it IS the session).
   const { run: noteRun, loading: noteLoading } = useAgentRunQuery(
-    active && noteRunId ? continuedNoteRunId ?? noteRunId : null,
+    active && noteRunId ? noteRunId : null,
   );
   const runs = noteRunId ? (noteRun ? [noteRun] : []) : issueRuns;
   const loading = noteRunId ? noteLoading : issueLoading;
@@ -520,18 +520,13 @@ export function AgentConversation({
     // echo arrives. If this fails, we remove it ourselves (the message does not exist).
     setPendingMessages((p) => [...p, { id: messageId, text, mentions }]);
     try {
-      const result = await steerAgentRunApi(
+      await steerAgentRunApi(
         liveRun.id,
         text,
         mentions,
         attachments,
         messageId,
       );
-      if (result.runId && result.runId !== liveRun.id) {
-        setSelectedId(result.runId);
-        if (noteRunId) setContinuedNoteRunId(result.runId);
-        setPendingMessages((messages) => messages.filter((message) => message.id !== messageId));
-      }
       await Promise.all([
         refreshRuns(),
         queryClient.invalidateQueries({
@@ -546,6 +541,19 @@ export function AgentConversation({
         const i = p.findIndex((message) => message.id === messageId);
         return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)];
       });
+      if (err instanceof ApiError && err.code === "nativeContinuationRequiresNumo") {
+        openIntent({
+          source: "code_worker", action: "custom", projectId,
+          prompt: text, mentions, attachments,
+          pageContext: {
+            ...(projectId ? { projectId } : {}),
+            ...(issueId ? { issueId, issueIdentifier } : {}),
+            ...(liveRun.pull_request_id ? { pullRequestId: liveRun.pull_request_id } : {}),
+            codeWorkerRunId: liveRun.id,
+          },
+        });
+        return;
+      }
       toast.error(agentErrorMessage(err));
     }
   };

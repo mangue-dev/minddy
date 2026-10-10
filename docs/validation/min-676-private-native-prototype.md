@@ -515,8 +515,10 @@ available portable history is decrypted from the original checkpoint only after
 rechecking owner, repository, conversation and frozen model identity. It is
 bounded when replayed privately into the native job; the visible launch prompt
 remains the user's new request. No native session ID or old auth file is copied.
-The standalone composer follows the new run; Numo's warm relaunch refuses stale
-auth and falls through to the existing explicit cold-continuation launcher.
+The historical composer hands the unchanged user request, mentions, attachments
+and structured worker context to Numo after reconnection. It never launches a
+worker directly. Numo's warm relaunch refuses stale auth and falls through to
+the existing explicit cold-continuation launcher.
 Missing/disconnected connections, cleanup fences, replacement identities,
 older generations, different owners and merged work remain refused.
 

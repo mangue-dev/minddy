@@ -30,9 +30,13 @@ recorded reviews. The experimental native picker is reviewed separately in
 the local UI. Prior live Codex HTTP 401/cold-restore evidence is retained; no
 new live provider acceptance is claimed.
 
-Verification: 212 targeted tests pass across 14 files, including native retry,
-Claude stream/MCP/auth export, owned cold continuation, standalone steering,
-Numo warm refusal, history scope and shared identity display. Typecheck, lint,
+Verification: 253 targeted tests pass across 17 files, including native retry,
+Claude stream/MCP/auth export, owned cold continuation, historical handoff,
+Numo warm refusal, history scope, structured continuation context and shared
+identity display. The lifecycle boundary requires every new worker to launch
+through Numo; the historical composer preserves the original user message,
+mentions and attachments while passing a UUID-only worker context to Numo.
+Typecheck, lint,
 agent VM build, native prototype build, documentation (92/92 workflows in six
 locales), knowledge, owned-English and whitespace checks pass locally.
 

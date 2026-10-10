@@ -627,6 +627,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
     );
   }
+  if (ctx.codeWorkerRunId) {
+    lines.push(
+      `- The user explicitly continues code worker (run id: ${ctx.codeWorkerRunId}) after reconnecting.`,
+      "For repository work, pass this exact run id as continuation_run_id to launch_code_agent. Preserve its branch and frozen engine/model/thinking; the delegation validates ownership and eligibility. Do not claim continuation succeeded before the tool accepts it.",
+    );
+  }
   if (ctx.pullRequestId) {
     lines.push(
       `- Open pull request: #${ctx.prNumber ?? "?"}${ctx.prState ? ` (${ctx.prState})` : ""} (pull request id: ${ctx.pullRequestId})${ctx.prHeadRef ? `, head ref ${ctx.prHeadRef}` : ""}${ctx.prBaseRef ? `, base ref ${ctx.prBaseRef}` : ""}.`,

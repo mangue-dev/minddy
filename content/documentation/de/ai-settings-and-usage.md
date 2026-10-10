@@ -147,7 +147,7 @@ Ordnen Sie die Modellfamilien für Text, Transkription und Embeddings kompatible
 
 **Claude Code ist Experimentell.** Es benötigt einen Tarif mit Claude Code; ein Free-Konto reicht nicht aus. Die tatsächliche Ausführung über ein Abonnement und die Sitzungserneuerung sind noch nicht validiert. Eine Kontoverbindung bestätigt nicht, dass der Tarif das gewählte Modell unterstützt.
 
-Bitten Sie Numo nach der erneuten Anmeldung ausdrücklich, den bisherigen Worker fortzusetzen, oder senden Sie eine neue Nachricht in dessen Code-Unterhaltung. Minddy erstellt einen neuen Lauf mit der neuen Verbindung und behält Engine, Modell, Denkstufe, Branch und den verfügbaren Gesprächskontext innerhalb der Größenbegrenzung bei. Der vorige Lauf behält seine gespeicherte Verbindungsgeneration; aktive Worker erhalten keine neue Verbindung.
+Bitten Sie Numo nach der erneuten Verbindung ausdrücklich, die Arbeit des vorherigen Agenten fortzusetzen. Eine neue Nachricht in dessen früherer Code-Unterhaltung öffnet Numo mit Ihrer Anfrage und diesem Agenten als Kontext. Minddy erstellt einen neuen Lauf mit der neuen Verbindung und behält Engine, Modell, Denkstufe, Branch und den verfügbaren Gesprächskontext innerhalb der Größenbegrenzung bei. Der vorige Lauf behält seine gespeicherte Verbindungsgeneration; aktive Worker erhalten keine neue Verbindung.
 
 Wählen Sie unter **Code-Agent** entweder **OpenCode (Minddy Cloud)** oder OpenCode mit dem oben konfigurierten Textmodell-Anbieter. **KI-Anbieter** bestimmt die Finanzierung von Codearbeiten unabhängig von anderen API-Funktionen. Konfigurieren Sie hier das OpenCode-Modell und die Denkstufe. Region und Sandbox-Größe stehen im selben Abschnitt und gelten für gehostete Code-Worker.
 

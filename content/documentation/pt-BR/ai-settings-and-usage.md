@@ -148,7 +148,7 @@ Associe as famílias de modelos de texto, transcrição e embeddings a chaves co
 
 **O Claude Code é Experimental.** Ele exige um plano que inclua o Claude Code; uma conta Free não basta. A execução real com assinatura e a renovação das sessões ainda não foram validadas. Conectar uma conta não garante que seu plano possa executar o modelo escolhido.
 
-Após reconectar a conta, peça explicitamente ao Numo para continuar o agente anterior ou envie uma nova mensagem na conversa de código dele. O Minddy cria uma nova execução com a nova conexão e mantém o agente, modelo, raciocínio, branch e contexto disponível dentro do limite de tamanho. A execução anterior mantém a geração de conexão registrada; a conexão dos agentes ativos nunca é substituída.
+Depois de reconectar, peça explicitamente ao Numo para continuar o trabalho do agente anterior. Uma nova mensagem na conversa de código anterior abre o Numo com seu pedido e esse agente como contexto. O Minddy cria uma nova execução com a nova conexão e mantém o agente, modelo, raciocínio, branch e contexto disponível dentro do limite de tamanho. A execução anterior mantém a geração de conexão registrada; a conexão dos agentes ativos nunca é substituída.
 
 Em **Agente de código**, escolha **OpenCode (Minddy Cloud)** ou OpenCode com o provedor de modelos de texto configurado acima. **Provedor de IA** escolhe o financiamento do trabalho de código independentemente de outras funções de API. Configure aqui o modelo e o raciocínio do OpenCode. Região e tamanho da sandbox ficam na mesma seção e se aplicam aos agentes hospedados.
 

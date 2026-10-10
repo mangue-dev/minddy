@@ -147,7 +147,7 @@ Assign text, transcription and embedding model families to compatible keys or ke
 
 **Claude Code is Experimental.** It needs a plan that includes Claude Code; a Free account is not sufficient. Its live subscription execution and session renewal remain unvalidated. Connecting an account does not establish that its plan can run the selected model.
 
-After reconnecting, explicitly continue the previous worker from Numo or send a new message in its code conversation. Minddy creates a new run using the new connection, retaining the original engine, model, thinking, branch and available bounded conversation context. The previous run keeps its recorded connection generation; active workers are never rebound.
+After reconnecting, explicitly continue the previous worker from Numo. Sending a new message in its historical code conversation opens Numo with your request and the previous worker as context. Minddy creates a new run using the new connection, retaining the original engine, model, thinking, branch and available bounded conversation context. The previous run keeps its recorded connection generation; active workers are never rebound.
 
 In **Code agent**, choose **OpenCode (Minddy Cloud)** or OpenCode with the text-model provider configured above. Its **AI provider** control chooses the funding source for code work independently of other API surfaces. Configure the OpenCode model and reasoning here. Region and sandbox size are in the same section and apply to hosted code workers.
 

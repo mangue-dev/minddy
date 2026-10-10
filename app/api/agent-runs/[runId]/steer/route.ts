@@ -13,7 +13,7 @@ import {
   bumpRunActivity,
   type AgentRunStatus,
 } from "@/lib/server/agent/runs";
-import { kickAgentDrain, launchAgentRun } from "@/lib/server/agent/launch";
+import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { isNativeAgentEngine } from "@/lib/agent-engines";
 import { resolveWorkerHarness, NativeWorkerUnavailableError } from "@/lib/server/agent/native-worker-selection";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
@@ -207,23 +207,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       }
     }
     if (isNativeAgentEngine(run.agent_engine)) {
-      // A message after reconnecting explicitly continues this conversation.
-      // Create a new immutable run instead of re-queuing revoked credentials.
+      // Reconnected credentials require a new run owned by Numo's delegation.
+      // The historical adapter can only resume its existing generation.
       if (run.created_by !== auth.user.id) {
         return NextResponse.json({ error: "Run not found" }, { status: 404 });
       }
       try {
         const harness = await resolveWorkerHarness(auth.user.id, run, { allowReconnectedContinuation: true });
         if (harness.engine !== "opencode" && harness.nativeConnectionGeneration !== run.native_connection_generation) {
-          const result = await launchAgentRun({
-            userId: auth.user.id, projectId: run.project_id, issueId: run.issue_id,
-            pullRequestId: run.pull_request_id, continueRunId: run.id,
-            triggeredBy: "chat", prompt: messageWithFiles, promptMentions: mentions,
-            intent: run.intent ?? undefined, routineId: run.routine_id, chainId: run.chain_id,
-            budgetUsd: run.budget_usd, title: run.title,
-          });
-          if (!result.ok) return NextResponse.json({ error: result.error, code: result.error }, { status: 409 });
-          return NextResponse.json({ ok: true, status: result.run.status, messageId, runId: result.run.id });
+          return NextResponse.json(
+            { error: "nativeContinuationRequiresNumo", code: "nativeContinuationRequiresNumo" },
+            { status: 409 },
+          );
         }
       } catch (error) {
         if (!(error instanceof NativeWorkerUnavailableError)) throw error;
