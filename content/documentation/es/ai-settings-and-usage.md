@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -59,13 +59,16 @@
       "components/settings/native-agent-connections.test.tsx",
       "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md",
       "app/api/account/agent-preferences/route.ts",
-      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md"
+      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
+      "components/agent/agent-engine-badge.tsx",
+      "lib/server/assistant/account-worker-context.ts",
+      "content/documentation/reviews/min-676-native-identity-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "revision": 10,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed)",
     "date": "2026-10-10"
   },
   "related": [
@@ -87,7 +90,7 @@
       "src": "/documentation/es/ai-keys-and-models-workflow.png",
       "alt": "Tarjeta del proveedor de IA con minddy Cloud seleccionado.",
       "caption": "El proveedor Cloud seleccionado utiliza el plan de la cuenta. El selector permite configurar proveedores personales.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -104,7 +107,7 @@
       "src": "/documentation/es/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modelo de código y razonamiento predeterminados.",
       "caption": "Modelo y razonamiento predeterminados de OpenCode. Los nuevos agentes OpenCode usan estos valores; los agentes en curso mantienen su configuración fijada.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -121,7 +124,7 @@
       "src": "/documentation/es/plans-and-ai-usage-workflow.png",
       "alt": "Página de uso de IA de la cuenta de demostración.",
       "caption": "Página de uso de IA de la cuenta de demostración. El presupuesto, las categorías y el historial se leen de la cuenta; no se inició ninguna compra ni ejecución de pago.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -160,7 +163,11 @@ Una vez conectado, **Probar nuevos sandboxes** comprueba el acceso nativo y las 
 
 Tras conectar la cuenta, selecciona **Codex** o **Claude Code** en **Agente de código**. Numo usa esta elección para los nuevos agentes de repositorio: implementación de incidencias, planificación, verificación y trabajo solicitado en una conversación o rutina. El CLI nativo elige su modelo y razonamiento; los valores del modelo API de OpenCode no se aplican. Los agentes se ejecutan en sandboxes de servidor alojadas con herramientas de Minddy. No hace falta un equipo local ni una sandbox permanente.
 
-La vista previa nativa ofrece herramientas de Minddy controladas mediante MCP. Las herramientas integradas nativas del proveedor, las imágenes de entrada y los subagentes no están disponibles en estos adaptadores. Numo lee las capacidades del adaptador elegido y recibe las capacidades fijadas del agente junto con su resultado. Resuelve las preguntas del agente con contexto fiable de la conversación o te pregunta si falta una decisión. Numo puede usar sus propias herramientas compatibles dentro de tu autorización; no inventa operaciones que el motor no admite.
+El selector y las filas de conexión muestran el nombre y el logotipo de cada agente de código. Las conversaciones de agentes nativos muestran el motor guardado y los valores gestionados por el CLI, sin controles de modelo o razonamiento de la API de OpenCode ni imágenes adjuntas. Las conversaciones de OpenCode conservan sus controles de modelo y razonamiento de la API.
+
+Antes de delegar, Numo recibe la selección actual de la cuenta y las capacidades del adaptador elegido. Una vez iniciado el agente, su motor y sus capacidades guardados tienen prioridad para esa ejecución, incluso después de cambiar los ajustes de la cuenta. Numo nombra ese agente al explicar el trabajo delegado. Si no puede leer la selección de la cuenta, consulta los ajustes en lugar de adivinarla.
+
+La vista previa nativa ofrece herramientas de Minddy controladas mediante MCP. Las herramientas integradas nativas del proveedor, las imágenes de entrada y los subagentes no están disponibles en estos adaptadores. Resuelve las preguntas del agente con contexto fiable de la conversación o te pregunta si falta una decisión. Numo puede usar sus propias herramientas compatibles dentro de tu autorización; no inventa operaciones que el motor no admite.
 
 Una conexión ausente, un acceso caducado o un límite del proveedor detiene el trabajo nativo. Minddy no cambia automáticamente a OpenCode, a otro proveedor API ni a otro pagador. Vuelve a conectar la cuenta seleccionada o elige **OpenCode** expresamente. Desconectar o perder acceso a la vista previa conserva la elección guardada hasta que la cambies. Los agentes existentes mantienen el motor elegido al iniciarse.
 

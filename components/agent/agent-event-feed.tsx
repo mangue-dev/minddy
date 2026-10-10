@@ -18,7 +18,8 @@ import { WorkEvents } from "@/components/assistant/work-events";
 import { workEventsRevealKey, type WorkEvent } from "@/lib/work-event-groups";
 import { liveSecretRevealKey } from "@/components/assistant/secret-callout";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { NumoIcon } from "@/components/numo-icon";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { agentEngineDisplay } from "@/lib/agent-engine-display";
 import { ChangedFilesBlock } from "./changed-files-block";
 import { ReasoningBlock } from "./reasoning-block";
 import { SubagentBlock } from "./subagent-block";
@@ -1084,7 +1085,10 @@ export function AgentEventFeed({
   liveDiffFiles,
   hiddenQuestionEventId,
   localExec = false,
+  engine,
 }: {
+  /** Frozen worker identity; Numo's own conversation does not use this feed. */
+  engine?: unknown;
   /**
    * Session to follow, or `null` when it does not YET exist: the POST of
    * launch is in flight. The thread then has nothing to query and just
@@ -1426,8 +1430,8 @@ export function AgentEventFeed({
  is therefore displayed exactly where the work will be written, and the succession does not move anything. */}
         {startingSandbox || workingSilently ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <NumoIcon
-              state="thinking"
+            <McpAgentLogo
+              agent={agentEngineDisplay(engine).logo}
               className="size-4 shrink-0 text-muted-foreground"
             />
             <span className="text-shimmer">

@@ -162,7 +162,7 @@ function metaString(meta: Record<string, unknown>, key: string): string {
  * default" to someone who does, and making a valid but false state is
  * worse than failing.
  */
-async function readAgentPrefs(
+export async function readAccountAgentPreferences(
   userId: string
 ): Promise<{ ok: true; prefs: AgentPrefs } | { ok: false; error: string }> {
   const service = getServiceClient();
@@ -266,7 +266,7 @@ export async function getAccountSettings({
   const service = getServiceClient();
   const [{ data, error }, agent] = await Promise.all([
     service.auth.admin.getUserById(userId),
-    readAgentPrefs(userId),
+    readAccountAgentPreferences(userId),
   ]);
   if (error || !data.user) {
     return { ok: false, error: error?.message ?? "Account not found." };

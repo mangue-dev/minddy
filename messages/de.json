@@ -2573,6 +2573,10 @@
     "mfaGenericError": "Der Code konnte nicht überprüft werden. Versuchen Sie es erneut."
   },
   "Agent": {
+    "nativeHarnessInputHint": "Senden Sie Bilder an Numo. {agent} erhält in dieser Vorschau keine Bildanhänge.",
+    "engineLegacyLabel": "Code-Agent",
+    "nativeHarnessDefault": "Von {agent} gewähltes Standardmodell",
+    "nativeHarnessControls": "Modell und Denkstufe werden von {agent} verwaltet.",
     "sectionTitle": "Numo",
     "menuLaunch": "Numo übergeben",
     "dialogTitle": "Arbeit Numo übergeben",

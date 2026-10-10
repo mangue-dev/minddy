@@ -45,6 +45,7 @@ import {
 } from "@/lib/server/assistant/tools";
 import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
 import { workerHarnessContext } from "@/lib/server/assistant/worker-harness-context";
+import { buildAccountWorkerContext } from "@/lib/server/assistant/account-worker-context";
 import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-mediation";
 import {
   AmbiguousToolExecutionError,
@@ -585,6 +586,7 @@ async function buildExecutionInput(input: {
   } else {
     systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
   }
+  if (!intent.documentation) systemPrompt += await buildAccountWorkerContext(turn.user_id);
   if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
   if (intent.automation) {
     const operation = intent.automation;
@@ -604,7 +606,7 @@ async function buildExecutionInput(input: {
     systemPrompt += `\n## Routine occurrence
 - This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
 - Complete the routine instruction as a Numo conversation. Use Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work that does not require a repository.
-- Delegate with launch_code_agent only when repository inspection or code changes are actually necessary. The worker uses the owner's current Account code model; never ask for or choose a routine-specific worker model.
+- Delegate with launch_code_agent only when repository inspection or code changes are actually necessary. The worker uses the owner's selected Account engine and its API or connected subscription defaults; never ask for or choose a routine-specific worker engine or model.
 - If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.
 - When the instruction requests a pull request, set requires_pull_request: true and authorize manage_pull_request in the worker brief. Treat missing PR artifacts or partial worker results as incomplete delivery; finish the work or explain the concrete failure in the occurrence result.
 - A delegated worker result is intermediate. Interpret it and finish the occurrence in this conversation.`;

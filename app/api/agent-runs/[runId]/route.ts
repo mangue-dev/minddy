@@ -43,6 +43,7 @@ function sanitizeRun(run: AgentRun) {
     status: run.status,
     resumable: agentRunCanResume(run),
     model: run.model,
+    agent_engine: run.agent_engine,
     model_forced: run.model_forced,
     reasoning_level: run.reasoning_level,
     key_mode: run.key_mode,

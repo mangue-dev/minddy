@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -59,13 +59,16 @@
       "components/settings/native-agent-connections.test.tsx",
       "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md",
       "app/api/account/agent-preferences/route.ts",
-      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md"
+      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
+      "components/agent/agent-engine-badge.tsx",
+      "lib/server/assistant/account-worker-context.ts",
+      "content/documentation/reviews/min-676-native-identity-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "revision": 10,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed)",
     "date": "2026-10-10"
   },
   "related": [
@@ -87,7 +90,7 @@
       "src": "/documentation/en/ai-keys-and-models-workflow.png",
       "alt": "AI provider card with minddy Cloud selected.",
       "caption": "The selected Cloud provider uses the account plan. Personal providers are configured in this selector.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -104,7 +107,7 @@
       "src": "/documentation/en/ai-keys-and-models-defaults-workflow.png",
       "alt": "Code model and reasoning defaults.",
       "caption": "OpenCode model and reasoning defaults. New OpenCode workers use these defaults; running workers retain their frozen settings.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -121,7 +124,7 @@
       "src": "/documentation/en/plans-and-ai-usage-workflow.png",
       "alt": "AI usage page for the demonstration account.",
       "caption": "AI usage page for the demonstration account. The current budget, usage categories and history are read from the account; no purchase or paid run was triggered.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -159,7 +162,11 @@ After connection, **Test new sandboxes** checks native access and Minddy tools i
 
 After connecting, select **Codex** or **Claude Code** in **Code agent**. Numo uses this choice for new repository workers, including issue implementation, planning, verification and work requested in a conversation or routine. The native CLI selects its own model and reasoning; OpenCode API model defaults do not apply. Workers run in hosted server sandboxes and receive Minddy tools. No local machine or persistent sandbox is required.
 
-The native preview exposes guarded Minddy tools through MCP. Provider-native built-in tools, image input and subagents are unavailable in these adapters. Numo reads the selected adapter capabilities and receives the frozen worker capabilities with its result. It mediates worker questions using reliable conversation context, or asks you when a decision is missing. Numo can use its own supported tools within your authorization; it does not invent unsupported harness operations.
+The selector and connection rows show each coding agent’s name and logo. Native worker conversations show the saved engine and CLI-managed defaults, without OpenCode API model or reasoning controls or image attachments. OpenCode conversations retain their API model and reasoning controls.
+
+Before delegation, Numo receives the current account selection and the selected adapter’s capabilities. Once a worker is launched, its saved engine and capabilities take precedence for that run, including after account settings change. Numo names that worker when explaining delegated work. If account selection cannot be read, it checks the settings rather than guessing.
+
+The native preview exposes guarded Minddy tools through MCP. Provider-native built-in tools, image input and subagents are unavailable in these adapters. It mediates worker questions using reliable conversation context, or asks you when a decision is missing. Numo can use its own supported tools within your authorization; it does not invent unsupported harness operations.
 
 A missing connection, expired access or provider limit stops native work. Minddy does not switch to OpenCode, another API provider or another payer automatically. Reconnect the selected account, or choose **OpenCode** explicitly. Disconnecting or losing preview access keeps the saved choice visible until you change it. Existing workers retain the engine selected when they started.
 

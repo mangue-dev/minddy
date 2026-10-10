@@ -2573,6 +2573,10 @@
     "mfaGenericError": "Não foi possível verificar o código. Tente novamente."
   },
   "Agent": {
+    "nativeHarnessInputHint": "Envie imagens ao Numo; {agent} não recebe imagens anexadas nesta prévia.",
+    "engineLegacyLabel": "Agente de código",
+    "nativeHarnessDefault": "Modelo padrão escolhido por {agent}",
+    "nativeHarnessControls": "O modelo e o raciocínio são gerenciados por {agent}.",
     "sectionTitle": "Numo",
     "menuLaunch": "Confiar ao Numo",
     "dialogTitle": "Confiar o trabalho ao Numo",

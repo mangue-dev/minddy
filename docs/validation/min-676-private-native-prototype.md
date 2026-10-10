@@ -229,3 +229,46 @@ in `min-676-harness-interface-probes.md`. Do not mark live Codex or Claude resul
 passed until those steps actually run. Public rollout remains separate from this private implementation. Full hosted
 Numo acceptance, both harnesses' paid execution and real renewal must be recorded
 individually; synthetic tests or successful connection alone do not establish them.
+
+## Codex ordinary-use readiness
+
+The private owner can select the connected Codex account and launch hosted code
+work from Minddy. The accepted UI-to-PR run proves encrypted cold restoration,
+guarded Minddy MCP calls, a pushed tested change and full allocation deletion.
+It required retries after infrastructure fixes; it does not establish reliable
+first-attempt delivery across every Numo model and entry point.
+
+Code-worker identity comes from the run's frozen `agent_engine`, not its model
+string or today's account preference. Settings reuse the existing MCP brand
+marks. Worker cards, detail headers and conversation controls identify the
+actual harness. Native controls describe CLI-selected defaults instead of API
+model/reasoning pickers; native image input remains unavailable and is mediated
+through Numo. Numo receives a safe account selection snapshot at prompt startup,
+then uses authoritative frozen launch and handoff capabilities for existing work.
+No credentials or connection identifiers enter that snapshot.
+
+Before treating this as ordinary hosted Codex delivery, complete these steps:
+
+1. Run a fresh issue-to-PR acceptance without manual retries on the corrected
+   worker. Exercise planning, verification and conversation/routine entry
+   points, follow-up on a saved branch, worker questions, stop and explicit
+   reconnect. Investigate the observed Numo responses that printed a tool-call
+   representation instead of executing the follow-up; a claimed relaunch is not
+   delivery evidence.
+2. Observe real provider-native credential renewal, encrypted write-back and
+   cold reuse after expiry, along with provider revocation and disconnect during
+   active work. Current generation/revision and lease tests cover fencing;
+   successful reuse of a still-valid profile does not prove renewal.
+3. Replace the temporary Quick Tunnel and development process with the intended
+   hosted application's stable HTTPS origin, then validate the same OIDC
+   audience, tenant admission, cleanup and recovery there. Apply the reviewed
+   migrations and encryption configuration only during an authorized rollout.
+   This pilot continues to use Docker locally and does not migrate remote data.
+4. Resolve the documented public multi-user credential-custody release boundary
+   and review the operational key rotation, backup recovery and erasure evidence
+   before expanding the server allowlist. Do not remove the private gate merely
+   because one owner pilot works.
+
+Paid Claude execution is a separate, explicitly untested acceptance path. It
+does not block Codex-specific private validation and must not be presented as a
+validated provider when broader access is considered.

@@ -11,6 +11,9 @@ const api = vi.hoisted(() => ({
   cancelNativeLogin: vi.fn(), submitNativeLoginCode: vi.fn(),
   disconnectNativeConnection: vi.fn(), testNativeConnection: vi.fn(),
 }));
+vi.mock("@/components/mcp-agent-logo", () => ({
+  McpAgentLogo: () => null,
+}));
 vi.mock("@/lib/native-agent-prototype-api", async (original) => ({
   ...await original<typeof import("@/lib/native-agent-prototype-api")>(), ...api,
 }));

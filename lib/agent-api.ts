@@ -23,6 +23,7 @@ import type { AssistantMention } from "./assistant-types";
 import type { ResourceInput } from "./types";
 import type { PullRequestReadiness } from "./pr-readiness";
 import type { AgentDelegationResult } from "./server/agent/agent-contract";
+import type { AgentEngine } from "./agent-engines";
 
 /**
  * Code agent client fetchers (MIN-46): launch a run on an issue and
@@ -90,6 +91,8 @@ export type AgentRunStatus =
 
 export interface AgentRunSummary {
   id: string;
+  /** Frozen harness identity; absent on responses from older application versions. */
+  agent_engine?: AgentEngine | null;
   status: AgentRunStatus;
   /**
    * Short conversation title written by the titler at launch
@@ -1328,6 +1331,8 @@ export interface AgentSessionListItem {
   conversationId: string;
   /** Current execution, used by the control plan. */
   runId: string;
+  /** Frozen harness identity, independent of the account's current default. */
+  agent_engine?: AgentEngine | null;
   status: AgentRunStatus;
   model: string | null;
   triggered_by: "button" | "chat" | "mention";

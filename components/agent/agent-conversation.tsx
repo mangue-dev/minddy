@@ -43,6 +43,9 @@ import {
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { ModelBadge } from "@/components/model-badge";
+import { AgentEngineBadge } from "./agent-engine-badge";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { agentEngineDisplay } from "@/lib/agent-engine-display";
 import { ModelCombobox } from "./model-combobox";
 import { ReasoningCombobox } from "./reasoning-combobox";
 import { useAgentRunLocalDiff } from "@/lib/use-agent-run-live";
@@ -651,7 +654,10 @@ export function AgentConversation({
         <AppContentHeader contentClassName="gap-2">
           {headerTitle ??
             (liveRun ? (
-              <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
+              <span className="flex min-w-0 items-center gap-2">
+                <AgentEngineBadge engine={liveRun.agent_engine} />
+                {!isNativeAgentEngine(liveRun.agent_engine) && <ModelBadge model={liveRun.model} className="min-w-0 shrink" />}
+              </span>
             ) : (
               <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
                 <NumoIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -678,6 +684,7 @@ export function AgentConversation({
           {phase === "live" && liveRun ? (
             <AgentEventFeed
               runId={liveRun.id}
+              engine={liveRun.agent_engine}
               status={liveRun.status}
               stopping={stopping}
               prompt={liveRun.prompt}
@@ -757,6 +764,7 @@ export function AgentConversation({
                   ) : null}
                   <ChatInput
                     key={liveRun.id}
+                    hideAttach={isNativeAgentEngine(liveRun.agent_engine)}
                     onSend={(message, attachments, mentions) =>
                       void sendLive(message, attachments, mentions)
                     }
@@ -791,7 +799,10 @@ export function AgentConversation({
                             : t("pastRunPlaceholder")
                     }
                     leadingControls={
-                      <>
+                      isNativeAgentEngine(liveRun.agent_engine) ? <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
+                        <AgentEngineBadge engine={liveRun.agent_engine} />
+                        <span className="text-xs text-muted-foreground">{t("nativeHarnessDefault", { agent: agentEngineDisplay(liveRun.agent_engine).name! })}</span>
+                      </span> : <>
                         {/* Fixed model for the session: locked picker + tooltip. */}
                         <ModelCombobox
                           variant="compact"
@@ -818,6 +829,9 @@ export function AgentConversation({
                       </>
                     }
                   />
+                  {isNativeAgentEngine(liveRun.agent_engine) && <p className="px-3 pb-2 text-xs text-muted-foreground">
+                    {t("nativeHarnessInputHint", { agent: agentEngineDisplay(liveRun.agent_engine).name! })}
+                  </p>}
                 </div>
               ) : null}
             </div>

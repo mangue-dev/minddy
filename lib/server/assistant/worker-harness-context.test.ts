@@ -9,7 +9,12 @@ it("uses the frozen harness and excludes credential-shaped input fields", () => 
     questions: "numo_mediation", minddyTools: true, nativeBuiltinTools: false,
     imageInput: false, subagents: false,
   } });
+  expect(result.engine_name).toBe("Codex");
   expect(JSON.stringify(result)).not.toContain("secret-profile");
+});
+
+it.each([["opencode", "OpenCode"], ["claude_code", "Claude Code"]])("names the frozen %s worker clearly", (engine, name) => {
+  expect(workerHarnessContext({ agent_engine: engine }).engine_name).toBe(name);
 });
 
 it.each(["loop", "future_engine", undefined])("does not assume current adapter support for unavailable %s workers", (engine) => {

@@ -463,3 +463,53 @@ temporary HTTPS bridge remain available for the private account. No production
 deployment or linked remote database migration was performed. Paid Claude
 execution, long-lived renewal/revocation and public credential custody remain
 unvalidated boundaries.
+
+## Frozen harness identity and Numo context (2026-10-10)
+
+Before this follow-up, PR #404 head
+`4650e2575e44eba28187424fa2afc1a294b4c687` passed its complete GitHub CI,
+edition builds, both unit-test shards, dependency audit, DCO and CodeQL checks.
+No failure from that accepted head remained to repair.
+
+The account settings reuse the existing MCP Codex and Claude Code brand marks.
+Run detail, issue-run and session-list responses expose only the frozen engine
+identifier, alongside their existing safe metadata. Worker cards, their detail
+headers, conversation controls and startup activity use that identity rather
+than an API provider label or the account's current selection. Unknown and
+historical engine identities remain generic. Native workers show CLI-selected
+defaults instead of API model and reasoning controls. Unsupported direct native
+attachments are hidden; image requests are mediated through Numo.
+
+The existing completed Codex worker was inspected in the actual Docker-backed
+Minddy UI. Its header showed the Codex logo and name, its unchanged successful
+summary and the real fixture PR. Settings showed the Codex default and connected
+state, with Claude Code visible and not connected. No provider login, Claude
+execution or extra worker inference was performed for this identity inspection.
+
+![Account settings showing the existing Codex and Claude Code brand marks, Codex selected and connected](assets/min-676-native-identity-settings.png)
+
+![Existing completed worker displaying its frozen Codex identity and delivered fixture PR](assets/min-676-codex-identity-detail.png)
+
+Numo now receives a bounded safe account-worker selection snapshot when an
+ordinary turn begins. It contains engine, native eligibility and connection
+status, tested adapter capabilities and API model defaults only for OpenCode.
+It excludes profile contents, connection identifiers and other personal account
+fields. Launch, continuation and validated handoff context name the actual frozen
+engine, which takes precedence over later account changes. Failed preference
+reads leave selection unknown; they neither invent an engine nor stop unrelated
+Numo work. Routine instructions distinguish API from native subscription defaults.
+
+Ordinary hosted Codex readiness is tracked in
+[the private prototype runbook](min-676-private-native-prototype.md#codex-ordinary-use-readiness).
+This UI adaptation does not remove the server allowlist, make the temporary
+control-plane host permanent, establish long-lived credential renewal or prove
+first-attempt delivery after the preceding retries. Paid Claude execution stays
+explicitly untested.
+
+This follow-up passed 140 focused tests covering worker metadata/privacy,
+identity rendering, native settings, stop controls, safe account context and
+durable Numo delegation. Typecheck, lint, the VM bundle build, encrypted column
+access, documentation (including release coverage), knowledge, owned-English
+and whitespace checks also passed. The three affected public guides were
+updated and reviewed in all six locales; their existing operational evidence
+and provider acceptance boundaries remain explicit.

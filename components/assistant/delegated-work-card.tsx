@@ -17,7 +17,10 @@ import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SideP
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
 import { AppIcon } from "@/components/icon";
 import { ModelLogo } from "@/components/model-logo";
-import { NumoIcon } from "@/components/numo-icon";
+import { AgentEngineBadge } from "@/components/agent/agent-engine-badge";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { agentEngineDisplay } from "@/lib/agent-engine-display";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   interruptAgentRunApi,
@@ -243,11 +246,12 @@ function DelegatedWorkMeta({
           {elapsedLabel(t, now.getTime() - Date.parse(run.started_at ?? run.created_at))}
         </span>
       ) : null}
-      <NumoModelLine
+      {run ? <AgentEngineBadge engine={run.agent_engine} size={13} /> : null}
+      {!isNativeAgentEngine(run?.agent_engine) ? <NumoModelLine
         model={run?.model}
         reasoningLevel={run?.reasoning_level}
         label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
-      />
+      /> : null}
       {changedFileCount > 0 ? (
         <span>{t("filesChanged", { count: changedFileCount })}</span>
       ) : null}
@@ -416,7 +420,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             disabled={!runId}
             onClick={() => setDetailsOpen(true)}
           >
-            <NumoIcon animated={false} className="size-4" />
+            <McpAgentLogo agent={agentEngineDisplay(run?.agent_engine).logo} className="size-4" />
             {t("delegatedWorkView")}
           </Button>
         </div>
@@ -519,6 +523,7 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
               stays pinned at the bottom of the panel, under the thread. */}
               <AgentEventFeed
                 runId={runId}
+                engine={run?.agent_engine}
                 status={run?.status ?? "queued"}
                 prompt={run?.prompt}
                 promptMentions={run?.prompt_mentions}

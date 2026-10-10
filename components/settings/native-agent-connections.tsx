@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "mangue-ui";
 
 import { SettingsGroup, SettingsRow } from "./settings-ui";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { agentEngineDisplay } from "@/lib/agent-engine-display";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import {
   cancelNativeLogin,
@@ -27,6 +29,14 @@ import type { AccountAgentEngine } from "@/lib/agent-keys-api";
 
 type NativeEngine = NativeConnectionMetadata["engine"];
 type NativeErrorMessage = "error" | `error_${NativeRequestErrorCode}`;
+
+function EngineLabel({ engine }: { engine: AccountAgentEngine }) {
+  const identity = agentEngineDisplay(engine);
+  return <span className="inline-flex items-center gap-2">
+    <McpAgentLogo agent={identity.logo} size={16} />
+    <span>{identity.name}</span>
+  </span>;
+}
 
 function nativeErrorMessage(value: unknown): NativeErrorMessage {
   const code = safeNativeErrorCode(value);
@@ -123,9 +133,9 @@ export function NativeAgentConnections({
           onValueChange={(value) => void selectEngine(value)}>
           <SelectTrigger className="w-56" aria-label={t("engineTitle")}><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="opencode">OpenCode</SelectItem>
-            <SelectItem value="codex" disabled={!ready("codex")}>Codex</SelectItem>
-            <SelectItem value="claude_code" disabled={!ready("claude_code")}>Claude Code</SelectItem>
+            <SelectItem value="opencode"><EngineLabel engine="opencode" /></SelectItem>
+            <SelectItem value="codex" disabled={!ready("codex")}><EngineLabel engine="codex" /></SelectItem>
+            <SelectItem value="claude_code" disabled={!ready("claude_code")}><EngineLabel engine="claude_code" /></SelectItem>
           </SelectContent>
         </Select>}
       >
@@ -281,7 +291,7 @@ function NativeConnectionRow({ engine, connection, refresh }: {
 
   return (
     <SettingsRow
-      label={name}
+      label={<EngineLabel engine={engine} />}
       hint={t(engine === "codex" ? "codexHint" : "claudeHint")}
       control={
         <div className="flex flex-wrap items-center gap-2">
