@@ -552,7 +552,10 @@ export async function downloadPageExportApi(
 ): Promise<void> {
   trackEvent("page_exported", { format: branch ? "zip" : "md" });
   const response = await fetchClientRead(
-    `/api/projects/${projectId}/pages/${pageId}/export${branch ? "?scope=branch" : ""}`
+    `/api/projects/${projectId}/pages/${pageId}/export${branch ? "?scope=branch" : ""}`,
+    undefined,
+    // Complete archive generation and attachment transfer can exceed normal reads.
+    { timeoutMs: null },
   );
   await ok(response, "Request failed");
   const blob = await response.blob();

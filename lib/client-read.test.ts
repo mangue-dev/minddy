@@ -3,7 +3,7 @@ import { CLIENT_READ_TIMEOUT_MS, fetchClientRead } from "./client-read";
 import { fetchIssuesApi } from "./issues-api";
 import { fetchGlobalBoardApi } from "./global-board-api";
 import { fetchProjectsApi } from "./projects-api";
-import { fetchPagesApi } from "./pages-api";
+import { downloadPageExportApi, fetchPagesApi } from "./pages-api";
 import { fetchAppTabs, createAppTab } from "./app-tabs-api";
 import { fetchPullRequestApi, ApiError } from "./agent-api";
 import { fetchBillingUsageApi } from "./billing-api";
@@ -19,9 +19,58 @@ beforeEach(() => {
   fetchMock.mockReset().mockImplementation(async () => Response.json({ ready: true }));
   vi.stubGlobal("fetch", fetchMock);
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("protected client reads", () => {
+  it("lets archive generation and body transfer exceed the normal read deadline", async () => {
+    let headers!: (response: Response) => void;
+    let body!: ReadableStreamDefaultController<Uint8Array>;
+    const stream = new ReadableStream<Uint8Array>({ start(controller) { body = controller; } });
+    fetchMock.mockImplementationOnce(() => new Promise(resolve => { headers = resolve; }));
+    const anchor = { href: "", download: "", click: vi.fn(), remove: vi.fn() };
+    vi.stubGlobal("document", { createElement: () => anchor, body: { appendChild: vi.fn() } });
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:archive");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const pending = downloadPageExportApi("project", "page", { branch: true });
+    await vi.advanceTimersByTimeAsync(CLIENT_READ_TIMEOUT_MS + 1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/projects/project/pages/page/export?scope=branch", expect.anything());
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(false);
+    headers(new Response(stream, { headers: { "Content-Disposition": "attachment; filename*=UTF-8''complete.zip" } }));
+    await vi.advanceTimersByTimeAsync(CLIENT_READ_TIMEOUT_MS + 1);
+    expect(anchor.click).not.toHaveBeenCalled();
+    body.enqueue(new TextEncoder().encode("complete archive"));
+    body.close();
+    await pending;
+    expect(anchor.download).toBe("complete.zip");
+    expect(anchor.click).toHaveBeenCalledOnce();
+    expect(auth.getSession).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("bounds archive session preparation and rejects an account switch after transfer", async () => {
+    auth.getSession.mockImplementationOnce(() => new Promise(() => {}));
+    const pending = fetchClientRead("/api/projects/project/pages/page/export", undefined, { timeoutMs: null });
+    const rejected = expect(pending).rejects.toMatchObject({ name: "TimeoutError" });
+    await vi.advanceTimersByTimeAsync(CLIENT_READ_TIMEOUT_MS);
+    await rejected;
+    expect(fetchMock).not.toHaveBeenCalled();
+    auth.getSession.mockResolvedValueOnce(session()).mockResolvedValueOnce(session("other"));
+    await expect(fetchClientRead("/api/projects/project/pages/page/export", undefined, { timeoutMs: null })).rejects.toThrow("account changed");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("cancels archive transport even after the normal read deadline", async () => {
+    fetchMock.mockImplementationOnce(() => new Promise(() => {}));
+    const caller = new AbortController();
+    const pending = fetchClientRead("/api/projects/project/pages/page/export", { signal: caller.signal }, { timeoutMs: null });
+    await vi.advanceTimersByTimeAsync(CLIENT_READ_TIMEOUT_MS + 1);
+    caller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it.each([
     ["project board", () => fetchIssuesApi("project")],
     ["global board", () => fetchGlobalBoardApi()],

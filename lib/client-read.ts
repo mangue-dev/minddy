@@ -16,22 +16,30 @@ export async function prepareClientSession(): Promise<string> {
   return data.session.user.id;
 }
 
-/** Bounded JSON/data reads only. Writes must never be automatically replayed. */
-export function fetchClientRead(path: string, init?: RequestInit): Promise<Response> {
+/** Protected reads only. Archive transfers may opt out of the read deadline. */
+export function fetchClientRead(
+  path: string,
+  init?: RequestInit,
+  { timeoutMs = CLIENT_READ_TIMEOUT_MS }: { timeoutMs?: number | null } = {},
+): Promise<Response> {
   if (!path.startsWith("/api/") || (init?.method ?? "GET").toUpperCase() !== "GET") {
     throw new Error("Client reads require a relative API path and GET method");
   }
   return withClientRequestDeadline(async (signal) => {
-    const owner = await prepareClientSession();
+    // Unbounded archive transfers still bound both session preparations.
+    const prepare = () => timeoutMs === null
+      ? withClientRequestDeadline(prepareClientSession, CLIENT_READ_TIMEOUT_MS, signal)
+      : prepareClientSession();
+    const owner = await prepare();
     signal.throwIfAborted();
     const response = await fetch(path, { ...init, signal });
     // Include body consumption in the deadline: headers alone do not finish a read.
     const body = await response.arrayBuffer();
     signal.throwIfAborted();
-    if (await prepareClientSession() !== owner) throw new Error("Local account changed");
+    if (await prepare() !== owner) throw new Error("Local account changed");
     signal.throwIfAborted();
     return new Response(response.status === 204 || response.status === 304 ? null : body, {
       status: response.status, statusText: response.statusText, headers: response.headers,
     });
-  }, CLIENT_READ_TIMEOUT_MS, init?.signal);
+  }, timeoutMs, init?.signal);
 }
