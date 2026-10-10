@@ -8,6 +8,7 @@ vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
 } }) }));
 import { createQueryStorage } from "./query-persistence";
 import { invalidateLocalSnapshotWrites, removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
+import { MAX_QUERY_SNAPSHOT_BYTES } from "./query-snapshot-budget";
 
 afterEach(() => { window.localStorage.clear(); vi.unstubAllGlobals(); });
 
@@ -20,6 +21,23 @@ it("never writes decrypted content to the durable query snapshot", async () => {
   try {
     await persistQueryClientSave({ queryClient: client, persister: createQueryStorage(window.localStorage, "minddy.query-cache") });
     expect(window.localStorage.getItem("minddy.query-cache")).not.toContain("PRIVATE_LOCAL_SENTINEL");
+  } finally { client.clear(); }
+});
+
+it("keeps oversized cache data in memory and leaves separately saved drafts untouched", async () => {
+  const client = new QueryClient();
+  const data = [{ title: "large", description: "x".repeat(MAX_QUERY_SNAPSHOT_BYTES) }];
+  client.setQueryData(["issues", "synthetic-project"], data);
+  window.localStorage.setItem("minddy.issue-drafts", "encrypted-draft");
+  window.localStorage.setItem("minddy.query-cache", "obsolete-snapshot");
+  const transport = vi.fn();
+  vi.stubGlobal("fetch", transport);
+  try {
+    await persistQueryClientSave({ queryClient: client, persister: createQueryStorage(window.localStorage, "minddy.query-cache") });
+    expect(transport).not.toHaveBeenCalled();
+    expect(client.getQueryData(["issues", "synthetic-project"])).toBe(data);
+    expect(window.localStorage.getItem("minddy.query-cache")).toBeNull();
+    expect(window.localStorage.getItem("minddy.issue-drafts")).toBe("encrypted-draft");
   } finally { client.clear(); }
 });
 
