@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (MIN-671)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,14 +38,15 @@
       "components/objective-momentum.tsx",
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
-      "lib/objective-momentum.ts"
+      "lib/objective-momentum.ts",
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
+    "language": "agent:/root (de changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "issues",
@@ -66,7 +67,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog mit einem Beispielnamen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,27 +76,10 @@
       ],
       "theme": "light",
       "padding": 24
-    },
-    {
-      "id": "objective-dependencies-and-momentum-steps",
-      "kind": "screenshot",
-      "src": "/documentation/de/reader-objective-momentum.png",
-      "alt": "Zieldynamik nach einem tatsächlich abgeschlossenen Demo-Ticket.",
-      "caption": "Lies die Dynamik zusammen mit der verknüpften Arbeit. Die verfügbare Historie reicht für ein geschätztes Abschlussdatum noch nicht aus.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        994,
-        1046
-      ],
-      "theme": "light",
-      "padding": 24
     }
   ],
   "requiredFigures": [
-    "objectives-steps",
-    "objective-dependencies-and-momentum-steps"
+    "objectives-steps"
   ]
 }
 ---
@@ -124,8 +108,8 @@ Eine blockierende Beziehung kann ein Problem oder ein anderes Ziel mit diesem Zi
 
 ### Das Momentum-Signal verstehen {#momentum}
 
+Der Bereich Dynamik erscheint nur, wenn das Ziel ein Zieldatum hat. Wenn du dieses Datum entfernst, werden der Bereich, sein Verlauf, die Tempoangaben und das geschätzte Abschlussdatum ausgeblendet. Füge ein Zieldatum hinzu, um ihn wieder anzuzeigen. Die allgemeine Fortschrittsanzeige bleibt auch ohne Zieldatum verfügbar.
+
 Momentum fasst kürzlich abgeschlossene Arbeit zusammen. Es kann beschleunigend, gleichmäßig, langsamer oder stockend sein; für noch nicht begonnene, abgeschlossene und abgebrochene Ziele gibt es eigene Zustände. Nutze es, um Ergebnisse mit Handlungsbedarf zu erkennen, und lies dann die zugrunde liegenden Probleme und Aktivitäten.
 
-Ein geschätztes Abschlussdatum setzt mindestens zwei Abschlüsse, eine volle beobachtete Woche, positiven gelieferten Aufwand und verbleibende Arbeit voraus. Nur aktuell zugeordnete Probleme zählen; ein Abschluss vor der Erstellung des Ziels erzeugt kein künstliches jüngstes Momentum. Bei einem gültigen Zieldatum reicht der Verlauf von der Erstellung bis zu diesem Datum. Der Durchsatz verwendet die beobachtete Zeit seit der Erstellung, einschließlich der Zeit nach einem verpassten Zieltermin. Ohne gültigen Zieltermin verwendet die Berechnung einen gleitenden Verlauf von acht Wochen und ein Vorhersagefenster von 28 Tagen. Wenig Verlauf oder eine kürzliche Änderung des Umfangs verringern den Nutzen. Die Schätzung ist kein zugesagter Termin und enthält keine noch nicht zugeordnete, unsichtbare Arbeit. Vergleiche Zieldatum, verbleibende Arbeit und tatsächliche Einschränkungen, bevor du Zusagen änderst.
-
-![Zieldynamik nach einem tatsächlich abgeschlossenen Demo-Ticket.](/documentation/de/reader-objective-momentum.png)
+Ein geschätztes Abschlussdatum setzt mindestens zwei Abschlüsse, eine volle beobachtete Woche, positiven gelieferten Aufwand und verbleibende Arbeit voraus. Nur aktuell zugeordnete Probleme zählen; ein Abschluss vor der Erstellung des Ziels erzeugt kein künstliches jüngstes Momentum. Bei einem gültigen Zieldatum reicht der Verlauf von der Erstellung bis zu diesem Datum. Der Durchsatz verwendet die beobachtete Zeit seit der Erstellung, einschließlich der Zeit nach einem verpassten Zieltermin. Wenn ein Zieldatum eingetragen ist, aber keinen gültigen Zeitraum nach der Erstellung definiert, verwendet die Berechnung einen gleitenden Verlauf von acht Wochen und ein Vorhersagefenster von 28 Tagen. Wenig Verlauf oder eine kürzliche Änderung des Umfangs verringern den Nutzen. Die Schätzung ist kein zugesagter Termin und enthält keine noch nicht zugeordnete, unsichtbare Arbeit. Vergleiche Zieldatum, verbleibende Arbeit und tatsächliche Einschränkungen, bevor du Zusagen änderst.

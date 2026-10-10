@@ -127,11 +127,41 @@ describe("objective momentum card", () => {
     expect(html).not.toContain("Objectives.momentum");
   });
 
-  it("retains rolling history without a target and suppresses canceled forecasts", () => {
-    const rolling = render({ ...objective, target_date: null });
-    expect(rolling).toContain("8 weeks ago");
-    expect(rolling).not.toContain('role="progressbar"');
+  it.each(["planned", "in_progress", "done", "canceled"] as const)(
+    "hides the entire momentum card for an undated %s objective",
+    (status) => {
+      expect(render({ ...objective, status, target_date: null })).toBe("");
+    },
+  );
 
+  it("updates the card when a target date is added, removed, and restored", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const undated = { ...objective, target_date: null };
+    const container = document.createElement("div");
+    document.body.append(container);
+    let root: Root | undefined;
+    try {
+      await act(() => {
+        root = hydrateRoot(container, card(undated));
+      });
+      expect(container.innerHTML).toBe("");
+
+      await act(() => root!.render(card(objective)));
+      expect(container.textContent).toContain("Momentum");
+      expect(container.textContent).toContain("Aug 5, 2026 → Sep 30, 2026");
+
+      await act(() => root!.render(card(undated)));
+      expect(container.innerHTML).toBe("");
+
+      await act(() => root!.render(card(objective)));
+      expect(container.textContent).toContain("Momentum");
+      expect(container.textContent).toContain("On track");
+    } finally {
+      await act(() => root?.unmount());
+    }
+  });
+
+  it("suppresses canceled forecasts for a dated objective", () => {
     const canceled = render({ ...objective, status: "canceled" });
     expect(canceled).toContain("This objective is canceled.");
     expect(canceled).not.toContain('role="progressbar"');

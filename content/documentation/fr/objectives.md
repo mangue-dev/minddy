@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (MIN-671)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,14 +38,15 @@
       "components/objective-momentum.tsx",
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
-      "lib/objective-momentum.ts"
+      "lib/objective-momentum.ts",
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
+    "language": "agent:/root (fr changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "issues",
@@ -66,7 +67,7 @@
       "src": "/documentation/fr/reader-objectives.png",
       "alt": "Dialogue de création d’objectif non envoyé avec un nom de résultat d’exemple.",
       "caption": "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,27 +76,10 @@
       ],
       "theme": "light",
       "padding": 24
-    },
-    {
-      "id": "objective-dependencies-and-momentum-steps",
-      "kind": "screenshot",
-      "src": "/documentation/fr/reader-objective-momentum.png",
-      "alt": "Élan d’un objectif après la clôture réelle d’un ticket de démonstration.",
-      "caption": "Consultez l’élan avec le travail associé. L’historique disponible ne suffit pas à afficher une date de fin estimée.",
-      "revision": 6,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        994,
-        1046
-      ],
-      "theme": "light",
-      "padding": 24
     }
   ],
   "requiredFigures": [
-    "objectives-steps",
-    "objective-dependencies-and-momentum-steps"
+    "objectives-steps"
   ]
 }
 ---
@@ -124,13 +108,13 @@ Une relation de blocage peut relier un ticket ou un autre objectif à cet object
 
 ### Interpréter le signal de dynamique {#momentum}
 
+Le panneau Élan apparaît uniquement si l’objectif a une date cible. Supprimer cette date masque le panneau, y compris l’historique, les statistiques de rythme et la date de fin estimée. Ajoutez une date cible pour le réafficher ; l’indicateur de progression globale reste disponible sans date cible.
+
 La dynamique résume le travail récemment terminé. Elle peut accélérer, rester stable, ralentir ou stagner, avec des états distincts pour les objectifs non démarrés, terminés et annulés. Utilisez ce signal pour repérer un résultat qui mérite votre attention, puis consultez tickets et activité.
 
 Une estimation de fin exige au moins deux réalisations, une semaine complète d’observation, un effort réalisé positif et du travail restant. Seuls les tickets actuellement associés contribuent ; les réalisations antérieures à la création de l’objectif ne comptent pas dans la dynamique récente.
 
 - Avec une date cible valide, l’historique va de la création à cette date. Le débit utilise le temps observé depuis la création, y compris après une échéance dépassée.
-- Sans date cible valide, le calcul utilise huit semaines d’historique glissant et une fenêtre de prévision de 28 jours.
+- Si une date cible est renseignée mais ne définit pas une période valide après la création, le calcul utilise huit semaines d’historique glissant et une fenêtre de prévision de 28 jours.
 
 Un historique limité ou un changement récent de périmètre rend l’estimation moins utile. Ce n’est pas une date promise, et elle exclut le travail non associé. Comparez la date cible, les tâches restantes et les contraintes réelles avant de changer vos engagements.
-
-![Élan d’un objectif après la clôture réelle d’un ticket de démonstration.](/documentation/fr/reader-objective-momentum.png)
