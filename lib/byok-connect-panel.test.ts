@@ -115,6 +115,7 @@ describe("ByokConnectPanel", () => {
               siteName: "minddy",
               contactEmail: "support@example.com",
               productFeedbackIntegrationEnabled: false,
+              documentationFeedbackIntegrationEnabled: false,
               productFeedbackUrl: null,
               posthog: {
                 key: null,

@@ -6,6 +6,7 @@ export interface PublicRuntimeConfig {
   siteName: string;
   contactEmail: string;
   productFeedbackIntegrationEnabled: boolean;
+  documentationFeedbackIntegrationEnabled: boolean;
   productFeedbackUrl: string | null;
   posthog: {
     key: string | null;

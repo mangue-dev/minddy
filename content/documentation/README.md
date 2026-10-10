@@ -146,7 +146,10 @@ Operators rehearse installation, backup, update and blank-target restore for
 each supported profile, checking Auth, encrypted content, Storage bytes and
 scheduled work. Preserve the actual sanitized outcomes and failed checks.
 
-Readers report errors from each article using its ID, locale and revision.
-Reports must not include keys, account data or private object URLs. Reproduce
+Readers sign in to report errors through the shared product feedback dialog.
+The server appends the public article ID, locale, revision and canonical URL
+after submission. A separate feedback integration configured through
+`MINDDY_DOCUMENTATION_FEEDBACK_KEY` assigns the Documentation objective.
+Readers must not enter keys, private account content or private object URLs. Reproduce
 the report, correct the source, update every affected locale and rerun the
 checks before publishing the revised set.

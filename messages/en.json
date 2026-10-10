@@ -6504,6 +6504,7 @@
     "nextArticle": "Next article",
     "articleNavigation": "Article navigation",
     "report": "Report an error",
+    "reportUnavailable": "Error reporting is unavailable on this instance.",
     "reviewed": "Last reviewed",
     "compatibility": "Compatibility",
     "language": "Language",

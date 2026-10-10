@@ -7,6 +7,8 @@ import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Input, Textarea, toast } from "mangue-ui";
 import { FormDialog } from "@/components/form-dialog";
+import type { DocumentationFeedbackContext } from "@/lib/documentation-feedback";
+import { DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX } from "@/lib/documentation-feedback";
 import {
   FEEDBACK_BODY_MAX,
   FEEDBACK_TITLE_MAX,
@@ -15,9 +17,13 @@ import {
 export function ProductFeedbackDialog({
   open,
   onOpenChange,
+  source = "product",
+  documentationContext,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  source?: "product" | "documentation";
+  documentationContext?: DocumentationFeedbackContext;
 }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Common");
@@ -51,7 +57,7 @@ export function ProductFeedbackDialog({
       const response = await fetch("/api/product-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ title, description, source, documentationContext }),
       });
       if (!response.ok) {
         toast.error(
@@ -124,7 +130,7 @@ export function ProductFeedbackDialog({
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder={t("feedbackDescriptionPlaceholder")}
-          maxLength={FEEDBACK_BODY_MAX}
+          maxLength={source === "documentation" ? DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX : FEEDBACK_BODY_MAX}
           disabled={submitting}
           rows={6}
         />

@@ -6504,6 +6504,7 @@
     "nextArticle": "Article suivant",
     "articleNavigation": "Navigation entre les articles",
     "report": "Signaler une erreur",
+    "reportUnavailable": "Le signalement d’erreurs est indisponible sur cette instance.",
     "reviewed": "Dernière relecture",
     "compatibility": "Compatibilité",
     "language": "Langue",

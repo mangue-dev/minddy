@@ -76,6 +76,7 @@ export function resolveRuntimeConfig(env: RuntimeConfigEnvironment): RuntimeConf
       siteName,
       contactEmail,
       productFeedbackIntegrationEnabled: !!env.MINDDY_FEEDBACK_KEY?.trim(),
+      documentationFeedbackIntegrationEnabled: !!env.MINDDY_DOCUMENTATION_FEEDBACK_KEY?.trim(),
       productFeedbackUrl: optionalUrl(
         env.MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL,
         "MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL",

@@ -6504,6 +6504,7 @@
     "nextArticle": "Artículo siguiente",
     "articleNavigation": "Navegación entre artículos",
     "report": "Informar de un error",
+    "reportUnavailable": "No se pueden informar errores en esta instancia.",
     "reviewed": "Última revisión",
     "compatibility": "Compatibilidad",
     "language": "Idioma",

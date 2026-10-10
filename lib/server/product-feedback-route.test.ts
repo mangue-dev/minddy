@@ -27,6 +27,7 @@ beforeEach(() => {
   process.env.MINDDY_PUBLIC_SUPABASE_URL = "https://database.example.test";
   process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
   process.env.MINDDY_FEEDBACK_KEY = "mdy_feedback-secret";
+  process.env.MINDDY_DOCUMENTATION_FEEDBACK_KEY = "mdy_documentation-secret";
   H.getAuthedUser.mockReset();
   H.getAuthedUser.mockResolvedValue({
     ok: true,
@@ -46,6 +47,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.MINDDY_FEEDBACK_KEY;
+  delete process.env.MINDDY_DOCUMENTATION_FEEDBACK_KEY;
 });
 
 describe("POST /api/product-feedback", () => {
@@ -122,5 +124,51 @@ describe("POST /api/product-feedback", () => {
 
     expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("42");
+  });
+});
+
+
+describe("documentation error reports", () => {
+  const report = {
+    source: "documentation",
+    title: "The instructions are unclear",
+    description: "The final step needs more detail.",
+    documentationContext: { articleId: "issues", locale: "fr" },
+  };
+
+  it("adds authoritative article context after the user's text using the dedicated integration", async () => {
+    const { getDocumentationArticle } = await import("@/lib/server/documentation");
+    const article = getDocumentationArticle("issues", "fr")!;
+    const response = await POST(request({ ...report, objective_id: "untrusted-objective" }) as never);
+    expect(response.status).toBe(201);
+    const options = vi.mocked(fetch).mock.calls[0]![1]!;
+    expect(options.headers).toMatchObject({ Authorization: "Bearer mdy_documentation-secret" });
+    const forwarded = JSON.parse(String(options.body));
+    expect(forwarded.body).toBe(`${report.description}\n\n---\nArticle: issues\nLocale: fr\nRevision: ${article.revision}\nURL: https://app.example.test/fr/documentation/issues`);
+    expect(forwarded).not.toHaveProperty("objective_id");
+    expect(forwarded.user.external_id).toBe("user-1");
+  });
+
+  it("requires authentication before processing a report", async () => {
+    H.getAuthedUser.mockResolvedValueOnce({ ok: false, response: new Response(null, { status: 401 }) });
+    expect((await POST(request(report) as never)).status).toBe(401);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("never falls back to the general integration when documentation reporting is disabled", async () => {
+    delete process.env.MINDDY_DOCUMENTATION_FEEDBACK_KEY;
+    expect((await POST(request(report) as never)).status).toBe(503);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { source: "other" },
+    { documentationContext: null },
+    { documentationContext: { articleId: "issues", locale: "unknown" } },
+    { documentationContext: { articleId: "../private", locale: "en" } },
+    { description: "X".repeat(10_000) },
+  ])("rejects unsupported context or oversized reports: %j", async invalid => {
+    expect((await POST(request({ ...report, ...invalid }) as never)).status).toBe(422);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
