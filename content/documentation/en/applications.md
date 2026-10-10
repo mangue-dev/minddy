@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-651 recovery delta; prior evidence retained)",
+    "version": "0.11.1 candidate (MIN-651 memory/stall recovery delta; prior evidence retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,13 +56,19 @@
       "lib/query-persistence.ts",
       "lib/desktop/renderer-recovery.ts",
       "desktop/src/main.ts",
-      "content/documentation/reviews/min-651-renderer-recovery-2026-10-10.json"
+      "content/documentation/reviews/min-651-renderer-recovery-2026-10-10.json",
+      "lib/query-retention.ts",
+      "lib/pull-request-tab-labels.ts",
+      "lib/desktop/window-stall-recovery.ts",
+      "content/documentation/reviews/min-651-stall-recovery-2026-10-10.json",
+      "lib/desktop/local-recovery-load.ts",
+      "scripts/desktop-renderer-hang.integration.mjs"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text)",
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions)",
     "date": "2026-10-10"
   },
   "related": [
@@ -88,7 +94,7 @@
       "src": "/documentation/en/web-and-mobile-workflow.png",
       "alt": "Mobile issue panel with localized title, description, properties and comment composer.",
       "caption": "On a narrow screen, issue details occupy a responsive panel. Use the close button to return to the project; Numo remains reachable through its floating button.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -105,7 +111,7 @@
       "src": "/documentation/en/install-the-pwa-workflow.png",
       "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
       "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -122,7 +128,7 @@
       "src": "/documentation/en/desktop-app-workflow.png",
       "alt": "Desktop settings in the real macOS Electron development app, version 0.11.1, connected to the local server with an isolated profile.",
       "caption": "Desktop settings in the real macOS Electron development app, version 0.11.1, connected to the local server with an isolated profile. This capture does not validate signed releases or other operating systems.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +144,7 @@
       "src": "/documentation/en/devices-and-notifications-workflow.png",
       "alt": "Push settings showing browser permission blocked and no registered device.",
       "caption": "This browser blocks notifications. Restore site permission before trying to register this device.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -155,7 +161,7 @@
       "src": "/documentation/en/devices-and-notifications-registered.png",
       "alt": "An active browser push device registered to the account, with its actual last-send date.",
       "caption": "The account has an active registered browser device. The list shows its registration and last-send dates. Browser permission and operating-system settings still determine whether a banner appears.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -171,7 +177,7 @@
       "src": "/documentation/en/desktop-renderer-recovery.png",
       "alt": "Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.",
       "caption": "Recovery page in the macOS development app with an isolated profile and demonstration server. The native shell uses English labels in every language.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -242,7 +248,11 @@ macOS and portable AppImage builds offer updates in the app. Windows updates thr
 
 If a desktop window crashes, a local recovery page offers **Reload window**. Use it to reopen the last screen on the currently selected server. Unsaved changes may be lost. The app waits for your action instead of repeatedly reloading the failing page. If the recovery page also fails, the native message asks you to quit and reopen minddy. These native recovery controls currently use English labels.
 
+If a page is still loading after 30 seconds, or a window remains unresponsive for five seconds after the desktop app detects it, a native dialog offers **Wait** and **Recover window**. **Wait** is the default and leaves your work and the current request in place. The dialog closes if loading finishes or the window responds again. Recovering may lose unsaved changes: choose **Recover window** to open the local recovery page, then **Reload window** to return to the last screen.
+
 The optional saved query cache is limited to 2 MiB. If it exceeds the limit, its previous local snapshot is removed; the current data stays in memory and is fetched again after a restart. Separately saved drafts are unaffected. This cache is not a backup of your work.
+
+To reduce memory use during long sessions, inactive PR details, commit and agent diffs, agent event streams and page bodies are released after one minute and reloaded when needed. Active queries are retained. Tab labels keep only lightweight PR information, so keeping a tab open does not retain its patches.
 
 ![Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.](/documentation/en/desktop-renderer-recovery.png)
 

@@ -60,6 +60,14 @@ it("reports failed local loads once without an unhandled rejection", async () =>
   expect(failed).toHaveBeenCalledTimes(1);
 });
 
+it("does not report an intentional local-document replacement as a recovery failure", async () => {
+  const { recovery, load, failed, run } = setup();
+  load.mockRejectedValueOnce(Object.assign(new Error("Navigation superseded"), { name: "AbortError" }));
+  recovery.rendererGone("crashed"); run();
+  await Promise.resolve();
+  expect(failed).not.toHaveBeenCalled();
+});
+
 it("handles synchronous load failures and ignores a late failure after navigation", async () => {
   const first = setup();
   first.load.mockImplementationOnce(() => { throw new Error("Window unavailable"); });

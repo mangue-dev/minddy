@@ -5,6 +5,7 @@ import { persistQueryClientRestore } from "@tanstack/react-query-persist-client"
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createQueryStorage, subscribeToQueryPersistence } from "./query-persistence";
 import { invalidateLocalSnapshotWrites } from "./local-snapshots";
+import { configurePayloadRetention, isMemoryOnlyPayload } from "./query-retention";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
@@ -41,9 +42,8 @@ export const QUERY_CACHE_STORAGE_KEY = "minddy.query-cache";
 const PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /**
- * `gcTime` global ≥ `PERSIST_MAX_AGE_MS`: a query fetched in memory leaves the
- * snapshot, so a shorter gcTime would empty the disk over the session and
- * would cancel persistence.
+ * Persisted board/list queries survive as long as their disk snapshot.
+ * Large memory-only payloads override this default with shorter retention.
  */
 const GC_TIME_MS = PERSIST_MAX_AGE_MS;
 
@@ -58,6 +58,9 @@ const persistenceStops = new Set<() => void>();
 
 /**
  * What DOES NOT go to disk.
+ *
+ * `MEMORY_ONLY_PAYLOAD_PREFIXES` in query-retention.ts also excludes full PR
+ * details, commit/local diffs and other large payloads with shorter inactive GC.
  *
  * - `["me","search-index"]`: up to 4,000 lines, or the localStorage quota at
  * alone (~5 MB); it is anyway designed to be reloaded once
@@ -114,7 +117,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
 
 /** Exported for unit testing (lib/query-persist.test.ts). */
 export function isPersistableKey(key: readonly unknown[]): boolean {
-  return !NON_PERSISTED_KEY_PREFIXES.some((prefix) =>
+  return !isMemoryOnlyPayload(key) && !NON_PERSISTED_KEY_PREFIXES.some((prefix) =>
     prefix.every((segment, i) => key[i] === segment)
   );
 }
@@ -173,8 +176,8 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
   const [isRestoring, setIsRestoring] = useState(true);
   const restorePromise = useRef<Promise<void> | null>(null);
   const [queryClient] = useState(
-    () =>
-      new QueryClient({
+    () => {
+      const client = new QueryClient({
         defaultOptions: {
           queries: {
             // The coolness comes from the real-time bridge, not from the clock: since
@@ -187,7 +190,10 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
             retry: 1,
           },
         },
-      })
+      });
+      configurePayloadRetention(client);
+      return client;
+    }
   );
 
   const [persistOptions] = useState(() => {

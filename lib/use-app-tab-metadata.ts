@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
 import { appTabRoute } from "./app-tab-location";
 import { APP_TAB_METADATA_BATCH_SIZE, appTabMetadataLocations, type AppTabMetadata } from "./app-tab-metadata";
-import type { PullRequestRef } from "./agent-api";
+import { createPullRequestTabLabels } from "./pull-request-tab-labels";
 import { fetchRoutinesApi } from "./routines-api";
 
 const empty: AppTabMetadata = { pages: [], objectives: [], pullRequests: [], routines: [], issues: [] };
@@ -57,10 +57,8 @@ export function useAppTabMetadata(hrefs: string[]) {
     queryKey: ["objectives", projectId], enabled: false,
     select: (objectives: AppTabMetadata["objectives"]) => objectives.filter((objective) => routes.some((route) => route.objectiveId === objective.id)).map(({ id, project_id, name, color }) => ({ id, project_id, name, color })),
   })) });
-  const prQueries = useQueries({ queries: prIds.map((prId) => ({
-    queryKey: ["pull-request", prId], enabled: false,
-    select: (detail: { pr?: PullRequestRef | null }) => detail.pr ? { id: prId, number: detail.pr.number, title: detail.pr.title ?? null } : null,
-  })) });
+  const prLabels = useMemo(() => createPullRequestTabLabels(client, prIds), [client, prIds]);
+  const prSnapshot = useSyncExternalStore(prLabels.subscribe, prLabels.getSnapshot, prLabels.getServerSnapshot);
   // Family boards name their tab after the parent issue: the project board's
   // own ["issues", projectId] cache already carries it — reuse, never fetch.
   const familyQueries = useQueries({ queries: familyProjects.map((projectId) => ({
@@ -98,10 +96,11 @@ export function useAppTabMetadata(hrefs: string[]) {
     for (const [id, objective] of objectiveById) if (objective.project_id === objectiveProjects[index]) objectiveById.delete(id);
     for (const objective of query.data) objectiveById.set(objective.id, objective);
   });
-  prQueries.forEach((query, index) => {
-    if (superseded(["pull-request", prIds[index]])) return;
-    if (query.data === null) prById.delete(prIds[index]);
-    else if (query.data) prById.set(query.data.id, query.data);
+  prSnapshot.forEach((label, id) => {
+    if (label.invalidated && metadataUpdatedAt > label.updatedAt) return;
+    if (label.retiredAt !== undefined && metadataUpdatedAt > label.retiredAt) return;
+    if (label.value === null) prById.delete(id);
+    else prById.set(id, label.value);
   });
   familyQueries.forEach((query, index) => {
     if (!query.data || superseded(["issues", familyProjects[index]])) return;

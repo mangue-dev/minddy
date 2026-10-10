@@ -10,6 +10,7 @@ import {
   issueAgentRunsQueryKey,
 } from "./use-agent-runs";
 import { agentActivityQueryKey } from "@/components/agent/agent-activity-context";
+import { pullRequestQueryOptions } from "./pull-request-query";
 
 // The persistence filter decides what goes to disk (MIN-89). A false positive
 // either saturates localStorage with the palette index or restores a completed
@@ -53,6 +54,9 @@ describe("isPersistableKey", () => {
   });
 
   it("excludes pull requests and their comments", () => {
+    expect(isPersistableKey(pullRequestQueryOptions("pr").queryKey)).toBe(false);
+    expect(isPersistableKey(["pr-commit-diff", "pr", "sha"])).toBe(false);
+    expect(isPersistableKey(["desktop-agent-run-diff", "run", "live"])).toBe(false);
     expect(isPersistableKey(["pull-requests", "all"])).toBe(false);
     expect(isPersistableKey(["pr-comments", "r1"])).toBe(false);
     expect(isPersistableKey(["pr-review-comments", "r1"])).toBe(false);

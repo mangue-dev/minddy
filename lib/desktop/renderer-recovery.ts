@@ -55,7 +55,8 @@ export function createRendererRecovery(options: RendererRecoveryOptions) {
         if (attempted) { failed(); return; }
         attempted = true;
         try {
-          void options.load(options.origin(), lastUrl).catch(() => {
+          void options.load(options.origin(), lastUrl).catch((error) => {
+            if (error?.name === "AbortError") return;
             if (at === navigation) failed();
           });
         } catch { failed(); }

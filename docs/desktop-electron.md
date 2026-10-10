@@ -313,8 +313,19 @@ writes. Queries remain available in memory and load from the server after a
 restart. Separate draft storage is unaffected. The server's 8 MiB request limit
 alone cannot protect the renderer because it applies after serialization.
 
+`configurePayloadRetention` gives full PR details, commit/agent/local diffs,
+agent event streams and page bodies a one-minute inactive GC window. These
+payloads are excluded from disk persistence; ordinary board caches keep their
+existing persistence window. Active query observers prevent GC. Tab labels
+subscribe to compact PR projections through `createPullRequestTabLabels`
+without observing the full detail or retaining its patches; the latest compact
+label survives payload eviction and continues to track cached title changes.
+
 Each window handles unexpected `render-process-gone` events by deferring a single
 local recovery-document load. It never automatically reloads the remote app.
+`loadLocalRecoveryDocument` matches completion/failure to that local URL, ignores
+only a late abort inherited from a replaced stream, and bounds local loading to
+15 seconds. New navigation, destruction or another renderer crash cancels it.
 **Reload window** returns to the latest main-frame/SPA route on the current
 selected origin, falling back to `/home` if the origin changed. The page also
 offers **Check server settings** through the existing preload bridge. Unsaved
@@ -324,12 +335,28 @@ A newer remote navigation cancels deferred recovery; a crash or failed load of
 the local recovery document produces one native error message asking the user
 to quit and reopen minddy, without a recovery loop.
 
+`createWindowStallRecovery` offers a parented native dialog after a remote
+main-frame load remains pending for 30 seconds, or five seconds after Electron
+reports the window as unresponsive. **Wait** is the default/cancel action and
+does not interrupt requests or edits. **Recover window** explicitly stops a
+stalled load or forcefully terminates a hung renderer, then reuses the deferred
+local recovery page. The dialog warns that unsaved changes may be lost.
+Completion, responsiveness, newer document navigation, destruction and quitting
+cancel obsolete dialogs/actions. A continuing episode gets one prompt rather
+than repeated interruptions; a new navigation or responsiveness resets it.
+The grace period avoids prompting for brief transient hangs. Diff highlighting
+runs in workers, but diff construction and parsing can still block the renderer;
+native recovery is independent of that JavaScript thread.
+
 Native failure diagnostics record only termination reason and exit code, never
 URLs or content. Run `npm --prefix desktop run build` followed by
 `node scripts/desktop-renderer-recovery.integration.mjs` to verify the actual
 shell with a loopback fixture, an isolated temporary profile and forced renderer
 crashes. The probe verifies local recovery, absence of automatic remote reload,
-SPA-route retry and the recovery-document failure stop; it does not reproduce
+SPA-route retry, stalled streaming responses, native Wait/Recover window
+actions, a real blocked renderer and the recovery-document failure stop. Native
+dialog arguments/actions are automated; the probe does not validate operating
+system sheet appearance. It does not reproduce
 the original account's allocation pressure or prove the absence of other OOMs.
 
 ## 3. Notifications: Web Push, APNs, and WNS

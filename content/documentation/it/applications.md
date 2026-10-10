@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-651 recovery delta; prior evidence retained)",
+    "version": "0.11.1 candidate (MIN-651 memory/stall recovery delta; prior evidence retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,13 +56,19 @@
       "lib/query-persistence.ts",
       "lib/desktop/renderer-recovery.ts",
       "desktop/src/main.ts",
-      "content/documentation/reviews/min-651-renderer-recovery-2026-10-10.json"
+      "content/documentation/reviews/min-651-renderer-recovery-2026-10-10.json",
+      "lib/query-retention.ts",
+      "lib/pull-request-tab-labels.ts",
+      "lib/desktop/window-stall-recovery.ts",
+      "content/documentation/reviews/min-651-stall-recovery-2026-10-10.json",
+      "lib/desktop/local-recovery-load.ts",
+      "scripts/desktop-renderer-hang.integration.mjs"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text)",
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions)",
     "date": "2026-10-10"
   },
   "related": [
@@ -88,7 +94,7 @@
       "src": "/documentation/it/web-and-mobile-workflow.png",
       "alt": "Pannello mobile di un ticket con titolo, descrizione, proprietà e campo per i commenti.",
       "caption": "Su uno schermo stretto, i dettagli della issue occupano un pannello adattabile. Usa il pulsante di chiusura per tornare al progetto; Numo resta accessibile dal pulsante mobile.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -105,7 +111,7 @@
       "src": "/documentation/it/install-the-pwa-workflow.png",
       "alt": "Guida illustrata di minddy per l’installazione da Safari: Condividi, aggiungi alla schermata Home e conferma.",
       "caption": "La guida pubblica illustra i tre passaggi di Safari e l’opzione Apri come app web da mantenere attiva. Sono illustrazioni didattiche mostrate da minddy, non schermate di un’installazione iOS completata.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -122,7 +128,7 @@
       "src": "/documentation/it/desktop-app-workflow.png",
       "alt": "Impostazioni desktop nella vera app Electron di sviluppo per macOS, versione 0.11.1, collegata al server locale con un profilo isolato.",
       "caption": "Impostazioni desktop nella vera app Electron di sviluppo per macOS, versione 0.11.1, collegata al server locale con un profilo isolato. La cattura non convalida release firmate né altri sistemi operativi.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +144,7 @@
       "src": "/documentation/it/devices-and-notifications-workflow.png",
       "alt": "Impostazioni push con permesso bloccato nel browser e nessun dispositivo registrato.",
       "caption": "Questo browser blocca le notifiche. Ripristina il permesso del sito prima di registrare il dispositivo.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -155,7 +161,7 @@
       "src": "/documentation/it/devices-and-notifications-registered.png",
       "alt": "Dispositivo browser registrato e attivo sull’account, con la data effettiva dell’ultimo invio.",
       "caption": "L’account ha un dispositivo browser registrato e attivo. L’elenco mostra la data di registrazione e quella dell’ultimo invio. La comparsa di un avviso dipende comunque dal permesso del browser e dalle impostazioni del sistema operativo.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -171,7 +177,7 @@
       "src": "/documentation/it/desktop-renderer-recovery.png",
       "alt": "Pagina locale di ripristino dopo un arresto forzato del processo di rendering, con i controlli Reload window e Check server settings.",
       "caption": "Pagina di ripristino nell’app di sviluppo per macOS, con un profilo isolato e un server dimostrativo. L’interfaccia nativa usa etichette in inglese in tutte le lingue.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -242,7 +248,11 @@ macOS e le AppImage portatili offrono aggiornamenti nell’app. Windows li insta
 
 Se una finestra desktop si arresta in modo anomalo, una pagina locale di ripristino offre **Reload window**. Usa questo pulsante per riaprire l’ultima schermata sul server attualmente selezionato. Le modifiche non salvate potrebbero andare perse. L’app attende la tua azione invece di ricaricare ripetutamente la pagina che non funziona. Se anche la pagina di ripristino non funziona, il messaggio nativo chiede di chiudere e riaprire minddy. Questi controlli nativi di ripristino usano attualmente etichette in inglese.
 
+Se una pagina è ancora in caricamento dopo 30 secondi, oppure una finestra non risponde per cinque secondi da quando l’app desktop rileva il blocco, una finestra di dialogo nativa propone **Wait** e **Recover window**. **Wait** è la scelta predefinita e mantiene il lavoro e la richiesta in corso. La finestra di dialogo si chiude quando il caricamento termina o la finestra torna a rispondere. Il recupero può perdere modifiche non salvate: scegli **Recover window** per aprire la pagina locale di recupero, poi **Reload window** per tornare all’ultima schermata.
+
 La cache delle query salvata, che è facoltativa, è limitata a 2 MiB. Se supera il limite, la precedente istantanea locale viene rimossa; i dati attuali restano in memoria e vengono recuperati di nuovo dopo un riavvio. Le bozze salvate separatamente non sono interessate. Questa cache non è un backup del tuo lavoro.
+
+Per ridurre l’uso della memoria nelle sessioni lunghe, i dettagli delle PR, i diff di commit e agenti, i flussi di eventi degli agenti e i contenuti delle pagine inattivi vengono rilasciati dopo un minuto e ricaricati quando servono. Le query attive vengono conservate. Le etichette delle schede mantengono solo informazioni leggere sulle PR: lasciare una scheda aperta non trattiene quindi le sue patch.
 
 ![Pagina locale di ripristino dopo un arresto forzato del processo di rendering, con i controlli Reload window e Check server settings.](/documentation/it/desktop-renderer-recovery.png)
 
