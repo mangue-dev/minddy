@@ -11,6 +11,7 @@ const baseEnvironment = {
   MINDDY_PUBLIC_SITE_NAME: "Acme Tickets",
   MINDDY_PUBLIC_CONTACT_EMAIL: "support@example.test",
   MINDDY_FEEDBACK_KEY: "mdy_server-only-feedback-key",
+  MINDDY_DOCUMENTATION_FEEDBACK_KEY: "mdy_server-only-documentation-key",
   MINDDY_PUBLIC_PRODUCT_FEEDBACK_URL: "https://feedback.example.test/board",
   MINDDY_PUBLIC_POSTHOG_KEY: "posthog-public-key",
   MINDDY_PUBLIC_POSTHOG_HOST: "https://analytics.example.test",
@@ -46,6 +47,7 @@ describe("resolveRuntimeConfig", () => {
       siteName: "Acme Tickets",
       contactEmail: "support@example.test",
       productFeedbackIntegrationEnabled: true,
+      documentationFeedbackIntegrationEnabled: true,
       productFeedbackUrl: "https://feedback.example.test/board",
     });
     expect(second).toMatchObject({
@@ -69,6 +71,7 @@ describe("resolveRuntimeConfig", () => {
     expect(serialized).toContain("anon-key-a");
     expect(serialized).toContain('"productFeedbackIntegrationEnabled":true');
     expect(serialized).not.toContain(baseEnvironment.MINDDY_FEEDBACK_KEY);
+    expect(serialized).not.toContain(baseEnvironment.MINDDY_DOCUMENTATION_FEEDBACK_KEY);
     expect(serialized).not.toContain(baseEnvironment.SUPABASE_SERVICE_ROLE_KEY);
     expect(serialized).not.toContain(baseEnvironment.OPENROUTER_API_KEY);
   });
@@ -81,6 +84,15 @@ describe("resolveRuntimeConfig", () => {
 
     expect(config.productFeedbackIntegrationEnabled).toBe(false);
     expect(config.productFeedbackUrl).toBe("https://feedback.example.test/board");
+  });
+
+  it("disables documentation reports independently of general feedback", () => {
+    const config = resolveRuntimeConfig({
+      ...baseEnvironment,
+      MINDDY_DOCUMENTATION_FEEDBACK_KEY: "   ",
+    }).public;
+    expect(config.documentationFeedbackIntegrationEnabled).toBe(false);
+    expect(config.productFeedbackIntegrationEnabled).toBe(true);
   });
 
   it("keeps error tracking opt-in and off by default", () => {

@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (documentation feedback; based on f40acc562)",
     "editions": [
       "self-hosted"
     ],
@@ -43,14 +43,15 @@
       "deploy/self-hosted/scheduler.mjs",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "content/documentation/reviews/documentation-error-feedback-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (documentation feedback routing and authentication addition; unchanged operational evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (six-locale reporting addition and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "workspace-encryption",
@@ -75,7 +76,7 @@
       "src": "/documentation/en/optional-providers-flow.svg",
       "alt": "Diagram: Operator selects an optional capability. Complete credentials and provider conditions. Explicit outbound provider data path. Verify behavior and monitor usage costs.",
       "caption": "Enabling an optional service adds its own credentials, data destination and usage costs.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +108,7 @@
       "src": "/documentation/en/proxy-network-and-jobs-flow.svg",
       "alt": "Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private runner, database and internal ports. Authenticated scheduler; stopped in maintenance.",
       "caption": "Public access uses HTTPS while internal services stay private and scheduled jobs pause during maintenance.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -154,6 +155,12 @@ The installer writes missing `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, 
 ### Apply and check a change {#capabilities}
 
 `MINDDY_PUBLIC_SITE_NAME` and `MINDDY_PUBLIC_CONTACT_EMAIL` identify your instance. `ADMIN_EMAILS` is a comma-separated administrator allowlist; privileged access also requires MFA. `OAUTH_ISSUER` normally stays empty unless you intentionally advertise OAuth at another stable origin. Leave managed AI and billing disabled for self-hosting. Enable optional services only with their complete required configuration. Restart or recreate the application after changing runtime public values; the OCI image needs no rebuild. Run the doctor to distinguish incomplete capabilities from core failures, then test generated account links and callbacks against the intended origin.
+
+### Configure feedback and documentation reports {#product-feedback}
+
+Set `MINDDY_FEEDBACK_KEY` to a feedback integration key to enable Share feedback in the app. For documentation reports, create a separate feedback integration in the receiving project, select the Documentation objective as its default, and store its key as `MINDDY_DOCUMENTATION_FEEDBACK_KEY`. Both keys stay on the server. Submissions use `/api/v1/feedback` on the origin set by `MINDDY_PUBLIC_APP_URL`. Restart the application after changing these values.
+
+Report an error on an article requires a signed-in account. After signing in, the reader returns to the same article with the Share feedback dialog open. The title and description start empty. After submission, the server appends the article ID, language, revision and public URL to the report; those details are not editable form fields. The documentation integration automatically links the report to its selected objective. Without `MINDDY_DOCUMENTATION_FEEDBACK_KEY`, the report button is disabled with an explanation.
 
 ## Enable optional providers deliberately {#optional-providers}
 

@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (documentation feedback; based on f40acc562)",
     "editions": [
       "self-hosted"
     ],
@@ -43,14 +43,15 @@
       "deploy/self-hosted/scheduler.mjs",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "content/documentation/reviews/documentation-error-feedback-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (documentation feedback routing and authentication addition; unchanged operational evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (six-locale reporting addition and retained-meaning review)",
+    "date": "2026-10-10"
   },
   "related": [
     "workspace-encryption",
@@ -75,7 +76,7 @@
       "src": "/documentation/pt-BR/optional-providers-flow.svg",
       "alt": "Diagrama: Operador escolhe capacidade opcional. Credenciais completas e condições. Destino externo explícito dos dados. Verificar comportamento e acompanhar custos.",
       "caption": "Antes de ativar uma integração, confira as credenciais, as condições e o destino dos dados.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +108,7 @@
       "src": "/documentation/pt-BR/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Origens app e Supabase públicas. Runner, banco e portas privadas. Tarefas autenticadas; paradas em manutenção.",
       "caption": "O proxy expõe as origens públicas e mantém os serviços internos privados; durante a manutenção, pare também as tarefas agendadas.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -154,6 +155,12 @@ O instalador cria `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENC
 ### Aplicar e conferir uma mudança {#capabilities}
 
 `MINDDY_PUBLIC_SITE_NAME` e `MINDDY_PUBLIC_CONTACT_EMAIL` identificam a instância. `ADMIN_EMAILS` contém administradores separados por vírgulas, também sujeitos a MFA. `OAUTH_ISSUER` normalmente fica vazio, salvo publicação intencional de OAuth em outra origem estável. Desligue IA e cobrança gerenciadas em self-hosted. Cada serviço opcional exige configuração completa. Reinicie ou recrie a aplicação após mudar valores públicos de execução, sem rebuild OCI. doctor distingue capacidades incompletas de falhas do núcleo. Confira links de conta e callbacks na origem correta.
+
+### Configurar feedback e relatos sobre a documentação {#product-feedback}
+
+Defina `MINDDY_FEEDBACK_KEY` com uma chave de integração de feedback para habilitar o envio de feedback no aplicativo. Para relatos sobre a documentação, crie uma integração de feedback separada no projeto que receberá os relatos, selecione Documentation como objetivo padrão e salve a chave em `MINDDY_DOCUMENTATION_FEEDBACK_KEY`. As duas chaves ficam no servidor. Os envios usam `/api/v1/feedback` na origem definida por `MINDDY_PUBLIC_APP_URL`. Reinicie o aplicativo após alterar esses valores.
+
+Para relatar um erro em um artigo, é preciso estar conectado a uma conta. Após entrar, o leitor volta ao mesmo artigo com o diálogo de feedback aberto. O título e a descrição começam vazios. Após o envio, o servidor acrescenta o identificador do artigo, o idioma, a revisão e a URL pública; esses dados não são campos editáveis do formulário. A integração da documentação vincula automaticamente o feedback ao objetivo selecionado. Sem `MINDDY_DOCUMENTATION_FEEDBACK_KEY`, o botão para relatar erros fica desabilitado e apresenta uma explicação.
 
 ## Habilitar provedores opcionais deliberadamente {#optional-providers}
 

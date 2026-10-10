@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { locales, type Locale } from "@/i18n/config";
+import { documentationPath } from "@/lib/documentation";
+import { DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX } from "@/lib/documentation-feedback";
 
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import {
@@ -9,6 +12,7 @@ import {
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
+import { getDocumentationArticle } from "@/lib/server/documentation";
 
 const SUBMIT_TIMEOUT_MS = 10_000;
 
@@ -59,7 +63,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const integrationKey = process.env.MINDDY_FEEDBACK_KEY?.trim();
+  const source = fields.source ?? "product";
+  if (source !== "product" && source !== "documentation") {
+    return NextResponse.json({ error: "Invalid feedback source." }, { status: 422 });
+  }
+  let body = description;
+  if (source === "documentation") {
+    const context = fields.documentationContext as Record<string, unknown> | null;
+    if (!context || typeof context !== "object" || Array.isArray(context)
+      || typeof context.articleId !== "string"
+      || !locales.includes(context.locale as Locale)) {
+      return NextResponse.json({ error: "Invalid documentation context." }, { status: 422 });
+    }
+    const article = getDocumentationArticle(context.articleId, context.locale as Locale);
+    if (!article || description.length > DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX) {
+      return NextResponse.json({ error: "Invalid documentation report." }, { status: 422 });
+    }
+    const url = new URL(documentationPath(article.id, article.locale), getRuntimeConfig().public.appUrl);
+    body = `${description}${description ? "\n\n" : ""}---\nArticle: ${article.id}\nLocale: ${article.locale}\nRevision: ${article.revision}\nURL: ${url}`;
+    if (body.length > FEEDBACK_BODY_MAX) {
+      return NextResponse.json({ error: "Documentation report is too long." }, { status: 422 });
+    }
+  }
+  const integrationKey = (source === "documentation"
+    ? process.env.MINDDY_DOCUMENTATION_FEEDBACK_KEY
+    : process.env.MINDDY_FEEDBACK_KEY)?.trim();
   if (!integrationKey) {
     return NextResponse.json(
       { error: "Product feedback integration is not configured." },
@@ -87,7 +115,7 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${integrationKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ title, body: description, user }),
+      body: JSON.stringify({ title, body, user }),
       cache: "no-store",
       signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
     });
