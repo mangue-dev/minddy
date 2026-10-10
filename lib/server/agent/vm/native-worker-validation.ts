@@ -7,8 +7,9 @@ import type { VmJob, VmToolResponse } from "./protocol";
 import { runNativeTurn } from "./native-supervisor";
 import { nativeWorkerPaths } from "../../../native-agent-worker";
 import { stageExpiredCodexAccessFixture } from "./native-worker-expiry-validation";
+import { startCodexHttp401Validation } from "./native-worker-http401-validation";
 
-type FixtureInput = { job: VmJob; requiredTool: string; requiredArgs: Record<string, unknown>; marker: string; accessExpirySimulation?: "synthetic_expired_access" };
+type FixtureInput = { job: VmJob; requiredTool: string; requiredArgs: Record<string, unknown>; marker: string; accessExpirySimulation?: "synthetic_expired_access"; providerHttp401Validation?: true };
 
 /** Private SDK mailbox fixture: no cloud callback, auth output, or model transcript. */
 export async function runNativeWorkerValidation(inputPath: string) {
@@ -16,6 +17,7 @@ export async function runNativeWorkerValidation(inputPath: string) {
   await rm(inputPath);
   if (!input.job.nativeAgent || input.job.authUrl !== null || input.job.pullRequestDelivery?.required || !/^[A-Z0-9_]{8,80}$/.test(input.marker) || !["read_issue", "read_page"].includes(input.requiredTool)) throw new Error("Invalid native worker validation fixture");
   if (input.accessExpirySimulation !== undefined && (input.accessExpirySimulation !== "synthetic_expired_access" || input.job.engine !== "codex" || input.job.nativeAgent.engine !== "codex")) throw new Error("Invalid native expiry simulation");
+  if (input.providerHttp401Validation !== undefined && (input.providerHttp401Validation !== true || input.accessExpirySimulation || input.job.engine !== "codex" || input.job.nativeAgent.engine !== "codex")) throw new Error("Invalid native HTTP 401 validation");
   const expirySimulation = input.accessExpirySimulation
     ? await stageExpiredCodexAccessFixture(nativeWorkerPaths(input.job.layout).profileImportPath)
     : null;
@@ -49,11 +51,12 @@ export async function runNativeWorkerValidation(inputPath: string) {
   const file = "native_worker_fixture.txt";
   const command = `node -e 'const fs=require("node:fs");if(fs.readFileSync("${file}","utf8")!=="${input.marker}")process.exit(1);for(const p of ${JSON.stringify([input.job.nativeAgent.privateRoot, "/proc", "/sys"])}){try{fs.readdirSync(p);process.exit(2)}catch(e){if(!["EACCES","EPERM","ENOENT"].includes(e.code))process.exit(3)}}'`;
   const prompt = `Execute this authorized private fixture using only Minddy MCP tools. First call ${input.requiredTool} with exactly ${JSON.stringify(input.requiredArgs)} and require success. Then call write_file with path ${file} and content exactly ${input.marker}; read_file the same file and check the marker. Finally use run_command with exactly this command: ${command}. Require exitCode 0. Do not create or publish a pull request. Finish with exactly ${input.marker}.`;
+  const http401 = input.providerHttp401Validation ? await startCodexHttp401Validation(input.job.nativeAgent.profileRoot) : null;
   try {
-    const report = await runNativeTurn(input.job, { prompt, anchorInstructions: "This is an authorized private Minddy native-worker fixture in a disposable repository." }, cp, { turnDeadlineMs: 180_000 });
+    const report = await runNativeTurn(input.job, { prompt, anchorInstructions: "This is an authorized private Minddy native-worker fixture in a disposable repository." }, cp, { turnDeadlineMs: 180_000, ...(http401 ? { runtime: http401.runtime } : {}) });
     const fileMatches = (await readFile(join(input.job.layout.repoDir, file), "utf8").catch(() => "")) === input.marker;
-    await write(final, { status: report.status, errorCode: report.errorCode, nativeAuthExportReady: report.nativeAuthExportReady === true, calls, successfulCalls, writeObserved, readObserved, commandObserved, fileMatches, markerMatches: report.reply?.trim() === input.marker, checkpointEngine: report.checkpoint?.native?.engine, checkpointHistoryCount: report.checkpoint?.native?.history.length ?? 0, costUsd: report.costUsd, sandboxMs: report.sandboxMs, expirySimulation });
-  } finally { stopped = true; await rm(pending, { force: true }); }
+    await write(final, { status: report.status, errorCode: report.errorCode, nativeAuthExportReady: report.nativeAuthExportReady === true, calls, successfulCalls, writeObserved, readObserved, commandObserved, fileMatches, markerMatches: report.reply?.trim() === input.marker, checkpointEngine: report.checkpoint?.native?.engine, checkpointHistoryCount: report.checkpoint?.native?.history.length ?? 0, costUsd: report.costUsd, sandboxMs: report.sandboxMs, expirySimulation, http401: http401?.proof() ?? null });
+  } finally { stopped = true; await http401?.close(); await rm(pending, { force: true }); }
 }
 
 if (process.argv[2]) void runNativeWorkerValidation(process.argv[2]).catch(() => { console.error("Native worker validation failed"); process.exitCode = 1; });

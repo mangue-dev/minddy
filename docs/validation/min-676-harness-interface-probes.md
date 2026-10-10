@@ -765,3 +765,69 @@ Verification: 67 focused tests across four files, TypeScript, targeted lint,
 production VM build, documentation/knowledge/English checks and whitespace checks.
 Public controls and documented behavior are unchanged; this adds private acceptance
 evidence only and requires no public manual or illustration revision.
+
+## Actual provider HTTP 401 and cold recovery (2026-10-11)
+
+The private acceptance fixture now exercises reactive authentication recovery in
+the unmodified Codex `0.162.1` binary. Its disposable loopback relay forwards the
+Responses request to the fixed, TLS-verified
+`https://chatgpt.com/backend-api/codex/responses` endpoint. It substitutes only
+the first two requests' Authorization header with a deliberately invalid test
+bearer and relays the actual upstream status, headers and body. The observed
+sequence is `401`, `401`, then `200`; a local unit-test server is never counted
+as official-provider evidence.
+
+Two refusals are required by the pinned native auth manager: the first reloads
+the saved profile, and the second requests OAuth renewal before retrying. The
+relay snapshots token digests only in memory after startup authentication, when
+the first inference request arrives. It verifies that the first bearer matches
+the saved profile, the reload retries that same bearer, and the third request
+uses a changed access token matching the newly saved profile, a changed refresh
+token and the same account. This distinguishes reactive renewal from Minddy's
+earlier startup `account/read({ refreshToken: true })` renewal. OAuth requests
+go directly to the provider and bypass the relay.
+
+The fixture-only CLI argument is `-c openai_base_url="http://127.0.0.1:<port>/minddy-http401"`.
+The noncanonical loopback path prevents native backend-route selection from
+bypassing this private relay. A local WebSocket `426 Upgrade Required` triggers
+the CLI's supported HTTP fallback; it is separate from the real upstream 401s.
+Compressed requests and streamed responses pass through unchanged. Neither auth
+files, signed JWT claims nor the host clock are modified. The production VM
+bundle contains no HTTP 401 relay or transport override.
+
+The final corrected pair is recorded in
+[`min-676-http401-recovery-proof.json`](assets/min-676-http401-recovery-proof.json).
+It uses local Docker for the database and two hosted disposable allocations.
+
+| Run | Execution | Persistence and destruction |
+| --- | --- | --- |
+| `e4af3f41-8f77-41e3-964f-010083651ec4` | Actual upstream 401s, native reload and OAuth renewal, successful Minddy `read_issue`, guarded file write/read/command and exact completion marker. | Valid renewed export matches encrypted write-back; typed SDK 404 confirms destruction. |
+| `af6628fe-4c4f-4486-b0c4-425faca4be08` | No transport or expiry fixture; restores the first worker's saved rotation and repeats the real MCP and repository operations. | The first allocation is confirmed absent before creation; the second export is saved and its allocation also returns SDK 404. |
+
+Both workers use `gpt-6-luna` with automatic thinking, frozen at launch. No
+authorization is requested during this final pair, and API inference cost is
+zero. The final connection is connected at generation 4, with encrypted
+credentials, no lease and no runtime descriptor. Allocation ledgers are cleaned
+and completed runs have confirmed stop timestamps. The proof contains metadata
+only: no credentials, token hashes, provider account identifiers or transcripts.
+
+An earlier successful pair already observed real 401 recovery. During a cleanup
+regression check, the relay incorrectly classified normal cancellation of an
+unfinished response stream after turn completion as a network failure. That
+worker completed provider renewal and MCP, but the host acceptance assertion
+ran before saving its rotated profile. The safety fence disconnected the pilot
+and discarded its uncertain saved session. The user then reauthorized through
+the official settings device flow before the final pair above. Other ChatGPT
+sessions were not revoked. The regression is fixed: normal client cancellation
+and intentional shutdown destroy upstream streams without flagging a transport
+failure. The host acceptance script now saves a valid, stopped-child renewed
+profile before evaluating probe metrics, preserving valid credentials if a
+subsequent evidence assertion fails.
+
+This establishes real provider HTTP 401 recovery after controlled header
+substitution, encrypted persistence and cold restoration. It does not establish
+natural expiration of an authentic signed access token; that acceptance remains
+pending. Paid Claude execution remains untested. Verification covers 73 focused
+tests across five files, TypeScript, targeted lint, production VM build and
+documentation/knowledge/English/whitespace checks. Public controls and production
+behavior are unchanged; no public article, workflow or figure revision is needed.

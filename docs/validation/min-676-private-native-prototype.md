@@ -463,3 +463,21 @@ probe report for exact assertions. This proves simulated expired-access recovery
 authentic expiry and provider HTTP 401 recovery remain unobserved. The current
 account model selection was `gpt-6-luna` with automatic thinking. Claude remains
 untested.
+
+On 2026-10-11, a private loopback transport fixture forwarded two deliberately
+invalid access headers to the official ChatGPT Responses backend. The unmodified
+Codex `0.162.1` CLI received actual upstream `401`, `401`, then `200`, first
+reloading its profile and then reactively renewing OAuth credentials. In-memory
+comparisons taken after startup authentication prove changed access and refresh
+tokens with the same account on the successful retry. Auth files, signed claims
+and the clock were untouched; the relay is absent from the production bundle.
+
+The corrected final pair saved the renewed profile through the production
+encrypted write-back, destroyed the first sandbox, restored that saved rotation
+into a fresh untouched sandbox, and repeated real Minddy MCP and guarded
+repository operations. Both allocations were physically absent through typed SDK
+404 checks. See `assets/min-676-http401-recovery-proof.json` and the harness probe
+report, including the fixed stream-cleanup classification regression and pilot
+reauthorization that preceded this final pair. The final connection is connected
+and idle at generation 4. Actual provider 401 recovery is now observed;
+authentic signed-token expiry remains pending and Claude remains untested.
