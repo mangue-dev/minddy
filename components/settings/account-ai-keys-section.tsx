@@ -51,16 +51,7 @@ import {
 } from "@/lib/model-catalog-capability";
 import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
-/**
- * “Code agent” section of account settings (MIN-46): the provider and
- * key first, default model second, reasoning last.
- * Each provider has a border fault; OpenRouter BYOK takes over the default of
- * minddy quota (same endpoint).
- *
- * The first block lives in `ByokConnectPanel` since MIN-149: onboarding
- * proposes the same thing at the "key" stage, and two key forms would have
- * diverged at the first provider added.
- */
+/** General Minddy AI routing and separate code-worker execution settings. */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
@@ -78,6 +69,10 @@ export function AccountAiKeysSection() {
     loading: prefLoading,
   } = useAgentPreferencesQuery();
   const usesOpenCode = defaultEngine === "opencode";
+  const usesCodeKey = Boolean(textKey?.enabled_surfaces.includes("agent"));
+  const codeProviderLabel = usesCodeKey && textKey
+    ? getAgentProvider(textKey.provider)?.label ?? textKey.provider
+    : t("aiProviderMinddy");
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const reasoningLevels = useReasoningLevelsFor(
     defaultModel || providerDefaultModel,
@@ -114,60 +109,63 @@ export function AccountAiKeysSection() {
     await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
   };
 
+  const onCodeFundingChange = async (value: string) => {
+    if (!textKey || (value !== "minddy" && value !== textKey.id)) return;
+    try {
+      const surfaces = textKey.enabled_surfaces.filter((surface) => surface !== "agent");
+      await updateAiKeyPreferencesApi({
+        key_id: textKey.id,
+        enabled_surfaces: value === "minddy" ? surfaces : [...surfaces, "agent"],
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey }),
+      ]);
+      toast.success(t("agentModelSavedToast"));
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
   return (
     <>
+      <section aria-labelledby="minddy-ai-title" className="space-y-5">
+        <header className="space-y-1">
+          <h2 id="minddy-ai-title" className="text-base font-semibold">{t("aiGeneralTitle")}</h2>
+          <p className="text-sm text-muted-foreground">{t("aiGeneralDescription")}</p>
+        </header>
+        <SettingsGroup anchor={SETTINGS_SECTIONS.accountAiProvider}
+          title={t("aiProviderTitle")} variant="block">
+          <ByokConnectPanel />
+        </SettingsGroup>
+        {keys.length > 0 ? <ByokCapabilityAssignments keys={keys} /> : null}
+        {keys.filter((key) => key.assigned_capabilities.length > 0).map((key) => (
+          <ByokSurfacePreferences key={key.id} aiKey={key}
+            providerDefaultModel={providerDefaultModel} />
+        ))}
+      </section>
+
       <NativeAgentConnections defaultEngine={defaultEngine}
         nativeAgentsEnabled={nativeAgentsEnabled} preferenceLoading={prefLoading}
-        onEngineChange={onEngineChange} />
-      {/* Provider credentials come first. */}
-      {/* `ByokConnectPanel` is an assistant shared with onboarding: only its
-          surrounding card changes, not its contents. */}
-      <SettingsGroup
-        anchor={SETTINGS_SECTIONS.accountAiProvider}
-        title={t("aiProviderTitle")}
-        variant="block"
-      >
-        <ByokConnectPanel />
-      </SettingsGroup>
-
-      {keys.length > 0 ? <ByokCapabilityAssignments keys={keys} /> : null}
-
-      {keys.filter((key) => key.assigned_capabilities.length > 0).map((key) => (
-        <ByokSurfacePreferences
-          key={key.id}
-          aiKey={key}
-          showAgentPreferences={usesOpenCode && key.id === textKey?.id}
-          usesOpenCode={usesOpenCode}
-          defaultModel={defaultModel}
-          defaultReasoningLevel={defaultReasoningLevel}
-          preferenceLoading={prefLoading}
-          providerDefaultModel={providerDefaultModel}
-          reasoningLevels={reasoningLevels}
-          onModelChange={onModelChange}
-          onReasoningChange={onReasoningChange}
-        />
-      ))}
-
-      {/* Without BYOK, agent preferences keep their card. As soon as a
-          key exists, they live in the Agent Numo row of the table above. */}
-      {usesOpenCode && !keysLoading && !textKey ? (
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.accountAgent}
-          title={t("agentTab")}
-        >
-          <AgentPreferenceRows
-            loading={prefLoading}
-            loadingLabel={tc("loading")}
-            defaultModel={defaultModel}
-            defaultReasoningLevel={defaultReasoningLevel}
-            providerDefaultModel={providerDefaultModel}
-            reasoningLevels={reasoningLevels}
-            onModelChange={onModelChange}
-            onReasoningChange={onReasoningChange}
-          />
-        </SettingsGroup>
-      ) : null}
-      <AccountSandboxSection />
+        onEngineChange={onEngineChange} openCodeProviderLabel={codeProviderLabel}>
+        {usesOpenCode && <>
+          <SettingsRow label={t("codeAgentFundingTitle")} hint={t("codeAgentFundingHint")}
+            control={textKey ? <Select value={usesCodeKey ? textKey.id : "minddy"}
+              disabled={keysLoading} onValueChange={(value) => void onCodeFundingChange(value)}>
+              <SelectTrigger className="w-56" aria-label={t("codeAgentFundingTitle")}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minddy">{t("aiProviderMinddy")}</SelectItem>
+                <SelectItem value={textKey.id}>{getAgentProvider(textKey.provider)?.label ?? textKey.provider}</SelectItem>
+              </SelectContent>
+            </Select> : <span className="text-sm">{t("aiProviderMinddy")}</span>} />
+          <AgentPreferenceRows loading={prefLoading} loadingLabel={tc("loading")}
+            defaultModel={defaultModel} defaultReasoningLevel={defaultReasoningLevel}
+            providerDefaultModel={providerDefaultModel} reasoningLevels={reasoningLevels}
+            onModelChange={onModelChange} onReasoningChange={onReasoningChange} />
+        </>}
+        <AccountSandboxSection embedded />
+      </NativeAgentConnections>
     </>
   );
 }
@@ -242,35 +240,18 @@ function capabilitiesForSurface(
 /** Areas covered by the key and explicit model of each type of call. */
 function ByokSurfacePreferences({
   aiKey: key,
-  showAgentPreferences,
-  usesOpenCode,
-  defaultModel,
-  defaultReasoningLevel,
-  preferenceLoading,
   providerDefaultModel,
-  reasoningLevels,
-  onModelChange,
-  onReasoningChange,
 }: {
   aiKey: AiKey;
-  showAgentPreferences: boolean;
-  usesOpenCode: boolean;
-  defaultModel: string | null;
-  defaultReasoningLevel: ReasoningLevel;
-  preferenceLoading: boolean;
   providerDefaultModel: string | null;
-  reasoningLevels: ReasoningLevel[];
-  onModelChange: (value: string) => Promise<void>;
-  onReasoningChange: (value: ReasoningLevel) => Promise<void>;
 }) {
   const t = useTranslations("Account");
   const tAgent = useTranslations("Agent");
   const tAdmin = useTranslations("Admin");
-  const tc = useTranslations("Common");
   const queryClient = useQueryClient();
   const visibleSurfaces = AI_SURFACE_DEFINITIONS.filter(
     (surface) =>
-      !isLocalAgentProvider(key.provider) || surface.id === "agent",
+      surface.id !== "agent" && !isLocalAgentProvider(key.provider),
   )
     .map((surface) => ({
       surface,
@@ -310,9 +291,9 @@ function ByokSurfacePreferences({
     }
   };
 
+  if (!visibleSurfaces.length) return null;
   return (
     <SettingsGroup
-      anchor={showAgentPreferences ? SETTINGS_SECTIONS.accountAgent : undefined}
       title={`${t("byokSurfacesTitle")} · ${getAgentProvider(key.provider)?.label ?? key.provider}`}
     >
       {visibleSurfaces.map(({ surface, assignedCapabilities }) => {
@@ -325,9 +306,7 @@ function ByokSurfacePreferences({
             <SettingsRow
               label={t(`byokSurface_${surface.id}`)}
               hint={
-                surface.id === "agent" && !usesOpenCode
-                  ? t("byokAgentNativeHint")
-                  : enabled
+                enabled
                     ? t("byokSurfaceUsesKeyFor", {
                       capabilities: assignedCapabilities
                         .map((capability) => t(`byokCapability_${capability}`))
@@ -344,20 +323,6 @@ function ByokSurfacePreferences({
                 />
               }
             />
-            {surface.id === "agent" && showAgentPreferences ? (
-              <div className="mb-3 ml-4 border-l border-border/70 pl-4">
-                <AgentPreferenceRows
-                  loading={preferenceLoading}
-                  loadingLabel={tc("loading")}
-                  defaultModel={defaultModel}
-                  defaultReasoningLevel={defaultReasoningLevel}
-                  providerDefaultModel={providerDefaultModel}
-                  reasoningLevels={reasoningLevels}
-                  onModelChange={onModelChange}
-                  onReasoningChange={onReasoningChange}
-                />
-              </div>
-            ) : null}
             {enabled && surface.modelKeys.length > 0 ? (
               <div className="mb-3 ml-4 border-l border-border/70 pl-4">
                 {surface.modelKeys

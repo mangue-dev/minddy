@@ -2,8 +2,55 @@
 
 Research date: 2026-10-10. Reviewer: Codex, acting as an agent reviewer.
 Repository baseline: `823b4b8765dffbb8e6fcbe4bdf59bdd182a7f63f`.
-Status: feasibility study; no native runtime, login flow or provider agreement
-has been shipped or validated by this change.
+Original status: feasibility study at the baseline above. Later private runtime,
+encrypted connection and UI-to-PR technical evidence is recorded in the
+[probe log](../validation/min-676-harness-interface-probes.md).
+
+## Current decision and remaining acceptance (2026-10-10)
+
+The current official [Codex app-server authentication reference](https://learn.chatgpt.com/docs/app-server#auth-endpoints)
+excludes native app-server authentication from commercial or hosted services.
+This supersedes this study's earlier permissive private-pilot recommendation.
+Minddy's hosted execution falls within that restriction regardless of its
+current lack of users or revenue. Successful CLI execution and open-source
+precedents prove technical feasibility, not permission to retain this auth route.
+
+The [Sign in with ChatGPT overview](https://developers.openai.com/siwc/token-sharing-open-source)
+documents public registration for local and self-hosted open-source tools;
+remotely hosted apps are directed to the hosted integration interest process.
+Keep Codex hosted rollout gated until Minddy has an authorized integration path.
+No provider application, approval or production deployment has been performed.
+Do not run additional real hosted refresh/revocation/inference through the old
+device-login route as part of this readiness pass.
+
+After that hosted access is established, implement the approved Minddy OAuth
+registration/consent contract, identity validation, PKCE/state/nonce and stable
+host/client mapping. Retain the mandatory owner-scoped encrypted vault and
+serialized credential writer. Use the [official app-server Responses provider](https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server)
+with the approved plan access token; the parent application handles renewal and
+app-server restart/resume. The final hosted client and callback contract cannot
+be inferred from the public local dynamic-registration example. Preserve MCP,
+frozen harness selection, compute quotas, delivery verification and erasure.
+
+Three acceptance areas remain open:
+
+1. Fresh issue-to-PR completion without manual retries, then questions, stop,
+   branch recovery and supported Numo entry points. Historical UI delivery
+   succeeded after infrastructure fixes and retries.
+2. Real credential expiry/renewal, encrypted replacement write-back and cold
+   reuse after destruction, plus confirmed remote-session revocation and
+   owner-approved reconnect on the authorized route. Existing disconnect clears
+   Minddy's copy and fences processes; it does not confirm remote revocation.
+3. Durable hosted HTTPS/OIDC acceptance and a multi-user custody review covering
+   key rotation, backups, cleanup and erasure. The current bridge remains
+   temporary; Docker stays local and no remote database was migrated.
+
+The current pass passed 96 local lifecycle/admission tests and replayed all
+three existing native connection, worker and recovery SQL regressions in the
+isolated Docker database. Their transactions rolled back. These are synthetic
+credential and local fencing proofs, not genuine provider renewal. Claude's
+paid execution remains explicitly untested. The following study sections
+describe the original research snapshot and are subordinate to this decision.
 
 ## Scope and recommendation
 
@@ -52,7 +99,7 @@ resolution. Encryption addresses storage security, not permission to store.
 | Route | Evidence and conclusion | Release condition |
 | --- | --- | --- |
 | Unmodified Claude Code with the user's Claude subscription | Anthropic documents hosted native binary use. Native cached auth and a CI token can technically avoid per-run login. | Confirm a permitted durable custody mechanism: the legal page also prohibits third-party collection/storage of Claude session tokens. Do not infer an exception from encryption or CI token availability. |
-| Native Codex app-server with the user's ChatGPT account | Native login and worker lifecycle are supported. Official private CI guidance describes auth restore and refreshed-file persistence. | Build a private prototype now; validate serialized renewal across destroyed allocations. Resolve public multi-user custody scope before release without conflating this route with token sharing. |
+| Native Codex app-server with the user's ChatGPT account | Login and worker lifecycle technically work; historical private tests recorded successful restoration. Current official documentation excludes this auth route for hosted/commercial services. | Do not continue hosted activation through device login. Use an authorized Minddy integration; historical results do not satisfy release permission. |
 | Sign in with ChatGPT tokens supplied by Minddy | The public open-source flow covers local apps and self-hosted VMs; paid or remotely hosted apps are directed to a separate interest process. | Do not treat Minddy's open-source license as authorization for its hosted offering. A separate approved integration would need its own client registration and consent. |
 | Ori wrapping Codex, Claude Code or OpenCode | Ori supplies OpenRouter credentials, models and organization settings to the chosen CLI. | Optional harness choice with OpenRouter billing, not native subscription consumption. |
 | Other coding CLI subscriptions | This study does not establish support or hosting permission for every coding assistant. | Add each harness only after the same auth, protocol, isolation and terms review. |
@@ -73,12 +120,11 @@ The [Codex app-server reference](https://learn.chatgpt.com/docs/app-server)
 documents CLI-owned account login. OpenAI's
 [ChatGPT plan integration overview](https://developers.openai.com/siwc/token-sharing-open-source)
 separately directs paid or remotely hosted integrations to an interest form.
-That limitation applies to that integration route; it is not proof that the
-original CLI's device login is technically unavailable. Conversely, the
-existence of device login does not settle the exact public multi-user custody
-design. Do not make outreach a prerequisite to all development: start with
-native adapters and a trusted private prototype, then assess the remaining
-release question against actual implementation evidence.
+The original CLI's device login is technically available, but the current
+app-server reference explicitly excludes hosted/commercial authentication.
+Treat the approved hosted integration route as a prerequisite to further live
+Codex auth acceptance. Reversible UI work, local fixtures, admission tests and
+documentation can continue without account mutations or production rollout.
 The [European terms](https://openai.com/policies/eu-terms-of-use/) also prohibit
 account sharing and bypassing usage restrictions. Personal connections must
 not become pooled credentials for a team, project or platform.
@@ -109,13 +155,15 @@ target for this issue.
 
 ### Codex
 
-Use `codex app-server --listen stdio://` with the supervisor as its private
+The original prototype used `codex app-server --listen stdio://` with the supervisor as its private
 JSON-RPC client. Initialize with Minddy's stable client identity, then use native
 account login, model discovery and thread/turn operations. Prefer
 `account/login/start` with `type: chatgptDeviceCode` for a remote sandbox; display
 the verification URL and short-lived user code only to the connection owner.
-Keep the device-code exchange and token renewal inside Codex. Support explicit
-login cancellation and logout. The user's workspace may disallow device login.
+This CLI-owned device-code exchange and renewal describe the historical
+prototype, not the authorized hosted design. The latter uses the approved
+Minddy OAuth registration and plan-token provider described above. The user's
+workspace may also disallow device login independently of the hosting condition.
 
 The generated schema from `@openai/codex@0.162.1` contains these operations.
 It also marks externally supplied `chatgptAuthTokens` as unstable and for OpenAI
@@ -632,7 +680,11 @@ These licenses permit studying or reusing code subject to their notices. They
 do not grant provider subscription rights. No inspected repository supplies
 approval for Minddy's exact multi-user custody model.
 
-### Private prototype sequence and remaining permission question
+### Historical private prototype sequence
+
+The sequence below records the earlier recommendation. The current hosted
+decision above supersedes its live-auth instructions; fixture development can
+continue without using genuine credentials in hosted allocations.
 
 1. Implement `vm/harness-adapter.ts`, the Codex app-server client, published
    Claude CLI stream transport and `vm/mcp-tool-bridge.ts` behind an internal
@@ -670,6 +722,7 @@ multi-user SaaS vault.
 An [OpenAI maintainer's answer](https://github.com/openai/codex/discussions/8338)
 describes permissive terms and similar OSS products while explicitly declining
 a legal conclusion. Treat it as a favorable engineering signal, not an exact
-hosted authorization. The study therefore supports building the private
-prototype now; successful technical tests alone will not resolve every public
-release condition.
+hosted authorization. That answer does not override the current official
+hosted-auth restriction. Continue local fixture and interface work; further live
+Codex authentication must use an authorized hosted integration. Technical
+success alone does not satisfy that release condition.

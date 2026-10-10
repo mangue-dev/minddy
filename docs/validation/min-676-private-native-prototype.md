@@ -1,8 +1,33 @@
 # MIN-676 private native subscription prototype
 
+## Current hosted release decision (2026-10-10)
+
+The existing implementation and earlier successful Codex runs are technical
+evidence only. A fresh official-source review supersedes the previous conclusion
+that the native app-server login route could continue as a hosted private pilot.
+The [Codex app-server authentication reference](https://learn.chatgpt.com/docs/app-server#auth-endpoints)
+explicitly excludes app-server authentication from commercial or hosted services.
+Minddy's hosted sandbox execution falls within that boundary even with no users
+or revenue. Do not start further hosted Codex device logins, native refreshes,
+revocations or inference through this mechanism during the readiness pass.
+
+The [Sign in with ChatGPT overview](https://developers.openai.com/siwc/token-sharing-open-source)
+provides the intended integration route, but its public open-source flow covers
+local applications and self-hosted environments. Remotely hosted applications
+are directed to the hosted integration interest process. Minddy's open-source
+license does not establish that access. No application, provider approval or
+production deployment has been performed. Keep the server gate and account
+allowlist; removing confusing UI labels does not remove this release condition.
+
+The sections below describe the implemented prototype and historical pilot
+configuration. They are not permission to activate this auth route for a hosted
+service. Claude remains implemented but its paid execution is untested.
+
 This preview connects a personal Codex or Claude Code account from Account
 settings → AI, persists an encrypted native profile, destroys the login sandbox,
-and offers a two-allocation cold-start test. Eligible accounts can then choose
+and includes an internal two-allocation cold-start diagnostic. The current
+settings interface removes its user-facing test button and combines sandbox
+controls with the code agent. Eligible accounts can then choose
 OpenCode, Codex or Claude Code as their code-agent default. Ticket implementation,
 planning, verification, conversation work and routine workers use that selection
 when creating a new lineage. Existing workers retain their frozen harness,
@@ -14,7 +39,7 @@ not establish paid execution eligibility: paid Claude hosted worker acceptance
 remains unvalidated until an actual successful run is recorded. This document
 states implemented contracts; live acceptance evidence belongs in the probe log.
 
-## Activation
+## Historical pilot configuration
 
 1. Apply the repository migration set, including
    `20270109200033_native_agent_connections.sql`,
@@ -59,7 +84,7 @@ uses its native app-server device flow; Claude uses its native browser login and
 approval-code input. A free Claude account is not evidence of paid subscription
 eligibility; a real successful native turn is required to validate that path.
 
-## Account pilot
+## Historical account pilot
 
 Choose Connect, complete approval on the provider's own site and keep settings
 open until the UI reports Connected. The server exports only allowlisted native
@@ -71,7 +96,7 @@ abandoned attempt. Login attempts expire after ten minutes, allocations after
 fifteen minutes. A lease is never automatically reclaimed while cleanup is
 unconfirmed.
 
-Choose Test on new sandboxes. The server creates a fresh named allocation,
+The internal two-allocation diagnostic creates a fresh named allocation,
 restores the profile, asks the native CLI to validate its account, and launches a
 fixed private fixture turn. The only advertised Minddy MCP tool is the existing
 read-only `minddy_list_projects` handler. Its normal authentication, rate limit,
@@ -183,9 +208,12 @@ attempts explicitly during a local pilot without cron, and inspect the private
 namespace when reconciling an interrupted process. Provider lifetime expiry bounds compute but does not
 prove metadata/snapshot deletion or settle a creation request.
 
-Logout here deletes Minddy's copy and its allocations. It does not revoke every
-session on the provider's other devices. Provider-side account/session revocation
-must be handled through that provider's normal account controls.
+Disconnect here deletes Minddy's copy and its allocations. It does not confirm
+revocation of that renewable session at OpenAI and does not revoke sessions on
+the provider's other devices. This local disconnect contract must not be
+presented as provider-side revocation. An authorized replacement integration
+needs explicit remote-session revocation and truthful recovery when that request
+cannot be confirmed.
 
 ## Verification boundary
 
@@ -232,8 +260,8 @@ individually; synthetic tests or successful connection alone do not establish th
 
 ## Codex ordinary-use readiness
 
-The private owner can select the connected Codex account and launch hosted code
-work from Minddy. The accepted UI-to-PR run proves encrypted cold restoration,
+The historical private owner pilot selected the connected Codex account and
+launched hosted code work from Minddy. The accepted UI-to-PR run proves encrypted cold restoration,
 guarded Minddy MCP calls, a pushed tested change and full allocation deletion.
 It required retries after infrastructure fixes; it does not establish reliable
 first-attempt delivery across every Numo model and entry point.
@@ -247,7 +275,20 @@ through Numo. Numo receives a safe account selection snapshot at prompt startup,
 then uses authoritative frozen launch and handoff capabilities for existing work.
 No credentials or connection identifiers enter that snapshot.
 
-Before treating this as ordinary hosted Codex delivery, complete these steps:
+The current readiness pass replayed 96 local tests covering the credential store,
+native connection and controller lifecycle, worker connections, signed route and
+sandbox network policy. All passed. The three transactional regressions
+`supabase/tests/native_agent_connections.test.sql`,
+`supabase/tests/native_subscription_workers.test.sql` and
+`supabase/tests/native_worker_recovery.test.sql` also passed against
+`supabase_db_minddy-min676-local` using `psql -X -v ON_ERROR_STOP=1`.
+Each script's opening `BEGIN` and closing `ROLLBACK` were checked before execution;
+all transactions rolled back. Their synthetic owners and credentials do not
+modify the connected account or prove provider renewal. No remote database,
+provider credential or production environment was changed.
+
+Three acceptance areas remain incomplete. The provider authorization condition
+above applies before further live hosted Codex acceptance:
 
 1. Run a fresh issue-to-PR acceptance without manual retries on the corrected
    worker. Exercise planning, verification and conversation/routine entry
@@ -255,19 +296,48 @@ Before treating this as ordinary hosted Codex delivery, complete these steps:
    reconnect. Investigate the observed Numo responses that printed a tool-call
    representation instead of executing the follow-up; a claimed relaunch is not
    delivery evidence.
-2. Observe real provider-native credential renewal, encrypted write-back and
-   cold reuse after expiry, along with provider revocation and disconnect during
-   active work. Current generation/revision and lease tests cover fencing;
-   successful reuse of a still-valid profile does not prove renewal.
+2. On the authorized authentication route, observe actual credential renewal,
+   encrypted write-back and cold reuse after expiry, plus remote session
+   revocation, local disconnect during active work and user-approved reconnect.
+   Current generation/revision and lease tests cover fencing; successful reuse
+   of a still-valid profile and synthetic token changes do not prove renewal.
+   The old managed CLI's `account/read` refresh flag is a protocol capability,
+   not acceptance evidence or permission to use it in Minddy hosting.
 3. Replace the temporary Quick Tunnel and development process with the intended
    hosted application's stable HTTPS origin, then validate the same OIDC
    audience, tenant admission, cleanup and recovery there. Apply the reviewed
    migrations and encryption configuration only during an authorized rollout.
-   This pilot continues to use Docker locally and does not migrate remote data.
-4. Resolve the documented public multi-user credential-custody release boundary
-   and review the operational key rotation, backup recovery and erasure evidence
-   before expanding the server allowlist. Do not remove the private gate merely
-   because one owner pilot works.
+   Include a multi-user custody review, operational key rotation, backup
+   recovery, erasure and reaper/crash evidence before expanding access. The
+   implementation can derive the HTTPS origin from its deployment scope; that
+   behavior and local OIDC tests do not attest that a durable deployment exists.
+   This pass keeps Docker locally and does not migrate remote data.
+
+## Authorized Codex integration path
+
+After hosted access is established, replace CLI-owned device authentication with
+Minddy's approved OAuth registration and consent flow. Retain a stable host
+identifier and account/client mapping, validate PKCE, state, nonce and identity,
+then store credentials under the existing mandatory owner-scoped encryption.
+The final hosted client and redirect contract must come from that approved
+integration; the public dynamic registration flow is not a hosting workaround.
+
+The [official app-server integration](https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server)
+uses a ChatGPT-plan-authorized access token with a Responses provider configured
+for `https://api.openai.com/v1`. The parent supplies the access token to the
+isolated native process and keeps renewable credentials outside the repository
+and model tools. Minddy must serialize renewal, persist the replacement under
+the existing lease fence and restart/resume app-server with the renewed token.
+MCP admission, frozen harness identity, compute metering, delivery checks and
+destructive cleanup remain required.
+
+The [official session lifecycle](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)
+also distinguishes remote renewable-session revocation from local token deletion.
+Implement confirmed revocation, bounded retries and an explicit unconfirmed
+state; never revoke the user's unrelated account sessions to test the feature.
+Validate this lifecycle through genuine expiration/renewal, deletion and cold
+restoration, then reconnect with the account owner's participation. No such
+real-provider lifecycle test was performed in this pass.
 
 Paid Claude execution is a separate, explicitly untested acceptance path. It
 does not block Codex-specific private validation and must not be presented as a

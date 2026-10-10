@@ -27,6 +27,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("AGENT_CONTROL_ORIGIN", ORIGIN);
+  vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
   vi.stubEnv("VERCEL_TEAM_ID", "fixture-team");
   vi.stubEnv("VERCEL_PROJECT_ID", "fixture-project");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "fixture-server-control-secret");
@@ -128,7 +129,7 @@ it("does not infer a trusted audience from forwarding headers without an explici
 });
 
 it.each([POST, PUT, DELETE])("preserves signed request paths, query strings and bodies", async (handler) => {
-  vi.stubEnv("AGENT_CONTROL_ORIGIN", `${ORIGIN}/ignored-config-path`);
+  vi.stubEnv("AGENT_CONTROL_ORIGIN", `${ORIGIN}/`);
   const method = handler === POST ? "POST" : handler === PUT ? "PUT" : "DELETE";
   const response = await handler(await signedRequest({
     path: "/api/agent-vm/checkpoint?fixture=true", method, body: '{"fixture":true}',
@@ -152,7 +153,22 @@ it("preserves the existing server runner admission without an origin override", 
   });
 });
 
-it.each(["not a URL", "file:///tmp/control", "https://user:password@control.example.test"])(
+it("preserves a configured internal HTTP origin for the self-hosted server runner", async () => {
+  vi.stubEnv("AGENT_EXECUTION_BACKEND", "self-hosted");
+  vi.stubEnv("AGENT_CONTROL_ORIGIN", "http://minddy-web:3000");
+  const token = signServerExecToken(RUN, resolveServerExecSecret()!);
+  const response = await GET(new Request("http://localhost:6463/api/agent-vm/interrupt", {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  expect(response.status).toBe(404);
+  expect(h.serve).toHaveBeenCalledWith({
+    runId: RUN, method: "GET", surface: "/interrupt", body: null, server: true,
+  });
+});
+
+it.each(["not a URL", "file:///tmp/control", "https://user:password@control.example.test",
+  `${ORIGIN}/configuration-path`, `${ORIGIN}?audience=other`, `${ORIGIN}#fragment`,
+  "http://control.example.test", "https://localhost:6463", "https://127.0.0.1:6463"])(
   "fails closed for invalid explicit origin configuration: %s",
   async (origin) => {
     vi.stubEnv("AGENT_CONTROL_ORIGIN", origin);

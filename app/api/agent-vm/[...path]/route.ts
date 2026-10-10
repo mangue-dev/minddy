@@ -1,4 +1,6 @@
 import { defineSandboxProxy } from "@vercel/sandbox/proxy";
+import { resolveAgentExecutionBackend } from "@/lib/capabilities";
+import { parseAgentControlOrigin } from "@/lib/server/agent/control-origin";
 
 import {
   CONTROL_PLANE_MAX_BODY_BYTES,
@@ -165,12 +167,11 @@ async function handler(request: Request): Promise<Response> {
 
   let url: URL;
   try {
-    const origin = new URL(configuredOrigin);
-    if (!["https:", "http:"].includes(origin.protocol) || origin.username || origin.password) {
-      throw new Error("Invalid control origin");
-    }
+    const origin = parseAgentControlOrigin(configuredOrigin, {
+      hosted: resolveAgentExecutionBackend(process.env) === "vercel",
+    });
     const incoming = new URL(request.url);
-    url = new URL(origin.origin);
+    url = new URL(origin);
     url.pathname = incoming.pathname;
     url.search = incoming.search;
   } catch {

@@ -8,7 +8,6 @@ import { getUserByok } from "@/lib/server/agent/model";
 import { DEFAULT_AGENT_PROVIDER } from "@/lib/agent-providers";
 import { isLiveAgentEngine } from "@/lib/agent-engines";
 import { nativePrototypeEnabledFor } from "@/lib/server/agent/native-prototype/access";
-import { listNativeConnections } from "@/lib/server/agent/native-agent-credentials";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import {
   DEFAULT_AGENT_BRANCH_PREFIX,
@@ -98,8 +97,8 @@ export async function PUT(request: NextRequest) {
     if (!isLiveAgentEngine(body.default_engine)) return NextResponse.json({ errorCode: "profile_invalid" }, { status: 400 });
     if (body.default_engine !== "opencode") {
       if (!nativePrototypeEnabledFor(auth.user.id)) return NextResponse.json({ errorCode: "private_prototype_unavailable" }, { status: 403 });
-      const connection = (await listNativeConnections(auth.user.id)).find((item) => item.engine === body.default_engine);
-      if (!connection || connection.status !== "connected" || connection.stopRequired) return NextResponse.json({ errorCode: "reconnect_required" }, { status: 409 });
+      // Selecting the desired harness precedes its account connection. Worker
+      // admission still requires usable credentials and never falls back to API.
     }
     patch.default_engine = body.default_engine;
   }

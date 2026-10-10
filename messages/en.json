@@ -2495,7 +2495,11 @@
     "desktopAppHint": "Available for macOS, Windows, and Linux. Its own window, server selector, and updates.",
     "desktopAppCta": "Download",
     "mcpClientsTab": "MCP for Numo",
-    "byokAgentNativeHint": "This key applies to OpenCode code workers. Your selected native agent uses its connected subscription."
+    "byokAgentNativeHint": "This key applies to OpenCode code workers. Your selected native agent uses its connected subscription.",
+    "aiGeneralTitle": "Minddy AI",
+    "aiGeneralDescription": "Numo conversations, automations, voice and feedback use Minddy Cloud or your API keys. Coding subscriptions apply only to the code agent.",
+    "codeAgentFundingTitle": "AI provider",
+    "codeAgentFundingHint": "OpenCode uses Minddy Cloud or the text-model provider configured above."
   },
   "AccountData": {
     "importTitle": "Transfer data from another minddy instance",
@@ -6541,11 +6545,11 @@
     "revisionLabel": "Revision"
   },
   "NativeAgentConnections": {
-    "title": "Personal coding subscriptions",
+    "title": "Code agent",
     "preview": "Private preview",
-    "description": "Connect your account, then choose the agent Numo uses for new code work in hosted sandboxes. Your subscription covers native model usage; sandbox compute and Numo still use Minddy usage.",
+    "description": "Choose the agent for repository work. Codex and Claude Code use their connected subscription; Numo and sandbox compute remain separate.",
     "codexHint": "Use a ChatGPT account with Codex access.",
-    "claudeHint": "Use a Claude subscription that includes Claude Code. Paid live execution has not yet been validated in this preview.",
+    "claudeHint": "Use a Claude subscription that includes Claude Code. Paid execution has not yet been validated.",
     "connect": "Connect {agent}",
     "resume": "Continue connection",
     "test": "Test new sandboxes",
@@ -6570,7 +6574,7 @@
     "status_connected": "Connected",
     "status_busy": "In use",
     "status_reconnect_required": "Reconnect needed",
-    "error_private_prototype_unavailable": "This preview is unavailable. Try again later.",
+    "error_private_prototype_unavailable": "This agent is unavailable. Try again later.",
     "error_connection_busy": "This connection is in use. Wait for the current work to finish.",
     "error_reconnect_required": "Your connection needs renewal. Connect your account again.",
     "error_login_failed": "Sign-in failed. Connect your account again.",
@@ -6579,9 +6583,10 @@
     "error_test_failed": "The sandbox test failed. Try again.",
     "error_subscription_unavailable": "This account cannot use the selected agent. Check your plan and account access.",
     "engineTitle": "Code agent",
-    "engineOpenCodeHint": "OpenCode uses your configured API provider, code model and reasoning level.",
+    "engineOpenCodeHint": "OpenCode uses Minddy Cloud or the text-model provider configured above.",
     "engineNativeHint": "The selected CLI chooses its model and reasoning. New workers use your subscription and Minddy tools. If access fails, work stops without switching to an API provider.",
-    "engineUnavailable": "This private preview is unavailable for your account. Choose OpenCode explicitly to start new code work.",
-    "engineReconnect": "Reconnect this account before starting code work, or choose OpenCode explicitly."
+    "engineUnavailable": "Native agents are unavailable for your account. Choose OpenCode to start code work.",
+    "engineReconnect": "Connect this account before starting code work, or choose OpenCode explicitly.",
+    "openCodeLabel": "OpenCode ({provider})"
   }
 }

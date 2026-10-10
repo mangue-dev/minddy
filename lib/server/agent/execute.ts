@@ -608,6 +608,7 @@ export async function executeAgentRun(
    * nothing. See `finally`.
    */
   let vmLoopLaunched = false;
+  let nativeControlOrigin: string | undefined;
   const executionTarget = resolveAgentExecutionTarget(process.env);
   const selfHostedSandbox = executionTarget === "self-hosted";
 
@@ -664,6 +665,8 @@ export async function executeAgentRun(
       if (selfHostedSandbox || resolveAgentExecutionBackend(process.env) !== "vercel") {
         throw new Error("Native subscription workers require hosted execution");
       }
+      // Reject invalid hosted-origin configuration before claiming credentials or allocating compute.
+      nativeControlOrigin = agentControlOrigin();
       await resolveWorkerHarness(run.created_by, run);
     }
 
@@ -952,7 +955,7 @@ export async function executeAgentRun(
       return vmTarget.remoteUrl;
     };
     const networkPolicy = (native ? buildNativeAgentNetworkPolicy : buildAgentNetworkPolicy)({
-      baseUrl, llmKey: vmKey, appOrigin: agentControlOrigin(),
+      baseUrl, llmKey: vmKey, appOrigin: nativeControlOrigin ?? agentControlOrigin(),
       ...(vmTarget ? {
         forge: {
           provider: vmTarget.provider, repoFullName: vmTarget.repoFullName,
@@ -1605,7 +1608,7 @@ export async function executeAgentRun(
       runId: run.id,
       ledgerRunId: run.run_id ?? run.id,
       projectId: run.project_id,
-      appOrigin: agentControlOrigin(),
+      appOrigin: nativeControlOrigin ?? agentControlOrigin(),
       ...(!selfHostedSandbox && sandbox ? {
         forgeRefreshPolicy: await sealAgentSandboxForgeRefreshPolicy(run.project_id, sandbox, networkPolicy),
       } : {}),

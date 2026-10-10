@@ -2495,7 +2495,11 @@
     "desktopAppHint": "Disponibile per macOS, Windows e Linux. La sua finestra, il selettore del server e gli aggiornamenti.",
     "desktopAppCta": "Scarica",
     "mcpClientsTab": "MCP per Numo",
-    "byokAgentNativeHint": "Questa chiave si applica agli agenti di codice OpenCode. L’agente nativo selezionato usa il suo abbonamento collegato."
+    "byokAgentNativeHint": "Questa chiave si applica agli agenti di codice OpenCode. L’agente nativo selezionato usa il suo abbonamento collegato.",
+    "aiGeneralTitle": "IA di Minddy",
+    "aiGeneralDescription": "Le conversazioni Numo, le automazioni, la voce e il feedback usano Minddy Cloud o le tue chiavi API. Gli abbonamenti di programmazione si applicano solo all’agente di codice.",
+    "codeAgentFundingTitle": "Provider IA",
+    "codeAgentFundingHint": "OpenCode usa Minddy Cloud o il provider di modelli di testo configurato sopra."
   },
   "AccountData": {
     "importTitle": "Trasferire dati da un'altra istanza minddy",
@@ -6541,11 +6545,11 @@
     "revisionLabel": "Revisione"
   },
   "NativeAgentConnections": {
-    "title": "Abbonamenti personali per il codice",
+    "title": "Agente di codice",
     "preview": "Anteprima privata",
-    "description": "Collega il tuo account, poi scegli l’agente che Numo usa per i nuovi lavori sul codice nelle sandbox ospitate. Il tuo abbonamento copre l’uso del modello nativo; il calcolo delle sandbox e Numo continuano a contare come utilizzo Minddy.",
+    "description": "Scegli l’agente per il lavoro sui repository. Codex e Claude Code usano il loro abbonamento collegato; Numo e il calcolo delle sandbox restano separati.",
     "codexHint": "Usa un account ChatGPT con accesso a Codex.",
-    "claudeHint": "Usa un abbonamento Claude che include Claude Code. L’esecuzione reale con un abbonamento a pagamento non è ancora stata verificata in questa anteprima.",
+    "claudeHint": "Usa un abbonamento Claude che include Claude Code. L’esecuzione con un abbonamento a pagamento non è ancora stata verificata.",
     "connect": "Collega {agent}",
     "resume": "Continua connessione",
     "test": "Prova nuove sandbox",
@@ -6570,7 +6574,7 @@
     "status_connected": "Collegato",
     "status_busy": "In uso",
     "status_reconnect_required": "Da ricollegare",
-    "error_private_prototype_unavailable": "Questa anteprima non è disponibile. Riprova più tardi.",
+    "error_private_prototype_unavailable": "Questo agente non è disponibile. Riprova più tardi.",
     "error_connection_busy": "Questa connessione è in uso. Attendi il completamento del lavoro in corso.",
     "error_reconnect_required": "La connessione deve essere rinnovata. Collega di nuovo il tuo account.",
     "error_login_failed": "L’accesso non è riuscito. Collega di nuovo il tuo account.",
@@ -6579,9 +6583,10 @@
     "error_test_failed": "Il test delle sandbox non è riuscito. Riprova.",
     "error_subscription_unavailable": "Questo account non può usare l’agente selezionato. Verifica il piano e l’accesso del tuo account.",
     "engineTitle": "Agente di codice",
-    "engineOpenCodeHint": "OpenCode usa il provider API, il modello di codice e il livello di ragionamento configurati.",
+    "engineOpenCodeHint": "OpenCode usa Minddy Cloud o il provider di modelli di testo configurato sopra.",
     "engineNativeHint": "Il CLI selezionato sceglie modello e ragionamento. I nuovi agenti usano il tuo abbonamento e gli strumenti Minddy. Se l’accesso fallisce, il lavoro si interrompe senza passare a un provider API.",
-    "engineUnavailable": "Questa anteprima privata non è disponibile per il tuo account. Scegli esplicitamente OpenCode per avviare nuovi lavori sul codice.",
-    "engineReconnect": "Ricollega questo account prima di avviare un lavoro sul codice, oppure scegli esplicitamente OpenCode."
+    "engineUnavailable": "Gli agenti nativi non sono disponibili per il tuo account. Scegli OpenCode per avviare lavori sul codice.",
+    "engineReconnect": "Collega questo account prima di avviare lavori sul codice oppure scegli esplicitamente OpenCode.",
+    "openCodeLabel": "OpenCode ({provider})"
   }
 }

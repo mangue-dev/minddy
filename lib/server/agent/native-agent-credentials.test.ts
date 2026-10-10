@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { randomBytes } from "node:crypto";
 import { EncryptedStore } from "@/lib/server/encryption/store";
+import { RootKeyCrypto } from "@/lib/server/encryption/root-key-crypto.mjs";
 import type { NativeCredentialProfile } from "@/lib/native-agent-prototype";
 
 const h = vi.hoisted(() => ({
@@ -42,6 +44,58 @@ beforeEach(() => {
 });
 
 describe("native subscription credential storage", () => {
+  it("restores a synthetic vault backup after root rewrap without rewriting credentials or weakening ownership", async () => {
+    const owner = lease();
+    const scope = { kind: "user" as const, id: owner.userId };
+    const oldRoot = randomBytes(32).toString("hex");
+    const nextRoot = randomBytes(32).toString("hex");
+    const generated = await new RootKeyCrypto(oldRoot).generate(scope);
+    let wrappedKey = Buffer.from(generated.wrappedKey);
+    generated.bytes.fill(0);
+    const restoreStore = (root: string) => {
+      const crypto = new RootKeyCrypto(root);
+      h.store = new EncryptedStore({
+        current: async (requested) => ({ version: 1,
+          bytes: await crypto.unwrap({ scope: requested, version: 1, wrappedKey }) }),
+        byVersion: async (requested, version) => {
+          if (version !== 1) throw new Error("Unknown backup data key version");
+          return { version, bytes: await crypto.unwrap({ scope: requested, version, wrappedKey }) };
+        },
+      });
+    };
+    restoreStore(oldRoot);
+    const profileCiphertext = await encryptNativeProfile(owner, profile);
+    h.single.mockResolvedValue({ data: { revision: 3 }, error: null });
+    await setNativeRuntime(owner, { sandboxId: "synthetic-allocation", controllerToken: "synthetic-controller" });
+    const runtimeCiphertext = h.rpc.mock.calls[0][1].p_ciphertext as string;
+    const backup = JSON.parse(JSON.stringify({ profileCiphertext, runtimeCiphertext,
+      wrappedKey: wrappedKey.toString("base64") })) as {
+      profileCiphertext: string; runtimeCiphertext: string; wrappedKey: string;
+    };
+    wrappedKey = Buffer.from(backup.wrappedKey, "base64");
+    restoreStore(nextRoot);
+    await expect(decryptNativeProfile(owner, backup.profileCiphertext)).rejects.toThrow("Unable to unwrap");
+
+    const dataKey = await new RootKeyCrypto(oldRoot).unwrap({ scope, version: 1, wrappedKey });
+    try { wrappedKey = new RootKeyCrypto(nextRoot).wrap(scope, dataKey); }
+    finally { dataKey.fill(0); }
+    restoreStore(nextRoot);
+    await expect(decryptNativeProfile(owner, backup.profileCiphertext)).resolves.toEqual(profile);
+    h.single.mockResolvedValue({ data: { runtime_ciphertext: backup.runtimeCiphertext }, error: null });
+    await expect(getNativeRuntime(owner)).resolves.toEqual({
+      sandboxId: "synthetic-allocation", controllerToken: "synthetic-controller",
+    });
+    for (const change of [{ userId: "different-owner" }, { connectionId: "different-connection" },
+      { engine: "claude_code" as const }]) {
+      await expect(decryptNativeProfile({ ...owner, ...change }, backup.profileCiphertext)).rejects.toThrow();
+    }
+    await expect(decryptNativeProfile(owner, backup.runtimeCiphertext)).rejects.toThrow();
+    expect(backup.profileCiphertext).toBe(profileCiphertext);
+    expect(backup.runtimeCiphertext).toBe(runtimeCiphertext);
+    restoreStore(oldRoot);
+    await expect(decryptNativeProfile(owner, backup.profileCiphertext)).rejects.toThrow("Unable to unwrap");
+  });
+
   it("always encrypts profiles and binds the owner, provider and connection", async () => {
     const cipher = await encryptNativeProfile(lease(), profile);
     expect(cipher).not.toContain("private-access");

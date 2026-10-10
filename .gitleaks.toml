@@ -171,7 +171,7 @@ paths = [
   '''(?:^|/)docs/self-hosting\.md$''',
   '''(?:^|/)scripts/self-hosting-install\.mjs$''',
   '''(?:^|/)scripts/self-hosting-tools\.test\.mjs$''',
-  '''(?:^|/)lib/(?:desktop/(?:local-models|server-origin)|server/(?:agent/vm/opencode-permissions|forge-relay/webhook-secret-route|link-preview|safe-fetch|ssrf-surfaces)|session-cookies)\.test\.ts$''',
+  '''(?:^|/)lib/(?:desktop/(?:local-models|server-origin)|server/(?:agent/(?:vm/opencode-permissions|origin)|forge-relay/webhook-secret-route|link-preview|safe-fetch|ssrf-surfaces)|session-cookies)\.test\.ts$''',
 ]
 
 [[rules.allowlists]]

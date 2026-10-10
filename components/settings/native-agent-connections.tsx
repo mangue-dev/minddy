@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "mangue-ui";
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "mangue-ui";
 
 import { SettingsGroup, SettingsRow } from "./settings-ui";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
@@ -17,13 +17,11 @@ import {
   startNativeLogin,
   safeNativeErrorCode,
   submitNativeLoginCode,
-  testNativeConnection,
 } from "@/lib/native-agent-prototype-api";
 import type { NativeRequestErrorCode } from "@/lib/native-agent-prototype-api";
 import type {
   NativeConnectionMetadata,
   NativeLoginStatus,
-  NativePrototypeTestResult,
 } from "@/lib/native-agent-prototype";
 import type { AccountAgentEngine } from "@/lib/agent-keys-api";
 
@@ -63,7 +61,11 @@ export function NativeAgentConnections({
   nativeAgentsEnabled,
   preferenceLoading = false,
   onEngineChange,
+  openCodeProviderLabel,
+  children,
 }: {
+  openCodeProviderLabel?: string;
+  children?: ReactNode;
   defaultEngine?: AccountAgentEngine;
   nativeAgentsEnabled?: boolean;
   preferenceLoading?: boolean;
@@ -99,7 +101,6 @@ export function NativeAgentConnections({
   }, []);
 
   const eligible = nativeAgentsEnabled ?? enabled;
-  if (!eligible && defaultEngine === "opencode") return null;
 
   const selectEngine = async (value: string) => {
     if (!onEngineChange || savingEngine || !["opencode", "codex", "claude_code"].includes(value)) return;
@@ -120,10 +121,9 @@ export function NativeAgentConnections({
 
   return (
     <SettingsGroup
-      anchor={defaultEngine !== "opencode" ? SETTINGS_SECTIONS.accountAgent : undefined}
+      anchor={SETTINGS_SECTIONS.accountAgent}
       title={t("title")}
-      action={<Badge variant="secondary">{t("preview")}</Badge>}
-      className="ph-no-capture ph-mask rr-block"
+      className="ph-no-capture ph-mask rr-block [&>header_h2]:text-base [&>header_h2]:font-semibold"
     >
       <p className="py-3 text-sm text-muted-foreground">{t("description")}</p>
       {onEngineChange && <SettingsRow
@@ -131,27 +131,28 @@ export function NativeAgentConnections({
         hint={t(defaultEngine === "opencode" ? "engineOpenCodeHint" : "engineNativeHint")}
         control={<Select value={defaultEngine} disabled={preferenceLoading || savingEngine}
           onValueChange={(value) => void selectEngine(value)}>
-          <SelectTrigger className="w-56" aria-label={t("engineTitle")}><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-72 max-w-full" aria-label={t("engineTitle")}><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="opencode"><EngineLabel engine="opencode" /></SelectItem>
-            <SelectItem value="codex" disabled={!ready("codex")}><EngineLabel engine="codex" /></SelectItem>
-            <SelectItem value="claude_code" disabled={!ready("claude_code")}><EngineLabel engine="claude_code" /></SelectItem>
+            <SelectItem value="opencode"><span className="inline-flex items-center gap-2"><McpAgentLogo agent="opencode" size={16} /><span>{openCodeProviderLabel ? t("openCodeLabel", { provider: openCodeProviderLabel }) : "OpenCode"}</span></span></SelectItem>
+            <SelectItem value="codex" disabled={!eligible}><EngineLabel engine="codex" /></SelectItem>
+            <SelectItem value="claude_code" disabled={!eligible}><EngineLabel engine="claude_code" /></SelectItem>
           </SelectContent>
         </Select>}
       >
-        {!eligible && <p className="py-2 text-sm text-muted-foreground" role="status">{t("engineUnavailable")}</p>}
+        {!eligible && defaultEngine !== "opencode" && <p className="py-2 text-sm text-muted-foreground" role="status">{t("engineUnavailable")}</p>}
         {eligible && defaultEngine !== "opencode" && !ready(defaultEngine)
           && <p className="py-2 text-sm text-muted-foreground" role="status">{t("engineReconnect")}</p>}
         {engineError && <p className="py-2 text-sm text-destructive" role="alert">{t(engineError)}</p>}
       </SettingsRow>}
-      {eligible && (["codex", "claude_code"] as const).map((engine) => (
+      {eligible && defaultEngine !== "opencode" && (
         <NativeConnectionRow
-          key={engine}
-          engine={engine}
-          connection={connections.find((item) => item.engine === engine)}
+          key={defaultEngine}
+          engine={defaultEngine}
+          connection={connections.find((item) => item.engine === defaultEngine)}
           refresh={refresh}
         />
-      ))}
+      )}
+      {children}
     </SettingsGroup>
   );
 }
@@ -167,7 +168,6 @@ function NativeConnectionRow({ engine, connection, refresh }: {
   const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<NativeErrorMessage | null>(null);
-  const [result, setResult] = useState<NativePrototypeTestResult | null>(null);
   const generation = useRef(0);
   const activeAttempt = useRef<string | null>(null);
   const mounted = useRef(false);
@@ -242,7 +242,6 @@ function NativeConnectionRow({ engine, connection, refresh }: {
   };
 
   const connect = () => action(async () => {
-    setResult(null);
     const next = status === "connecting" && connection?.attemptId
       ? await readNativeLogin(engine, connection.attemptId)
       : await startNativeLogin(engine);
@@ -277,17 +276,9 @@ function NativeConnectionRow({ engine, connection, refresh }: {
     activeAttempt.current = null;
     setLogin(null);
     setCode("");
-    setResult(null);
     await refresh();
   });
 
-  const test = () => action(async () => {
-    setResult(null);
-    const next = await testNativeConnection(engine);
-    if (!mounted.current) return;
-    setResult(next);
-    await refresh();
-  });
 
   return (
     <SettingsRow
@@ -305,8 +296,6 @@ function NativeConnectionRow({ engine, connection, refresh }: {
           )}
           {(status === "connected" || status === "busy") && (
             <>
-              <Button size="sm" variant="outline" disabled={pending || status === "busy"}
-                onClick={() => void test()}>{t("test")}</Button>
               <Button size="sm" variant="ghost" disabled={pending}
                 onClick={() => void disconnect()}>{t("disconnect")}</Button>
             </>
@@ -350,21 +339,7 @@ function NativeConnectionRow({ engine, connection, refresh }: {
           {t(error ?? (login?.status === "expired" ? "expired" : nativeErrorMessage(login?.errorCode)))}
         </p>
       )}
-      {result && (
-        <div className="space-y-1 text-sm" role="status">
-          <p>{t(result.passed ? "testPassed" : "testFailed")}</p>
-          {!result.passed && safeNativeErrorCode(result.errorCode) && (
-            <p>{t(nativeErrorMessage(result.errorCode))}</p>
-          )}
-          <p className="text-xs text-muted-foreground">{t("testSummary", {
-            count: result.allocations.length,
-            authenticated: result.allocations.filter((item) => item.authenticated).length,
-            tools: result.allocations.filter((item) => item.mcpVerified).length,
-            destroyed: result.allocations.filter((item) => item.destroyed).length,
-          })}</p>
-          <p className="text-xs text-muted-foreground">{t(result.refreshObserved ? "refreshObserved" : "refreshNotObserved")}</p>
-        </div>
-      )}
+
     </SettingsRow>
   );
 }

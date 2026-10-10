@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context",
+    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -42,13 +42,14 @@
       "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
       "components/agent/agent-engine-badge.tsx",
       "lib/server/assistant/account-worker-context.ts",
-      "content/documentation/reviews/min-676-native-identity-2026-10-10.md"
+      "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
+      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed)",
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance)",
     "date": "2026-10-10"
   },
   "related": [
@@ -72,7 +73,7 @@
       "src": "/documentation/pt-BR/delegate-code-work-workflow.png",
       "alt": "Cartão do worker concluído com modelo, raciocínio leve, dois arquivos alterados, branch, PR nº 1 e commit corrigido.",
       "caption": "Exemplo histórico do OpenCode: Cartão da correção real do PR existente, com o commit atualizado e seu link. Revise o diff e as verificações antes do merge; o estado concluído por si só não comprova que os critérios de aceitação foram atendidos.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -88,7 +89,7 @@
       "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
       "alt": "Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.",
       "caption": "O PR real corrigido permanece aberto, sem merge. O diff remove os espaços ao redor do nome e usa World quando o valor é vazio. Esta instância não pode solicitar autorização de usuário do GitHub; a indicação de prontidão não concede permissão de merge nem comprova que a CI do provedor passou.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +111,9 @@ O trabalho de código parte de um problema e do repositório vinculado e é exec
 
 ## Delegar um problema ao worker de código {#delegate-code-work}
 
-O projeto precisa de repositório GitHub ou GitLab vinculado, autorização válida e sandbox de servidor configurada. Confira **Agente de código** nas configurações de IA da conta. OpenCode exige modelo de API de código compatível e raciocínio configurado; a prévia privada Codex e Claude Code exige a conexão da conta pessoal selecionada. Os padrões do CLI nativo são independentes do modelo da conversa. Se o acesso nativo falhar, reconecte ou escolha explicitamente OpenCode; o trabalho não muda para cobrança de API.
+O projeto precisa de repositório GitHub ou GitLab vinculado, autorização válida e sandbox de servidor configurada. Confira **Agente de código** nas configurações de IA da conta. OpenCode exige modelo de API de código compatível e raciocínio configurado; o acesso restrito ao Codex e Claude Code exige a conexão da conta pessoal selecionada. Os padrões do CLI nativo são independentes do modelo da conversa. Se o acesso nativo falhar, reconecte ou escolha explicitamente OpenCode; o trabalho não muda para cobrança de API.
+
+A autenticação Codex por assinatura em serviços hospedados não está disponível para uso geral. A OpenAI exclui explicitamente a autenticação app-server desses serviços e os direciona ao Sign in with ChatGPT. O Minddy precisa usar uma integração autorizada antes do lançamento. Os testes técnicos restritos não comprovam permissão, renovação real de tokens ou início sem novas tentativas. A execução paga do Claude Code continua sem teste. Remover os selos da interface não altera essas condições. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
 
 O cartão do trabalho delegado, os detalhes do agente e sua conversa mostram o mecanismo daquela execução com seu logo: **Codex**, **Claude Code** ou **OpenCode**. Essa identidade é salva ao iniciar o agente. Alterar as configurações da conta afeta novos agentes; não muda a identificação de uma execução existente. Execuções antigas sem mecanismo salvo mostram um rótulo genérico de agente de código.
 

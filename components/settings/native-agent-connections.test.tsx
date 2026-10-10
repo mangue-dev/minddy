@@ -61,17 +61,19 @@ async function click(label: string) {
   await act(() => button!.click());
 }
 
-it("hides the preview unless the account allowlist enables it", async () => {
+it("keeps OpenCode visible while the allowlist disables native selection", async () => {
   api.fetchNativeConnections.mockResolvedValue({ enabled: false, connections: [] });
-  await render();
-  expect(host.textContent).toBe("");
+  await render({ onEngineChange: vi.fn(), nativeAgentsEnabled: false });
+  expect(host.textContent).toContain("OpenCode");
+  expect(host.querySelector('option[value="codex"]')?.hasAttribute("disabled")).toBe(true);
+  expect(host.querySelector("button")).toBeNull();
   expect(api.startNativeLogin).not.toHaveBeenCalled();
 });
 
 it("uses native approval links and clears a pending login when settings close", async () => {
   api.startNativeLogin.mockResolvedValue({ attemptId: "one", status: "waiting",
     verificationUrl: "https://auth.openai.com/codex/device", userCode: "ABCD-1234" });
-  await render();
+  await render({ defaultEngine: "codex" });
   await click("Connect Codex");
   expect(host.querySelector("a")?.href).toBe("https://auth.openai.com/codex/device");
   expect(host.querySelector("a")?.rel).toBe("noopener noreferrer");
@@ -85,7 +87,7 @@ it("rejects lookalike approval hosts and never renders raw native errors", async
   api.startNativeLogin.mockResolvedValue({ attemptId: "one", status: "waiting",
     verificationUrl: "https://auth.openai.com.attacker.test/secret" });
   api.readNativeLogin.mockResolvedValue({ attemptId: "one", status: "failed", errorCode: "sk-native-secret" });
-  await render();
+  await render({ defaultEngine: "codex" });
   await click("Connect Codex");
   expect(host.querySelector("a")).toBeNull();
   await act(() => vi.advanceTimersByTimeAsync(2000));
@@ -94,35 +96,21 @@ it("rejects lookalike approval hosts and never renders raw native errors", async
   expect(host.innerHTML).not.toContain("attacker.test");
 });
 
-it("distinguishes cold access success from unobserved authentication renewal", async () => {
+it("shows only the selected connection and removes diagnostic and preview controls", async () => {
   api.fetchNativeConnections.mockResolvedValue({ enabled: true, connections: [
     { engine: "codex", status: "connected", updatedAt: null },
-  ] });
-  api.testNativeConnection.mockResolvedValue({ engine: "codex", passed: true,
-    allocations: ["one", "two"].map((id) => ({ id, authenticated: true, mcpVerified: true, destroyed: true })),
-    refreshObserved: false });
-  await render();
-  await click("Test new sandboxes");
-  expect(host.textContent).toContain("Native access and Minddy tools worked in both new sandboxes.");
-  expect(host.textContent).toContain("Authentication renewal was not observed; it still needs validation.");
-  expect(host.textContent).not.toContain("Updated authentication was saved.");
-});
-
-it("keeps failed tests explicit and shows only translated recovery guidance", async () => {
-  api.fetchNativeConnections.mockResolvedValue({ enabled: true, connections: [
     { engine: "claude_code", status: "connected", updatedAt: null },
   ] });
-  api.testNativeConnection.mockResolvedValue({ engine: "claude_code", passed: false,
-    allocations: [], refreshObserved: false, errorCode: "subscription_unavailable" });
-  await render();
-  await click("Test new sandboxes");
-  expect(host.textContent).toContain("The sandbox test did not pass.");
-  expect(host.textContent).toContain("Check your plan and account access.");
-  expect(host.textContent).not.toContain("subscription_unavailable");
-  expect(host.textContent).not.toContain("Native access and Minddy tools worked");
+  await render({ defaultEngine: "codex", onEngineChange: vi.fn() });
+  expect([...host.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["Disconnect"]);
+  expect(host.textContent).not.toContain("Private preview");
+  expect(host.textContent).not.toContain("Test new sandboxes");
+  expect(api.testNativeConnection).not.toHaveBeenCalled();
+  await render({ defaultEngine: "claude_code", onEngineChange: vi.fn() });
+  expect(host.querySelector("article:last-of-type h3")?.textContent).toBe("Claude Code");
 });
 
-it("permits only connected native selections while preserving busy profiles", async () => {
+it("permits eligible native selection before connection without automatically authenticating", async () => {
   api.fetchNativeConnections.mockResolvedValue({ enabled: true, connections: [
     { engine: "codex", status: "busy", updatedAt: null },
     { engine: "claude_code", status: "reconnect_required", updatedAt: null },
@@ -131,9 +119,11 @@ it("permits only connected native selections while preserving busy profiles", as
   await render({ onEngineChange: save, nativeAgentsEnabled: true });
   const select = host.querySelector("select")!;
   expect(select.querySelector<HTMLOptionElement>('[value="codex"]')!.disabled).toBe(false);
-  expect(select.querySelector<HTMLOptionElement>('[value="claude_code"]')!.disabled).toBe(true);
+  expect(select.querySelector<HTMLOptionElement>('[value="claude_code"]')!.disabled).toBe(false);
   await act(() => { select.value = "codex"; select.dispatchEvent(new Event("change", { bubbles: true })); });
   expect(save).toHaveBeenCalledWith("codex");
+  expect(api.startNativeLogin).not.toHaveBeenCalled();
+  expect(host.querySelector("button")).toBeNull();
 });
 
 it("retains an unavailable native default and offers explicit OpenCode recovery", async () => {
@@ -142,7 +132,7 @@ it("retains an unavailable native default and offers explicit OpenCode recovery"
   await render({ defaultEngine: "codex", nativeAgentsEnabled: false, onEngineChange: save });
   const select = host.querySelector("select")!;
   expect(select.value).toBe("codex");
-  expect(host.textContent).toContain("Choose OpenCode explicitly");
+  expect(host.textContent).toContain(messages.NativeAgentConnections.engineUnavailable);
   expect(host.querySelector("button")).toBeNull();
   expect(save).not.toHaveBeenCalled();
   await act(() => { select.value = "opencode"; select.dispatchEvent(new Event("change", { bubbles: true })); });
@@ -155,10 +145,30 @@ it("keeps the native default when its connection is removed and sanitizes select
   await render({ defaultEngine: "codex", nativeAgentsEnabled: true, onEngineChange: save });
   const select = host.querySelector("select")!;
   expect(select.value).toBe("codex");
-  expect(host.textContent).toContain("Reconnect this account before starting code work");
+  expect(host.textContent).toContain("Connect this account before starting code work");
   expect(save).not.toHaveBeenCalled();
   await act(() => { select.value = "opencode"; select.dispatchEvent(new Event("change", { bubbles: true })); });
   expect(select.value).toBe("codex");
   expect(host.querySelector('[role="alert"]')?.textContent).toBe("The request failed. Try again.");
   expect(host.innerHTML).not.toContain("secret native transcript");
+});
+
+it("cancels a pending connection when the selected agent changes", async () => {
+  api.startNativeLogin.mockResolvedValue({ attemptId: "pending", status: "waiting",
+    verificationUrl: "https://auth.openai.com/codex/device", userCode: "ABCD-1234" });
+  await render({ defaultEngine: "codex" });
+  await click("Connect Codex");
+  await render({ defaultEngine: "claude_code" });
+  expect(api.cancelNativeLogin).toHaveBeenCalledWith("codex", "pending");
+  expect(host.textContent).not.toContain("ABCD-1234");
+  expect(host.textContent).toContain("Connect Claude Code");
+  expect(api.startNativeLogin).toHaveBeenCalledTimes(1);
+});
+
+it("labels OpenCode with its actual API payer and hides native connection actions", async () => {
+  await render({ onEngineChange: vi.fn(), openCodeProviderLabel: "Minddy Cloud" });
+  expect(host.textContent).toContain("OpenCode (Minddy Cloud)");
+  expect(host.querySelector("button")).toBeNull();
+  await render({ onEngineChange: vi.fn(), openCodeProviderLabel: "OpenRouter" });
+  expect(host.textContent).toContain("OpenCode (OpenRouter)");
 });

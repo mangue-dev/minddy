@@ -34,21 +34,22 @@ it("preserves a selected native engine when eligibility is revoked without readi
   expect(h.list).not.toHaveBeenCalled();
 });
 
-it("selects a connected busy native account with a partial owner-bound write", async () => {
+it("selects a desired native agent with a partial owner-bound write before connection", async () => {
   h.list.mockResolvedValue([{ engine: "codex", status: "connected", busy: true, stopRequired: false }]);
   const result = await put({ default_engine: "codex", user_id: "attacker", native_agents_enabled: true });
   expect(result.status).toBe(200);
-  expect(h.list).toHaveBeenCalledWith("owner");
+  expect(h.list).not.toHaveBeenCalled();
   expect(h.save).toHaveBeenCalledWith("owner", { default_engine: "codex" }, supabase);
   expect(await result.json()).toMatchObject({ default_engine: "codex", default_model: "provider/model", default_reasoning_level: "high" });
 });
 
-it.each([undefined, { engine: "codex", status: "disconnected" }, { engine: "codex", status: "connected", stopRequired: true }])("rejects unusable native profile metadata without writing a fallback", async (metadata) => {
+it.each([undefined, { engine: "codex", status: "disconnected" }, { engine: "codex", status: "connected", stopRequired: true }])("preserves deliberate native selection independently of connection readiness", async (metadata) => {
   h.list.mockResolvedValue(metadata ? [metadata] : []);
   const result = await put({ default_engine: "codex" });
-  expect(result.status).toBe(409);
-  expect(await result.json()).toEqual({ errorCode: "reconnect_required" });
-  expect(h.save).not.toHaveBeenCalled();
+  expect(result.status).toBe(200);
+  expect(await result.json()).toMatchObject({ default_engine: "codex" });
+  expect(h.save).toHaveBeenCalledWith("owner", { default_engine: "codex" }, supabase);
+  expect(h.list).not.toHaveBeenCalled();
 });
 
 it("rejects client-forged eligibility and unknown engines before profile access", async () => {

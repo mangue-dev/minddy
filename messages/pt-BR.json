@@ -2495,7 +2495,11 @@
     "desktopAppHint": "Disponível para macOS, Windows e Linux. Sua própria janela, seletor de servidor e atualizações.",
     "desktopAppCta": "Baixar",
     "mcpClientsTab": "MCP para o Numo",
-    "byokAgentNativeHint": "Esta chave se aplica aos agentes de código OpenCode. O agente nativo selecionado usa sua assinatura conectada."
+    "byokAgentNativeHint": "Esta chave se aplica aos agentes de código OpenCode. O agente nativo selecionado usa sua assinatura conectada.",
+    "aiGeneralTitle": "IA do Minddy",
+    "aiGeneralDescription": "As conversas do Numo, automações, voz e feedback usam o Minddy Cloud ou suas chaves de API. As assinaturas de programação se aplicam apenas ao agente de código.",
+    "codeAgentFundingTitle": "Provedor de IA",
+    "codeAgentFundingHint": "O OpenCode usa o Minddy Cloud ou o provedor de modelos de texto configurado acima."
   },
   "AccountData": {
     "importTitle": "Transfira dados de outra instância minddy",
@@ -6541,11 +6545,11 @@
     "revisionLabel": "Revisão"
   },
   "NativeAgentConnections": {
-    "title": "Assinaturas pessoais de programação",
+    "title": "Agente de código",
     "preview": "Prévia privada",
-    "description": "Conecte sua conta e escolha o agente que o Numo usa para novos trabalhos de código em sandboxes hospedadas. Sua assinatura cobre o uso do modelo nativo; o processamento das sandboxes e o Numo continuam contando como uso do Minddy.",
+    "description": "Escolha o agente para trabalhar nos repositórios. Codex e Claude Code usam a assinatura conectada; Numo e o processamento das sandboxes são contabilizados separadamente.",
     "codexHint": "Use uma conta ChatGPT com acesso ao Codex.",
-    "claudeHint": "Use uma assinatura do Claude que inclua o Claude Code. A execução real com uma assinatura paga ainda não foi validada nesta prévia.",
+    "claudeHint": "Use uma assinatura do Claude que inclua o Claude Code. A execução com uma assinatura paga ainda não foi validada.",
     "connect": "Conectar {agent}",
     "resume": "Continuar conexão",
     "test": "Testar novas sandboxes",
@@ -6570,7 +6574,7 @@
     "status_connected": "Conectado",
     "status_busy": "Em uso",
     "status_reconnect_required": "Reconexão necessária",
-    "error_private_prototype_unavailable": "Esta prévia está indisponível. Tente novamente mais tarde.",
+    "error_private_prototype_unavailable": "Este agente não está disponível. Tente novamente mais tarde.",
     "error_connection_busy": "Esta conexão está em uso. Aguarde a conclusão do trabalho atual.",
     "error_reconnect_required": "Sua conexão precisa ser renovada. Conecte sua conta novamente.",
     "error_login_failed": "O login falhou. Conecte sua conta novamente.",
@@ -6579,9 +6583,10 @@
     "error_test_failed": "O teste das sandboxes falhou. Tente novamente.",
     "error_subscription_unavailable": "Esta conta não pode usar o agente selecionado. Verifique seu plano e o acesso da conta.",
     "engineTitle": "Agente de código",
-    "engineOpenCodeHint": "O OpenCode usa seu provedor de API, modelo de código e nível de raciocínio configurados.",
+    "engineOpenCodeHint": "O OpenCode usa o Minddy Cloud ou o provedor de modelos de texto configurado acima.",
     "engineNativeHint": "O CLI selecionado escolhe o modelo e o raciocínio. Novos agentes usam sua assinatura e as ferramentas do Minddy. Se o acesso falhar, o trabalho para sem mudar para um provedor de API.",
-    "engineUnavailable": "Esta prévia privada não está disponível para sua conta. Escolha explicitamente o OpenCode para iniciar novos trabalhos de código.",
-    "engineReconnect": "Reconecte esta conta antes de iniciar um trabalho de código ou escolha explicitamente o OpenCode."
+    "engineUnavailable": "Os agentes nativos não estão disponíveis para sua conta. Escolha o OpenCode para iniciar trabalhos de código.",
+    "engineReconnect": "Conecte esta conta antes de iniciar trabalhos de código ou escolha explicitamente o OpenCode.",
+    "openCodeLabel": "OpenCode ({provider})"
   }
 }

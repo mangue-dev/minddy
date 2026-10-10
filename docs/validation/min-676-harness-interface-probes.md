@@ -9,6 +9,11 @@ Related design: [hosted native harness plan](../plans/min-676-native-agent-harne
 Repository baseline: `823b4b8765dffbb8e6fcbe4bdf59bdd182a7f63f`.
 CLI inspection host: macOS with Node.js `v24.11.1`.
 
+Current decision: the later [hosted readiness review](#hosted-readiness-and-credential-lifecycle-review-2026-10-10)
+supersedes earlier permission conclusions in this log. Historical successful
+Codex execution remains technical evidence; the current official app-server auth
+restriction prevents declaring this hosted authentication design ready for use.
+
 ## Published versions inspected
 
 Existing executables reported Codex `0.146.0` and Claude Code `2.1.251`.
@@ -120,7 +125,7 @@ not establish personal subscription entitlement, commercial hosting permission,
 Linux runtime behavior, native MCP/hook isolation, cold restore, end-to-end
 login, token refresh or provider revocation.
 
-The hosted pilot must execute the acceptance matrix in the design using
+On an authorized authentication route, hosted acceptance must execute the matrix using
 consenting test accounts and actual Minddy allocations. Store sanitized evidence
 of outcomes, exact versions and allocation profile; never retain callback
 codes, tokens, login transcripts or production account data as proof.
@@ -144,7 +149,7 @@ behavior below are documentary evidence, not results from these help probes.
 
 | Primary source reviewed on 2026-10-10 | Established scope | Remaining validation |
 | --- | --- | --- |
-| [Codex CI authentication](https://learn.chatgpt.com/docs/auth/ci-cd-auth) | Private trusted runners restore native auth and save refreshed state; serialize use. The guide excludes public/open-source repositories. | Exact public multi-user custody scope, encrypted write-back, lease/crash behavior and cold hosted execution. |
+| [Codex CI authentication](https://learn.chatgpt.com/docs/auth/ci-cd-auth) | Private trusted runners restore native auth and save refreshed state; serialize use. The guide excludes public/open-source repositories. | Does not override the current app-server hosted-auth exclusion. A Minddy-authorized auth route plus encrypted renewal, lease/crash and cold-execution evidence is required. |
 | [Claude authentication](https://code.claude.com/docs/en/authentication), [GitHub Actions](https://code.claude.com/docs/en/github-actions) | Native cached credentials and subscription CI tokens provide technical repeated-run mechanisms. | The hosted native permission does not resolve [third-party token-storage restrictions](https://code.claude.com/docs/en/legal-and-compliance) for a Minddy account vault. |
 | [Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli), [Claude MCP](https://code.claude.com/docs/en/mcp) | Both native clients support configured MCP servers. | Actual admitted Minddy tools, strict configuration, startup errors, mutation acknowledgement and Numo mediation. |
 | [Linear coding sessions](https://linear.app/docs/coding-sessions), [AI credits](https://linear.app/docs/ai-credits), [Codex in Linear](https://learn.chatgpt.com/docs/third-party/linear) | Integrated Linear coding sessions use workspace credits; the separate ChatGPT-account integration starts provider cloud chats. | No inspected source discloses native personal credential storage in Linear-hosted ephemeral workers. |
@@ -513,3 +518,118 @@ access, documentation (including release coverage), knowledge, owned-English
 and whitespace checks also passed. The three affected public guides were
 updated and reviewed in all six locales; their existing operational evidence
 and provider acceptance boundaries remain explicit.
+
+## Hosted readiness and credential lifecycle review (2026-10-10)
+
+The readiness pass fetched the current official OpenAI documentation rather than
+inferring authorization from OSS implementations or prior successful runs.
+The [app-server authentication reference](https://learn.chatgpt.com/docs/app-server#auth-endpoints)
+explicitly excludes its native authentication from commercial or hosted services.
+The [Sign in with ChatGPT overview](https://developers.openai.com/siwc/token-sharing-open-source)
+limits the published OSS registration flow to local/self-hosted applications and
+directs remotely hosted applications to the hosted integration interest process.
+Minddy's zero-user, zero-revenue state does not change its hosted execution scope.
+These statements supersede the earlier recommendation to keep validating a
+hosted device-login pilot without first resolving the auth route. No provider
+contact, application or access grant was made during this pass.
+
+The existing fixture PR, real MCP acknowledgements and 404 deletion probes
+remain valid historical technical results. They do not prove authorization,
+first-attempt orchestration, credential expiry or remote revocation. The current
+pass performed no real provider login, refresh, revocation or inference and
+never read or printed ambient personal authentication files.
+
+Local verification passed **96 tests in six files**:
+
+- `lib/server/agent/native-agent-credentials.test.ts`
+- `lib/server/agent/native-worker-connections.test.ts`
+- `lib/server/agent/native-prototype/connections.test.ts`
+- `lib/server/agent/vm/native-prototype/controller.test.ts`
+- `lib/server/agent-vm-route.test.ts`
+- `lib/server/agent/sandbox-network-policy.test.ts`
+
+These cover owner/provider/connection-bound ciphertext, stale-write fences,
+exclusive ownership, synthetic refreshed-profile write-back followed by
+destruction and cold reload, cleanup and signed audience/tenant admission.
+Controller subprocesses and allocation mocks are synthetic. In particular,
+the successful changed-token fixture is not a real expired-token renewal.
+
+The following existing SQL regressions were replayed against the isolated
+Docker database container `supabase_db_minddy-min676-local`. Each script was
+checked to start with `BEGIN`, end with `ROLLBACK` and contain no `COMMIT` before
+execution with `psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres`:
+
+| Regression | Actual result | Boundary |
+| --- | --- | --- |
+| `supabase/tests/native_agent_connections.test.sql` | Exit 0; final `ROLLBACK` | Owner and service-only privileges, concurrent leases, revision fences, disconnect and expiry |
+| `supabase/tests/native_subscription_workers.test.sql` | Exit 0; final `ROLLBACK` | Frozen worker binding, admission, generation and allocation authority |
+| `supabase/tests/native_worker_recovery.test.sql` | Exit 0; final `ROLLBACK` | Recovery claims, abandoned-worker fencing and retry ownership |
+
+No fixture transaction persisted. No remote Supabase database or genuine saved
+Codex connection was changed. The SQL results prove local database contracts,
+not remote provider token rotation or account revocation.
+
+The source audit found that `disconnectNativePrototype()` clears Minddy's copy,
+fences writers and deletes allocations; it does not confirm remote OAuth-session
+revocation. The [official session lifecycle](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)
+requires an authorized integration to manage serialized replacement-token
+renewal and remote renewable-session revocation separately from local deletion.
+Those provider actions were deliberately not exercised on the owner's account.
+
+The supported next design uses an approved Minddy OAuth registration, validated
+consent and identity, PKCE/state/nonce, a stable host identifier and the encrypted
+account vault. The [official app-server provider route](https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server)
+supplies a plan-authorized access token to a Responses provider and makes the
+parent application responsible for renewal. This is a distinct authentication
+implementation; injecting restored native CLI files is not equivalent to it.
+The hosted access/client contract must be established before its live tests.
+
+The three remaining acceptance areas are therefore still open:
+
+1. A fresh ordinary issue-to-PR launch without manual retries, plus questions,
+   stop and recovery across the supported entry points. Existing UI success
+   followed infrastructure fixes and retries.
+2. Genuine credential expiry, renewal, encrypted replacement write-back and
+   reuse after destruction, then remote revocation and explicit reconnect on
+   the authorized route. Local fencing tests alone are insufficient.
+3. A durable hosted HTTPS control plane with genuine OIDC callbacks and cleanup,
+   plus multi-user custody, key rotation, backups and erasure evidence. The
+   current origin helper supports deployment-affine HTTPS, but the development
+   process and Quick Tunnel are temporary and no deployment was performed.
+
+The local Docker database is retained. Claude's paid execution remains untested
+and cannot be inferred from transport fixtures or the Codex results.
+
+### Account AI interface acceptance (2026-10-10)
+
+The actual Docker-backed development interface at
+`http://localhost:6463/settings?tab=agent` was inspected in a 585 × 810 dark-mode
+viewport. It separates general Minddy AI API configuration from the code agent.
+The code card contains its sandbox region and size, with no experimental or
+private-preview badge and no user-facing cold-sandbox diagnostic button.
+
+The interface started with the saved connected Codex choice. Selecting
+unconnected Claude Code saved the preference and displayed only Claude's
+connection controls and a connection-required message; no login was started.
+Selecting OpenCode displayed its Minddy Cloud funding and model/reasoning
+controls with no native connection row. The API payer behavior for a configured
+text key is covered by local UI regression tests, not a real provider-key
+change. The Codex account choice was restored afterwards, with the connection
+still shown as connected. No native worker or provider inference was launched.
+
+Actual internal screenshots:
+
+- `assets/min-676-reorganized-ai-codex.png`: Minddy AI and connected Codex.
+- `assets/min-676-reorganized-ai-claude-unconnected.png`: selected unconnected
+  Claude Code; this is interface evidence, not paid Claude acceptance.
+- `assets/min-676-reorganized-ai-opencode.png`: OpenCode model controls.
+- `assets/min-676-reorganized-ai-sandbox.png`: OpenCode funding, model,
+  reasoning and sandbox in the same code-agent card.
+
+Combined checks: 163 local behavior tests across 12 files; three native SQL
+regressions passed in Docker with final `ROLLBACK`. Typecheck, lint, both native
+and general VM bundles, encrypted-access/schema, documentation release,
+knowledge, owned-English and whitespace checks pass. These checks do not
+establish real expiry/renewal, remote revocation, a fresh seamless Codex
+UI-to-PR launch, durable HTTPS deployment or authorization of the hosted auth
+mechanism. Claude paid execution remains untested.
