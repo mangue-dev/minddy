@@ -4928,5 +4928,24 @@
         "updated_at"
       ]
     }
+  },
+  "user_numo_preferences": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "user_id",
+        "provider"
+      ],
+      "operational_configuration": [
+        "model"
+      ],
+      "timestamp": [
+        "updated_at"
+      ]
+    }
   }
 }

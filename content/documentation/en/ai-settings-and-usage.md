@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; multi-provider settings and persistent personal Numo defaults",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,13 +67,14 @@
       "lib/native-agent-models.ts",
       "components/settings/native-agent-model-preferences.tsx",
       "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
-      "content/documentation/reviews/min-676-review-fixes-2026-10-11.md"
+      "content/documentation/reviews/min-676-review-fixes-2026-10-11.md",
+      "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance)",
     "date": "2026-10-11"
   },
   "related": [
@@ -91,20 +92,36 @@
   "figures": [
     {
       "id": "ai-keys-and-models-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/ai-keys-and-models-workflow.png",
-      "alt": "AI provider card with minddy Cloud selected.",
-      "caption": "The selected Cloud provider uses the account plan. Personal providers are configured in this selector.",
-      "revision": 13,
+      "kind": "diagram",
+      "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
+      "alt": "Connected providers, capability routing and a personal Numo model are separate settings.",
+      "caption": "Several providers can stay connected. Routing chooses the provider for each capability; the Numo default is saved per account and provider.",
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-11",
       "viewport": [
         816,
-        212
+        390
       ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Providers and Numo defaults",
+        "items": [
+          {
+            "title": "Connected providers",
+            "detail": "Keep several API providers connected; adding one preserves the others."
+          },
+          {
+            "title": "Provider by capability",
+            "detail": "Assign text, transcription and embeddings independently, then enable the required usages."
+          },
+          {
+            "title": "Default Numo model",
+            "detail": "Follow the app default or save a personal model. A conversation choice takes precedence."
+          }
+        ]
+      }
     },
     {
       "id": "plans-and-ai-usage-workflow",
@@ -112,7 +129,7 @@
       "src": "/documentation/en/plans-and-ai-usage-workflow.png",
       "alt": "AI usage page for the demonstration account.",
       "caption": "AI usage page for the demonstration account. The current budget, usage categories and history are read from the account; no purchase or paid run was triggered.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -137,11 +154,15 @@ Account AI settings separate **Minddy AI** from **Code agent**. Minddy AI config
 
 ## Configure personal AI keys and model defaults {#ai-keys-and-models}
 
-Open account AI settings, add a compatible provider and enter its key and any required base URL. Save and inspect the confirmation state. For AI calls with managed fallback available, an unconfirmed or unreachable key leaves usage on minddy. This depends on configured managed AI; code workers have the provider-bound model rules below. Never paste the key into a conversation or screenshot.
+In account AI settings, **AI provider** selects the text-model provider from Minddy Cloud or your connected compatible providers. **Connected providers** keeps the full list visible. Choose **Add provider**, select a provider, enter its API key and any required base URL, then save. You can connect several providers; adding or selecting one does not delete the others. Never paste a key into a conversation or screenshot.
 
-Assign text, transcription and embedding model families to compatible keys or keep them on minddy. For each key, choose its enabled surfaces: Numo conversation, automations, voice and feedback. Choose OpenCode funding separately in **Code agent**. A surface or model family without a usable assignment stays on minddy usage. Your provider bills calls made with its key. Sandbox compute is recorded separately; validated personal keys (BYOK) and minddy-funded work follow the [budget rules below](#consumption).
+Assign text, transcription and embedding families independently. Each family uses one provider at a time. Per-provider usage switches determine whether Numo, automations, voice and feedback use that key or managed Minddy usage. For example, you can keep text on OpenRouter and transcription on OpenAI. Selecting a text provider does not enable a previously disabled Numo usage switch. OpenCode funding and model settings remain in **Code agent**.
 
-![AI provider card with minddy Cloud selected.](/documentation/en/ai-keys-and-models-workflow.png)
+Under **Default Numo model**, choose **App default** or a specific model from the active Numo provider. This choice is saved for your account and separately for each provider, across reloads and new sessions. App default follows the application’s configured model for that provider. An explicit conversation model takes precedence; conversations following your default pick up subsequent account changes. Already admitted turns retain their frozen model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or App default. Account export/import includes these model preferences, without provider credentials.
+
+An unconfirmed or unreachable key may leave supported general AI calls on managed Minddy usage when managed AI is configured. Your provider bills calls made with its key. Sandbox compute is recorded separately; validated personal keys and Minddy-funded work follow the [budget rules below](#consumption).
+
+![Connected providers, capability routing and a personal Numo model are separate settings.](/documentation/en/ai-providers-and-numo-defaults-flow.svg)
 
 ### Choose the code agent {#native-agent-preview}
 

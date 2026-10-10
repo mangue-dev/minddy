@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="816" height="390" viewBox="0 0 816 390" role="img" aria-labelledby="title desc">
+<title id="title">Proveedores y modelo de Numo</title><desc id="desc">Las conexiones, la asignación por capacidad y el modelo personal de Numo son ajustes separados.</desc>
+<rect width="816" height="390" rx="16" fill="#f8fafc"/>
+<text x="32" y="38" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Proveedores y modelo de Numo</text>
+<rect x="24" y="56" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
+<text x="42" y="83" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">1. Proveedores conectados</text>
+<text x="42" y="107" font-family="Arial,sans-serif" font-size="14" fill="#475569">Mantenga varios proveedores API conectados; añadir uno conserva los demás.</text>
+<rect x="24" y="161" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
+<text x="42" y="188" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">2. Proveedor por capacidad</text>
+<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Asigne texto, transcripción y embeddings por separado y active los usos necesarios.</text>
+<rect x="24" y="266" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
+<text x="42" y="293" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">3. Modelo predeterminado de Numo</text>
+<text x="42" y="317" font-family="Arial,sans-serif" font-size="14" fill="#475569">Use el valor de la app o guarde un modelo personal. Una conversación puede elegir otro.</text>
+</svg>

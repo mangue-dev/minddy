@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,6 +18,9 @@ import {
   SettingsGroup,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { formatModelName } from "@/lib/model-display";
+import { ProviderLogo } from "@/components/model-logo";
+import { numoPreferencesQueryKey, saveNumoPreferencesApi, useNumoPreferencesQuery } from "@/lib/use-numo-preferences-query";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { AccountSandboxSection } from "./account-sandbox-section";
@@ -139,9 +143,11 @@ export function AccountAiKeysSection() {
         </header>
         <SettingsGroup anchor={SETTINGS_SECTIONS.accountAiProvider}
           title={t("aiProviderTitle")} variant="block">
-          <ByokConnectPanel />
+          <ByokCapabilityAssignments keys={keys} capabilities={["text"]} />
+          <NumoModelPreference />
+          <ByokConnectPanel mode="settings" />
         </SettingsGroup>
-        {keys.length > 0 ? <ByokCapabilityAssignments keys={keys} /> : null}
+        {keys.length > 0 ? <SettingsGroup title={t("byokRoutingTitle")}><ByokCapabilityAssignments keys={keys} capabilities={MODEL_CATALOG_CAPABILITIES.filter((capability) => capability !== "text")} /></SettingsGroup> : null}
         {keys.filter((key) => key.assigned_capabilities.length > 0).map((key) => (
           <ByokSurfacePreferences key={key.id} aiKey={key}
             providerDefaultModel={providerDefaultModel} />
@@ -175,7 +181,41 @@ export function AccountAiKeysSection() {
   );
 }
 
-function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
+export function NumoModelPreference() {
+  const t = useTranslations("Account");
+  const ta = useTranslations("Agent");
+  const queryClient = useQueryClient();
+  const preferences = useNumoPreferencesQuery();
+  const [saving, setSaving] = useState(false);
+  const save = async (value: string) => {
+    if (!preferences.data || saving) return;
+    setSaving(true);
+    try {
+      await saveNumoPreferencesApi({ provider: preferences.data.provider, default_model: value || null });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+      ]);
+      toast.success(t("agentModelSavedToast"));
+    } catch {
+      toast.error(t("numoModelSaveError"));
+    } finally { setSaving(false); }
+  };
+  return <SettingsRow label={t("numoDefaultModel")} hint={t("numoDefaultModelHint")}
+    control={<ModelCombobox scope="assistant" value={preferences.data?.default_model ?? ""}
+      onChange={(value) => void save(value)} disabled={preferences.isPending || saving || !preferences.data}
+      defaultLabel={t("numoApplicationDefault")} defaultModelId={preferences.data?.application_model}
+      placeholder={ta("modelSearchPlaceholder")} emptyLabel={ta("modelSearchEmpty")}
+      loadingLabel={ta("modelSearchLoading")} freeTextLabel={(model) => ta("modelUseCustom", { model })}
+      variant="compact" ariaLabel={t("numoDefaultModel")}
+      triggerContent={<span className="truncate">{preferences.data?.default_model
+        ? formatModelName(preferences.data.default_model) : t("numoApplicationDefault")}</span>}
+      triggerClassName="h-9 w-72 max-w-full justify-between rounded-lg border border-border bg-card px-3 text-sm" />}>
+    {preferences.error && <p role="alert" className="py-2 text-sm text-destructive">{t("numoModelLoadError")}</p>}
+  </SettingsRow>;
+}
+
+function ByokCapabilityAssignments({ keys, capabilities }: { keys: AiKey[]; capabilities: readonly ModelCatalogCapability[] }) {
   const t = useTranslations("Account");
   const queryClient = useQueryClient();
   const assignedKey = (capability: ModelCatalogCapability) =>
@@ -193,6 +233,7 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
         queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
         queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
         queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey }),
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
       ]);
       toast.success(t("agentModelSavedToast"));
     } catch (error) {
@@ -201,18 +242,18 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
   };
 
   return (
-    <SettingsGroup title={t("byokRoutingTitle")}>
-      {MODEL_CATALOG_CAPABILITIES.map((capability) => (
+    <div>
+      {capabilities.map((capability) => (
         <SettingsRow
           key={capability}
-          label={t(`byokCapability_${capability}`)}
+          label={capability === "text" ? t("aiProviderTitle") : t(`byokCapability_${capability}`)}
           hint={t("byokRoutingHint")}
           control={
             <Select
               value={assignedKey(capability)?.id ?? "minddy"}
               onValueChange={(value) => void saveAssignment(capability, value)}
             >
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-72 max-w-full" aria-label={capability === "text" ? t("aiProviderTitle") : t(`byokCapability_${capability}`)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -223,7 +264,7 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
                   )
                   .map((key) => (
                     <SelectItem key={key.id} value={key.id}>
-                      {getAgentProvider(key.provider)?.label ?? key.provider}
+                      <span className="inline-flex items-center gap-2"><ProviderLogo provider={key.provider} size={16} />{getAgentProvider(key.provider)?.label ?? key.provider}</span>
                     </SelectItem>
                   ))}
               </SelectContent>
@@ -231,7 +272,7 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
           }
         />
       ))}
-    </SettingsGroup>
+    </div>
   );
 }
 
@@ -276,7 +317,9 @@ function ByokSurfacePreferences({
         key_id: key.id,
         enabled_surfaces: next,
       });
-      await queryClient.invalidateQueries({ queryKey: aiKeysQueryKey });
+      await Promise.all([queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey })]);
       toast.success(t("agentModelSavedToast"));
     } catch (err) {
       toast.error((err as Error).message);
@@ -289,7 +332,9 @@ function ByokSurfacePreferences({
         key_id: key.id,
         feature_models: { ...key.feature_models, [modelKey]: model },
       });
-      await queryClient.invalidateQueries({ queryKey: aiKeysQueryKey });
+      await Promise.all([queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey })]);
       toast.success(t("agentModelSavedToast"));
     } catch (err) {
       toast.error((err as Error).message);
@@ -332,7 +377,7 @@ function ByokSurfacePreferences({
               <div className="mb-3 ml-4 border-l border-border/70 pl-4">
                 {surface.modelKeys
                   .filter((modelKey) =>
-                    key.assigned_capabilities.includes(
+                    modelKey !== "assistant_model" && key.assigned_capabilities.includes(
                       modelCatalogCapabilityForKey(modelKey),
                     ),
                   )

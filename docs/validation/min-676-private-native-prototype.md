@@ -524,3 +524,38 @@ older generations, different owners and merged work remain refused.
 
 The database remains local Docker. No live provider run, remote migration,
 public enrollment or production deployment is performed by this follow-up.
+
+
+## General AI provider and Numo defaults (2026-10-11)
+
+General AI settings now distinguish text routing from the inventory of connected
+API providers. Add provider opens a compact connection form; saved providers
+remain available independently of routing. Onboarding retains its managed-cloud
+choice. The redundant managed-cloud inventory banner has been removed.
+
+A new `user_numo_preferences` table stores an owner/provider-bound model default.
+App default follows the configured provider default; explicit conversation
+choices override the account choice. The resolver applies the preference to both
+foreground and background Numo admissions without freezing it onto the
+conversation; already admitted turns retain their immutable configuration.
+Documentation help remains managed-only. Unavailable or over-plan choices are
+refused. Account export/import transfers only bounded provider/model identifiers,
+rebound to the destination owner. Credentials and native settings are unchanged.
+
+The Docker pilot received migration `20270109200040`; transactional owner-isolation
+and clear-without-affecting-another-provider SQL passed. The logged-in French UI
+saved Qwen3.7 Flash, then the Home composer restored it after reload without an
+inference request. App default was subsequently restored and confirmed by the
+composer and metadata-only SQL. Add provider/Cancel was verified without entering
+or altering credentials. Final screenshot:
+`assets/min-676-provider-numo-settings.png` (585 × 809, dark).
+
+All 10,819 Vitest tests passed (113 pre-existing skips); 357 focused tests cover
+settings, routing, persistence, plan/catalog rejection, account transfer and Numo
+lifecycle boundaries. Lint, typecheck, public-repository, encryption, documentation
+including release mode, knowledge, owned-English and whitespace checks passed.
+Public guides `ai-settings-and-usage` revision 14 and `numo` revision 10 were
+updated in all six locales; the obsolete provider screenshots were replaced by
+reviewed localized responsive diagrams and SVG fallbacks. Claude remains
+experimental and untested; no native provider run, remote migration or deployment
+was performed in this follow-up.

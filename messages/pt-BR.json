@@ -2499,7 +2499,15 @@
     "aiGeneralTitle": "IA do Minddy",
     "aiGeneralDescription": "As conversas do Numo, automações, voz e feedback usam o Minddy Cloud ou suas chaves de API. As assinaturas de programação se aplicam apenas ao agente de código.",
     "codeAgentFundingTitle": "Provedor de IA",
-    "codeAgentFundingHint": "O OpenCode usa o Minddy Cloud ou o provedor de modelos de texto configurado acima."
+    "codeAgentFundingHint": "O OpenCode usa o Minddy Cloud ou o provedor de modelos de texto configurado acima.",
+    "aiConnectedProviders": "Provedores conectados",
+    "aiAddProvider": "Adicionar provedor",
+    "aiMultipleProvidersHint": "Conecte vários provedores e distribua seus usos abaixo.",
+    "numoDefaultModel": "Modelo padrão do Numo",
+    "numoDefaultModelHint": "Salvo para sua conta e este provedor. Cada conversa pode usar outro modelo.",
+    "numoApplicationDefault": "Padrão do app",
+    "numoModelSaveError": "Não foi possível salvar o modelo do Numo. Tente novamente.",
+    "numoModelLoadError": "Não foi possível carregar o modelo do Numo. Recarregue as configurações."
   },
   "AccountData": {
     "importTitle": "Transfira dados de outra instância minddy",

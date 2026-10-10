@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; multi-provider settings and persistent personal Numo defaults",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,13 +67,14 @@
       "lib/native-agent-models.ts",
       "components/settings/native-agent-model-preferences.tsx",
       "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
-      "content/documentation/reviews/min-676-review-fixes-2026-10-11.md"
+      "content/documentation/reviews/min-676-review-fixes-2026-10-11.md",
+      "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance)",
     "date": "2026-10-11"
   },
   "related": [
@@ -91,20 +92,36 @@
   "figures": [
     {
       "id": "ai-keys-and-models-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/ai-keys-and-models-workflow.png",
-      "alt": "Carte du fournisseur IA avec minddy Cloud sélectionné.",
-      "caption": "Le fournisseur Cloud sélectionné utilise le forfait du compte. Le sélecteur permet de configurer un fournisseur personnel.",
-      "revision": 13,
+      "kind": "diagram",
+      "src": "/documentation/fr/ai-providers-and-numo-defaults-flow.svg",
+      "alt": "Les connexions, le routage par capacité et le modèle Numo personnel sont des réglages distincts.",
+      "caption": "Plusieurs fournisseurs peuvent rester connectés. Le routage choisit le fournisseur par capacité ; le défaut Numo est enregistré par compte et fournisseur.",
+      "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-11",
       "viewport": [
         816,
-        212
+        390
       ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
+      "theme": "neutral",
+      "diagram": {
+        "layout": "sequence",
+        "title": "Fournisseurs et modèle Numo",
+        "items": [
+          {
+            "title": "Fournisseurs connectés",
+            "detail": "Gardez plusieurs fournisseurs API connectés ; un ajout conserve les autres."
+          },
+          {
+            "title": "Fournisseur par capacité",
+            "detail": "Attribuez séparément le texte, la transcription et les embeddings, puis activez les usages."
+          },
+          {
+            "title": "Modèle par défaut de Numo",
+            "detail": "Suivez le défaut de l’app ou enregistrez votre modèle. Le choix d’une conversation est prioritaire."
+          }
+        ]
+      }
     },
     {
       "id": "plans-and-ai-usage-workflow",
@@ -112,7 +129,7 @@
       "src": "/documentation/fr/plans-and-ai-usage-workflow.png",
       "alt": "Page d’usage IA du compte de démonstration.",
       "caption": "Page d’usage IA du compte de démonstration. Le budget actuel, les catégories et l’historique proviennent du compte ; aucun achat ni travail facturé n’a été déclenché.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -137,11 +154,15 @@ Les paramètres IA séparent **IA de Minddy** et **Agent de code**. L’IA de Mi
 
 ## Configurer ses clés IA et modèles {#ai-keys-and-models}
 
-Ouvrez les réglages IA du compte, ajoutez un fournisseur compatible et saisissez sa clé ainsi que l’URL de base éventuellement requise. Enregistrez et vérifiez l’état de confirmation. Pour les appels IA disposant d’un recours géré, une clé non confirmée ou injoignable laisse l’utilisation sur minddy. Ce recours exige une IA gérée configurée ; les workers de code suivent les règles de modèle lié au fournisseur ci-dessous. Ne collez jamais la clé dans une conversation ou une capture.
+Dans les paramètres IA du compte, **Provider IA** sélectionne le fournisseur de modèles de texte parmi Minddy Cloud et vos fournisseurs compatibles connectés. **Fournisseurs connectés** affiche toute la liste. Choisissez **Ajouter un fournisseur**, sélectionnez-le, saisissez sa clé API et son éventuelle URL de base, puis enregistrez. Vous pouvez connecter plusieurs fournisseurs ; en ajouter ou en sélectionner un ne supprime pas les autres. Ne collez jamais une clé dans une conversation ou une capture d’écran.
 
-Attribuez les familles de modèles de texte, transcription et embeddings à des clés compatibles ou laissez-les sur minddy. Pour chaque clé, choisissez les usages activés : conversations Numo, automatisations, voix et retours. Choisissez séparément le financement OpenCode dans **Agent de code**. Un usage ou une famille sans attribution utilisable reste comptabilisé sur minddy. Votre fournisseur facture les appels réalisés avec sa clé. Le calcul de la sandbox est comptabilisé séparément ; les clés personnelles validées (BYOK) et le travail financé par minddy suivent les [règles de budget ci-dessous](#consumption).
+Attribuez indépendamment les familles texte, transcription et embeddings. Chaque famille utilise un seul fournisseur à la fois. Les interrupteurs d’usage de chaque fournisseur déterminent si Numo, les automatisations, la voix et le feedback utilisent cette clé ou le quota Minddy. Vous pouvez, par exemple, garder le texte sur OpenRouter et la transcription sur OpenAI. Sélectionner un fournisseur de texte ne réactive pas un usage Numo précédemment désactivé. Le financement et le modèle OpenCode restent dans **Agent de code**.
 
-![Carte du fournisseur IA avec minddy Cloud sélectionné.](/documentation/fr/ai-keys-and-models-workflow.png)
+Dans **Modèle par défaut de Numo**, choisissez **Par défaut de l’app** ou un modèle précis du fournisseur actif de Numo. Ce choix est enregistré pour votre compte et séparément pour chaque fournisseur, après rechargement comme dans une nouvelle session. Le défaut de l’app suit le modèle configuré par l’application pour ce fournisseur. Le modèle choisi explicitement dans une conversation est prioritaire ; les conversations qui suivent votre défaut reprennent ses modifications ultérieures. Les tours déjà admis gardent leur modèle enregistré. Un modèle devenu indisponible ou hors des limites de votre offre est refusé : choisissez un autre modèle ou le défaut de l’app. L’export et l’import du compte incluent ces préférences, sans les credentials des fournisseurs.
+
+Une clé non confirmée ou inaccessible peut laisser les appels IA généraux compatibles sur le quota Minddy lorsque l’IA gérée est configurée. Votre fournisseur facture les appels effectués avec sa clé. Le calcul des sandbox est comptabilisé séparément ; les clés personnelles validées et le travail financé par Minddy suivent les [règles de budget ci-dessous](#consumption).
+
+![Les connexions, le routage par capacité et le modèle Numo personnel sont des réglages distincts.](/documentation/fr/ai-providers-and-numo-defaults-flow.svg)
 
 ### Choisir l’agent de code {#native-agent-preview}
 

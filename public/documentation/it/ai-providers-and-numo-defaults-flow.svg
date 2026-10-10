@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="816" height="390" viewBox="0 0 816 390" role="img" aria-labelledby="title desc">
+<title id="title">Fornitori e modello Numo</title><desc id="desc">Connessioni, assegnazione per capacità e modello Numo personale sono impostazioni separate.</desc>
+<rect width="816" height="390" rx="16" fill="#f8fafc"/>
+<text x="32" y="38" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Fornitori e modello Numo</text>
+<rect x="24" y="56" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
+<text x="42" y="83" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">1. Fornitori collegati</text>
+<text x="42" y="107" font-family="Arial,sans-serif" font-size="14" fill="#475569">Mantieni collegati più fornitori API; aggiungerne uno conserva gli altri.</text>
+<rect x="24" y="161" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
+<text x="42" y="188" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">2. Fornitore per capacità</text>
+<text x="42" y="212" font-family="Arial,sans-serif" font-size="14" fill="#475569">Assegna separatamente testo, trascrizione ed embeddings, poi attiva gli utilizzi.</text>
+<rect x="24" y="266" width="768" height="94" rx="12" fill="#fff" stroke="#cbd5e1"/>
+<text x="42" y="293" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#0f172a">3. Modello predefinito di Numo</text>
+<text x="42" y="317" font-family="Arial,sans-serif" font-size="14" fill="#475569">Segui l’app o salva un modello personale. La scelta della conversazione ha la precedenza.</text>
+</svg>

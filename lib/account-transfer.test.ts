@@ -38,6 +38,13 @@ const emptyDocument = {
 };
 
 describe("account transfer compatibility", () => {
+  it("retains personal Numo defaults and rejects malformed preference arrays", () => {
+    const rows = [{ provider: "openrouter", model: "test/model" }];
+    const result = validateAccountTransfer({ ...emptyDocument, numo_preferences: rows });
+    expect(result.ok && result.document.numo_preferences).toEqual(rows);
+    expect(validateAccountTransfer({ ...emptyDocument, numo_preferences: "bad" }))
+      .toMatchObject({ ok: false, field: "numo_preferences" });
+  });
   it("accepts legacy v2 exports and normalizes the current envelope", () => {
     const result = validateAccountTransfer(emptyDocument);
 

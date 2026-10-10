@@ -77,6 +77,7 @@ export function ModelCombobox({
   allowDefault = true,
   variant = "field",
   triggerContent,
+  ariaLabel,
   triggerClassName,
   scope = "user",
   capability = "text",
@@ -107,6 +108,8 @@ export function ModelCombobox({
   variant?: "field" | "compact";
   /** Optional compact trigger layout while retaining the same model picker. */
   triggerContent?: ReactNode;
+  /** Accessible name supplied by a host with a dedicated settings label. */
+  ariaLabel?: string;
   /** Additional compact trigger styles for host-specific layouts. */
   triggerClassName?: string;
   /**
@@ -274,6 +277,7 @@ export function ModelCombobox({
             type="button"
             variant="ghost"
             role="combobox"
+            aria-label={ariaLabel}
             aria-expanded={open}
             disabled={disabled}
             className={cn(
@@ -306,6 +310,7 @@ export function ModelCombobox({
             type="button"
             variant="outline"
             role="combobox"
+            aria-label={ariaLabel}
             aria-expanded={open}
             disabled={disabled}
             className="w-full justify-between font-normal"

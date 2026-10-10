@@ -2499,7 +2499,15 @@
     "aiGeneralTitle": "Minddy AI",
     "aiGeneralDescription": "Numo conversations, automations, voice and feedback use Minddy Cloud or your API keys. Coding subscriptions apply only to the code agent.",
     "codeAgentFundingTitle": "AI provider",
-    "codeAgentFundingHint": "OpenCode uses Minddy Cloud or the text-model provider configured above."
+    "codeAgentFundingHint": "OpenCode uses Minddy Cloud or the text-model provider configured above.",
+    "aiConnectedProviders": "Connected providers",
+    "aiAddProvider": "Add provider",
+    "aiMultipleProvidersHint": "Keep several providers connected and assign them by usage below.",
+    "numoDefaultModel": "Default Numo model",
+    "numoDefaultModelHint": "Saved for your account and this provider. Conversations can override it.",
+    "numoApplicationDefault": "App default",
+    "numoModelSaveError": "Could not save the Numo model. Try again.",
+    "numoModelLoadError": "Could not load the Numo model. Reload settings."
   },
   "AccountData": {
     "importTitle": "Transfer data from another minddy instance",

@@ -5,12 +5,19 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
 import type { AiKey } from "@/lib/agent-keys-api";
-import { AccountAiKeysSection } from "./account-ai-keys-section";
+import { AccountAiKeysSection, NumoModelPreference } from "./account-ai-keys-section";
 
 const h = vi.hoisted(() => ({
   keys: [] as AiKey[], engine: "opencode", invalidate: vi.fn(), update: vi.fn(),
-  saveEngine: vi.fn(),
+  saveEngine: vi.fn(), saveNumo: vi.fn(), numoModel: null as string | null,
+  numoProvider: "openrouter", numoError: null as Error | null,
 }));
+vi.mock("@/lib/use-numo-preferences-query", () => ({
+  numoPreferencesQueryKey: ["numo-preferences"],
+  useNumoPreferencesQuery: () => ({ data: { provider: h.numoProvider, default_model: h.numoModel, application_model: "provider/model" }, isPending: false, error: h.numoError }),
+  saveNumoPreferencesApi: h.saveNumo,
+}));
+vi.mock("@/components/model-logo", () => ({ ProviderLogo: () => null }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: h.invalidate }) }));
 vi.mock("@/lib/use-ai-keys-query", () => ({ aiKeysQueryKey: ["keys"], useAiKeysQuery: () => ({ keys: h.keys, loading: false }) }));
 vi.mock("@/lib/use-agent-preferences-query", () => ({
@@ -34,7 +41,7 @@ vi.mock("./native-agent-connections", () => ({
   NativeAgentConnections: ({ children, openCodeProviderLabel }: { children: ReactNode; openCodeProviderLabel: string }) =>
     <section data-code-agent><h2>Code agent</h2><span>OpenCode ({openCodeProviderLabel})</span>{children}</section>,
 }));
-vi.mock("@/components/agent/model-combobox", () => ({ ModelCombobox: ({ scope }: { scope?: string }) => <div data-model-scope={scope ?? "code"}>Model</div> }));
+vi.mock("@/components/agent/model-combobox", () => ({ ModelCombobox: ({ scope, value, onChange, disabled, triggerContent }: { scope?: string; value: string; onChange: (value: string) => void; disabled: boolean; triggerContent?: ReactNode }) => <div data-model-scope={scope ?? "code"}>{triggerContent}<select aria-label="Fixture model" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}><option value="">App default</option><option value="provider/model">Specific model</option></select></div> }));
 vi.mock("@/components/agent/reasoning-combobox", () => ({ ReasoningCombobox: () => <div data-reasoning>Reasoning</div> }));
 vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ title, children }: { title: string; children: ReactNode }) => <section><h3>{title}</h3>{children}</section>,
@@ -56,6 +63,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   h.engine = "opencode";
+  h.numoModel = null;
+  h.numoProvider = "openrouter";
+  h.numoError = null;
+  h.saveNumo.mockResolvedValue(undefined);
   h.keys = [];
   h.update.mockResolvedValue(undefined);
   h.invalidate.mockResolvedValue(undefined);
@@ -119,4 +130,38 @@ it.each(["codex", "claude_code"])("hides API funding and model controls for %s w
   expect(code.textContent).toContain("Sandbox");
   expect(host.querySelector('[aria-labelledby="minddy-ai-title"]')?.textContent).toContain("Numo conversations and comments");
   expect(h.update).not.toHaveBeenCalled();
+});
+
+async function renderNumo() {
+  await act(() => root.render(<NextIntlClientProvider locale="en" messages={messages}><NumoModelPreference /></NextIntlClientProvider>));
+}
+async function chooseNumo(model: string) {
+  const select = host.querySelector<HTMLSelectElement>("select")!;
+  await act(async () => { select.value = model; select.dispatchEvent(new Event("change", { bubbles: true })); });
+}
+it("saves a Numo model for the active provider and refreshes settings and conversation pickers", async () => {
+  await renderNumo();
+  await chooseNumo("provider/model");
+  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "openrouter", default_model: "provider/model" });
+  expect(h.invalidate).toHaveBeenCalledWith({ queryKey: ["numo-preferences"] });
+  expect(h.invalidate).toHaveBeenCalledWith({ queryKey: ["models"] });
+});
+it("restores a saved Numo choice and clears it explicitly to the application default", async () => {
+  h.numoModel = "provider/model";
+  h.numoProvider = "anthropic";
+  await renderNumo();
+  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("provider/model");
+  await chooseNumo("");
+  expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: null });
+});
+it("retains the saved choice when saving fails and reports a load failure", async () => {
+  h.numoModel = "provider/model";
+  h.saveNumo.mockRejectedValueOnce(new Error("Fixture save failure"));
+  await renderNumo();
+  await chooseNumo("");
+  expect(h.invalidate).not.toHaveBeenCalled();
+  expect(host.querySelector<HTMLSelectElement>("select")!.value).toBe("provider/model");
+  h.numoError = new Error("Fixture load failure");
+  await renderNumo();
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(messages.Account.numoModelLoadError);
 });

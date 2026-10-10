@@ -2421,7 +2421,7 @@
     "agentBranchPrefixSave": "Salva",
     "agentBranchPrefixSaving": "Salvataggio…",
     "agentBranchPrefixSavedToast": "Prefisso dei branch salvato.",
-    "aiProviderTitle": "Produttore di AI",
+    "aiProviderTitle": "Fornitore IA",
     "aiProviderDesc": "Le funzionalità AI utilizzano la quota di minddy, il proprio provider o un modello locale nell'app desktop.",
     "aiProviderCloudGroup": "Fornitori di cloud",
     "aiProviderLocalGroup": "Locale AI — su questo Mac",
@@ -2499,7 +2499,15 @@
     "aiGeneralTitle": "IA di Minddy",
     "aiGeneralDescription": "Le conversazioni Numo, le automazioni, la voce e il feedback usano Minddy Cloud o le tue chiavi API. Gli abbonamenti di programmazione si applicano solo all’agente di codice.",
     "codeAgentFundingTitle": "Provider IA",
-    "codeAgentFundingHint": "OpenCode usa Minddy Cloud o il provider di modelli di testo configurato sopra."
+    "codeAgentFundingHint": "OpenCode usa Minddy Cloud o il provider di modelli di testo configurato sopra.",
+    "aiConnectedProviders": "Fornitori collegati",
+    "aiAddProvider": "Aggiungi fornitore",
+    "aiMultipleProvidersHint": "Collega più fornitori e assegna i loro utilizzi qui sotto.",
+    "numoDefaultModel": "Modello predefinito di Numo",
+    "numoDefaultModelHint": "Salvato per il tuo account e questo fornitore. Ogni conversazione può usare un altro modello.",
+    "numoApplicationDefault": "Predefinito dell’app",
+    "numoModelSaveError": "Impossibile salvare il modello di Numo. Riprova.",
+    "numoModelLoadError": "Impossibile caricare il modello di Numo. Ricarica le impostazioni."
   },
   "AccountData": {
     "importTitle": "Trasferire dati da un'altra istanza minddy",

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/server/assistant/model-preferences", () => ({ getNumoPreferences: vi.fn(async () => ({ provider: "openrouter", default_model: null, application_model: "test" })) }));
+
 const h = vi.hoisted(() => ({
   db: {} as unknown,
   process: vi.fn(),

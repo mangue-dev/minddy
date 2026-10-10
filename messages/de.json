@@ -2499,7 +2499,15 @@
     "aiGeneralTitle": "Minddy-KI",
     "aiGeneralDescription": "Numo-Gespräche, Automatisierungen, Sprache und Feedback verwenden Minddy Cloud oder deine API-Schlüssel. Coding-Abonnements gelten nur für den Code-Agenten.",
     "codeAgentFundingTitle": "KI-Anbieter",
-    "codeAgentFundingHint": "OpenCode verwendet Minddy Cloud oder den oben konfigurierten Anbieter für Textmodelle."
+    "codeAgentFundingHint": "OpenCode verwendet Minddy Cloud oder den oben konfigurierten Anbieter für Textmodelle.",
+    "aiConnectedProviders": "Verbundene Anbieter",
+    "aiAddProvider": "Anbieter hinzufügen",
+    "aiMultipleProvidersHint": "Verbinden Sie mehrere Anbieter und ordnen Sie ihnen unten Einsatzbereiche zu.",
+    "numoDefaultModel": "Numos Standardmodell",
+    "numoDefaultModelHint": "Für Ihr Konto und diesen Anbieter gespeichert. Unterhaltungen können ein anderes Modell verwenden.",
+    "numoApplicationDefault": "App-Standard",
+    "numoModelSaveError": "Das Numo-Modell konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+    "numoModelLoadError": "Das Numo-Modell konnte nicht geladen werden. Laden Sie die Einstellungen neu."
   },
   "AccountData": {
     "importTitle": "Daten von einer anderen minddy-Instanz übertragen",

@@ -105,6 +105,8 @@ export async function resolveAiRuntime(params: {
   modelOverride?: string | null;
   /** Public documentation help always uses the account's managed allowance. */
   managedOnly?: boolean;
+  /** Numo account defaults supersede legacy per-key assistant model settings. */
+  applicationModelDefault?: boolean;
 }): Promise<ResolvedAiRuntime> {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
   const modelOverride = params.modelOverride?.trim() || null;
@@ -121,7 +123,7 @@ export async function resolveAiRuntime(params: {
     if (isLocalAgentProvider(byok.provider)) {
       throw new LocalEndpointRequiresLocalRunError();
     }
-    const chosen = byok.featureModels[params.modelKey]?.trim();
+    const chosen = params.applicationModelDefault ? null : byok.featureModels[params.modelKey]?.trim();
     const model =
       modelOverride ||
       chosen ||

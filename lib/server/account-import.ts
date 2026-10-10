@@ -8,6 +8,7 @@ import { encodeImportedAgentMessage, shouldEncryptAgentLaunch } from "@/lib/serv
 import { encodeAgentContextSnapshot, shouldEncryptAgentContext } from
   "@/lib/server/agent/context-snapshot-content";
 
+import { isKnownAgentProvider } from "@/lib/agent-providers";
 import { randomUUID } from "node:crypto";
 import type { AccountTransferDocument, TransferRow } from "@/lib/account-transfer";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -855,6 +856,18 @@ export async function importAccountTransfer(
         "default_model_provider", "default_reasoning_level",
         "sandbox_region", "sandbox_size"].includes(key)));
     await saveAgentPreferences(userId, fields, service);
+    result.personalData += 1;
+  }
+  for (const preference of document.numo_preferences ?? []) {
+    if (typeof preference.provider !== "string" || !isKnownAgentProvider(preference.provider) ||
+      !(preference.model === null || typeof preference.model === "string" && /^[\w./:@-]{1,200}$/.test(preference.model))) {
+      throw new Error("Invalid imported Numo preference");
+    }
+    const { error } = await service.from("user_numo_preferences").upsert({
+      user_id: userId, provider: preference.provider, model: preference.model,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id,provider" });
+    if (error) throw new Error("Could not import Numo preferences");
     result.personalData += 1;
   }
   if (document.scratchpad) {
