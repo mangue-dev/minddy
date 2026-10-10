@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -39,13 +39,14 @@
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
-      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
-    "language": "agent:/root (es changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "revision": 8,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root (es changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -67,7 +68,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar con un nombre de resultado de ejemplo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -113,3 +114,8 @@ El panel Ritmo solo aparece cuando el objetivo tiene una fecha objetivo. Al elim
 El ritmo resume el trabajo completado recientemente. Puede estar acelerándose, estable, ralentizándose o detenido, con estados separados para objetivos no iniciados, completados y cancelados. Úsalo para identificar un resultado que necesite atención y después lee las incidencias y la actividad subyacentes.
 
 La fecha estimada requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Si hay una fecha objetivo pero no define un periodo válido posterior a la creación, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos.
+
+
+## Elegir un objetivo para un comentario {#objective-feedback}
+
+Un comentario puede pertenecer a un objetivo sin convertirse en ticket. En los comentarios del proyecto, elige el objetivo en las propiedades de la solicitud. El detalle del objetivo muestra las solicitudes vinculadas, sus votos y estado público; selecciona una para leer su conversación. No contribuyen al progreso ni al ritmo de los tickets. Al convertirlas, el ticket hereda el objetivo y las categorías, salvo los cambios realizados en el formulario de creación.

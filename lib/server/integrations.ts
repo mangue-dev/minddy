@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { validateFeedbackObjective } from "./feedback/objective";
 import { generateIntegrationKey } from "@/lib/server/integration-key";
 import {
   isIntegrationKind,
@@ -28,7 +29,7 @@ import { decodeIntegration, decodeIntegrationField,
  */
 
 export const INTEGRATION_SUMMARY_SELECT =
-  "id, project_id, name, kind, key_prefix, created_at, last_used_at, revoked_at, " +
+  "id, project_id, name, kind, objective_id, key_prefix, created_at, last_used_at, revoked_at, " +
   "webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at";
 
 // The kind and its guard live in purity with the API contract they describe
@@ -36,6 +37,7 @@ export const INTEGRATION_SUMMARY_SELECT =
 export { isIntegrationKind, type IntegrationKind };
 
 export interface IntegrationSummary {
+  objective_id: string | null;
   id: string;
   name: string;
   kind: IntegrationKind;
@@ -82,17 +84,19 @@ export async function createIntegration({
   actorId,
   name,
   kind,
+  objectiveId,
 }: {
   projectId: string;
   actorId: string;
   name: unknown;
   kind: unknown;
+  objectiveId?: unknown;
 }): Promise<
   | { ok: true; integration: IntegrationSummary; key: string }
   | {
       ok: false;
       status: number;
-      errorKey: "integrationNameRequired" | "databaseError";
+      errorKey: "integrationNameRequired" | "databaseError" | "objectiveNotFound" | "invalidRequest";
     }
 > {
   const trimmed = typeof name === "string" ? name.trim() : "";
@@ -102,6 +106,8 @@ export async function createIntegration({
 
   const { key, hash, prefix } = generateIntegrationKey();
   const service = getServiceClient();
+  if (objectiveId != null && kind !== "feedback") return { ok: false, status: 400, errorKey: "invalidRequest" };
+  if (!await validateFeedbackObjective(service, projectId, objectiveId)) return { ok: false, status: 400, errorKey: "objectiveNotFound" };
   const id=randomUUID();
   const protectedWrite=await shouldProtectIntegrations();
   const storedName=protectedWrite
@@ -117,6 +123,7 @@ export async function createIntegration({
       key_hash: hash,
       key_prefix: prefix,
       created_by: actorId,
+      objective_id: objectiveId ?? null,
     })
     .select(INTEGRATION_SUMMARY_SELECT)
     .single();
@@ -282,4 +289,23 @@ export async function revokeIntegration({
     return { ok: false, status: 404, errorKey: "integrationNotFound" };
   }
   return { ok: true };
+}
+
+/** Change the objective for future submissions; existing feedback is unchanged. */
+export async function updateIntegrationObjective(params: {
+  projectId: string; integrationId: string; objectiveId: unknown;
+}): Promise<{ ok: true; integration: IntegrationSummary } | {
+  ok: false; status: number; errorKey: "invalidRequest" | "objectiveNotFound" | "databaseError";
+}> {
+  const service = getServiceClient();
+  if (params.objectiveId === undefined || !await validateFeedbackObjective(service, params.projectId, params.objectiveId)) {
+    return { ok: false, status: 400, errorKey: "objectiveNotFound" };
+  }
+  const { data, error } = await service.from("integrations")
+    .update({ objective_id: params.objectiveId }).eq("id", params.integrationId)
+    .eq("project_id", params.projectId).eq("kind", "feedback").is("revoked_at", null)
+    .select(INTEGRATION_SUMMARY_SELECT).maybeSingle();
+  if (error) return { ok: false, status: 500, errorKey: "databaseError" };
+  if (!data) return { ok: false, status: 400, errorKey: "invalidRequest" };
+  return { ok: true, integration: await toSummary(data) };
 }

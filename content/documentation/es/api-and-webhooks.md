@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 5,
+  "revision": 7,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -43,13 +43,14 @@
       "app/f/[token]/sso/route.ts",
       "lib/server/feedback/posts.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -71,7 +72,7 @@
       "src": "/documentation/es/integration-api-and-webhooks-flow.svg",
       "alt": "Diagrama: Servidor guarda clave de integración. POST incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
       "caption": "Siga las etapas en este orden. Servidor guarda clave de integración. `POST` incidencias o feedback con tipo correcto. Propietario elige destino webhook issues. Receptor verifica HMAC bruto y UUID.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,7 +104,7 @@
       "src": "/documentation/es/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.",
       "caption": "La clave de recogida autentica llamadas del servidor. El secreto SSO del tablero firma un token de visitante breve y de un solo uso.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -204,3 +205,8 @@ Como propietario, active el tablero y configure su secreto SSO independiente. El
 Compruebe que el visitante abra Mis sugerencias con la identidad prevista. Un token caducado exige una nueva redirección. Si el secreto queda comprometido, rótelo mediante la confirmación del tablero y actualice el backend a la vez. El flujo por código de email sigue siendo la alternativa cuando el SSO no está disponible.
 
 ![Secuencias separadas de recogida desde el backend y SSO del navegador con secretos distintos.](/documentation/es/feedback-ingestion-and-sso-workflow.svg)
+
+
+## Elegir un objetivo para un comentario {#feedback-objective-default}
+
+Para una integración `feedback`, el propietario puede elegir **Objetivo** al crearla o junto a la integración existente en **Ajustes → Integraciones**. Solo se aceptan objetivos activos del mismo proyecto. Cada nuevo envío `POST /api/v1/feedback` hereda el ajuste, incluso con `analyze: false`; no envíes `objective_id` en el cuerpo de la API. La respuesta 201 incluye el `objective_id` asignado o `null`. Cambiar o quitar el ajuste solo afecta a futuros envíos. Un objetivo no disponible devuelve 422 `objective_not_found`: elige uno activo o elimina el ajuste antes de reintentar. La revisión de Numo no deduce objetivos. La conversión hereda el objetivo y las categorías del comentario.

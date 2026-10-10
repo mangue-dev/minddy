@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -54,14 +54,15 @@
       "components/assistant/ask-user-card.tsx",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "code-work",
@@ -92,7 +93,7 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -109,7 +110,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -170,7 +171,7 @@
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar worker atual se necessário. Rever eventos e reconciliar escritas incertas.",
       "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar worker atual se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -202,7 +203,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -219,7 +220,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Formulário de servidor MCP personalizado com configurações avançadas de autenticação, transporte e cabeçalhos.",
       "caption": "Formulário de servidor MCP personalizado com configurações avançadas de autenticação, transporte e cabeçalhos. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -319,3 +320,8 @@ Em um cartão ativo, responda todas as perguntas obrigatórias e envie o conjunt
 O cartão de limite da conta mostra a data de redefinição do limite, quando conhecida, e pode oferecer plano ou chave pessoal. O da rotina leva à gestão: confira o teto por execução. A alocação corresponde àquela operação. Repetir o pedido não elimina o limite. Chaves pessoais não tornam gratuito o processamento da sandbox.
 
 Só é possível retomar de um checkpoint se ele tiver sido preservado. Confira tarefas, branch, PR e serviços externos antes de repetir: uma gravação pode ter funcionado mesmo com a resposta perdida. Informe o que falta e peça para continuar. Sem checkpoint recuperável, forneça o estado verificado em um novo pedido. Ao relatar falhas persistentes, identifique a conversa sem incluir credenciais.
+
+
+## Escolher um objetivo para um feedback {#feedback-objectives}
+
+Os objetivos de feedbacks exigem uma escolha explícita. Peça ao Numo para vincular uma solicitação a um objetivo do projeto ou remover esse vínculo; o Numo resolve a solicitação e o objetivo antes de alterá-los. Uma revisão ou categorização geral não autoriza atribuir objetivos. Uma integração pode fornecer o objetivo escolhido pelo proprietário. A conversão herda objetivo e categorias; sem uma escolha, o objetivo fica vazio.

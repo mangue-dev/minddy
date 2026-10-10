@@ -1,3 +1,5 @@
+import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
+import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
 import { abortableReadClient } from "./abortable-read-client";
@@ -109,6 +111,7 @@ import {
   createIntegration,
   revokeIntegration,
   updateIntegrationWebhook,
+  updateIntegrationObjective,
 } from "@/lib/server/integrations";
 import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { normalizeWebhookStatus } from "@/lib/server/webhooks";
@@ -1306,6 +1309,7 @@ export async function executeTool(
         return {
           result: {
             objective,
+            linked_feedback: await listFeedbackForObjective(projectId, objective.id),
             relations: relations.map((r) => r.kind === "objective"
               ? {
                   relation: r.relation,
@@ -1395,7 +1399,7 @@ export async function executeTool(
           // A single literal string: `select` types its columns as READ
           // this text, and a concatenation makes the result opaque.
           .select(
-            "id, project_id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
+            "id, project_id, name, kind, objective_id, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at",
           )
           .eq("project_id", projectId)
           .order("id", { ascending: true });
@@ -1406,6 +1410,7 @@ export async function executeTool(
               id: row.id,
               name: await decodeIntegrationField(row,"name",row.name),
               kind: row.kind,
+              objective_id: row.objective_id,
               revoked_at: row.revoked_at,
               // Without URL there is no webhook: `null` rather than an object to
               // half filled, which would make it look like a webhook is turned off but set.
@@ -2838,7 +2843,8 @@ export async function executeTool(
         const statuses = Array.isArray(args.status)
           ? args.status.filter(isFeedbackPostStatus)
           : undefined;
-        const posts = await listTeamFeedback(projectId, { statuses });
+        const posts = await listTeamFeedback(projectId, { statuses,
+          objectiveId: typeof args.objective_id === "string" || args.objective_id === null ? args.objective_id : undefined });
         const limit =
           typeof args.limit === "number"
             ? Math.min(Math.max(1, args.limit), 200)
@@ -2850,6 +2856,7 @@ export async function executeTool(
           vote_count: p.vote_count,
           is_public: p.is_public,
           source: p.source,
+          objective_id: p.objective_id,
           linked_issue_id: p.issue_id,
         }));
         return { result: { feedback: rows }, success: true };
@@ -2890,6 +2897,7 @@ export async function executeTool(
               id: detail.id,
               title: detail.title,
               body: detail.body,
+              objective_id: detail.objective_id,
               submitted_title: detail.submitted_title,
               submitted_body: detail.submitted_body,
               status: detail.status,
@@ -2973,6 +2981,22 @@ export async function executeTool(
         };
       }
 
+      case "link_feedback_to_objective": {
+        const postId = typeof args.feedback_post_id === "string" ? args.feedback_post_id : ctx.feedbackPostId;
+        if (!postId) return toolError("feedback_post_id is required.");
+        if (!await getTeamFeedbackDetail(projectId, postId)) return toolError("Feedback post not found in this project.");
+        const result = await updateFeedbackPostFields({ postId, actorId: ctx.userId,
+          input: { objective_id: args.objective_id }, viaAssistant: true });
+        if (!result.ok) return toolError(result.errorKey);
+        return { result: { feedback_post_id: postId, objective_id: result.post.objective_id }, success: true };
+      }
+      case "update_integration_objective": {
+        if (!access.isOwner) return settingsError("ownerOnly");
+        if (typeof args.integration_id !== "string") return toolError("integration_id is required.");
+        const result = await updateIntegrationObjective({ projectId, integrationId: args.integration_id, objectiveId: args.objective_id });
+        if (!result.ok) return settingsError(result.errorKey);
+        return { result: { integration: result.integration }, success: true };
+      }
       case "link_feedback_to_issue": {
         const postId =
           (typeof args.feedback_post_id === "string" &&
@@ -3169,6 +3193,7 @@ export async function executeTool(
           actorId: ctx.userId,
           name: args.name,
           kind,
+          objectiveId: args.objective_id,
         });
         if (!result.ok) return settingsError(result.errorKey);
         return {
@@ -3177,6 +3202,7 @@ export async function executeTool(
               id: result.integration.id,
               name: result.integration.name,
               kind: result.integration.kind,
+              objective_id: result.integration.objective_id,
             },
             // The plaintext key is returned ONCE, to the SCREEN (MIN-343): the
             // browser gets it live, the history never does.

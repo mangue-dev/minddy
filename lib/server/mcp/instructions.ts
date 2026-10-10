@@ -132,7 +132,12 @@ export const MCP_FULL_USAGE_GUIDE =
       "latter includes the WHOLE comment thread — team-only notes and the public " +
       "replies visitors wrote on the board alike, each tagged by its 'visibility' — " +
       "plus the translation of a request written in a language the team does not " +
-      "read); minddy_promote_feedback " +
+      "read). Feedback objectives are explicit: minddy_link_feedback_objective " +
+      "sets or clears one only at the user's request; never infer objectives " +
+      "while reviewing or categorizing feedback. A feedback integration's " +
+      "objective_id defaults new submissions; owners can change it with " +
+      "minddy_update_integration_objective without changing existing posts. " +
+      "minddy_get_objective includes linked_feedback. minddy_promote_feedback " +
       "turns one into a new linked issue and minddy_link_feedback / " +
       "minddy_unlink_feedback wire it to an existing one (once linked, the post's " +
       "public status follows the issue, and can no longer be set by hand); " +

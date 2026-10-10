@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -64,13 +64,14 @@
       "lib/server/feedback/voice-limits.ts",
       "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -97,7 +98,7 @@
       "src": "/documentation/en/publish-a-feedback-board-workflow.png",
       "alt": "Enabled public feedback board with local SSO identity configured and its URL concealed.",
       "caption": "The owner enables the board and chooses visitor identity. This demo uses a local SSO signer; the URL and signing secret are concealed.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
       "alt": "Visitor feedback form with a title, description and public visibility enabled.",
       "caption": "A signed-in visitor submits a need and chooses whether it appears publicly. The example was actually submitted with automatic review disabled.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -124,20 +125,21 @@
       "padding": 24
     },
     {
-      "id": "moderate-feedback-workflow",
+      "id": "feedback-objective-selection",
       "kind": "screenshot",
-      "src": "/documentation/en/moderate-feedback-workflow.png",
-      "alt": "Feedback detail showing a public team reply and an internal note.",
-      "caption": "The Public badge identifies the reply visible to visitors; the internal note stays with the team. No AI moderation result is shown.",
-      "revision": 6,
+      "src": "/documentation/en/feedback-objective-selection.png",
+      "alt": "Component preview of the feedback objective selector and a feedback integration default, both set to Docs.",
+      "caption": "Objective selectors with demonstration data. New feedback inherits the integration default.",
+      "revision": 7,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-10",
       "viewport": [
-        816,
-        874
+        680,
+        301
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "feedback-pages-and-views-workflow",
@@ -145,7 +147,7 @@
       "src": "/documentation/en/feedback-pages-and-views-workflow.png",
       "alt": "Published feedback guide selected in the board navigation and readable without sign-in.",
       "caption": "Publish a page, enable page tabs and select it for the board. This demonstration page was opened anonymously; the opaque URL keeps `noindex`.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -159,7 +161,7 @@
   "requiredFigures": [
     "publish-a-feedback-board-workflow",
     "submit-and-follow-feedback-workflow",
-    "moderate-feedback-workflow",
+    "feedback-objective-selection",
     "feedback-pages-and-views-workflow"
   ]
 }
@@ -211,7 +213,15 @@ Choose internal discussion for team notes. Public replies are visible to visitor
 
 Team members can delete public comments for moderation. Editing stays with the author, and visitor words are never rewritten by the team. Internal comments retain author-only rules. After a public reply or moderation action, inspect the signed-out board to confirm the intended visibility.
 
-![Feedback detail showing a public team reply and an internal note.](/documentation/en/moderate-feedback-workflow.png)
+### Choose an objective for feedback {#feedback-objective}
+
+As a project member, choose **Objective** in the feedback properties, or when creating internal feedback. Choose **None** to remove the link. The objective must belong to this project. Open the objective to see its linked feedback; follow a request to read its discussion. This association is internal and does not expose private objectives on the public board. It does not count as issue progress.
+
+The project owner can choose an optional objective when creating a feedback integration in **Settings → Integrations**, or change it beside an existing feedback integration. New API submissions inherit that objective, including with `analyze: false`; changing the default does not move existing feedback. If the objective is in the trash, choose an active objective or clear the default before submitting again. Numo never chooses an objective during feedback review. Ask Numo explicitly to link or unlink a request when you want its help.
+
+Promotion starts the new issue with the feedback objective and categories. You can change them in the creation form. If no objective was chosen, promotion keeps it empty, even with Smart Fill enabled. Changing a feedback objective later does not move an already linked issue. Feedback can merge only when both requests have the same objective, including both having none; align their objectives first if the team decides they describe the same need.
+
+![Component preview of the feedback objective selector and a feedback integration default, both set to Docs.](/documentation/en/feedback-objective-selection.png)
 
 ## Merge feedback and connect it to delivery {#feedback-to-issue}
 

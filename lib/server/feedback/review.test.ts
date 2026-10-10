@@ -36,7 +36,7 @@ const {
   getAppConfigValuesMock: vi.fn<() => Promise<Record<string, string | null>>>(),
   embedTextMock: vi.fn<() => Promise<number[] | null>>(),
   matchFeedbackPostsMock: vi.fn<() => Promise<unknown[]>>(),
-  mergePostsMock: vi.fn<() => Promise<{ ok: boolean }>>(),
+  mergePostsMock: vi.fn<() => Promise<{ ok: true } | { ok: false; error: string }>>(),
   forcedToolCallMock: vi.fn<
     (
       model: string,
@@ -121,6 +121,7 @@ const PROJECT_ROW = {
 
 const CLAIMED_POST = {
   id: "post-new",
+  objective_id: "docs-objective",
   project_id: "project-1",
   submitted_title: "Dark mode",
   submitted_body: "Please add a dark theme.",
@@ -134,6 +135,7 @@ const CLAIMED_POST = {
 };
 
 const FRESH_ROW = {
+  objective_id: "docs-objective",
   id: "post-new",
   merged_into_id: null,
   is_public: true,
@@ -254,6 +256,37 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
     newRunIdMock.mockReset().mockReturnValue("run-test");
     wireDb();
     vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("restricts duplicate search to the explicit objective and never writes an objective", async () => {
+    runJevDecisionMock.mockResolvedValue(jevAnswer());
+    await reviewFeedbackPost("post-new", "project-1");
+    expect(matchFeedbackPostsMock).toHaveBeenCalledWith(expect.objectContaining({ objectiveId: "docs-objective" }));
+    for (const payload of updatePayloads) expect(payload).not.toHaveProperty("objective_id");
+  });
+
+  it("discards a stale verdict when the objective changes during review", async () => {
+    runJevDecisionMock.mockResolvedValue(jevAnswer());
+    feedbackPostsReads.push(() => ({ data: { ...FRESH_ROW, objective_id: null }, error: null }));
+
+    const report = await reviewFeedbackPost("post-new", "project-1");
+
+    expect(updatePayloads).toEqual([]);
+    expect(setFeedbackPostCategoriesMock).not.toHaveBeenCalled();
+    expect(mergePostsMock).not.toHaveBeenCalled();
+    expect(report.posts_reviewed).toBe(0);
+  });
+
+  it("does not suggest a merge rejected because the objectives changed", async () => {
+    runJevDecisionMock.mockResolvedValue(null);
+    forcedToolCallMock.mockResolvedValue(llmArgs({ duplicate_of: "post-1", confidence: 0.95 }));
+    mergePostsMock.mockResolvedValue({ ok: false, error: "feedback_merge_objective_mismatch" });
+
+    const report = await reviewFeedbackPost("post-new", "project-1");
+
+    expect(report.posts_merged).toBe(0);
+    expect(report.posts_suggested).toBe(0);
+    expect(updatePayloads.some((payload) => (payload as Record<string, unknown>).suggested_merge_into_id === "post-1")).toBe(false);
   });
 
   it("publishes a clean confident Jev verdict WITHOUT paying the LLM", async () => {

@@ -1,3 +1,4 @@
+import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
@@ -89,6 +90,7 @@ import {
   listIntegrations,
   revokeIntegration,
   updateIntegrationWebhook,
+  updateIntegrationObjective,
 } from "@/lib/server/integrations";
 import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
@@ -1586,6 +1588,7 @@ export function registerMinddyTools(
       title: "Get objective",
       description:
         "Fetch ONE objective in full — the counterpart of minddy_get_issue: its " +
+        "linked_feedback (requests associated with this objective), " +
         "whole description (the goal, not the truncated line " +
         "minddy_list_objectives shows), status, lead, target date, weighted " +
         "progress, the ISSUES it groups (identifier, title, status, priority, " +
@@ -1704,6 +1707,7 @@ export function registerMinddyTools(
       }
 
       return ok({
+        linked_feedback: await listFeedbackForObjective(scope.access.project.id, objective.id),
         objective: {
           ...objective,
           lead_name:
@@ -3964,13 +3968,14 @@ export function registerMinddyTools(
         "take), title, status (open/planned/in_progress/shipped/declined/spam — " +
         "'spam' is a request the team or the AI review set aside, and it never " +
         "shows on the public board), vote_count, is_public, review_state, source, " +
-        "category_ids, and the linked tracking issue if any. Sorted by votes; " +
+        "category_ids, objective_id, and the linked tracking issue if any. Sorted by votes; " +
         "merged duplicates are excluded. A post is actually VISIBLE on the board " +
         "only when is_public AND review_state is 'published' AND status is not " +
         "'spam' — a 'pending' post is still in the AI review queue and nobody has " +
         "seen it yet, so don't tell the user their request is up.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
+        objective_id: z.string().uuid().nullable().optional().describe("Filter by objective; null means no objective. Omit for all."),
         status: z
           .array(z.enum(FEEDBACK_POST_STATUSES))
           .optional()
@@ -3994,6 +3999,7 @@ export function registerMinddyTools(
       // premier, celui qu'on vient justement de rendre demandable.
       const posts = await listTeamFeedback(scope.access.project.id, {
         statuses: args.status,
+        objectiveId: args.objective_id,
       });
       const rows = posts.slice(0, args.limit ?? 50).map((p) => ({
         id: p.id,
@@ -4007,6 +4013,7 @@ export function registerMinddyTools(
         review_state: p.review_state,
         source: p.source,
         category_ids: p.category_ids,
+        objective_id: p.objective_id,
         linked_issue_id: p.issue_id,
       }));
       return ok({ feedback: rows });
@@ -4019,7 +4026,7 @@ export function registerMinddyTools(
       title: "Get feedback",
       description:
         "Fetch one feedback post in full: title, body (the user's request), the raw " +
-        "submitted text, status, vote_count, review_state, category_ids, author " +
+        "submitted text, status, vote_count, review_state, category_ids, objective_id, author " +
         "(real identity), the linked issue if any, and its whole comment thread. " +
         "Each comment carries a `visibility`: 'internal' is a team-only note, " +
         "'public' is read by everyone on the board — including the replies visitors " +
@@ -4068,6 +4075,7 @@ export function registerMinddyTools(
           id: detail.id,
           title: detail.title,
           body: detail.body,
+          objective_id: detail.objective_id,
           submitted_title: detail.submitted_title,
           submitted_body: detail.submitted_body,
           // The translation lives NEXT to the text, never in its place: the board
@@ -4267,6 +4275,7 @@ export function registerMinddyTools(
       title: "Promote feedback to issue",
       description:
         "Turn a feedback post into a NEW backlog issue and link them: the issue " +
+        "inherits the explicit feedback objective (including none) and categories. It " +
         "carries the request and its vote count, and the post's public status then " +
         "follows that issue automatically. Fails if the post is already linked or is " +
         "a merged duplicate. Use minddy_link_feedback instead when an issue already " +
@@ -4304,6 +4313,37 @@ export function registerMinddyTools(
       });
     },
   );
+
+  server.registerTool("minddy_link_feedback_objective", {
+    title: "Link feedback to objective",
+    description: "Set or clear a feedback post's objective ONLY when explicitly requested by the user. Never infer objectives during feedback review. Resolve the objective with minddy_list_objectives; it must be in the same project. Null removes the objective. An already linked issue is unchanged.",
+    inputSchema: z.object({ project_id: PROJECT_ID, feedback_post_id: z.string().uuid(), objective_id: z.string().uuid().nullable() }),
+    annotations: WRITE,
+  }, async (args, extra) => {
+    const scope = await requireProject(extra, args.project_id);
+    if ("error" in scope) return scope.error;
+    const ref = await resolveFeedbackPost(scope.access, args.feedback_post_id);
+    if ("error" in ref) return ref.error;
+    const result = await updateFeedbackPostFields({ postId: ref.post.id, actorId: scope.userId,
+      input: { objective_id: args.objective_id }, mcpKeyId: scope.keyId });
+    if (!result.ok) return fail(result.status === 400 ? "invalid_params" : "database_error", coreMessage(result, "Could not link feedback."));
+    return ok({ feedback_post_id: ref.post.id, objective_id: result.post.objective_id });
+  });
+
+  server.registerTool("minddy_update_integration_objective", {
+    title: "Update feedback integration objective",
+    description: "Set or clear a feedback integration's default objective when explicitly requested. OWNER ONLY. New submissions inherit it; existing feedback keeps its objective. Resolve ids with minddy_list_integrations and minddy_list_objectives. Null clears the default.",
+    inputSchema: z.object({ project_id: PROJECT_ID, integration_id: z.string().uuid(), objective_id: z.string().uuid().nullable() }),
+    annotations: WRITE,
+  }, async (args, extra) => {
+    const scope = await requireProject(extra, args.project_id);
+    if ("error" in scope) return scope.error;
+    if (!scope.access.isOwner) return fail("forbidden", "Only the project owner can update an integration.");
+    const result = await updateIntegrationObjective({ projectId: scope.access.project.id,
+      integrationId: args.integration_id, objectiveId: args.objective_id });
+    if (!result.ok) return fail(result.status === 400 ? "invalid_params" : "database_error", coreMessage(result, "Could not update integration."));
+    return ok({ integration: result.integration });
+  });
 
   server.registerTool(
     "minddy_link_feedback",
@@ -4629,6 +4669,7 @@ export function registerMinddyTools(
           id: row.id,
           name: row.name,
           kind: row.kind,
+          objective_id: row.objective_id,
           key_prefix: row.key_prefix,
           created_at: row.created_at,
           last_used_at: row.last_used_at,
@@ -4671,6 +4712,7 @@ export function registerMinddyTools(
         "board, and it creates no issue.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
+        objective_id: z.string().uuid().nullable().optional().describe("Default objective for a feedback integration, explicitly chosen by the user. New submissions inherit it."),
         name: z
           .string()
           .min(1)
@@ -4701,17 +4743,19 @@ export function registerMinddyTools(
         actorId: scope.userId,
         name: args.name,
         kind: args.kind,
+        objectiveId: args.objective_id,
       });
       if (!created.ok) {
         return created.errorKey === "integrationNameRequired"
           ? fail("invalid_params", "name must be 1 to 60 characters.")
-          : fail("database_error", "Could not create the integration.");
+          : fail(created.status === 400 ? "invalid_params" : "database_error", coreMessage(created, "Could not create the integration."));
       }
       return ok({
         integration: {
           id: created.integration.id,
           name: created.integration.name,
           kind: created.integration.kind,
+          objective_id: created.integration.objective_id,
         },
         key: created.key,
         usage: integrationUsage(args.kind, SITE_URL),

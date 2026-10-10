@@ -22,7 +22,8 @@ import {
  * required). The post enters the standard pipeline (embedding to submission,
  * hourly AI deduplication) and appears on the public board if activated.
  *
- * Payload: { title, body?, user: { external_id?, email?, name? }, parse? }
+ * Payload: { title, body?, user: { external_id?, email?, name? }, analyze? }
+ * The integration's optional objective is inherited, never selected from this payload.
  *
  * `analyze` (MIN-106, default true): passing false keeps the post out of the pass
  * Numo Review — for a customer running their own classifier. THE
@@ -152,8 +153,10 @@ export async function POST(request: NextRequest) {
     authorId: feedbackUser.id,
     integrationId: auth.integration.id,
     analyze: analyzeOption.analyze,
+    objectiveId: auth.integration.objective_id,
   });
   if (!result.ok) {
+    if (result.errorKey === "objectiveNotFound") return publicApiError(422, "objective_not_found", "The integration objective is unavailable. Choose an active objective or clear it in Settings → Integrations.");
     console.error("[api/v1/feedback] create failed:", result.errorKey);
     return publicApiError(500, "internal_error", "Something went wrong.");
   }
@@ -163,6 +166,7 @@ export async function POST(request: NextRequest) {
       id: result.post.id,
       title: result.post.title,
       status: result.post.status,
+      objective_id: result.post.objective_id,
       // Observable consequence of `analyze`: 'published' = already on the board,
       // 'pending' = held for the duration of the review. This is what says to
       // the integrator that its flag has been taken into account.

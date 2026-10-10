@@ -165,9 +165,12 @@ export async function saveFeedbackPostContent(
   projectId: string,
   updates: Row,
 ): Promise<Result<Row>> {
-  const directLegacyUpdate = () => client.from("feedback_posts").update(updates)
-    .eq("id", id).eq("project_id", projectId).is("deleted_at", null)
-    .select("*").maybeSingle();
+  const directLegacyUpdate = () => {
+    let query = client.from("feedback_posts").update(updates)
+      .eq("id", id).eq("project_id", projectId).is("deleted_at", null);
+    if ("objective_id" in updates) query = query.is("merged_into_id", null);
+    return query.select("*").maybeSingle();
+  };
   if (!isContentEncryptionEnabled() && !process.env.MINDDY_DATA_ROOT_KEY) {
     const { data, error } = await directLegacyUpdate();
     return { data: data as Row | null, error };

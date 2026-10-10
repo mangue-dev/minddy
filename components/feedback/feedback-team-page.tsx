@@ -47,7 +47,7 @@ import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
-import { CategoryValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
+import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
 import { AgentBeamOverlay } from "@/components/agent-beam";
@@ -1376,7 +1376,7 @@ function FeedbackDetail({
   const post = data?.post ?? null;
 
   // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
-  // objectives/categories are not used for feedback. `feedbackAuthor` names it
+  // Objectives resolve objective-change events. `feedbackAuthor` names the
   // submission board: the person who wrote, with the same name and face
   // than the author sheet below — never two spellings two blocks apart.
   const author = post?.author ?? null;
@@ -1384,7 +1384,7 @@ function FeedbackDetail({
   const eventCtx = useMemo<EventContext>(
     () => ({
       members,
-      objectives: [],
+      objectives,
       categories: [],
       issues,
       projectKey,
@@ -1395,7 +1395,7 @@ function FeedbackDetail({
           }
         : null,
     }),
-    [members, issues, projectKey, author, authorSeed]
+    [members, objectives, issues, projectKey, author, authorSeed]
   );
 
   const [title, setTitle] = useState("");
@@ -1433,6 +1433,7 @@ function FeedbackDetail({
     void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
     // The activity feed has no realtime: each action refreshes it.
     void queryClient.invalidateQueries({ queryKey: ["feedback-events", projectId] });
+    void queryClient.invalidateQueries({ queryKey: ["objective-feedback", projectId] });
     onChanged();
   };
 
@@ -2015,6 +2016,11 @@ function FeedbackDetail({
             </PropertyRow>
           )}
 
+          <PropertyRow label={tField("objective")}>
+            <ObjectiveValue value={post.objective_id} objectives={objectives} projectId={projectId}
+              onChange={(objective_id) => patch.mutate({ objective_id })} />
+          </PropertyRow>
+
           <PropertyRow label={tField("categories")}>
             <CategoryValue
               categories={categories}
@@ -2108,7 +2114,8 @@ function FeedbackDetail({
         // absorbing a real return in a discarded post would bury it behind a
         // tombstone that the board no longer shows (same guard as the AI ​​review).
         candidates={allPosts.filter(
-          (p) => p.id !== postId && !p.issue_id && p.status !== "spam"
+          (p) => p.id !== postId && !p.issue_id && p.status !== "spam" &&
+            (p.objective_id ?? null) === (post.objective_id ?? null)
         )}
         onMerge={(canonicalId) => {
           setMergeOpen(false);
@@ -2146,6 +2153,7 @@ function FeedbackDetail({
         initialTitle={post.title}
         initialDescription={post.body}
         initialCategoryIds={post.category_ids}
+        initialObjectiveId={post.objective_id}
         analyticsSource="feedback"
         onCreate={async (input) => {
           await api(`/api/projects/${projectId}/feedback/${postId}/promote`, {
@@ -2682,6 +2690,9 @@ function InternalFeedbackDialog({
   const tCommon = useTranslations("Common");
   const tDictate = useTranslations("Dictate");
   const locale = useLocale();
+  const tField = useTranslations("Field");
+  const { objectives } = useObjectivesQuery(projectId);
+  const [objectiveId, setObjectiveId] = useState<string | null>(null);
   const [author, setAuthor] = useState<ComposerAuthor | null>(null);
   // New person being entered. `null` = we are on the selector.
   const [draftAuthor, setDraftAuthor] = useState<{ email: string; name: string } | null>(
@@ -2779,6 +2790,7 @@ function InternalFeedbackDialog({
     setAuthor(null);
     setDraftAuthor(null);
     setTitle("");
+    setObjectiveId(null);
     setIsPublic(true);
     bodyRef.current = "";
     setInitialBody("");
@@ -2815,6 +2827,7 @@ function InternalFeedbackDialog({
             title: title.trim(),
             body: bodyRef.current.trim(),
             is_public: boardEnabled ? isPublic : false,
+            objective_id: objectiveId,
             user: { email: signer.email, name: signer.name ?? undefined },
           }),
         }
@@ -2913,6 +2926,10 @@ function InternalFeedbackDialog({
             />
           )}
         </div>
+
+        <PropertyRow label={tField("objective")}>
+          <ObjectiveValue value={objectiveId} objectives={objectives} projectId={projectId} onChange={setObjectiveId} />
+        </PropertyRow>
 
         {boardEnabled ? (
           <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">

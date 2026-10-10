@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -43,14 +43,15 @@
       "app/f/[token]/sso/route.ts",
       "lib/server/feedback/posts.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "integration-troubleshooting",
@@ -72,7 +73,7 @@
       "src": "/documentation/it/integration-api-and-webhooks-flow.svg",
       "alt": "Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
       "caption": "Segui le fasi in questo ordine. Server conserva chiave integrazione. `POST` ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +105,7 @@
       "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -205,3 +206,8 @@ Come proprietario, attiva la bacheca e configura il suo segreto SSO distinto. Il
 Verifica che il visitatore apra Il mio feedback con l’identità prevista. Un token scaduto richiede un nuovo reindirizzamento. Se il segreto è compromesso, rinnovalo tramite la conferma della bacheca e aggiorna contemporaneamente il backend. Il codice email resta l’alternativa quando il SSO non è disponibile.
 
 ![Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.](/documentation/it/feedback-ingestion-and-sso-workflow.svg)
+
+
+## Scegliere un obiettivo per un feedback {#feedback-objective-default}
+
+Per un’integrazione `feedback`, il proprietario può scegliere **Obiettivo** alla creazione o accanto all’integrazione esistente in **Impostazioni → Integrazioni**. Sono accettati solo obiettivi attivi dello stesso progetto. Ogni nuovo invio `POST /api/v1/feedback` eredita l’impostazione, anche con `analyze: false`; non inviare `objective_id` nel payload API. La risposta 201 include l’`objective_id` assegnato o `null`. Cambiare o rimuovere l’impostazione riguarda solo gli invii futuri. Un obiettivo non disponibile restituisce 422 `objective_not_found`: scegline uno attivo o rimuovi l’impostazione prima di riprovare. La revisione di Numo non deduce obiettivi. La conversione eredita l’obiettivo e le categorie del feedback.

@@ -8848,6 +8848,13 @@
     "storage": false
   },
   {
+    "file": "lib/server/integrations.ts",
+    "operation": "from",
+    "resource": "integrations",
+    "line": 304,
+    "storage": false
+  },
+  {
     "file": "lib/server/invitation-token.ts",
     "operation": "from",
     "resource": "project_invitations",

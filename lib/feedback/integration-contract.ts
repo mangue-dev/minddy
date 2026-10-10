@@ -263,7 +263,7 @@ function feedbackUsage(base: string): IntegrationUsage {
           analyze: ANALYZE_FIELD,
         },
         response:
-          '201 { id, title, status, review_state, votes, user: { pseudonym } } — ' +
+          '201 { id, title, status, objective_id, review_state, votes, user: { pseudonym } } — ' +
           '"pseudonym" is the anonymised name shown on the public board; ' +
           'review_state is "pending" while minddy\'s AI reviews the post and ' +
           '"published" once it is live on the board (immediately when analyze is false).',
@@ -291,6 +291,7 @@ function feedbackUsage(base: string): IntegrationUsage {
         code: "body_too_long",
         meaning: `body exceeds ${FEEDBACK_BODY_MAX} characters.`,
       },
+      { status: 422, code: "objective_not_found", meaning: "The integration default objective is unavailable. Choose an active objective or clear the default." },
       { status: 422, code: "user_required", meaning: "The user object is missing." },
       {
         status: 422,
@@ -312,6 +313,7 @@ function feedbackUsage(base: string): IntegrationUsage {
       },
     ],
     rules: [
+      "A feedback integration may have an optional objective_id chosen in Settings → Integrations or via minddy_create_integration/minddy_update_integration_objective. New submissions inherit it (also with analyze false); do not send an objective_id in the ingestion payload. Review never assigns objectives. Promotion inherits this objective and the feedback categories. Only feedback sharing the same objective (including none) can merge.",
       "Posts land on the project's feedback board, not in the issue list: they are user needs with votes and a public status, not tasks.",
       "minddy deduplicates automatically — do not try to search for an existing post before submitting, just submit.",
       "The board must be enabled for the public page to exist, but collection through this API works either way.",

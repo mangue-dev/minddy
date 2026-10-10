@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -39,13 +39,14 @@
       "lib/relation-constants.ts",
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
-      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md"
+      "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained)",
-    "language": "agent:/root (pt-BR changed-passage review against English revision 7; earlier unchanged prose reviews retained)",
+    "revision": 8,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root (pt-BR changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -67,7 +68,7 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada com um nome de resultado de exemplo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -117,3 +118,8 @@ A data estimada de conclusão exige pelo menos duas conclusões, uma semana inte
 Com uma data-alvo válida, o histórico vai da criação até essa data e o ritmo de entrega usa o tempo observado desde a criação, incluindo o período depois de um prazo não cumprido. Se uma data-alvo estiver definida, mas não determinar um período válido após a criação, o cálculo usa um histórico móvel de oito semanas e uma janela de previsão de 28 dias.
 
 Histórico escasso ou mudança recente de escopo reduzem sua utilidade. A estimativa não é um prazo prometido e não inclui trabalho invisível que você não vinculou. Compare a data-alvo, o trabalho restante e as restrições reais antes de mudar compromissos.
+
+
+## Escolher um objetivo para um feedback {#objective-feedback}
+
+Um feedback pode pertencer a um objetivo sem virar um ticket. Nos feedbacks do projeto, escolha o objetivo nas propriedades da solicitação. O detalhe do objetivo mostra as solicitações vinculadas, os votos e o status público; selecione uma para ler a discussão. Elas não contribuem para o progresso ou o ritmo dos tickets. A conversão herda o objetivo e as categorias, respeitando as alterações no formulário de criação.

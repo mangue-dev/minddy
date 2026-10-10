@@ -4,6 +4,8 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AddToListIcon, Clock01Icon, Copy01Icon, MessageMultiple01Icon, CheckIcon, WebhookIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
+import { ObjectiveValue, PropertyRow } from "@/components/issue-property-fields";
+import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Textarea, toast } from "mangue-ui";
@@ -86,6 +88,9 @@ export function CreateIntegrationWizard({
 }) {
   const t = useTranslations("Settings");
   const tCommon = useTranslations("Common");
+  const tField = useTranslations("Field");
+  const { objectives } = useObjectivesQuery(projectId);
+  const [objectiveId, setObjectiveId] = useState<string | null>(null);
   const { openIntent } = useAssistantPanelActions();
 
   const [kind, setKind] = useState<IntegrationKind>("issues");
@@ -115,6 +120,7 @@ export function CreateIntegrationWizard({
   const reset = () => {
     setKind("issues");
     setName("");
+    setObjectiveId(null);
     setPlacement("");
     setWantsWebhook(null);
     setWebhook(DEFAULT_WEBHOOK);
@@ -160,7 +166,7 @@ export function CreateIntegrationWizard({
     if (!trimmed) return;
     setCreating(true);
     try {
-      const created = await createIntegrationApi(projectId, trimmed, kind);
+      const created = await createIntegrationApi(projectId, trimmed, kind, kind === "feedback" ? objectiveId : null);
       setCreatedKey(created.key);
       onCreated();
 
@@ -257,6 +263,7 @@ export function CreateIntegrationWizard({
       subtitle: t("integrationWizardNameDesc"),
       submitDisabled: !name.trim(),
       content: (
+        <div className="space-y-4">
         <Input
           autoFocus={allowInputAutoFocus()}
           required
@@ -266,6 +273,13 @@ export function CreateIntegrationWizard({
           placeholder={t("integrationNamePlaceholder")}
           aria-label={t("integrationNameLabel")}
         />
+        {kind === "feedback" && <div className="space-y-2">
+          <PropertyRow label={tField("objective")}>
+            <ObjectiveValue value={objectiveId} objectives={objectives} onChange={setObjectiveId} />
+          </PropertyRow>
+          <p className="text-sm text-muted-foreground">{t("feedbackObjectiveHint")}</p>
+        </div>}
+        </div>
       ),
     },
 

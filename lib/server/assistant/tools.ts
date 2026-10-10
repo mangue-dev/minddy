@@ -365,7 +365,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_objective",
       description:
-        "Read an objective's id, name, description, status, lead_user_id and target_date, plus its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
+        "Read an objective's id, name, description, status, lead_user_id and target_date, plus linked_feedback (requests associated with the objective) and its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
       parameters: {
         type: "object",
         properties: {
@@ -454,7 +454,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_integrations",
       description:
-        "List the project's integrations (API keys external apps push through): id, name, kind ('issues' or 'feedback'), revoked_at, and `webhook` — null when none, else the url, events, scope and the status of the last delivery. Issues created by one carry its integration_id; the view filter filters.integration takes these ids. Plaintext keys are never listed — they exist only in the create_integration result.",
+        "List the project's integrations (API keys external apps push through): id, name, kind ('issues' or 'feedback'), objective_id, revoked_at, and `webhook` — null when none, else the url, events, scope and the status of the last delivery. Issues created by one carry its integration_id; the view filter filters.integration takes these ids. Plaintext keys are never listed — they exist only in the create_integration result.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1146,10 +1146,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_feedback",
       description:
-        "List the project's feedback posts (user requests from the feedback board / API / internal entry): id, title, status, vote_count, is_public, whether a tracking issue is linked, source. Sorted by votes. Use it to find the feedback the user means before acting. Excludes merged duplicates.",
+        "List the project's feedback posts (user requests from the feedback board / API / internal entry): id, title, status, objective_id, vote_count, is_public, whether a tracking issue is linked, source. Sorted by votes. Use it to find the feedback the user means before acting. Excludes merged duplicates.",
       parameters: {
         type: "object",
         properties: {
+          objective_id: { type: ["string", "null"], description: "Filter by objective UUID; null means no objective. Omit for all." },
           status: {
             type: "array",
             items: { type: "string", enum: [...FEEDBACK_POST_STATUSES] },
@@ -1169,7 +1170,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_feedback",
       description:
-        "Get one feedback post in full: title, body (the user's request), the raw submitted text, public status, vote_count, author (real identity), the linked issue if any, and its internal comment thread. In a feedback comment thread, omit feedback_post_id to read the post the comment is on.",
+        "Get one feedback post in full: title, body (the user's request), the raw submitted text, public status, vote_count, author (real identity), its objective_id, the linked issue if any, and its internal comment thread. In a feedback comment thread, omit feedback_post_id to read the post the comment is on.",
       parameters: {
         type: "object",
         properties: {
@@ -1187,7 +1188,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "promote_feedback_to_issue",
       description:
-        "Turn a feedback post into a NEW backlog issue and link them: the issue carries the request + its vote count, and the post's public status then follows that issue automatically. Use when no issue tracks this feedback yet. Fails if the post is already linked or is a merged duplicate. Omit feedback_post_id to target the current post (feedback comment mode).",
+        "Turn a feedback post into a NEW backlog issue and link them: the issue inherits the explicit feedback objective (including none), categories, request + its vote count, and the post's public status then follows that issue automatically. Use when no issue tracks this feedback yet. Fails if the post is already linked or is a merged duplicate. Omit feedback_post_id to target the current post (feedback comment mode).",
       parameters: {
         type: "object",
         properties: {
@@ -1196,6 +1197,36 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description: "Feedback post id. Omit to target the current post.",
           },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "link_feedback_to_objective",
+      description: "Set or clear a feedback post's objective ONLY when the user explicitly requests it. Never infer objectives during feedback review or triage. Resolve the objective with list_objectives first; it must belong to the same project. Pass null to remove the objective. This does not move an already linked issue. Omit feedback_post_id in the current feedback thread.",
+      parameters: {
+        type: "object",
+        properties: {
+          feedback_post_id: { type: "string", description: "Feedback post UUID; omit for the current feedback thread." },
+          objective_id: { type: ["string", "null"], description: "Objective UUID from list_objectives, or null to unlink." },
+        },
+        required: ["objective_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_integration_objective",
+      description: "Set or clear the default objective of a feedback integration when explicitly requested. OWNER ONLY. New submissions inherit this objective; existing feedback keeps its own choice. Pass null to clear. Resolve ids with list_integrations and list_objectives first.",
+      parameters: {
+        type: "object",
+        properties: {
+          integration_id: { type: "string", description: "Feedback integration UUID." },
+          objective_id: { type: ["string", "null"], description: "Objective UUID in this project, or null." },
+        },
+        required: ["integration_id", "objective_id"],
       },
     },
   },
@@ -1441,6 +1472,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       parameters: {
         type: "object",
         properties: {
+          objective_id: { type: ["string", "null"], description: "Optional default objective UUID for a feedback integration. New submissions inherit it. Only set when the user chooses it." },
           name: {
             type: "string",
             description: "A name identifying the integration (max 60 chars).",

@@ -122,6 +122,7 @@ export async function createIssueForProject({
   remote = null,
   recurrenceSeriesId = null,
   smartFillOwnerTriage = false,
+  inferObjective = true,
   rowId = null,
 }: {
   projectId: string;
@@ -145,6 +146,8 @@ export async function createIssueForProject({
   recurrenceSeriesId?: string | null;
   /** Treat this creation as owner-billed triage (feedback promotion). */
   smartFillOwnerTriage?: boolean;
+  /** Feedback promotion must preserve the explicit objective, including none. */
+  inferObjective?: boolean;
   /** ID that the customer has ALREADY given to his optimistic card: the line is born with,
       so that the real-time broadcast of this creation is recognized as the
       its own rather than adopted in duplicate (lib/optimistic-issue.ts). Asked by the
@@ -358,7 +361,7 @@ export async function createIssueForProject({
       row.effort = patch.effort;
       smartFilled.push("effort");
     }
-    if (patch.objective_id && row.objective_id == null) {
+    if (inferObjective && patch.objective_id && row.objective_id == null) {
       row.objective_id = patch.objective_id;
       smartFilled.push("objective_id");
     }

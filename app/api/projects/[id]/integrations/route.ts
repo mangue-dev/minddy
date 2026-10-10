@@ -53,6 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     actorId: auth.user.id,
     name: (body as { name?: unknown })?.name,
     kind: (body as { kind?: unknown })?.kind,
+    objectiveId: (body as { objective_id?: unknown })?.objective_id,
   });
   if (!result.ok) {
     return NextResponse.json(

@@ -63,7 +63,7 @@ export interface TeamFeedbackListItem extends FeedbackPostRow {
  */
 export async function listTeamFeedback(
   projectId: string,
-  options: { statuses?: readonly FeedbackPostStatus[] } = {}
+  options: { statuses?: readonly FeedbackPostStatus[]; objectiveId?: string | null } = {}
 ): Promise<TeamFeedbackListItem[]> {
   const service = getServiceClient();
   let query = feedbackPostStore(service)
@@ -71,6 +71,9 @@ export async function listTeamFeedback(
     .is("deleted_at", null)
     .eq("project_id", projectId)
     .is("merged_into_id", null);
+  if (options.objectiveId !== undefined) {
+    query = options.objectiveId === null ? query.is("objective_id", null) : query.eq("objective_id", options.objectiveId);
+  }
   if (options.statuses?.length) {
     query = query.in("status", options.statuses as string[]);
   }
@@ -194,29 +197,30 @@ export async function getTeamFeedbackDetail(
 export type { IssueLinkedFeedback };
 
 /**
- * The returns that a ticket implements. Several are possible: several
- * requests often converge on the same job.
+ * Feedback associated with an issue or objective. Multiple requests may
+ * describe the same job or desired outcome.
  *
  * Customer service, always: `feedback_posts` is RLS deny-all, so a
  * read by the session client would return an EMPTY list instead of a
  * error. The caller has already proven their access to the project, we filter on it.
  */
-export async function listFeedbackForIssue(
+async function listLinkedFeedback(
   projectId: string,
-  issueId: string
+  targetId: string,
+  target: "issue_id" | "objective_id",
 ): Promise<IssueLinkedFeedback[]> {
   const service = getServiceClient();
   const { data, error } = await feedbackPostStore(service)
     .select("id, title, status, vote_count, is_public")
     .is("deleted_at", null)
     .eq("project_id", projectId)
-    .eq("issue_id", issueId)
+    .eq(target, targetId)
     // A merged duplicate only exists through its canonical: show it
     // would make two entries for a single request.
     .is("merged_into_id", null)
     .order("vote_count", { ascending: false });
   if (error) {
-    console.error("[feedback-queries] by_issue_failed");
+    console.error("[feedback-queries] linked_feedback_failed");
     return [];
   }
   const rows = (data ?? []) as unknown as Omit<IssueLinkedFeedback, "comment_count">[];
@@ -233,4 +237,12 @@ export async function listFeedbackForIssue(
     counts.set(c.feedback_post_id, (counts.get(c.feedback_post_id) ?? 0) + 1);
   }
   return rows.map((r) => ({ ...r, comment_count: counts.get(r.id) ?? 0 }));
+}
+
+export function listFeedbackForIssue(projectId: string, issueId: string) {
+  return listLinkedFeedback(projectId, issueId, "issue_id");
+}
+
+export function listFeedbackForObjective(projectId: string, objectiveId: string) {
+  return listLinkedFeedback(projectId, objectiveId, "objective_id");
 }

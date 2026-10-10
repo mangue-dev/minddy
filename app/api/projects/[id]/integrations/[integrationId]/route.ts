@@ -2,12 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { revokeIntegration, updateIntegrationWebhook } from "@/lib/server/integrations";
+import { revokeIntegration, updateIntegrationWebhook, updateIntegrationObjective } from "@/lib/server/integrations";
 
 type RouteContext = { params: Promise<{ id: string; integrationId: string }> };
 
-/** PATCH /api/projects/[id]/integrations/[integrationId] — owner configures
-    the outgoing webhook (url + followed events + scope). url null = disabled. */
+/** The owner updates a feedback objective default or outgoing webhook settings. */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id, integrationId } = await params;
   const auth = await getAuthedUser(request);
@@ -27,6 +26,16 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
+  if ("objective_id" in body) {
+    if (Object.keys(body).some((key) => key !== "objective_id")) return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+    const result = await updateIntegrationObjective({ projectId: id, integrationId, objectiveId: body.objective_id });
+    if (!result.ok) return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
+    return NextResponse.json({ integration: result.integration });
   }
 
   const result = await updateIntegrationWebhook({

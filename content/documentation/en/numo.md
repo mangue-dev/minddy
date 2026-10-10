@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -54,14 +54,15 @@
       "components/assistant/ask-user-card.tsx",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "code-work",
@@ -91,7 +92,7 @@
       "src": "/documentation/en/work-with-numo-workflow.png",
       "alt": "Numo demonstration conversation with page context, a priority-change request and its saved answer.",
       "caption": "Existing demonstration thread, localized for display. The saved answer names AUR-11 and AUR-7; this capture does not prove a new execution.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -108,7 +109,7 @@
       "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -169,7 +170,7 @@
       "src": "/documentation/en/numo-execution-model-flow.svg",
       "alt": "Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for current code worker when needed. Replay durable events; reconcile uncertain writes.",
       "caption": "Read the stages in order. Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for current code worker when needed. Replay durable events; reconcile uncertain writes.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -201,7 +202,7 @@
       "src": "/documentation/en/numo-mcp-connections-workflow.png",
       "alt": "Personal MCP settings, empty connection list and Add another MCP server control.",
       "caption": "Numo connections are personal; project routines use the project owner’s connections.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -218,7 +219,7 @@
       "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
       "alt": "Custom MCP server form with advanced authentication, transport and header settings.",
       "caption": "Custom MCP server form with advanced authentication, transport and header settings. No credentials were entered and no server was contacted.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -319,3 +320,8 @@ For a live question card, answer every required question and submit the set. Pas
 An account-limit card shows the reset date when known and may offer plan or personal-key options. A routine-limit card links to routine management; inspect the per-run cap. An operation-allocation card concerns that operation's allocation. Repeating the same request does not remove the limit. Personal model keys do not make sandbox compute free.
 
 A failed turn can continue from a saved checkpoint only when that checkpoint survived. Inspect issue changes, branch, pull request and external services before retrying: a write may have succeeded even when its response was lost. State what remains and ask to continue the existing work. If no recoverable checkpoint exists, provide that verified state in a new request. Record the error and affected conversation when reporting a persistent failure; exclude credentials.
+
+
+## Choose an objective for feedback {#feedback-objectives}
+
+Feedback objectives require an explicit choice. Ask Numo to link a request to a named project objective, or to remove that link; Numo resolves the request and objective before changing it. General review or categorization does not authorize objective assignment. An integration can supply a default chosen by the owner. Promotion inherits the feedback objective and categories; it keeps the objective empty when none was chosen.

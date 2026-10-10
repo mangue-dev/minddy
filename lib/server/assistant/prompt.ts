@@ -239,6 +239,7 @@ export function buildSharedRules(
   defaultStatus: NumoDefaultStatus = DEFAULT_NUMO_STATUS,
 ): string {
   return `## Rules
+- Feedback objectives are explicit choices. Use link_feedback_to_objective ONLY when the user asks; never infer or assign an objective during feedback review, categorization or triage. A feedback integration default applies to new submissions. Promotion preserves the selected objective, including none.
 - Respond in ${responseLanguageInstruction(locale, { mentionIssueTerm: true })}.
 - Your actions run DIRECTLY and are attributed to the user — there is no undo. Every change is
   traced in the issue's activity log. For sweeping or destructive-feeling changes (bulk edits of
@@ -602,7 +603,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
   } else if (ctx.feedbackId) {
     lines.push(
       `- Open feedback post: "${ctx.feedbackTitle ?? "(untitled)"}" (id: ${ctx.feedbackId}).`,
-      `When the user says "ce feedback", "ce retour", "this feedback", "promeus-le", "réponds-lui" or similar, they mean the feedback post above — use its id directly with the feedback tools (get_feedback, promote_feedback_to_issue, link_feedback_to_issue, respond_to_feedback). Do not search for it.`,
+      `When the user says "ce feedback", "ce retour", "this feedback", "promeus-le", "réponds-lui" or similar, they mean the feedback post above — use its id directly with the feedback tools (get_feedback, link_feedback_to_objective, promote_feedback_to_issue, link_feedback_to_issue, respond_to_feedback). Do not search for it.`,
     );
   } else if (ctx.pageId) {
     lines.push(

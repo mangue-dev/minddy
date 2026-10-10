@@ -39,6 +39,7 @@ import {
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
 import { ObjectiveMomentum } from "@/components/objective-momentum";
+import { ObjectiveFeedbackSection } from "@/components/objective-feedback-section";
 import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
 import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
@@ -552,6 +553,7 @@ export function ObjectiveDetail({
               projectKey={projectKey}
               issues={issues}
             />
+            <ObjectiveFeedbackSection projectId={projectId} objectiveId={objective.id} />
             <ObjectiveResourcesSection
               objectiveId={objective.id}
               projectId={projectId}

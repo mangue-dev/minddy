@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
     "editions": [
@@ -43,14 +43,15 @@
       "app/f/[token]/sso/route.ts",
       "lib/server/feedback/posts.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
+    "date": "2026-10-10"
   },
   "related": [
     "integration-troubleshooting",
@@ -71,7 +72,7 @@
       "src": "/documentation/en/integration-api-and-webhooks-flow.svg",
       "alt": "Diagram: Server keeps the project integration key. POST issues or feedback with correct key kind. Owner selects an issues webhook destination. Receiver verifies raw-body HMAC and delivery UUID.",
       "caption": "Read the stages in order. Server keeps the project integration key. `POST` issues or feedback with correct key kind. Owner selects an issues webhook destination. Receiver verifies raw-body HMAC and delivery UUID.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -103,7 +104,7 @@
       "src": "/documentation/en/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Separate backend-ingestion and browser-SSO sequences with distinct secrets.",
       "caption": "The ingestion key authenticates server requests. The board SSO secret signs a short-lived, single-use visitor token.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -203,3 +204,8 @@ Enable the board and configure its separate SSO secret as owner. Your backend si
 Verify that the visitor opens My feedback under the intended identity. An expired token needs a fresh redirect. Rotate the board SSO secret with its confirmation when compromised and update the backend together. The email-code flow remains the alternative when SSO is unavailable.
 
 ![Separate backend-ingestion and browser-SSO sequences with distinct secrets.](/documentation/en/feedback-ingestion-and-sso-workflow.svg)
+
+
+## Choose an objective for feedback {#feedback-objective-default}
+
+For a `feedback` integration, the owner may choose **Objective** at creation or beside the existing integration in **Settings → Integrations**. Only an active objective in the same project is accepted. Each new `POST /api/v1/feedback` submission inherits this default, including with `analyze: false`; do not send `objective_id` in the ingestion payload. The 201 response includes the assigned `objective_id` or `null`. Changing or clearing the default affects future submissions only. An unavailable default returns 422 `objective_not_found`: select an active objective or clear the default before retrying. Numo review does not infer objectives. Promotion inherits the feedback objective and categories.

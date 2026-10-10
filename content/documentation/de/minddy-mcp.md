@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
@@ -56,13 +56,14 @@
       "lib/server/database-tool-schema.ts",
       "lib/server/page-databases.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
-      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md"
+      "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
+      "content/documentation/reviews/min-670-feedback-objectives.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 de network guidance and terminology review); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review)",
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 de network guidance and terminology review); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained)",
     "date": "2026-10-10"
   },
   "related": [
@@ -84,7 +85,7 @@
       "src": "/documentation/de/external-minddy-mcp-workflow.png",
       "alt": "minddy-MCP-Clientauswahl mit Claude, Codex und weiteren Assistenten.",
       "caption": "Wähle deinen Client, um dessen Installationsbefehl oder Konfiguration anzuzeigen.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -101,7 +102,7 @@
       "src": "/documentation/de/external-minddy-mcp-install-workflow.png",
       "alt": "Codex-Installationsdialog mit dem Endpunkt von minddy Cloud.",
       "caption": "Dieses Beispiel verbindet sich mit minddy Cloud. Verwenden Sie bei Selbsthosting den Ursprung Ihrer eigenen Instanz; der angezeigte Befehl wurde für diese Aufnahme nicht ausgeführt.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -178,3 +179,8 @@ Das bereinigte Beispiel ändert die erste Aufgabe eines zuvor gelesenen Plans. E
   "tasks": [{"task_index": 0, "state": "in_progress"}]
 }
 ```
+
+
+## Ein Ziel für Feedback wählen {#feedback-objectives}
+
+Feedback-Lesezugriffe enthalten `objective_id`; `minddy_list_feedback` unterstützt einen optionalen Zielfilter (`null` wählt Anfragen ohne Ziel). Verwenden Sie `minddy_link_feedback_objective` mit `project_id`, `feedback_post_id` und `objective_id` nur auf ausdrücklichen Wunsch des Benutzers; `null` entfernt die Zuordnung. Das Ziel muss aktiv sein und zum selben Projekt gehören. Zieldetails enthalten `linked_feedback`. Eigentümer können `objective_id` bei `minddy_create_integration` für Feedback-Schlüssel angeben oder die Vorgabe mit `minddy_update_integration_objective` ändern. Bestehendes Feedback bleibt unverändert. Die Umwandlung übernimmt Ziel und Kategorien; Numo weist bei der Prüfung niemals ein Ziel zu.

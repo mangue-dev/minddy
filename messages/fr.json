@@ -2947,6 +2947,7 @@
     "integrationsEmpty": "Aucune intégration pour le moment.",
     "newIntegration": "Nouvelle intégration",
     "integrationNameLabel": "Nom",
+    "feedbackObjectiveHint": "Les nouveaux retours de cette intégration seront liés à cet objectif.",
     "integrationWizardNameTitle": "Nommez cette intégration",
     "integrationWizardNameDesc": "Le nom sous lequel vous la retrouverez dans la liste des clés.",
     "integrationWizardPlacementIssuesTitle": "D’où partent les tickets ?",

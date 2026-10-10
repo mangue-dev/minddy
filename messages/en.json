@@ -2947,6 +2947,7 @@
     "integrationsEmpty": "No integrations yet.",
     "newIntegration": "New integration",
     "integrationNameLabel": "Name",
+    "feedbackObjectiveHint": "New feedback from this integration will belong to this objective.",
     "integrationWizardNameTitle": "Name this integration",
     "integrationWizardNameDesc": "The name you'll find it under in your key list.",
     "integrationWizardPlacementIssuesTitle": "Where do the issues come from?",

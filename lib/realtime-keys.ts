@@ -353,6 +353,7 @@ export function keysForProjectEvent(
       return [
         active(["feedback", projectId]),
         active(["feedback-detail", projectId]),
+        active(["objective-feedback", projectId]),
         active(["feedback-count", projectId]),
         active(HOME_SUMMARY_KEY),
         // The number of the project lines in the sidebar counts the returns
@@ -529,6 +530,7 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["objective-comments"],
   ["objective-events"],
   ["objective-resources"],
+  ["objective-feedback", projectId],
   ["feedback", projectId],
   ["feedback-detail", projectId],
   ["feedback-count", projectId],

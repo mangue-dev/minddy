@@ -217,6 +217,15 @@ describe("createIssueForProject birth activity", () => {
     });
   });
 
+  it("never infers an objective during feedback promotion while filling other fields", async () => {
+    smartFillPayer = { userId: "member-1", scope: "created" };
+    smartFillPatch = { objective_id: "objective-1", priority: "high", effort: "m" };
+    const result = await createIssueForProject({ projectId: "project-1", actorId: "member-1",
+      inferObjective: false, input: { title: "Feedback", objective_id: null } });
+    expect(result).toMatchObject({ ok: true, issue: { objective_id: null, priority: "high", effort: "m" } });
+    expect(eventRows.find((row) => row.field === "smart_fill")?.to_value).toBe("priority,effort");
+  });
+
   it("reports Smart Fill categories only when they were actually linked", async () => {
     smartFillPayer = { userId: "member-1", scope: "created" };
     smartFillPatch = { category_ids: ["category-smart"] };

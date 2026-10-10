@@ -196,6 +196,8 @@ export async function matchFeedbackPosts(params: {
   limit?: number;
   /** true = only report public posts (suggestions on the visitor side, so as not to disclose private feedback). false (default) = team/AI dedup. */
   publicOnly?: boolean;
+  /** Review searches only within the explicitly selected objective. */
+  objectiveId?: string | null;
 }): Promise<MatchedPost[]> {
   const service = getServiceClient();
   const maxCount = Number.isFinite(params.limit ?? 8)
@@ -209,6 +211,8 @@ export async function matchFeedbackPosts(params: {
       .eq("project_id", params.projectId).is("deleted_at", null)
       .is("merged_into_id", null).order("id", { ascending: true })
       .range(offset, offset + pageSize - 1);
+    if (params.objectiveId !== undefined) query = params.objectiveId === null
+      ? query.is("objective_id", null) : query.eq("objective_id", params.objectiveId);
     if (params.publicOnly) query = query.eq("is_public", true)
       .eq("review_state", "published").neq("status", "spam");
     const { data, error } = await query;
