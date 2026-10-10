@@ -720,3 +720,48 @@ Codex workers; Codex was restored as the final account default.
 ![Codex settings with GPT-6.1-Sol, medium thinking and connected subscription](assets/min-676-native-model-codex.png)
 
 ![Claude Code model and thinking controls; account disconnected and paid execution untested](assets/min-676-native-model-claude-untested.png)
+
+## Simulated access expiry and real cold recovery (2026-10-10)
+
+The private Docker-backed acceptance now covers an expired-access simulation
+without waiting for the authentic access token to expire. Metadata-only evidence
+is recorded in [`min-676-simulated-expiry-proof.json`](assets/min-676-simulated-expiry-proof.json).
+
+The dedicated `native-worker-expiry-validation.ts` helper replaces only the
+first sandbox's fenced `profile-import.json` access token with a new synthetic
+JWT-shaped test string: `exp=1`, a test-only header and an explicitly invalid
+provider signature. It does not alter any signed provider token's claims. The
+actual refresh token, ID token, account identity and refresh timestamp remain
+unchanged. The saved encrypted profile and host clock are untouched by injection.
+This helper is imported only by the private acceptance entry point; the production
+VM bundle contains neither the fixture nor an expiration override.
+
+The unmodified pinned Codex `0.162.1` CLI then performs its real OAuth renewal
+through the production runtime's `account/read({ refreshToken: true })` before
+inference. The host refuses to finalize the worker unless its exported access
+token is no longer the fixture, is unexpired, and both access and refresh tokens
+have changed with matching account identity. Only that renewed export enters
+the production atomic encrypted write-back path.
+
+| Run | Injection and execution | Persistence and destruction |
+| --- | --- | --- |
+| `69cf12c7-4ae0-403e-8448-45b3e1a4ded7` | Synthetic expired access token; real native renewal, successful Minddy `read_issue`, guarded file write/read/command and exact completion marker. | Renewed encrypted profile matches the export; typed SDK 404 confirms destruction. |
+| `98cd338f-f410-49ea-8673-ef10e936abf3` | No injection; restores the first worker's saved rotation into a fresh sandbox; repeats real renewal, MCP and repository operations. | Same matching encrypted export and SDK deletion proof; the first sandbox was confirmed absent before creating this one. |
+
+Both workers use the current account selection, `gpt-6-luna` with automatic
+thinking, frozen at launch. No additional authorization or API inference key is
+needed; reported API inference cost is zero. Their allocation ledgers are
+`cleaned`, completed runs have confirmed stop timestamps, and the Codex connection
+remains connected at generation 3 with encrypted credentials, no lease and no
+runtime descriptor. The synthetic credential is never saved to the vault.
+
+This establishes simulated expired-access recovery, real provider renewal,
+encrypted persistence and cold restoration. It does not establish expiration of
+an authentic provider-signed token or reactive recovery after an actual provider
+HTTP 401: Minddy's startup renewal occurs before inference. The natural-expiry
+acceptance above remains pending. Paid Claude execution remains untested.
+
+Verification: 67 focused tests across four files, TypeScript, targeted lint,
+production VM build, documentation/knowledge/English checks and whitespace checks.
+Public controls and documented behavior are unchanged; this adds private acceptance
+evidence only and requires no public manual or illustration revision.

@@ -5,14 +5,20 @@ import { randomUUID } from "node:crypto";
 import type { ControlPlaneClient } from "./control-plane-client";
 import type { VmJob, VmToolResponse } from "./protocol";
 import { runNativeTurn } from "./native-supervisor";
+import { nativeWorkerPaths } from "../../../native-agent-worker";
+import { stageExpiredCodexAccessFixture } from "./native-worker-expiry-validation";
 
-type FixtureInput = { job: VmJob; requiredTool: string; requiredArgs: Record<string, unknown>; marker: string };
+type FixtureInput = { job: VmJob; requiredTool: string; requiredArgs: Record<string, unknown>; marker: string; accessExpirySimulation?: "synthetic_expired_access" };
 
 /** Private SDK mailbox fixture: no cloud callback, auth output, or model transcript. */
 export async function runNativeWorkerValidation(inputPath: string) {
   const input = JSON.parse(await readFile(inputPath, "utf8")) as FixtureInput;
   await rm(inputPath);
   if (!input.job.nativeAgent || input.job.authUrl !== null || input.job.pullRequestDelivery?.required || !/^[A-Z0-9_]{8,80}$/.test(input.marker) || !["read_issue", "read_page"].includes(input.requiredTool)) throw new Error("Invalid native worker validation fixture");
+  if (input.accessExpirySimulation !== undefined && (input.accessExpirySimulation !== "synthetic_expired_access" || input.job.engine !== "codex" || input.job.nativeAgent.engine !== "codex")) throw new Error("Invalid native expiry simulation");
+  const expirySimulation = input.accessExpirySimulation
+    ? await stageExpiredCodexAccessFixture(nativeWorkerPaths(input.job.layout).profileImportPath)
+    : null;
   const root = join(input.job.nativeAgent.privateRoot, "validation");
   await mkdir(root, { mode: 0o700, recursive: true });
   const pending = join(root, "pending.json"); const final = join(root, "result.json");
@@ -46,7 +52,7 @@ export async function runNativeWorkerValidation(inputPath: string) {
   try {
     const report = await runNativeTurn(input.job, { prompt, anchorInstructions: "This is an authorized private Minddy native-worker fixture in a disposable repository." }, cp, { turnDeadlineMs: 180_000 });
     const fileMatches = (await readFile(join(input.job.layout.repoDir, file), "utf8").catch(() => "")) === input.marker;
-    await write(final, { status: report.status, errorCode: report.errorCode, nativeAuthExportReady: report.nativeAuthExportReady === true, calls, successfulCalls, writeObserved, readObserved, commandObserved, fileMatches, markerMatches: report.reply?.trim() === input.marker, checkpointEngine: report.checkpoint?.native?.engine, checkpointHistoryCount: report.checkpoint?.native?.history.length ?? 0, costUsd: report.costUsd, sandboxMs: report.sandboxMs });
+    await write(final, { status: report.status, errorCode: report.errorCode, nativeAuthExportReady: report.nativeAuthExportReady === true, calls, successfulCalls, writeObserved, readObserved, commandObserved, fileMatches, markerMatches: report.reply?.trim() === input.marker, checkpointEngine: report.checkpoint?.native?.engine, checkpointHistoryCount: report.checkpoint?.native?.history.length ?? 0, costUsd: report.costUsd, sandboxMs: report.sandboxMs, expirySimulation });
   } finally { stopped = true; await rm(pending, { force: true }); }
 }
 

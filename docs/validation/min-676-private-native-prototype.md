@@ -452,3 +452,14 @@ rotation and typed SDK deletion proofs. See
 This does not establish natural expiry recovery: no authentic expired access
 token was available and no signed claims were changed. Claude paid execution
 remains untested. Availability and provider authorization conditions above remain.
+
+An additional private acceptance on 2026-10-10 replaced only the first disposable
+sandbox's imported access token with an explicitly synthetic expired fixture,
+preserving the actual refresh token and ID token. Real native renewal, encrypted
+write-back, Minddy MCP and a second untouched cold worker all passed without
+another authorization. Both sandboxes were physically destroyed and allocation
+ledgers cleaned. See `assets/min-676-simulated-expiry-proof.json` and the harness
+probe report for exact assertions. This proves simulated expired-access recovery;
+authentic expiry and provider HTTP 401 recovery remain unobserved. The current
+account model selection was `gpt-6-luna` with automatic thinking. Claude remains
+untested.
