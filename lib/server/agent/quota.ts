@@ -30,7 +30,7 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
 export interface AgentQuota {
   allowed: boolean;
   unlimited: boolean;
-  mode: "platform" | "byok";
+  mode: "platform" | "byok" | "subscription";
   spent?: number;
   cap?: number;
   remaining?: number;
@@ -48,13 +48,14 @@ export interface AgentQuota {
 export async function checkAgentQuota(
   userId: string,
   surface: Extract<AiSurface, "agent" | "automations"> = "agent",
+  options: { subscription?: boolean } = {},
 ): Promise<AgentQuota> {
-  const hasByok = await userHasByokKey(userId, surface);
+  const hasByok = !options.subscription && await userHasByokKey(userId, surface);
   if (hasByok) return { allowed: true, unlimited: true, mode: "byok" };
   // In self-hosting, the tokens and the endpoint belong to the operator.
   // A BYOK key (or a local endpoint) is therefore authorized without reading a plan or
   // from ledger minddy ; without it, we refuse any platform call beforehand.
-  if (!isManagedAiEnabled()) {
+  if (!options.subscription && !isManagedAiEnabled()) {
     return hasByok
       ? { allowed: true, unlimited: true, mode: "byok" }
       : { allowed: false, unlimited: false, mode: "platform", reason: "managed_ai_unavailable" };
@@ -65,7 +66,7 @@ export async function checkAgentQuota(
     return {
       allowed: false,
       unlimited: false,
-      mode: "platform",
+      mode: options.subscription ? "subscription" : "platform",
       planId: plan.id,
       nextPlanId: nextBillingPlanId(plan.id),
       reason: "agents_not_in_plan",
@@ -79,7 +80,7 @@ export async function checkAgentQuota(
   return {
     allowed,
     unlimited: false,
-    mode: "platform",
+    mode: options.subscription ? "subscription" : "platform",
     spent,
     cap,
     remaining: Math.max(0, cap - spent),

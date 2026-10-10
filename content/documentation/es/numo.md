@@ -22,11 +22,11 @@
   "visibility": "public",
   "status": "published",
   "revision": 6,
-  "sourceRevision": 5,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-676 private hosted native worker selection",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -55,13 +55,17 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-light-review-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "components/settings/native-agent-connections.tsx",
+      "components/settings/native-agent-connections.test.tsx",
+      "app/api/account/agent-preferences/route.ts",
+      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md"
     ]
   },
   "review": {
     "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed)",
     "date": "2026-10-10"
   },
   "related": [
@@ -264,7 +268,7 @@ Si solicita información, envíe su elección antes de esperar que continúen la
 
 Numo actúa dentro del acceso del usuario actual. Pedirlo por chat no concede a un miembro ajustes exclusivos del propietario. El propietario administra miembros, integraciones, repositorios y configuración del tablón de feedback. Los ajustes personales pertenecen a la cuenta actual.
 
-Numo puede cambiar preferencias compatibles y ajustes del proyecto autorizados al propietario. Las credenciales de proveedores, conexiones Git, segundo factor y archivos de avatar los configura usted. El modelo y razonamiento del agente de código se cambian únicamente en los ajustes de IA de la cuenta.
+Numo puede cambiar preferencias compatibles y ajustes del proyecto autorizados al propietario. Las credenciales de proveedores, conexiones de suscripciones nativas, conexiones Git, segundo factor y archivos de avatar los configura usted. El agente de código y los valores de modelo y razonamiento de OpenCode se eligen únicamente en los ajustes de IA de la cuenta.
 
 ### Autorizar la acción {#authorization}
 
@@ -280,7 +284,9 @@ Las conversaciones no usan conexiones MCP personales de otros miembros. Las ruti
 
 ## Comprender los turnos duraderos de Numo y el trabajo delegado {#numo-execution-model}
 
-Los mensajes interactivos, las acciones contextuales y las rutinas entran en conversaciones Numo. El modelo y el nivel de razonamiento de la conversación se eligen en el campo de composición; el trabajo delegado usa los valores predeterminados de modelo de código y razonamiento de la cuenta. Las herramientas directas de minddy pueden actuar sin repositorio. El trabajo de código abre una sandbox en el servidor para el repositorio vinculado solo cuando hace falta. Una rutina crea una conversación para esa ejecución con las instrucciones guardadas y el contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
+Los mensajes interactivos, acciones contextuales y rutinas entran en conversaciones Numo. El modelo y razonamiento de conversación se eligen en el campo de composición. El trabajo delegado en repositorios usa el agente de código elegido en los ajustes de IA de la cuenta: OpenCode utiliza su modelo API y razonamiento configurados; Codex o Claude Code usa la suscripción personal conectada y los valores del CLI en la vista previa privada. Las herramientas directas de Minddy pueden actuar sin repositorio. El trabajo de código abre una sandbox de servidor alojada para el repositorio vinculado solo cuando hace falta. Una rutina crea una nueva conversación con instrucciones guardadas y contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
+
+La vista previa nativa ofrece herramientas de Minddy controladas mediante MCP. Las herramientas integradas nativas del proveedor, las imágenes de entrada y los subagentes no están disponibles en estos adaptadores. Numo lee las capacidades del adaptador elegido y recibe las capacidades fijadas del agente junto con su resultado. Resuelve las preguntas del agente con contexto fiable de la conversación o te pregunta si falta una decisión. Numo puede usar sus propias herramientas compatibles dentro de tu autorización; no inventa operaciones que el motor no admite.
 
 ![Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar al worker actual cuando sea necesario. Releer eventos y conciliar escrituras inciertas.](/documentation/es/numo-execution-model-flow.svg)
 

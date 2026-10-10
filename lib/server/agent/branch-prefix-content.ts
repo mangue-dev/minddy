@@ -60,25 +60,26 @@ export function agentBranchPrefixVersion(value: string) {
   return store.versionOf(cipher);
 }
 
-/** The protected RPC merges partial preference changes under one row lock. */
+/** Both RPCs merge partial preference changes atomically without resetting omitted fields. */
 export async function saveAgentPreferences(
   userId: string, patch: Record<string, unknown>,
-  client: SupabaseClient = getServiceClient(),
+  _client: SupabaseClient = getServiceClient(),
 ): Promise<Row> {
   if (Object.keys(patch).some((key) => ![
-    "branch_prefix", "default_model", "default_model_provider",
+    "branch_prefix", "default_engine", "default_model", "default_model_provider",
     "default_reasoning_level", "sandbox_region", "sandbox_size",
   ].includes(key))) throw new Error("Unsupported agent preference field");
+  if (Object.hasOwn(patch, "branch_prefix") &&
+      (typeof patch.branch_prefix !== "string" ||
+       normalizeAgentBranchPrefix(patch.branch_prefix) !== patch.branch_prefix))
+    throw new Error("Invalid agent branch prefix");
   const service = getServiceClient();
   if (!await shouldProtectAgentBranchPrefix(service)) {
-    const { error } = await client.from("user_agent_preferences")
-      .upsert({ user_id: userId, updated_at: new Date().toISOString(), ...patch },
-        { onConflict: "user_id" });
-    if (error) throw new Error("Unable to save agent preferences");
-    const read = await client.from("user_agent_preferences").select("*")
-      .eq("user_id",userId).maybeSingle();
-    if (read.error || !read.data) throw new Error("Unable to load agent preferences");
-    return read.data as Row;
+    const { data, error } = await service.rpc("upsert_agent_preferences_partial", {
+      p_user_id: userId, p_values: patch,
+    }).single();
+    if (error || !data) throw new Error("Unable to save agent preferences");
+    return data as Row;
   }
   const replace = Object.hasOwn(patch, "branch_prefix");
   const value = replace ? patch.branch_prefix : DEFAULT_AGENT_BRANCH_PREFIX;

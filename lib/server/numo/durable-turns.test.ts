@@ -531,7 +531,7 @@ describe("durable Numo execution", () => {
       phase: "worker_result",
       worker_event: {
         type: "worker_completed",
-        payload: { status: "completed", outcome: "Tests pass" },
+        payload: { status: "completed", outcome: "Tests pass", agent_engine: "claude_code" },
       },
     });
     await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
@@ -541,6 +541,10 @@ describe("durable Numo execution", () => {
     expect(prompt).toContain("worker_completed");
     expect(prompt).toContain('\\"status\\":\\"completed\\"');
     expect(prompt).toContain("Tests pass");
+    expect(prompt).toContain("Frozen worker harness");
+    expect(prompt).toContain('\\"engine\\":\\"claude_code\\"');
+    expect(prompt).toContain('\\"subagents\\":false');
+    expect(prompt).toContain("Paid Claude execution has not been validated");
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
   });
 
@@ -552,6 +556,7 @@ describe("durable Numo execution", () => {
         worker_event: {
           type: "worker_input",
           payload: {
+            agent_engine: "codex",
             result: {
               version: 1,
               status: "needs_input",

@@ -25,9 +25,10 @@ import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import {
   assignAiCapabilityApi,
   saveAgentPreferencesApi,
+  saveAgentEnginePreferenceApi,
   updateAiKeyPreferencesApi,
 } from "@/lib/agent-keys-api";
-import type { AiKey } from "@/lib/agent-keys-api";
+import type { AiKey, AccountAgentEngine } from "@/lib/agent-keys-api";
 import {
   agentModelsQueryKey,
   useAgentModelsQuery,
@@ -70,10 +71,13 @@ export function AccountAiKeysSection() {
   );
 
   const {
+    defaultEngine,
+    nativeAgentsEnabled,
     defaultModel,
     defaultReasoningLevel,
     loading: prefLoading,
   } = useAgentPreferencesQuery();
+  const usesOpenCode = defaultEngine === "opencode";
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const reasoningLevels = useReasoningLevelsFor(
     defaultModel || providerDefaultModel,
@@ -105,9 +109,16 @@ export function AccountAiKeysSection() {
     }
   };
 
+  const onEngineChange = async (engine: AccountAgentEngine) => {
+    await saveAgentEnginePreferenceApi(engine);
+    await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
+  };
+
   return (
     <>
-      <NativeAgentConnections />
+      <NativeAgentConnections defaultEngine={defaultEngine}
+        nativeAgentsEnabled={nativeAgentsEnabled} preferenceLoading={prefLoading}
+        onEngineChange={onEngineChange} />
       {/* Provider credentials come first. */}
       {/* `ByokConnectPanel` is an assistant shared with onboarding: only its
           surrounding card changes, not its contents. */}
@@ -125,7 +136,8 @@ export function AccountAiKeysSection() {
         <ByokSurfacePreferences
           key={key.id}
           aiKey={key}
-          showAgentPreferences={key.id === textKey?.id}
+          showAgentPreferences={usesOpenCode && key.id === textKey?.id}
+          usesOpenCode={usesOpenCode}
           defaultModel={defaultModel}
           defaultReasoningLevel={defaultReasoningLevel}
           preferenceLoading={prefLoading}
@@ -138,7 +150,7 @@ export function AccountAiKeysSection() {
 
       {/* Without BYOK, agent preferences keep their card. As soon as a
           key exists, they live in the Agent Numo row of the table above. */}
-      {!keysLoading && !textKey ? (
+      {usesOpenCode && !keysLoading && !textKey ? (
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.accountAgent}
           title={t("agentTab")}
@@ -231,6 +243,7 @@ function capabilitiesForSurface(
 function ByokSurfacePreferences({
   aiKey: key,
   showAgentPreferences,
+  usesOpenCode,
   defaultModel,
   defaultReasoningLevel,
   preferenceLoading,
@@ -241,6 +254,7 @@ function ByokSurfacePreferences({
 }: {
   aiKey: AiKey;
   showAgentPreferences: boolean;
+  usesOpenCode: boolean;
   defaultModel: string | null;
   defaultReasoningLevel: ReasoningLevel;
   preferenceLoading: boolean;
@@ -311,8 +325,10 @@ function ByokSurfacePreferences({
             <SettingsRow
               label={t(`byokSurface_${surface.id}`)}
               hint={
-                enabled
-                  ? t("byokSurfaceUsesKeyFor", {
+                surface.id === "agent" && !usesOpenCode
+                  ? t("byokAgentNativeHint")
+                  : enabled
+                    ? t("byokSurfaceUsesKeyFor", {
                       capabilities: assignedCapabilities
                         .map((capability) => t(`byokCapability_${capability}`))
                         .join(", "),

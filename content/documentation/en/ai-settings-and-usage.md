@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676)",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,13 +57,15 @@
       "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
       "components/settings/native-agent-connections.tsx",
       "components/settings/native-agent-connections.test.tsx",
-      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md"
+      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md",
+      "app/api/account/agent-preferences/route.ts",
+      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "revision": 9,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed)",
     "date": "2026-10-10"
   },
   "related": [
@@ -85,7 +87,7 @@
       "src": "/documentation/en/ai-keys-and-models-workflow.png",
       "alt": "AI provider card with minddy Cloud selected.",
       "caption": "The selected Cloud provider uses the account plan. Personal providers are configured in this selector.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -101,8 +103,8 @@
       "kind": "screenshot",
       "src": "/documentation/en/ai-keys-and-models-defaults-workflow.png",
       "alt": "Code model and reasoning defaults.",
-      "caption": "Code model and reasoning defaults. New code workers use these defaults; running workers retain their frozen settings.",
-      "revision": 8,
+      "caption": "OpenCode model and reasoning defaults. New OpenCode workers use these defaults; running workers retain their frozen settings.",
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -119,7 +121,7 @@
       "src": "/documentation/en/plans-and-ai-usage-workflow.png",
       "alt": "AI usage page for the demonstration account.",
       "caption": "AI usage page for the demonstration account. The current budget, usage categories and history are read from the account; no purchase or paid run was triggered.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -149,19 +151,25 @@ Assign text, transcription and embedding model families to compatible keys or ke
 
 ![AI provider card with minddy Cloud selected.](/documentation/en/ai-keys-and-models-workflow.png)
 
-### Test a personal coding subscription in the private preview {#native-agent-preview}
+### Choose a personal coding subscription in the private preview {#native-agent-preview}
 
 If your account has been enabled for the private preview, account AI settings show **Personal coding subscriptions**. Choose **Connect Codex** or **Connect Claude Code** and approve access on the provider's official page with your own account. For Codex, enter the displayed sign-in code on that page. If Claude asks for an authorization code, paste only that code into Minddy and choose **Complete connection**. You need access to Codex or a Claude subscription that includes Claude Code. **Cancel connection** stops a pending attempt.
 
 After connection, **Test new sandboxes** checks native access and Minddy tools in two fresh hosted sandboxes. Inspect the result, including whether each sandbox was destroyed. A successful access test does not prove authentication renewal: a separate message says when renewal was not observed. The connection is saved for later tests; reconnect if access expires or cannot be restored. **Disconnect** removes Minddy's saved connection; this does not cancel your provider subscription.
 
-This preview checks login, tools and cold starts. It does not yet change the agent that Numo launches for tickets, plans or reviews. Numo retains its current provider and usage settings; native tests use your personal subscription and temporary hosted compute.
+After connecting, select **Codex** or **Claude Code** in **Code agent**. Numo uses this choice for new repository workers, including issue implementation, planning, verification and work requested in a conversation or routine. The native CLI selects its own model and reasoning; OpenCode API model defaults do not apply. Workers run in hosted server sandboxes and receive Minddy tools. No local machine or persistent sandbox is required.
+
+The native preview exposes guarded Minddy tools through MCP. Provider-native built-in tools, image input and subagents are unavailable in these adapters. Numo reads the selected adapter capabilities and receives the frozen worker capabilities with its result. It mediates worker questions using reliable conversation context, or asks you when a decision is missing. Numo can use its own supported tools within your authorization; it does not invent unsupported harness operations.
+
+A missing connection, expired access or provider limit stops native work. Minddy does not switch to OpenCode, another API provider or another payer automatically. Reconnect the selected account, or choose **OpenCode** explicitly. Disconnecting or losing preview access keeps the saved choice visible until you change it. Existing workers retain the engine selected when they started.
+
+Your subscription funds native model usage. Numo conversation calls and sandbox compute still follow Minddy usage and budget rules. This preview is restricted to enabled accounts; paid Claude Code execution has not yet been validated. A successful connection or cold-start test does not prove that every provider plan, authentication renewal or full implementation run works.
 
 ### Models and execution location {#models}
 
-Code-model choices are tied to their provider. After changing, disabling or losing a personal key, the previous choice may no longer match the active provider. A new worker then refuses to start until you choose a compatible code model in account AI settings; it does not silently select a cheaper model or a platform default. An already frozen BYOK run does not switch payer when its key becomes unavailable.
+**OpenCode:** Code-model choices are tied to their provider. After changing, disabling or losing a personal key, the previous choice may no longer match the active provider. A new worker then refuses to start until you choose a compatible code model in account AI settings; it does not silently select a cheaper model or a platform default. An already frozen BYOK run does not switch payer when its key becomes unavailable.
 
-Set the default code model and reasoning for new workers here. Existing workers keep their frozen reasoning level. Choose sandbox region and size for new sandboxes separately. These defaults do not replace the model selected in a conversation.
+With **OpenCode**, set the default code model and reasoning for new workers here. With **Codex** or **Claude Code**, the CLI chooses those defaults. Existing workers retain their frozen settings. Choose sandbox region and size separately. These choices do not replace the conversation model.
 
 Local Ollama or OpenAI-compatible endpoints can serve conversations through the desktop bridge when configured. They cannot serve delegated code work or routines running in the server sandbox. Use a server-reachable provider for those surfaces. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
 

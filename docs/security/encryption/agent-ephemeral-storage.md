@@ -1,9 +1,10 @@
 # Agent ephemeral storage and historical copy retirement
 
-Server Agent jobs contain decrypted prompts and journal events. OpenCode also
+Server Agent jobs contain decrypted prompts and conversation context. OpenCode also
 writes SQLite, WAL, repository snapshots and logs. Tool commands can write output
 files. These bytes must not survive a stopped server sandbox. The encrypted
-`agent_run_journal` and checkpoint provide conversation recovery; the pushed
+`agent_run_journal` and checkpoint provide OpenCode conversation recovery; native
+workers use the encrypted checkpoint's bounded portable text history. The pushed
 work branch provides checkout recovery.
 
 ## New server runs
@@ -66,13 +67,44 @@ MIN-676's disabled-by-default private preview is an explicit durable exception:
 allowlisted native authentication JSON is stored in the account-owned encrypted
 `native_agent_connections.profile_ciphertext`, not a sandbox snapshot or journal.
 The mandatory format-3 binding includes the owner, row ID, engine and column.
-The separately encrypted runtime descriptor exists only for allocation cleanup.
+The separately encrypted runtime descriptor pins the exact allocation and tracks
+whether the profile was imported and safely saved. It supports trusted lifecycle
+and cleanup operations; it is never returned to the native model.
 No credential contents are exposed in metadata reads, native output or client
-caches. The native CLI alone owns refresh; fenced write-back precedes each
-destruction and the next allocation restores the updated profile.
+caches. The native CLI alone owns provider token refresh. A healthy turn exports and
+saves its profile under the revision/generation/lease fence before destruction;
+an ambiguous imported profile is invalidated rather than reused. The next
+allocation restores the current encrypted profile through SDK file operations.
+The job and control-plane HTTP channel never carry that profile.
+
+Account settings select the native worker for new Numo code lineages under the
+private server allowlist; existing runs retain their frozen engine and connection
+generation. Protocol 4 carries only bounded portable history and private handoff
+paths. Repository bootstrap/refresh keeps forge secrets in trusted
+infrastructure, with an encrypted allocation-bound refresh-policy context and
+HTTP acknowledgements. No API inference credential is substituted.
+
+The trusted supervisor and native CLI own the private auth directory. Model-led
+repository commands use a separately kernel-isolated host denying that directory,
+`/proc` and `/sys`; native builtin shell, edits, images and subagents remain
+disabled. Each real allocation must pass the isolation probe before guarded
+tools execute. Application tests describe those boundaries; paid Claude hosted
+execution and public custody acceptance remain unvalidated until separately
+recorded live evidence exists.
+
+Subscription inference does not generate Minddy API-model usage. Minddy still
+reserves and meters hosted compute, independently of any unrelated BYOK key;
+Numo itself retains its configured API billing. Every resumed native turn uses a
+fresh physical allocation, the pushed branch and encrypted text checkpoint,
+without a retained sandbox or opaque native CLI session.
 
 Connection generations and exclusive leases prevent late writers from restoring
-a disconnected credential. Stop-only descriptors survive failed cleanup;
+a disconnected credential. Watchdog recovery claims the exact stale run before
+invalidating credentials or stopping an allocation. A fresh completion claim
+wins; an abandoned completion older than twenty minutes can be fenced and
+recovered. Late native completion stamps require their original rest timestamp
+and allocation with no recovery claim, including checkpoint-free retries.
+Stop-only descriptors survive failed cleanup;
 account erasure must stop those allocations before deleting Auth or key material.
 Do not restore an old credential/profile row independently of its tombstone,
 lease and account-erasure fences. Restore backups under quiescent writers and

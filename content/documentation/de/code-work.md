@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,18 @@
       "content/knowledge/agents-and-mcp.md",
       "components/assistant/delegated-work-card.tsx",
       "components/pull-requests/pr-detail.tsx",
-      "components/pull-requests/pr-reviews-details.tsx"
+      "components/pull-requests/pr-reviews-details.tsx",
+      "components/settings/native-agent-connections.tsx",
+      "components/settings/native-agent-connections.test.tsx",
+      "app/api/account/agent-preferences/route.ts",
+      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "date": "2026-10-10"
   },
   "related": [
     "numo",
@@ -64,7 +68,7 @@
       "src": "/documentation/de/delegate-code-work-workflow.png",
       "alt": "Abgeschlossene Worker-Karte mit Modell, geringer Denkintensität, zwei geänderten Dateien, Branch, PR Nr. 1 und korrigiertem Commit.",
       "caption": "Karte der tatsächlichen Korrektur am bestehenden PR mit aktualisiertem Commit und Link. Prüfen Sie Diff und Tests vor dem Merge; der Abschlussstatus allein belegt nicht, dass die Abnahmekriterien erfüllt sind.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,7 +84,7 @@
       "src": "/documentation/de/review-pull-requests-workflow.png",
       "alt": "Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.",
       "caption": "Der tatsächlich korrigierte PR bleibt offen und wurde nicht gemergt. Der Diff entfernt Leerzeichen um den Namen und verwendet World bei leerem Wert. Diese Instanz kann keine GitHub-Benutzerautorisierung anfordern; der Bereitschaftsstatus verleiht keine Merge-Rechte und belegt keine erfolgreiche Anbieter-CI.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,7 +106,7 @@ Codearbeit beginnt mit dem verknüpften Repository eines Projekts und läuft in 
 
 ## Ein Ticket an den Code-Worker delegieren {#delegate-code-work}
 
-Das Projekt benötigt ein verknüpftes GitHub- oder GitLab-Repository, gültige Anbieterrechte und eine konfigurierte Server-Sandbox. Prüfen Sie Worker-Modell und Denkintensität in den KI-Kontoeinstellungen. Das Gesprächsmodell ersetzt diese Vorgaben nicht.
+Das Projekt benötigt ein verknüpftes GitHub- oder GitLab-Repository, gültige Anbieterrechte und eine konfigurierte Serversandbox. Prüfen Sie **Code-Agent** in den KI-Kontoeinstellungen. OpenCode benötigt ein kompatibles API-Codemodell und eine konfigurierte Denkstufe; die private Codex- und Claude-Code-Vorschau benötigt die Verbindung zum gewählten persönlichen Konto. Native CLI-Modellvorgaben sind unabhängig vom Gesprächsmodell. Schlägt der native Zugriff fehl, verbinden Sie sich erneut oder wählen ausdrücklich OpenCode; die Arbeit wechselt nicht zur API-Abrechnung.
 
 1. Öffnen Sie das Ticket und beschreiben Sie erwartetes Verhalten, Einschränkungen und Abnahmetests.
 2. Öffnen Sie Numo mit Ticketkontext. Lassen Sie das Repository vor einem technischen Plan prüfen. Ungeprüfte Dateinamen und APIs sind keine Umsetzungsbelege.

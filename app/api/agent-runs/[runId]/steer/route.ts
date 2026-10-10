@@ -161,7 +161,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
    * the owner's key, and it is his ceiling which decides what happens next
    * (checked on the recovery path, below).
    */
-  const callerQuota = await checkAgentQuota(auth.user.id);
+  const callerQuota = await checkAgentQuota(auth.user.id, "agent", { subscription: run.key_mode === "subscription" });
   if (!callerQuota.allowed) {
     return NextResponse.json(
       { error: "quotaExceeded", code: "quotaExceeded", quota: callerQuota },
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
     const ownerQuota =
-      ownerId === auth.user.id ? null : await checkAgentQuota(ownerId);
+      ownerId === auth.user.id ? null : await checkAgentQuota(ownerId, "agent", { subscription: run.key_mode === "subscription" });
     const quota = !callerQuota.allowed
       ? callerQuota
       : (ownerQuota ?? callerQuota);
@@ -257,10 +257,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const managedResume = run.key_mode === "platform";
+    const managedResume = run.key_mode !== "byok";
     if (
       managedResume &&
-      (quota.mode !== "platform" ||
+      (quota.mode === "byok" ||
         quota.cap == null ||
         !quota.periodStart)
     ) {
@@ -405,14 +405,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         );
       }
       const ownerQuota =
-        ownerId === auth.user.id ? callerQuota : await checkAgentQuota(ownerId);
+        ownerId === auth.user.id ? callerQuota : await checkAgentQuota(ownerId, "agent", { subscription: run.key_mode === "subscription" });
       if (!ownerQuota.allowed) {
         return NextResponse.json(
           { error: "quotaExceeded", code: "quotaExceeded", quota: ownerQuota },
           { status: 402 },
         );
       }
-      const managedResume = now.key_mode === "platform";
+      const managedResume = now.key_mode !== "byok";
       const budgetCap = managedResume ? (ownerQuota.cap ?? null) : null;
       const usageSince = managedResume ? (ownerQuota.periodStart ?? null) : null;
       const requestedBudget =
@@ -424,7 +424,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           : null;
       const resumableQuota =
         !managedResume ||
-        (ownerQuota.mode === "platform" &&
+        (ownerQuota.mode !== "byok" &&
           budgetCap !== null &&
           usageSince !== null);
       if (!resumableQuota) {

@@ -6,6 +6,8 @@ import type { AiSurface, ByokFeatureModels } from "./ai-surfaces";
 import type { ModelCatalogCapability } from "./model-catalog-capability";
 import type { AgentProviderId } from "./agent-providers";
 import { trackEvent } from "./analytics";
+import { NativePrototypeRequestError, safeNativeErrorCode } from "./native-agent-prototype-api";
+import type { LiveAgentEngine } from "./agent-engines";
 
 /**
  * Code Agent Client Fetchers (MIN-46): BYOK OpenRouter keys of the account,
@@ -119,7 +121,12 @@ export async function assignAiCapabilityApi(
   );
 }
 
+export type AccountAgentEngine = LiveAgentEngine;
+
 export interface AgentPreferences extends SandboxPreferences {
+  default_engine: AccountAgentEngine;
+  /** Read-only account eligibility for the private native worker preview. */
+  native_agents_enabled: boolean;
   default_model: string | null;
   /** null = `off` (MIN-122). */
   default_reasoning_level: ReasoningLevel | null;
@@ -127,11 +134,31 @@ export interface AgentPreferences extends SandboxPreferences {
 }
 
 export type AgentPreferencesPatch = Partial<
-  Omit<AgentPreferences, "branch_prefix"> & { branch_prefix: string | null }
+  Omit<AgentPreferences, "branch_prefix" | "native_agents_enabled"> & { branch_prefix: string | null }
 >;
 
 export async function fetchAgentPreferencesApi(): Promise<AgentPreferences> {
-  return parseJson(await fetch("/api/account/agent-preferences"));
+  return parseJson(await fetch("/api/account/agent-preferences", { cache: "no-store" }));
+}
+
+/** Save only the worker engine; native errors never expose provider transcripts. */
+export async function saveAgentEnginePreferenceApi(
+  engine: AccountAgentEngine,
+): Promise<AgentPreferences> {
+  const response = await fetch("/api/account/agent-preferences", {
+    method: "PUT",
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ default_engine: engine }),
+  });
+  if (!response.ok) {
+    const data: unknown = await response.json().catch(() => null);
+    const code = data !== null && typeof data === "object" && "errorCode" in data
+      ? safeNativeErrorCode(data.errorCode) : null;
+    throw new NativePrototypeRequestError(code);
+  }
+  return response.json() as Promise<AgentPreferences>;
 }
 
 /**

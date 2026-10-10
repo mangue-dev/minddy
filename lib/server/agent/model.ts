@@ -454,7 +454,7 @@ export async function supportsImageInput(
   return (await getOpenRouterModelInfo(model, apiKey))?.imageInput ?? false;
 }
 
-export type AgentKeyMode = "platform" | "byok";
+export type AgentKeyMode = "platform" | "byok" | "subscription";
 
 export class ManagedAgentServiceUnavailableError extends Error {
   constructor() {
@@ -469,9 +469,9 @@ export interface ResolvedAgentEndpoint {
   apiKey: string;
   /** Present only for BYOK and changes when its stored credential is updated. */
   credentialVersion: string | null;
-  mode: AgentKeyMode;
+  mode: Exclude<AgentKeyMode, "subscription">;
   provider: AgentProviderId;
-  /** Base URL OpenAI-compatible (sans /chat/completions). */
+  /** OpenAI-compatible base URL, excluding /chat/completions. */
   baseUrl: string;
 }
 
@@ -525,6 +525,9 @@ export async function resolveAgentApiKeyForRun(
     provider?: AgentProviderId | null;
   },
 ): Promise<ResolvedAgentEndpoint> {
+  if (options.keyMode === "subscription") {
+    throw new Error("Native subscription workers have no API endpoint");
+  }
   if (options.keyMode === "platform") {
     if (options.provider && options.provider !== DEFAULT_AGENT_PROVIDER) {
       throw new ByokCredentialUnavailableError();

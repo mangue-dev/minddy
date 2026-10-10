@@ -1640,6 +1640,11 @@
         "nullable": true,
         "generated": false
       },
+      "native_connection_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
       "checkpoint_ciphertext": {
         "type": "text",
         "nullable": true,
@@ -1717,6 +1722,11 @@
       },
       "launch_encryption_checked_at": {
         "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "native_connection_generation": {
+        "type": "bigint",
         "nullable": true,
         "generated": false
       },
@@ -8666,6 +8676,11 @@
         "nullable": true,
         "generated": false
       },
+      "default_engine": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
       "sandbox_region": {
         "type": "text",
         "nullable": false,
@@ -12238,6 +12253,11 @@
         "nullable": false,
         "generated": false
       },
+      "worker_run_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
       "lease_expires_at": {
         "type": "timestamp with time zone",
         "nullable": true,
@@ -12250,6 +12270,11 @@
       },
       "runtime_ciphertext": {
         "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "worker_allocation_id": {
+        "type": "uuid",
         "nullable": true,
         "generated": false
       }

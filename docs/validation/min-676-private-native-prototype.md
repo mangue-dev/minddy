@@ -2,15 +2,30 @@
 
 This preview connects a personal Codex or Claude Code account from Account
 settings → AI, persists an encrypted native profile, destroys the login sandbox,
-and offers a two-allocation cold-start test. It does not select a new default
-worker for Numo yet. Normal ticket, planning, verification and routine workers
-continue to use their existing OpenCode configuration.
+and offers a two-allocation cold-start test. Eligible accounts can then choose
+OpenCode, Codex or Claude Code as their code-agent default. Ticket implementation,
+planning, verification, conversation work and routine workers use that selection
+when creating a new lineage. Existing workers retain their frozen harness,
+subscription connection ID and generation. A missing, disconnected or ineligible
+native connection refuses work; it never silently switches to API inference.
+
+The preview is private and disabled by default. Connecting a Claude account does
+not establish paid execution eligibility: paid Claude hosted worker acceptance
+remains unvalidated until an actual successful run is recorded. This document
+states implemented contracts; live acceptance evidence belongs in the probe log.
 
 ## Activation
 
-1. Apply `20270109200033_native_agent_connections.sql` to the intended development
-   Supabase database using the repository migration workflow. Do not enable the
-   preview against a database without its connection RPCs and erasure fence.
+1. Apply the repository migration set, including
+   `20270109200033_native_agent_connections.sql`,
+   `20270109200034_native_subscription_workers.sql`,
+   `20270109200035_atomic_agent_preferences.sql`,
+   `20270109200036_native_worker_recovery.sql` and
+   `20270109200037_abandoned_native_completion.sql`, to an isolated local Docker
+   Supabase database using the repository migration workflow. These add the
+   connection vault, account default, frozen worker binding, worker leases,
+   atomic compute reservations and fenced watchdog recovery. Do not enable the
+   preview against a database missing those RPCs or erasure fences. Do not copy production data into the pilot.
 2. Configure `MINDDY_DATA_ROOT_KEY`, Supabase service credentials and hosted
    Vercel Sandbox credentials. The native vault always uses the format-3
    encrypted store, independently of the optional content-encryption flag.
@@ -18,10 +33,14 @@ continue to use their existing OpenCode configuration.
    `MINDDY_NATIVE_AGENT_PROTOTYPE_USER_IDS`. Both variables are server-only.
    The UI and all operations remain unavailable to other accounts.
 4. Build with `npm run build:native-agent-prototype` (also included in predev and
-   prebuild), then run the development app. The local web control plane can
-   operate the hosted sandboxes: no provider callback to localhost is required.
+   prebuild), then run the development app. Connection and two-allocation SDK
+   diagnostics can control hosted sandboxes from the local app without a provider
+   callback to localhost. Ordinary Numo workers require a reachable HTTPS
+   `agentControlOrigin` and an authorized linked forge/repository binding. The
+   local SDK mailbox fixture does not establish deployed HTTP control-plane
+   acceptance.
 
-The prototype pins published Codex 0.162.1 and Claude Code 2.1.296. Packages are
+The native adapters pin published Codex 0.162.1 and Claude Code 2.1.296. Packages are
 installed from npm with lifecycle scripts disabled. Native auth uses dedicated
 homes, never the developer's ambient personal credentials or an API key. Codex
 uses its native app-server device flow; Claude uses its native browser login and
@@ -67,7 +86,9 @@ A kernel probe against synthetic files must pass in the actual allocation
 before Codex is eligible for this fixture. It fails closed on an unsupported
 Linux sandbox mechanism. The test fixture lives outside the denied private area;
 published CLI code also lives outside that area. This narrowly scoped pilot does
-not establish safe permissions for arbitrary repository work.
+not establish arbitrary repository-work acceptance by itself. Ordinary native
+workers use a separate kernel-isolated guarded command host; their own allocation
+must pass its synthetic private-file and proc/sys denial probe before tools run.
 
 Native model inference uses the user's subscription. Minddy budget admission
 still applies to its compute, and allocation duration is recorded in the existing
@@ -75,12 +96,66 @@ idempotent sandbox usage ledger under the connection lease UUID. No API-model
 usage is substituted silently. A failed subscription or native CLI yields a
 bounded translated error, without provider transcripts or credentials.
 
+## Hosted Numo workers
+
+The account selector appears only for eligible private accounts, except that a
+previously saved native choice remains visible with an unavailable state if
+eligibility is removed. Selecting a native harness hides the OpenCode-only model
+and reasoning controls: the native CLI selects its supported defaults. The user
+must reconnect or explicitly choose OpenCode to change an unavailable selection.
+Numo receives metadata and engine capabilities, never credentials. Native
+builtin tools, images and native subagents are unavailable; questions and any
+additional context are mediated by Numo through the guarded Minddy tools.
+
+Protocol 4 rejects mixed native/API jobs. A native job contains portable,
+bounded user/assistant history and private handoff paths, not provider auth,
+opaque CLI sessions, a public API key or native inference pricing. The server
+imports the decrypted profile through authenticated Sandbox SDK file operations;
+the stopped supervisor exports it through the same private channel. Git bootstrap
+and refresh keep forge credentials in trusted infrastructure; the job carries
+only an encrypted, allocation-bound refresh-policy context. The HTTP refresh
+surface returns an acknowledgement, not a forge secret. Public provider egress
+uses the native network policy without API credential transformations.
+
+A native worker claims the exclusive connection lease before allocation and
+records its exact physical allocation before profile import. Lease heartbeat,
+owner/engine/generation/revision checks and allocation identity fence stale
+controllers. Watchdog recovery first atomically claims the exact stale run
+snapshot, reserves its rest callback and changes the bound lease to stop. A
+refreshed heartbeat or a fresh competing rest prevents that claim. A completion
+handler abandoned for more than twenty minutes can be recovered: takeover
+replaces its rest timestamp, and all late native terminal/requeue stamps require
+the original timestamp, allocation identity and no recovery claim. The hosted
+control-plane route has a sixty-second execution bound; elapsed time alone does
+not restore execution authority. Cleanup happens before terminal failure; an interrupted or uncertain cleanup retains the durable claim
+for retry, even if the revoked command still reports alive. A successful rest saves the bounded native auth export before
+landing the turn and physically cleans the allocation before releasing the
+lease. An uncertain imported profile requires reconnect; a stale watchdog cannot
+clean a replacement allocation. Physical allocation and account-erasure fences
+remain authoritative even after feature disablement or disconnect.
+
+Guarded repository commands run in a kernel sandbox denying the private
+controller/auth directory, `/proc` and `/sys`, with inherited capabilities and
+loader variables constrained. They cannot acquire the native process's profile
+or control-plane authority. Native CLI builtin edits and shell stay disabled;
+repository work uses the same authorized Minddy tool and delivery checks.
+
+Resumes create fresh hosted allocations, clone the pushed branch and replay the
+encrypted checkpoint's bounded text history. They do not retain a sandbox or
+restore an opaque native session. Partial repository work must be safely pushed
+before destruction; a failed publication is reported as incomplete. Native
+model inference is subscription-funded; atomic Minddy budget admission,
+reservation and sandbox-duration accounting still cover compute. Numo's own API
+usage remains billed through its existing Minddy configuration. An unrelated
+BYOK key does not exempt a subscription worker from that compute budget.
+
 ## Disconnect, failures and account deletion
 
 Disconnect clears the encrypted profile and fences older writers before SDK
-cleanup. The encrypted runtime descriptor retains only the private controller
-token, allocation name, timestamps and billing context needed to stop and
-delete the process. Cleanup failures retain a stop-only lease for retry. Account
+cleanup. The encrypted runtime descriptor retains the controller or worker lifecycle
+metadata needed to stop and delete the exact allocation. Login/test descriptors
+include controller authority, timestamps and billing context; worker descriptors
+pin the run, allocation and profile-import/save state. Cleanup failures retain a stop-only lease for retry. Account
 deletion invokes this cleanup even if the preview flag has been turned off;
 failure blocks Auth and encryption-key deletion so the descriptor remains usable.
 
@@ -107,10 +182,18 @@ binding, exclusive leases, stale writers, account erasure, actual registered MCP
 handler scoping, private route responses and settings controls. SQL regressions
 run against actual PostgreSQL in the isolated Docker Supabase project, not the
 connected remote development database. Synthetic subprocess and allocation tests are not a live
-subscription acceptance test.
+subscription acceptance test. The recorded paid Codex worker fixture uses the
+actual native supervisor, owner-scoped registered Minddy handlers and encrypted
+vault through an SDK-relayed control-plane mailbox. Its acceptance evidence is
+recorded in [the probe log](min-676-harness-interface-probes.md). Its two distinct allocations
+exercise MCP calls, guarded repository read/write/commands, auth export and
+physical deletion. This proves that controlled hosted worker path; it does not
+prove UI-to-PR completion or acceptance of a deployed HTTPS control plane.
+Paid Claude hosted execution remains unvalidated.
 
 Record the actual hosted kernel result, paid account login, login-allocation
 deletion, two cold allocations, owner-scoped MCP results and token-renewal evidence
 in `min-676-harness-interface-probes.md`. Do not mark live Codex or Claude results
-passed until those steps actually run. Public rollout and full Numo worker
-selection remain separate pending tasks in MIN-676.
+passed until those steps actually run. Public rollout remains separate from this private implementation. Full hosted
+Numo acceptance, both harnesses' paid execution and real renewal must be recorded
+individually; synthetic tests or successful connection alone do not establish them.

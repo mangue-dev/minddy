@@ -50,6 +50,8 @@ import { decodeAgentWorkBranch } from "./run-work-branch-content";
 import { requestedRunReservationUsd } from "./run-key";
 import { drainAgentRuns } from "./drain";
 import { capability } from "@/lib/server/capabilities";
+import { resolveAgentExecutionBackend } from "@/lib/capabilities";
+import { resolveWorkerHarness, NativeWorkerUnavailableError } from "./native-worker-selection";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
 import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
@@ -96,6 +98,8 @@ export type LaunchError =
   | "providerEndpointUnavailableFromSandbox"
   | "localExecutionRetired"
   | "modelAbovePlan"
+  | "nativeConnectionRequired"
+  | "nativeAgentUnavailable"
   | "promptRequired"
   | "continuationNotFound";
 
@@ -243,7 +247,7 @@ function managedBudgetReservation(
   quota: AgentQuota,
   runBudgetUsd?: number | null,
 ): CreateRunInput["managedBudget"] {
-  if (quota.mode !== "platform") return undefined;
+  if (quota.mode === "byok") return undefined;
   if (quota.cap == null || !quota.periodStart) {
     throw new Error(
       "Managed-AI quota is missing its account cap or usage period",
@@ -500,10 +504,18 @@ export async function launchAgentRun(
   // Token execution and model selection are both code-worker concerns. The
   // automations BYOK surface still controls helper calls such as Smart Fill,
   // but cannot replace the worker provider or its quota mode.
-  const quotaPromise = checkAgentQuota(input.userId, "agent");
+  let harness: Awaited<ReturnType<typeof resolveWorkerHarness>>;
+  try {
+    harness = await resolveWorkerHarness(input.userId, continuedRun ?? undefined);
+  } catch (error) {
+    if (error instanceof NativeWorkerUnavailableError) return { ok: false, error: error.code === "reconnect_required" ? "nativeConnectionRequired" : "nativeAgentUnavailable" };
+    throw error;
+  }
+  const native = harness.engine !== "opencode";
+  const quotaPromise = checkAgentQuota(input.userId, "agent", { subscription: native });
   // Every code worker uses the account's code-agent provider, regardless of
   // which product surface initiated it.
-  const byokPromise = getUserByok(input.userId, "agent");
+  const byokPromise = native ? Promise.resolve(null) : getUserByok(input.userId, "agent");
 
   const link = await linkPromise;
   // Every worker runs in a server sandbox, which needs a linked repository to
@@ -581,6 +593,9 @@ export async function launchAgentRun(
   if (!capability("agentExecution").configured) {
     return { ok: false, error: "executionBackendUnavailable" };
   }
+  if (native && resolveAgentExecutionBackend(process.env) !== "vercel") {
+    return { ok: false, error: "nativeAgentUnavailable" };
+  }
   const byok = await byokPromise;
   // A desktop-only endpoint cannot be reached from the server sandbox. Keep
   // the configured provider and payer intact and ask the user to replace the
@@ -594,14 +609,16 @@ export async function launchAgentRun(
   let model: string;
   let workerModelProvider: AgentProviderId;
   try {
-    const resolved = await resolveAgentModel(input.userId);
+    const resolved = native
+      ? { model: `${harness.engine}/default`, provider: (harness.engine === "codex" ? "openai" : "anthropic") as AgentProviderId }
+      : await resolveAgentModel(input.userId);
     model = resolved.model;
     workerModelProvider = resolved.provider;
     // The account choice may predate a plan downgrade or ceiling adjustment.
-    await ensureModelInPlan({
+    if (!native) await ensureModelInPlan({
       userId: input.userId,
       model,
-      mode: quota.mode,
+      mode: quota.mode === "byok" ? "byok" : "platform",
     });
   } catch (err) {
     if (err instanceof AgentModelRequiredError) {
@@ -625,7 +642,7 @@ export async function launchAgentRun(
 
   // Level of reasoning fixed on the run, like the model: the following chunks
   // rotate in other invocations and must find the same one.
-  const reasoningLevel = await resolveReasoningLevel(input.userId);
+  const reasoningLevel = native ? "medium" as const : await resolveReasoningLevel(input.userId);
 
   // A new conversation always has its workspace. The only implicit recovery
   // still admitted here is an EXPLICIT request to continue a pull request:
@@ -678,6 +695,11 @@ export async function launchAgentRun(
       modelForced: false,
       reasoningLevel,
       keyMode: quota.mode,
+      engine: harness.engine,
+      ...(harness.engine !== "opencode" ? {
+        nativeConnectionId: harness.nativeConnectionId,
+        nativeConnectionGeneration: harness.nativeConnectionGeneration,
+      } : {}),
       workerModelProvider,
       triggeredBy: input.triggeredBy,
       // Persisted since MIN-147: without it, the channel cannot know what

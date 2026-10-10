@@ -1,4 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+
+const native = vi.hoisted(() => ({ list: vi.fn() }));
+vi.mock("./agent/native-agent-credentials", () => ({ listNativeConnections: native.list }));
 
 type Meta = Record<string, unknown>;
 
@@ -20,6 +23,13 @@ function makeService({ meta, agentRow }: { meta: Meta; agentRow: Meta }) {
           return { error: null };
         },
       },
+    },
+    rpc: (name: string, args: { p_user_id: string; p_values: Meta }) => {
+      if (name !== "upsert_agent_preferences_partial") throw new Error(`unexpected RPC ${name}`);
+      return { single: async () => {
+        Object.assign(agentRow, { user_id: args.p_user_id }, args.p_values);
+        return { data: agentRow, error: null };
+      } };
     },
     from: (table: string) => {
       if (table === "agent_branch_prefix_scope") return {
@@ -49,7 +59,7 @@ vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => h.service,
 }));
 
-import { updateAccountSettings } from "./account-settings";
+import { getAccountSettings, updateAccountSettings } from "./account-settings";
 import {
   AUTOMATION_EFFORTS_META_KEY,
   AUTOMATION_START_DELAY_META_KEY,
@@ -64,7 +74,8 @@ function setup({ meta = {} as Meta, agentRow = {} as Meta } = {}) {
   return made;
 }
 
-beforeEach(() => setup());
+beforeEach(() => { setup(); native.list.mockReset(); vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE", "false"); });
+afterEach(() => vi.unstubAllEnvs());
 
 describe("updateAccountSettings — the settings Numo could not reach before", () => {
   it("writes the keyboard send shortcut", async () => {
@@ -124,6 +135,8 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
   });
 
   it("writes the sandbox region and size into user_agent_preferences", async () => {
+    const agentRow = { default_engine: "codex", default_model: "saved-api-model", branch_prefix: "team/" };
+    setup({ agentRow });
     const r = await updateAccountSettings({
       userId: "user-1",
       input: { sandbox_region: "us", sandbox_size: "performance" },
@@ -133,6 +146,7 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
       expect(r.settings.agent.sandbox_region).toBe("us");
       expect(r.settings.agent.sandbox_size).toBe("performance");
     }
+    expect(agentRow).toMatchObject({ default_engine: "codex", default_model: "saved-api-model", branch_prefix: "team/" });
   });
 
   it("refuses a bad sandbox value without touching the row", async () => {
@@ -158,5 +172,45 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
   it("keeps the code-worker model boundary", async () => {
     const r = await updateAccountSettings({ userId: "user-1", input: { default_model: "gpt-x" } });
     expect(r.ok).toBe(false);
+  });
+
+  it("rejects engine changes through Numo without changing account preferences", async () => {
+    const agentRow = { default_engine: "codex" };
+    setup({ agentRow });
+    const result = await updateAccountSettings({ userId: "user-1", input: { default_engine: "opencode" } });
+    expect(result).toMatchObject({ ok: false });
+    expect(agentRow).toEqual({ default_engine: "codex" });
+  });
+
+  it("returns safe native metadata and adapter limitations without authentication capabilities", async () => {
+    setup({ agentRow: { default_engine: "claude_code" } });
+    vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE", "true");
+    vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE_USER_IDS", "other,user-1");
+    native.list.mockResolvedValue([{ engine: "claude_code", status: "connected", busy: true,
+      stopRequired: false, id: "secret-connection-id", generation: 9, revision: 4,
+      leaseId: "secret-lease", profile_ciphertext: "secret-profile" }]);
+    const result = await getAccountSettings({ userId: "user-1" });
+    expect(native.list).toHaveBeenCalledWith("user-1");
+    expect(result).toMatchObject({ ok: true, settings: { agent: {
+      default_engine: "claude_code", native_agents_enabled: true, native_connection: "busy",
+      harness_capabilities: { funding: "subscription", modelSelection: "cli_default",
+        minddyTools: true, nativeBuiltinTools: false, subagents: false, imageInput: false,
+        paidExecutionValidated: false },
+    } } });
+    expect(JSON.stringify(result)).not.toMatch(/secret-|leaseId|profile_ciphertext|generation|revision/);
+  });
+
+  it("retains unavailable native selection without reading auth metadata or substituting OpenCode", async () => {
+    setup({ agentRow: { default_engine: "codex" } });
+    expect(await getAccountSettings({ userId: "user-1" })).toMatchObject({ ok: true, settings: {
+      agent: { default_engine: "codex", native_agents_enabled: false, native_connection: "unavailable" },
+    } });
+    expect(native.list).not.toHaveBeenCalled();
+  });
+
+  it("does not guess an engine when saved selection is invalid", async () => {
+    setup({ agentRow: { default_engine: "unknown-harness" } });
+    expect(await getAccountSettings({ userId: "user-1" })).toMatchObject({ ok: false });
+    expect(native.list).not.toHaveBeenCalled();
   });
 });

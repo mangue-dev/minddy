@@ -44,6 +44,7 @@ import {
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
+import { workerHarnessContext } from "@/lib/server/assistant/worker-harness-context";
 import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-mediation";
 import {
   AmbiguousToolExecutionError,
@@ -709,6 +710,7 @@ async function buildExecutionInput(input: {
   let workerInput: WorkerInputCorrelation | undefined;
   if (workerEvent) {
     const durableResult = workerDelegationResult(workerEvent);
+    const harness = workerHarnessContext({ agent_engine: workerEvent.payload.agent_engine });
     const request = durableResult.inputRequest;
     if (durableResult.status === "needs_input" && request) {
       workerInput = {
@@ -720,8 +722,8 @@ async function buildExecutionInput(input: {
     messages.push({
       role: "system",
       content: workerInput
-        ? `[Validated durable code-worker input request]\n${JSON.stringify(durableResult)}\nYou alone mediate this worker's interaction with the user. If the parent conversation already determines a reliable answer, call answer_code_worker with the exact supplied identifiers and a self-contained answer. Otherwise call ask_user with the minimum blocking questions; never expose or refer the user to a separate worker conversation. Do not present this as the final result while the worker is waiting.`
-        : `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer.`,
+        ? `[Validated durable code-worker input request]\n${JSON.stringify(durableResult)}\n[Frozen worker harness]\n${JSON.stringify(harness)}\nYou alone mediate this worker's interaction with the user. If the parent conversation already determines a reliable answer, call answer_code_worker with the exact supplied identifiers and a self-contained answer. Otherwise call ask_user with the minimum blocking questions; never expose or refer the user to a separate worker conversation. Do not present this as the final result while the worker is waiting. Respect these frozen adapter capabilities; do not promise unavailable native built-ins, images or subagents.`
+        : `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\n[Frozen worker harness]\n${JSON.stringify(harness)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer. Respect these frozen adapter capabilities; do not promise unavailable native built-ins, images or subagents.`,
     });
   }
 

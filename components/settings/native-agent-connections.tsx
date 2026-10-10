@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Badge, Button, Input } from "mangue-ui";
+import { Badge, Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "mangue-ui";
 
 import { SettingsGroup, SettingsRow } from "./settings-ui";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import {
   cancelNativeLogin,
   disconnectNativeConnection,
@@ -22,6 +23,7 @@ import type {
   NativeLoginStatus,
   NativePrototypeTestResult,
 } from "@/lib/native-agent-prototype";
+import type { AccountAgentEngine } from "@/lib/agent-keys-api";
 
 type NativeEngine = NativeConnectionMetadata["engine"];
 type NativeErrorMessage = "error" | `error_${NativeRequestErrorCode}`;
@@ -46,10 +48,22 @@ function approvalUrl(engine: NativeEngine, value?: string): string | null {
 }
 
 /** Private native login state stays outside persisted queries and analytics. */
-export function NativeAgentConnections() {
+export function NativeAgentConnections({
+  defaultEngine = "opencode",
+  nativeAgentsEnabled,
+  preferenceLoading = false,
+  onEngineChange,
+}: {
+  defaultEngine?: AccountAgentEngine;
+  nativeAgentsEnabled?: boolean;
+  preferenceLoading?: boolean;
+  onEngineChange?: (engine: AccountAgentEngine) => Promise<void>;
+} = {}) {
   const t = useTranslations("NativeAgentConnections");
   const [enabled, setEnabled] = useState(false);
   const [connections, setConnections] = useState<NativeConnectionMetadata[]>([]);
+  const [savingEngine, setSavingEngine] = useState(false);
+  const [engineError, setEngineError] = useState<NativeErrorMessage | null>(null);
   const mounted = useRef(false);
   const refresh = useCallback(async () => {
     const data = await fetchNativeConnections();
@@ -74,16 +88,53 @@ export function NativeAgentConnections() {
     };
   }, []);
 
-  if (!enabled) return null;
+  const eligible = nativeAgentsEnabled ?? enabled;
+  if (!eligible && defaultEngine === "opencode") return null;
+
+  const selectEngine = async (value: string) => {
+    if (!onEngineChange || savingEngine || !["opencode", "codex", "claude_code"].includes(value)) return;
+    setSavingEngine(true);
+    setEngineError(null);
+    try {
+      await onEngineChange(value as AccountAgentEngine);
+    } catch (failure) {
+      setEngineError(failure instanceof NativePrototypeRequestError && failure.code
+        ? `error_${failure.code}` : "error");
+    } finally {
+      setSavingEngine(false);
+    }
+  };
+
+  const ready = (engine: NativeEngine) => eligible && connections.some((item) =>
+    item.engine === engine && (item.status === "connected" || item.status === "busy"));
 
   return (
     <SettingsGroup
+      anchor={defaultEngine !== "opencode" ? SETTINGS_SECTIONS.accountAgent : undefined}
       title={t("title")}
       action={<Badge variant="secondary">{t("preview")}</Badge>}
       className="ph-no-capture ph-mask rr-block"
     >
       <p className="py-3 text-sm text-muted-foreground">{t("description")}</p>
-      {(["codex", "claude_code"] as const).map((engine) => (
+      {onEngineChange && <SettingsRow
+        label={t("engineTitle")}
+        hint={t(defaultEngine === "opencode" ? "engineOpenCodeHint" : "engineNativeHint")}
+        control={<Select value={defaultEngine} disabled={preferenceLoading || savingEngine}
+          onValueChange={(value) => void selectEngine(value)}>
+          <SelectTrigger className="w-56" aria-label={t("engineTitle")}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="opencode">OpenCode</SelectItem>
+            <SelectItem value="codex" disabled={!ready("codex")}>Codex</SelectItem>
+            <SelectItem value="claude_code" disabled={!ready("claude_code")}>Claude Code</SelectItem>
+          </SelectContent>
+        </Select>}
+      >
+        {!eligible && <p className="py-2 text-sm text-muted-foreground" role="status">{t("engineUnavailable")}</p>}
+        {eligible && defaultEngine !== "opencode" && !ready(defaultEngine)
+          && <p className="py-2 text-sm text-muted-foreground" role="status">{t("engineReconnect")}</p>}
+        {engineError && <p className="py-2 text-sm text-destructive" role="alert">{t(engineError)}</p>}
+      </SettingsRow>}
+      {eligible && (["codex", "claude_code"] as const).map((engine) => (
         <NativeConnectionRow
           key={engine}
           engine={engine}

@@ -147,6 +147,7 @@ export async function deliverAgentDelegationResult(
     type,
     payload: {
       run_id: run.id,
+      agent_engine: run.agent_engine,
       status: run.status,
       awaiting_input: run.awaiting_input,
       outcome: run.outcome,
@@ -193,8 +194,10 @@ export interface AgentRunVerdict {
 
 /** Serialized content of the checkpoint (resumed as is in the next chunk). */
 export interface AgentCheckpoint {
+  /** Redacted portable context for a fresh native CLI, without credentials or opaque sessions. */
+  native?: import("@/lib/native-agent-worker").NativeWorkerCheckpoint;
   messages: AgentChatMessage[];
-  /** Prochain index de ligne ai_usage (ordre d'affichage). */
+  /** Next ai_usage sequence index, used for display ordering. */
   usageSeq?: number;
   /**
    * Sha git at the last event `files_changed` emitted — the “before” of the diff per turn
@@ -241,7 +244,7 @@ export interface AgentCheckpoint {
    * by `MAX_PROVIDER_REQUEUES`. Written by the only output that awaits the
    * provider, therefore reset by itself as soon as a chunk advances: the
    * checkpoint is rebuilt anew each time it is quiesced, and no other
-   * branche ne repose ce champ.
+   * other exit resets this counter.
    *
    * Here and not in a column: it is a WAIT counter, it has no meaning
    * only attached to the state of the turn that he makes wait. `continuations` account
@@ -337,7 +340,7 @@ export interface AgentRun {
   /** Level of reasoning FROZEN at launch (MIN-122), like the model: one run
    * taken up by another invocation must find the same one. */
   reasoning_level: ReasoningLevel;
-  key_mode: "platform" | "byok";
+  key_mode: "platform" | "byok" | "subscription";
   /** Resolution contract frozen at launch. NULL/absent identifies legacy runs. */
   worker_model_source?: "account" | null;
   /** AI provider frozen with the account worker model. NULL for legacy runs. */
@@ -443,6 +446,8 @@ export interface AgentRun {
    * remain readable, and that’s all we ask of them.
    */
   agent_engine: AgentEngine;
+  native_connection_id?: string | null;
+  native_connection_generation?: number | null;
   /**
    * This run runs on the USER'S MACHINE (MIN-355), not in a
    * microVM.
@@ -509,7 +514,10 @@ export interface CreateRunInput {
   modelForced: boolean;
   /** Level of reasoning resolved at launch (see `resolveReasoningLevel`). */
   reasoningLevel: ReasoningLevel;
-  keyMode: "platform" | "byok";
+  keyMode: "platform" | "byok" | "subscription";
+  engine?: import("@/lib/agent-engines").LiveAgentEngine;
+  nativeConnectionId?: string | null;
+  nativeConnectionGeneration?: number | null;
   workerModelProvider: AgentProviderId;
   triggeredBy: AgentRunTrigger;
   /** Step of an automation chain (MIN-147): its id and its ceiling. */
@@ -578,25 +586,13 @@ const PG_UNIQUE_VIOLATION = "23505";
 /** Creates a run in `queued`, ready to be drained. */
 export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const service = getServiceClient();
-  /**
-   * THE ENGINE AND THE MICROVM, INSTALLED WITHOUT ASKING ANYONE (MIN-286).
-   *
-   * There is no more flag: `opencode` is the harness, and it only runs in
-   * microVM — there is no “in-function” version of its
-   * supervisor, who controls a server living next to the depot. The two lists of
-   * `app_config` projects (`agent_opencode_projects`, `agent_loop_in_vm_projects`)
-   * therefore disappeared with what they were used to decide.
-   *
-   * Both values ​​remain WRITTEN on the line, and that's what matters: they
-   * say which engine performed THIS run, and a run already in flight at the time of deployment
-   * keep his. The two engines do not keep their memory in the same place
-   * (`checkpoint.messages` against `checkpoint.opencode`), therefore a conversation which
-   * changing the engine during its life would not lose a setting: it would lose
-   * its history. The column is also read by the SWEEPERS
-   * (`reapDeadVmRuns` wants it true) — a line that would say `false` when playing in
-   * the VM would never be found dead.
-   */
-  const engine = AGENT_ENGINE;
+  // Freeze the account harness and funding for this run. Native credentials are
+  // referenced by owner-bound generation only and never inserted into run state.
+  const engine = input.engine ?? AGENT_ENGINE;
+  if ((engine === "codex" || engine === "claude_code") !== (input.keyMode === "subscription") ||
+      (input.keyMode === "subscription" && (!input.nativeConnectionId || !input.nativeConnectionGeneration))) {
+    throw new Error("Invalid native worker funding or connection binding");
+  }
   const loopInVm = true;
   const encryptLaunch = await shouldEncryptAgentLaunch(service, input.projectId);
   const encryptTitle = await shouldEncryptAgentTitle(service, input.projectId);
@@ -688,6 +684,10 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     deployment_url: storedDeployment,
     loop_in_vm: loopInVm,
     agent_engine: engine,
+    ...(input.keyMode === "subscription" ? {
+      native_connection_id: input.nativeConnectionId,
+      native_connection_generation: input.nativeConnectionGeneration,
+    } : {}),
     // Historical columns remain readable, but all newly admitted workers use
     // the deployment-selected server sandbox.
     local_exec: false,
@@ -1661,7 +1661,8 @@ export async function stampRun(
         | "last_activity_at"
         | "loop_command_id"
         | "sandbox_id"
-        | "sandbox_reap_claim",
+        | "sandbox_reap_claim"
+        | "rest_claimed_at",
         string | null
       >
     >;
@@ -1692,7 +1693,8 @@ export async function stampRunResult(
         | "last_activity_at"
         | "loop_command_id"
         | "sandbox_id"
-        | "sandbox_reap_claim",
+        | "sandbox_reap_claim"
+        | "rest_claimed_at",
         string | null
       >
     >;

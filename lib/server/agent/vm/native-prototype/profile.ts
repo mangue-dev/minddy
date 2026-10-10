@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 export type NativeEngine = "codex" | "claude_code";
 export type NativeProfile = { version: 1; engine: NativeEngine; files: { path: string; content: string }[] };
 export const PROFILE_LIMIT = 64 * 1024;
-const paths = { codex: ["auth.json"], claude_code: [".credentials.json"] } as const;
+const paths = { codex: ["auth.json"], claude_code: [".credentials.json", ".claude.json"] } as const;
 
 export function parseEngine(value: unknown): NativeEngine {
   if (value !== "codex" && value !== "claude_code") throw new Error("Invalid engine");
@@ -16,17 +16,21 @@ export function validateProfile(value: unknown): NativeProfile {
   if (!value || typeof value !== "object") throw new Error("Invalid profile");
   const profile = value as NativeProfile;
   const engine = parseEngine(profile.engine);
-  if (profile.version !== 1 || !Array.isArray(profile.files) || profile.files.length !== 1) throw new Error("Invalid profile");
+  if (profile.version !== 1 || !Array.isArray(profile.files) || profile.files.length < 1 || profile.files.length > paths[engine].length || Object.keys(profile).some((key) => !["version", "engine", "files"].includes(key))) throw new Error("Invalid profile");
   let size = 0;
+  const seen = new Set<string>();
   for (const file of profile.files) {
-    if (!file || !(paths[engine] as readonly string[]).includes(file.path) || typeof file.content !== "string") throw new Error("Invalid profile file");
+    if (!file || !(paths[engine] as readonly string[]).includes(file.path) || seen.has(file.path) || typeof file.content !== "string" || Object.keys(file).some((key) => !["path", "content"].includes(key))) throw new Error("Invalid profile file");
+    seen.add(file.path);
     size += Buffer.byteLength(file.content);
     if (size > PROFILE_LIMIT) throw new Error("Profile is too large");
     const data = JSON.parse(file.content);
     if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Invalid native authentication");
     const nativeTokens = engine === "codex" ? [data.tokens?.refresh_token, data.tokens?.access_token] : [data.claudeAiOauth?.accessToken, data.claudeAiOauth?.refreshToken];
-    if (nativeTokens.some((token) => typeof token !== "string" || !token) || (engine === "codex" && data.OPENAI_API_KEY != null)) throw new Error("Native subscription authentication required");
+    if (file.path !== ".claude.json" && (nativeTokens.some((token) => typeof token !== "string" || !token) || (engine === "codex" && data.OPENAI_API_KEY != null))) throw new Error("Native subscription authentication required");
   }
+  if (!seen.has(engine === "codex" ? "auth.json" : ".credentials.json")) throw new Error("Native authentication file is required");
+  if (Buffer.byteLength(JSON.stringify(profile)) > PROFILE_LIMIT) throw new Error("Profile is too large");
   return { version: 1, engine, files: profile.files.map(({ path, content }) => ({ path, content })) };
 }
 
@@ -59,7 +63,9 @@ export async function importProfile(root: string, value: unknown) {
 export async function exportProfile(root: string, engine: NativeEngine): Promise<NativeProfile> {
   const files: NativeProfile["files"] = [];
   for (const path of paths[engine]) {
-    const handle = await open(join(root, engine, path), constants.O_RDONLY | constants.O_NOFOLLOW);
+    let handle;
+    try { handle = await open(join(root, engine, path), constants.O_RDONLY | constants.O_NOFOLLOW); }
+    catch (error) { if (path === ".claude.json" && (error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error; }
     try {
       const stat = await handle.stat();
       if (!stat.isFile() || stat.size > PROFILE_LIMIT) throw new Error("Invalid profile file");

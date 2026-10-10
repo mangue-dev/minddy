@@ -19,6 +19,7 @@ const {
   disconnectNativeConnection,
   listNativeCleanupCandidates,
   getNativeRuntime,
+  acquireNativeWorkerConnection, getNativeWorkerConnection, renewNativeWorkerLease, stopNativeWorkerLease,
 } = await import("./native-agent-credentials");
 type Lease = import("./native-agent-credentials").NativeConnectionLease;
 
@@ -37,7 +38,7 @@ beforeEach(() => {
     not: h.not, or: h.or, order: h.order, limit: h.limit };
   h.from.mockReturnValue(query); h.select.mockReturnValue(query); h.eq.mockReturnValue(query);
   h.not.mockReturnValue(query); h.or.mockReturnValue(query); h.order.mockReturnValue(query);
-  h.rpc.mockReturnValue({ single: h.single });
+  h.rpc.mockReturnValue({ single: h.single, maybeSingle: h.maybeSingle });
 });
 
 describe("native subscription credential storage", () => {
@@ -161,5 +162,44 @@ describe("native subscription credential storage", () => {
     }));
     await getNativeRuntime(lease());
     expect(h.rpc.mock.lastCall?.[1]).not.toHaveProperty("p_execution");
+  });
+
+  it("derives worker ownership from the frozen run and distinguishes busy admission from database failure", async () => {
+    h.maybeSingle.mockResolvedValue({ data: null, error: null });
+    await expect(acquireNativeWorkerConnection("run-1")).resolves.toBeNull();
+    expect(h.rpc).toHaveBeenCalledWith("acquire_native_worker_connection", { p_run_id: "run-1" });
+    h.maybeSingle.mockResolvedValue({ data: null, error: { message: "owner mismatch" } });
+    await expect(acquireNativeWorkerConnection("run-1")).rejects.toThrow("admission rejected");
+  });
+
+  it("keeps worker control-plane lookups metadata-only and permits explicit cleanup reads", async () => {
+    h.store = null;
+    h.maybeSingle.mockResolvedValue({ data: { id: "connection-1", user_id: "user-1", engine: "codex",
+      generation: 1, revision: 2, lease_id: "lease-1", lease_kind: "worker", lease_expires_at: "2030-01-01",
+      worker_run_id: "run-1", worker_allocation_id: "allocation-1" }, error: null });
+    await expect(getNativeWorkerConnection("run-1", "sandbox-1")).resolves.toMatchObject({
+      userId: "user-1", kind: "worker", workerRunId: "run-1", workerAllocationId: "allocation-1",
+    });
+    expect(h.rpc).toHaveBeenCalledWith("get_native_worker_connection", {
+      p_run_id: "run-1", p_sandbox_name: "sandbox-1", p_execution: true,
+    });
+    await getNativeWorkerConnection("run-1", undefined, { execution: false });
+    expect(h.rpc).toHaveBeenLastCalledWith("get_native_worker_connection", {
+      p_run_id: "run-1", p_sandbox_name: null, p_execution: false,
+    });
+  });
+
+  it("renews worker expiry without advancing the write-back revision and fences pre-injection stop", async () => {
+    const owned = { ...lease(), kind: "worker" as const, workerRunId: "run-1" };
+    h.single.mockResolvedValue({ data: { revision: 2, lease_expires_at: "2031-01-01" }, error: null });
+    await renewNativeWorkerLease(owned);
+    expect(owned.revision).toBe(2);
+    expect(owned.leaseExpiresAt).toBe("2031-01-01");
+    h.single.mockResolvedValue({ data: { id: "connection-1", user_id: "user-1", engine: "codex", generation: 1,
+      revision: 3, lease_id: "stop-lease", lease_kind: "stop", lease_expires_at: "2031-01-01", worker_run_id: "run-1" }, error: null });
+    await expect(stopNativeWorkerLease(owned)).resolves.toMatchObject({ generation: 1, leaseId: "stop-lease", kind: "stop" });
+    expect(h.rpc).toHaveBeenLastCalledWith("stop_native_worker_connection", expect.objectContaining({
+      p_user_id: "user-1", p_lease_id: "lease-1", p_revision: 2,
+    }));
   });
 });

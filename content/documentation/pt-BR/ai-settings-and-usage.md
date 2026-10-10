@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676)",
+    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,13 +57,15 @@
       "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
       "components/settings/native-agent-connections.tsx",
       "components/settings/native-agent-connections.test.tsx",
-      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md"
+      "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md",
+      "app/api/account/agent-preferences/route.ts",
+      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "revision": 9,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed)",
     "date": "2026-10-10"
   },
   "related": [
@@ -86,7 +88,7 @@
       "src": "/documentation/pt-BR/ai-keys-and-models-workflow.png",
       "alt": "Cartão do provedor de IA com minddy Cloud selecionado.",
       "caption": "O provedor Cloud selecionado usa o plano da conta. O seletor permite configurar provedores pessoais.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -102,8 +104,8 @@
       "kind": "screenshot",
       "src": "/documentation/pt-BR/ai-keys-and-models-defaults-workflow.png",
       "alt": "Modelo de código e raciocínio padrão.",
-      "caption": "Modelo de código e raciocínio padrão. Novos workers usam esses valores; os que estão em execução mantêm as configurações fixadas.",
-      "revision": 8,
+      "caption": "Modelo e raciocínio padrão do OpenCode. Novos agentes OpenCode usam esses padrões; agentes em execução mantêm suas configurações fixadas.",
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -120,7 +122,7 @@
       "src": "/documentation/pt-BR/plans-and-ai-usage-workflow.png",
       "alt": "Página de uso de IA da conta de demonstração.",
       "caption": "Página de uso de IA da conta de demonstração. O orçamento, as categorias e o histórico são lidos da conta; nenhuma compra ou execução paga foi iniciada.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -150,19 +152,25 @@ Associe as famílias de modelos de texto, transcrição e embeddings a chaves co
 
 ![Cartão do provedor de IA com minddy Cloud selecionado.](/documentation/pt-BR/ai-keys-and-models-workflow.png)
 
-### Testar uma assinatura pessoal de programação na prévia privada {#native-agent-preview}
+### Escolher uma assinatura pessoal de programação na prévia privada {#native-agent-preview}
 
 Se sua conta estiver habilitada para a prévia privada, as configurações de IA da conta mostram **Assinaturas pessoais de programação**. Escolha **Conectar Codex** ou **Conectar Claude Code** e autorize o acesso com sua própria conta na página oficial do provedor. Para o Codex, digite o código de login mostrado nessa página. Se o Claude pedir um código de autorização, cole apenas esse código no Minddy e escolha **Concluir conexão**. Você precisa de acesso ao Codex ou de uma assinatura Claude que inclua o Claude Code. **Cancelar conexão** interrompe uma tentativa em andamento.
 
 Após a conexão, **Testar novas sandboxes** verifica o acesso nativo e as ferramentas Minddy em duas novas sandboxes hospedadas. Confira o resultado, incluindo a destruição de cada sandbox. Um teste de acesso bem-sucedido não comprova a renovação da autenticação: uma mensagem separada informa quando essa renovação não foi observada. A conexão é salva para testes posteriores; conecte-se novamente se o acesso expirar ou não puder ser restaurado. **Desconectar** remove a conexão salva pelo Minddy; isso não cancela sua assinatura do provedor.
 
-Esta prévia verifica o login, as ferramentas e a inicialização em novas sandboxes. Ainda não muda o agente iniciado pelo Numo para tickets, planos ou revisões. O Numo mantém suas configurações atuais de provedor e uso; os testes nativos usam sua assinatura pessoal e processamento hospedado temporário.
+Após conectar a conta, selecione **Codex** ou **Claude Code** em **Agente de código**. O Numo usa essa escolha para novos agentes de repositório: implementação de tarefas, planos, verificações e trabalhos solicitados em conversas ou rotinas. O CLI nativo escolhe seu modelo e raciocínio; os padrões do modelo de API do OpenCode não se aplicam. Os agentes executam em sandboxes de servidor hospedadas com ferramentas do Minddy. Não é necessário computador local nem sandbox permanente.
+
+A prévia nativa expõe ferramentas controladas do Minddy via MCP. Ferramentas integradas nativas do provedor, imagens de entrada e subagentes não estão disponíveis nesses adaptadores. O Numo lê as capacidades do adaptador escolhido e recebe as capacidades fixadas do agente junto com seu resultado. Responde às perguntas do agente com contexto confiável da conversa ou pergunta a você quando falta uma decisão. O Numo pode usar suas próprias ferramentas compatíveis dentro da sua autorização; não inventa operações que o mecanismo não suporta.
+
+Uma conexão ausente, acesso expirado ou limite do provedor interrompe o trabalho nativo. O Minddy não muda automaticamente para OpenCode, outro provedor de API ou outro pagador. Reconecte a conta selecionada ou escolha explicitamente **OpenCode**. Desconectar ou perder acesso à prévia mantém a escolha salva visível até você alterá-la. Agentes existentes mantêm o mecanismo escolhido ao iniciar.
+
+Sua assinatura financia o uso do modelo nativo. As chamadas de conversa do Numo e o processamento das sandboxes continuam seguindo as regras de uso e orçamento do Minddy. Esta prévia é restrita a contas habilitadas; a execução real do Claude Code com assinatura paga ainda não foi validada. Uma conexão ou um teste de inicialização bem-sucedido não comprova o funcionamento de todos os planos, da renovação da autenticação ou de uma implementação completa.
 
 ### Modelos e local de execução {#models}
 
-A escolha do modelo de código está vinculada ao provedor. Depois de alterar, desativar ou perder uma chave pessoal, a escolha anterior pode deixar de corresponder ao provedor ativo. Nesse caso, um novo worker recusa o início até que você escolha um modelo compatível nas configurações de IA da conta; ele não seleciona automaticamente um modelo mais barato nem um padrão da plataforma. Uma execução BYOK já fixada não muda quem paga quando sua chave fica indisponível.
+**OpenCode:** A escolha do modelo de código está vinculada ao provedor. Depois de alterar, desativar ou perder uma chave pessoal, a escolha anterior pode deixar de corresponder ao provedor ativo. Nesse caso, um novo worker recusa o início até que você escolha um modelo compatível nas configurações de IA da conta; ele não seleciona automaticamente um modelo mais barato nem um padrão da plataforma. Uma execução BYOK já fixada não muda quem paga quando sua chave fica indisponível.
 
-Defina aqui o modelo de código e o nível de raciocínio padrão dos novos workers. Os workers existentes mantêm o nível de raciocínio fixado quando foram criados. Escolha separadamente a região e o tamanho das novas sandboxes. Esses padrões não substituem o modelo selecionado em uma conversa.
+Com **OpenCode**, configure aqui o modelo de código e raciocínio padrão de novos agentes. Com **Codex** ou **Claude Code**, o CLI escolhe esses padrões. Agentes existentes mantêm suas configurações fixadas. Escolha região e tamanho da sandbox separadamente. Essas escolhas não substituem o modelo da conversa.
 
 Quando configurados, o Ollama local e endpoints compatíveis com OpenAI podem atender às conversas pela ponte do aplicativo desktop. Eles não podem atender ao trabalho delegado de código nem às rotinas executadas na sandbox do servidor. Para esses usos, escolha um provedor acessível pelo servidor. Remova um provedor pelo controle de confirmação quando ele não for mais necessário e confira o roteamento resultante antes da próxima execução.
 

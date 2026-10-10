@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+
 import { recordSandboxUsage } from "@/lib/server/usage";
 import {
   spentForBudget,
@@ -106,12 +108,26 @@ function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
 }
 
+/** Native callbacks retain their exact completion authority across watchdog takeover. */
+function nativeRestGuard(run: AgentRun): Parameters<typeof stampRun>[2] {
+  if (!isNativeAgentEngine(run.agent_engine)) return undefined;
+  if (!run.rest_claimed_at || run.sandbox_reap_claim) {
+    throw new Error("Native rest authority unavailable");
+  }
+  return { expected: {
+    started_at: run.started_at ?? null, sandbox_id: run.sandbox_id ?? null,
+    rest_claimed_at: run.rest_claimed_at, sandbox_reap_claim: null,
+  } };
+}
+
 /**
  * Lands the trick. Never ROSE to the HTTP caller on a detail: what matters is that the run line leaves `running`. A missed event, a PR not
  * reopened, a lost notification are degradations; a run left
  * `running` is a conversation blocked until the watchdog passes.
  */
 export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<void> {
+  const native = isNativeAgentEngine(run.agent_engine);
+  const restGuard = nativeRestGuard(run);
   const emit: EmitAgentEvent = (type, payload) => appendEvent(run.id, type, payload);
   const nowIso = new Date().toISOString();
 
@@ -266,15 +282,20 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
  * message wakes up.
  */
   async function stampToRest(fields: Parameters<typeof stampRun>[1]): Promise<void> {
-    const first = await stampRunResult(run.id, fields);
-    if (!first.failed) return;
-    console.error("[agent-vm-rest] rest stamp refused — retrying without the checkpoint");
-    const { checkpoint: _dropped, ...withoutCheckpoint } = fields;
-    const second = await stampRunResult(run.id, withoutCheckpoint);
-    if (second.failed) {
-      console.error("[agent-vm-rest] rest stamp refused TWICE — the watchdog will close this run");
+    const first = await stampRunResult(run.id, fields, restGuard);
+    if (!first.failed) {
+      if (native && !first.run) throw new Error("Native rest authority superseded");
       return;
     }
+    console.error("[agent-vm-rest] rest stamp refused — retrying without the checkpoint");
+    const { checkpoint: _dropped, ...withoutCheckpoint } = fields;
+    const second = await stampRunResult(run.id, withoutCheckpoint, restGuard);
+    if (second.failed) {
+      console.error("[agent-vm-rest] rest stamp refused TWICE — the watchdog will close this run");
+      if (native) throw new Error("Native rest persistence unavailable");
+      return;
+    }
+    if (native && !second.run) throw new Error("Native rest authority superseded");
     await Promise.resolve(
       emit("error", {
         code: "checkpointRefused",
@@ -286,7 +307,7 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
 
   if (report.status === "budget_exhausted") {
     await emitBudgetExhausted(run, emit);
-    // Volontairement PAS `restStamp` : celui-ci re-queue s'il reste du steering,
+    // Avoid restStamp here: pending steering must not resume an exhausted budget.
     // which would immediately restart a tour without a budget. The message is waiting.
     await stampToRest({ status: "completed", ...restFields });
     await notifyAgentRun(run, "agent_failed");
@@ -347,12 +368,14 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
       : null;
     if (stallCheckpoint && stall?.requeue) {
       const steering = await hasPendingRunMessages(run.id).catch(() => false);
-      await stampRun(run.id, {
+      const stalledFields = {
         ...restFields,
-        status: "queued",
+        status: "queued" as const,
         checkpoint: { ...stallCheckpoint, providerRetries: stall.retries },
         not_before: new Date(Date.now() + (steering ? 0 : stall.delayMs)).toISOString(),
-      });
+      };
+      if (native) await stampToRest(stalledFields);
+      else await stampRun(run.id, stalledFields);
       // No events here: the thread already bears the note “the supplier hiccuped”
       // that the loop has just issued (`status: transient_error`), and it says
       // true — the round starts again. A `error` on top would announce a stop which
@@ -440,7 +463,7 @@ async function landOnPullRequest(
   // The branch only exists for the app from the first REAL push: it's him
   // which creates it on the repository (MIN-123).
   if (!run.branch_name && report.workBranch) {
-    await stampRun(run.id, { branch_name: report.workBranch }).catch(() => {
+    await stampRun(run.id, { branch_name: report.workBranch }, nativeRestGuard(run)).catch(() => {
       console.error("[agent-vm-rest] branch_stamp_failed");
     });
   }
@@ -491,7 +514,7 @@ async function identifierOf(run: AgentRun): Promise<string | null> {
  * An allocation can end while the monthly account still has funds.
  */
 async function emitBudgetExhausted(run: AgentRun, emit: EmitAgentEvent): Promise<void> {
-  const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);
+  const quota = await checkAgentQuota(run.created_by ?? "", "agent", { subscription: run.key_mode === "subscription" }).catch(() => null);
   const operationSpent = await spentForBudget(
     run.run_id ?? run.id,
     run.parent_numo_turn_id,

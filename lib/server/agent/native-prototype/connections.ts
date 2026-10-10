@@ -10,6 +10,7 @@ import { acquireNativeConnection, disconnectNativeConnection, getNativeConnectio
 import { assertNativePrototypeAccess, nativePrototypeEnabledFor } from "./access";
 import { createNativeAllocation, openNativeAllocation, NATIVE_ALLOCATION_TIMEOUT_MS, type NativeAllocation, type NativeControllerStatus } from "./sandbox";
 import { nativePrototypeMcpTool, executeNativePrototypeMcp } from "./mcp";
+import { cleanupNativeWorkerLease } from "../native-worker-connections";
 
 const LOGIN_TIMEOUT_MS = 10 * 60_000;
 const TEST_TIMEOUT_MS = 4 * 60_000;
@@ -243,6 +244,10 @@ export async function cancelNativeLogin(userId: string, engine: NativeHarness, a
 export async function disconnectNativePrototype(userId: string, engine: NativeHarness, expected?: NativeConnectionLease) {
   const result = await disconnectNativeConnection(userId, engine, expected);
   if (!result.lease) return;
+  if (result.lease.workerRunId) {
+    await cleanupNativeWorkerLease(result.lease);
+    return;
+  }
   await stop(result.lease, runtime(result.runtime));
   await releaseNativeConnection(result.lease, { stopped: true });
 }

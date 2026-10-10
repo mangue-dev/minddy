@@ -2494,7 +2494,8 @@
     "desktopAppLabel": "App de bureau",
     "desktopAppHint": "Disponible sur macOS, Windows et Linux. Sa fenêtre, le choix du serveur et les mises à jour.",
     "desktopAppCta": "Télécharger",
-    "mcpClientsTab": "MCP pour Numo"
+    "mcpClientsTab": "MCP pour Numo",
+    "byokAgentNativeHint": "Cette clé concerne les agents de code OpenCode. Votre agent natif sélectionné utilise son abonnement connecté."
   },
   "AccountData": {
     "importTitle": "Transférer des données depuis une autre instance minddy",
@@ -2782,7 +2783,9 @@
     "localRepoNotGit": "Ce dossier n'est pas un dépôt git.",
     "localRepoNoRemote": "Ce dépôt n'a aucun remote : impossible de dire lequel c'est.",
     "localRepoWrongRepo": "C'est un autre dépôt que celui lié à ce projet.",
-    "delegatedWorkNoDirectMessages": "Vous ne pouvez pas envoyer de message directement à un agent de code."
+    "delegatedWorkNoDirectMessages": "Vous ne pouvez pas envoyer de message directement à un agent de code.",
+    "errorNativeConnectionRequired": "Connectez ou reconnectez l’agent de code sélectionné dans les paramètres IA du compte, ou choisissez explicitement OpenCode. Aucun repli vers une API n’a été utilisé.",
+    "errorNativeAgentUnavailable": "L’agent natif sélectionné est indisponible ou sa connexion est utilisée. Vérifiez les paramètres IA du compte avant de réessayer ; aucun repli vers une API n’a été utilisé."
   },
   "Projects": {
     "newProject": "Nouveau projet",
@@ -6533,9 +6536,9 @@
   "NativeAgentConnections": {
     "title": "Abonnements personnels de code",
     "preview": "Aperçu privé",
-    "description": "Connectez votre compte pour tester la connexion native, les outils Minddy et de nouvelles sandboxes. Cet aperçu ne change pas encore l’agent lancé par Numo. Le calcul des sandboxes et Numo consomment toujours votre usage Minddy.",
+    "description": "Connectez votre compte, puis choisissez l’agent que Numo utilise pour les nouveaux travaux de code dans les sandbox hébergées. Votre abonnement couvre l’usage du modèle natif ; le calcul des sandbox et Numo restent comptabilisés dans Minddy.",
     "codexHint": "Utilisez un compte ChatGPT donnant accès à Codex.",
-    "claudeHint": "Utilisez un abonnement Claude incluant Claude Code.",
+    "claudeHint": "Utilisez un abonnement Claude qui inclut Claude Code. L’exécution réelle avec un abonnement payant n’a pas encore été validée dans cet aperçu.",
     "connect": "Connecter {agent}",
     "resume": "Continuer la connexion",
     "test": "Tester de nouvelles sandboxes",
@@ -6561,12 +6564,17 @@
     "status_busy": "En cours d’utilisation",
     "status_reconnect_required": "Reconnexion nécessaire",
     "error_private_prototype_unavailable": "Cet aperçu est indisponible. Réessayez plus tard.",
-    "error_connection_busy": "Cette connexion est utilisée. Attendez la fin du test.",
+    "error_connection_busy": "Cette connexion est utilisée. Attendez la fin du travail en cours.",
     "error_reconnect_required": "Votre connexion doit être renouvelée. Reconnectez votre compte.",
     "error_login_failed": "La connexion a échoué. Reconnectez votre compte.",
     "error_login_expired": "Cette tentative de connexion a expiré. Reconnectez-vous.",
     "error_profile_invalid": "La connexion sauvegardée n’a pas pu être restaurée. Reconnectez-vous.",
     "error_test_failed": "Le test des sandboxes a échoué. Réessayez.",
-    "error_subscription_unavailable": "Ce compte ne peut pas utiliser cet agent. Vérifiez votre abonnement et vos accès."
+    "error_subscription_unavailable": "Ce compte ne peut pas utiliser cet agent. Vérifiez votre abonnement et vos accès.",
+    "engineTitle": "Agent de code",
+    "engineOpenCodeHint": "OpenCode utilise votre fournisseur API, votre modèle de code et votre niveau de raisonnement configurés.",
+    "engineNativeHint": "Le CLI sélectionné choisit son modèle et son raisonnement. Les nouveaux agents utilisent votre abonnement et les outils Minddy. Si l’accès échoue, le travail s’arrête sans basculer vers un fournisseur API.",
+    "engineUnavailable": "Cet aperçu privé est indisponible pour votre compte. Choisissez explicitement OpenCode pour lancer un nouveau travail de code.",
+    "engineReconnect": "Reconnectez ce compte avant de lancer un travail de code, ou choisissez explicitement OpenCode."
   }
 }

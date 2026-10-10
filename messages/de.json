@@ -2494,7 +2494,8 @@
     "desktopAppLabel": "Desktop-App",
     "desktopAppHint": "Verfügbar für macOS, Windows und Linux. Ein eigenes Fenster, eine Serverauswahl und Aktualisierungen.",
     "desktopAppCta": "Herunterladen",
-    "mcpClientsTab": "MCP für Numo"
+    "mcpClientsTab": "MCP für Numo",
+    "byokAgentNativeHint": "Dieser Schlüssel gilt für OpenCode-Worker. Dein gewählter nativer Agent verwendet sein verbundenes Abonnement."
   },
   "AccountData": {
     "importTitle": "Daten von einer anderen minddy-Instanz übertragen",
@@ -2782,7 +2783,9 @@
     "localRepoNotGit": "Dieser Ordner ist kein Git-Repository.",
     "localRepoNoRemote": "Dieses Repository hat kein Remote-Repository, daher kann nicht gesagt werden, um welches es sich handelt.",
     "localRepoWrongRepo": "Das ist ein anderes Repository als das, mit dem dieses Projekt verknüpft ist.",
-    "delegatedWorkNoDirectMessages": "Du kannst einem Code-Agenten keine Nachrichten direkt senden."
+    "delegatedWorkNoDirectMessages": "Du kannst einem Code-Agenten keine Nachrichten direkt senden.",
+    "errorNativeConnectionRequired": "Verbinden Sie den ausgewählten Code-Agenten in den KI-Kontoeinstellungen erneut oder wählen Sie ausdrücklich OpenCode. Es wurde nicht auf eine API ausgewichen.",
+    "errorNativeAgentUnavailable": "Der ausgewählte native Code-Agent ist nicht verfügbar oder seine Verbindung wird verwendet. Prüfen Sie vor einem erneuten Versuch die KI-Kontoeinstellungen; es wurde nicht auf eine API ausgewichen."
   },
   "Projects": {
     "newProject": "Neues Projekt",
@@ -6533,9 +6536,9 @@
   "NativeAgentConnections": {
     "title": "Persönliche Coding-Abonnements",
     "preview": "Private Vorschau",
-    "description": "Verbinde dein Konto, um die native Anmeldung, Minddy-Tools und neue Sandboxes zu testen. Diese Vorschau ändert noch nicht den Agenten, den Numo startet. Sandbox-Rechenleistung und Numo zählen weiterhin zu deinem Minddy-Verbrauch.",
+    "description": "Verbinde dein Konto und wähle dann den Agenten, den Numo für neue Codearbeiten in gehosteten Sandboxes verwendet. Dein Abonnement deckt die native Modellnutzung ab; Sandbox-Rechenleistung und Numo zählen weiterhin zur Minddy-Nutzung.",
     "codexHint": "Verwende ein ChatGPT-Konto mit Codex-Zugriff.",
-    "claudeHint": "Verwende ein Claude-Abonnement mit Claude Code.",
+    "claudeHint": "Verwende ein Claude-Abonnement, das Claude Code enthält. Die tatsächliche Ausführung mit einem kostenpflichtigen Abonnement wurde in dieser Vorschau noch nicht überprüft.",
     "connect": "{agent} verbinden",
     "resume": "Verbindung fortsetzen",
     "test": "Neue Sandboxes testen",
@@ -6561,12 +6564,17 @@
     "status_busy": "Wird verwendet",
     "status_reconnect_required": "Erneute Verbindung nötig",
     "error_private_prototype_unavailable": "Diese Vorschau ist nicht verfügbar. Versuche es später erneut.",
-    "error_connection_busy": "Diese Verbindung wird verwendet. Warte, bis der Test beendet ist.",
+    "error_connection_busy": "Diese Verbindung wird verwendet. Warte, bis die aktuelle Arbeit abgeschlossen ist.",
     "error_reconnect_required": "Deine Verbindung muss erneuert werden. Verbinde dein Konto erneut.",
     "error_login_failed": "Die Anmeldung ist fehlgeschlagen. Verbinde dein Konto erneut.",
     "error_login_expired": "Dieser Verbindungsversuch ist abgelaufen. Verbinde dich erneut.",
     "error_profile_invalid": "Die gespeicherte Verbindung konnte nicht wiederhergestellt werden. Verbinde dich erneut.",
     "error_test_failed": "Der Sandbox-Test ist fehlgeschlagen. Versuche es erneut.",
-    "error_subscription_unavailable": "Dieses Konto kann den ausgewählten Agenten nicht nutzen. Prüfe dein Abonnement und deinen Kontozugriff."
+    "error_subscription_unavailable": "Dieses Konto kann den ausgewählten Agenten nicht nutzen. Prüfe dein Abonnement und deinen Kontozugriff.",
+    "engineTitle": "Code-Agent",
+    "engineOpenCodeHint": "OpenCode verwendet deinen konfigurierten API-Anbieter, dein Code-Modell und deine Denkstufe.",
+    "engineNativeHint": "Das gewählte CLI bestimmt Modell und Denkstufe. Neue Worker verwenden dein Abonnement und die Minddy-Werkzeuge. Schlägt der Zugriff fehl, wird die Arbeit ohne Wechsel zu einem API-Anbieter angehalten.",
+    "engineUnavailable": "Diese private Vorschau ist für dein Konto nicht verfügbar. Wähle ausdrücklich OpenCode, um neue Codearbeiten zu starten.",
+    "engineReconnect": "Verbinde dieses Konto erneut, bevor du Codearbeiten startest, oder wähle ausdrücklich OpenCode."
   }
 }

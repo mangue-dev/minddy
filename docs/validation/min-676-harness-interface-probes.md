@@ -216,7 +216,8 @@ The subsequent implementation adds private account connection routes/settings,
 mandatory encrypted native profiles and runtime cleanup descriptors, exclusive
 fenced leases, published native controllers and a fixed two-allocation MCP pilot.
 See [activation and pilot instructions](min-676-private-native-prototype.md).
-The ordinary Numo worker remains unchanged and public enablement is still gated.
+At this milestone, ordinary Numo workers still used OpenCode. The subsequent
+worker integration is recorded below; public enablement remains gated.
 
 Actual authless hosted probes used fresh Vercel `node24`, `iad1`, 2-vCPU,
 nonpersistent allocations, with no native personal profile, login or model turn:
@@ -298,3 +299,85 @@ tests that queue draining continues after cleanup failure. The publication scan
 uses an exact fixture-path/address exception for the non-routable synthetic
 account; no real identity or credential is exempted. The PR commit range passed
 the redacted secret/data-marker scan.
+
+
+## Account-selected native Numo workers (2026-10-10)
+
+The next private phase wires the selected account harness into ordinary code
+worker launches. Codex and Claude Code have separate native adapters, frozen
+connection generations, subscription inference and managed hosted compute.
+OpenCode remains the default for accounts that have not selected a native agent.
+A native connection failure refuses work without changing its payer or harness.
+Numo receives explicit capability context and mediates worker questions; native
+builtin shell, images and subagents are unavailable.
+
+The actual settings page saved Codex as the account default. An initial UI
+failure exposed the old preference helper's field allowlist and non-atomic
+unprotected upsert; the partial-upsert RPC now preserves unrelated preferences.
+All six public locales describe the selection, recovery and billing behavior.
+
+![Private account settings showing Codex selected and connected, with Claude Code explicitly unvalidated](assets/min-676-native-worker-selection.png)
+
+Before restoring a real profile, a fresh hosted production repository-host probe
+passed at 17:35:14 UTC: pinned installation, kernel isolation verification,
+write/read and isolated command execution all succeeded. The probe included
+private credential sentinel and controller process environment, descriptor and
+memory denial. Its allocation was stopped and deleted without authentication
+or inference.
+
+Two early fixture-driver failures were cleaned up: duplicate private-directory
+creation failed before import; reading the detached SDK command's old exit
+object then caused conservative auth invalidation. The latter required a new
+owner device approval. The driver now checks the freshly fetched finished
+command and records safe proof before teardown. These failures are not counted
+as successful worker acceptance.
+
+A real paid Codex worker pair then passed repository work and Minddy MCP. After
+source review disabled Codex's default apps, plugins and hooks and aligned tool
+events with the existing UI contract, a final pair repeated the test using that
+restricted runtime. Both final turns used the actual native supervisor,
+production kernel host, pinned CLI, native network policy, worker leases and
+mandatory encrypted profile restore/write-back. The owner-scoped `read_issue`
+handler read a disposable local fixture; the worker wrote and reread a marker
+file, then ran a command verifying the marker and denied access to the private
+controller/auth root, `/proc` and `/sys`.
+
+| Final turn | Actual supervisor duration | Verified result |
+| --- | --- | --- |
+| First fresh allocation | 26,873 ms | Completed; one successful Minddy read; guarded write/read/command observed; marker verified; native profile exported and saved; allocation stopped and deleted. |
+| Second distinct fresh allocation | 27,778 ms | Completed with the same proofs after restoring the first turn's saved database profile, with no new owner approval; allocation stopped and deleted. |
+
+The final database state was connected, generation 2, revision 84, format 3,
+with cleared lease/runtime metadata. Both allocation-ledger entries were cleaned
+and had no pending provider request. Only two sandbox-compute usage rows were
+written for the final pair; no API inference usage was recorded. Safe structured
+proof is retained in [the worker proof artifact](assets/min-676-native-worker-proof.json).
+The four successful worker turns required no intervening browser approval.
+
+The fixture uses a private SDK mailbox because the Docker-backed control plane
+is on localhost. It verifies the production supervisor and actual owner tool
+handler, vault and physical cleanup; it does not exercise the deployed HTTP
+control plane or the complete settings-to-ticket-to-pull-request UI flow. No Git
+remote or pull request was published. Normal workers require a reachable HTTPS
+control-plane origin and an authorized forge binding. Launch, HTTP authority,
+resume, delivery and legacy behavior are covered by focused repository tests.
+Live Claude subscription execution, long-lived refresh/revocation and public
+credential-custody authorization remain separate unvalidated boundaries.
+
+Watchdog recovery now atomically claims the exact stale run snapshot and revokes
+native execution before SDK cleanup. Heartbeat/checkpoint stamps reject a
+recovery claim. Recovery retains a retryable stop claim if cleanup is uncertain;
+a terminal failure is published only after physical cleanup. Completion landing
+retains its original rest-claim authority so a late callback cannot overwrite
+recovery. A completion claim abandoned for more than 20 minutes can be recovered with a
+new rest timestamp, exceeding the hosted callback's 60-second lifetime; an old
+completion writer retains the old timestamp and cannot land afterward. Local
+SQL regressions run with transaction rollback; all 248 migrations
+were applied only to the isolated Docker database.
+
+Final local verification passed: 3,070 focused agent/Numo/assistant/settings tests
+(26 intentionally skipped), full application build, typecheck, lint, VM bundle
+build, actual PostgreSQL native/partial-preference/recovery regressions,
+encryption access/schema inventories, documentation, knowledge, owned-English
+and whitespace checks. The publication scan uses file-aware redacted Git diff
+input so existing exact synthetic-token fixture exceptions remain scoped.

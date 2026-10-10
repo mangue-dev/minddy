@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
   events: [] as string[], allocations: [] as Array<{ name: string; request: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
   imports: [] as NativeCredentialProfile[], mode: "smoke", authHook: null as (() => void) | null,
   list: vi.fn(), acquire: vi.fn(), getLease: vi.fn(), getRuntime: vi.fn(), setRuntime: vi.fn(),
-  cleanupCandidates: vi.fn(),
+  cleanupCandidates: vi.fn(), cleanupWorker: vi.fn(),
   load: vi.fn(), save: vi.fn(), release: vi.fn(), disconnect: vi.fn(),
   create: vi.fn(), open: vi.fn(), budget: vi.fn(), charge: vi.fn(), executeTool: vi.fn(),
 }));
@@ -24,6 +24,7 @@ vi.mock("./access", () => ({ nativePrototypeEnabledFor: (id: string) => h.enable
 vi.mock("./sandbox", () => ({ NATIVE_ALLOCATION_TIMEOUT_MS: 15 * 60_000,
   createNativeAllocation: h.create, openNativeAllocation: h.open }));
 vi.mock("@/lib/server/usage", () => ({ ensureUsageBudget: h.budget, recordSandboxUsage: h.charge }));
+vi.mock("../native-worker-connections", () => ({ cleanupNativeWorkerLease: h.cleanupWorker }));
 vi.mock("./mcp", () => ({ nativePrototypeMcpTool: () => ({ name: "minddy_list_projects", description: "Actual tool fixture", inputSchema: {} }),
   executeNativePrototypeMcp: h.executeTool }));
 

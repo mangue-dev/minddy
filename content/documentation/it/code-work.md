@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-10",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,18 @@
       "content/knowledge/agents-and-mcp.md",
       "components/assistant/delegated-work-card.tsx",
       "components/pull-requests/pr-detail.tsx",
-      "components/pull-requests/pr-reviews-details.tsx"
+      "components/pull-requests/pr-reviews-details.tsx",
+      "components/settings/native-agent-connections.tsx",
+      "components/settings/native-agent-connections.test.tsx",
+      "app/api/account/agent-preferences/route.ts",
+      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed)",
+    "date": "2026-10-10"
   },
   "related": [
     "numo",
@@ -64,7 +68,7 @@
       "src": "/documentation/it/delegate-code-work-workflow.png",
       "alt": "Scheda del worker completato con modello, ragionamento leggero, due file modificati, branch, PR n. 1 e commit corretto.",
       "caption": "Scheda della correzione effettiva della PR esistente, con commit aggiornato e collegamento. Verifica diff e controlli prima del merge: lo stato completato da solo non dimostra che i criteri di accettazione siano soddisfatti.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -80,7 +84,7 @@
       "src": "/documentation/it/review-pull-requests-workflow.png",
       "alt": "Scheda Modifiche della PR dimostrativa aperta, con il diff di greeting e l’avviso di autorizzazione GitHub non disponibile.",
       "caption": "La PR effettivamente corretta rimane aperta, senza merge. Il diff rimuove gli spazi intorno al nome e usa World quando il valore è vuoto. Questa istanza non può richiedere l’autorizzazione dell’utente su GitHub: lo stato di disponibilità non concede il permesso di merge né dimostra che la CI del fornitore sia riuscita.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -102,7 +106,7 @@ Il lavoro sul codice parte da un ticket e dal repository collegato e viene esegu
 
 ## Delegare un ticket al worker di codice {#delegate-code-work}
 
-Servono un repository GitHub o GitLab collegato, autorizzazioni valide e una sandbox server configurata. Controlla modello e ragionamento del worker nelle impostazioni IA dell’account. Il modello della conversazione non sostituisce questi valori.
+Servono un repository GitHub o GitLab collegato, autorizzazioni valide e una sandbox server configurata. Controlla **Agente di codice** nelle impostazioni IA dell’account. OpenCode richiede un modello API di codice compatibile e il ragionamento configurato; l’anteprima privata Codex e Claude Code richiede la connessione dell’account personale selezionato. I valori del CLI nativo sono indipendenti dal modello della conversazione. Se l’accesso nativo fallisce, ricollega l’account o scegli esplicitamente OpenCode; il lavoro non passa alla fatturazione API.
 
 1. Apri il ticket e descrivi comportamento atteso, vincoli e verifiche di accettazione.
 2. Apri Numo con quel contesto. Chiedi di ispezionare il repository prima del piano tecnico. Nomi di file e API non verificati non sono prove di implementazione.

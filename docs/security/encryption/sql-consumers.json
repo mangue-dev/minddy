@@ -7303,7 +7303,7 @@
       "functionReferences": []
     },
     "upsert_agent_preferences_protected(uuid,jsonb,text,boolean)": {
-      "sha256": "6ff7572163945632bd4f8da2d25ed10e2fc835069f3d6120b1f76779261cd343",
+      "sha256": "06bb55517ec1b9ace5faf1836af910a6d61b4c017709d248e98106ea567a4940",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8382,7 +8382,7 @@
       "functionReferences": []
     },
     "create_agent_run_with_budget(uuid,timestamp with time zone,numeric,numeric,jsonb)": {
-      "sha256": "854e2a6a667a465c6d13c0eb383f6d68bcbe7b801ac6a98c53f66ee5ef1c8c1b",
+      "sha256": "bb8ff5ab3237cd0f6a4a0076fbfe899029db803009d3b29ec4ec6e6c272a154a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8397,9 +8397,7 @@
         "agent_runs",
         "numo_assistant_turns"
       ],
-      "functionReferences": [
-        "concurrent_managed_budget_grant"
-      ]
+      "functionReferences": []
     },
     "ensure_numo_routine_occurrence(uuid,uuid,text,timestamp with time zone,uuid,text)": {
       "sha256": "9b50d2dedfb1cecb24494f63ad958f79fccf4d6ea03c30768236302b293e1b51",
@@ -8799,7 +8797,7 @@
       "functionReferences": []
     },
     "resume_agent_run_with_budget(uuid,uuid,timestamp with time zone,numeric,numeric,timestamp with time zone)": {
-      "sha256": "082fcd0c8ebc13f2553d11d077682c2c868f6461f52754c7d4f3e6da43a01bef",
+      "sha256": "6b5c161da937480b7a79b6178635e4408a7c26cd958048fae278c6f60df99b48",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8814,10 +8812,7 @@
         "agent_runs",
         "numo_assistant_turns"
       ],
-      "functionReferences": [
-        "get_numo_operation_platform_spend",
-        "concurrent_managed_budget_grant"
-      ]
+      "functionReferences": []
     },
     "upsert_gitlab_connection_protected_atomic(uuid,text,text,text,text,text,text,integer,timestamp with time zone,text)": {
       "sha256": "2403a7c99946a3dda76976408e68ec8dd51e9e7149417be79e6f80ae42b541d3",
@@ -8850,7 +8845,7 @@
       "functionReferences": []
     },
     "resume_latest_agent_run_with_message(uuid,uuid,uuid,uuid,text,jsonb,timestamp with time zone,timestamp with time zone,numeric,numeric)": {
-      "sha256": "bf1a94ff6eb96efc176513da7a1c319250214c89c88e82cf2298ca5318d0cc25",
+      "sha256": "10cfbbceeb1d6d4ea22552fe8304e88f5b6365f12c1d667930617c1eafb9e3bf",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8872,8 +8867,7 @@
       "functionReferences": [
         "agent_queue_content_version",
         "lock_live_agent_run_project_access",
-        "agent_run_repository_binding_is_current",
-        "concurrent_managed_budget_grant"
+        "agent_run_repository_binding_is_current"
       ]
     },
     "resume_numo_worker_input(uuid,uuid,uuid,text,uuid,uuid,text,boolean,timestamp with time zone,timestamp with time zone,numeric,numeric)": {
@@ -8904,7 +8898,7 @@
       ]
     },
     "begin_numo_turn_with_budget(uuid,uuid,uuid,uuid,jsonb,text,text,uuid,integer,text,jsonb,jsonb,timestamp with time zone,numeric,numeric)": {
-      "sha256": "ac44ee097e9642aa291dd657e50b51165883f75e9e7a75da8f7307c464be2a4d",
+      "sha256": "55f90cba714a9d235479d4f6f782d092376501ca3aac4c3435b9370c466ba285",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -8923,9 +8917,7 @@
         "assistant_messages",
         "numo_assistant_turns"
       ],
-      "functionReferences": [
-        "concurrent_managed_budget_grant"
-      ]
+      "functionReferences": []
     },
     "migrate_numo_tool_operation(uuid,text,jsonb,jsonb,jsonb,integer,integer,integer,text,jsonb,jsonb,jsonb,integer,integer,integer,text,uuid)": {
       "sha256": "f879b34e40ca051c162a4b7cb0587fe2b9a642ae9fa59536ab9b3f4bc17408cb",
@@ -9221,14 +9213,15 @@
       "functionReferences": []
     },
     "release_native_agent_connection(uuid,uuid,text,bigint,uuid,bigint)": {
-      "sha256": "54cfa994bc874f23e7a0b95a87bae2491b7ec50b54b99755cc2fe5f6b4dd1a9f",
+      "sha256": "e5c669a1be45d509703d679a7ff18cbf64391fa2318b65d05f54fca8c8511d8a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
-        "native_agent_connections"
+        "native_agent_connections",
+        "agent_sandbox_allocations"
       ],
       "protectedRelations": [
         "native_agent_connections"
@@ -9238,20 +9231,25 @@
       ]
     },
     "check_native_agent_lease(uuid,uuid,text,bigint,uuid,bigint,boolean)": {
-      "sha256": "afb245669e18e38a1e43fe18ee35c00cbef7ec2598f98c90dab7490d328204ae",
+      "sha256": "f82c0f2e4b1be42e2e3742472eb72d056201667c024982ea26b369e46015406c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres}",
       "relations": [
-        "agent_account_erasure_fences",
-        "native_agent_connections"
+        "agent_runs",
+        "native_agent_connections",
+        "agent_sandbox_allocations",
+        "agent_account_erasure_fences"
       ],
       "protectedRelations": [
+        "agent_runs",
         "native_agent_connections"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "agent_allocation_run_authority_current"
+      ]
     },
     "write_native_agent_connection(uuid,uuid,text,bigint,uuid,bigint,boolean,text)": {
       "sha256": "d7de130906b9911e5f64759425b02a0da6981a14066ec6f1c3f3a5a73aa1ca53",
@@ -9286,6 +9284,164 @@
       "functionReferences": [
         "check_native_agent_lease"
       ]
+    },
+    "guard_native_worker_run_contract()": {
+      "sha256": "8cda3fecb331fc85656531e44846b3fe7ee265145e6cb7901f3b9a33ae42b1dc",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "native_agent_connections",
+        "agent_account_erasure_fences"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": []
+    },
+    "acquire_native_worker_connection(uuid)": {
+      "sha256": "988418e578df5d681d46aaf6b33eaa794272ae9f0f0b04cb23c9232266ebba71",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_runs",
+        "native_agent_connections",
+        "agent_account_erasure_fences"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "agent_allocation_run_authority_current"
+      ]
+    },
+    "get_native_worker_connection(uuid,text,boolean)": {
+      "sha256": "1f876a82b63980ba9693bd09617f51faae25d83b33f9cfa1f0559eb1801a838c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections",
+        "agent_sandbox_allocations"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "get_native_worker_allocation(uuid,uuid,text,bigint,uuid,bigint)": {
+      "sha256": "6700b7becc78a11185fa6579bc5efddae3748fea8e870c5288d161867e120586",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections",
+        "agent_sandbox_allocations"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "stop_native_worker_connection(uuid,uuid,text,bigint,uuid,bigint)": {
+      "sha256": "93a44293774cf08994f159e8e8dcb7f863976fe7065f207c334d7abebf756b6a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "renew_native_worker_connection(uuid,uuid,text,bigint,uuid,bigint)": {
+      "sha256": "1bd213e349ee59a26fb507fb3dc77d1eaaf25ccfc5ae7f2ab858cda71f42e67f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "bind_native_worker_allocation(uuid,uuid,text,bigint,uuid,bigint,uuid)": {
+      "sha256": "5f8d9bfdcae770b0426906822dfc04009aa2599b48730d8ecb00204625730f32",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "native_agent_connections",
+        "agent_sandbox_allocations"
+      ],
+      "protectedRelations": [
+        "native_agent_connections"
+      ],
+      "functionReferences": [
+        "check_native_agent_lease"
+      ]
+    },
+    "upsert_agent_preferences_partial(uuid,jsonb)": {
+      "sha256": "322b68fa89ec329387a9ebdf5838cd61c2bf535796367c8a3d5476d253c4113d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "user_agent_preferences",
+        "agent_branch_prefix_scope"
+      ],
+      "protectedRelations": [
+        "user_agent_preferences"
+      ],
+      "functionReferences": []
+    },
+    "claim_native_worker_recovery(uuid,timestamp with time zone,timestamp with time zone,text,text,uuid)": {
+      "sha256": "7715eda61c620ff503686f4c8a55eeb0fbc060f8b9c815acadf509813a11f477",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_runs",
+        "native_agent_connections",
+        "agent_sandbox_allocations"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "native_agent_connections"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {
@@ -11256,6 +11412,10 @@
     "feedback_posts.feedback_descendant_objectives_sync": {
       "function": "sync_feedback_descendant_objectives()",
       "definition": "CREATE TRIGGER feedback_descendant_objectives_sync AFTER UPDATE OF objective_id ON feedback_posts FOR EACH ROW WHEN (old.objective_id IS DISTINCT FROM new.objective_id) EXECUTE FUNCTION sync_feedback_descendant_objectives()"
+    },
+    "agent_runs.agent_runs_native_contract": {
+      "function": "guard_native_worker_run_contract()",
+      "definition": "CREATE TRIGGER agent_runs_native_contract BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_native_worker_run_contract()"
     }
   }
 }

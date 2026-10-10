@@ -649,7 +649,8 @@
         "managed_budget_usd",
         "model_forced",
         "pr_inline_comments_used",
-        "pr_number"
+        "pr_number",
+        "native_connection_generation"
       ],
       "operational_configuration": [
         "agent_engine",
@@ -701,7 +702,8 @@
         "routine_id",
         "run_id",
         "sandbox_id",
-        "sandbox_reap_claim"
+        "sandbox_reap_claim",
+        "native_connection_id"
       ],
       "timestamp": [
         "base_branch_encryption_attempted_at",
@@ -4324,7 +4326,8 @@
         "default_model_provider",
         "default_reasoning_level",
         "sandbox_region",
-        "sandbox_size"
+        "sandbox_size",
+        "default_engine"
       ],
       "routing_identity": [
         "user_id"
@@ -4886,7 +4889,9 @@
         "id",
         "user_id",
         "engine",
-        "lease_id"
+        "lease_id",
+        "worker_run_id",
+        "worker_allocation_id"
       ],
       "bounded_metadata": [
         "status",

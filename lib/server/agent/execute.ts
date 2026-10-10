@@ -1,6 +1,12 @@
 import "server-only";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { nativeWorkerPaths } from "@/lib/native-agent-worker";
+import { describeAgentHarnessCapabilities } from "@/lib/agent-harness-capabilities";
+import type { NativeConnectionLease } from "./native-agent-credentials";
+import { claimNativeWorkerConnection, bindNativeWorkerAllocation, restoreNativeWorkerProfile, abortNativeWorkerConnection } from "./native-worker-connections";
+import { resolveWorkerHarness } from "./native-worker-selection";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { workerModelSurfaceForAgentRun } from "@/lib/ai-surfaces";
 import { getUserSandboxPreferences } from "./sandbox-preferences";
@@ -83,9 +89,11 @@ import {
   getModelInputPrice,
   getModelPricing,
   supportsImageInput,
+  type ResolvedAgentEndpoint,
 } from "./model";
 import {
   buildAgentNetworkPolicy,
+  buildNativeAgentNetworkPolicy,
   AGENT_LLM_PLACEHOLDER_KEY,
 } from "./network-policy";
 import { startVmLoop } from "./vm-launch";
@@ -575,6 +583,8 @@ export async function executeAgentRun(
     : "sandbox_compute";
   let sandbox: Sandbox | null = null;
   let allocation: SandboxAllocation | null = null;
+  let nativeLease: NativeConnectionLease | null = null;
+  const native = isNativeAgentEngine(run.agent_engine);
   /**
    * Keep the newly minted key locally as well as in the allocation ledger, so
    * a failed SQL handle registration can still revoke the known provider key.
@@ -650,6 +660,12 @@ export async function executeAgentRun(
 
     if (!run.created_by) throw new Error("Run has no owner");
     if (!run.model) throw new Error("Run has no model");
+    if (native) {
+      if (selfHostedSandbox || resolveAgentExecutionBackend(process.env) !== "vercel") {
+        throw new Error("Native subscription workers require hosted execution");
+      }
+      await resolveWorkerHarness(run.created_by, run);
+    }
 
     // Interruption requested while the run was QUEUED (between turns): return it to
     // rest without even waking the sandbox.
@@ -700,18 +716,20 @@ export async function executeAgentRun(
     const prefsPromise = resolveRunPrefs(run);
     const workerSurface = workerModelSurfaceForAgentRun(run);
     const quotaAndLedgerPromise = Promise.all([
-      checkAgentQuota(run.created_by ?? "", workerSurface).catch(() => null),
+      checkAgentQuota(run.created_by ?? "", workerSurface, { subscription: native }).catch(() => null),
       spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
       spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
     ]);
     // A BYOK run is fixed to its own payer. If the configuration disappeared, or a
     // desktop-only endpoint was requested from the server, preparation fails explicitly:
     // it must never fall back to the platform key.
-    const endpointPromise = resolveAgentApiKeyForRun(run.created_by, workerSurface, {
-      allowLocal: false,
-      keyMode: run.key_mode,
-      provider: run.worker_model_provider,
-    });
+    const endpointPromise: Promise<Omit<ResolvedAgentEndpoint, "mode"> & { mode: "platform" | "byok" | "subscription" }> = native
+      ? Promise.resolve({ apiKey: "", credentialVersion: null, mode: "subscription",
+          provider: run.agent_engine === "codex" ? "openai" : "anthropic",
+          baseUrl: run.agent_engine === "codex" ? "https://api.openai.com/v1" : "https://api.anthropic.com/v1" })
+      : resolveAgentApiKeyForRun(run.created_by, workerSurface, {
+          allowLocal: false, keyMode: run.key_mode, provider: run.worker_model_provider,
+        });
 
     // Clone target (fresh token for this chunk) + the provider's PR/MR client.
     const target = await targetPromise;
@@ -838,9 +856,10 @@ export async function executeAgentRun(
      * a 1.5× margin, and the ledger is reread for every chunk).
      */
     const [quotaNow, ledgerSpentUsd, platformLedgerSpentUsd] = quotaAndLedger;
+    if (native && !quotaNow?.allowed) throw new Error("Native worker compute budget unavailable");
     const operationSpentUsd = Math.max(run.cost_usd, ledgerSpentUsd ?? 0);
     const platformRunSpentUsd = Math.max(
-      run.key_mode === "platform" ? run.cost_usd : 0,
+      run.key_mode !== "byok" ? run.cost_usd : 0,
       platformLedgerSpentUsd ?? 0,
     );
 
@@ -878,7 +897,16 @@ export async function executeAgentRun(
      * erasure until the durable provisioning intent is reconciled.
      */
     let vmKeyHash: string | null = null;
+    if (native) {
+      nativeLease = await claimNativeWorkerConnection(run.id);
+      if (!nativeLease) {
+        await stampRun(run.id, { status: "queued", attempts: 0,
+          not_before: new Date(Date.now() + 15_000).toISOString(), last_activity_at: new Date().toISOString() });
+        return "suspended";
+      }
+    }
     allocation = await reserveSandboxAllocation(run.id);
+    if (nativeLease) await bindNativeWorkerAllocation(nativeLease, allocation);
     let vmKey = selfHostedSandbox ? AGENT_LLM_PLACEHOLDER_KEY : apiKey;
     if (keyMode === "platform") {
       if (!selfHostedSandbox) {
@@ -923,7 +951,7 @@ export async function executeAgentRun(
       }
       return vmTarget.remoteUrl;
     };
-    const networkPolicy = buildAgentNetworkPolicy({
+    const networkPolicy = (native ? buildNativeAgentNetworkPolicy : buildAgentNetworkPolicy)({
       baseUrl, llmKey: vmKey, appOrigin: agentControlOrigin(),
       ...(vmTarget ? {
         forge: {
@@ -1031,6 +1059,7 @@ export async function executeAgentRun(
       throw new Error("agent_allocation_attachment_failed");
     }
     uninstalledVmKeyHash = null;
+    if (nativeLease && sandbox) await restoreNativeWorkerProfile(nativeLease, sandbox);
 
     // No one can use the PREVIOUS chunk's key anymore: the policy just installed
     // injects the new one. Revoke it immediately rather than waiting for expiry —
@@ -1068,7 +1097,7 @@ export async function executeAgentRun(
     // for the same reason as web_search: the prompt must describe only what the
     // run can actually do. This also lets `read_resource` return a mockup instead
     // of its metadata.
-    const imageInput = await supportsImageInput(
+    const imageInput = !native && await supportsImageInput(
       run.model,
       provider,
       apiKey,
@@ -1084,11 +1113,11 @@ export async function executeAgentRun(
     // inherits the parent's model. Load the catalog only in that case (it is cached
     // for an hour and never throws): it validates an ID and FILTERS for tool
     // calling — a subagent that cannot call tools cannot do anything.
-    const subagentModels = provider === "openrouter";
+    const subagentModels = !native && provider === "openrouter";
     const [rawFavorites, subagentMaxParallel, subagentCatalog] =
       await Promise.all([
-        getSubagentFavorites().catch(() => []),
-        maxParallelSubagents().catch(() => 2),
+        native ? Promise.resolve([]) : getSubagentFavorites().catch(() => []),
+        native ? Promise.resolve(0) : maxParallelSubagents().catch(() => 2),
         subagentModels && run.created_by
           ? getAgentModelsForUser(run.created_by).catch(() => null)
           : Promise.resolve(null),
@@ -1123,11 +1152,13 @@ export async function executeAgentRun(
       ).flatMap(([id, pricing]) => (pricing ? [[id, pricing] as const] : [])),
     );
 
-    const journalPointer = run.checkpoint?.opencode;
+    const journalPointer = native ? undefined : run.checkpoint?.opencode;
     const restoredJournal = journalPointer?.sessionId
       ? await loadRunJournal(run.id, journalPointer.sessionId)
       : null;
     const canResumeOpencode = restoredJournal !== null;
+    const canResumeNative = native && run.checkpoint?.native?.engine === run.agent_engine &&
+      (run.checkpoint.native.history.length ?? 0) > 0;
     const priorMemoryUnavailable =
       priorConversationLost(run) ||
       (journalPointer?.sessionId !== undefined && !canResumeOpencode);
@@ -1147,7 +1178,7 @@ export async function executeAgentRun(
       paths: [...(run.checkpoint?.instructions?.paths ?? [])],
       bytes: run.checkpoint?.instructions?.bytes ?? 0,
     };
-    if (canResumeOpencode) {
+    if (canResumeOpencode || canResumeNative) {
       /**
        * A CONTINUED OPENCODE TURN NEEDS NO BOOTSTRAP (MIN-286).
        *
@@ -1346,7 +1377,7 @@ export async function executeAgentRun(
     const repoMode: VmJob["repoMode"] = "clone";
     const currentRepo = isCurrentRepoJob({ repoMode });
     const opencodeInput = {
-      anchorInstructions: buildOpencodeAnchor({
+      anchorInstructions: `${describeAgentHarnessCapabilities(native ? run.agent_engine as "codex" | "claude_code" : "opencode")}\n\n` + buildOpencodeAnchor({
         locale: commentLocale,
         anchor,
         currentRepo,
@@ -1376,7 +1407,9 @@ export async function executeAgentRun(
        * lost (see `priorConversationLost`): without this sentence, it would answer
        * a message whose context it cannot see.
        */
-      prompt: priorMemoryUnavailable
+      prompt: canResumeNative
+        ? "Continue the previous Minddy worker conversation with its saved context. Follow pending user instructions and recheck the current repository state."
+        : priorMemoryUnavailable
         ? `${PRIOR_CONVERSATION_LOST_NOTE(commentLocale)}\n\n${userPromptFromMessages(messages)}`
         : userPromptFromMessages(messages),
     };
@@ -1396,7 +1429,7 @@ export async function executeAgentRun(
     // `modelPricing` comes from the SAME index (and therefore the same cached round
     // trip): it goes into the microVM so the opencode harness bills at our prices
     // rather than those of a third-party catalog (MIN-286, see `VmModelPricing`).
-    const [contextWindow, inputUsdPerMTok, modelPricing] = await Promise.all([
+    const [contextWindow, inputUsdPerMTok, modelPricing] = native ? [null, null, null] : await Promise.all([
       getModelContextWindow(run.model, provider, apiKey).catch(() => null),
       getModelInputPrice(run.model, provider, apiKey).catch(() => null),
       getModelPricing(run.model, provider, apiKey).catch(() => null),
@@ -1553,6 +1586,15 @@ export async function executeAgentRun(
     // when bootstrap ends (see `VmJob.bootstrapMs`).
     const job: Omit<VmJob, "bootstrapMs"> = {
       protocolVersion: VM_PROTOCOL_VERSION,
+      engine: native ? run.agent_engine as "codex" | "claude_code" : "opencode",
+      ...(native && run.sandbox_billing ? { sandboxUsdPerMinute: run.sandbox_billing.usdPerMinute } : {}),
+      ...(native ? { nativeAgent: {
+        engine: run.agent_engine as "codex" | "claude_code",
+        privateRoot: nativeWorkerPaths(cloudLayout()).privateRoot,
+        profileRoot: nativeWorkerPaths(cloudLayout()).profileRoot,
+        profileExportPath: nativeWorkerPaths(cloudLayout()).profileExportPath,
+        history: run.checkpoint?.native?.engine === run.agent_engine ? run.checkpoint.native.history : [],
+      } } : {}),
       /**
        * WHERE THIS TURN WORKS (MIN-354). A microVM is created for one run and that
        * run alone: its layout is the cloud layout, with no other choice to make.
@@ -1590,7 +1632,7 @@ export async function executeAgentRun(
           delivered: run.pr_number != null && run.pr_state !== "merged" && run.pr_state !== "closed",
         },
       } : {}),
-      interactive: true,
+      interactive: !run.routine_id,
       ...(run.parent_numo_turn_id && run.parent_numo_conversation_id
         ? {
             numoMediation: {
@@ -1687,6 +1729,8 @@ export async function executeAgentRun(
     vmLoopLaunched = true;
     return "detached";
   } catch (err) {
+    // Fence native authentication before changing run status or scheduling retries.
+    if (nativeLease && !vmLoopLaunched) await abortNativeWorkerConnection(run.id, nativeLease);
     // Redacted BEFORE any use (MIN-239): a rejected `git clone` copies the entire
     // clone URL — including the token — into stderr, and this message goes into the
     // `error` event and then `agent_runs.error_message`, which the UI displays.

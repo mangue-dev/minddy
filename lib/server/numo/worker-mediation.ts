@@ -49,10 +49,10 @@ export async function cancelStoppedTurnWorkerInputs(turnId: string): Promise<voi
 }
 
 function managedResumeBudget(run: AgentRun, quota: Awaited<ReturnType<typeof checkAgentQuota>>) {
-  if (run.key_mode !== "platform") {
+  if (run.key_mode === "byok") {
     return { usageSince: null, budgetCap: null, requestedBudget: null };
   }
-  if (quota.mode !== "platform" || quota.cap == null || !quota.periodStart) {
+  if (quota.mode === "byok" || quota.cap == null || !quota.periodStart) {
     return null;
   }
   return {
@@ -84,7 +84,7 @@ export async function answerNumoWorkerInput(input: {
     return { action: "refused", reason: "worker_input_mismatch" };
   }
 
-  const quota = await checkAgentQuota(input.userId);
+  const quota = await checkAgentQuota(input.userId, "agent", { subscription: run.key_mode === "subscription" });
   if (!quota.allowed) return { action: "refused", reason: "quota_exceeded" };
   const budget = managedResumeBudget(run, quota);
   if (!budget) return { action: "refused", reason: "quota_exceeded" };
@@ -277,7 +277,7 @@ export async function relaunchNumoWorkerRun(input: {
   // is a billable turn on the OWNER's key — same budget control as /steer.
   const ownerId = run.created_by;
   if (!ownerId) return { ok: false, code: "not_found" };
-  const quota = await checkAgentQuota(ownerId);
+  const quota = await checkAgentQuota(ownerId, "agent", { subscription: run.key_mode === "subscription" });
   if (!quota.allowed) return { ok: false, code: "quota_exceeded" };
   const budget = managedResumeBudget(run, quota);
   if (!budget) return { ok: false, code: "quota_exceeded" };

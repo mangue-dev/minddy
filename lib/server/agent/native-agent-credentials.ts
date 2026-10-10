@@ -12,8 +12,10 @@ export type NativeConnectionLease = {
   generation: number;
   leaseId: string;
   revision: number;
-  kind: "login" | "test" | "stop";
+  kind: "login" | "test" | "worker" | "stop";
   leaseExpiresAt: string;
+  workerRunId?: string;
+  workerAllocationId?: string;
 };
 
 export type NativeConnectionMetadata = {
@@ -35,8 +37,10 @@ type StoredConnection = {
   generation: number;
   revision: number;
   lease_id: string | null;
-  lease_kind: "login" | "test" | "stop" | null;
+  lease_kind: "login" | "test" | "worker" | "stop" | null;
   lease_expires_at: string | null;
+  worker_run_id?: string | null;
+  worker_allocation_id?: string | null;
   updated_at: string;
   profile_ciphertext?: string | null;
   runtime_ciphertext?: string | null;
@@ -129,7 +133,9 @@ function asLease(row: StoredConnection): NativeConnectionLease {
   if (!row.lease_id || !row.lease_kind || !row.lease_expires_at) throw new Error("Missing native connection lease");
   return { connectionId: row.id, userId: row.user_id, engine: row.engine,
     generation: row.generation, revision: row.revision, leaseId: row.lease_id,
-    kind: row.lease_kind, leaseExpiresAt: row.lease_expires_at };
+    kind: row.lease_kind, leaseExpiresAt: row.lease_expires_at,
+    ...(row.worker_run_id ? { workerRunId: row.worker_run_id } : {}),
+    ...(row.worker_allocation_id ? { workerAllocationId: row.worker_allocation_id } : {}) };
 }
 
 function fence(lease: NativeConnectionLease) {
@@ -168,7 +174,7 @@ export async function getNativeConnectionLease(userId: string, engine: NativeHar
   assertEngine(engine);
   if (!userId) throw new Error("Native credential owner is required");
   const { data, error } = await getServiceClient().from("native_agent_connections")
-    .select("id,user_id,engine,generation,revision,lease_id,lease_kind,lease_expires_at")
+    .select("id,user_id,engine,generation,revision,lease_id,lease_kind,lease_expires_at,worker_run_id,worker_allocation_id")
     .eq("user_id", userId).eq("engine", engine).maybeSingle();
   if (error) throw new Error("Unable to load native connection lease");
   const row = data as StoredConnection | null;
@@ -190,6 +196,40 @@ export async function listNativeCleanupCandidates(limit = 8): Promise<Array<{ us
 export async function loadNativeProfile(lease: NativeConnectionLease): Promise<NativeCredentialProfile | null> {
   const row = await call("read_native_agent_connection", { ...fence(lease), p_runtime: false });
   return row.profile_ciphertext ? decryptNativeProfile(lease, row.profile_ciphertext) : null;
+}
+
+/** A busy account returns no lease; every other admission failure remains an error. */
+export async function acquireNativeWorkerConnection(runId: string): Promise<NativeConnectionLease | null> {
+  if (!runId) throw new Error("Native worker run is required");
+  const { data, error } = await getServiceClient().rpc("acquire_native_worker_connection", { p_run_id: runId }).maybeSingle();
+  if (error) throw new Error("Native worker admission rejected");
+  return data ? asLease(data as StoredConnection) : null;
+}
+
+export async function bindNativeWorkerConnection(lease: NativeConnectionLease, allocationId: string): Promise<void> {
+  const row = await call("bind_native_worker_allocation", { ...fence(lease), p_allocation_id: allocationId });
+  lease.revision = row.revision;
+  lease.workerAllocationId = row.worker_allocation_id ?? undefined;
+}
+
+/** Worker lookup returns metadata only, even when cleanup bypasses live run authority. */
+export async function getNativeWorkerConnection(runId: string, sandboxName?: string,
+  options: { execution?: boolean } = { execution: true }): Promise<NativeConnectionLease | null> {
+  const { data, error } = await getServiceClient().rpc("get_native_worker_connection", {
+    p_run_id: runId, p_sandbox_name: sandboxName ?? null, p_execution: options.execution !== false,
+  }).maybeSingle();
+  if (error) throw new Error("Native worker authority rejected");
+  return data ? asLease(data as StoredConnection) : null;
+}
+
+export async function renewNativeWorkerLease(lease: NativeConnectionLease): Promise<void> {
+  const row = await call("renew_native_worker_connection", fence(lease));
+  lease.leaseExpiresAt = row.lease_expires_at!;
+}
+
+/** Pre-injection failure retires execution while preserving the connected profile. */
+export async function stopNativeWorkerLease(lease: NativeConnectionLease): Promise<NativeConnectionLease> {
+  return asLease(await call("stop_native_worker_connection", fence(lease)));
 }
 
 export async function saveNativeProfile(lease: NativeConnectionLease, profile: NativeCredentialProfile): Promise<void> {

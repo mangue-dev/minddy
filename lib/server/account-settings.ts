@@ -51,6 +51,10 @@ import {
   type NotificationPrefs,
 } from "@/lib/notification-prefs";
 import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
+import { isLiveAgentEngine, type LiveAgentEngine } from "@/lib/agent-engines";
+import { agentHarnessCapabilities, describeAgentHarnessCapabilities } from "@/lib/agent-harness-capabilities";
+import { nativePrototypeEnabledFor } from "./agent/native-prototype/access";
+import { listNativeConnections } from "./agent/native-agent-credentials";
 import {
   ACCOUNT_THEME_META_KEY,
   isAccountTheme,
@@ -128,6 +132,12 @@ export interface AccountSettings {
 }
 
 export interface AgentPrefs {
+  default_engine: LiveAgentEngine;
+  native_agents_enabled: boolean;
+  /** Status only: no profile, approval, runtime or lease capabilities reach Numo. */
+  native_connection: "not_selected" | "unavailable" | "disconnected" | "connected" | "busy" | "reconnect_required";
+  harness_capabilities: ReturnType<typeof agentHarnessCapabilities>;
+  harness_description: string;
   default_model: string | null;
   default_reasoning_level: ReasoningLevel | null;
   branch_prefix: string;
@@ -159,7 +169,7 @@ async function readAgentPrefs(
   const { data, error } = await service
     .from("user_agent_preferences")
     .select(
-      "default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size"
+      "default_engine, default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -168,9 +178,33 @@ async function readAgentPrefs(
     return { ok: false, error: error.message };
   }
   const sandbox = resolveSandboxPreferences(data);
+  const storedEngine = (data as { default_engine?: unknown } | null)?.default_engine;
+  if (storedEngine != null && !isLiveAgentEngine(storedEngine)) {
+    return { ok: false, error: "Could not read the selected code agent." };
+  }
+  const engine = storedEngine ?? "opencode";
+  const enabled = nativePrototypeEnabledFor(userId);
+  let connection: AgentPrefs["native_connection"] = "not_selected";
+  if (engine !== "opencode") {
+    connection = "unavailable";
+    if (enabled) {
+      try {
+        const metadata = (await listNativeConnections(userId)).find((item) => item.engine === engine);
+        connection = !metadata || metadata.status === "disconnected" ? "disconnected"
+          : metadata.stopRequired ? "reconnect_required" : metadata.busy ? "busy" : "connected";
+      } catch {
+        return { ok: false, error: "Could not read native connection status." };
+      }
+    }
+  }
   return {
     ok: true,
     prefs: {
+      default_engine: engine,
+      native_agents_enabled: enabled,
+      native_connection: connection,
+      harness_capabilities: agentHarnessCapabilities(engine),
+      harness_description: describeAgentHarnessCapabilities(engine),
       default_model: (data as { default_model?: string | null } | null)?.default_model ?? null,
       default_reasoning_level: isReasoningLevel(
         (data as { default_reasoning_level?: string | null } | null)?.default_reasoning_level
@@ -267,11 +301,11 @@ export async function updateAccountSettings({
   // Account settings route may change them. Keep this check here as a
   // server-side boundary even when a caller forges fields absent from the tool
   // schema.
-  if ("default_model" in input || "default_reasoning_level" in input) {
+  if ("default_engine" in input || "default_model" in input || "default_reasoning_level" in input) {
     return {
       ok: false,
       error:
-        "Code-worker model and reasoning can only be changed in Account settings.",
+        "Code-agent engine, model and reasoning can only be changed in Account settings.",
     };
   }
 

@@ -18,6 +18,11 @@ vi.mock("mangue-ui", () => ({
   Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Button: ({ size: _size, variant: _variant, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string }) => <button {...props} />,
   Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+  Select: ({ value, disabled, onValueChange, children }: { value: string; disabled: boolean; onValueChange: (value: string) => void; children: ReactNode }) => <select aria-label="Code agent" value={value} disabled={disabled} onChange={(event) => onValueChange(event.target.value)}>{children}</select>,
+  SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+  SelectTrigger: () => null,
+  SelectValue: () => null,
+  SelectItem: ({ value, disabled, children }: { value: string; disabled?: boolean; children: ReactNode }) => <option value={value} disabled={disabled}>{children}</option>,
 }));
 vi.mock("./settings-ui", () => ({
   SettingsGroup: ({ title, action, children, className }: { title: ReactNode; action: ReactNode; children: ReactNode; className: string }) => <section className={className}><h2>{title}</h2>{action}{children}</section>,
@@ -42,9 +47,9 @@ afterEach(async () => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
-async function render() {
+async function render(props: Parameters<typeof NativeAgentConnections>[0] = {}) {
   await act(() => root.render(<NextIntlClientProvider locale="en" messages={messages}>
-    <NativeAgentConnections />
+    <NativeAgentConnections {...props} />
   </NextIntlClientProvider>));
 }
 async function click(label: string) {
@@ -112,4 +117,45 @@ it("keeps failed tests explicit and shows only translated recovery guidance", as
   expect(host.textContent).toContain("Check your plan and account access.");
   expect(host.textContent).not.toContain("subscription_unavailable");
   expect(host.textContent).not.toContain("Native access and Minddy tools worked");
+});
+
+it("permits only connected native selections while preserving busy profiles", async () => {
+  api.fetchNativeConnections.mockResolvedValue({ enabled: true, connections: [
+    { engine: "codex", status: "busy", updatedAt: null },
+    { engine: "claude_code", status: "reconnect_required", updatedAt: null },
+  ] });
+  const save = vi.fn().mockResolvedValue(undefined);
+  await render({ onEngineChange: save, nativeAgentsEnabled: true });
+  const select = host.querySelector("select")!;
+  expect(select.querySelector<HTMLOptionElement>('[value="codex"]')!.disabled).toBe(false);
+  expect(select.querySelector<HTMLOptionElement>('[value="claude_code"]')!.disabled).toBe(true);
+  await act(() => { select.value = "codex"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(save).toHaveBeenCalledWith("codex");
+});
+
+it("retains an unavailable native default and offers explicit OpenCode recovery", async () => {
+  api.fetchNativeConnections.mockResolvedValue({ enabled: false, connections: [] });
+  const save = vi.fn().mockResolvedValue(undefined);
+  await render({ defaultEngine: "codex", nativeAgentsEnabled: false, onEngineChange: save });
+  const select = host.querySelector("select")!;
+  expect(select.value).toBe("codex");
+  expect(host.textContent).toContain("Choose OpenCode explicitly");
+  expect(host.querySelector("button")).toBeNull();
+  expect(save).not.toHaveBeenCalled();
+  await act(() => { select.value = "opencode"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(save).toHaveBeenCalledWith("opencode");
+});
+
+it("keeps the native default when its connection is removed and sanitizes selection failures", async () => {
+  api.fetchNativeConnections.mockResolvedValue({ enabled: true, connections: [] });
+  const save = vi.fn().mockRejectedValue(new Error("secret native transcript"));
+  await render({ defaultEngine: "codex", nativeAgentsEnabled: true, onEngineChange: save });
+  const select = host.querySelector("select")!;
+  expect(select.value).toBe("codex");
+  expect(host.textContent).toContain("Reconnect this account before starting code work");
+  expect(save).not.toHaveBeenCalled();
+  await act(() => { select.value = "opencode"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  expect(select.value).toBe("codex");
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe("The request failed. Try again.");
+  expect(host.innerHTML).not.toContain("secret native transcript");
 });

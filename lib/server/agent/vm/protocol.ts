@@ -49,7 +49,7 @@ import type { AgentLiveDiff } from "../agent-contract";
  * **3** — self-hosted server jobs now require an LLM relay endpoint. An older
  * harness would otherwise request a provider key directly from the control plane.
  */
-export const VM_PROTOCOL_VERSION = 3;
+export const VM_PROTOCOL_VERSION = 4;
 
 /**
  * `vmBundlePath` and `vmJobPath` now live in
@@ -148,6 +148,18 @@ export interface VmLocalProject {
  * conversation into a commit to the user's repository.
  */
 export interface VmJob {
+  /** Trusted hosted compute rate for native subscription turn admission. */
+  sandboxUsdPerMinute?: number;
+  /** Immutable harness identity; omission is retained for historical OpenCode fixtures. */
+  engine?: import("@/lib/agent-engines").LiveAgentEngine;
+  /** Trusted SDK file paths only. Authentication material never enters the job. */
+  nativeAgent?: {
+    engine: "codex" | "claude_code";
+    privateRoot: string;
+    profileRoot: string;
+    profileExportPath: string;
+    history?: import("@/lib/native-agent-worker").NativeWorkerMessage[];
+  };
   /** The version of the contract (see `VM_PROTOCOL_VERSION`). The harness REFUSES this
    * that it does not recognize rather than silently ignoring the fields. */
   protocolVersion: number;
@@ -396,6 +408,31 @@ export function parseVmJob(raw: unknown): VmJob {
     throw new Error("vm job: missing layout");
   }
   assertUsableLayout(job.layout);
+  if (job.engine !== undefined && !["opencode", "codex", "claude_code"].includes(job.engine)) {
+    throw new Error("vm job: unsupported harness");
+  }
+  const native = job.engine === "codex" || job.engine === "claude_code";
+  if (job.sandboxUsdPerMinute !== undefined && (!Number.isFinite(job.sandboxUsdPerMinute) || job.sandboxUsdPerMinute < 0)) {
+    throw new Error("vm job: invalid sandbox compute rate");
+  }
+  if (native) {
+    const config = job.nativeAgent;
+    const privateRoot = `${job.layout.harnessDir}/native-private`;
+    if (!config || config.engine !== job.engine || config.privateRoot !== privateRoot ||
+        config.profileRoot !== `${privateRoot}/profiles` || config.profileExportPath !== `${privateRoot}/profile-export.json` ||
+        Object.keys(config).some((key) => !["engine", "privateRoot", "profileRoot", "profileExportPath", "history"].includes(key)) ||
+        job.controlToken || job.executionEnvironment || job.repoMode !== "clone") {
+      throw new Error("vm job: invalid hosted native harness contract");
+    }
+    if (config.history !== undefined && (!Array.isArray(config.history) || config.history.length > 512 ||
+        JSON.stringify(config.history).length > 1_000_000 || config.history.some((message) => !message ||
+          !["user", "assistant"].includes(message.role) || typeof message.text !== "string" ||
+          Object.keys(message).some((key) => !["role", "text"].includes(key))))) {
+      throw new Error("vm job: invalid native conversation history");
+    }
+  } else if (job.nativeAgent !== undefined) {
+    throw new Error("vm job: native state cannot be used by OpenCode");
+  }
   // MIN-358: the deposit mode has NO default. A silent job cannot be
   // treated as a clone — it's the `current` mode that is dangerous to play by
   // error, and it is precisely the one that a job of an unexpected form would silence.
@@ -490,6 +527,8 @@ export interface VmPushResult {
  * the forge. The VM is not part of it, and has nothing to believe in it.
  */
 export interface VmTurnReport {
+  /** Signals that the stopped native process exported to its trusted SDK file. */
+  nativeAuthExportReady?: boolean;
   /** The same states as `AgentLoopResult`, minus `suspended`: a turn that lives
    * in the VM no longer splits, so it no longer suspends. What the loop
    * calls `suspended` arrives here in `error`, and its CAUSE travels in
