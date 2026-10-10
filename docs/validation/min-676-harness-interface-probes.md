@@ -36,6 +36,9 @@ npm exec --yes --package=@openai/codex@0.162.1 -- codex login --help
 npm exec --yes --package=@anthropic-ai/claude-code@2.1.296 -- claude --version
 npm exec --yes --package=@anthropic-ai/claude-code@2.1.296 -- claude auth login --help
 npm exec --yes --package=@anthropic-ai/claude-code@2.1.296 -- claude --help
+npm exec --yes --package=@anthropic-ai/claude-code@2.1.296 -- claude setup-token --help
+npm exec --yes --package=@openai/codex@0.162.1 -- codex mcp --help
+npm exec --yes --package=@anthropic-ai/claude-code@2.1.296 -- claude mcp --help
 MIN676_PROBE_DIR=$(mktemp -d /tmp/minddy-min676-probe.XXXXXX)
 npm exec --yes --package=@openai/codex@0.162.1 -- codex app-server generate-json-schema --out "$MIN676_PROBE_DIR/codex-schema"
 ```
@@ -124,3 +127,51 @@ codes, tokens, login transcripts or production account data as proof.
 
 Repository checks for this documentation-only delivery are recorded in the PR.
 No runtime or public-manual behavior is changed by these two internal documents.
+
+## Durable account connection refinement
+
+The owner's follow-up makes persistent account authentication mandatory, with
+Codex and Claude Code as the initial native engines. An already authenticated
+live allocation does not demonstrate acceptance. Setup must work in account AI
+settings without an issue, project, run or locally installed agent.
+
+Three additional pinned help commands above exited successfully. Claude's
+`setup-token --help` confirms a long-lived subscription-token command; the
+MCP commands confirm server-management interfaces in both binaries. These
+checks requested help only: no token was generated, MCP server configured,
+credential file opened or account authenticated. Token lifetime and restoration
+behavior below are documentary evidence, not results from these help probes.
+
+| Primary source reviewed on 2026-10-10 | Established scope | Remaining validation |
+| --- | --- | --- |
+| [Codex CI authentication](https://learn.chatgpt.com/docs/auth/ci-cd-auth) | Ephemeral runners restore native auth and save the refreshed version; concurrent copies are discouraged. | Paid Minddy custody permission, encrypted write-back, lease/crash behavior and cold hosted execution. |
+| [Claude authentication](https://code.claude.com/docs/en/authentication), [GitHub Actions](https://code.claude.com/docs/en/github-actions) | Native cached credentials and subscription CI tokens provide technical repeated-run mechanisms. | The hosted native permission does not resolve [third-party token-storage restrictions](https://code.claude.com/docs/en/legal-and-compliance) for a Minddy account vault. |
+| [Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli), [Claude MCP](https://code.claude.com/docs/en/mcp) | Both native clients support configured MCP servers. | Actual admitted Minddy tools, strict configuration, startup errors, mutation acknowledgement and Numo mediation. |
+| [Linear coding sessions](https://linear.app/docs/coding-sessions), [AI credits](https://linear.app/docs/ai-credits), [Codex in Linear](https://learn.chatgpt.com/docs/third-party/linear) | Integrated Linear coding sessions use workspace credits; the separate ChatGPT-account integration starts provider cloud chats. | No inspected source discloses native personal credential storage in Linear-hosted ephemeral workers. |
+
+The encryption inspection found user-scoped `EncryptedStore` primitives in
+`lib/server/encryption/store.ts` and ownership-aware API-key access in
+`lib/server/user-ai-key-content.ts`. This is reusable infrastructure, not an
+implemented native vault. Its legacy/feature-flag fallback must not become an
+unencrypted path for new subscription credentials. New entities require their
+own guarded access, encryption policy, inventory and recovery/deletion tests.
+
+Before enabling either native engine, record sanitized evidence for:
+
+- One native account login, destruction of its setup sandbox, and two later
+  cold allocations that use the same personal subscription without browser
+  reauthentication or a warm VM.
+- A real native renewal followed by versioned encrypted write-back and cold
+  restore of the updated credential; concurrent/late writers and crash windows
+  cannot restore an old seed or revive a disconnected connection.
+- Complete cleanup of runtime plaintext while the authorized encrypted account
+  profile survives; disconnect and account deletion fence active allocations
+  and saved-state recovery, including restored backups.
+- Every Numo launch mode resolving the selected account harness, and verified
+  MCP operations or acknowledged Numo mediation of unsupported capabilities.
+- Exception-only reconnect for unusable provider access, honest provider quota
+  errors, separate Minddy compute/Numo charges and no automatic API fallback.
+
+None of these live outcomes was exercised in this refinement. Provider custody
+authorization, secret-free transport and OS isolation are release gates; a
+documented capability or another product's implementation is not a passed test.
