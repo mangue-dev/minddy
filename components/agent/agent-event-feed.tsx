@@ -990,6 +990,8 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   turnTooBig: "errorTurnTooBig",
   turnHistoryReset: "errorTurnHistoryReset",
   replyIncomplete: "errorReplyIncomplete",
+  nativePublicationFailed: "errorNativePublicationFailed",
+  nativeDeliveryMissing: "errorNativeDeliveryMissing",
   providerUnavailable: "errorProviderUnavailable",
   // MIN-224: the microVM loop process died before concluding.
   // This was noticed by the watchdog (`reapDeadVmRuns`), and the session

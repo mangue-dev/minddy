@@ -2621,6 +2621,8 @@
     "errorTurnTooBig": "Ce tour est devenu trop volumineux pour être poursuivi; son travail est gardé. Envoyez un message pour en ouvrir un nouveau.",
     "errorTurnHistoryReset": "Cette conversation est devenue trop volumineuse pour être reprise, elle a donc été réinitialisée; le travail est gardé. Le tour suivant repart du ticket : redites ce qu'il reste à faire.",
     "errorReplyIncomplete": "La réponse du modèle n'est jamais arrivée en entier; son travail est gardé, et rien n'a été commité. Envoyez un message pour poursuivre.",
+    "errorNativePublicationFailed": "La branche distante n’a pas reçu les modifications de ce tour. Les modifications non publiées sont perdues à la suppression de la sandbox. Envoyez un message pour réessayer depuis la dernière branche sauvegardée.",
+    "errorNativeDeliveryMissing": "La pull request demandée n’a pas été créée. Seul le travail poussé sur la branche distante est sauvegardé. Envoyez un message pour réessayer depuis cette branche.",
     "errorProviderUnavailable": "Le fournisseur du modèle a échoué de façon répétée, ce tour est donc en pause; son travail est gardé. Envoyez un message pour poursuivre.",
     "errorTurnLost": "Le processus de ce tour s’est arrêté avant la fin ; la conversation a été restaurée depuis sa dernière sauvegarde. Envoyez un message pour continuer.",
     "errorUsageRejected": "Un relevé de consommation de cette conversation a été rejeté car son montant était impossible. Il n’a pas été décompté et le tour continue.",

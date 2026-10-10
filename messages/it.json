@@ -2621,6 +2621,8 @@
     "errorTurnTooBig": "Questo giro è cresciuto troppo grande per continuare; il suo lavoro è mantenuto. Inviare un messaggio per iniziare un nuovo.",
     "errorTurnHistoryReset": "Questa conversazione è cresciuta troppo grande per essere rimossa, quindi è stata resettata; il lavoro è mantenuto. Il turno successivo parte dal biglietto, quindi ripetete quello che ancora deve essere fatto.",
     "errorReplyIncomplete": "La risposta del modello non è mai stata completa; il suo lavoro è mantenuto, e nulla è stato commesso. Invia un messaggio per continuare.",
+    "errorNativePublicationFailed": "Il branch remoto non ha ricevuto le modifiche di questo turno. Le modifiche non pubblicate vanno perse quando la sandbox viene eliminata. Invia un messaggio per riprovare dall’ultimo branch salvato.",
+    "errorNativeDeliveryMissing": "La pull request richiesta non è stata creata. Solo il lavoro inviato al branch remoto viene salvato. Invia un messaggio per riprovare da quel branch.",
     "errorProviderUnavailable": "Il provider del modello ha continuato a fallire, quindi questo turno è stato interrotto; il suo lavoro è mantenuto. Inviare un messaggio per continuare.",
     "errorTurnLost": "Il processo di questo turno si è interrotto prima di terminare; la conversazione è stata ripristinata dall’ultimo salvataggio. Invia un messaggio per continuare.",
     "errorUsageRejected": "Un registro di spesa di questa conversazione è stato rifiutato perché l’importo era impossibile, quindi non è stato conteggiato. Il turno continua.",

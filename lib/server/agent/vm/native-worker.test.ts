@@ -46,7 +46,9 @@ describe("native worker boundary", () => {
     expect(args.join(" ")).toContain(`${JSON.stringify(job.nativeAgent!.privateRoot)}="deny"`);
     expect(args.join(" ")).toContain('"/proc"="deny"'); expect(args.join(" ")).toContain('"/sys"="deny"');
     expect(args.join(" ")).toContain(`${JSON.stringify(job.layout.repoDir)}="write"`);
+    expect(args.join(" ")).toContain(`${JSON.stringify(join(job.layout.repoDir, ".git"))}="write"`);
     expect(nativeKernelArguments({ ...job, writesToRepo: false }, "node", []).join(" ")).toContain(`${JSON.stringify(job.layout.repoDir)}="read"`);
+    expect(nativeKernelArguments({ ...job, writesToRepo: false }, "node", []).join(" ")).not.toContain(`${JSON.stringify(join(job.layout.repoDir, ".git"))}="write"`);
     expect(nativeToolEnvironment("/home", "/tmp")).not.toHaveProperty("CODEX_HOME");
     expect(() => nativeToolEnvironment("/home", "/tmp", { ANTHROPIC_AUTH_TOKEN: "forbidden" })).toThrow();
   });
@@ -131,6 +133,26 @@ describe("native worker MCP", () => {
 });
 
 describe("native supervisor lifecycle", () => {
+  it("does not publish a success summary when the final repository publication fails", async () => {
+    const context = await setup();
+    expect((await context.host.exec("git init")).exitCode).toBe(0);
+    expect((await context.host.exec("git -c user.name=Fixture -c user.email=fixture@example.test commit --allow-empty -m 'Initial fixture'")).exitCode).toBe(0);
+    let writeResult: Awaited<ReturnType<typeof invoke>> | undefined;
+    const runtime: NativeRuntime = {
+      start: async (input) => {
+        const result = await invoke(input.mcpUrl, input.mcpToken, "tools/call", { name: "write_file", arguments: { path: "result.txt", content: "Implementation ready" } });
+        writeResult = result;
+      },
+      async *events() { yield { type: "completed", reply: "Implementation complete" }; },
+      steer: async () => {}, interrupt: async () => {}, close: async () => {},
+    };
+    const report = await runNativeTurn(context.job, { prompt: "Implement the fixture", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => "/fixture/bin" });
+    expect(writeResult).toMatchObject({ value: { result: { content: [{ text: '{"written":"result.txt"}' }] } } });
+    expect(report.pushError).toBe("Native repository publication failed safely");
+    expect(report.pushed).toBeNull();
+    expect(report.nativeAuthExportReady).toBe(true);
+    expect(context.cp.emit).not.toHaveBeenCalledWith("summary", expect.anything());
+  });
   it("imports auth after the kernel gate, uses real MCP, masks secrets and exports only after child shutdown", async () => {
     const context = await setup(); const order: string[] = [];
     context.host.verifyIsolation = async () => { order.push("kernel"); };

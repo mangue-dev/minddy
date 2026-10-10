@@ -2621,6 +2621,8 @@
     "errorTurnTooBig": "This turn grew too large to carry on; its work is kept. Send a message to start a fresh one.",
     "errorTurnHistoryReset": "This conversation grew too large to carry over, so it was reset; the work is kept. The next turn starts from the ticket, so say again what still needs doing.",
     "errorReplyIncomplete": "The model's reply never came through in full; its work is kept, and nothing was committed. Send a message to carry on.",
+    "errorNativePublicationFailed": "The remote branch did not receive this turn's changes. Unpublished changes are lost when the sandbox is deleted. Send a message to retry from the last saved branch.",
+    "errorNativeDeliveryMissing": "The requested pull request was not created. Only work pushed to the remote branch is saved. Send a message to retry from that branch.",
     "errorProviderUnavailable": "The model provider kept failing, so this turn was paused; its work is kept. Send a message to carry on.",
     "errorTurnLost": "This turn's process stopped before it could finish; the conversation was restored from its last save. Send a message to carry on.",
     "errorUsageRejected": "One of this conversation's spend records was rejected because its amount was impossible, so it was not counted. The turn carries on.",

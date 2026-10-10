@@ -2621,6 +2621,8 @@
     "errorTurnTooBig": "Esta curva ficou grande demais para continuar; seu trabalho é mantido. Envie uma mensagem para iniciar uma nova.",
     "errorTurnHistoryReset": "Essa conversa ficou grande demais para ser transferida, então foi reiniciada; o trabalho é mantido. A próxima curva começa a partir do ticket, então diga novamente o que ainda precisa ser feito.",
     "errorReplyIncomplete": "A resposta do modelo não chegou por completo; o trabalho foi preservado e nenhum commit foi feito. Envie uma mensagem para continuar.",
+    "errorNativePublicationFailed": "A branch remota não recebeu as alterações desta rodada. As alterações não publicadas são perdidas quando a sandbox é excluída. Envie uma mensagem para tentar novamente a partir da última branch salva.",
+    "errorNativeDeliveryMissing": "A pull request solicitada não foi criada. Apenas o trabalho enviado à branch remota é salvo. Envie uma mensagem para tentar novamente a partir dessa branch.",
     "errorProviderUnavailable": "O provedor do modelo continuou falhando, então este turno foi pausado; seu trabalho é mantido. Envie uma mensagem para continuar.",
     "errorTurnLost": "O processo deste turno parou antes de terminar; a conversa foi restaurada do último salvamento. Envie uma mensagem para continuar.",
     "errorUsageRejected": "Um registro de uso desta conversa foi rejeitado porque o valor era impossível, por isso não foi contabilizado. O turno continua.",

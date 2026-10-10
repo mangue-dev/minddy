@@ -118,7 +118,7 @@ async function serveControlPlane(
   return Response.json(result.body, { status: result.status });
 }
 
-const handler = defineSandboxProxy(
+const sandboxHandler = defineSandboxProxy(
   async (request, meta) => {
     const admission = admitSandboxCaller(
       { teamId: meta.teamId, projectId: meta.projectId, sandboxName: meta.sandboxName },
@@ -128,7 +128,7 @@ const handler = defineSandboxProxy(
       // The 503 is a CONFIGURATION failure, not a refusal: it deserves a line,
       // otherwise a deployment without VERCEL_TEAM_ID would break all runs silently.
       if (admission.status === 503) {
-        console.error("[agent-vm] VERCEL_TEAM_ID/VERCEL_PROJECT_ID manquants — plan de contrôle fermé");
+        console.error("[agent-vm] Missing VERCEL_TEAM_ID/VERCEL_PROJECT_ID; control plane closed");
       }
       return Response.json({ error: admission.error }, { status: admission.status });
     }
@@ -155,6 +155,30 @@ const handler = defineSandboxProxy(
     );
   },
 );
+
+/** Reverse proxies may expose HTTPS while Next receives a localhost URL.
+ * Use only the server's explicit control origin for OIDC audience verification;
+ * incoming Host and forwarding headers cannot choose the trusted audience. */
+async function handler(request: Request): Promise<Response> {
+  const configuredOrigin = process.env.AGENT_CONTROL_ORIGIN?.trim();
+  if (!configuredOrigin) return sandboxHandler(request);
+
+  let url: URL;
+  try {
+    const origin = new URL(configuredOrigin);
+    if (!["https:", "http:"].includes(origin.protocol) || origin.username || origin.password) {
+      throw new Error("Invalid control origin");
+    }
+    const incoming = new URL(request.url);
+    url = new URL(origin.origin);
+    url.pathname = incoming.pathname;
+    url.search = incoming.search;
+  } catch {
+    return Response.json({ error: "invalid control plane origin" }, { status: 503 });
+  }
+
+  return sandboxHandler(new Request(url, request));
+}
 
 export const GET = handler;
 export const POST = handler;

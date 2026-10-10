@@ -43,7 +43,11 @@ export async function restoreNativeWorkerProfile(lease: NativeConnectionLease, s
   const active = descriptor(await getNativeRuntime(lease, { execution: true }), lease);
   const profile = await loadNativeProfile(lease);
   if (!profile) throw new Error("Native subscription reconnection required");
-  const paths = nativeWorkerPaths(cloudLayout());
+  const layout = cloudLayout();
+  const paths = nativeWorkerPaths(layout);
+  // A fresh repository allocation has no harness directory until VM launch.
+  // Credential restore precedes that launch, so create its parent explicitly.
+  await sandbox.mkDir(layout.harnessDir);
   await sandbox.mkDir(paths.privateRoot);
   const directory = await sandbox.runCommand({ cmd: "chmod", args: ["0700", "--", paths.privateRoot] });
   if (directory.exitCode !== 0) throw new Error("Native private directory unavailable");

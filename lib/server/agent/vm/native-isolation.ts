@@ -37,6 +37,9 @@ export function nativeToolEnvironment(home: string, temp: string, extra: Record<
 export function nativeKernelArguments(job: VmJob, executable: string, args: string[], writable = job.writesToRepo): string[] {
   if (!job.nativeAgent) throw new Error("Native job context is required");
   const filesystem: Record<string, string> = { ":root": "read", [job.layout.repoDir]: writable ? "write" : "read", [job.layout.toolOutputDir]: "write", [job.layout.typecheckDir]: "write", [join(job.layout.root, "native-tool-home")]: "write", [join(job.layout.root, "native-tool-tmp")]: "write", [job.nativeAgent.privateRoot]: "deny", "/proc": "deny", "/sys": "deny" };
+  // Codex protects Git metadata inside writable roots unless explicitly granted.
+  // Hosted native workers use a fresh clone, whose delivery must stage and commit.
+  if (writable) filesystem[join(job.layout.repoDir, ".git")] = "write";
   const rules = Object.entries(filesystem).map(([path, access]) => `${JSON.stringify(path)}=${JSON.stringify(access)}`).join(",");
   return ["sandbox", "-c", 'default_permissions="minddy_native_tools"', "-c", `permissions.minddy_native_tools.filesystem={${rules}}`, "-c", "permissions.minddy_native_tools.network.enabled=true", "-c", `projects.${JSON.stringify(job.layout.repoDir)}.trust_level="untrusted"`, "--", executable, ...args];
 }

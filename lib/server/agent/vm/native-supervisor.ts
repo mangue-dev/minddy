@@ -196,13 +196,14 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
         history.push({ role: "assistant", text: outward(reply) }); break;
       }
     }
+    delivery.noteEdits();
     await delivery.probeRepoTouched();
     await background.stopAll();
     if (job.writesToRepo && delivery.repoTouched()) {
       try { pushed = await pushWork(`wip(${job.commitRef}): native agent update`); if (pushed.remoteUpdated) await cp.emit("commit", { sha: pushed.headSha }); }
       catch { pushError = "Native repository publication failed safely"; }
     }
-    if (status === "completed") await cp.emit("summary", { text: outward(reply) });
+    if (status === "completed" && !pushError) await cp.emit("summary", { text: outward(reply) });
   } catch { if (!stopped) { status = "error"; errorCode = "providerUnavailable"; } }
   finally {
     stopped = true;

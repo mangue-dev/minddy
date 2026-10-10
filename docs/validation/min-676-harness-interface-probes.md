@@ -381,3 +381,85 @@ build, actual PostgreSQL native/partial-preference/recovery regressions,
 encryption access/schema inventories, documentation, knowledge, owned-English
 and whitespace checks. The publication scan uses file-aware redacted Git diff
 input so existing exact synthetic-token fixture exceptions remain scoped.
+
+## Ordinary issue interface to Codex pull request (2026-10-10)
+
+The owner authorized a temporary HTTPS control plane, a private fixture
+repository and an actual launch from the Minddy interface, retaining the local
+Docker database and leaving paid Claude execution untested. The connected
+account and saved Codex default were reused without another provider approval.
+
+A Cloudflare Quick Tunnel forwards only `/api/agent-vm/*` to the local app.
+Public UI, account and database paths return 404; unsigned control-plane calls
+return 403. Two genuine Vercel OIDC calls from a disposable unauthenticated
+sandbox passed signature, audience, tenant and sandbox-name admission and
+reached the expected unknown-run response. That allocation was stopped and
+deleted. Behind Next development's reverse proxy, the route now reconstructs
+the expected audience from the explicit server `AGENT_CONTROL_ORIGIN`, never
+from incoming Host headers. Real SDK JWT regression tests reject incorrect
+audiences, signatures, tenants and invalid origin configuration.
+
+The private fixture repository was linked through the existing GitHub App
+connection and `bindRepo` path. Its installation token was verified to authorize
+exactly that repository; no PAT or user token was stored. Issue synchronization
+was disabled. The UI-created NAT-1 requested a minimal inclusive-range sum fix,
+preserving the five existing tests and invalid-input validation.
+
+The real UI launch exposed two defects that the prior SDK fixture did not:
+credential restore needed to create the harness parent before VM startup, and
+the pinned Codex kernel sandbox automatically made `.git` read-only. Both were
+fixed with focused regressions. An actual unauthenticated kernel probe reproduced
+the Git lock failure before the explicit metadata permission and verified stage,
+commit and a clean tree afterward. Read-only workers retain their Git protection;
+private profiles, controller process files, `/proc` and `/sys` remain denied.
+The failed worker's profile was saved before its allocation was deleted, and the
+successful retry restored that saved connection in another fresh allocation.
+
+From the issue's **Entrust to Numo → Implement issue** action and subsequent
+Numo conversation, the ordinary `launchAgentRun`/`execute` path selected
+`codex`, froze subscription funding and connection generation, cloned the
+private repository and started the detached native supervisor. Its real HTTPS
+callbacks recorded successful `read_issue`, plan-update and `create_pr` calls.
+The worker published [fixture PR #1](https://github.com/mangue-dev/minddy-min676-codex-e2e/pull/1),
+branch `numo/nat-1-7e39ac26`, head `803c745b75cce4dcbd96bd6a6f814f034a4c6372`.
+Minddy's bot authored the commit with a matching DCO trailer; the PR was open,
+non-draft and mergeable when reviewed. It was not manually created or merged.
+
+Independent verification fetched that exact PR head. Only
+`src/sum-inclusive.js` changed, with four additions and one deletion. Tests,
+README and package manifest were unchanged. Baseline tests yielded four
+failures and one pass; the PR head passed all five. Another 441 range-oracle
+checks and 16 invalid-input checks passed, along with whitespace and commit-range
+secret scans. The diff normalizes reversed bounds and includes the upper endpoint.
+
+![Completed Minddy code worker showing the tested correction, commit, branch and real PR link](assets/min-676-ui-pr-completed.png)
+
+The successful run completed with no error. Its allocation ledger was cleaned,
+with no pending provider operation, and a fresh Vercel SDK lookup returned 404.
+The two preceding UI allocations also returned 404. The encrypted connection
+remained connected at generation 2, revision 103, with lease, runtime and worker
+bindings cleared. No idle allocation or new browser login was used between the
+failed and successful repository workers. Native CLI inference was subscription
+funded; this successful run recorded $0.007856 of sandbox compute and $0.000183
+for the existing API short-title enrichment. Numo conversation API usage remains
+separately metered. These auxiliary calls are not native Codex inference.
+
+Failure handling now explicitly distinguishes native publication failure from
+missing required PR delivery in all six UI locales. Unpublished files cannot
+survive native sandbox deletion. Final MCP edits are detected before fallback
+publication; a failed push clears the success outcome and suppresses a success
+summary. A real Git/MCP regression covers the failed fallback without `create_pr`.
+The public manual's existing instruction to inspect the saved branch and PR
+before retrying remains accurate; this phase adds internal pilot evidence and
+configuration guidance rather than new public controls.
+
+Final checks for this phase passed: 207 focused control-plane, credential,
+native-worker and landing tests; rebuilt VM bundle; application typecheck and
+lint; documentation, knowledge, owned-English and whitespace checks.
+
+Safe structured acceptance data is retained in
+[the UI-to-PR proof artifact](assets/min-676-ui-pr-proof.json). The local app and
+temporary HTTPS bridge remain available for the private account. No production
+deployment or linked remote database migration was performed. Paid Claude
+execution, long-lived renewal/revocation and public credential custody remain
+unvalidated boundaries.

@@ -2621,6 +2621,8 @@
     "errorTurnTooBig": "Este giro se hizo demasiado grande para continuar; su trabajo se mantiene. Envíe un mensaje para empezar uno nuevo.",
     "errorTurnHistoryReset": "Esta conversación se hizo demasiado grande para llevarla, así que se reinició; el trabajo se mantiene. El siguiente turno comienza desde el ticket, así que repita lo que todavía necesita hacer.",
     "errorReplyIncomplete": "La respuesta del modelo no llegó completa; su trabajo se conserva y no se ha creado ningún commit. Envía un mensaje para continuar.",
+    "errorNativePublicationFailed": "La rama remota no recibió los cambios de este turno. Los cambios sin publicar se pierden al eliminar el entorno. Envía un mensaje para reintentarlo desde la última rama guardada.",
+    "errorNativeDeliveryMissing": "No se creó la pull request solicitada. Solo se conserva el trabajo enviado a la rama remota. Envía un mensaje para reintentarlo desde esa rama.",
     "errorProviderUnavailable": "El proveedor del modelo siguió fallando, por lo que este giro se detuvo; su trabajo se mantiene. Enviar un mensaje para continuar.",
     "errorTurnLost": "El proceso de este turno se detuvo antes de terminar; la conversación se restauró desde su último guardado. Envía un mensaje para continuar.",
     "errorUsageRejected": "Se rechazó un registro de gasto de esta conversación porque su importe era imposible, por lo que no se contabilizó. El turno continúa.",

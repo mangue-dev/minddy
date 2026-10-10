@@ -2621,6 +2621,8 @@
     "errorTurnTooBig": "Diese Runde wurde zu groß, um fortzufahren. Die Arbeit bleibt erhalten. Senden Sie eine Nachricht, um eine neue Runde zu beginnen.",
     "errorTurnHistoryReset": "Diese Konversation wurde zu groß, um sie zu übertragen, daher wurde sie zurückgesetzt. Die Arbeit bleibt erhalten. Die nächste Runde beginnt mit dem Ticket; beschreiben Sie daher erneut, was noch zu tun ist.",
     "errorReplyIncomplete": "Die Antwort des Modells kam nie vollständig an; Seine Arbeit wird beibehalten und es wurde nichts festgelegt. Senden Sie eine Nachricht, um fortzufahren.",
+    "errorNativePublicationFailed": "Der Remote-Branch hat die Änderungen dieser Runde nicht erhalten. Nicht veröffentlichte Änderungen gehen beim Löschen der Sandbox verloren. Senden Sie eine Nachricht, um vom zuletzt gespeicherten Branch aus erneut zu starten.",
+    "errorNativeDeliveryMissing": "Die angeforderte Pull Request wurde nicht erstellt. Nur auf den Remote-Branch gepushte Änderungen sind gespeichert. Senden Sie eine Nachricht, um von diesem Branch aus erneut zu starten.",
     "errorProviderUnavailable": "Der Modellanbieter ist wiederholt fehlgeschlagen, daher wurde diese Runde angehalten; die Arbeit bleibt erhalten. Senden Sie eine Nachricht, um fortzufahren.",
     "errorTurnLost": "Der Prozess dieses Schritts wurde vorzeitig beendet; die Unterhaltung wurde aus der letzten Speicherung wiederhergestellt. Senden Sie eine Nachricht, um fortzufahren.",
     "errorUsageRejected": "Ein Verbrauchseintrag dieser Unterhaltung wurde wegen eines unmöglichen Betrags abgelehnt und nicht angerechnet. Der Schritt wird fortgesetzt.",

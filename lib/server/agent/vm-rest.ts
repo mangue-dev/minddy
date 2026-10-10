@@ -191,9 +191,10 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   // would re-fail silently and the user would believe the work delivered.
   if (report.pushError) {
     await emit("error", {
-      message: PUSH_FAILED_STRINGS[locale](
-        cap(report.pushError, 300),
-      ),
+      ...(native ? { code: "nativePublicationFailed" } : {}),
+      message: native
+        ? `The remote branch did not receive this turn's changes. Unpublished changes are lost when the sandbox is deleted. Send a message to retry from the last saved branch. Detail: ${cap(report.pushError, 300)}`
+        : PUSH_FAILED_STRINGS[locale](cap(report.pushError, 300)),
     });
   }
 
@@ -394,11 +395,14 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
  * (and the readable trace in the events table) — the sentence that the user
  * reads comes from `ERROR_CODE_KEYS` and the two catalogs.
  */
-    if (report.errorCode) {
+    if (report.errorCode && !(native && report.pushError)) {
+      const missingNativeDelivery = native && report.errorCode === "replyIncomplete";
       await emit("error", {
-        code: report.errorCode,
+        code: missingNativeDelivery ? "nativeDeliveryMissing" : report.errorCode,
         message:
-          report.errorCode === "providerUnavailable"
+          missingNativeDelivery
+            ? "The requested pull request was not created. Only work pushed to the remote branch is saved. Send a message to retry from that branch."
+          : report.errorCode === "providerUnavailable"
             ? "The model provider kept failing, so this turn was paused. Send a message to carry on."
             : report.errorCode === "replyIncomplete"
               ? report.errorMessage || "The model ended before completing its work. Its checkpoint was kept. Send a message to carry on."
@@ -406,7 +410,9 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
       });
     }
     const pending = await restStamp({
-      error_message: report.errorMessage ? cap(report.errorMessage, 1000) : null,
+      error_message: native
+        ? cap(report.errorMessage || report.pushError || (report.errorCode === "replyIncomplete" ? "The required pull request was not created." : "Native agent turn failed."), 1000)
+        : report.errorMessage ? cap(report.errorMessage, 1000) : null,
       ...(report.errorCode === "replyIncomplete" ? { outcome: null } : {}),
     });
     if (!pending) await notifyAgentRun(run, "agent_failed");
@@ -414,16 +420,16 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     return;
   }
 
-  // Fin de tour NATURELLE.
+  // The turn ended naturally.
   const pending = await restStamp({
-    outcome: report.reply ? cap(report.reply, 4000) : null,
+    outcome: native && report.pushError ? null : report.reply ? cap(report.reply, 4000) : null,
     // Round ended on a `ask_user` → the session WAITS: yellow dot on the
     // surfaces until the user responds.
     ...(report.askedUser ? { awaiting_input: true } : {}),
     ...(report.pushError ? { error_message: cap(report.pushError, 1000) } : {}),
   });
   if (!pending) {
-    await notifyAgentRun(run, report.askedUser ? "agent_question" : "agent_done");
+    await notifyAgentRun(run, native && report.pushError ? "agent_failed" : report.askedUser ? "agent_question" : "agent_done");
   }
   await revokeKey(run);
 }

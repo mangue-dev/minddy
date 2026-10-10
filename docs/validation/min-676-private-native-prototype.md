@@ -40,6 +40,18 @@ states implemented contracts; live acceptance evidence belongs in the probe log.
    local SDK mailbox fixture does not establish deployed HTTP control-plane
    acceptance.
 
+For a local Docker-backed worker pilot, keep the UI and `MINDDY_PUBLIC_APP_URL`
+on localhost and set the server-only `AGENT_CONTROL_ORIGIN` to a temporary HTTPS
+bridge. Expose only `/api/agent-vm/*`; refuse account, UI and database paths.
+Preserve Vercel's signed forwarding headers. The route reconstructs the audience
+from this explicit server configuration before the SDK verifies the genuine
+Vercel signature, expiration and audience; request Host headers cannot select
+that audience. Keep `VERCEL_TEAM_ID` and `VERCEL_PROJECT_ID` identical to those
+used for sandbox creation. An unsigned request must still return HTTP 403.
+Bind a private fixture repository through the ordinary GitHub App connection,
+using repository-scoped installation tokens and disabling issue synchronization.
+Never place native profiles or forge credentials in the bridge configuration.
+
 The native adapters pin published Codex 0.162.1 and Claude Code 2.1.296. Packages are
 installed from npm with lifecycle scripts disabled. Native auth uses dedicated
 homes, never the developer's ambient personal credentials or an API key. Codex
@@ -190,6 +202,26 @@ exercise MCP calls, guarded repository read/write/commands, auth export and
 physical deletion. This proves that controlled hosted worker path; it does not
 prove UI-to-PR completion or acceptance of a deployed HTTPS control plane.
 Paid Claude hosted execution remains unvalidated.
+
+The subsequent local Docker-backed HTTPS pilot completed the ordinary
+issue-interface-to-Numo-to-Codex-to-PR flow. A temporary bridge exposed only the
+authenticated control plane; a genuine repository-scoped GitHub App token
+authorized a private fixture. Codex read the issue through MCP, updated its plan,
+fixed the repository, verified the unchanged tests and opened a real pull
+request. Independent checkout tests and review confirmed its correctness.
+The preceding and successful worker allocations were deleted completely, and
+the same encrypted connection remained connected without another login. See
+the [UI-to-PR proof](assets/min-676-ui-pr-proof.json) and probe log for exact scope.
+The historical SDK-mailbox boundary above applies only to that earlier fixture.
+
+Writable native repository hosts explicitly grant the fresh clone's `.git`
+directory write access, since the pinned Codex kernel sandbox otherwise protects
+Git metadata even under a writable project root. Read-only workers retain that
+protection. Private credentials, controller process files and `/sys` remain
+denied. Publication failure never establishes delivery: only changes actually
+pushed to the remote branch survive sandbox deletion. The native UI reports this
+limit and offers a retry from the saved branch, rather than promising retained
+local files.
 
 Record the actual hosted kernel result, paid account login, login-allocation
 deletion, two cold allocations, owner-scoped MCP results and token-renewal evidence

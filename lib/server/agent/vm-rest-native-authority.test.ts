@@ -114,4 +114,49 @@ describe("native completion callback authority", () => {
     expect(h.stampResult).toHaveBeenCalledWith("run", expect.objectContaining({ status: "queued" }), expectedGuard());
     expect(h.stamp).not.toHaveBeenCalled();
   });
+
+  it.each(["codex", "claude_code"] as const)("reports %s publication failure without claiming sandbox retention or successful delivery", async (engine) => {
+    run.agent_engine = engine;
+    await landVmTurn(run, report({ pushError: "Native repository publication failed safely", reply: "Implementation complete" }));
+    expect(h.event).toHaveBeenCalledWith("run", "error", expect.objectContaining({
+      code: "nativePublicationFailed",
+      message: expect.stringContaining("Unpublished changes are lost when the sandbox is deleted"),
+    }));
+    expect(h.stampResult).toHaveBeenCalledWith("run", expect.objectContaining({
+      outcome: null, error_message: "Native repository publication failed safely",
+    }), expectedGuard());
+    expect(h.notify).toHaveBeenCalledWith(run, "agent_failed");
+    expect(h.notify).not.toHaveBeenCalledWith(run, "agent_done");
+  });
+
+  it("reports an undelivered native pull request independently of model reply completeness", async () => {
+    await landVmTurn(run, report({ status: "error", errorCode: "replyIncomplete", reply: "All changes are ready" }));
+    expect(h.event).toHaveBeenCalledWith("run", "error", expect.objectContaining({
+      code: "nativeDeliveryMissing",
+      message: expect.stringContaining("The requested pull request was not created"),
+    }));
+    expect(h.stampResult).toHaveBeenCalledWith("run", expect.objectContaining({
+      outcome: null, error_message: "The required pull request was not created.",
+    }), expectedGuard());
+    expect(h.event.mock.calls.some((call) => call[2]?.code === "replyIncomplete")).toBe(false);
+    expect(h.notify).toHaveBeenCalledWith(run, "agent_failed");
+  });
+
+  it("retains the publication failure on an unsuccessful native turn", async () => {
+    await landVmTurn(run, report({ status: "error", errorCode: "replyIncomplete", pushError: "Native repository publication failed safely" }));
+    expect(h.stampResult).toHaveBeenCalledWith("run", expect.objectContaining({
+      outcome: null, error_message: "Native repository publication failed safely",
+    }), expectedGuard());
+  });
+
+  it("reports only publication failure when a native provider error also failed to push", async () => {
+    await landVmTurn(run, report({ status: "error", errorCode: "providerUnavailable", pushError: "Native repository publication failed safely", checkpoint: undefined }));
+    const errors = h.event.mock.calls.filter((call) => call[1] === "error");
+    expect(errors).toHaveLength(1);
+    expect(errors[0][2]).toMatchObject({ code: "nativePublicationFailed" });
+    expect(h.stampResult).toHaveBeenCalledWith("run", expect.objectContaining({
+      status: "completed", error_message: "Native repository publication failed safely",
+    }), expectedGuard());
+    expect(h.notify).toHaveBeenCalledWith(run, "agent_failed");
+  });
 });

@@ -59,6 +59,13 @@ describe("hosted native worker credential lifecycle", () => {
   it("binds the durable allocation before injection and writes secrets only through SDK private files", async () => {
     await bindNativeWorkerAllocation(h.lease!, allocation);
     expect(h.bind).toHaveBeenCalledWith(h.lease, "allocation");
+    let parentCreated = false;
+    h.mkdir.mockImplementation(async (path: string) => {
+      if (path === cloudLayout().harnessDir) parentCreated = true;
+      if (path === nativeWorkerPaths(cloudLayout()).privateRoot && !parentCreated) {
+        throw new Error("Missing harness parent directory");
+      }
+    });
     await restoreNativeWorkerProfile(h.lease!, sandbox());
     expect(h.get).toHaveBeenCalledWith("run", "sandbox");
     expect(h.runtimeGet).toHaveBeenCalledWith(h.lease, { execution: true });
