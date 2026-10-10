@@ -1,8 +1,8 @@
 # MIN-676: Native harness interface evidence
 
 Date: 2026-10-10. Reviewer: Codex, acting as an agent reviewer.
-Scope: read-only repository inspection, official documentation and unmodified
-public CLI help/schema generation. This is not a hosted authentication,
+Scope: read-only Minddy and pinned open-source repository inspection, official
+documentation and unmodified public CLI help/schema generation. This is not a hosted authentication,
 inference, security-isolation or erasure rehearsal.
 
 Related design: [hosted native harness plan](../plans/min-676-native-agent-harnesses.md).
@@ -144,7 +144,7 @@ behavior below are documentary evidence, not results from these help probes.
 
 | Primary source reviewed on 2026-10-10 | Established scope | Remaining validation |
 | --- | --- | --- |
-| [Codex CI authentication](https://learn.chatgpt.com/docs/auth/ci-cd-auth) | Ephemeral runners restore native auth and save the refreshed version; concurrent copies are discouraged. | Paid Minddy custody permission, encrypted write-back, lease/crash behavior and cold hosted execution. |
+| [Codex CI authentication](https://learn.chatgpt.com/docs/auth/ci-cd-auth) | Private trusted runners restore native auth and save refreshed state; serialize use. The guide excludes public/open-source repositories. | Exact public multi-user custody scope, encrypted write-back, lease/crash behavior and cold hosted execution. |
 | [Claude authentication](https://code.claude.com/docs/en/authentication), [GitHub Actions](https://code.claude.com/docs/en/github-actions) | Native cached credentials and subscription CI tokens provide technical repeated-run mechanisms. | The hosted native permission does not resolve [third-party token-storage restrictions](https://code.claude.com/docs/en/legal-and-compliance) for a Minddy account vault. |
 | [Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli), [Claude MCP](https://code.claude.com/docs/en/mcp) | Both native clients support configured MCP servers. | Actual admitted Minddy tools, strict configuration, startup errors, mutation acknowledgement and Numo mediation. |
 | [Linear coding sessions](https://linear.app/docs/coding-sessions), [AI credits](https://linear.app/docs/ai-credits), [Codex in Linear](https://learn.chatgpt.com/docs/third-party/linear) | Integrated Linear coding sessions use workspace credits; the separate ChatGPT-account integration starts provider cloud chats. | No inspected source discloses native personal credential storage in Linear-hosted ephemeral workers. |
@@ -156,7 +156,7 @@ implemented native vault. Its legacy/feature-flag fallback must not become an
 unencrypted path for new subscription credentials. New entities require their
 own guarded access, encryption policy, inventory and recovery/deletion tests.
 
-Before enabling either native engine, record sanitized evidence for:
+Before public enablement of either native engine, record sanitized evidence for:
 
 - One native account login, destruction of its setup sandbox, and two later
   cold allocations that use the same personal subscription without browser
@@ -175,3 +175,37 @@ Before enabling either native engine, record sanitized evidence for:
 None of these live outcomes was exercised in this refinement. Provider custody
 authorization, secret-free transport and OS isolation are release gates; a
 documented capability or another product's implementation is not a passed test.
+
+## Open-source implementation evidence
+
+Read-only inspections on 2026-10-10 used immutable source revisions. No project
+was installed or run against an account, and no hosted inference or credentials
+were accessed. Repository license evidence concerns code reuse only.
+
+| Repository and revision | Concrete evidence inspected | What it does not verify |
+| --- | --- | --- |
+| [T3 Code](https://github.com/pingdotgg/t3code/tree/a11f464133291122e0f6381b35e1b245d0aa9c73), `a11f464133291122e0f6381b35e1b245d0aa9c73`, MIT | `CodexChatGptAuth.ts`, `CodexChatGptSessionLock.ts`, `CodexManagedRuntime.ts`, `CodexChatGptHandoff.ts`, `ServerSecretStore.ts`, `CodexAdapterV2.ts`, `ClaudeAdapterV2.ts` and provider/remote guides. Managed Codex token sharing differs from native login; both adapters inject HTTP MCP. | The default file store is not encrypted. Remote machine persistence is not disposable SaaS recovery. No exact Minddy custody permission. |
+| [opencompany](https://github.com/useopencompany/opencompany/tree/274f4d1c0ba7a2348b619b469dd3e284215715c2), `274f4d1c0ba7a2348b619b469dd3e284215715c2`, MIT | Native device login in a bounded E2B allocation, owner-bound encrypted auth, `codex-chat.ts` restore and `codex.ts:persistRefreshedCodexAuth` compare-and-swap write-back; Claude ACP/SDK transport and attempt-scoped MCP tests. | Refresh locks in custom inference code do not serialize native CLI turns. Retained worker sandboxes do not prove cold history restore. Source does not grant provider permission. |
+| [project-sandbox](https://github.com/pkrusche/project-sandbox/tree/796590c9b9f8bfa48ffc177d2e9f11b6629d3959), `796590c9b9f8bfa48ffc177d2e9f11b6629d3959`, MIT | `oauth_refresh.py` native status commands under a host lock and security documentation of selected credential staging. | It explicitly warns that container-only renewal can be discarded. Status command success is not proof of refresh; auth outside checkout remains readable to container processes. |
+| [Coral Centaur](https://github.com/Coral-Protocol/coral_centaur/tree/b5be00c1cd54574d9483232ad0e08f6b9a31c139), `b5be00c1cd54574d9483232ad0e08f6b9a31c139`, Apache-2.0/MIT | `claude-app-wrapper.py` native stream transport, `proxy_config.py` placeholder/proxy configuration and production token-broker instructions. | Shared vault, dedicated account and broker-owned OAuth renewal do not match Minddy's native per-user design and are not permission evidence. |
+
+The source comparisons narrow the first live experiment: reproduce the native
+Codex restore/write-back pattern with mandatory account encryption, add a lease
+covering the entire native process lifetime, and prove actual rotated-state
+recovery after destruction. Use a private fixture repository rather than
+claiming the Codex CI guide authorizes public repository automation. For Claude,
+retain the published CLI's login and authentication methods; test native profile
+persistence without representing it as an approved public SaaS custody model.
+
+The [2026-10-07 Claude SDK subscription update](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)
+is billing evidence, not a waiver of credential restrictions. Published native
+hosting conditions and customer CI token persistence justify advancing a
+private prototype; provider outreach is not a universal prerequisite to
+adapter development. Before public enablement, record the exact remaining
+custody conclusion separately from successful tests. The full source links,
+provider conditions and prototype sequence are in the related design.
+
+Repository verification for this refinement: `check:documentation`,
+`check:knowledge`, `check:owned-english`, relative documentation links and
+`git diff --check` passed. Only the two internal study/evidence documents changed;
+public manuals and runtime source remain untouched.

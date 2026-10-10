@@ -13,9 +13,10 @@ subscription inside Minddy's server sandbox. Local execution and a self-hosting
 restriction do not meet this requirement.
 
 **The execution interfaces are technically suitable. A production integration
-is conditional on authentication, credential isolation and provider approval
-evidence.** Build native adapters for the published Codex app-server and Claude
-Code CLI, retaining OpenCode as the existing default. Let the original CLI own
+is conditional on authentication, credential isolation and evidence that the
+exact design satisfies provider conditions.** Build native adapters for the
+published Codex app-server and Claude Code CLI, retaining OpenCode as the
+existing default. Let the original CLI own
 its login and inference. Keep Numo as the orchestration layer and return worker
 events, verification and PR artifacts through Minddy's existing control plane.
 
@@ -51,22 +52,22 @@ resolution. Encryption addresses storage security, not permission to store.
 | Route | Evidence and conclusion | Release condition |
 | --- | --- | --- |
 | Unmodified Claude Code with the user's Claude subscription | Anthropic documents hosted native binary use. Native cached auth and a CI token can technically avoid per-run login. | Confirm a permitted durable custody mechanism: the legal page also prohibits third-party collection/storage of Claude session tokens. Do not infer an exception from encryption or CI token availability. |
-| Native Codex app-server with the user's ChatGPT account | Native login and worker lifecycle are supported. Official CI guidance explicitly describes restoring auth on ephemeral runners and saving the refreshed file. | Confirm Minddy's paid, multi-user hosting and durable user credential custody; validate a serialized native refresh cycle across destroyed allocations. |
+| Native Codex app-server with the user's ChatGPT account | Native login and worker lifecycle are supported. Official private CI guidance describes auth restore and refreshed-file persistence. | Build a private prototype now; validate serialized renewal across destroyed allocations. Resolve public multi-user custody scope before release without conflating this route with token sharing. |
 | Sign in with ChatGPT tokens supplied by Minddy | The public open-source flow covers local apps and self-hosted VMs; paid or remotely hosted apps are directed to a separate interest process. | Do not treat Minddy's open-source license as authorization for its hosted offering. A separate approved integration would need its own client registration and consent. |
 | Ori wrapping Codex, Claude Code or OpenCode | Ori supplies OpenRouter credentials, models and organization settings to the chosen CLI. | Optional harness choice with OpenRouter billing, not native subscription consumption. |
 | Other coding CLI subscriptions | This study does not establish support or hosting permission for every coding assistant. | Add each harness only after the same auth, protocol, isolation and terms review. |
 
 Anthropic's [legal and compliance page](https://code.claude.com/docs/en/legal-and-compliance)
-distinguishes running the original CLI from offering a third-party Claude login
-or routing subscription credentials through another application. Its hosted
-conditions require the published binary, preservation of its authentication
-methods and usage billed directly to each end user. The same page restricts
-third-party collection and storage of Claude session tokens. Hosted execution
-permission alone therefore does not establish permission for Minddy's proposed
-durable vault, including a token produced by `claude setup-token`. Its
-[Commercial Terms](https://www.anthropic.com/legal/commercial-terms) remain part
-of that arrangement. No agreement acceptance or provider contact was performed
-during this study.
+explicitly permits hosted published Claude Code: accept the Commercial Terms,
+preserve built-in authentication methods and bill usage to each user's own
+access. It restricts third-party credential collection but expressly preserves
+end-user sign-in through the unmodified hosted CLI. A native user profile is
+therefore distinct from Minddy implementing OAuth or subscription inference.
+Whether centrally retaining and restoring that profile falls within the
+exception is not expressly answered. Encryption or renaming a vault as a volume
+does not settle it. The clause has no user-count or revenue threshold and does
+not describe a mandatory negotiated agreement. No provider contact or terms
+acceptance was performed during this study.
 
 The [Codex app-server reference](https://learn.chatgpt.com/docs/app-server)
 documents CLI-owned account login. OpenAI's
@@ -74,8 +75,10 @@ documents CLI-owned account login. OpenAI's
 separately directs paid or remotely hosted integrations to an interest form.
 That limitation applies to that integration route; it is not proof that the
 original CLI's device login is technically unavailable. Conversely, the
-existence of device login is not proof that a paid SaaS may offer it without
-additional conditions. Ask OpenAI about the exact hosted-native-CLI design.
+existence of device login does not settle the exact public multi-user custody
+design. Do not make outreach a prerequisite to all development: start with
+native adapters and a trusted private prototype, then assess the remaining
+release question against actual implementation evidence.
 The [European terms](https://openai.com/policies/eu-terms-of-use/) also prohibit
 account sharing and bypassing usage restrictions. Personal connections must
 not become pooled credentials for a team, project or platform.
@@ -380,7 +383,7 @@ existing conversation's engine, user, history or funding source.
 All items below remain pending. Names of new files/functions are design targets.
 Complete hosted acceptance tests before marking MIN-676 implemented.
 
-- [ ] **Provider gates and cold hosted pilot:** record authorization for Minddy's paid native hosting and durable user credential custody, explicitly resolving Anthropic's third-party storage restriction. With consenting test accounts, connect from account settings, destroy the login allocation, run in two fresh hosted Vercel allocations and verify native renewal, logout and credential isolation. A live-allocation-only pilot cannot satisfy this step.
+- [ ] **Private native prototype and release conditions:** build a trusted private, owner-only pilot using the published native CLIs and a private fixture repository. Connect from account settings, destroy the login allocation and run in two fresh hosted Vercel allocations; verify native renewal, logout and isolation. Record compliance with published hosting conditions and resolve the remaining multi-user credential custody question before public release. Outreach is conditional on that unresolved question, not a prerequisite to adapter development. A live-allocation-only pilot cannot satisfy this step.
 - [ ] **Schema, encrypted credentials and admission:** add a new `supabase/migrations/` migration and SQL tests for engine/funding constraints, account-owned connection metadata, mandatory encrypted native credential entities, RLS, profile revisions, exclusive connection leases, allocation generations and disconnect/erasure fences. Add `lib/server/agent/native-agent-credentials.ts` using `lib/server/encryption/{store.ts,registry.ts}`; extend encryption policies, schema inventory, audits and guarded run/allocation reservation RPCs. Never expose credential contents through metadata reads or reuse BYOK admission.
 - [ ] **Shared contracts and capabilities:** extend `lib/agent-engines.ts`, `lib/server/agent/runs.ts:createRun`, `harness-layout.ts` and `vm/protocol.ts:parseVmJob`. Add `lib/agent-harness-capabilities.ts`, engine-bound frozen connection metadata and a discriminated native job/checkpoint without secret values. Bump `VM_PROTOCOL_VERSION`; extend bundle manifests and diagnostics in `harness-bundle.ts` and `scripts/build-agent-vm.mjs`.
 - [ ] **Common supervisor services:** extract lifecycle, tool counters, heartbeat, delivery, redaction and normalized events from `vm/supervisor.ts:runOpencodeTurn` into a shared runtime service. Define `vm/harness-adapter.ts`; preserve OpenCode regression coverage before adding native dispatch.
@@ -413,8 +416,8 @@ Complete hosted acceptance tests before marking MIN-676 implemented.
 | Provider throttles or CLI/transport crashes | Preserve reviewable work, interrupt children, report failure and account for costs idempotently; mark reconnect only when credential recovery actually fails. |
 | Current OpenCode worker and historical run | Existing API/BYOK launch, recovery, redaction, delivery and billing remain correct for accounts retaining that selection. |
 
-Unresolved before production: provider authorization for the exact paid hosting
-and durable credential-custody design; Claude's third-party storage restriction;
+Unresolved before public release: the exact multi-user durable credential-custody
+scope under provider conditions, including Claude's third-party storage clause;
 secret-free login/transport telemetry; native credential/tool isolation on Vercel;
 crash-safe refresh write-back and backup erasure; cold history restoration;
 and quota/cancellation behavior on real subscriptions. A session-bound pilot
@@ -455,7 +458,7 @@ and code observations, not authenticated product tests or provider contracts.
 | Ona Cloud | Native Codex connected to a user's ChatGPT plan using device authorization. | A first-class cloud integration, personal/service-account ownership, separate compute and provider allowance. | No public evidence of auth encryption, refresh locking or immediate revocation of active sessions. Service-account capabilities do not establish permission to pool personal plans. |
 | Boxes.dev | Native Codex/Claude on managed Linux devboxes; device code or browser approval plus code. | Explicit account-switch, sleep/reboot and disconnect behavior; API fallback is opt-in. | Retains machine state through sleep and warns that machine processes can read delivered credentials. This differs materially from Minddy's ephemeral and secret-isolation requirements. |
 | CloudCLI Cloud | Hosted containers with a PTY-based native login interface. | Public PTY reconnect and provider-runtime code is available. | Its Claude conversation path uses Agent SDK; presence of OAuth support in source is not proof of subscription eligibility for a third-party service. |
-| opencompany | Dedicated cloud Codex login sandbox and persistent hosted worker sandboxes. | Public per-user encrypted credential storage and refresh-lock implementation. | Copies native auth state; its custom Claude usage probe is not an acceptable template for a native-only subscription design. |
+| opencompany | Dedicated cloud Codex login sandbox and persistent hosted worker sandboxes. | Per-user encrypted native state and version-checked write-back. | Native CLI refresh is not fully serialized by its DB locks. Its custom Claude usage probe is not an acceptable native-only template. |
 | Linear Agent coding sessions | Native coding harnesses in cloud environments funded by workspace AI credits. | Integrated issue delegation, steering and review. | This documented path charges for model tokens; it does not establish personal subscription reuse. |
 | Codex by OpenAI in Linear | Paid ChatGPT account integration delegates to Codex cloud chats. | Connect once and delegate from an issue, with results returned to the tracker. | Provider-cloud execution does not show native auth persistence in Linear-owned sandboxes and changes Minddy's required execution destination. |
 | Sinatra, listed in Linear's directory | Connect a Claude/ChatGPT subscription and start a fresh isolated cloud sandbox per task. | A closer functional precedent for durable subscription access with ephemeral compute. | The directory does not explain credential storage, renewal or provider permission. |
@@ -535,13 +538,138 @@ At opencompany commit `274f4d1c0ba7a2348b619b469dd3e284215715c2`,
 [Codex login](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/apps/runner/src/codex-auth.ts)
 runs in a dedicated sandbox with a 15-minute flow limit and 20-minute sandbox
 lifetime. [Credential persistence](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/packages/db/src/codex-auth.ts)
-uses per-user encrypted native state and refresh locks. Its
-[Claude usage-probe note](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/docs/claude-code-subscription-usage.md)
-describes custom inference traffic to obtain usage headers. The engineering
-patterns are inspectable; that probe and credential-copy design do not prove
-provider-approved native CLI hosting and must not be adopted without review.
+uses per-user encrypted native state. Native
+[Codex execution](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/apps/runner/src/codex-chat.ts)
+restores `auth.json` to a dedicated `CODEX_HOME`, then
+[`persistRefreshedCodexAuth`](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/apps/runner/src/codex.ts)
+saves changed credentials with an expected rotation timestamp. Database refresh
+locks are called by its custom inference/usage paths, not native turn execution:
+this demonstrates compare-and-swap persistence, not serialized native refresh.
+Its [Claude path](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/apps/runner/src/claude-code-cli.ts)
+launches an ACP adapter backed by Agent SDK with an encrypted per-user
+`setup-token`, rather than directly using the proposed published CLI print mode.
+The [usage-probe note](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/docs/claude-code-subscription-usage.md)
+describes custom inference for quota headers; exclude that path. Its
+[MCP tests](https://github.com/useopencompany/opencompany/blob/274f4d1c0ba7a2348b619b469dd3e284215715c2/apps/runner/src/claude-code-chat.test.ts)
+show attempt/lease-scoped credentials and failure when required core tools are
+disconnected. Retained conversation sandboxes do not prove cold history recovery.
 
 The transferable pattern is a personal connection, an actual hosted harness,
-bounded authentication and separately metered infrastructure. No examined
-public source establishes Minddy's permission to replicate another product's
-provider-specific exception, persistent credential store or shared account.
+bounded authentication and separately metered infrastructure. These product
+and source comparisons do not alone establish that Minddy's persistent
+credential storage satisfies the conditions for its own hosted deployment.
+
+## Open-source evidence and what to build next
+
+The owner reports an unreleased development product with no users or revenue.
+The practical next step is a private native prototype, not a blanket request for
+commercial agreements before any implementation. This research did not find a
+general requirement for such outreach before adapter development. Development
+status does not waive provider conditions or establish public hosting permission.
+
+### T3 Code: two Codex authentication paths and native tools
+
+At MIT-licensed commit `a11f464133291122e0f6381b35e1b245d0aa9c73`,
+[T3 Code's Codex guide](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/docs/user/providers-codex.md)
+supports existing native CLI login and a separate managed Connect with ChatGPT
+flow. The latter uses official token sharing, not exported native `auth.json`.
+[`CodexChatGptAuth.ts`](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/apps/server/src/provider/CodexChatGptAuth.ts)
+uses scope `chatgpt.tokens.use.direct` and persists rotated tokens;
+[`CodexManagedRuntime.ts`](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/apps/server/src/provider/CodexManagedRuntime.ts)
+configures an `openai_token_sharing` provider at `api.openai.com/v1` using
+`ACCESS_TOKEN`. A
+[session lock](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/apps/server/src/provider/CodexChatGptSessionLock.ts)
+serializes access across processes, and a
+[handoff](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/apps/server/src/provider/CodexChatGptHandoff.ts)
+lets the destination own the durable session. These are useful lifecycle
+patterns, but the token-sharing eligibility rules still distinguish remotely
+hosted apps, including free ones. Minddy cannot copy a client registration or
+assume T3's native-login alternative establishes hosted token-sharing eligibility.
+
+The default
+[`ServerSecretStore.ts`](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/apps/server/src/auth/ServerSecretStore.ts)
+stores bytes in permission-restricted files with atomic rename; it does not
+encrypt them. Its name is not evidence of encryption at rest. Minddy needs its
+own mandatory encrypted account store.
+
+The [Claude guide](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/docs/user/providers-claude.md)
+uses native login on the environment machine, with `CLAUDE_CONFIG_DIR` for
+separate profiles. The
+[Claude adapter](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.ts)
+uses Agent SDK around the configured Claude executable and injects scoped HTTP
+MCP with explicit allowed tools and an authorization environment reference.
+The [Codex adapter](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.ts)
+passes `mcp_servers` on thread start/resume/fork. Both provide concrete evidence
+that a product can expose its own tools through native harnesses.
+[Remote access](https://github.com/pingdotgg/t3code/blob/a11f464133291122e0f6381b35e1b245d0aa9c73/docs/user/remote-access.md)
+retains work and credentials on a running environment machine; it does not
+prove Minddy's disposable multi-user sandbox lifecycle.
+
+### Smaller projects: useful successes and failure cases
+
+MIT-licensed `project-sandbox`, commit
+`796590c9b9f8bfa48ffc177d2e9f11b6629d3959`, stages selected native credentials
+into disposable containers. Its
+[`oauth_refresh.py`](https://github.com/pkrusche/project-sandbox/blob/796590c9b9f8bfa48ffc177d2e9f11b6629d3959/src/project_sandbox/oauth_refresh.py)
+invokes native status commands under a host lock. Its
+[security guide](https://github.com/pkrusche/project-sandbox/blob/796590c9b9f8bfa48ffc177d2e9f11b6629d3959/docs/security.md)
+acknowledges that destroying a long-running container can discard a rotated
+refresh token and require reconnection. A status check or mounted auth file
+alone is therefore insufficient; verify actual renewal and save the new state.
+
+Apache-2.0/MIT-licensed Coral Centaur, commit
+`b5be00c1cd54574d9483232ad0e08f6b9a31c139`, provides a direct native
+[Claude stream wrapper](https://github.com/Coral-Protocol/coral_centaur/blob/b5be00c1cd54574d9483232ad0e08f6b9a31c139/services/sandbox/claude-app-wrapper.py)
+and [external credential broker](https://github.com/Coral-Protocol/coral_centaur/blob/b5be00c1cd54574d9483232ad0e08f6b9a31c139/docs/pages/deploying-in-production.mdx).
+The sandbox sees placeholders; the broker refreshes secrets and rewrites
+outbound bearer credentials. This is an isolation precedent, but its dedicated
+account/shared vault and custom OAuth renewal differ from personal native auth.
+Do not adopt that credential intermediation as Minddy's subscription mechanism.
+Docker also [documents host-held OAuth outside local Codex sandboxes](https://docs.docker.com/ai/sandboxes/agents/codex/);
+its explicit local scope does not establish hosted SaaS permission.
+
+These licenses permit studying or reusing code subject to their notices. They
+do not grant provider subscription rights. No inspected repository supplies
+approval for Minddy's exact multi-user custody model.
+
+### Private prototype sequence and remaining permission question
+
+1. Implement `vm/harness-adapter.ts`, the Codex app-server client, published
+   Claude CLI stream transport and `vm/mcp-tool-bridge.ts` behind an internal
+   flag. Use fixtures first; native inference and account secrets stay out of
+   generic API model routes.
+2. Add the account connection lifecycle and mandatory encrypted opaque native
+   profile storage in `native-agent-connections.ts`,
+   `native-agent-credentials.ts` and `vm/native-auth.ts`. The original CLI owns
+   login and renewal. Minddy must not implement OAuth refresh, forge headers or
+   submit subscription inference itself. This is a prototype of the proposed
+   persistence mechanism, not a declaration that public custody is approved.
+3. Test with the account owner's participation, trusted private allocations
+   and a private fixture repository. OpenAI's
+   [CI auth guide](https://learn.chatgpt.com/docs/auth/ci-cd-auth) is limited to
+   private trusted automation and excludes public/open-source repositories;
+   do not present it as blanket permission for future customer tickets.
+   Destroy login and worker allocations between runs, trigger real native
+   renewal, commit the new profile, then test concurrent leases, crashes,
+   disconnect and an actual Minddy MCP operation.
+4. Before public enablement, compare the implemented custody boundary with
+   provider conditions. If native profile retention remains ambiguous, seek
+   clarification on that narrow mechanism with a concrete design. No email,
+   sales contact or application has been sent as part of this study.
+
+Claude's [official subscription SDK update](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan),
+dated 2026-10-07, confirms that SDK, print-mode and third-party usage can still
+consume subscription limits. Do not claim SDK use necessarily means API
+billing; this billing clarification does not waive credential custody rules.
+The [official GitHub Actions flow](https://code.claude.com/docs/en/github-actions)
+also saves a CLI-generated subscription token into a GitHub secret. This is
+stronger remote persistence evidence than a third-party repository, within
+that documented workflow. It does not automatically authorize an arbitrary
+multi-user SaaS vault.
+
+An [OpenAI maintainer's answer](https://github.com/openai/codex/discussions/8338)
+describes permissive terms and similar OSS products while explicitly declining
+a legal conclusion. Treat it as a favorable engineering signal, not an exact
+hosted authorization. The study therefore supports building the private
+prototype now; successful technical tests alone will not resolve every public
+release condition.
