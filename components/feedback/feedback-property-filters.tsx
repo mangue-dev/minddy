@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { CommandGroup, CommandItem } from "mangue-ui";
-import { checkedProps } from "@/components/search-select";
+import { Input } from "mangue-ui";
+import { FilterSub, MenuToggleRow } from "@/components/filter-menu";
 import type { FeedbackPropertyFilters } from "@/lib/collection-filters";
 import type { Category, Objective } from "@/lib/types";
 import type { TeamFeedbackListItem } from "@/lib/server/feedback/team-queries";
 
-export function FeedbackPropertyFilterItems({ filters, onChange, objectives, categories, posts, authors: availableAuthors, boardEnabled }: {
+export function FeedbackPropertyFilterItems({ filters, onChange, objectives, categories, posts, authors: availableAuthors, boardEnabled, authorSearch, onAuthorSearchChange }: {
+  authorSearch: string; onAuthorSearchChange: (search: string) => void;
   filters: FeedbackPropertyFilters; onChange: (filters: FeedbackPropertyFilters) => void;
   objectives: Objective[]; categories: Category[]; posts: TeamFeedbackListItem[];
   authors: { id: string; name: string | null; email: string | null; pseudonym: string }[]; boardEnabled: boolean;
@@ -28,14 +29,14 @@ export function FeedbackPropertyFilterItems({ filters, onChange, objectives, cat
     { key: "review", label: t("filterReview"), options: [{ value: "pending", label: t("reviewPending") }, { value: "published", label: t("filterReview_published") }] },
     ...(boardEnabled ? [{ key: "visibility" as const, label: t("visibility"), options: [{ value: "public", label: t("public") }, { value: "private", label: t("private") }] }] : []),
   ];
-  return <>{facets.filter((f) => f.options.length).map(({ key, label, options }) => <CommandGroup key={key} heading={label}>
-    {options.map((option) => {
+  return <>{facets.filter((f) => f.options.length).map(({ key, label, options }) => <FilterSub key={key} label={label} count={filters[key]?.length ?? 0}>
+    {key === "author" && <div className="p-1" onKeyDown={(event) => event.stopPropagation()}><Input aria-label={t("author")} placeholder={t("author")} value={authorSearch} onChange={(event) => onAuthorSearchChange(event.target.value)} /></div>}
+    {options.filter((option) => key !== "author" || !authorSearch.trim() || (filters.author ?? []).includes(option.value) || option.label.toLocaleLowerCase().includes(authorSearch.trim().toLocaleLowerCase())).map((option) => {
       const selected = filters[key] ?? [];
       const active = (selected as (string | null)[]).includes(option.value);
-      return <CommandItem key={option.value ?? "none"} value={`property-${key}-${option.value ?? "none"}`} keywords={[label, option.label]}
-        {...checkedProps(active)} onSelect={() => onChange({ ...filters,
+      return <MenuToggleRow key={option.value ?? "none"} active={active} onSelect={() => onChange({ ...filters,
           [key]: active ? selected.filter((id) => id !== option.value) : [...selected, option.value],
-        })}>{option.label}</CommandItem>;
+        })}><span className="truncate">{option.label}</span></MenuToggleRow>;
     })}
-  </CommandGroup>)}</>;
+  </FilterSub>)}</>;
 }

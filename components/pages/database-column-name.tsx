@@ -137,7 +137,7 @@ export function DatabaseColumnName({
             }}
             onDoubleClick={start}
             onKeyDown={(event) => {
-              dragHandleProps?.onKeyDown?.(event);
+              if (event.key === "F8" || dragging) dragHandleProps?.onKeyDown?.(event);
               if (event.defaultPrevented) return;
               if (event.key === "F2") {
                 event.preventDefault();

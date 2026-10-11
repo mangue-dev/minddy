@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -49,7 +49,7 @@
     ]
   },
   "review": {
-    "revision": 8,
+    "revision": 9,
     "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
     "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (de complete-body second pass and corrected wording review); agent:/root (de changed-passage parity and localized-label review)",
     "date": "2026-10-11"
@@ -76,7 +76,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wählen Sie Numo oder Import, oder schließen Sie die Karten, um manuell fortzufahren.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -93,7 +93,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,7 +109,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -125,7 +125,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -141,7 +141,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -210,7 +210,7 @@ Suche, filtere, sortiere und blende Spalten in der einzigen Listenansicht aus. D
 
 ## Das Datenbankschema sicher ändern {#change-a-database-schema}
 
-Das Verschieben einer Spalte beginnt nach einer Zeigerbewegung und bleibt horizontal. Der Greifcursor erscheint nur während des Ziehens; ein normaler Klick öffnet weiterhin die Spaltenaktionen.
+Das Verschieben einer Spalte beginnt nach einer Zeigerbewegung und bleibt horizontal. Der Greifcursor erscheint nur während des Ziehens; ein normaler Klick öffnet weiterhin die Spaltenaktionen. Wenn eine Spaltenüberschrift fokussiert ist, öffnet Eingabe oder Leertaste ihre Aktionen. Starten Sie das Umordnen mit F8, verwenden Sie Links oder Rechts und bestätigen Sie mit Eingabe oder brechen Sie mit Escape ab.
 
 Unter Spalten kannst du Eigenschaften mit dem Augensymbol ein- oder ausblenden. Klicke auf eine Spaltenüberschrift, um sie umzubenennen, oder ziehe die Überschriften, um ihre Reihenfolge zu ändern. Die Namensspalte der Einträge bleibt an erster Stelle. Optionen für Auswahl und Mehrfachauswahl lassen sich im Zellenmenü oder unter Spalten bearbeiten. Namen und Farben werden zusammen gespeichert.
 

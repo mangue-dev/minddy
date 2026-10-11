@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -70,7 +70,7 @@
     ]
   },
   "review": {
-    "revision": 8,
+    "revision": 9,
     "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (fr pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (fr changed-passage parity and localized-label review)",
     "date": "2026-10-11"
@@ -99,7 +99,7 @@
       "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
       "alt": "Board public de retours activé, avec identité SSO locale configurée et URL masquée.",
       "caption": "Le propriétaire active le board et choisit l’identité des visiteurs. Cet exemple utilise une signature SSO locale ; l’URL et le secret de signature sont masqués.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +115,7 @@
       "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
       "alt": "Formulaire visiteur avec titre, description et visibilité publique activée.",
       "caption": "Un visiteur identifié soumet un besoin et choisit sa visibilité. L’exemple a été réellement envoyé avec la revue automatique désactivée.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +131,7 @@
       "src": "/documentation/fr/feedback-objective-selection.png",
       "alt": "Aperçu des composants de sélection d’objectif pour un retour et une intégration, tous deux réglés sur Docs.",
       "caption": "Sélecteurs d’objectif avec des données de démonstration. Les nouveaux retours héritent du réglage de l’intégration.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -148,7 +148,7 @@
       "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
       "alt": "Guide des retours publié, sélectionné dans la navigation du board et lisible sans connexion.",
       "caption": "Publiez une page, activez les onglets de pages et sélectionnez-la pour le board. Cette page de démonstration a été ouverte anonymement ; son URL opaque conserve `noindex`.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -204,7 +204,7 @@ Ouvrez Mes retours pour retrouver vos demandes et vos votes, selon les droits de
 
 ## Examiner les retours en privé et répondre publiquement {#moderate-feedback}
 
-Les filtres de la liste combinent statut, objectif, catégories, auteur, source et état de modération ; la visibilité est proposée lorsque le board public est activé. Plusieurs choix pour une propriété sont des alternatives ; les différentes propriétés se cumulent. Réinitialisez les filtres pour retrouver la liste initiale. La liste affiche jusqu’à 500 demandes correspondant à ces filtres à la fois.
+Les filtres de la liste combinent statut, objectif, catégories, auteur, source et état de modération ; la visibilité est proposée lorsque le board public est activé. Plusieurs choix pour une propriété sont des alternatives ; les différentes propriétés se cumulent. Réinitialisez les filtres pour retrouver la liste initiale. La liste affiche jusqu’à 500 demandes correspondant à ces filtres à la fois. Ouvrez le sous-menu d’une propriété pour sélectionner ses valeurs ; le nombre indique combien sont sélectionnées. Sur mobile, dépliez la section de la propriété.
 
 Les membres du projet ouvrent sa rubrique Retours et choisissent une demande dans la file de revue ou la liste. Lisez la soumission d’origine, le choix public ou privé, l’état de revue et les éventuelles suggestions de modération ou de doublon. Vous pouvez clarifier le titre et le corps canoniques tout en conservant les textes soumis d’origine. Attribuez des catégories et un statut public adapté ; un spam n’apparaît jamais sur le board public. Une demande privée reste distincte d’une demande publique simplement en attente.
 

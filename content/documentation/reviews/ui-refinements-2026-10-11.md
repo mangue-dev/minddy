@@ -65,3 +65,29 @@ against the English delta and their localized runtime controls in all six locale
 The captures and final check results are recorded in the pull request. Unchanged
 article claims retain their previous reviews; no release-wide operational rerun or
 production deployment is claimed.
+
+## PR 408 follow-up
+
+Feedback and triage use the board's shared property submenus, selection counts,
+and toggle rows; mobile uses the same expandable sections. Author search remains
+in its own submenu. The `feedback` guide (F03/F04) describes these controls in all
+six locales. The `databases` guide (P10) and localized column hints document F8
+for keyboard reordering while Enter and Space retain standard menu activation.
+Existing figures do not show either changed control and remain accurate.
+
+Category saves update every matching project cache, then refetch filtered lists
+after success or failure, including an unmount flush. Server parameter parsing
+deduplicates visibility choices before filtering and the 500-row cap. Regression
+checks cover these cases and update the setup-banner and empty-page test fixtures
+to match the intended behavior. No additional feedback properties were added.
+
+Follow-up browser evidence uses the real shared filter components and database
+view with mocked authors and writes in the local fixture. Light-mode captures
+are `docs/reviews/pr-408-feedback-filters.png`,
+`docs/reviews/pr-408-feedback-filters-mobile.png`, and
+`docs/reviews/pr-408-triage-filters.png`. Browser assertions cover multiple choices,
+counts, author search, mobile selection, standard Enter/Space activation and F8
+reordering; the existing pointer, bulk-action and empty-option checks also pass.
+Verification: failing CI shard 1/2 (5,415 tests), targeted regressions, board render,
+typecheck, lint, documentation, knowledge, owned-English and encrypted-access
+checks. These are component/agent checks, not signed-in production evidence.

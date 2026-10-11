@@ -62,7 +62,7 @@ function placeholders(
   return found;
 }
 
-describe("placeholder d'un bloc vide", () => {
+describe("empty block placeholder", () => {
   it("invites the « / » menu on a top-level line", () => {
     expect(placeholders("<p></p>", "start")).toEqual(["placeholder"]);
     expect(placeholders("<p>texte</p><p></p>", "end")).toEqual(["placeholder"]);
@@ -83,11 +83,8 @@ describe("placeholder d'un bloc vide", () => {
     ).toEqual(["placeholderNested"]);
   });
 
-  it("turns off as soon as the document is left", () => {
-    // The selection remains on the empty line: only FOCUS changed, and it is
-    // the one that decides — a writing prompt has no meaning on a
-    // document we have just left.
-    expect(placeholders("<p></p>", "start", { blur: true })).toEqual([]);
+  it("keeps the empty-page prompt after blur and hides inactive block prompts", () => {
+    expect(placeholders("<p></p>", "start", { blur: true })).toEqual(["placeholder"]);
     expect(placeholders("<p>x</p><h2></h2>", "end", { blur: true })).toEqual([]);
   });
 

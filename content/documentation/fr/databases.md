@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -49,7 +49,7 @@
     ]
   },
   "review": {
-    "revision": 8,
+    "revision": 9,
     "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
     "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/second_workflows (fr complete-body second pass and corrected wording review); agent:/root (fr changed-passage parity and localized-label review)",
     "date": "2026-10-11"
@@ -76,7 +76,7 @@
       "src": "/documentation/fr/database-setup-cards.png",
       "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
       "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -93,7 +93,7 @@
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,7 +109,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -125,7 +125,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -141,7 +141,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -210,7 +210,7 @@ Recherchez, filtrez, classez et masquez les colonnes dans l’unique vue liste. 
 
 ## Modifier le schéma d’une base {#change-a-database-schema}
 
-Le déplacement d’une colonne commence après un mouvement du pointeur et reste horizontal. Le curseur de déplacement apparaît uniquement pendant le glisser-déposer ; un clic normal ouvre toujours les actions de la colonne.
+Le déplacement d’une colonne commence après un mouvement du pointeur et reste horizontal. Le curseur de déplacement apparaît uniquement pendant le glisser-déposer ; un clic normal ouvre toujours les actions de la colonne. Lorsqu’un en-tête de colonne a le focus, Entrée ou Espace ouvre ses actions. Appuyez sur F8 pour commencer le déplacement au clavier, utilisez Gauche ou Droite, puis Entrée pour confirmer ou Échap pour annuler.
 
 Dans Colonnes, l’œil montre ou masque une propriété. Cliquez sur un en-tête pour renommer ou faites-le glisser pour réordonner ; le nom reste en première position. Les options de sélection simple ou multiple se modifient depuis la cellule ou Colonnes ; noms et couleurs s’enregistrent ensemble.
 

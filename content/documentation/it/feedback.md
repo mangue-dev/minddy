@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -70,7 +70,7 @@
     ]
   },
   "review": {
-    "revision": 8,
+    "revision": 9,
     "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (it changed-passage parity and localized-label review)",
     "date": "2026-10-11"
@@ -99,7 +99,7 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità SSO locale configurata e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questo esempio usa un firmatario SSO locale; l’URL e il segreto di firma sono nascosti.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +115,7 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +131,7 @@
       "src": "/documentation/it/feedback-objective-selection.png",
       "alt": "Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.",
       "caption": "Selettori dell’obiettivo con dati dimostrativi. I nuovi feedback ereditano l’impostazione dell’integrazione.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -148,7 +148,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -204,7 +204,7 @@ Apri Il mio feedback per ritrovare richieste e voti secondo ciò che può vedere
 
 ## Esaminare feedback in privato e rispondere pubblicamente {#moderate-feedback}
 
-I filtri dell’elenco combinano stato, obiettivo, categorie, autore, origine e stato di revisione; la visibilità è disponibile quando la bacheca pubblica è attiva. Più valori della stessa proprietà sono alternative; proprietà diverse si combinano. Reimposta i filtri per tornare all’elenco iniziale. L’elenco mostra fino a 500 richieste corrispondenti a questi filtri alla volta.
+I filtri dell’elenco combinano stato, obiettivo, categorie, autore, origine e stato di revisione; la visibilità è disponibile quando la bacheca pubblica è attiva. Più valori della stessa proprietà sono alternative; proprietà diverse si combinano. Reimposta i filtri per tornare all’elenco iniziale. L’elenco mostra fino a 500 richieste corrispondenti a questi filtri alla volta. Apri il sottomenu di una proprietà per selezionarne i valori; il numero indica quanti sono selezionati. Su mobile, espandi la sezione della proprietà.
 
 I membri aprono Feedback nel progetto e scelgono una richiesta dalla coda di revisione o dall’elenco. Leggi l’invio originale, la scelta pubblica o privata, lo stato di revisione e gli eventuali suggerimenti di moderazione o duplicati. Puoi chiarire titolo e corpo canonici conservando i testi originali inviati. Assegna categorie e uno stato pubblico adatto; lo spam non appare mai sulla bacheca pubblica. Una richiesta privata resta distinta da una richiesta pubblica soltanto in attesa.
 

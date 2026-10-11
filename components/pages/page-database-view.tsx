@@ -373,7 +373,7 @@ export function PageDatabaseView({
   const { saveSchema, pending: schemaPending } = usePageDatabase(projectId);
   const columnBase = useRef<PageSummary | null>(null);
   const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
   const tPages = useTranslations("Pages");
   const {
@@ -829,7 +829,7 @@ export function PageDatabaseView({
           {t("new")}
         </Button>
       </div>
-      <DndContext sensors={columnSensors} collisionDetection={closestCenter} modifiers={[horizontalColumnDrag]}
+      <DndContext accessibility={{ screenReaderInstructions: { draggable: t("dragColumnHint") } }} sensors={columnSensors} collisionDetection={closestCenter} modifiers={[horizontalColumnDrag]}
         onDragStart={() => { columnBase.current = database; }}
         onDragCancel={() => { columnBase.current = null; }}
         onDragEnd={({ active, over }) => {

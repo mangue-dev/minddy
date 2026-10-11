@@ -6433,7 +6433,7 @@
     "columnActions": "Actions for {name}",
     "rename": "Rename",
     "editColumn": "Edit column",
-    "dragColumnHint": "Click for actions, drag to reorder",
+    "dragColumnHint": "Click for actions or drag to reorder. Keyboard: F8 starts moving, Left/Right reorders, Enter confirms, Escape cancels.",
     "conversionWarningTitle": "Some values cannot be converted",
     "conversionWarningDescription": "Changing from {from} to {to} will clear {count, plural, one {# incompatible cell} other {# incompatible cells}}. Compatible values will be converted. Cancel to keep the current column and all its values.",
     "confirmConversion": "Change type and clear cells",

@@ -1,10 +1,11 @@
 "use client";
 
+import { FilterMenu, FilterItem, FilterSub, MenuToggleRow } from "@/components/filter-menu";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, ArrowDown01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
-import { createContext, useContext, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -29,9 +30,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   Input,
   SplitButton,
@@ -39,7 +37,7 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { DialogTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   StatusIndicator,
   PriorityIndicator,
@@ -182,74 +180,6 @@ function toggleFacet<T extends string | null>(
   return [...set];
 }
 
-const MobileFilters = createContext(false);
-function FilterItem({ onSelect, disabled, children, pressed }: React.ComponentProps<typeof DropdownMenuItem> & { pressed?: boolean }) {
-  if (!useContext(MobileFilters)) return <DropdownMenuItem onSelect={onSelect} disabled={disabled}>{children}</DropdownMenuItem>;
-  return <button type="button" disabled={disabled} aria-pressed={pressed}
-    className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left hover:bg-control-hover disabled:opacity-50"
-    onClick={(event) => onSelect?.(event.nativeEvent)}>{children}</button>;
-}
-
-/** One toggle row inside a filter submenu — Linear style: clicking toggles
-    WITHOUT closing the menu (onSelect preventDefault), the check sits on the
-    right. */
-function MenuToggleRow({
-  active,
-  onSelect,
-  children,
-}: {
-  active: boolean;
-  onSelect: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <FilterItem
-      pressed={active}
-      onSelect={(event) => {
-        event.preventDefault();
-        onSelect();
-      }}
-    >
-      <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
-      {active && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
-    </FilterItem>
-  );
-}
-
-/** One facet submenu of the filters menu: the trigger carries the facet name
-    and, when the facet is active, how many values are selected — a bare
-    number, the same count treatment as the sidebar. */
-function FilterSub({
-  label,
-  count,
-  children,
-}: {
-  label: string;
-  count: number;
-  children: React.ReactNode;
-}) {
-  if (useContext(MobileFilters)) return <details className="group/filter rounded-xl">
-    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-3 text-sm [&::-webkit-details-marker]:hidden">
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {count > 0 && <span className="shrink-0 tabular-nums text-muted-foreground">{count}</span>}
-      <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground transition-transform group-open/filter:rotate-180 motion-reduce:transition-none" />
-    </summary>
-    <div className="pl-3">{children}</div>
-  </details>;
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-        {count > 0 && (
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-            {count}
-          </span>
-        )}
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="w-56">{children}</DropdownMenuSubContent>
-    </DropdownMenuSub>
-  );
-}
 
 function FiltersPopover({
   config,
@@ -617,20 +547,7 @@ function FiltersPopover({
           </FilterItem>
         </FilterSub>
   </>;
-  return <MobileFilters.Provider value={mobile}>
-    {mobile ? <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent aria-describedby={undefined}>
-        <DialogTitle>{tc("filters")}</DialogTitle>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{body}</div>
-      </DialogContent>
-    </Dialog> : <DropdownMenu open={open} onOpenChange={setOpen}>
-      <Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger></TooltipTrigger>
-        <TooltipContent>{tc("filters")}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent align="end" className="w-60">{body}</DropdownMenuContent>
-    </DropdownMenu>}
-  </MobileFilters.Provider>;
+  return <FilterMenu open={open} onOpenChange={setOpen} label={tc("filters")} trigger={trigger}>{body}</FilterMenu>;
 }
 
 function ViewNameDialog({

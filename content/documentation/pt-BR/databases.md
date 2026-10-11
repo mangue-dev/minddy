@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -49,7 +49,7 @@
     ]
   },
   "review": {
-    "revision": 8,
+    "revision": 9,
     "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (pt-BR complete-body second pass and corrected wording review); agent:/root (pt-BR changed-passage parity and localized-label review)",
     "date": "2026-10-11"
@@ -76,7 +76,7 @@
       "src": "/documentation/pt-BR/database-setup-cards.png",
       "alt": "Prévia do componente com cartões para configurar uma nova base de dados com Numo ou importar uma existente.",
       "caption": "Sugestões para uma nova base com dados de demonstração. Escolha Numo ou importação, ou feche os cartões para continuar manualmente.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -93,7 +93,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com texto, número, seleções, datas, pessoas e caixa de seleção.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,7 +109,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -125,7 +125,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -141,7 +141,7 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -210,7 +210,7 @@ Pesquise, filtre, ordene e oculte colunas na única visualização de lista. Ess
 
 ## Alterar o esquema de um banco de dados com segurança {#change-a-database-schema}
 
-O arraste de uma coluna começa após um movimento do ponteiro e permanece horizontal. O cursor de arraste aparece somente enquanto você arrasta; um clique normal continua abrindo as ações da coluna.
+O arraste de uma coluna começa após um movimento do ponteiro e permanece horizontal. O cursor de arraste aparece somente enquanto você arrasta; um clique normal continua abrindo as ações da coluna. Com o foco no cabeçalho de uma coluna, Enter ou Espaço abre suas ações. Pressione F8 para iniciar a reordenação, use Esquerda ou Direita e depois Enter para confirmar ou Esc para cancelar.
 
 Em Colunas, use o controle com o ícone de olho para mostrar ou ocultar propriedades. Clique em um cabeçalho para renomeá-lo ou arraste os cabeçalhos para reorganizá-los. A coluna com o nome da entrada permanece na primeira posição. As opções de Seleção ou Seleção múltipla podem ser editadas pelo menu da célula ou em Colunas; os nomes e as cores são salvos juntos.
 

@@ -17,8 +17,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -49,7 +49,7 @@
     ]
   },
   "review": {
-    "revision": 8,
+    "revision": 9,
     "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
     "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (it complete-body second pass and corrected wording review); agent:/root (it changed-passage parity and localized-label review)",
     "date": "2026-10-11"
@@ -76,7 +76,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -93,7 +93,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,7 +109,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -125,7 +125,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -141,7 +141,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -210,7 +210,7 @@ Cerca, filtra, ordina e nascondi colonne nell’unica vista elenco. Queste prefe
 
 ## Modificare lo schema di un database in sicurezza {#change-a-database-schema}
 
-Il trascinamento di una colonna inizia dopo un movimento del puntatore e resta orizzontale. Il cursore di presa compare solo durante il trascinamento; un clic normale continua ad aprire le azioni della colonna.
+Il trascinamento di una colonna inizia dopo un movimento del puntatore e resta orizzontale. Il cursore di presa compare solo durante il trascinamento; un clic normale continua ad aprire le azioni della colonna. Con il focus sull’intestazione di una colonna, Invio o Spazio apre le azioni. Premi F8 per iniziare il riordino, usa Sinistra o Destra, quindi Invio per confermare o Esc per annullare.
 
 In Colonne, usa il controllo con l’occhio per mostrare o nascondere le proprietà. Fai clic su un’intestazione per rinominarla oppure trascina le intestazioni per riordinarle. La colonna con il nome della voce rimane per prima. Puoi modificare le opzioni di Selezione o Selezione multipla dal menu della cella o da Colonne; nomi e colori vengono salvati insieme.
 

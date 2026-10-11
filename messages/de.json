@@ -6433,7 +6433,7 @@
     "columnActions": "Aktionen für {name}",
     "rename": "Umbenennen",
     "editColumn": "Spalte bearbeiten",
-    "dragColumnHint": "Klicken für Aktionen, ziehen zum Umordnen",
+    "dragColumnHint": "Klicken für Aktionen oder ziehen zum Umordnen. Tastatur: F8 startet, Links/Rechts ordnet um, Eingabe bestätigt, Escape bricht ab.",
     "conversionWarningTitle": "Einige Werte können nicht umgewandelt werden",
     "conversionWarningDescription": "Beim Wechsel von {from} zu {to} {count, plural, one {wird # inkompatible Zelle geleert} other {werden # inkompatible Zellen geleert}}. Kompatible Werte werden umgewandelt. Brich ab, um die aktuelle Spalte und alle Werte zu behalten.",
     "confirmConversion": "Typ ändern und Zellen leeren",

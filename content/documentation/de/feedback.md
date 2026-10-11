@@ -20,8 +20,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -70,7 +70,7 @@
     ]
   },
   "review": {
-    "revision": 8,
+    "revision": 9,
     "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
     "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (de changed-passage parity and localized-label review)",
     "date": "2026-10-11"
@@ -99,7 +99,7 @@
       "src": "/documentation/de/publish-a-feedback-board-workflow.png",
       "alt": "Aktiviertes öffentliches Feedback-Board mit lokaler SSO-Identität und ausgeblendeter URL.",
       "caption": "Der Eigentümer aktiviert das Board und wählt die Besucheridentität. Dieses Beispiel verwendet einen lokalen SSO-Signierer; URL und Signaturgeheimnis sind ausgeblendet.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +115,7 @@
       "src": "/documentation/de/submit-and-follow-feedback-workflow.png",
       "alt": "Feedback-Formular für Besucher mit Titel, Beschreibung und aktivierter öffentlicher Sichtbarkeit.",
       "caption": "Ein angemeldeter Besucher reicht einen Bedarf ein und bestimmt die Sichtbarkeit. Das Beispiel wurde tatsächlich bei deaktivierter automatischer Prüfung eingereicht.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +131,7 @@
       "src": "/documentation/de/feedback-objective-selection.png",
       "alt": "Komponentenvorschau der Zielauswahl für Feedback und einer Feedback-Integration, beide auf Docs eingestellt.",
       "caption": "Zielauswahl mit Demonstrationsdaten. Neues Feedback übernimmt die Integrationsvorgabe.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -148,7 +148,7 @@
       "src": "/documentation/de/feedback-pages-and-views-workflow.png",
       "alt": "Veröffentlichter Feedback-Leitfaden als ausgewählter Board-Tab, ohne Anmeldung lesbar.",
       "caption": "Veröffentlichen Sie eine Seite, aktivieren Sie Seitentabs und wählen Sie die Seite für das Board aus. Die Demoseite wurde anonym geöffnet; ihre undurchsichtige URL behält `noindex`.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -204,7 +204,7 @@ Stimmen Sie für eine vorhandene Anfrage, statt sie zu duplizieren. Ihre Identit
 
 ## Feedback privat prüfen und öffentlich antworten {#moderate-feedback}
 
-Die Listenfilter kombinieren Status, Ziel, Kategorien, Autor, Quelle und Prüfstatus; die Sichtbarkeit ist bei aktiviertem öffentlichem Board verfügbar. Mehrere Werte derselben Eigenschaft gelten als Alternativen, verschiedene Eigenschaften gemeinsam. Setzen Sie die Filter zurück, um zur ursprünglichen Liste zurückzukehren. Die Liste zeigt jeweils bis zu 500 Anfragen, die diesen Filtern entsprechen.
+Die Listenfilter kombinieren Status, Ziel, Kategorien, Autor, Quelle und Prüfstatus; die Sichtbarkeit ist bei aktiviertem öffentlichem Board verfügbar. Mehrere Werte derselben Eigenschaft gelten als Alternativen, verschiedene Eigenschaften gemeinsam. Setzen Sie die Filter zurück, um zur ursprünglichen Liste zurückzukehren. Die Liste zeigt jeweils bis zu 500 Anfragen, die diesen Filtern entsprechen. Öffnen Sie das Untermenü einer Eigenschaft und wählen Sie Werte aus; die Zahl zeigt die Anzahl ausgewählter Werte. Auf Mobilgeräten klappen Sie den Eigenschaftsbereich auf.
 
 Projektmitglieder öffnen den Feedback-Bereich des Projekts und wählen eine Anfrage aus der Prüfliste oder Übersicht. Lesen Sie den ursprünglichen Beitrag, seine öffentliche oder private Sichtbarkeit, den Prüfstatus und mögliche Moderations- oder Duplikatvorschläge. Sie können den kanonischen Titel und Text präzisieren; die ursprünglich eingereichten Texte bleiben erhalten. Weisen Sie Kategorien und einen geeigneten öffentlichen Status zu. Spam erscheint niemals auf dem öffentlichen Board. Eine private Anfrage bleibt etwas anderes als eine öffentliche Anfrage, die nur auf Prüfung wartet.
 

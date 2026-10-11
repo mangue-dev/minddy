@@ -76,6 +76,17 @@ describe("team feedback list filters", () => {
     expect(rows[0]).not.toHaveProperty("filter_categories");
   });
 
+  it("deduplicates visibility parameters and filters before the row cap", async () => {
+    state.client = client([...Array.from({ length: 520 }, (_, i) => post(`private-${i}`, { is_public: false })), post("public-match")]);
+    const filters = parseFeedbackListFilters(new URLSearchParams("visibility=public&visibility=public"));
+    expect(filters).toEqual({ visibility: ["public"] });
+    const response = await GET(new NextRequest("https://minddy.example/api/projects/project/feedback?visibility=public&visibility=public"), { params: Promise.resolve({ id: "project" }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()).posts.map((row: { id: string }) => row.id)).toEqual(["public-match"]);
+    expect(parseFeedbackListFilters(new URLSearchParams("visibility=public&visibility=private&visibility=public")))
+      .toEqual({ visibility: ["public", "private"] });
+  });
+
   it("accepts repeated optional identifiers and rejects invalid values before querying", async () => {
     expect(parseFeedbackListFilters(new URLSearchParams(`objective=${goal}&objective=none&source=api&statuses=shipped`)))
       .toEqual({ objective: [goal, null], source: ["api"], statuses: ["shipped"] });

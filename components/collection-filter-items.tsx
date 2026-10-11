@@ -1,11 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, CommandGroup, CommandItem, CommandSeparator } from "mangue-ui";
+import { Button, DropdownMenuSeparator } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FilterIcon } from "@hugeicons/core-free-icons";
-import { SearchMenu } from "@/components/search-menu";
-import { checkedProps } from "@/components/search-select";
+import { FilterMenu, FilterSub, FilterItem, MenuToggleRow } from "@/components/filter-menu";
 import { EFFORTS, PRIORITIES } from "@/lib/issue-constants";
 import { ME_ASSIGNEE } from "@/lib/view-filter";
 import { displayName } from "@/lib/display-name";
@@ -31,17 +30,16 @@ export function CollectionFilterItems({ filters, onChange, members, categories, 
     ...(integrations ? [{ key: "integration" as const, label: tf("integration"), options: [{ value: null, label: tc("none") }, ...integrations.map((i) => ({ value: i.id, label: i.name }))] }] : []),
   ];
   return <>
-    {facets.filter((facet) => facet.options.length).map(({ key, label, options }) => <CommandGroup key={key} heading={label}>
+    {facets.filter((facet) => facet.options.length).map(({ key, label, options }) => <FilterSub key={key} label={label} count={filters[key]?.length ?? 0}>
       {options.map((option) => {
-        const active = (filters[key] as (string | null)[] | undefined)?.includes(option.value) ?? false;
-        return <CommandItem key={option.value ?? "none"} value={`property-${key}-${option.value ?? "none"}`} keywords={[label, option.label]}
-          {...checkedProps(active)} onSelect={() => {
-            const selected = filters[key] as (string | null)[] | undefined ?? [];
-            onChange({ ...filters, [key]: active ? selected.filter((value) => value !== option.value) : [...selected, option.value] });
-          }}>{option.label}</CommandItem>;
+        const selected = filters[key] as (string | null)[] | undefined ?? [];
+        const active = selected.includes(option.value);
+        return <MenuToggleRow key={option.value ?? "none"} active={active} onSelect={() => {
+          onChange({ ...filters, [key]: active ? selected.filter((value) => value !== option.value) : [...selected, option.value] });
+        }}><span className="truncate">{option.label}</span></MenuToggleRow>;
       })}
-    </CommandGroup>)}
-    <CommandSeparator /><CommandGroup><CommandItem value="clear-properties" onSelect={() => onChange({})}>{tc("clearFilter")}</CommandItem></CommandGroup>
+    </FilterSub>)}
+    <DropdownMenuSeparator /><FilterItem onSelect={() => onChange({})}>{tc("clearFilter")}</FilterItem>
   </>;
 }
 
@@ -49,8 +47,8 @@ export function CollectionFilterMenu(props: CollectionFilterProps) {
   const [open, setOpen] = useState(false);
   const tc = useTranslations("Common");
   const active = Object.values(props.filters).some((values) => values?.length);
-  return <SearchMenu open={open} onOpenChange={setOpen} align="end" tooltip={tc("filters")}
+  return <FilterMenu open={open} onOpenChange={setOpen} label={tc("filters")}
     trigger={<Button variant="ghost" size="icon-sm" aria-label={tc("filters")}><HugeiconsIcon icon={FilterIcon} className={active ? "text-primary" : undefined} /></Button>}>
     <CollectionFilterItems {...props} />
-  </SearchMenu>;
+  </FilterMenu>;
 }

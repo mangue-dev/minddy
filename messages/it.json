@@ -6433,7 +6433,7 @@
     "columnActions": "Azioni per {name}",
     "rename": "Rinomina",
     "editColumn": "Modifica colonna",
-    "dragColumnHint": "Fai clic per le azioni, trascina per riordinare",
+    "dragColumnHint": "Fai clic per le azioni o trascina per riordinare. Tastiera: F8 avvia, Sinistra/Destra riordina, Invio conferma, Esc annulla.",
     "conversionWarningTitle": "Alcuni valori non possono essere convertiti",
     "conversionWarningDescription": "Il passaggio da {from} a {to} svuoterà {count, plural, one {# cella incompatibile} other {# celle incompatibili}}. I valori compatibili verranno convertiti. Annulla per mantenere la colonna attuale e tutti i suoi valori.",
     "confirmConversion": "Cambia tipo e svuota celle",
