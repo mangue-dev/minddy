@@ -1,5 +1,8 @@
 import "server-only";
 
+import { RoutineTriggerError, type RoutineTrigger } from "@/lib/routine-triggers";
+import { validateRoutineTrigger } from "@/lib/server/routine-trigger-validation";
+
 import { randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRoutine, encodeRoutine, routineContentValues } from
@@ -53,6 +56,12 @@ export interface Routine {
  * (1–100, 15 by default). See `routineRunBudgetUsd`.
  */
   max_spend_percent: number;
+  trigger?: RoutineTrigger;
+  trigger_type?: RoutineTrigger["type"];
+  trigger_revision?: number;
+  legacy_source_key?: string | null;
+  waiting_count?: number;
+  trigger_error?: string | null;
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
@@ -86,6 +95,7 @@ export type RoutineErrorKey =
   | "routineNotFound"
   | "promptRequired"
   | "noRepo"
+  | "invalidTrigger"
   | "invalidSchedule"
   | "unknownTimezone"
   | "workerConfigurationManagedInSettings"
@@ -151,13 +161,16 @@ export interface CreateRoutineInput {
   promptMentions?: AssistantMention[] | null;
   /** Per-occurrence cap as a percentage of monthly usage (1–100). Default: 15. */
   maxSpendPercent?: number | null;
-  frequency: string;
-  hour: number;
+  trigger?: unknown;
+  frequency?: string;
+  hour?: number;
   minute?: number | null;
   weekdays?: number[] | null;
   daysOfMonth?: number[] | null;
   timezone: string;
   enabled?: boolean;
+  /** Internal, idempotent archive conversion key; never exposed by creation doors. */
+  legacySourceKey?: string;
 }
 
 /** Cadence fields read from raw input, normalized. */
@@ -249,7 +262,16 @@ export async function createRoutine(
   const prompt = input.prompt?.trim() ?? "";
   if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
 
-  const schedule = toSchedule(input);
+  let trigger: RoutineTrigger;
+  try { trigger = await validateRoutineTrigger(input.trigger, input.projectId, input.actorId); }
+  catch (error) {
+    if (error instanceof RoutineTriggerError) return { ok: false, status: 400, errorKey: "invalidTrigger", scheduleCode: error.code };
+    throw error;
+  }
+  if (trigger.type !== "schedule" && [input.frequency, input.hour, input.minute, input.weekdays, input.daysOfMonth].some(v => v != null)) {
+    return { ok: false, status: 400, errorKey: "invalidTrigger" };
+  }
+  const schedule = toSchedule(trigger.type === "schedule" ? { ...input, frequency: input.frequency ?? "weekly", hour: input.hour ?? 9 } : { frequency: "daily", hour: 0, timezone: input.timezone });
   let next: Date;
   try {
     next = nextRunAt(schedule, new Date());
@@ -269,6 +291,10 @@ export async function createRoutine(
       project_id: input.projectId,
       owner_id: input.actorId,
       title,
+      trigger,
+      trigger_type: trigger.type,
+      trigger_revision: 1,
+      ...(input.legacySourceKey ? { legacy_source_key: input.legacySourceKey } : {}),
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
       prompt_mentions: input.promptMentions?.length ? input.promptMentions : [],
       base_branch: null,
@@ -282,7 +308,7 @@ export async function createRoutine(
       days_of_month: schedule.daysOfMonth,
       timezone: schedule.timezone,
       enabled,
-      next_run_at: enabled ? next.toISOString() : null,
+      next_run_at: enabled && trigger.type === "schedule" ? next.toISOString() : null,
     }, { service });
   const { data, error } = await service
     .from("agent_routines")
@@ -297,6 +323,7 @@ export async function createRoutine(
 }
 
 export interface UpdateRoutineInput {
+  trigger?: unknown;
   routineId: string;
   actorId: string;
   /** Rewrite the instruction REDOES the title: cf. `titleFor`. */
@@ -350,6 +377,19 @@ export async function updateRoutine(
   }
 
   const updates: Record<string, unknown> = {};
+  let trigger = routine.trigger ?? { type: "schedule" } as RoutineTrigger;
+  if (input.trigger !== undefined || input.enabled === true) {
+    try { trigger = await validateRoutineTrigger(input.trigger ?? trigger, routine.project_id, input.actorId); }
+    catch (error) {
+      if (error instanceof RoutineTriggerError) return { ok: false, status: 400, errorKey: "invalidTrigger", scheduleCode: error.code };
+      throw error;
+    }
+    updates.trigger = trigger;
+    updates.trigger_type = trigger.type;
+  }
+  if (trigger.type !== "schedule" && [input.frequency, input.hour, input.minute, input.weekdays, input.daysOfMonth].some(v => v != null)) {
+    return { ok: false, status: 400, errorKey: "invalidTrigger" };
+  }
   if (typeof input.prompt === "string") {
     const prompt = input.prompt.trim();
     if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
@@ -385,7 +425,7 @@ export async function updateRoutine(
   const enabled = enabledTouched ? (input.enabled as boolean) : routine.enabled;
 
   let schedule: RoutineSchedule | null = null;
-  if (cadenceTouched || enabledTouched) {
+  if (cadenceTouched || enabledTouched || input.trigger !== undefined) {
     schedule = toSchedule({
       frequency: input.frequency ?? routine.frequency,
       hour: input.hour ?? routine.hour,
@@ -397,7 +437,7 @@ export async function updateRoutine(
     });
     try {
       const next = nextRunAt(schedule, new Date());
-      updates.next_run_at = enabled ? next.toISOString() : null;
+      updates.next_run_at = enabled && trigger.type === "schedule" ? next.toISOString() : null;
     } catch (err) {
       const refusal = scheduleRefusal(err);
       if (refusal) return refusal;
@@ -459,7 +499,7 @@ export async function deleteRoutine(input: {
   if (result.ok) return { ok: true };
   // The basket only returns, for a routine, these three keys; the withdrawal
   // cover the impossible rather than letting a key pass that the UI doesn't know
-  // pas traduire.
+  // translate.
   const errorKey: RoutineErrorKey =
     result.errorKey === "routineNotFound" || result.errorKey === "ownerOnly"
       ? result.errorKey
@@ -472,6 +512,16 @@ export async function deleteRoutine(input: {
  * trash routine no longer exists for anyone (MIN-201): it is
  * restored from the trash, it is not reread by its old URL.
  */
+async function routineWaitingState(routine: Routine): Promise<Routine> {
+  if (!routine.trigger || routine.trigger.type === "schedule") return routine;
+  const result = await getServiceClient().from("routine_armings").select("state,error_code")
+    .eq("routine_id", routine.id).eq("revision", routine.trigger_revision ?? 1)
+    .in("state", ["armed", "reserved", "failed"]);
+  if (result.error) throw new Error(result.error.message);
+  return { ...routine, waiting_count: (result.data ?? []).filter(a => a.state !== "failed").length,
+    trigger_error: result.data?.find(a => a.error_code)?.error_code ?? null };
+}
+
 export async function getRoutineForUser(
   routineId: string,
   userId: string,
@@ -486,7 +536,7 @@ export async function getRoutineForUser(
   if (!data) return null;
   const access = await getProjectAccess(userId, data.project_id as string);
   if (!access) return null;
-  return { routine: await decodeRoutine(data, userId) as unknown as Routine,
+  return { routine: await routineWaitingState(await decodeRoutine(data, userId) as unknown as Routine),
     isOwner: access.isOwner };
 }
 
@@ -512,6 +562,9 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
   ]);
   if (ids.size === 0) return [];
 
+  const { prepareLegacyRoutineProposals } = await import("@/lib/server/legacy-routine-proposals");
+  for (const project of owned ?? []) await prepareLegacyRoutineProposals(project.id, userId);
+
   const { data } = await service
     .from("agent_routines")
     // Same guard as the cron scan: a trashed project leaves the
@@ -527,7 +580,7 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
     .order("created_at", { ascending: false });
   return Promise.all(((data ?? []) as Array<Routine & { projects?: unknown }>)
     .map(async ({ projects: _joined, ...routine }) =>
-      await decodeRoutine(routine, userId) as unknown as Routine));
+      await routineWaitingState(await decodeRoutine(routine, userId) as unknown as Routine)));
 }
 
 /**
@@ -581,6 +634,7 @@ export async function dueRoutines(limit = 20): Promise<Routine[]> {
 export async function claimRoutine(
   routine: Routine,
 ): Promise<{ claimed: boolean; nextRunAt: string | null }> {
+  if (routine.trigger_type && routine.trigger_type !== "schedule") return { claimed: false, nextRunAt: null };
   if (!routine.next_run_at) return { claimed: false, nextRunAt: null };
   const schedule = routineSchedule(routine);
   let next: string | null;
@@ -648,6 +702,7 @@ export async function stampRoutineError(
 
 /** The cadence of a routine, such as `describeSchedule`/`nextRunAt` expects it. */
 export function routineSchedule(routine: Routine): RoutineSchedule {
+  if (routine.trigger_type && routine.trigger_type !== "schedule") throw new RoutineTriggerError("scheduleOnly");
   return {
     frequency: routine.frequency,
     hour: routine.hour,

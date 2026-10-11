@@ -21,7 +21,7 @@ import {
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
-import { AUTOMATION_PRESET_IDS, AUTOMATION_START_DELAY_CHOICES } from "@/lib/automations";
+
 import {
   CREATE_ROUTINE_DESCRIPTION,
   CREATE_ROUTINE_PARAMETERS,
@@ -1317,7 +1317,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings: identity (name, key, accent color — the icon itself is set from the project's Settings → General page, you have no tool for it), auto-assign on create, Smart Assign and its per-member rules, Smart Triage's mode ('rules' only — the deterministic board sort; the AI scoring pass was retired), the automations switch (the agent loop), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign and automations are plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
+        "Update the project's own settings: identity (name, key, accent color — the icon itself is set from the project's Settings → General page, you have no tool for it), auto-assign on create, Smart Assign and its per-member rules, Smart Triage's mode ('rules' only — the deterministic board sort; the AI scoring pass was retired), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign is plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -1352,11 +1352,6 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...SMART_TRIAGE_MODES],
             description:
               "Smart Triage uses free, deterministic rules for the board's 'Smart' sort. Only 'rules' is supported.",
-          },
-          automations_enabled: {
-            type: "boolean",
-            description:
-              "Arm the automation loop on THIS project: the account's automation preset then runs the code agent by itself on status changes. Plan-gated on activation. The preset itself is an ACCOUNT setting (update_account_settings, automation_preset) — you cannot write per-project rules.",
           },
           feedback_review_enabled: {
             type: "boolean",
@@ -1546,7 +1541,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the automation preset with its start delay and per-effort switches, analytics consent, the code agent's selected engine, adapter capabilities, safe native connection status, OpenCode model and reasoning defaults, branch prefix and sandbox (region, size). Native credentials and login capabilities are never returned. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, analytics consent, the code agent's selected engine, adapter capabilities, safe native connection status, OpenCode model and reasoning defaults, branch prefix and sandbox (region, size). Native credentials and login capabilities are never returned. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1665,7 +1660,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           notif_agent: {
             type: "boolean",
             description:
-              "Inbox: notify on code-agent activity — a run finishes, asks a question or fails, and automation chains.",
+              "Inbox: notify on code-agent activity — a run finishes, asks a question or fails,.",
           },
           notif_routine: {
             type: "boolean",
@@ -1685,29 +1680,6 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "Inbox: notify on wiki-page activity — the user is mentioned in a page, or the agent writes in one on their behalf.",
-          },
-          automation_preset: {
-            type: ["string", "null"],
-            enum: [...AUTOMATION_PRESET_IDS, null],
-            description:
-              "The automation loop applied to EVERY project this account owns (each project still has its own on/off switch — update_project, automations_enabled). null clears it: no loop at all, without touching each project.",
-          },
-          automation_start_delay_minutes: {
-            type: "number",
-            enum: [...AUTOMATION_START_DELAY_CHOICES],
-            description:
-              "How long (minutes) an automation waits AFTER its trigger before starting the code agent — the reprieve that lets a stray drag or a change of mind cancel the run. 0 = immediate. Applies to the whole account's automation loop.",
-          },
-          automation_efforts: {
-            type: "object",
-            description:
-              "Per-effort switches for the automation loop: which ticket sizes the agent may run on, as a map of effort → boolean. Only pass the efforts to CHANGE — an effort left out keeps its current value; every effort is enabled by default. Set false to exclude a size ('no automation on my xl'), true to re-include it.",
-            properties: Object.fromEntries(
-              ISSUE_EFFORTS.map((effort) => [
-                effort,
-                { type: "boolean" as const },
-              ]),
-            ),
           },
           analytics_consent: {
             type: ["string", "null"],
@@ -2756,44 +2728,6 @@ export const CONVERSATION_ASSISTANT_TOOLS = buildGlobalTools().map((tool) => {
   return targeted;
 });
 
-const REPORT_AUTOMATION_OUTCOME_TOOL: AssistantToolDef = {
-  type: "function",
-  function: {
-    name: "report_automation_outcome",
-    description:
-      "Finish the current automated Numo operation with the result the chain should act on. Call exactly once, as the last tool after all Minddy actions and delegated code work are resolved. Use ok only when this step achieved its requested outcome; use failed when work failed or a blocker remains. This records the machine-readable result but does not replace your final conversational summary.",
-    parameters: {
-      type: "object",
-      properties: {
-        outcome: { type: "string", enum: ["ok", "failed"] },
-        summary: {
-          type: "string",
-          description: "A concise explanation of what the operation concluded.",
-        },
-        blockers: {
-          type: "array",
-          items: { type: "string" },
-          description: "Concrete unresolved blockers; empty when outcome is ok.",
-        },
-      },
-      required: ["outcome", "summary", "blockers"],
-    },
-  },
-};
-
-export const AUTOMATION_ASSISTANT_TOOLS = [
-  ...CONVERSATION_ASSISTANT_TOOLS.filter(
-    (tool) =>
-      tool.function.name !== "ask_user" &&
-      // Connection setup is an account-level write with a one-shot OAuth link
-      // that expires in 10 minutes: no user is watching an automated run, and
-      // an injected instruction must not be able to add MCP endpoints to the
-      // account (each one widens what call_mcp_tool can reach).
-      tool.function.name !== "configure_mcp_connection",
-  ),
-  REPORT_AUTOMATION_OUTCOME_TOOL,
-];
-
 const ANSWER_CODE_WORKER_TOOL: AssistantToolDef = {
   type: "function",
   function: {
@@ -2819,15 +2753,5 @@ const ANSWER_CODE_WORKER_TOOL: AssistantToolDef = {
 /** Restricted surface used while Numo mediates one worker decision. */
 export const WORKER_MEDIATION_ASSISTANT_TOOLS = [
   CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "ask_user")!,
-  ANSWER_CODE_WORKER_TOOL,
-];
-
-/**
- * An automation has no person waiting at the other end of the conversation.
- * It may answer a worker from the chain context, or conclude the operation as
- * blocked, but it must never turn a worker question into a user-input wait.
- */
-export const AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS = [
-  ...AUTOMATION_ASSISTANT_TOOLS,
   ANSWER_CODE_WORKER_TOOL,
 ];

@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { isPosition } from "@/lib/pages";
@@ -392,5 +393,6 @@ export async function importDatabase(args: {
     service,
     pages.map((page) => page.id!),
   );
+  scheduleRoutineEvents();
   return { count: data.count as number };
 }

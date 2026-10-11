@@ -231,6 +231,11 @@ function toolsFor(job: VmJob): AgentToolDef[] {
 }
 
 type JsonSchema = {
+  $ref?: string;
+  const?: unknown;
+  minItems?: number;
+  maxItems?: number;
+  maxLength?: number;
   additionalProperties?: boolean;
   type?: string | string[];
   anyOf?: JsonSchema[];
@@ -293,7 +298,17 @@ export function retargetToolNames(text: string): string {
  * `enum`, `description`, nullable values, and unions. Unsupported types throw
  * instead of silently dropping a parameter or weakening it to `any`.
  */
-export function schemaExpression(schema: JsonSchema, path = "args"): string {
+export function schemaExpression(schema: JsonSchema, path = "args", definitions: Record<string, unknown> = {}, refs = new Map<string, string>()): string {
+  if (schema.$ref) {
+    if (refs.has(schema.$ref)) return refs.get(schema.$ref)!;
+    const key = schema.$ref.replace(/^#\/\$defs\//, "");
+    const definition = definitions[key] as JsonSchema | undefined;
+    if (!definition) throw new Error(`${path}: unknown schema reference ${schema.$ref}`);
+    const variable = `recursive${refs.size}`;
+    const nested = new Map(refs).set(schema.$ref, variable);
+    return `(() => { const ${variable} = tool.schema.lazy(() => ${schemaExpression(definition, path, definitions, nested)}); return ${variable}; })()`;
+  }
+  if (Object.hasOwn(schema, "const")) return `tool.schema.literal(${JSON.stringify(schema.const)})`;
   const describe = (expr: string) =>
     schema.description
       ? `${expr}.describe(${literal(retargetToolNames(schema.description))})`
@@ -303,7 +318,7 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
     // The enums of `tools.ts` are all strings; an enum of something else
     // would not have an obvious translation, and it is better to know it here.
     if (!schema.enum.every((v) => typeof v === "string")) {
-      throw new Error(`${path}: enum non textuel, sans traduction`);
+      throw new Error(`${path}: non-string enum is unsupported`);
     }
     return describe(`tool.schema.enum(${JSON.stringify(schema.enum)})`);
   }
@@ -314,7 +329,7 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
   if (variants) {
     if (!variants.length) throw new Error(`${path}: empty schema union`);
     const expressions = variants.map((variant, index) =>
-      schemaExpression(variant, `${path}.anyOf[${index}]`),
+      schemaExpression(variant, `${path}.anyOf[${index}]`, definitions, refs),
     );
     return describe(expressions.length === 1
       ? expressions[0]
@@ -325,30 +340,30 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
     case "null":
       return describe("tool.schema.null()");
     case "string":
-      return describe("tool.schema.string()");
+      return describe(`tool.schema.string()${schema.maxLength === undefined ? "" : `.max(${schema.maxLength})`}`);
     case "number":
     case "integer":
       return describe("tool.schema.number()");
     case "boolean":
       return describe("tool.schema.boolean()");
     case "array": {
-      if (!schema.items) throw new Error(`${path}: tableau sans \`items\``);
+      if (!schema.items) throw new Error(`${path}: array is missing \`items\``);
       return describe(
-        `tool.schema.array(${schemaExpression(schema.items, `${path}[]`)})`,
+        `tool.schema.array(${schemaExpression(schema.items, `${path}[]`, definitions, refs)})${schema.minItems === undefined ? "" : `.min(${schema.minItems})`}${schema.maxItems === undefined ? "" : `.max(${schema.maxItems})`}`,
       );
     }
     case "object": {
       const properties = schema.properties ?? {};
       const required = new Set(schema.required ?? []);
       const entries = Object.entries(properties).map(([name, raw]) => {
-        const inner = schemaExpression(raw as JsonSchema, `${path}.${name}`);
+        const inner = schemaExpression(raw as JsonSchema, `${path}.${name}`, definitions, refs);
         return `    ${JSON.stringify(name)}: ${inner}${required.has(name) ? "" : ".optional()"},`;
       });
-      const passthrough = schema.additionalProperties === true ? ".passthrough()" : "";
+      const passthrough = schema.additionalProperties === true ? ".passthrough()" : schema.additionalProperties === false ? ".strict()" : "";
       return describe(`tool.schema.object({\n${entries.join("\n")}\n  })${passthrough}`);
     }
     default:
-      throw new Error(`${path}: type ${String(schema.type)} sans traduction`);
+      throw new Error(`${path}: type ${String(schema.type)} is unsupported`);
   }
 }
 
@@ -360,6 +375,7 @@ function argsBlock(def: AgentToolDef): string {
     const expr = schemaExpression(
       raw as JsonSchema,
       `${def.function.name}.${name}`,
+      def.function.parameters.$defs,
     );
     return `    ${JSON.stringify(name)}: ${expr}${req.has(name) ? "" : ".optional()"},`;
   });

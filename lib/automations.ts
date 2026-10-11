@@ -1,27 +1,11 @@
 /**
- * The vocabulary of project automations (MIN-147) — PURE logic,
- * shared client + server: the engine runs the rules, the editor of
- * rules draws the same fields. NO import `server-only`.
+ * Archived project-automation vocabulary and decoders (MIN-147, MIN-677).
  *
- * An automation is a conditional rule:
- * • `when` — the EVENT that wakes it up. There are only two, because the
- * loop only needs these: a status change, and the end of a
- * run ;
- * • `if` — conditions on the TICKET (effort, priority, plan, categories,
- * assignment) ;
- * • `then` — actions: start Numo in a mode, set a status, stop
- * for a human, stop the chain.
- *
- * The MIN-147 effort matrix is NOT hardcoded: it is preset
- * `loop-by-effort`, an editable ruleset like any other. This is what makes
- * the feature customizable without making it complicated to use.
- *
- * ONE RULE PER EVENT. The engine plays the FIRST rule that matches and which
- * has not already been played on this chain (`played_rule_ids`). This is what
- * allows two rules to share the same trigger to describe two successive steps
- * — "write plan" then 'check plan' all end up
- * two on one `run_finished intent=plan` * — and it's also what breaks the loop
- * when the action `set_status` retriggers the hook that produced it.
+ * Stored project rules, issue overrides and account presets remain readable for
+ * account transfer and paused routine proposals. These helpers preserve the
+ * original rule semantics for review; they no longer authorize a chain engine,
+ * expose settings controls or launch work. New automation configuration uses
+ * the routine trigger contract in `lib/routine-triggers.ts`.
  */
 
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";

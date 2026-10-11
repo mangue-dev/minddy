@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
 import { categoryStore } from "@/lib/server/category-store";
 
@@ -413,7 +414,7 @@ export async function createIssueForProject({
         .eq("project_id", projectId)
         .is("deleted_at", null)
         .maybeSingle();
-      if (existing) return { ok: true, issue: mapIssueRow(await decodeIssue(existing)) };
+      if (existing) { scheduleRoutineEvents(); return { ok: true, issue: mapIssueRow(await decodeIssue(existing)) }; }
     }
     console.error("[create-issue] create failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
@@ -712,12 +713,12 @@ export async function createIssueForProject({
   // above counts tickets created WITH an assignee. Only the ticket returned
   // carries the correction: the MCP agent reads this response to know to whom he has
   // business, and the live broadcast only catches what it sees happening.
-  return {
+  { scheduleRoutineEvents(); return {
     ok: true,
     issue: {
       ...data,
       ...(smartAssignee ? { assignee_id: smartAssignee } : {}),
       category_ids: categoryIds,
     },
-  };
+  }; }
 }

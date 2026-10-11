@@ -83,9 +83,8 @@ export function notifyRoutineOfNumoTurn(turn: NumoTurn): void {
  *
  * Module separately — and not in `lib/server/routines.ts` — so that
  * `lib/server/agent/runs.ts` can call it without dragging the
- behind it * manufactures, its model ceiling and its quota. Same division as the hooks
- * for automation (`lib/server/automations/hooks.ts`), and for the same reason:
- * the call point is at the lowest of the stack.
+ * routine factory, its model selection and its quota calculation.
+ * The call site stays near the run lifecycle boundary.
  *
  * **All end of passage is said**, with the word that corresponds to it: a pull open request
  * (`agent_done`), a failed pass (`agent_failed`), and otherwise the
@@ -179,4 +178,16 @@ export async function stampRoutineRunEnd(run: {
   } catch (err) {
     console.error("[routine-hooks] stamp threw:", (err as Error).message);
   }
+}
+
+/** Opportunistic wakeup only; source mutations are journaled transactionally. */
+export function scheduleRoutineEvents(): void {
+  afterOrNow(async () => {
+    try {
+      const { processRoutineEvents } = await import("@/lib/server/routine-event-processing");
+      await processRoutineEvents(10);
+    } catch (error) {
+      console.error("[routine-hooks] Event processing deferred to cron:", error);
+    }
+  });
 }

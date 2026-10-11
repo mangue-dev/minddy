@@ -2245,19 +2245,6 @@
       "protectedRelations": [],
       "functionReferences": []
     },
-    "guard_agent_routine_content()": {
-      "sha256": "0dc2243babde6480d7bc8a8aee9e10cdb82ab1933e5b3c8513a46b9ea342620a",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "agent_routine_content_encryption_scope"
-      ],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
     "guard_agent_run_base_branch()": {
       "sha256": "ffbe6ac6387955a0808fcc252aa31226c98c97fb1daade2f38183d155d7c4ce8",
       "securityDefiner": true,
@@ -3090,24 +3077,6 @@
         "comments"
       ],
       "functionReferences": []
-    },
-    "activate_agent_routine_content()": {
-      "sha256": "f7aa3e876ec58096a6b3cc46bdbb21387cdfe5a535d5f38d311b0c285e46bf2d",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "agent_routines",
-        "agent_routine_content_encryption_scope"
-      ],
-      "protectedRelations": [
-        "agent_routines"
-      ],
-      "functionReferences": [
-        "require_encryption_read_committed"
-      ]
     },
     "activate_private_project_icons()": {
       "sha256": "ff8e12ae158293bca18a1986be9bca142e86c9c64ff236d5e175d4dfbf4f92c0",
@@ -8368,27 +8337,6 @@
       ],
       "functionReferences": []
     },
-    "ensure_numo_routine_occurrence(uuid,uuid,text,timestamp with time zone,uuid,text)": {
-      "sha256": "9b50d2dedfb1cecb24494f63ad958f79fccf4d6ea03c30768236302b293e1b51",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "projects",
-        "conversations",
-        "agent_routines",
-        "numo_routine_occurrences"
-      ],
-      "protectedRelations": [
-        "projects",
-        "conversations",
-        "agent_routines",
-        "numo_routine_occurrences"
-      ],
-      "functionReferences": []
-    },
     "migrate_numo_automation_content(uuid,text,jsonb,text,jsonb,text,jsonb,text,jsonb)": {
       "sha256": "2ea3714380594e70504b364f8d8fa0076bd401903373f5ef217719308767aa93",
       "securityDefiner": true,
@@ -9495,6 +9443,153 @@
       "functionReferences": [
         "append_numo_turn_event"
       ]
+    },
+    "capture_routine_event()": {
+      "sha256": "83d36785911df81f847f93e91cced0195de2bf8e0dd039960ac129bfc43eb80b",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "issues",
+        "comments",
+        "feedback_posts",
+        "issue_categories",
+        "routine_events"
+      ],
+      "protectedRelations": [
+        "issues",
+        "comments",
+        "feedback_posts"
+      ],
+      "functionReferences": []
+    },
+    "cleanup_routine_events()": {
+      "sha256": "2668d1df2cb1321efc293964b6cee36f023c8e2d53c0eba8fbcaaf5c375a8a49",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_routines",
+        "routine_events",
+        "routine_armings"
+      ],
+      "protectedRelations": [
+        "agent_routines"
+      ],
+      "functionReferences": []
+    },
+    "revise_routine_trigger()": {
+      "sha256": "07284e730d3fa53d1bf6ffe2ef2c4d024ad320c7c89526b94218bb35695a9292",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "claim_routine_events(integer)": {
+      "sha256": "fceb35278b70e19cafa72a9df1b359049f763ec4ac22c31989514f35a716cd56",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "routine_events"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "guard_agent_routine_content()": {
+      "sha256": "6f5fcaa78e9b75ec461462524dff582fa42b323840a140e91cd977fda73c0f50",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": null,
+      "relations": [
+        "agent_routine_content_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "activate_agent_routine_content()": {
+      "sha256": "27210d332d4d9dc0733a91ce2d1ff84fed57b6cc3cd63edfeb18fdfbea1b8f03",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_routines",
+        "agent_routine_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "agent_routines"
+      ],
+      "functionReferences": []
+    },
+    "claim_routine_arming(uuid,bigint)": {
+      "sha256": "8ca602468a0c76d9ad49e2feb450e7cda8db4807e7f963775f0e9a0a1298d79d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_routines",
+        "routine_armings"
+      ],
+      "protectedRelations": [
+        "agent_routines"
+      ],
+      "functionReferences": []
+    },
+    "arm_routine_event(uuid,bigint,bigint,integer)": {
+      "sha256": "ae3162978b9bf2952d291c9eafacd3fb1cc5ab5988793a1b65a1f0c8aba77f2a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_routines",
+        "routine_events",
+        "routine_armings"
+      ],
+      "protectedRelations": [
+        "agent_routines"
+      ],
+      "functionReferences": []
+    },
+    "ensure_numo_routine_occurrence(uuid,uuid,text,timestamp with time zone,uuid,text,uuid)": {
+      "sha256": "2e731f7a48101d9c7c587f9b7be0a8ca1cb2bd4937572d04971d670e505a80ac",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "projects",
+        "conversations",
+        "agent_routines",
+        "numo_routine_occurrences",
+        "routine_events",
+        "routine_armings"
+      ],
+      "protectedRelations": [
+        "projects",
+        "conversations",
+        "agent_routines",
+        "numo_routine_occurrences"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {
@@ -11469,6 +11564,30 @@
     "agent_runs.agent_runs_native_contract": {
       "function": "guard_native_worker_run_contract()",
       "definition": "CREATE TRIGGER agent_runs_native_contract BEFORE INSERT OR UPDATE ON agent_runs FOR EACH ROW EXECUTE FUNCTION guard_native_worker_run_contract()"
+    },
+    "pages.routine_page_event": {
+      "function": "capture_routine_event()",
+      "definition": "CREATE TRIGGER routine_page_event AFTER INSERT OR UPDATE ON pages FOR EACH ROW EXECUTE FUNCTION capture_routine_event()"
+    },
+    "issues.routine_issue_event": {
+      "function": "capture_routine_event()",
+      "definition": "CREATE TRIGGER routine_issue_event AFTER INSERT OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION capture_routine_event()"
+    },
+    "comments.routine_comment_event": {
+      "function": "capture_routine_event()",
+      "definition": "CREATE TRIGGER routine_comment_event AFTER INSERT ON comments FOR EACH ROW EXECUTE FUNCTION capture_routine_event()"
+    },
+    "feedback_posts.routine_feedback_event": {
+      "function": "capture_routine_event()",
+      "definition": "CREATE TRIGGER routine_feedback_event AFTER INSERT OR UPDATE ON feedback_posts FOR EACH ROW EXECUTE FUNCTION capture_routine_event()"
+    },
+    "issue_categories.routine_category_event": {
+      "function": "capture_routine_event()",
+      "definition": "CREATE TRIGGER routine_category_event AFTER INSERT OR DELETE ON issue_categories FOR EACH ROW EXECUTE FUNCTION capture_routine_event()"
+    },
+    "agent_routines.agent_routines_trigger_revision": {
+      "function": "revise_routine_trigger()",
+      "definition": "CREATE TRIGGER agent_routines_trigger_revision BEFORE UPDATE ON agent_routines FOR EACH ROW EXECUTE FUNCTION revise_routine_trigger()"
     }
   }
 }

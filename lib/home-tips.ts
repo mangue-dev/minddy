@@ -92,7 +92,6 @@ export const HOME_TIPS: HomeTip[] = [
   // Agents, repositories, and integrations.
   tip("agentPr"),
   tip("routines", "nav.routines"),
-  tip("automations"),
   tip("mcp"),
   tip("webhooks"),
   tip("feedbackBoard"),

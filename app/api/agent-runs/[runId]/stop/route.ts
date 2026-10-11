@@ -5,7 +5,6 @@ import { kickAgentDrain } from "@/lib/server/agent/launch";
 import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun, requestInterrupt, requestNumoWorkerStop } from "@/lib/server/agent/runs";
 import { getServiceClient } from "@/lib/supabase-service";
-import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
 
 /**
  * “Interrupt the current response” of an agent session (MIN-46). Put it down
@@ -46,16 +45,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     });
     kickAgentDrain(getServiceClient());
   }
-
-  // A human “stop” STOPS the chain (MIN-147), it does not move it forward:
-  // it's the gesture of someone who wants it to stop, not the end of a stage. He
-  // must be said HERE — the end of run hook cannot deduct it,
-  // `clearInterrupt` having already cleared the flag when `stampRun` executes.
-  //
-  // Only if THIS run worked: open an OLD run in the chain and there
-  // clicking “stop” stopped the chain while its current run continued
-  // turn and push code — the bar said “stopped”, the agent was coding.
-  if (run.chain_id && working) stopChainOnInterrupt(run.chain_id);
 
   return NextResponse.json({ ok: true, status: run.status });
 }

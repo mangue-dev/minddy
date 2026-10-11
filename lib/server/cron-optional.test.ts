@@ -34,7 +34,7 @@ describe("optional scheduler", () => {
       readFileSync(new URL("../../vercel.json", import.meta.url), "utf8"),
     ) as { crons?: unknown[] };
 
-    expect(config.crons).toHaveLength(12);
+    expect(config.crons).toHaveLength(11);
     expect(config.crons).toContainEqual({
       path: "/api/cron/numo-turns",
       schedule: "* * * * *",

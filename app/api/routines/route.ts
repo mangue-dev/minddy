@@ -32,6 +32,7 @@ export const ROUTINE_ERROR_STATUS: Record<RoutineErrorKey, number> = {
   promptRequired: 400,
   noRepo: 409,
   invalidSchedule: 400,
+  invalidTrigger: 400,
   unknownTimezone: 400,
   workerConfigurationManagedInSettings: 400,
   noFieldsToUpdate: 400,
@@ -115,11 +116,12 @@ export async function POST(request: NextRequest) {
     // An absent cap uses the factory default. The factory also clamps 1–100
     // so every creation surface follows one rule.
     maxSpendPercent: num(body.maxSpendPercent),
-    frequency: str(body.frequency, 32),
-    hour: num(body.hour) ?? 9,
-    minute: num(body.minute) ?? 0,
-    weekdays: days(body.weekdays),
-    daysOfMonth: days(body.daysOfMonth),
+    trigger: body.trigger,
+    ...(body.frequency !== undefined ? { frequency: str(body.frequency, 32) } : {}),
+    ...(body.hour !== undefined ? { hour: num(body.hour) ?? 9 } : {}),
+    ...(body.minute !== undefined ? { minute: num(body.minute) ?? 0 } : {}),
+    ...(body.weekdays !== undefined ? { weekdays: days(body.weekdays) } : {}),
+    ...(body.daysOfMonth !== undefined ? { daysOfMonth: days(body.daysOfMonth) } : {}),
     timezone: str(body.timezone, 64),
     ...(typeof body.enabled === "boolean" ? { enabled: body.enabled } : {}),
   });

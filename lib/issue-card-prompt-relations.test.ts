@@ -78,7 +78,7 @@ describe.each(["kanban-board.tsx", "global-kanban-board.tsx"])("%s copied prompt
       issue, projectId: "project", projectKey: "MIN", issueHasPlan: false,
       promptContext: promptContext(rows), buildIssuePrompt, buildIssuePlanPrompt,
       buildIssueVerifyPrompt, buildIssueCustomPrompt,
-      handOffIssueApi: vi.fn(), resolvePromptCopyAutoStart: () => false,
+      resolvePromptCopyAutoStart: () => false,
       shouldAutoStartOnPromptCopy: () => false, user: null,
       navigator: { clipboard: { writeText } }, toast: { success: vi.fn() },
       t: (key: string) => key, tPlan: (key: string) => key,

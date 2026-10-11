@@ -1,6 +1,10 @@
 export type RoutineToolSource = {
   id: string;
   title: string;
+  trigger?: import("@/lib/routine-triggers").RoutineTrigger;
+  waiting_count?: number;
+  trigger_error?: string | null;
+  legacy_source_key?: string | null;
   prompt: string;
   max_spend_percent: number;
   frequency: string;
@@ -36,6 +40,10 @@ export function routineForAssistantTool(
   return {
     id: routine.id,
     title: routine.title,
+    trigger: routine.trigger ?? { type: "schedule" },
+    waiting_count: routine.waiting_count ?? 0,
+    trigger_error: routine.trigger_error ?? null,
+    legacy_proposal: Boolean(routine.legacy_source_key),
     ...(options.includePrompt === false ? {} : { prompt: routine.prompt }),
     /** What one run can spend, as a percentage of the owner's monthly budget. */
     max_spend_percent: routine.max_spend_percent,

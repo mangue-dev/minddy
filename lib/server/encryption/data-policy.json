@@ -447,7 +447,8 @@
       "base_branch",
       "prompt",
       "prompt_mentions",
-      "title"
+      "title",
+      "trigger"
     ],
     "clear": {
       "bounded_metadata": [
@@ -457,12 +458,14 @@
         "max_spend_percent",
         "minute",
         "weekdays",
-        "content_revision"
+        "content_revision",
+        "trigger_revision"
       ],
       "operational_configuration": [
         "frequency",
         "last_error",
-        "timezone"
+        "timezone",
+        "trigger_type"
       ],
       "routing_identity": [
         "deleted_by",
@@ -477,11 +480,15 @@
         "encryption_checked_at",
         "last_run_at",
         "next_run_at",
-        "updated_at"
+        "updated_at",
+        "trigger_activated_at"
       ],
       "encryption_metadata": [
         "encrypted_content",
         "encryption_version"
+      ],
+      "token_digest": [
+        "legacy_source_key"
       ]
     }
   },
@@ -2985,7 +2992,12 @@
         "id",
         "request_id",
         "routine_id",
-        "turn_id"
+        "turn_id",
+        "arming_id",
+        "event_id",
+        "subject_id",
+        "subject_type",
+        "cause_routine_ids"
       ],
       "timestamp": [
         "created_at",
@@ -4945,6 +4957,68 @@
       ],
       "timestamp": [
         "updated_at"
+      ]
+    }
+  },
+  "routine_events": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "source_id",
+        "project_id",
+        "subject_id",
+        "lease_token",
+        "subject_type",
+        "cause_routine_id",
+        "cause_routine_ids"
+      ],
+      "timestamp": [
+        "created_at",
+        "lease_until",
+        "processed_at"
+      ],
+      "bounded_metadata": [
+        "event",
+        "attempts",
+        "error_code",
+        "after_state",
+        "before_state"
+      ]
+    }
+  },
+  "routine_armings": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "event_id",
+        "project_id",
+        "request_id",
+        "routine_id",
+        "subject_id",
+        "lease_token",
+        "subject_type"
+      ],
+      "timestamp": [
+        "retry_at",
+        "created_at",
+        "updated_at",
+        "lease_until"
+      ],
+      "bounded_metadata": [
+        "state",
+        "attempts",
+        "revision",
+        "error_code"
       ]
     }
   }

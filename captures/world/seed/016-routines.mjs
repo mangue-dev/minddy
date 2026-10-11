@@ -150,6 +150,7 @@ async function main() {
         reasoning_level: "medium",
         base_branch: "main",
         // DISABLED, always: the scheduler can never claim these rows.
+        trigger_type: "schedule", trigger: { type: "schedule" },
         enabled: false,
         next_run_at: null,
         frequency: routine.frequency,

@@ -20,7 +20,7 @@ vi.mock("@/lib/keyboard/keyboard-context", () => ({
   useChordPrefixForEvents: () => chord,
   isTypingTarget: (target: HTMLElement) => target?.tagName === "INPUT",
 }));
-vi.mock("@/lib/agent-api", () => ({ handOffIssueApi: vi.fn() }));
+
 afterEach(() => { chord.current = null; vi.unstubAllGlobals(); });
 
 describe("bulk action subscriptions", () => {

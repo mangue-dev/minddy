@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (documentation feedback; based on f40acc562)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "self-hosted"
     ],
@@ -44,14 +44,15 @@
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
-      "content/documentation/reviews/documentation-error-feedback-2026-10-10.md"
+      "content/documentation/reviews/documentation-error-feedback-2026-10-10.md",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (documentation feedback routing and authentication addition; unchanged operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (six-locale reporting addition and retained-meaning review)",
-    "date": "2026-10-10"
+    "revision": 6,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "language": "agent:/root (it translation, label and retained-meaning self-review)",
+    "date": "2026-10-11"
   },
   "related": [
     "workspace-encryption",
@@ -76,7 +77,7 @@
       "src": "/documentation/it/optional-providers-flow.svg",
       "alt": "Schema: Operatore sceglie capacità opzionale. Credenziali complete e condizioni. Destinazione dati esterna esplicita. Verificare comportamento e costi.",
       "caption": "Prima di attivare un’integrazione, verifica le credenziali, le condizioni e la destinazione dei dati.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -108,7 +109,7 @@
       "src": "/documentation/it/proxy-network-and-jobs-flow.svg",
       "alt": "Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Runner, database e porte private. Job autenticati; fermi in manutenzione.",
       "caption": "Il proxy espone le origini pubbliche e mantiene privati i servizi interni; durante la manutenzione ferma anche i job.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -199,7 +200,6 @@ Lo scheduler pubblicato in v0.11.0 non include `numo-turns`. Quello del candidat
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |
-| `/api/cron/automations` | `*/2 * * * *` |
 | `/api/cron/smart-assign` | `*/5 * * * *` |
 | `/api/cron/routines` | `*/5 * * * *` |
 | `/api/cron/billing-sync` | `15 * * * *` |

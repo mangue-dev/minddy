@@ -1,3 +1,5 @@
+import { processRoutineEvents } from "@/lib/server/routine-event-processing";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import { verifyCronSecret } from "@/lib/server/cron-auth";
@@ -88,6 +90,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const eventWork = await processRoutineEvents(MAX_PER_TICK);
   const due = await dueRoutines(MAX_PER_TICK);
   const results: Array<{ id: string; outcome: string }> = [];
   for (const routine of due) {
@@ -100,7 +103,7 @@ async function handle(request: NextRequest) {
       results.push({ id: routine.id, outcome: "threw" });
     }
   }
-  return NextResponse.json({ ok: true, due: due.length, results });
+  return NextResponse.json({ ok: true, due: due.length, results, eventWork });
 }
 
 export const GET = handle;

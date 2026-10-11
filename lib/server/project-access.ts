@@ -1,3 +1,4 @@
+import { projectForClient } from "@/lib/server/project-content";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -75,8 +76,8 @@ export async function getProjectAccess(
     project.encryption_version !== undefined ||
       project.automations !== undefined &&
       project.smart_assign_rules !== undefined
-      ? await decodeProject(project, userId) as unknown as Project
-      : project as Project;
+      ? projectForClient(await decodeProject(project, userId)) as unknown as Project
+      : projectForClient(project) as Project;
 
   if (project.owner_id === userId) {
     return { project: await readable(), isOwner: true, isMember: true };

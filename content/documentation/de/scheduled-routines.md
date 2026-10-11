@@ -2,8 +2,8 @@
 {
   "id": "scheduled-routines",
   "locale": "de",
-  "title": "Geplante Routinen",
-  "summary": "Projektkontext, Zeitzone und KI-Limit festlegen und jeden Durchlauf kontrollieren.",
+  "title": "Routinen",
+  "summary": "Starten Sie Numo per Zeitplan, Ticketereignis, eingegangenem Feedback oder neuem Datenbankeintrag.",
   "topic": "Numo und Integrationen",
   "type": "guide",
   "audiences": [
@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -34,14 +34,15 @@
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "language": "agent:/root (de translation, label and retained-meaning self-review)",
+    "date": "2026-10-11"
   },
   "related": [],
   "aliases": [],
@@ -53,14 +54,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/scheduled-routines-workflow.png",
-      "alt": "Editor einer vorhandenen pausierten Demonstrationsroutine mit für die Anzeige übersetzter Anweisung.",
-      "caption": "Editor einer vorhandenen pausierten Demonstrationsroutine mit für die Anzeige übersetzter Anweisung. Zeitplan und Ausgabenlimit bleiben unverändert; nichts wurde gespeichert oder ausgeführt.",
-      "revision": 3,
+      "alt": "Ereignisroutine mit verschachtelten UND/ODER-Bedingungen.",
+      "caption": "Lokale Demonstration des tatsächlichen Auslösereditors. Keine Routine wurde gespeichert oder ausgeführt.",
+      "revision": 4,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-11",
       "viewport": [
-        1154,
-        1016
+        788,
+        1339
       ],
       "theme": "light",
       "padding": 24,
@@ -73,16 +74,34 @@
 }
 ---
 
-## Den geplanten Auftrag erstellen {#scheduled-routines}
+## Eine Routine erstellen {#scheduled-routines}
 
-Nur der Projekteigentümer kann seine Routine erstellen. Öffnen Sie Routinen und starten Sie die Erstellung. Wählen Sie ein eigenes Projekt, formulieren Sie die Anweisung und erwähnen Sie relevante Tickets, Seiten oder Ziele. Wählen Sie Zeitplan und Zeitzone; prüfen Sie die Vorschau des ersten Laufs. Legen Sie das Limit je Durchlauf als Prozentsatz des Monatsbudgets fest.
+Nur der Projekteigentümer kann Routinen erstellen, bearbeiten oder aktivieren. Öffnen Sie Routinen, wählen Sie ein eigenes Projekt und formulieren Sie die Anweisung für Numo. Erwähnen Sie relevante Tickets, Seiten oder Ziele. Jede Ausführung besitzt eine private Numo-Konversation, einen Verlauf, Minddy-Werkzeuge und bei Bedarf delegierte Codearbeit. Code-Worker verwenden die Kontovorgaben des Eigentümers; ein Repository ist nur für Repository-Arbeit erforderlich.
 
-Jeder Durchlauf erstellt ein neues Gespräch mit gespeicherter Anweisung und Kontext. Es nutzt KI-Budget und persönliche MCP-Verbindungen des Eigentümers. Repository-Arbeit delegiert Numo bei Bedarf mit den Worker-Kontovorgaben.
+Wählen Sie einen Auslöser:
 
-## Durchläufe verwalten {#runs}
+- **Zeitplan:** täglich, wöchentlich oder monatlich mit Uhrzeit und Ihrer Zeitzone. Prüfen Sie die Vorschau des ersten Starts.
+- **Ereignis:** Ticketerstellung, Eintritt in einen Zielstatus, Zuweisung, Kommentar zu einem verfolgten Ticket oder eingegangenes Feedback. Wählen Sie den erforderlichen Status, die Person oder das Ticket. Der Statusauslöser umfasst direkt in diesem Status erstellte Tickets. Eine Zuweisung erfordert einen tatsächlichen Wechsel der zuständigen Person.
+- **Datenbankeintrag:** wählen Sie eine Seitendatenbank dieses Projekts. Erstellung, Duplizierung, Datenbankimport oder Verschieben in diese Datenbank gelten als Eingang. Die Wiederherstellung eines Eintrags erzeugt keinen neuen Eingang.
 
-Öffnen Sie die Routine, um Anweisung oder Zeitplan zu ändern, sie zu pausieren oder Durchläufe einzusehen. Auch manuelle Läufe verbrauchen Budget. Lesen Sie Ergebnis, Fragen, Prüfungen und delegierte Arbeit im jeweiligen Gespräch. Fehlende Eingaben erfordern eine Antwort; der Zeitplan ersetzt sie nicht.
+Stellen Sie bei Bedarf eine Verzögerung nach dem Ereignis zwischen 0 und 120 Minuten ein. Ihre Zeitzone bleibt Teil des Numo-Kontexts. Ereignis- und Datenbankroutinen warten auf künftige Eingänge und haben keinen nächsten geplanten Termin. Die automatische Verarbeitung benötigt den Scheduler der Instanz; ein manueller Start bleibt möglich.
 
-Prüfen Sie nach einem Limitstopp vorhandene Ergebnisse, bevor Sie Limit oder Auftrag ändern. Nach Eigentümerwechsel starten Sie einen neuen Lauf unter dem aktuellen Eigentümer; alte Läufe dürfen frühere Verbindungen nicht verwenden.
+## Bedingungen mit Wartezustand erstellen {#conditions}
 
-![Editor einer vorhandenen pausierten Demonstrationsroutine mit für die Anzeige übersetzter Anweisung.](/documentation/de/scheduled-routines-workflow.png)
+Kombinieren Sie über **Bedingung hinzufügen** und **Gruppe hinzufügen** die Gruppen **Alle Bedingungen** (UND) und **Eine beliebige Bedingung** (ODER). Wählen Sie Ticketstatus, zuständige Person, Kategorie, Priorität oder Aufwand; bei einer Datenbank die typisierte Eigenschaft. Wählen Sie einen passenden Operator und Wert. Personen, Kategorien und Datenbanken müssen zum Projekt gehören. Bedingungen sind auf sechs verschachtelte Ebenen und 64 Knoten beschränkt; ausführbare Ausdrücke sind nicht erlaubt.
+
+Beispiel: Eintritt in Triage UND Kategorie Backend UND (eine Person ist zugewiesen ODER Priorität ist Hoch). Ein Ticket ohne Kategorie wartet zunächst. Die spätere Ergänzung von Backend kann die Ausführung starten. Ein verbrauchter Wartezustand startet keine zweite Ausführung. Das Verlassen des Zielstatus beendet ihn; ein erneuter Eintritt erzeugt einen neuen. Eine Neuzuweisung ersetzt ebenfalls den vorherigen Wartezustand.
+
+Ein Eintrag ohne erforderliche Eigenschaft wartet auf eine passende Bearbeitung. Wird eine referenzierte Eigenschaft entfernt oder ihr Typ geändert, erscheint ein Filterfehler: korrigieren Sie die Bedingungen vor dem Fortsetzen. Die Verzögerung gilt auch, wenn ein Filter später erfüllt wird. Feedbackeingänge umfassen private und noch nicht geprüfte Rückmeldungen; Numo veröffentlicht sie nicht und umgeht keine Moderation.
+
+![Ereignisroutine mit verschachtelten UND/ODER-Bedingungen.](/documentation/de/scheduled-routines-workflow.png)
+
+## Ausführungen verwalten und prüfen {#runs}
+
+Öffnen Sie die Routine, um wartende Bedingungen zu prüfen, Anweisung oder Auslöser zu ändern, zu pausieren oder Ausführungen zu lesen. Pausieren, Löschen und Konfigurationsänderungen verwerfen wartende Einträge. Eine erneute Aktivierung wartet auf künftige Ereignisse ohne alte Eingänge zu wiederholen. Ein manueller Start funktioniert mit jedem Auslöser ohne dessen Ereignis und verbraucht ebenfalls Budget.
+
+Jede Ausführung verwendet das KI-Budget des Eigentümers, standardmäßig mit einer Obergrenze von 15 % des Monatsbudgets einschließlich Numo und delegierter Worker. Öffnen Sie ihre Konversation für Quelle, Ergebnis, Prüfungen, Fragen und delegierte Arbeit. Antworten Sie bei erforderlicher Eingabe in derselben Konversation; das verbleibende Ausführungsbudget bleibt erhalten. Prüfen Sie gespeicherte Ergebnisse, bevor Sie ein Limit ändern oder erneut starten. Nach einem Eigentümerwechsel kann die Routine des vorherigen Eigentümers keine neue Arbeit starten; erstellen Sie eine Routine als aktueller Eigentümer.
+
+Archivierte Projektautomatisierungen erscheinen als pausierte Vorschläge, wenn ihr Eigentümer Routinen öffnet. Lesen Sie vor der Aktivierung den [Übergangsleitfaden](/docs/automation-settings).
+
+Das Limit gilt bei verfügbarem enthaltenem Monatsbudget; ein unbeschränkter Modus mit persönlichem Schlüssel erhält kein künstliches Monatsbudget.

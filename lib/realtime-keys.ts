@@ -443,7 +443,7 @@ export function keysForProjectEvent(
     case "agent_chains": {
       const issueId = issueIdOf(change);
       return issueId
-        ? [active(["agent-chain", "issue", issueId]), active(["agent-runs", "issue", issueId])]
+        ? [active(["agent-runs", "issue", issueId])]
         : [];
     }
     // Pull requests (MIN-161). The trigger only broadcasts the VISIBLE columns
@@ -544,7 +544,6 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   // The automation chain of a ticket (MIN-147): in prefix, like the
   // runs — a tab that slept while a chain was running should
   // find your real stage, not the one before the cut.
-  ["agent-chain"],
   // The panel of a PR, its four surfaces (MIN-161). As a prefix, and the
   // four: messages in the `pull-request:{id}` topic are EPHEMERAL — one
   // sleeping tab doesn't replay them, it just didn't get them. It is therefore

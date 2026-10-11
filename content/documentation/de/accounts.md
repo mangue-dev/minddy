@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,14 +57,15 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 8,
+    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "language": "agent:/root (de changed-text and retained-meaning self-review)",
+    "date": "2026-10-11"
   },
   "related": [
     "choose-an-instance",
@@ -96,7 +97,7 @@
       "src": "/documentation/de/account-security-workflow.png",
       "alt": "Karte zur Zwei-Faktor-Authentifizierung mit Aktivieren-Schaltfläche.",
       "caption": "Beginne hier, bestätige anschließend den Authenticator und bewahre die Wiederherstellungscodes sicher auf.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/de/profile-and-preferences-workflow.png",
       "alt": "Profileinstellungen mit Avatar, Benutzername und schreibgeschützter E-Mail-Adresse.",
       "caption": "Speichere die geprüften Profiländerungen. Die E-Mail-Adresse bleibt schreibgeschützt.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -130,7 +131,7 @@
       "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
       "alt": "Sprachauswahl und Schalter für helles, dunkles und Systemdesign.",
       "caption": "Die Kontosprache und die Sprache der öffentlichen Website werden getrennt eingestellt.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +148,7 @@
       "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
       "alt": "Löschvorschau mit eigenen Projekten, Tickets und Mitgliedern, die Zugriff verlieren.",
       "caption": "Lies die Vorschau und exportiere gewünschte Daten, bevor du die Löschbestätigung öffnest.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -247,3 +248,8 @@ Die Zustimmung ist von den für den Kontobetrieb erforderlichen Daten getrennt. 
 Exportiere vor der Kontolöschung benötigte Daten im Bereich Daten. Lies die Vorschau deiner eigenen Projekte, betroffenen Mitglieder, Tickets, Kommentare und des aktiven Abonnements. Kläre vor der Bestätigung die Folgen für andere Menschen, die an deinen Projekten beteiligt sind.
 
 Öffne die Löschbestätigung erst, wenn du bereit bist. Gib deine Konto-E-Mail-Adresse und bei Passwortkonten das Passwort ein. Konten ohne Passwort benötigen eine kürzlich erfolgte Anmeldung. Folge den Hinweisen, wenn die erneute Authentifizierung abgelehnt wird, statt die Anfrage wiederholt zu senden. Eine erfolgreiche Löschung meldet das Konto ab und führt zur öffentlichen Website zurück. Dies ist kein wiederherstellbarer Papierkorb. Halte Exporte privat und bearbeite verbleibende Abonnement- oder Anbieterfragen über die jeweiligen Abrechnungs- und Anbieterfunktionen.
+
+
+## Routinen konfigurieren {#routines}
+
+Automatische Projektarbeit wird in [Routinen](/docs/scheduled-routines) konfiguriert. Der Eigentümer wählt Zeitplan, Produktereignis oder Datenbankeingang. Automatisierungsvoreinstellungen des Kontos und ihre Projektschalter sind entfernt. Lesen Sie vor der Aktivierung eines archivierten Vorschlags den [Übergangsleitfaden](/docs/automation-settings).

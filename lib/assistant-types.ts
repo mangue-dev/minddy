@@ -116,11 +116,14 @@ export interface NumoConversationDetail {
     started_at: string | null; completed_at: string | null;
     created_at: string; updated_at: string;
   }>;
-  /** Scheduled/manual provenance when this conversation is a routine occurrence. */
+  /** Trigger provenance when this conversation is a routine occurrence. */
   routine_occurrence?: {
     id: string;
     routine_id: string;
-    origin: "scheduled" | "manual";
+    origin: "scheduled" | "manual" | "event" | "database";
+    event_id?: number | null;
+    subject_id?: string | null;
+    subject_type?: "issue" | "page" | "feedback" | null;
     scheduled_for: string | null;
     created_at: string;
   } | null;

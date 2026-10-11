@@ -286,6 +286,7 @@ export interface AnalyticsEventProps {
   // Measure the shape of the gesture, never the instruction itself.
   routine_created: {
     frequency: string;
+    trigger_type?: string;
     spend_cap_percent: number;
     prompt_length_bucket: string;
   };

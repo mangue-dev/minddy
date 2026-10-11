@@ -1,5 +1,8 @@
 import "server-only";
 
+import { z } from "zod";
+import type { RoutineCondition } from "@/lib/routine-triggers";
+
 import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
 
 /**
@@ -12,8 +15,8 @@ import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
  * a fourth.
  *
  * The description must include the following, because the model sees it nowhere else:
- * - **this is NOT a recurring ticket** (`recurrence` on a ticket) nor a
- * project automation (`when … then …`). The three look similar from a distance;
+ * - **this is NOT a recurring ticket** (`recurrence` on a ticket) and
+ * combines schedules and product events. The definitions must remain consistent;
  * a client that confuses them creates the wrong thing;
  * - **each occurrence is a Numo conversation** that can use Minddy tools and
  *   pause visibly for owner input;
@@ -26,10 +29,9 @@ const FREQUENCY_VALUES = [...ROUTINE_FREQUENCIES];
 
 export const CREATE_ROUTINE_DESCRIPTION =
   "Create a ROUTINE: an instruction that starts a private Numo conversation on a " +
-  "schedule — project triage every Monday, a cycle report every Friday, or a " +
-  "monthly security review. It is NOT a recurring ticket (that is an issue with a `recurrence`) " +
-  "and NOT a project automation (those react to an event): nothing triggers it but " +
-  "the clock, and every occurrence has its own Numo conversation and history. There " +
+  "schedule or a product event — triage, status change, assignment, comment, feedback, or database entry. It is NOT a recurring ticket (that is an issue with a `recurrence`) " +
+  ". Choose one trigger: schedule, event, or a new page database entry. Every occurrence " +
+  "has its own Numo conversation and history. There " +
   "is NO name to pass: minddy writes the routine's title from its " +
   "instruction, and rewrites it whenever the instruction changes. `prompt` IS the " +
   "instruction Numo receives, so WRITE it from the user's request rather than " +
@@ -47,13 +49,14 @@ export const CREATE_ROUTINE_DESCRIPTION =
 
 export const UPDATE_ROUTINE_DESCRIPTION =
   "Change an existing routine: turn it on or off (`enabled`), move its cadence, " +
-  "or rewrite its instruction (its title follows). OWNER ONLY. " +
+  "replace its trigger or nested AND/OR conditions, or rewrite its instruction (its title follows). OWNER ONLY. " +
+  "Configuration changes invalidate pending armings; re-enabling listens to future events without replaying the past. " +
   "Touching the cadence or re-enabling it recomputes the next run — so 'move it to 7am' takes effect at the " +
   "NEXT occurrence, not at the one already scheduled. Get the id from list_routines.";
 
 export const LIST_ROUTINES_DESCRIPTION =
   "List the routines of a project without loading every instruction: id, title " +
-  "(written by minddy from the instruction), cadence in plain fields, " +
+  "(written by minddy from the instruction), trigger and conditions, cadence for schedules, " +
   "the spending cap of one occurrence, whether it is enabled, when it last ran " +
   "and when it runs next, and the " +
   "code of the last missed occurrence. " +
@@ -128,9 +131,22 @@ export const ROUTINE_SCHEDULE_PROPERTIES: Record<string, unknown> = {
   },
 };
 
+/** Recursive, typed conditions shared with the MCP registration. */
+export const ROUTINE_CONDITION_SCHEMA: z.ZodType<RoutineCondition> = z.lazy(() => z.union([
+  z.object({ operator: z.enum(["and", "or"]), children: z.array(ROUTINE_CONDITION_SCHEMA).min(1).max(16) }).strict(),
+  z.object({ field: z.enum(["status", "assignee", "category", "priority", "effort", "property"]), propertyId: z.string().uuid().optional(), operator: z.enum(["eq", "neq", "in", "contains", "present", "absent", "gt", "gte", "lt", "lte"]), value: z.union([z.string().max(2000), z.array(z.string()).max(100), z.number(), z.boolean(), z.null()]).optional() }).strict(),
+]));
+export const ROUTINE_TRIGGER_SCHEMA = z.union([
+  z.object({ type: z.literal("schedule") }).strict(),
+  z.object({ type: z.literal("event"), event: z.enum(["issue.created", "issue.status_changed", "issue.assigned", "issue.comment_added", "feedback.received"]), status: z.string().optional(), assigneeId: z.string().uuid().optional(), issueId: z.string().uuid().optional(), delayMinutes: z.number().int().min(0).max(120).optional(), conditions: ROUTINE_CONDITION_SCHEMA.optional() }).strict(),
+  z.object({ type: z.literal("database"), databaseId: z.string().uuid(), delayMinutes: z.number().int().min(0).max(120).optional(), conditions: ROUTINE_CONDITION_SCHEMA.optional() }).strict(),
+]).describe("One trigger. Omit for a schedule; cadence fields are schedule-only. A status event requires its target status; a comment requires a followed issueId; a database requires databaseId. Conditions are nested and/or groups with children or typed leaves (field, operator, optional value/propertyId). An unmatched item stays armed until an edit satisfies the conditions; status exit cancels it. Resolve all IDs in this project. Max depth 6, 64 nodes, 16 KiB. No code or arbitrary expressions.");
+const { $defs: TRIGGER_DEFINITIONS, $schema: _draft, ...TRIGGER_PROPERTY } = z.toJSONSchema(ROUTINE_TRIGGER_SCHEMA, { target: "draft-2020-12" });
+
 /** Complete `create_routine` parameters. */
 export const CREATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
+  $defs: TRIGGER_DEFINITIONS,
   properties: {
     prompt: {
       type: "string",
@@ -140,6 +156,7 @@ export const CREATE_ROUTINE_PARAMETERS = {
         "what to do with one. Numo may use Minddy tools, delegate repository work, " +
         "or pause the conversation when owner input is genuinely required.",
     },
+    trigger: TRIGGER_PROPERTY,
     ...ROUTINE_SCHEDULE_PROPERTIES,
     max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,
@@ -148,12 +165,13 @@ export const CREATE_ROUTINE_PARAMETERS = {
   // frequencies is a trap. Everything else IS required — a small model will not fill
   // an optional field, and omitting `timezone` starts the routine three hours away
   // without anyone noticing. No `title`: minddy writes it from the instruction.
-  required: ["prompt", "frequency", "hour", "timezone"],
+  required: ["prompt", "timezone"],
 };
 
 /** `update_routine` parameters — everything is optional except the target. */
 export const UPDATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
+  $defs: TRIGGER_DEFINITIONS,
   properties: {
     routine_id: { type: "string", description: "Routine id, from list_routines." },
     prompt: {
@@ -168,6 +186,7 @@ export const UPDATE_ROUTINE_PARAMETERS = {
         "false pauses the routine without deleting it (its past runs stay readable); " +
         "true re-arms it on its next occurrence.",
     },
+    trigger: TRIGGER_PROPERTY,
     ...ROUTINE_SCHEDULE_PROPERTIES,
     max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,

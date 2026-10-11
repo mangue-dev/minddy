@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-11T21:11:12.250Z",
+  "method": "Actual RoutineTriggerFields React component, local query-cache demonstrations only, external requests blocked, no business writes, native 2x pixels.",
+  "records": [
+    {
+      "locale": "en",
+      "viewport": [
+        788,
+        1319
+      ]
+    },
+    {
+      "locale": "fr",
+      "viewport": [
+        788,
+        1339
+      ]
+    },
+    {
+      "locale": "de",
+      "viewport": [
+        788,
+        1339
+      ]
+    },
+    {
+      "locale": "es",
+      "viewport": [
+        788,
+        1339
+      ]
+    },
+    {
+      "locale": "it",
+      "viewport": [
+        788,
+        1339
+      ]
+    },
+    {
+      "locale": "pt-BR",
+      "viewport": [
+        788,
+        1339
+      ]
+    }
+  ],
+  "mobileOverflow": false,
+  "typedNumber": 7,
+  "errors": []
+}

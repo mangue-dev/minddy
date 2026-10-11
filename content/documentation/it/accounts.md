@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,14 +57,15 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 8,
+    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "language": "agent:/root (it changed-text and retained-meaning self-review)",
+    "date": "2026-10-11"
   },
   "related": [
     "choose-an-instance",
@@ -96,7 +97,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Controlli del profilo per avatar, nome utente ed email di sola lettura.",
       "caption": "Salva le modifiche al profilo dopo la validazione; l’indirizzo email rimane di sola lettura.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -130,7 +131,7 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua e controlli del tema chiaro, scuro e di sistema.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +148,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -249,3 +250,8 @@ Il consenso è distinto dai dati necessari al funzionamento dell’account. Legg
 Prima di eliminare l’account, esporta dalla sezione Dati ciò che devi conservare. Leggi l’anteprima dei progetti di cui sei proprietario, dei membri coinvolti, dei ticket, dei commenti e dell’abbonamento attivo. Le conseguenze sui progetti posseduti riguardano altre persone: risolvile prima di confermare.
 
 Apri la conferma di eliminazione soltanto quando sei pronto. Digita l’indirizzo email dell’account e, se l’account ha una password, anche la password. Gli account senza password richiedono un accesso recente. Segui le indicazioni di un eventuale rifiuto di autenticazione recente, senza riprovare alla cieca. Se l’eliminazione riesce, la sessione viene chiusa e si torna al sito pubblico. Non è uno spostamento nel cestino recuperabile. Mantieni private le esportazioni e gestisci eventuali questioni residue su abbonamenti o provider tramite i rispettivi controlli di fatturazione e servizio.
+
+
+## Configurare le routine {#routines}
+
+Il lavoro automatico del progetto si configura in [Routine](/docs/scheduled-routines), dove il proprietario sceglie pianificazione, evento o arrivo in un database. I preset di automazione dell’account e i relativi interruttori di progetto sono rimossi. Leggi la [guida alla transizione](/docs/automation-settings) prima di attivare una proposta archiviata.

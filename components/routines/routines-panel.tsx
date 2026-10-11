@@ -496,7 +496,8 @@ function RoutineRow({
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
-  const cadence = describeSchedule(
+  const statusT = useTranslations("Status");
+  const cadence = routine.trigger && routine.trigger.type !== "schedule" ? (routine.trigger.type === "database" ? t("trigger_database") : t(`event_${routine.trigger.event.replaceAll(".", "_")}` as "event_issue_created") + (routine.trigger.status ? ` · ${statusT(routine.trigger.status as "triage")}` : "")) : describeSchedule(
     {
       frequency: routine.frequency,
       hour: routine.hour,

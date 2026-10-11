@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   ASSISTANT_TOOLS,
-  AUTOMATION_ASSISTANT_TOOLS,
   GLOBAL_ASSISTANT_TOOLS,
   PROJECT_ASSISTANT_TOOLS,
   PROJECT_SCOPED_TOOLS,
@@ -57,8 +56,6 @@ describe("Numo tool contracts", () => {
     const settings = tool("update_account_settings")?.function.parameters.properties;
     for (const name of [
       "send_shortcut",
-      "automation_start_delay_minutes",
-      "automation_efforts",
       "analytics_consent",
       "sandbox_region",
       "sandbox_size",
@@ -381,15 +378,8 @@ describe("Numo tool contracts", () => {
     );
   });
 
-  it("keeps connection setup out of unattended automation runs", () => {
-    const automation = AUTOMATION_ASSISTANT_TOOLS.map(
-      (candidate) => candidate.function.name,
-    );
-    // An automation has no user to open the expiring OAuth link, and an
-    // injected instruction must not be able to add MCP endpoints to the
-    // account. The read-only catalog stays available.
-    expect(automation).not.toContain("configure_mcp_connection");
-    expect(automation).toContain("list_mcp_presets");
+  it("does not expose the retired chain outcome tool", () => {
+    expect(CONVERSATION_ASSISTANT_TOOLS.map(tool => tool.function.name)).not.toContain("report_automation_outcome");
   });
 });
 

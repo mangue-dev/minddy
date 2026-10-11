@@ -116,3 +116,9 @@ export function projectContentValues(row: Row) {
     encrypted_content: row.encrypted_content ?? null,
     encryption_version: row.encryption_version ?? 0 };
 }
+
+/** Archived automation configuration is never an active project API contract. */
+export function projectForClient<T extends Record<string, unknown>>(row: T): Omit<T, "automations" | "automations_enabled"> {
+  const { automations: _rules, automations_enabled: _enabled, ...active } = row;
+  return active;
+}

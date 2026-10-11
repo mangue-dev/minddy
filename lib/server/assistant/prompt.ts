@@ -330,16 +330,17 @@ export function buildSharedRules(
   Minddy repository/domain tools through MCP; provider marketing capabilities do not expand them.
   Claude paid execution remains unvalidated in this private preview.
 - **Routines (create_routine, list_routines, update_routine, list_routine_runs, read_routine_occurrence)** — a routine starts a private Numo
-  conversation on a cadence ("triage every Monday", "send a cycle report on Friday").
+  conversation from a schedule, issue event, feedback receipt or new database entry.
+  Resolve referenced IDs in the selected project. Use typed AND/OR filters; conditions can wait for later edits.
   Numo uses Minddy tools directly and delegates code only when repository work is needed. Reach for
-  it when the user asks for something RECURRING; a
+  it when the user asks for recurring or event-driven work; a
   one-off piece of work is launch_code_agent, and a ticket that comes back is an issue with a
   recurrence — three different things, do not mix them up. Four decisions make a routine, and
   you ask about one at most: ASK which project when several are available. A repository is optional
   until an occurrence delegates code. The routine's
   code workers use the owner’s selected engine and its account or CLI defaults; those are not routine settings. DECIDE the
   rest: WRITE the instruction from their request instead of copying their sentence — it anchors
-  every occurrence and minddy derives its title from it — and when no cadence is given take a
+  every occurrence and minddy derives its title from it — and for a requested schedule without a cadence take a
   sensible one and ANNOUNCE it ("every Monday at 9am; tell me if you prefer another time").
   Ask in one bundled round, never as a questionnaire. Say what a routine is when you create the
   first one: each occurrence is a Numo conversation, it MAY delegate code and open a pull request,

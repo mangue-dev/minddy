@@ -45,7 +45,6 @@ import { RelationTargetPicker } from "@/components/relation-target-picker";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { useIssueActivity } from "@/components/agent/agent-activity-context";
 import {
-  handOffIssueApi,
   isPrWorthShowing,
   type IssuePr,
 } from "@/lib/agent-api";
@@ -1176,10 +1175,6 @@ const IssueCardContent = memo(function IssueCardContent({
   };
 
   const copyPrompt = async () => {
-    // Copying a prompt means entrusting the work to someone else: the channel
-    // who was waiting for this suspended ticket is canceled (MIN-147). In the callback and
-    // not in the menu — ⇧P calls it directly.
-    handOffIssueApi(issue.id);
     // MIN-20: copy the prompt starts the ticket (option enabled by default,
     // can be deactivated in Account → Preferences). We only advance the statutes
     // pre-work, and the toast only signals the trip if it has taken place.
@@ -1212,8 +1207,6 @@ const IssueCardContent = memo(function IssueCardContent({
   // rereading when the plan exists. No automatic start: schedule
   // is not starting.
   const copyPlanPrompt = async () => {
-    // Getting started: the suspended chain is canceled (MIN-147).
-    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
         issue,
@@ -1232,8 +1225,6 @@ const IssueCardContent = memo(function IssueCardContent({
   // automatic: we reread work already done, we don’t start it — and a
   // Ticket remaining upstream must not advance because a check is requested.
   const copyVerifyPrompt = async () => {
-    // Getting started: the suspended chain is canceled (MIN-147).
-    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
         issue,

@@ -170,13 +170,13 @@ export const MCP_FULL_USAGE_GUIDE =
       "webhook setup and its last delivery status), minddy_revoke_integration " +
       "kills one for good. " +
       "A project can also carry ROUTINES: private Numo conversations started on " +
-      "a cadence — project triage every Monday, a cycle report every Friday " +
-      "on the 1st. minddy_create_routine schedules one (owner only), " +
+      "a schedule or event — project triage every Monday, an issue entering review, " +
+      "feedback received or a new database entry. minddy_create_routine creates one (owner only), " +
       "minddy_list_routines shows what is already scheduled and when it last ran, " +
       "minddy_update_routine pauses or re-times one, minddy_delete_routine sends " +
       "it to the trash — it stops at once and keeps its history, restorable from " +
-      "the app for a few weeks. A routine is neither a recurring issue nor a project " +
-      "automation: nothing triggers it but the clock. Numo uses Minddy tools and " +
+      "the app for a few weeks. A routine is distinct from an issue recurrence. " +
+      "Typed nested AND/OR filters can wait for later edits; status exit cancels the waiting item. Pausing or editing invalidates waiting items and activation listens to future events. Numo uses Minddy tools and " +
       "delegates code only when needed, so a repository is optional; the occurrence " +
       "can pause visibly when owner input is required. " +
       "Start with minddy_list_projects to discover project ids.";

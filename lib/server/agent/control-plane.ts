@@ -1,3 +1,6 @@
+import { getServiceClient } from "@/lib/supabase-service";
+import { withRoutineCause } from "@/lib/server/supabase-fetch";
+import { hydrateNumoTurn, type NumoTurn } from "@/lib/server/numo/turns";
 import "server-only";
 import { isNativeAgentEngine } from "@/lib/agent-engines";
 import { assertNativeWorkerAuthority, renewNativeWorkerConnection, finalizeNativeWorkerConnection,
@@ -1144,7 +1147,7 @@ export async function handleControlPlaneRequest(opts: {
  * a simple POST from its shell: “rereading = zero writing” was just a
  * prompt sentence, and one injection was enough to get through it.
  */
-async function runPlatformTool(
+async function runPlatformToolCore(
   run: AgentRun,
   name: string,
   body: Record<string, unknown>,
@@ -1614,4 +1617,14 @@ export function validNativeWorkerCheckpoint(value: AgentCheckpoint | null, engin
   return memory.history.every((message) => message &&
     ["user", "assistant"].includes(message.role) && typeof message.text === "string" &&
     Object.keys(message).every((key) => ["role", "text"].includes(key)));
+}
+
+/** Carry the protected parent routine's causality through deferred worker writes. */
+async function runPlatformTool(run: AgentRun, name: string, body: Record<string, unknown>): Promise<ControlPlaneResult> {
+  if (!run.parent_numo_turn_id) return runPlatformToolCore(run, name, body);
+  const result = await getServiceClient().from("numo_assistant_turns").select("*").eq("id", run.parent_numo_turn_id).maybeSingle();
+  if (result.error || !result.data) throw new Error("Parent Numo turn unavailable");
+  const parent = await hydrateNumoTurn(result.data as NumoTurn);
+  return withRoutineCause(parent.intent.routineId ?? null,
+    () => runPlatformToolCore(run, name, body), parent.intent.routineProvenance?.causeRoutineIds ?? []);
 }

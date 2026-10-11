@@ -42,7 +42,6 @@ const AgentChatModal = dynamic(
   { ssr: false }
 );
 import { IssueAgentChip } from "@/components/agent/issue-agent-chip";
-import { ChainStatusBar } from "@/components/automations/chain-status-bar";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import {
   CustomPromptDialog,
@@ -54,7 +53,6 @@ import { RelationTargetPicker } from "@/components/relation-target-picker";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
 import {
-  handOffIssueApi,
   isLatestAgentRunResumable,
   isAgentRunWorking,
 } from "@/lib/agent-api";
@@ -457,12 +455,6 @@ export function IssueSidePanel({
 
   const copyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
-    // Copying a prompt means giving the work to someone else — an agent
-    // external, oneself. The chain that was waiting for this suspended ticket is canceled
-    // therefore (MIN-147). HERE and not in the menu: the buttons on the Map tab and
-    // the shortcut ⇧P call this callback DIRECTLY, and therefore skip
-    // l'enveloppe qui n'existait qu'au niveau du menu ⋯.
-    handOffIssueApi(issue.id);
     // MIN-20: copy the prompt starts the ticket (option enabled by default,
     // can be deactivated in Account → Preferences). We only advance the statutes
     // pre-work, and the toast only signals the trip if it has taken place.
@@ -501,8 +493,6 @@ export function IssueSidePanel({
   // automatic here: planning is not starting the work.
   const copyPlanPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
-    // Getting started: the suspended chain is canceled (MIN-147).
-    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
         issue,
@@ -524,8 +514,6 @@ export function IssueSidePanel({
   // work already done, we are not starting it.
   const copyVerifyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
-    // Getting started: the suspended chain is canceled (MIN-147).
-    handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
         issue,
@@ -546,10 +534,6 @@ export function IssueSidePanel({
   const runCustomPrompt = useCallback(
     async (instructions: string, target: CustomPromptTarget) => {
       if (!issue || !promptContext) return;
-      // Getting started, whether the free instruction is copied OR launched (MIN-147).
-      // The launch is covered on the server side anyway; the signal is
-      // idempotent, and this point covers the copy.
-      handOffIssueApi(issue.id);
       if (target === "launch") {
         const identifier = issueIdentifier(projectKey, issue.number);
         entrustToNumo(
@@ -987,7 +971,7 @@ export function IssueSidePanel({
                 NOT behind `agentsEnabled`: a string that EXISTS is a fact,
                 and the case which most deserves to be shown is precisely that
                 of a chain stopped FOR FAULT of linked deposit. */}
-            <ChainStatusBar issueId={issue.id} />
+
 
             <Tabs
               value={tab}

@@ -336,6 +336,10 @@ vi.mock("@/lib/server/account-settings", () => ({
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (table: string) => {
+      if (table === "numo_assistant_turns") {
+        const query = { select: () => query, eq: () => query, maybeSingle: async () => ({ data: { id: "parent-turn", user_id: "user-owner", intent: { routineId: "routine-1", routineProvenance: { causeRoutineIds: [] } }, outcome: null, error_message: null, checkpoint: {} }, error: null }) };
+        return query;
+      }
       if (table === "agent_runs") {
         const query = {
           select: () => query,

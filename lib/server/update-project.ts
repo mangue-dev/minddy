@@ -1,9 +1,9 @@
+import { projectForClient } from "@/lib/server/project-content";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { canUseAutomations, canUseSmartAssign } from "@/lib/server/entitlements";
-import { parseAutomations } from "@/lib/automations";
+import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { normalizeLanguage, type FeedbackLanguage } from "@/lib/feedback/languages";
 import { parseSmartTriageMode } from "@/lib/smart-triage";
@@ -37,8 +37,8 @@ export type UpdateProjectResult =
         | "projectNotFound"
         | "ownerOnly"
         | "smartAssignNotAllowed"
-        | "automationsNotAllowed"
         | "invalidSmartTriageMode"
+        | "projectAutomationsRetired"
         | "databaseError";
     };
 
@@ -60,6 +60,9 @@ export async function updateProjectSettings({
   if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
 
+  if ("automations_enabled" in input || "automations" in input) {
+    return { ok: false, status: 400, errorKey: "projectAutomationsRetired" };
+  }
   const updates: Record<string, unknown> = {};
   if (typeof input.name === "string") {
     const name = input.name.trim();
@@ -124,25 +127,6 @@ export async function updateProjectSettings({
     }
     updates.smart_triage_mode = mode;
   }
-  // Automations (MIN-147). Same shape as the neighbor, different gate:
-  // `canUseAutomations` ALSO requires `allowAgents`, since a rule throws
-  // agent runs. The RULES are written without gate - disarming them does not
-  // costs nothing, it's the switch that allows the expense to pass.
-  if (typeof input.automations_enabled === "boolean") {
-    if (
-      input.automations_enabled &&
-      !(await canUseAutomations(access.project.owner_id))
-    ) {
-      return { ok: false, status: 403, errorKey: "automationsNotAllowed" };
-    }
-    updates.automations_enabled = input.automations_enabled;
-  }
-  if ("automations" in input) {
-    // `parseAutomations` is the validation: tolerant by construction, it
-    // let go of what she doesn't understand rather than refusing everything
-    // registration for a malformed rule.
-    updates.automations = parseAutomations(input.automations);
-  }
 
   const service = getServiceClient();
 
@@ -173,7 +157,7 @@ export async function updateProjectSettings({
   if (Object.keys(updates).length === 0) {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
-  const contentChange = ["name", "automations", "smart_assign_rules"]
+  const contentChange = ["name", "smart_assign_rules"]
     .some((key) => Object.hasOwn(updates, key));
   if (contentChange) {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -203,7 +187,7 @@ export async function updateProjectSettings({
         return { ok: false, status: 500, errorKey: "databaseError" };
       }
       if (write.data) {
-        return { ok: true, project: await decodeProject(write.data, actorId) as unknown as Project };
+        return { ok: true, project: projectForClient(await decodeProject(write.data, actorId)) as unknown as Project };
       }
     }
     return { ok: false, status: 409, errorKey: "databaseError" };
@@ -224,5 +208,5 @@ export async function updateProjectSettings({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   if (!data) return { ok: false, status: 404, errorKey: "projectNotFound" };
-  return { ok: true, project: await decodeProject(data, actorId) as unknown as Project };
+  return { ok: true, project: projectForClient(await decodeProject(data, actorId)) as unknown as Project };
 }

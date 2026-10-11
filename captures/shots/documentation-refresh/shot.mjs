@@ -20,8 +20,6 @@ const settings = [
   ["devices-and-notifications-workflow", "inbox", "account-push-devices"],
   ["ai-keys-and-models-workflow", "agent", "account-ai-provider"],
   ["ai-keys-and-models-defaults-workflow", "agent", "account-agent"],
-  ["automation-settings-workflow", "automations", "account-automations"],
-  ["automation-settings-projects-workflow", "automations", "account-automations-projects"],
   ["transfer-between-instances-workflow", "data", "account-data-import"],
   ["transfer-between-instances-export-workflow", "data", "account-data-export"],
   ["privacy-and-account-deletion-workflow", "data", "account-data-delete"],

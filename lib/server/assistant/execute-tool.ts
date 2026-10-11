@@ -16,9 +16,7 @@ import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
-import { decodeOperationJson, decodeOperationText, encodeOperationJson,
-  encodeOperationText, shouldProtectAutomationOperation } from
-  "@/lib/server/automations/operation-content";
+
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeMcpTool } from "@/lib/server/mcp-client";
@@ -292,7 +290,7 @@ export interface ToolContext {
   operationBudgetPercent?: number | null;
   routineId?: string | null;
   /** Automation chain that owns this parent Numo operation, if any. */
-  automationChainId?: string | null;
+
   /** Exact pending worker decision available only during a mediation turn. */
   workerInput?: WorkerInputCorrelation;
 }
@@ -558,10 +556,9 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
     "can still turn the webhook off, or change the events and scope of the " +
     "destination already in place.",
   webhookInvalidConfig: "The webhook events or scope are invalid.",
+  projectAutomationsRetired: "Project automations were replaced by routines. Configure a routine instead.",
   smartAssignNotAllowed:
     "Smart Assign is not included in the owner's plan, so it cannot be turned on. Relay this meaning in the user's language.",
-  automationsNotAllowed:
-    "Automations are not included in the owner's plan, so the loop cannot be armed on this project. Relay this meaning in the user's language.",
   webhookIssuesOnly:
     "That is a 'feedback' key: it creates no issue, so it has no webhook. Only an 'issues' key can have one.",
   databaseError: "A database error occurred.",
@@ -938,96 +935,6 @@ export async function executeTool(
         },
         success: true,
         pause: true,
-      };
-    }
-    if (toolName === "report_automation_outcome") {
-      if (!ctx.automationChainId || !ctx.turnId) {
-        return toolError(
-          "report_automation_outcome is only available inside an automated Numo operation.",
-        );
-      }
-      const outcome = args.outcome === "ok" || args.outcome === "failed"
-        ? args.outcome
-        : null;
-      const summary = typeof args.summary === "string"
-        ? args.summary.trim().slice(0, 2_000)
-        : "";
-      const blockers = delegationStrings(args.blockers, 20);
-      if (!outcome || !summary) {
-        return toolError("outcome and summary are required.");
-      }
-      if (outcome === "ok" && blockers.length > 0) {
-        return toolError("An ok automation outcome cannot carry blockers.");
-      }
-      const { data: bound, error: boundError } = await ctx.service
-        .from("numo_automation_operations")
-        .select("id, step")
-        .eq("chain_id", ctx.automationChainId)
-        .eq("turn_id", ctx.turnId)
-        .maybeSingle();
-      if (boundError) return toolError(boundError.message);
-      if (!bound) return toolError("The current Numo turn is not bound to this automation chain.");
-      const { data: chain, error: chainError } = await ctx.service
-        .from("agent_chains").select("project_id")
-        .eq("id", ctx.automationChainId).single();
-      if (chainError || !chain?.project_id) {
-        return toolError("Automation operation project is unavailable.");
-      }
-      const projectId = chain.project_id as string;
-      const protect = await shouldProtectAutomationOperation(ctx.service);
-      const storedSummary = protect ? await encodeOperationText(projectId,
-        ctx.automationChainId, bound.step, "outcome_summary", summary) : summary;
-      const storedBlockers = protect ? await encodeOperationJson(projectId,
-        ctx.automationChainId, bound.step, "outcome_blockers", blockers) : blockers;
-      const { data, error } = await ctx.service
-        .from("numo_automation_operations")
-        .update({
-          outcome,
-          outcome_summary: storedSummary,
-          outcome_blockers: storedBlockers,
-        })
-        .eq("id", bound.id)
-        .is("outcome", null)
-        .select("id")
-        .maybeSingle();
-      if (error) return toolError(error.message);
-      if (!data) {
-        const { data: existing, error: existingError } = await ctx.service
-          .from("numo_automation_operations")
-          .select("outcome, outcome_summary, outcome_blockers")
-          .eq("id", bound.id)
-          .maybeSingle();
-        if (existingError) return toolError(existingError.message);
-        const existingSummary = await decodeOperationText(projectId,
-          ctx.automationChainId, bound.step, "outcome_summary",
-          existing?.outcome_summary ?? null);
-        const existingBlockers = existing ? await decodeOperationJson(projectId,
-          ctx.automationChainId, bound.step, "outcome_blockers",
-          existing.outcome_blockers as unknown as unknown[]) : [];
-        const sameBlockers = Array.isArray(existingBlockers)
-          && existingBlockers.length === blockers.length
-          && existingBlockers.every(
-            (blocker: unknown, index: number) => blocker === blockers[index],
-          );
-        if (
-          existing?.outcome === outcome
-          && existingSummary === summary
-          && sameBlockers
-        ) {
-          return {
-            result: { recorded: true, reused: true, outcome, summary, blockers },
-            success: true,
-          };
-        }
-        return toolError(
-          existing?.outcome
-            ? "This automation outcome was already recorded."
-            : "The current Numo turn is not bound to this automation chain.",
-        );
-      }
-      return {
-        result: { recorded: true, outcome, summary, blockers },
-        success: true,
       };
     }
 
@@ -2115,7 +2022,7 @@ export async function executeTool(
             projectKey: access.project.key,
             locale: ctx.locale,
             extra: durableDelegation ? legacyPrompt : objective,
-            fromChain: !!ctx.automationChainId,
+
           });
         }
         if (issueSource) {
@@ -2240,7 +2147,7 @@ export async function executeTool(
                 ? { issueId }
                 : { projectId }),
           userId: ctx.userId,
-          triggeredBy: ctx.automationChainId ? "automation" : ctx.triggerSource ?? "chat",
+          triggeredBy: ctx.triggerSource ?? "chat",
           prompt: message,
           continueRunId:
             typeof args.continuation_run_id === "string"
@@ -2264,7 +2171,7 @@ export async function executeTool(
             : {}),
           budgetUsd: ctx.operationBudgetUsd ?? null,
           routineId: ctx.routineId ?? null,
-          chainId: ctx.automationChainId ?? null,
+
           // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
@@ -2306,16 +2213,17 @@ export async function executeTool(
         const result = await createRoutine({
           projectId,
           actorId: ctx.userId,
-          prompt: typeof args.prompt === "string" ? args.prompt : "",
+          trigger: args.trigger,
+    prompt: typeof args.prompt === "string" ? args.prompt : "",
           maxSpendPercent:
             typeof args.max_spend_percent === "number"
               ? args.max_spend_percent
               : null,
-          frequency: typeof args.frequency === "string" ? args.frequency : "",
-          hour: typeof args.hour === "number" ? args.hour : 9,
-          minute: typeof args.minute === "number" ? args.minute : 0,
-          weekdays: numberList(args.weekdays),
-          daysOfMonth: numberList(args.days_of_month),
+          frequency: typeof args.frequency === "string" ? args.frequency : undefined,
+          hour: typeof args.hour === "number" ? args.hour : undefined,
+          minute: typeof args.minute === "number" ? args.minute : undefined,
+          weekdays: args.weekdays === undefined ? undefined : numberList(args.weekdays),
+          daysOfMonth: args.days_of_month === undefined ? undefined : numberList(args.days_of_month),
           // The browser's time zone is in the context of Numo: if it does not
           // has not passed it, we refuse rather than leaving in UTC.
           timezone: typeof args.timezone === "string" ? args.timezone : "",
@@ -2353,7 +2261,7 @@ export async function executeTool(
           );
         }
         const result = await updateRoutine({
-          routineId,
+          trigger: args.trigger,          routineId,
           actorId: ctx.userId,
           ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}),
           ...(typeof args.enabled === "boolean"
@@ -3125,7 +3033,6 @@ export async function executeTool(
               smart_assign_enabled: result.project.smart_assign_enabled,
               smart_assign_rules: result.project.smart_assign_rules,
               smart_triage_mode: result.project.smart_triage_mode,
-              automations_enabled: result.project.automations_enabled,
               feedback_review_enabled: result.project.feedback_review_enabled,
               feedback_review_skip_over_budget:
                 result.project.feedback_review_skip_over_budget,

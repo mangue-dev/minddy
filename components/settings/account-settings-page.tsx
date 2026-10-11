@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, FlowIcon as Workflow, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
 import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
@@ -11,7 +11,6 @@ import { AccountSecuritySection } from "@/components/settings/account-security-s
 import { AccountDesktopSection } from "@/components/settings/account-desktop-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
-import { AccountAutomationsSection } from "@/components/settings/account-automations-section";
 import { AccountNotificationsSection } from "@/components/settings/account-notifications-section";
 import { AccountPushDevicesSection } from "@/components/settings/account-push-devices-section";
 import {
@@ -28,7 +27,6 @@ import { useAssistantContext } from "@/lib/assistant-panel-context";
 
 export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const t = useTranslations("Account");
-  const tAutomations = useTranslations("Automations");
   const { user } = useAuth();
   useAssistantContext(!browse && user ? { settings: "account" } : null);
   // The attention badge of the “Security” tab (MIN-132): as long as 2FA
@@ -73,14 +71,6 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       label: t("cyclesTab"),
       icon: CycleIcon,
       content: <AccountCyclesSection />,
-    },
-    // Automations just after the cycles: both say how the
-    // work progresses on its own, one for me, the other for the agent.
-    {
-      value: "automations",
-      label: tAutomations("title"),
-      icon: Workflow,
-      content: <AccountAutomationsSection />,
     },
     {
       value: "inbox",

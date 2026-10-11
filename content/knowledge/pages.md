@@ -5,7 +5,7 @@ summary: A nested wiki for specifications, decisions, and durable project knowle
 category: collaboration
 audience: end-user
 tags: [wiki, page, documentation, spec, notes, markdown]
-lastReviewed: 2026-10-07
+lastReviewed: 2026-10-11
 ---
 
 Every project can have a nested wiki of pages. Pages are for durable context: specifications, decisions, conventions, runbooks, onboarding, and the reasoning a ticket depends on. Issues remain the right place for work to be done. Pages support markdown, subpages, attachments, threaded comments, backlinks from pages that link to them, read-only sharing, export, and history. Favorite pages surface for the whole project at the top of the page tree, and avatars show who is viewing a page live.
@@ -34,7 +34,7 @@ Database entries support the usual rich text editor, comments, attachments, dupl
 
 PDF exports include database entries and their column values. **Export → Database archive (.zip)** includes the complete branch: readable Markdown and CSV, exact column schemas and option colors, values, entry bodies, creation timestamps, nested pages, and attached file bytes. Import this archive through a new database’s banner to restore it, including remapped internal page/file links. People can be matched to members of the destination project. Device-specific filters, sort direction, and hidden columns stay on the original device. Published database pages only show entries included in the published branch; publishing a database without its children keeps their content private. Numo and MCP-connected agents read database schemas, option definitions, entry values, and creation timestamps through page tools. They can create databases and entry pages, rename or reorder columns, manage selection options, and update individual values using the same access checks and conflict protection as the interface. MCP exposes these operations through `minddy_create_page` (`database: true`), `minddy_get_page`, and `minddy_update_page_database`; Numo uses `create_page`, `get_page` in the conversation, or `read_page` during delegated repository work, plus `update_page_database`. Schema edits require the current database revision; cell edits require the exact previous value. Column type changes use a preview followed by an apply with its token. Clearing incompatible values requires explicit confirmation, and concurrent changes invalidate the preview. MCP writes retain the connected agent’s identity.
 
-Advanced formulas, automations, and additional database views are not part of page databases.
+Advanced formulas and additional database views are not part of page databases.
 
 ## Import a database
 
@@ -43,3 +43,5 @@ From a new database’s banner, choose **Import an existing database**. Upload a
 The import includes entry bodies, nested documents, and local files. It requires a database with no optional columns or existing entries. A failed database write rolls back all imported rows; retrying the same import does not create duplicates. Archives are limited to 20 MB compressed, 50 MB expanded, and 1,000 pages. Each attachment retains the existing 10 MB page-file limit.
 
 The option editor offers **Add an option** below its rows, including for empty Select and Multi-select columns. Give options distinct, nonempty names before saving. The new-database setup area offers Numo and import cards; its dismiss control has a tooltip.
+
+The project owner can create a database-arrival routine with typed property filters. An empty entry stays armed until edited to satisfy its conditions. Removing a referenced property or changing its type suspends the filter with a readable error. Creation, duplication, database import and allowed moves are arrivals; restoration is not. Configure these in Routines, not the database schema editor.

@@ -13,8 +13,6 @@ import {
   fetchAgentSessionsApi,
   fetchAllPullRequestsApi,
   fetchIssueAgentRunsApi,
-  fetchIssueAutomationApi,
-  fetchIssueChainStatusApi,
   fetchOpenPullRequestCountApi,
   fetchPullRequestReadinessBatchApi,
   fetchPrCommitDiffApi,
@@ -71,54 +69,6 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     /** The PR of the ticket, regardless of its state — null if it has none. */
     pullRequest: data?.pullRequest ?? null,
     loading: enabled && isPending,
-  };
-}
-
-/** Ticket automation chain cache key (MIN-147). */
-export function issueChainQueryKey(issueId: string) {
-  return ["agent-chain", "issue", issueId] as const;
-}
-
-/** Keep status reads under the same realtime and mutation invalidation prefix. */
-export function issueChainStatusQueryKey(issueId: string) {
-  return [...issueChainQueryKey(issueId), "status"] as const;
-}
-
-export function useIssueChainStatusQuery(issueId: string | null) {
-  const enabled = !!issueId;
-  const { data, isPending } = useQuery({
-    queryKey: issueChainStatusQueryKey(issueId ?? ""),
-    queryFn: () => fetchIssueChainStatusApi(issueId as string),
-    enabled,
-    refetchOnMount: "always",
-  });
-  return { chain: data?.chain ?? null, loading: enabled && isPending };
-}
-
-/**
- * Ticket automation chain. NO polling, unlike its
- * neighbors: a channel lives for several minutes without anyone touching it
- * nothing, and that's exactly why it has a dedicated realtime trigger
- * (`case "agent_chains"` in lib/realtime-provider.tsx) — direct does it
- * move, a timer would just pay requests for nothing.
- *
- * `refetchOnMount: always` anyway: realtime does not replay what happened
- * passed while the tab was sleeping.
- */
-export function useIssueChainQuery(issueId: string | null) {
-  const on = !!issueId;
-  const { data, isPending } = useQuery({
-    queryKey: issueChainQueryKey(issueId ?? ""),
-    queryFn: () => fetchIssueAutomationApi(issueId as string),
-    enabled: on,
-    refetchOnMount: "always",
-  });
-  return {
-    enabled: data?.enabled ?? false,
-    chain: data?.chain ?? null,
-    plannedModes: data?.plannedModes ?? [],
-    estimate: data?.estimate ?? null,
-    loading: on && isPending,
   };
 }
 

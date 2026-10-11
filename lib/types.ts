@@ -9,7 +9,6 @@ import type { CycleIntensity } from "./cycle-prefs";
 import type { RepoProviderId } from "./repo-providers";
 import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
-import type { AutomationOverride, AutomationRule } from "./automations";
 import type { SmartTriageMode } from "./smart-triage";
 import type { CommentVisibility } from "./feedback/types";
 
@@ -544,12 +543,6 @@ export interface Project {
   feedback_team_language: string | null;
   /** Languages ​​that we read without help, left as they are. */
   feedback_no_translate_languages: string[];
-  /** Project automations (MIN-147): the general switch of the chained Numo
- loop. Off = the rules remain written but nothing is triggered. */
-  automations_enabled: boolean;
-  /** `when … if … then …` rules, such as `parseAutomations` reads.
- Delivered by a preset, then editable. */
-  automations: AutomationRule[];
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -586,8 +579,6 @@ export interface ProjectUpdateInput {
   feedback_translate_enabled?: boolean;
   feedback_team_language?: string | null;
   feedback_no_translate_languages?: string[];
-  automations_enabled?: boolean;
-  automations?: AutomationRule[];
 }
 
 export interface Member {
@@ -943,9 +934,6 @@ export interface Issue {
   /** Id of the first ticket in the series, inherited by each occurrence — enabling
  to find the history of a recurrence. None out of series. */
   recurrence_series_id: string | null;
-  /** Force automations on THIS ticket (MIN-147). Null = it follows the
- project rules; otherwise it opts out, or plays another preset. */
-  automation_override?: AutomationOverride | null;
   position: number;
   created_by: string | null;
   /** Set when the issue was created through a project integration (Feedback API). */
@@ -1212,8 +1200,6 @@ export interface IssueUpdateInput {
   /** Setting a cycle assigns the issue to the cycle's owner as a side-effect
       (never bumps status); null removes it from its cycle. */
   cycle_id?: string | null;
-  /** Force automations on this ticket (MIN-147); null = follows the project. */
-  automation_override?: AutomationOverride | null;
 }
 
 /** "smart" (the default) orders by priority but lets imminent due dates and

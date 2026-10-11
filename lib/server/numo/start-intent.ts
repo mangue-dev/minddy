@@ -35,7 +35,6 @@ import {
   beginNumoTurn,
   executeNumoTurn,
   NumoBudgetReservationError,
-  type NumoAutomationContext,
 } from "./turns";
 
 export class NumoIntentStartError extends Error {
@@ -71,11 +70,11 @@ export interface StartNumoIntentInput {
   executeInBackground?: boolean;
   triggerSource?: "chat" | "mention";
   /** Server-owned chain identity carried into the canonical turn. */
-  automation?: NumoAutomationContext;
   /** Server-owned routine occurrence and its shared parent/worker budget. */
   routine?: {
     id: string;
-    origin: "scheduled" | "manual";
+    origin: "scheduled" | "manual" | "event" | "database";
+    provenance?: { eventId: string; subjectId: string; subjectType: "issue" | "page" | "feedback"; causeRoutineIds?: string[] };
     scheduledFor: string | null;
     budgetUsd: number | null;
     budgetPercent: number;
@@ -212,11 +211,11 @@ export async function startNumoIntent(
               routineId: input.routine.id,
               routineOrigin: input.routine.origin,
               routineScheduledFor: input.routine.scheduledFor,
+              routineProvenance: input.routine.provenance,
               operationBudgetUsd: input.routine.budgetUsd,
               operationBudgetPercent: input.routine.budgetPercent,
             }
           : {}),
-        ...(input.automation ? { automation: input.automation } : {}),
       },
       model: configuration.model,
       reasoningLevel: configuration.reasoningLevel,

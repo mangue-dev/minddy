@@ -71,6 +71,7 @@ export type AgentToolDef = {
       type: "object";
       properties: Record<string, unknown>;
       required?: string[];
+      $defs?: Record<string, unknown>;
     };
   };
 };
@@ -756,39 +757,6 @@ const MINDDY_TOOLS: AgentToolDef[] = [
       name: "create_routine",
       description: CREATE_ROUTINE_DESCRIPTION,
       parameters: CREATE_ROUTINE_PARAMETERS,
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "report_verdict",
-      description:
-        "Report the RESULT of the verification step you were asked to run. Call it exactly once, at the very end of your turn, after you have actually looked at the code — never before, and never instead of doing the work. `ok` is the whole point: true means the work matches the plan and you found nothing that must be fixed; false means it does not, and the run will be retried with your summary as its instruction. Say WHY in `summary`, and list the concrete things that must change in `blockers` (empty array when ok is true). This tool is only available inside an automated chain — nobody reads a verdict outside one.",
-      parameters: {
-        type: "object",
-        properties: {
-          ok: {
-            type: "boolean",
-            description:
-              "Does the work pass? false when anything must be fixed before it ships.",
-          },
-          summary: {
-            type: "string",
-            description:
-              "Two or three sentences: what you checked, and what you concluded.",
-          },
-          blockers: {
-            type: "array",
-            items: { type: "string" },
-            description:
-              "One line per thing that must change. Empty array when ok is true.",
-          },
-        },
-        // The three in `required` ON PURPOSE: a field outside `required` of a
-        // tool call is simply not answered by a small model — and
-        // it is precisely a small model which checks a diff.
-        required: ["ok", "summary", "blockers"],
-      },
     },
   },
   {

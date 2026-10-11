@@ -642,3 +642,26 @@ describe("claimRoutine", () => {
     expect(next - Date.now()).toBeLessThanOrEqual(25 * 3600_000);
   });
 });
+
+
+describe("event routine factory", () => {
+  const eventInput = () => ({ projectId: PROJECT_ID, actorId: OWNER_ID, prompt: "Review each new issue", timezone: "Europe/Paris", trigger: { type: "event" as const, event: "issue.created" as const } });
+  it("creates without a cadence and never claims the routine as a scheduled appointment", async () => {
+    const result = await createRoutine(eventInput());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.routine.trigger).toEqual(eventInput().trigger);
+    expect(result.routine.next_run_at).toBeNull();
+    expect(await claimRoutine(result.routine)).toEqual({ claimed: false, nextRunAt: null });
+  });
+  it("rejects a foreign followed issue and mixed calendar/event configuration", async () => {
+    expect(await createRoutine({ ...eventInput(), trigger: { type: "event", event: "issue.comment_added", issueId: ROUTINE_ID } })).toMatchObject({ ok: false, errorKey: "invalidTrigger" });
+    expect(await createRoutine({ ...eventInput(), frequency: "weekly", hour: 9 })).toMatchObject({ ok: false, errorKey: "invalidTrigger" });
+  });
+  it("refuses non-owner event creation and invalid filter references on reactivation", async () => {
+    expect(await createRoutine({ ...eventInput(), actorId: MEMBER_ID })).toMatchObject({ ok: false, status: 403 });
+    world.routines = [makeRoutine({ trigger_type: "event", trigger: { type: "event", event: "issue.comment_added", issueId: ROUTINE_ID }, enabled: false, next_run_at: null })];
+    expect(await updateRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID, enabled: true })).toMatchObject({ ok: false, errorKey: "invalidTrigger" });
+    expect(world.routines[0].enabled).toBe(false);
+  });
+});

@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,14 +57,15 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 8,
+    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "language": "agent:/root (pt-BR changed-text and retained-meaning self-review)",
+    "date": "2026-10-11"
   },
   "related": [
     "choose-an-instance",
@@ -96,7 +97,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Controles do perfil para avatar, nome de usuário e email somente leitura.",
       "caption": "Salve as alterações do perfil após a validação; o endereço de email permanece somente leitura.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -130,7 +131,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma e controles de tema claro, escuro e do sistema.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +148,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -249,3 +250,8 @@ Esse consentimento é separado dos dados necessários ao funcionamento da conta.
 Antes de excluir a conta, exporte pela seção Dados o que precisa conservar. Leia a prévia dos projetos que possui, membros afetados, tarefas, comentários e assinatura ativa. As consequências para os projetos próprios afetam outras pessoas; resolva essas questões antes de confirmar.
 
 Abra a confirmação de exclusão somente quando estiver pronto. Digite o email da conta e, nas contas com senha, a senha. Contas sem senha exigem um login recente. Siga as orientações de uma recusa por autenticação não recente, em vez de repetir tentativas às cegas. Uma exclusão bem-sucedida encerra a sessão e retorna ao site público. Essa operação não envia os dados para uma lixeira recuperável. Mantenha as exportações privadas e trate qualquer questão restante de assinatura ou provedor pelos controles correspondentes de cobrança e serviço.
+
+
+## Configurar rotinas {#routines}
+
+O trabalho automático do projeto é configurado em [Rotinas](/docs/scheduled-routines), onde o proprietário escolhe agenda, evento ou chegada em um banco. Os presets de automação da conta e seus interruptores de projeto foram removidos. Leia o [guia de transição](/docs/automation-settings) antes de ativar uma proposta arquivada.

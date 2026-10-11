@@ -205,16 +205,12 @@ export function buildOpencodeAnchor(input: OpencodeAnchorInput): string {
 - \`create_pr\` — publish this session's pull request when there is none yet (see Git below).`
       : `${validateTool}
 - \`create_pr\` — publish the ticket's pull request when there is none yet (see Git below).`;
-  const chainTool = input.chain
-    ? `
-- \`report_verdict\` — close this run with its VERDICT, because it is a step of an automated chain (see below).`
-    : "";
   return `${introBlock({ notebook, routine })}
 
 ${harnessDeltas(input)}
 
 ## minddy's own tools
-${anchorTools}${chainTool}
+${anchorTools}
 ${minddyToolsBlock({ images: input.images === true, routine })}
 
 ${anchorRulesSection({

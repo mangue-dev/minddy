@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
 
 import { after } from "next/server";
@@ -235,7 +236,7 @@ export async function createFeedbackPost(input: {
   // for the review transition so spam never reaches the inbox.
   await notifyFeedbackTransition(service, null, post);
 
-  if (!input.authorId) return { ok: true, post };
+  if (!input.authorId) { scheduleRoutineEvents(); return { ok: true, post }; }
 
   // Submit = vote: the author obviously supports his own need.
   await service
@@ -244,6 +245,8 @@ export async function createFeedbackPost(input: {
       { post_id: post.id, user_id: input.authorId },
       { onConflict: "post_id,user_id", ignoreDuplicates: true }
     );
+
+  scheduleRoutineEvents();
 
   return { ok: true, post: { ...post, vote_count: post.vote_count + 1 } };
 }
@@ -370,6 +373,8 @@ export async function updateFeedbackPostFields(params: {
     before as FeedbackPostRow,
     data
   );
+
+  scheduleRoutineEvents();
 
   return { ok: true, post: data };
 }

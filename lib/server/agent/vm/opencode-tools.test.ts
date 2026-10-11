@@ -110,8 +110,8 @@ describe("le jeu de tools de domaine sort de tools.ts, pas d'une liste", () => {
     const chain = domainToolsFor(job({ chain: true })).map(
       (t) => t.function.name,
     );
-    expect(chain).toContain("report_verdict");
-    expect(domainToolsFor(job()).map((t) => t.function.name)).toContain(
+    expect(chain).not.toContain("report_verdict");
+    expect(domainToolsFor(job()).map((t) => t.function.name)).not.toContain(
       "report_verdict",
     );
 
@@ -181,7 +181,7 @@ describe("la traduction d'un schéma", () => {
     // A silent `any` would be a tool whose model no longer knows the form.
     // Better a ride that doesn't start than a parameter that disappears quietly.
     expect(() => schemaExpression({ type: "tuple" } as never)).toThrow(
-      /sans traduction/,
+      /unsupported/,
     );
     expect(() => schemaExpression({ type: "array" })).toThrow(/items/);
   });

@@ -118,7 +118,6 @@ describe("buildOpencodeAnchor — la doctrine du produit, entière", () => {
       "list_pull_requests",
       "create_pr",
       "web_search",
-      "report_verdict",
     ]) {
       expect(text, tool).toContain(`\`${tool}\``);
     }

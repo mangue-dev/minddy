@@ -49,7 +49,6 @@ describe("unified Numo lifecycle boundary", () => {
     expect(entrypoints).toEqual([
       "lib/server/agent/pr-actions.ts",
       "lib/server/assistant/comment-agent.ts",
-      "lib/server/automations/actions.ts",
       "lib/server/routine-occurrences.ts",
     ]);
   });

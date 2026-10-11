@@ -4505,6 +4505,31 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "trigger": {
+        "type": "jsonb",
+        "nullable": true,
+        "generated": false
+      },
+      "trigger_type": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "trigger_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "legacy_source_key": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "trigger_activated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9654,6 +9679,31 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "event_id": {
+        "type": "bigint",
+        "nullable": true,
+        "generated": false
+      },
+      "arming_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "subject_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "subject_type": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "cause_routine_ids": {
+        "type": "uuid[]",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9673,6 +9723,11 @@
       {
         "table": "numo_assistant_turns",
         "column": "turn_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "routine_armings",
+        "column": "arming_id",
         "targetColumn": "id"
       }
     ]
@@ -12376,6 +12431,204 @@
       {
         "table": "users",
         "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "routine_events": {
+    "columns": {
+      "id": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "event": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "attempts": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "source_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "error_code": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "subject_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "after_state": {
+        "type": "jsonb",
+        "nullable": false,
+        "generated": false
+      },
+      "lease_token": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "lease_until": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "before_state": {
+        "type": "jsonb",
+        "nullable": false,
+        "generated": false
+      },
+      "processed_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "subject_type": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "cause_routine_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "cause_routine_ids": {
+        "type": "uuid[]",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "routine_armings": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "state": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "attempts": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "event_id": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "retry_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "error_code": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "request_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "routine_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "subject_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "updated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "lease_token": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "lease_until": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "subject_type": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "routine_events",
+        "column": "event_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "agent_routines",
+        "column": "routine_id",
         "targetColumn": "id"
       }
     ]

@@ -341,7 +341,6 @@ describe("agentToolsFor — pull-request anchor", () => {
       "create_pr",
       "run_background",
       "update_plan",
-      "report_verdict",
       "web_search",
       "update_issue",
       "write_issue_plan",

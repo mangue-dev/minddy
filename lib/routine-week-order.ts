@@ -2,6 +2,7 @@ import { nextRunAt, type RoutineSchedule } from "./routine-schedule";
 
 export interface RoutineWeekOrderInput extends RoutineSchedule {
   title: string;
+  trigger?: import("./routine-triggers").RoutineTrigger;
 }
 
 const WEEKDAY_INDEX = new Map([
@@ -45,6 +46,7 @@ export function routineWeekPosition(
   routine: RoutineWeekOrderInput,
   from = new Date(),
 ): number {
+  if (routine.trigger && routine.trigger.type !== "schedule") return Number.POSITIVE_INFINITY;
   if (
     !Number.isInteger(routine.hour) ||
     routine.hour < 0 ||

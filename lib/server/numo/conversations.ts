@@ -273,7 +273,7 @@ export async function getNumoConversationDetail(
     collection(supabase, "numo_contexts", id), collection(supabase, "numo_artifacts", id),
     collection(supabase, "numo_turns", id),
     supabase.from("numo_routine_occurrences")
-      .select("id, routine_id, origin, scheduled_for, created_at")
+      .select("id, routine_id, origin, scheduled_for, created_at, event_id, subject_id, subject_type")
       .eq("conversation_id", conversation.legacy_id)
       .maybeSingle(),
   ]);
