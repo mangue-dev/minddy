@@ -18,7 +18,6 @@ import {
   SettingsGroup,
   SettingsRow,
 } from "@/components/settings/settings-ui";
-import { formatModelName } from "@/lib/model-display";
 import { ProviderLogo } from "@/components/model-logo";
 import { numoPreferencesQueryKey, saveNumoPreferencesApi, useNumoPreferencesQuery } from "@/lib/use-numo-preferences-query";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
@@ -207,10 +206,7 @@ export function NumoModelPreference() {
       defaultLabel={t("numoApplicationDefault")} defaultModelId={preferences.data?.application_model}
       placeholder={ta("modelSearchPlaceholder")} emptyLabel={ta("modelSearchEmpty")}
       loadingLabel={ta("modelSearchLoading")} freeTextLabel={(model) => ta("modelUseCustom", { model })}
-      variant="compact" ariaLabel={t("numoDefaultModel")}
-      triggerContent={<span className="truncate">{preferences.data?.default_model
-        ? formatModelName(preferences.data.default_model) : t("numoApplicationDefault")}</span>}
-      triggerClassName="h-9 w-72 max-w-full justify-between rounded-lg border border-border bg-card px-3 text-sm" />}>
+      ariaLabel={t("numoDefaultModel")} />}>
     {preferences.error && <p role="alert" className="py-2 text-sm text-destructive">{t("numoModelLoadError")}</p>}
   </SettingsRow>;
 }

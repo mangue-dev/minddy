@@ -46,3 +46,19 @@ on `supabase_db_minddy-min676-local`; lint, typecheck, encrypted-access/schema,
 public repository, documentation/release mode, knowledge, owned-English and
 whitespace checks. Only migration `20270109200040` was applied for this change,
 on the Docker pilot. No hosted migration or deployment was performed.
+
+## Standard model field follow-up
+
+On 2026-10-11, replaced Numo's custom compact text trigger with the standard
+`ModelCombobox` field used by `admin-models-dashboard.tsx`. The field now shows
+the model logo, resolved application default, multiplier and dropdown affordance.
+The assistant catalog, plan restrictions, accessible label and provider-bound
+persistence are unchanged. The existing seven account-settings behavior tests,
+lint and typecheck passed. The French Docker-backed UI was inspected: the field
+rendered the app default with DeepSeek's logo and model name, its list opened,
+and a Qwen search filtered models. Closed without changing the saved preference
+or starting inference. Refreshed `min-676-provider-numo-settings.png` in the same
+585 × 809 dark viewport. Public procedures and responsive diagrams remain
+accurate; this presentation-only follow-up requires no public-guide revision or
+translation change. No credential, database, native-provider or deployment
+operation was performed.
