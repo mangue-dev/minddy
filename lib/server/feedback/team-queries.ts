@@ -1,6 +1,7 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+import type { FeedbackListFilters } from "@/lib/feedback-list-filters";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
@@ -63,25 +64,35 @@ export interface TeamFeedbackListItem extends FeedbackPostRow {
  */
 export async function listTeamFeedback(
   projectId: string,
-  options: { statuses?: readonly FeedbackPostStatus[]; objectiveId?: string | null } = {}
+  options: { statuses?: readonly FeedbackPostStatus[]; objectiveId?: string | null; filters?: FeedbackListFilters } = {}
 ): Promise<TeamFeedbackListItem[]> {
   const service = getServiceClient();
+  const filters = options.filters ?? {};
+  const categoryFilter = filters.category?.length ? ", filter_categories:feedback_post_categories!inner(category_id)" : "";
   let query = feedbackPostStore(service)
-    .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
+    .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}${categoryFilter}`)
     .is("deleted_at", null)
     .eq("project_id", projectId)
     .is("merged_into_id", null);
   if (options.objectiveId !== undefined) {
     query = options.objectiveId === null ? query.is("objective_id", null) : query.eq("objective_id", options.objectiveId);
   }
+  if (filters.objective?.length) query = query.inNullableIds("objective_id", filters.objective);
+  if (filters.author?.length) query = query.inNullableIds("author_id", filters.author);
+  if (filters.category?.length) query = query.in("filter_categories.category_id", filters.category);
+  if (filters.source?.length) query = query.in("source", filters.source);
+  if (filters.review?.length) query = query.in("review_state", filters.review);
+  if (filters.visibility?.length === 1) query = query.eq("is_public", filters.visibility[0] === "public");
+  if (filters.statuses?.length) query = query.in("status", filters.statuses);
   if (options.statuses?.length) {
     query = query.in("status", options.statuses as string[]);
   }
-  const { data } = await query
+  const { data, error } = await query
     .order("vote_count", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(500);
-  const rows = (data ?? []) as unknown as (FeedbackPostRow & {
+  if (error) throw new Error("Unable to load team feedback");
+  const rows = (data ?? []).map(({ filter_categories: _filter, ...row }) => row) as unknown as (FeedbackPostRow & {
     author: TeamFeedbackAuthor | null;
   } & WithCategoryEmbed)[];
 
@@ -245,4 +256,14 @@ export function listFeedbackForIssue(projectId: string, issueId: string) {
 
 export function listFeedbackForObjective(projectId: string, objectiveId: string) {
   return listLinkedFeedback(projectId, objectiveId, "objective_id");
+}
+
+/** Count canonical, live requests without fetching encrypted content or a capped list. */
+export async function countFeedbackForObjective(projectId: string, objectiveId: string) {
+  const { count, error } = await feedbackPostStore(getServiceClient())
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId).eq("objective_id", objectiveId)
+    .is("deleted_at", null).is("merged_into_id", null);
+  if (error || count === null || count === undefined) throw new Error("Unable to count objective feedback");
+  return count;
 }

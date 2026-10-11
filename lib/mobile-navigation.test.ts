@@ -10,6 +10,7 @@ vi.mock("./auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) })
 vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => state.mobile }));
 vi.mock("./use-app-tabs-query", () => ({ useAppTabsQuery: state.query, appTabsQueryKey: () => ["app-tabs"] }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: state.replace }) }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/components/app-tab-route-sync", () => ({ AppTabRouteSync: () => null }));
 
 let cleanup = async () => {};
@@ -79,8 +80,10 @@ it("waits for mobile editor saves and blocks a rejected departure", async () => 
   await act(() => root.render(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(AppTabsProvider, null, createElement(Editor)))));
   await act(async () => { open("/home", navigate); await Promise.resolve(); });
   expect(navigate).not.toHaveBeenCalled();
+  expect(container.querySelector('[role="progressbar"]')).not.toBeNull();
   await act(async () => { release(false); await Promise.resolve(); });
   expect(navigate).not.toHaveBeenCalled();
+  expect(container.querySelector('[role="progressbar"]')).toBeNull();
   await act(async () => { open("/home", navigate); await Promise.resolve(); release(true); await Promise.resolve(); });
   expect(navigate).toHaveBeenCalledOnce();
   expect(state.query).not.toHaveBeenCalled();

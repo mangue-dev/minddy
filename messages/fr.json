@@ -142,7 +142,10 @@
     "pageCreated": "a créé la page",
     "pageUpdated": "a modifié la page",
     "pageTrashed": "a mis la page à la corbeille",
-    "pageRestored": "a restauré la page"
+    "pageRestored": "a restauré la page",
+    "objectiveRelationAdded_blocks": "a marqué cet objectif comme bloquant {ref}",
+    "objectiveRelationAdded_blocked_by": "a marqué cet objectif comme bloqué par {ref}",
+    "objectiveRelationAdded_related": "a lié cet objectif à {ref}"
   },
   "ApiErrors": {
     "invalidJson": "Requête invalide.",
@@ -1038,7 +1041,14 @@
     "translated": "Version traduite",
     "original": "Version originale",
     "translatedFrom": "Original en {language} · traduit par Numo",
-    "translatedReadOnly": "Passez à la version originale pour modifier le texte."
+    "translatedReadOnly": "Passez à la version originale pour modifier le texte.",
+    "filterSource": "Provenance",
+    "filterSource_board": "Tableau public",
+    "filterSource_api": "API",
+    "filterSource_internal": "Saisie interne",
+    "filterReview": "Revue",
+    "filterReview_published": "Publié",
+    "resetFilters": "Réinitialiser les filtres"
   },
   "Categories": {
     "colorSwatchAria": "Couleur {color}",
@@ -2046,7 +2056,9 @@
     "restoreFailed": "Restauration impossible. Vérifiez votre connexion et réessayez.",
     "deleteFailed": "Suppression impossible. Réessayez.",
     "recoverLegacy": "Récupérer les anciens brouillons sur cet appareil",
-    "legacyWarning": "Récupérez uniquement les brouillons que vous avez créés sur cet appareil."
+    "legacyWarning": "Récupérez uniquement les brouillons que vous avez créés sur cet appareil.",
+    "deleteTitle": "Supprimer ce brouillon ?",
+    "deleteDescription": "Ce brouillon sera supprimé définitivement."
   },
   "Pages": {
     "placeholder": "Écrivez, ou tapez « / » pour insérer un bloc…",
@@ -6404,7 +6416,7 @@
     "duplicate": "Dupliquer",
     "noResults": "Aucune entrée ne correspond à votre recherche ou filtre.",
     "emptyDatabase": "Ajoutez votre première entrée. Chaque entrée est une page avec son propre contenu.",
-    "deleteEntry": "Supprimer l’entrée",
+    "deleteEntry": "Déplacer l’entrée vers la corbeille ?",
     "deleteEntryBody": "Cette page et ses sous-pages seront déplacées dans la corbeille. Vous pourrez les y restaurer.",
     "new": "Nouveau",
     "valuePlaceholder": "Saisir une valeur…",
@@ -6417,7 +6429,7 @@
     "selectAllEntries": "Sélectionner toutes les entrées",
     "selectEntry": "Sélectionner {name}",
     "insertEntryHint": "Insérer en dessous · Option/Alt-clic pour insérer au-dessus",
-    "deleteEntries": "Supprimer {count} entrées",
+    "deleteEntries": "Déplacer {count} entrées vers la corbeille ?",
     "columnActions": "Actions pour {name}",
     "rename": "Renommer",
     "editColumn": "Modifier la colonne",
@@ -6460,7 +6472,11 @@
     "importUnavailable": "L’import de bases n’est pas encore disponible sur ce serveur. Mettez-le à jour et appliquez les migrations de base de données.",
     "importStorageFull": "Le stockage du projet est plein. Libérez de l’espace et réessayez.",
     "importFailed": "L’import n’a pas pu aboutir. Réessayez : le même import ne sera pas ajouté deux fois.",
-    "exportArchive": "Archive de la base (.zip)"
+    "exportArchive": "Archive de la base (.zip)",
+    "addOption": "Ajouter une option",
+    "moveToTrash": "Déplacer vers la corbeille",
+    "duplicateEntries": "{count, plural, one {Dupliquer cette entrée ?} other {Dupliquer # entrées ?}}",
+    "duplicateEntriesBody": "Créer une copie de chaque entrée sélectionnée et de ses sous-pages."
   },
   "AppTabs": {
     "label": "Onglets de l’application",

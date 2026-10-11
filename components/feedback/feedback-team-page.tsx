@@ -40,6 +40,9 @@ import { AppContentHeader } from "@/components/app-content-header";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
+import { FeedbackPropertyFilterItems } from "./feedback-property-filters";
+import { matchesFeedbackFilters, collectionFilterParams, type FeedbackPropertyFilters } from "@/lib/collection-filters";
+import { useCollectionFilters } from "@/lib/use-collection-filters";
 import { SearchMenu } from "@/components/search-menu";
 import { SearchSelect, checkedProps } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -105,6 +108,7 @@ import {
 } from "@/lib/feedback/languages";
 import {
   FEEDBACK_POST_STATUSES,
+  FEEDBACK_OPEN_STATUSES,
   FEEDBACK_TO_ISSUE_STATUS,
   isResolvedFeedbackStatus,
   type CommentVisibility,
@@ -203,6 +207,7 @@ function matchesStateFilter(post: TeamFeedbackListItem, filter: FeedbackStateFil
  * nothing to say.
  */
 function FeedbackFilterMenu({
+  projectId,
   state,
   sort,
   onlyToReview,
@@ -210,7 +215,20 @@ function FeedbackFilterMenu({
   onStateChange,
   onSortChange,
   onToReviewChange,
+  properties,
+  onPropertiesChange,
+  objectives,
+  categories,
+  posts,
+  boardEnabled,
 }: {
+  projectId: string;
+  properties: FeedbackPropertyFilters;
+  onPropertiesChange: (filters: FeedbackPropertyFilters) => void;
+  objectives: Objective[];
+  categories: Category[];
+  posts: TeamFeedbackListItem[];
+  boardEnabled: boolean;
   state: FeedbackStateFilter;
   sort: FeedbackSort;
   onlyToReview: boolean;
@@ -222,6 +240,13 @@ function FeedbackFilterMenu({
   const t = useTranslations("FeedbackBoard");
   const tStatus = useTranslations("PublicFeedback");
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const { data: authorData } = useQuery({
+    queryKey: ["feedback-filter-authors", projectId, search.trim()],
+    enabled: open,
+    queryFn: () => api<{ users: TeamFeedbackUserOption[] }>(`/api/projects/${projectId}/feedback/users?q=${encodeURIComponent(search.trim())}`),
+  });
+  const authors = useMemo(() => authorData?.users ?? [], [authorData]);
 
   const stateLabel =
     state === "unresolved"
@@ -230,7 +255,7 @@ function FeedbackFilterMenu({
         ? t("filterAll")
         : tStatus(`status.${state}`);
   // “Open, by popularity, everything” is the starting point: nothing to report.
-  const active = state !== "unresolved" || sort !== "top" || onlyToReview;
+  const active = state !== "unresolved" || sort !== "top" || onlyToReview || Object.values(properties).some((values) => values?.length);
   const tooltip = t("filterTooltip", { state: stateLabel });
 
   const pick = (run: () => void) => {
@@ -241,7 +266,9 @@ function FeedbackFilterMenu({
   return (
     <SearchMenu
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(next) => { setOpen(next); if (!next) setSearch(""); }}
+      searchValue={search}
+      onSearchValueChange={setSearch}
       align="end"
       tooltip={tooltip}
       trigger={
@@ -343,6 +370,13 @@ function FeedbackFilterMenu({
           </CommandGroup>
         </>
       ) : null}
+      <CommandSeparator className="my-1" />
+      <FeedbackPropertyFilterItems filters={properties} onChange={onPropertiesChange} objectives={objectives}
+        categories={categories} posts={posts} authors={authors} boardEnabled={boardEnabled} />
+      <CommandSeparator className="my-1" />
+      <CommandGroup><CommandItem value="reset-filters" onSelect={() => {
+        onPropertiesChange({}); onStateChange("unresolved"); onSortChange("top"); onToReviewChange(false);
+      }}>{t("resetFilters")}</CommandItem></CommandGroup>
     </SearchMenu>
   );
 }
@@ -659,10 +693,12 @@ function FeedbackRow({
   categoryMap,
   memberSeeds,
   teamLanguage,
+  objective,
   onSelect,
 }: {
   projectId: string;
   post: TeamFeedbackListItem;
+  objective?: Objective;
   selected: boolean;
   boardEnabled: boolean;
   dateLabel: string;
@@ -762,6 +798,10 @@ function FeedbackRow({
           separated={!!authorLabel}
         />
       </span>
+      {objective && <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }} />
+        <span className="truncate">{objective.name}</span>
+      </span>}
     </button>
   );
 }
@@ -792,8 +832,11 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const isOwner = !!project && project.owner_id === user?.id;
   const [setupOpen, setSetupOpen] = useState(false);
 
+  const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", searchParams.has("objective") ? "all" : "unresolved");
+  const listFilters = postParam ? {} : { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
   const { data: listData, isPending } = useQuery({
-    ...feedbackQueryOptions(projectId),
+    ...feedbackQueryOptions(projectId, listFilters),
   });
   const posts = useMemo(() => listData?.posts ?? [], [listData]);
   const boardEnabled = listData?.board_enabled ?? false;
@@ -805,7 +848,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // We arrive on this page to decide what is not decided: the
   // column therefore opens on the open returns, and not on the hundreds
   // archives which buried them.
-  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", "unresolved");
+  const objectiveParam = searchParams.getAll("objective").join(",");
+  useEffect(() => { if (objectiveParam) setState("all"); }, [objectiveParam, setState]);
   const [sort, setSort] = useMobileCollectionState<FeedbackSort>(`/projects/${projectId}/feedback`, "sort", "top");
   const [onlyToReview, setOnlyToReview] = useMobileCollectionState(`/projects/${projectId}/feedback`, "onlyToReview", false);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
@@ -815,7 +859,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   const visiblePosts = useMemo(() => {
     const kept = posts.filter(
-      (p) => matchesStateFilter(p, state) && (!onlyToReview || needsHumanReview(p))
+      (p) => matchesStateFilter(p, state) && (!onlyToReview || needsHumanReview(p)) && matchesFeedbackFilters(p, properties)
     );
     /**
      * The sort chosen is the sort obtained — NOTHING goes ahead.
@@ -840,7 +884,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       if (sort === "recent") sorted.reverse();
     }
     return sorted;
-  }, [posts, state, onlyToReview, sort]);
+  }, [posts, state, onlyToReview, sort, properties]);
 
   /**
    * What the column DISPLAYS. One notch BELOW `visiblePosts`, which carries the
@@ -902,7 +946,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // pre-selected, Enter accepts it, and “Returns” for short is the same
   // name on each project — the second view would overwrite the first.
   usePublishCurrentView(browse ? null : {
-    href: buildViewHref(pathname, searchParams.toString(), {
+    href: buildViewHref(pathname, collectionFilterParams(properties, searchParams).toString(), {
       post: selectedPost?.id ?? null,
     }),
     label: project
@@ -989,21 +1033,26 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   useEffect(() => {
     if (!postParam) return;
     if (!posts.some((p) => p.id === postParam)) return;
+    let nextProperties = properties;
     if (
       deepLinkNeedsAllFilter(
         posts,
         (post) => post.id === postParam,
         (post) =>
           matchesStateFilter(post, state) &&
-          (!onlyToReview || needsHumanReview(post)),
+          (!onlyToReview || needsHumanReview(post)) && matchesFeedbackFilters(post, properties),
       )
     ) {
       setState("all");
       setOnlyToReview(false);
+      nextProperties = {};
+      setProperties(nextProperties);
     }
     setSelectedId(postParam);
-    router.replace(pathname);
-  }, [postParam, posts, pathname, router, state, onlyToReview]);
+    const remaining = collectionFilterParams(nextProperties, searchParams);
+    remaining.delete("post");
+    router.replace(pathname + (remaining.size ? `?${remaining}` : ""));
+  }, [postParam, posts, pathname, router, state, onlyToReview, properties, searchParams, setProperties]);
 
   // Invalidates the list AND all project details (prefix): a merge/undo
   // also changes the canonical post, not just the one we are looking at. THE
@@ -1055,6 +1104,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         actions={
           <>
             <FeedbackFilterMenu
+              projectId={projectId}
+              properties={properties} onPropertiesChange={setProperties}
+              objectives={objectives} categories={categories} posts={posts} boardEnabled={boardEnabled}
               state={state}
               sort={sort}
               onlyToReview={onlyToReview}
@@ -1133,6 +1185,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                   onClick={() => {
                     setState("all");
                     setOnlyToReview(false);
+                    setProperties({});
                   }}
                 >
                   {t("emptyShowAll")}
@@ -1156,6 +1209,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                     categoryMap={categoryMap}
                     memberSeeds={memberSeeds}
                     teamLanguage={teamLanguage}
+                    objective={objectives.find((objective) => objective.id === post.objective_id)}
                     onSelect={() => setSelectedId(post.id)}
                   />
                 </li>

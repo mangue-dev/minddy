@@ -4,7 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { objectiveStore } from "@/lib/server/objective-store";
-import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
+import { countFeedbackForObjective, listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 
 /** Team-only feedback; the objective's project is authorized before reading. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,6 +16,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     .select("id, project_id").eq("id", id).is("deleted_at", null).maybeSingle();
   if (!objective || !await getProjectAccess(auth.user.id, objective.project_id)) {
     return NextResponse.json({ error: t("objectiveNotFound") }, { status: 404 });
+  }
+  if (request.nextUrl.searchParams.get("count") === "1") {
+    return NextResponse.json({ count: await countFeedbackForObjective(objective.project_id, id) });
   }
   return NextResponse.json({ feedback: await listFeedbackForObjective(objective.project_id, id) });
 }

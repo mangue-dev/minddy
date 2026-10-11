@@ -142,7 +142,10 @@
     "pageCreated": "ha creado la página",
     "pageUpdated": "ha editado la página",
     "pageTrashed": "ha movido la página a la papelera",
-    "pageRestored": "ha restaurado la página"
+    "pageRestored": "ha restaurado la página",
+    "objectiveRelationAdded_blocks": "marcó este objetivo como bloqueante de {ref}",
+    "objectiveRelationAdded_blocked_by": "marcó este objetivo como bloqueado por {ref}",
+    "objectiveRelationAdded_related": "vinculó este objetivo con {ref}"
   },
   "ApiErrors": {
     "invalidJson": "Solicitud inválida.",
@@ -1038,7 +1041,14 @@
     "translated": "Traducido",
     "original": "Original",
     "translatedFrom": "Original en {language} · traducido por Numo",
-    "translatedReadOnly": "Cambia al original para editar el texto."
+    "translatedReadOnly": "Cambia al original para editar el texto.",
+    "filterSource": "Origen",
+    "filterSource_board": "Tablero público",
+    "filterSource_api": "API",
+    "filterSource_internal": "Entrada interna",
+    "filterReview": "Revisión",
+    "filterReview_published": "Publicado",
+    "resetFilters": "Restablecer filtros"
   },
   "Categories": {
     "colorSwatchAria": "Color {color}",
@@ -2046,7 +2056,9 @@
     "restoreFailed": "No se pudieron recuperar los borradores. Comprueba tu conexión e inténtalo de nuevo.",
     "deleteFailed": "No se pudo eliminar el borrador. Inténtalo de nuevo.",
     "recoverLegacy": "Recuperar borradores antiguos en este dispositivo",
-    "legacyWarning": "Recupera solo los borradores que creaste en este dispositivo."
+    "legacyWarning": "Recupera solo los borradores que creaste en este dispositivo.",
+    "deleteTitle": "¿Eliminar este borrador?",
+    "deleteDescription": "Este borrador se eliminará permanentemente."
   },
   "Pages": {
     "placeholder": "Escribe o pulsa '/' para ver los bloques…",
@@ -6404,7 +6416,7 @@
     "duplicate": "Duplicar",
     "noResults": "Ninguna entrada coincide con tu búsqueda o filtro.",
     "emptyDatabase": "Añade tu primera entrada. Cada entrada es una página con su propio contenido.",
-    "deleteEntry": "Eliminar entrada",
+    "deleteEntry": "¿Mover la entrada a la papelera?",
     "deleteEntryBody": "Esta página y sus subpáginas se moverán a la papelera. Puedes restaurarlas desde allí.",
     "new": "Nuevo",
     "valuePlaceholder": "Introduce un valor…",
@@ -6417,7 +6429,7 @@
     "selectAllEntries": "Seleccionar todas las entradas",
     "selectEntry": "Seleccionar {name}",
     "insertEntryHint": "Insertar debajo · Opción/Alt-clic para insertar encima",
-    "deleteEntries": "Eliminar {count} entradas",
+    "deleteEntries": "¿Mover {count} entradas a la papelera?",
     "columnActions": "Acciones para {name}",
     "rename": "Renombrar",
     "editColumn": "Editar columna",
@@ -6460,7 +6472,11 @@
     "importUnavailable": "La importación de bases aún no está disponible en este servidor. Actualízalo y aplica sus migraciones de base de datos.",
     "importStorageFull": "El almacenamiento del proyecto está lleno. Libera espacio e inténtalo de nuevo.",
     "importFailed": "No se pudo completar la importación. Inténtalo de nuevo; la misma importación no se añadirá dos veces.",
-    "exportArchive": "Archivo de la base (.zip)"
+    "exportArchive": "Archivo de la base (.zip)",
+    "addOption": "Añadir una opción",
+    "moveToTrash": "Mover a la papelera",
+    "duplicateEntries": "{count, plural, one {¿Duplicar esta entrada?} other {¿Duplicar # entradas?}}",
+    "duplicateEntriesBody": "Crear una copia de cada entrada seleccionada y de sus subpáginas."
   },
   "AppTabs": {
     "label": "Pestañas de la aplicación",

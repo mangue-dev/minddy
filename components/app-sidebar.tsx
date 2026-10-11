@@ -30,7 +30,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   Popover,
   PopoverAnchor,
@@ -820,9 +819,6 @@ function ChangelogButton({
           className="w-80"
           data-sidebar-owner={portalOwner}
         >
-          <DropdownMenuLabel className="font-normal text-muted-foreground">
-            {t("whatsNew")}
-          </DropdownMenuLabel>
           <DropdownMenuItem asChild>
             <a href={documentationHref} target="_blank" rel="noopener noreferrer">
               <HugeiconsIcon icon={HelpCircleIcon} className="size-4 shrink-0 text-muted-foreground" />{t("documentation")}

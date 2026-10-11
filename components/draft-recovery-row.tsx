@@ -4,7 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Cancel01Icon, Clock01Icon as FileClock } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { cn } from "mangue-ui";
+import { useState } from "react";
+import { cn, AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "mangue-ui";
 import {
   Tooltip,
   TooltipContent,
@@ -32,14 +33,17 @@ export function DraftRecoveryRow({
 }: {
   drafts: DraftSummary[];
   onRecover: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<boolean>;
   className?: string;
 }) {
   const t = useTranslations("Drafts");
+  const tc = useTranslations("Common");
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   if (drafts.length === 0) return null;
 
   return (
-    <div
+    <><div
       className={cn(
         "flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground",
         className
@@ -65,7 +69,7 @@ export function DraftRecoveryRow({
             <TooltipTrigger asChild>
               <button
                 type="button"
-                onClick={() => onDelete(d.id)}
+                onClick={() => setDeleting(d.id)}
                 aria-label={t("delete")}
                 className="ml-0.5 flex size-5 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
               >
@@ -77,5 +81,19 @@ export function DraftRecoveryRow({
         </span>
       ))}
     </div>
+    <AlertDialog open={deleting !== null} onOpenChange={(open) => { if (!open && !busy) setDeleting(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader><AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("deleteDescription")}</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogFooter><AlertDialogCancel disabled={busy}>{tc("cancel")}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" disabled={busy} onClick={async (event) => {
+            event.preventDefault();
+            if (!deleting) return;
+            setBusy(true);
+            try { if (await onDelete(deleting) !== false) setDeleting(null); }
+            finally { setBusy(false); }
+          }}>{t("delete")}</AlertDialogAction></AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog></>
   );
 }

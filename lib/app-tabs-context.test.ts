@@ -24,6 +24,7 @@ vi.mock("./use-app-tabs-query", () => ({
   appTabsQueryKey: (owner: string) => ["app-tabs", owner],
   useAppTabsQuery: (...args: unknown[]) => { queryCalls(...args); return query; },
 }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/components/app-tab-route-sync", () => ({ AppTabRouteSync: () => null }));
 

@@ -142,7 +142,10 @@
     "pageCreated": "created the page",
     "pageUpdated": "edited the page",
     "pageTrashed": "moved the page to the trash",
-    "pageRestored": "restored the page"
+    "pageRestored": "restored the page",
+    "objectiveRelationAdded_blocks": "marked this objective as blocking {ref}",
+    "objectiveRelationAdded_blocked_by": "marked this objective as blocked by {ref}",
+    "objectiveRelationAdded_related": "linked this objective to {ref}"
   },
   "ApiErrors": {
     "invalidJson": "Invalid request.",
@@ -1038,7 +1041,14 @@
     "translated": "Translated",
     "original": "Original",
     "translatedFrom": "Original in {language} · translated by Numo",
-    "translatedReadOnly": "Switch to the original to edit the text."
+    "translatedReadOnly": "Switch to the original to edit the text.",
+    "filterSource": "Source",
+    "filterSource_board": "Public board",
+    "filterSource_api": "API",
+    "filterSource_internal": "Internal entry",
+    "filterReview": "Review",
+    "filterReview_published": "Published",
+    "resetFilters": "Reset filters"
   },
   "Categories": {
     "colorSwatchAria": "Color {color}",
@@ -2046,7 +2056,9 @@
     "restoreFailed": "Could not restore drafts. Check your connection and try again.",
     "deleteFailed": "Could not delete the draft. Try again.",
     "recoverLegacy": "Recover older drafts on this device",
-    "legacyWarning": "Recover only drafts you created on this device."
+    "legacyWarning": "Recover only drafts you created on this device.",
+    "deleteTitle": "Delete this draft?",
+    "deleteDescription": "This draft will be permanently deleted."
   },
   "Pages": {
     "placeholder": "Write, or type '/' for blocks…",
@@ -6404,7 +6416,7 @@
     "duplicate": "Duplicate",
     "noResults": "No entries match your search or filter.",
     "emptyDatabase": "Add your first entry. Each entry is a page with its own content.",
-    "deleteEntry": "Delete entry",
+    "deleteEntry": "Move entry to trash?",
     "deleteEntryBody": "This page and its subpages will move to the trash. You can restore them there.",
     "new": "New",
     "valuePlaceholder": "Enter a value…",
@@ -6417,7 +6429,7 @@
     "selectAllEntries": "Select all entries",
     "selectEntry": "Select {name}",
     "insertEntryHint": "Insert below · Option/Alt-click to insert above",
-    "deleteEntries": "Delete {count} entries",
+    "deleteEntries": "Move {count} entries to trash?",
     "columnActions": "Actions for {name}",
     "rename": "Rename",
     "editColumn": "Edit column",
@@ -6460,7 +6472,11 @@
     "importUnavailable": "Database import is not available on this server yet. Update the server and apply its database migrations.",
     "importStorageFull": "Project storage is full. Free some space and try again.",
     "importFailed": "The import could not be completed. Try again; the same import will not be added twice.",
-    "exportArchive": "Database archive (.zip)"
+    "exportArchive": "Database archive (.zip)",
+    "addOption": "Add an option",
+    "moveToTrash": "Move to trash",
+    "duplicateEntries": "{count, plural, one {Duplicate this entry?} other {Duplicate # entries?}}",
+    "duplicateEntriesBody": "Create a copy of each selected entry and its subpages."
   },
   "AppTabs": {
     "label": "Application tabs",

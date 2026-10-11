@@ -4,7 +4,7 @@ import { GET } from "@/app/api/objectives/[id]/feedback/route";
 import { POST } from "@/app/api/v1/feedback/route";
 
 const mocks = vi.hoisted(() => ({
-  auth: vi.fn(), access: vi.fn(), objective: vi.fn(), feedback: vi.fn(),
+  auth: vi.fn(), access: vi.fn(), objective: vi.fn(), feedback: vi.fn(), count: vi.fn(),
   integration: vi.fn(), create: vi.fn(), identity: vi.fn(),
 }));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: mocks.auth }));
@@ -14,7 +14,7 @@ vi.mock("@/lib/server/objective-store", () => ({ objectiveStore: () => {
   const query = { select: () => query, eq: () => query, is: () => query, maybeSingle: mocks.objective };
   return query;
 } }));
-vi.mock("@/lib/server/feedback/team-queries", () => ({ listFeedbackForObjective: mocks.feedback }));
+vi.mock("@/lib/server/feedback/team-queries", () => ({ listFeedbackForObjective: mocks.feedback, countFeedbackForObjective: mocks.count }));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 vi.mock("@/lib/server/integration-auth", () => ({
   authenticateIntegration: mocks.integration,
@@ -45,6 +45,18 @@ const integrationRequest = (analyze: boolean) => new NextRequest("https://minddy
 });
 
 describe("objective feedback access", () => {
+  it("returns the exact count after authorization without loading the linked list", async () => {
+    mocks.count.mockResolvedValue(1240);
+    const response = await GET(new NextRequest("https://minddy.example/api/objectives/objective/feedback?count=1"), { params: Promise.resolve({ id: "objective" }) });
+    expect(await response.json()).toEqual({ count: 1240 });
+    expect(mocks.count).toHaveBeenCalledWith("project", "objective");
+    expect(mocks.access.mock.invocationCallOrder[0]).toBeLessThan(mocks.count.mock.invocationCallOrder[0]);
+    expect(mocks.feedback).not.toHaveBeenCalled();
+    mocks.access.mockResolvedValue(null);
+    mocks.count.mockClear();
+    expect((await GET(new NextRequest("https://minddy.example/api/objectives/objective/feedback?count=1"), { params: Promise.resolve({ id: "objective" }) })).status).toBe(404);
+    expect(mocks.count).not.toHaveBeenCalled();
+  });
   it("authorizes the objective's project before reading private feedback", async () => {
     const response = await objectiveRequest();
     expect(response.status).toBe(200);

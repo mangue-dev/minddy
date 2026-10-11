@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,15 @@
       "lib/server/database-import.ts",
       "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
       "lib/database-import/types.ts",
-      "lib/database-import/archive.ts"
+      "lib/database-import/archive.ts",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/second_workflows (en complete-body second pass and corrected wording review)",
-    "date": "2026-10-10"
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/second_workflows (en complete-body second pass and corrected wording review); agent:/root (en changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "pages"
@@ -70,12 +71,29 @@
   ],
   "figures": [
     {
+      "id": "database-setup-cards-preview",
+      "kind": "screenshot",
+      "src": "/documentation/en/database-setup-cards.png",
+      "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
+      "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
+      "revision": 8,
+      "reviewed": true,
+      "capturedAt": "2026-10-11",
+      "viewport": [
+        712,
+        240
+      ],
+      "deviceScaleFactor": 2,
+      "theme": "light",
+      "padding": 24
+    },
+    {
       "id": "create-a-database-steps",
       "kind": "screenshot",
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database property type picker with text, number, selections, dates, people and checkbox.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +109,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +125,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -123,7 +141,7 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,9 +165,14 @@ A database combines a table of typed properties with a full page for each entry.
 
 ## Create a database and its columns {#create-a-database}
 
+The new-database setup area offers two cards: ask Numo to prepare the structure or import an existing database. Its close control has a tooltip and dismisses these suggestions; manual editing remains available.
+
 As a project member, open Pages, use + and choose a database. A new database has its entry name and no optional columns. Its new-database banner offers setup with Numo or importing an existing database. Manual setup remains available without AI. Choosing setup with Numo opens a prepared request with this database as page context, after its creation has settled. Review and send that request to ask for the structure you need; merely opening the conversation does not complete the setup. Actual AI work needs a configured provider and available usage or a compatible personal key. Inspect the resulting schema and entries before relying on them.
 
 Open Columns and choose Add column, or use the + column at the table's right edge. Name the column and choose Text, Number, Select, Multi-select, Created at, Date, People or Checkbox. Use the searchable type picker to find it. Save, add an entry and verify that the column appears in the table and entry page.
+
+
+![Component preview of the new-database cards for Numo setup and importing an existing database.](/documentation/en/database-setup-cards.png)
 
 ### Choose types and respect limits {#database-types}
 
@@ -164,11 +187,15 @@ Advanced formulas, automations and additional database views are not available. 
 
 ## Edit database values and entry pages {#database-cells-and-entries}
 
+In the option editor, add an option below the existing rows, even when the list is empty. Give each option a distinct, nonempty name and save. This works for both Select and Multi-select.
+
 Click a table cell or the property above an entry's page body. Enter saves, Escape cancels, and Shift+Enter inserts a text line. Leaving the editor saves. An invalid number keeps the editor open until fixed; a failed save reverts the value and reports an error.
 
 Use a Select cell for one option or Multi-select for several. Search existing options or create a new option from the menu. Open Edit options to rename or recolor options, then save together or cancel. Date, People and Checkbox use their matching controls; Created at stays read-only.
 
 ### Open, select and insert entries {#entry-actions}
+
+An empty entry body displays a placeholder so you can locate the writing area. From a row action or a multi-row selection, duplication asks for confirmation before creating copies. Moving entries to the trash also asks for confirmation and preserves the recoverable trash workflow rather than permanently deleting them.
 
 Open an entry to edit its full page in a floating panel. Extend opens it as a full page after pending document saves finish. If saving fails, the panel stays open so you can resolve it. An empty entry stays in the database until deleted.
 
@@ -182,6 +209,8 @@ Search, filter, sort and hide columns in the single list view. These preferences
 ![Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.](/documentation/en/database-entry.png)
 
 ## Change a database schema safely {#change-a-database-schema}
+
+Column dragging starts after pointer movement and stays horizontal. The grabbing cursor appears only while dragging; a normal click still opens the column actions.
 
 Use Columns to show or hide properties with the eye control. Click a header to rename it or drag headers to reorder them; the entry-name column stays first. Select or Multi-select options can be edited from the cell menu or Columns, with names and colors saved together.
 

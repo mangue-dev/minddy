@@ -3,6 +3,7 @@ import type { Locale } from "@/i18n/config";
 import type { DocumentationArticle } from "@/lib/documentation";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { localizedHref } from "@/lib/locale-href";
+import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { DocumentationAccountActions } from "./documentation-session";
 import { WordmarkLetters } from "@/components/marketing/wordmark-letters";
@@ -33,7 +34,7 @@ export async function DocumentationHeader({ articles, locale, currentId, title, 
       <div className="flex shrink-0 items-center gap-2 lg:-ml-6 lg:h-16 lg:w-72 lg:gap-4 lg:border-r lg:border-border lg:pl-6 lg:pr-3">
         <DocumentationMobileNavigation {...navigation} />
         <div className="flex items-center gap-3">
-          <a href={localizedHref("/", locale)} aria-label="minddy" className="rounded focus-visible:outline-2 focus-visible:outline-ring"><MinddyLogo className="h-6" /></a>
+          <a href={localizedHref("/", locale)} aria-label="minddy" className="rounded focus-visible:outline-2 focus-visible:outline-ring"><MinddyLogo className={`h-6 ${ENV_LOGO_TINT[getAppEnv()]}`} /></a>
           <span aria-hidden className="hidden text-border min-[375px]:inline">|</span>
           <a href={documentationPath(null, locale)} className="hidden rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring min-[375px]:inline">
             <span className={wordmarkStyles.brand}><WordmarkLetters text={t("navTitle")} /></span>

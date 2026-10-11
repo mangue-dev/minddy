@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 development (MIN-671)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,15 @@
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
       "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 9,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "issues",
@@ -68,7 +69,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog with a demonstration result name.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -123,4 +124,6 @@ Sparse history or a recent scope change makes the estimate less useful. It is no
 
 ## Choose an objective for feedback {#objective-feedback}
 
-Feedback can also belong to an objective without becoming an issue. In the project’s Feedback destination, choose the objective in a request’s properties. The objective detail lists linked requests, their votes and public status; select one to read its discussion. These requests do not contribute to issue progress or momentum. When promoted, the new issue inherits the selected objective and feedback categories, subject to changes in the creation form.
+In the objective properties, the feedback count opens the project’s Feedback destination filtered to this objective, including resolved requests. A zero count is also shown. Requests remain separate from issue progress and momentum.
+
+Feedback can also belong to an objective without becoming an issue. In the project’s Feedback destination, choose the objective in a request’s properties. These requests do not contribute to issue progress or momentum. When promoted, the new issue inherits the selected objective and feedback categories, subject to changes in the creation form.

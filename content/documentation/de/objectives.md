@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 development (MIN-671)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,15 @@
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
       "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root (de changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 9,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root (de changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (de changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "issues",
@@ -68,7 +69,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog mit einem Beispielnamen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,4 +119,6 @@ Ein geschätztes Abschlussdatum setzt mindestens zwei Abschlüsse, eine volle be
 
 ## Ein Ziel für Feedback wählen {#objective-feedback}
 
-Feedback kann einem Ziel zugeordnet sein, ohne ein Ticket zu werden. Wählen Sie das Ziel in den Eigenschaften einer Rückmeldung unter Feedback im Projekt. Die Zielansicht zeigt verknüpfte Rückmeldungen, Stimmen und öffentlichen Status; wählen Sie eine Rückmeldung, um ihre Diskussion zu lesen. Diese Anfragen zählen weder zum Ticketfortschritt noch zur Dynamik. Bei der Umwandlung übernimmt das Ticket Ziel und Kategorien, sofern Sie sie im Erstellungsformular nicht ändern.
+In den Zieleigenschaften öffnet die Feedbackzahl den Feedbackbereich des Projekts mit einem Filter für dieses Ziel, einschließlich erledigter Anfragen. Auch null wird angezeigt. Feedback bleibt von Ticketfortschritt und Momentum getrennt.
+
+Feedback kann einem Ziel zugeordnet sein, ohne ein Ticket zu werden. Wählen Sie das Ziel in den Eigenschaften einer Rückmeldung unter Feedback im Projekt. Diese Anfragen zählen weder zum Ticketfortschritt noch zur Dynamik. Bei der Umwandlung übernimmt das Ticket Ziel und Kategorien, sofern Sie sie im Erstellungsformular nicht ändern.

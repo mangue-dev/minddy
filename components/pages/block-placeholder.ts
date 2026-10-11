@@ -21,7 +21,7 @@
 // never late for a keystroke.
 //
 // No "use client" or component import: this module is mounted by the
-// registre de blocs, qui doit rester importable hors navigateur (cf. lib/cx.ts).
+// block registry, which must remain importable outside the browser (see lib/cx.ts).
 
 import { Extension } from "@tiptap/core";
 import type { EditorState } from "@tiptap/pm/state";
@@ -84,7 +84,15 @@ export const BlockPlaceholder = Extension.create<BlockPlaceholderOptions>({
             },
           },
           decorations(state: EditorState) {
-            if (!editor.isEditable || !focused) return null;
+            if (!editor.isEditable) return null;
+            if (!focused) {
+              const first = state.doc.firstChild;
+              if (state.doc.childCount !== 1 || !first?.isTextblock || first.content.size > 0) return null;
+              const text = options.text({ node: first, depth: 1 });
+              return text ? DecorationSet.create(state.doc, [Decoration.node(0, first.nodeSize, {
+                class: PLACEHOLDER_CLASS, "data-placeholder": text,
+              })]) : null;
+            }
             const { selection } = state;
             // A SELECTION is not a cursor: we do not invite you to write there
             // where the user is choosing text.

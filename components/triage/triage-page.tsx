@@ -1,5 +1,9 @@
 "use client";
 
+import { CollectionFilterMenu } from "@/components/collection-filter-items";
+import { matchesCollectionFilters } from "@/lib/collection-filters";
+import { useCollectionFilters } from "@/lib/use-collection-filters";
+import { useIntegrationsQuery } from "@/lib/use-integrations-query";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
@@ -98,6 +102,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const { members } = useMembersQuery(projectId, !!project);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
+  const { integrations } = useIntegrationsQuery(projectId);
+  const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
   const { relations, addRelation } = useIssueRelationsQuery(projectId);
   const mentions = useDescriptionMentions(projectId, members);
   const { openIntent } = useAssistantPanelActions();
@@ -119,15 +125,14 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
    * once per letter — and we filter precisely to SEARCH for one.
    */
   const visibleIssues = useMemo(() => {
-    if (!query.trim()) return triageIssues;
     return triageIssues.filter((i) =>
-      matchesFilter(query, [
+      matchesCollectionFilters(i, properties, user?.id ?? null) && matchesFilter(query, [
         i.title,
         i.description,
         project ? issueIdentifier(project.key, i.number) : null,
       ])
     );
-  }, [triageIssues, query, project]);
+  }, [triageIssues, query, project, properties, user?.id]);
   // The fade that replaces the border under the detail header: it doesn't seem
   // only on the side where there is still something to discover.
   const detailFade = useScrollFade<HTMLDivElement>();
@@ -317,8 +322,10 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     // first in line, and the deep link would be lost cold.
     if (!triageIssues.some((i) => i.id === issueParam)) return;
     setSelectedId(issueParam);
-    router.replace(pathname);
-  }, [issueParam, triageIssues, pathname, router]);
+    const params = new URLSearchParams(searchParams);
+    params.delete("issue");
+    router.replace(pathname + (params.size ? `?${params}` : ""));
+  }, [issueParam, triageIssues, pathname, router, searchParams]);
 
   useEffect(() => {
     if (selected) setTitle(selected.title);
@@ -434,6 +441,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
           placeholder: t("filterPlaceholder", { count: visibleIssues.length }),
           clearLabel: tCommon("clearFilter"),
         }}
+        actions={<CollectionFilterMenu filters={properties} onChange={setProperties} members={members}
+          categories={categories} objectives={objectives} integrations={integrations} />}
       >
         {loading ? (
           <div className="flex flex-col gap-2 p-4">

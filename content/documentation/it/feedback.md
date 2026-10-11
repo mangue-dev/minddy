@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,14 +65,15 @@
       "supabase/migrations/20270106320000_atomic_public_feedback_and_share_limits.sql",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (it changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "api-and-webhooks"
@@ -98,7 +99,7 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità SSO locale configurata e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questo esempio usa un firmatario SSO locale; l’URL e il segreto di firma sono nascosti.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,7 +115,7 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -130,7 +131,7 @@
       "src": "/documentation/it/feedback-objective-selection.png",
       "alt": "Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.",
       "caption": "Selettori dell’obiettivo con dati dimostrativi. I nuovi feedback ereditano l’impostazione dell’integrazione.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -147,7 +148,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -203,6 +204,8 @@ Apri Il mio feedback per ritrovare richieste e voti secondo ciò che può vedere
 
 ## Esaminare feedback in privato e rispondere pubblicamente {#moderate-feedback}
 
+I filtri dell’elenco combinano stato, obiettivo, categorie, autore, origine e stato di revisione; la visibilità è disponibile quando la bacheca pubblica è attiva. Più valori della stessa proprietà sono alternative; proprietà diverse si combinano. Reimposta i filtri per tornare all’elenco iniziale. L’elenco mostra fino a 500 richieste corrispondenti a questi filtri alla volta.
+
 I membri aprono Feedback nel progetto e scelgono una richiesta dalla coda di revisione o dall’elenco. Leggi l’invio originale, la scelta pubblica o privata, lo stato di revisione e gli eventuali suggerimenti di moderazione o duplicati. Puoi chiarire titolo e corpo canonici conservando i testi originali inviati. Assegna categorie e uno stato pubblico adatto; lo spam non appare mai sulla bacheca pubblica. Una richiesta privata resta distinta da una richiesta pubblica soltanto in attesa.
 
 La traduzione facoltativa compare accanto al testo originale per il team; la bacheca pubblica conserva il feedback così com’è stato scritto. Verifica le classificazioni IA prima di farvi affidamento. Se un feedback è collegato a una issue, il suo stato dipende da quella issue e non può essere modificato autonomamente.
@@ -215,7 +218,9 @@ I membri possono eliminare commenti pubblici per moderarli. Solo l’autore può
 
 ### Scegliere un obiettivo per un feedback {#feedback-objective}
 
-Come membro del progetto, scegli **Obiettivo** nelle proprietà del feedback o quando lo crei internamente. Scegli **Nessuna** per rimuovere il collegamento. L’obiettivo deve appartenere allo stesso progetto. Apri l’obiettivo per vedere i feedback collegati e selezionane uno per leggere la discussione. L’associazione è interna, non espone obiettivi privati sulla bacheca pubblica e non contribuisce all’avanzamento dei ticket.
+L’elenco mostra l’obiettivo collegato sotto l’autore e le categorie. Nelle proprietà dell’obiettivo, il numero di feedback conta le richieste esistenti e non unite, incluse quelle private visibili al team. Seleziona il numero per aprire i feedback filtrati per quell’obiettivo, con tutti gli stati.
+
+Come membro del progetto, scegli **Obiettivo** nelle proprietà del feedback o quando lo crei internamente. Scegli **Nessuna** per rimuovere il collegamento. L’obiettivo deve appartenere allo stesso progetto. L’associazione è interna, non espone obiettivi privati sulla bacheca pubblica e non contribuisce all’avanzamento dei ticket.
 
 Il proprietario può scegliere un obiettivo facoltativo creando un’integrazione di feedback in **Impostazioni → Integrazioni**, oppure modificarlo accanto a un’integrazione esistente. I nuovi invii API ereditano l’obiettivo, anche con `analyze: false`. Cambiare l’impostazione non sposta i feedback esistenti. Se l’obiettivo è nel cestino, scegline uno attivo o rimuovi l’impostazione prima di un nuovo invio. Numo non sceglie mai un obiettivo durante la revisione dei feedback. Chiedigli esplicitamente di collegare una richiesta o rimuoverne il collegamento.
 

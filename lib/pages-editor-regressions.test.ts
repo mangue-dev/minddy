@@ -15,6 +15,23 @@ import { pageExtensions } from "@/components/pages/page-extensions";
 const translate = ((key: string) => key) as never;
 
 describe("page editor regressions", () => {
+  it("shows an empty page's writing placeholder before focus and after blur", () => {
+    const element = document.createElement("div");
+    document.body.appendChild(element);
+    const editor = new Editor({ element, content: "<p></p>", extensions: [
+      ...pageExtensions({ headless: true }),
+      BlockPlaceholder.configure({ text: pagePlaceholder(translate) }),
+    ] as never });
+    expect(element.querySelector("[data-placeholder]")?.getAttribute("data-placeholder")).toBe("placeholder");
+    editor.view.dom.dispatchEvent(new FocusEvent("focus"));
+    editor.view.dom.dispatchEvent(new FocusEvent("blur"));
+    expect(element.querySelector("[data-placeholder]")).not.toBeNull();
+    editor.commands.setContent("<p>Written content</p>");
+    expect(element.querySelector("[data-placeholder]")).toBeNull();
+    editor.destroy();
+    element.remove();
+  });
+
   it("does not paint the new-line placeholder over an empty code block", () => {
     const element = document.createElement("div");
     document.body.appendChild(element);

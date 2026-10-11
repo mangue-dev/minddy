@@ -4,7 +4,7 @@ import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -1796,7 +1796,7 @@ export function PrDetail({
                 }
               }}
               position={linkIssuePosition}
-              triggerClassName="hidden 2xl:inline-flex"
+              triggerClassName="hidden"
               prId={item.prId}
               linkedIssueIds={linkedIssues(item).map((issue) => issue.id)}
               prState={item.pr_state}
@@ -1840,7 +1840,7 @@ export function PrDetail({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onCloseAutoFocus={onMoreCloseAutoFocus}>
                 {item.project ? (
-                  <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
+                  <DropdownMenuItem onSelect={openLinkIssueFromMenu}>
                     <HugeiconsIcon icon={Link02Icon} />
                     {t(linkedIssues(item).length > 0 ? "linkAnotherIssue" : "linkIssue")}
                   </DropdownMenuItem>
@@ -1877,47 +1877,10 @@ export function PrDetail({
             </div>
           </div>
         ) : (
-          // Under `2xl`, secondary actions move into the overflow menu. The
-          // remaining actions stay on the shared 60 px header line; if a long
-          // translation still exceeds the pane, the header remains horizontally
-          // reachable instead of growing vertically.
+          // Secondary actions stay in the overflow menu at every width.
+          // The shared header remains horizontally reachable for long labels.
           <div className="ml-auto flex shrink-0 items-center justify-end gap-1.5">
-            {/* ── Wide screen: each gesture has its name ─────────────────── */}
-            <div className="hidden items-center gap-1.5 2xl:flex">
-              {/* Request changes can launch Numo work and does not require a
-                  connected forge identity, so it remains directly available. */}
-              <Button variant="outline" size="sm" onClick={() => openReview("request_changes")}>
-                <NumoIcon animated={false} />
-                {t("reviewRequestChanges")}
-              </Button>
-
-              {/* Approve and comment require a forge identity. Numo review does
-                  not, so it becomes a direct button when it is the only action. */}
-              {canComment ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      {aiReviewActive ? <Spinner /> : null}
-                      {t("review")}
-                      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => openReview("approve")}>
-                      <HugeiconsIcon icon={CheckIcon} />
-                      {t("reviewApprove")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => openReview("comment")}>
-                      <HugeiconsIcon icon={Message01Icon} />
-                      {t("reviewComment")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
-            </div>
-
-            {/* On narrow screens, actions stay available in one unlabeled menu.
-                Numo work comes first, followed by human review actions. */}
+            {/* Secondary actions remain in the overflow menu at every width. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -1932,7 +1895,7 @@ export function PrDetail({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onCloseAutoFocus={onMoreCloseAutoFocus}>
                 {item.project ? (
-                  <DropdownMenuItem className="2xl:hidden" onSelect={openLinkIssueFromMenu}>
+                  <DropdownMenuItem onSelect={openLinkIssueFromMenu}>
                     <HugeiconsIcon icon={Link02Icon} />
                     {t(linkedIssues(item).length > 0 ? "linkAnotherIssue" : "linkIssue")}
                   </DropdownMenuItem>
@@ -1963,7 +1926,6 @@ export function PrDetail({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   data-testid="pr-action-numo-request"
-                  className="2xl:hidden"
                   onSelect={() => openReview("request_changes")}
                 >
                   <NumoIcon animated={false} />
@@ -1971,11 +1933,10 @@ export function PrDetail({
                 </DropdownMenuItem>
                 {canComment ? (
                   <>
-                    <DropdownMenuSeparator className="2xl:hidden" />
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       data-testid="pr-action-start-review"
-                      className="2xl:hidden"
-                      onSelect={startFileReview}
+                          onSelect={startFileReview}
                     >
                       <HugeiconsIcon icon={ViewIcon} />
                       {t("reviewStart")}

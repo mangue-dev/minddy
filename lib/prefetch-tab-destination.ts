@@ -1,5 +1,5 @@
 import { prepareAppTabSurface, isAppTabSurfaceReady } from "./app-tab-surfaces";
-import { feedbackQueryOptions } from "./feedback-query";
+import { feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-query";
 import { fetchPagesApi, fetchPageApi } from "./pages-api";
 import { pagesKey, pageKey } from "./use-pages-query";
 import { issuesQueryFn } from "./issues-api";
@@ -74,7 +74,7 @@ export function prefetchAppTabDestination(
     return;
   }
   if (route.projectId && route.section === "feedback") {
-    void queryClient.prefetchQuery(feedbackQueryOptions(route.projectId));
+    void queryClient.prefetchQuery(feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href)));
     return;
   }
   if (route.projectId && route.section !== "tickets" && route.section !== "triage") return;
@@ -140,7 +140,7 @@ export function appTabPreparationQuery(client: QueryClient, href: string) {
     if (route.pageId) return { queryKey: pageKey(route.pageId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPageApi(route.projectId!, route.pageId!, signal) };
     return { queryKey: pagesKey(route.projectId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPagesApi(route.projectId!, signal) };
   }
-  if (route.projectId && route.section === "feedback") return feedbackQueryOptions(route.projectId);
+  if (route.projectId && route.section === "feedback") return feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href));
   if (route.projectId && ["tickets", "triage"].includes(route.section)) return { queryKey: ["issues", route.projectId] as const, queryFn: issuesQueryFn(route.projectId) };
   if (route.section === "all") return { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn };
   return null;

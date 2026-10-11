@@ -438,16 +438,8 @@ export const ChatMessage = memo(function ChatMessage({
             />
             {message.content && (
               <>
-                {/* `rounded-xl` and not the `rounded-2xl` of SURFACES (the
- composer, the cards): a bubble is not one, it
- is only a background placed on text. A shorter radius places the
- behind the surface which contains it instead of putting it at its level.
-
- `mention-on-ink`: the mention pills keep their type hue
- on this bubble, but at the clarity of a ink surface
- — it's the SURFACE that says this, not each pill
- (app/globals.css). */}
-                <div className="chat-selectable mention-on-ink relative min-w-0 max-w-full break-words rounded-xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background [overflow-wrap:anywhere]">
+                {/* Match the public documentation's pastel user-message surface. */}
+                <div className="chat-selectable relative min-w-0 max-w-full break-words rounded-xl bg-secondary px-4 py-2 text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]">
                   <UserText
                     content={message.content}
                     mentions={

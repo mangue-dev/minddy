@@ -142,7 +142,10 @@
     "pageCreated": "die Seite erstellt",
     "pageUpdated": "hat die Seite bearbeitet",
     "pageTrashed": "die Seite in den Papierkorb verschoben",
-    "pageRestored": "die Seite wiederhergestellt"
+    "pageRestored": "die Seite wiederhergestellt",
+    "objectiveRelationAdded_blocks": "hat dieses Ziel als blockierend für {ref} markiert",
+    "objectiveRelationAdded_blocked_by": "hat dieses Ziel als durch {ref} blockiert markiert",
+    "objectiveRelationAdded_related": "hat dieses Ziel mit {ref} verknüpft"
   },
   "ApiErrors": {
     "invalidJson": "Ungültige Anfrage.",
@@ -1038,7 +1041,14 @@
     "translated": "Übersetzt",
     "original": "Original",
     "translatedFrom": "Original in {language} · übersetzt von Numo",
-    "translatedReadOnly": "Wechseln Sie zum Original, um den Text zu bearbeiten."
+    "translatedReadOnly": "Wechseln Sie zum Original, um den Text zu bearbeiten.",
+    "filterSource": "Herkunft",
+    "filterSource_board": "Öffentliches Board",
+    "filterSource_api": "API",
+    "filterSource_internal": "Interner Eintrag",
+    "filterReview": "Prüfung",
+    "filterReview_published": "Veröffentlicht",
+    "resetFilters": "Filter zurücksetzen"
   },
   "Categories": {
     "colorSwatchAria": "Farbe {color}",
@@ -2046,7 +2056,9 @@
     "restoreFailed": "Entwürfe konnten nicht wiederhergestellt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "deleteFailed": "Der Entwurf konnte nicht gelöscht werden. Versuchen Sie es erneut.",
     "recoverLegacy": "Ältere Entwürfe auf diesem Gerät wiederherstellen",
-    "legacyWarning": "Stellen Sie nur Entwürfe wieder her, die Sie auf diesem Gerät erstellt haben."
+    "legacyWarning": "Stellen Sie nur Entwürfe wieder her, die Sie auf diesem Gerät erstellt haben.",
+    "deleteTitle": "Diesen Entwurf löschen?",
+    "deleteDescription": "Dieser Entwurf wird endgültig gelöscht."
   },
   "Pages": {
     "placeholder": "Schreiben oder „/“ für Blöcke eingeben…",
@@ -6404,7 +6416,7 @@
     "duplicate": "Duplizieren",
     "noResults": "Keine Einträge entsprechen deiner Suche oder deinem Filter.",
     "emptyDatabase": "Füge deinen ersten Eintrag hinzu. Jeder Eintrag ist eine Seite mit eigenem Inhalt.",
-    "deleteEntry": "Eintrag löschen",
+    "deleteEntry": "Eintrag in den Papierkorb verschieben?",
     "deleteEntryBody": "Diese Seite und ihre Unterseiten werden in den Papierkorb verschoben. Dort kannst du sie wiederherstellen.",
     "new": "Neu",
     "valuePlaceholder": "Wert eingeben…",
@@ -6417,7 +6429,7 @@
     "selectAllEntries": "Alle Einträge auswählen",
     "selectEntry": "{name} auswählen",
     "insertEntryHint": "Darunter einfügen · Wahltaste/Alt-Klick für darüber",
-    "deleteEntries": "{count} Einträge löschen",
+    "deleteEntries": "{count} Einträge in den Papierkorb verschieben?",
     "columnActions": "Aktionen für {name}",
     "rename": "Umbenennen",
     "editColumn": "Spalte bearbeiten",
@@ -6460,7 +6472,11 @@
     "importUnavailable": "Der Datenbankimport ist auf diesem Server noch nicht verfügbar. Aktualisiere den Server und wende seine Datenbankmigrationen an.",
     "importStorageFull": "Der Projektspeicher ist voll. Gib Speicherplatz frei und versuche es erneut.",
     "importFailed": "Der Import konnte nicht abgeschlossen werden. Versuche es erneut; derselbe Import wird nicht zweimal hinzugefügt.",
-    "exportArchive": "Datenbankarchiv (.zip)"
+    "exportArchive": "Datenbankarchiv (.zip)",
+    "addOption": "Option hinzufügen",
+    "moveToTrash": "In den Papierkorb verschieben",
+    "duplicateEntries": "{count, plural, one {Diesen Eintrag duplizieren?} other {# Einträge duplizieren?}}",
+    "duplicateEntriesBody": "Eine Kopie jedes ausgewählten Eintrags und seiner Unterseiten erstellen."
   },
   "AppTabs": {
     "label": "Anwendungstabs",
