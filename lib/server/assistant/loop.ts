@@ -85,6 +85,8 @@ export interface ProcessChatCheckpoint {
   completionRepairs?: number;
   completionRepairPending?: boolean;
   completionRepairExhausted?: boolean;
+  /** Empty replies need a visible-answer repair, including after a durable resume. */
+  emptyAnswerRepair?: boolean;
 }
 
 export class NumoCompletionError extends Error {
@@ -101,6 +103,17 @@ const COMPLETION_REPAIR_PROMPT =
   "If work remains, use the advertised native tool calls now; never serialize tool calls as XML or prose. " +
   "Complete the task and return the actual outcome, or state the concrete blocker. " +
   "Do not finish with an announcement of an action you have not performed.";
+const EMPTY_ANSWER_REPAIR_PROMPT =
+  "Your previous response contained no visible answer. Reasoning alone is not a reply. " +
+  "Return a non-empty final answer in the assistant content, using the available results. " +
+  "Report the actual outcome, including any failure, partial work or concrete blocker. ";
+
+function completionRepairPrompt(emptyAnswerRepair: boolean, canUseTools: boolean): string {
+  if (!emptyAnswerRepair) return COMPLETION_REPAIR_PROMPT;
+  return EMPTY_ANSWER_REPAIR_PROMPT + (canUseTools
+    ? "If an action remains, use the advertised native tools before answering; do not repeat completed actions."
+    : "No tools are available in this reply. Summarize the recorded outcome instead of announcing another action.");
+}
 
 function malformedNativeCalls(calls: Iterable<{ id: string; name: string; arguments: string }>): boolean {
   const ids = new Set<string>();
@@ -351,8 +364,10 @@ export async function processChat(
   let resumeCheckpoint = context.resumeCheckpoint ?? null;
   let completionRepairs = Math.min(MAX_COMPLETION_REPAIRS,
     Math.max(0, Math.floor(resumeCheckpoint?.completionRepairs ?? 0)));
+  let emptyAnswerRepair = resumeCheckpoint?.emptyAnswerRepair === true;
   if (resumeCheckpoint?.phase === "model" && resumeCheckpoint.completionRepairPending) {
-    messages.push({ role: "user", content: COMPLETION_REPAIR_PROMPT });
+    messages.push({ role: "user", content: completionRepairPrompt(emptyAnswerRepair,
+      tools.length > 0 && roundCount < MAX_TOOL_EXECUTION_ROUNDS) });
   }
   // True as soon as a stop was observed anywhere in the round (mid-stream or
   // between tools): the loop stops handing the turn back with no persisted
@@ -477,6 +492,16 @@ export async function processChat(
           aiRuntime.provider === "openrouter"
             ? getModelInputModalities(requestModel, aiRuntime.apiKey)
             : Promise.resolve(new Set(["text"])));
+        // Some providers end normally after reasoning without any visible text.
+        // Change that request during repair only when the catalog explicitly
+        // permits disabling reasoning; mandatory and unknown models keep theirs.
+        const repairWithoutReasoning = emptyAnswerRepair && aiRuntime.provider === "openrouter"
+          && (await getOpenRouterModelInfo(requestModel, aiRuntime.apiKey))?.reasoning?.mandatory === false;
+        if (stopObserved || await context.shouldStop?.()) {
+          observeStop();
+          closeRound();
+          break;
+        }
         call = await fetchAiChat(
           aiRuntime,
           requestModel,
@@ -485,7 +510,7 @@ export async function processChat(
             messages: modelMessages,
             stream: true,
             maxOutputTokens: reasoningMaxTokens(4096, reasoningLevel),
-            reasoning: { effort: reasoningLevel },
+            reasoning: repairWithoutReasoning ? { enabled: false } : { effort: reasoningLevel },
             ...(tools.length > 0 && !forceConclusion ? { tools } : {}),
           }),
           "Numo (minddy)",
@@ -692,17 +717,21 @@ export async function processChat(
           && tools.length > 0 && roundCount >= MAX_TOOL_EXECUTION_ROUNDS
         );
         const exhausted = completionRepairs >= MAX_COMPLETION_REPAIRS || actionRepairUnavailable;
+        if (completionProblem === "the response was empty") emptyAnswerRepair = true;
         if (!exhausted) completionRepairs++;
         await context.persistCheckpoint?.({
           phase: "model", roundCount, completionRepairs,
           completionRepairPending: !exhausted,
           completionRepairExhausted: exhausted,
+          ...(emptyAnswerRepair ? { emptyAnswerRepair: true } : {}),
         });
         if (exhausted) throw new NumoCompletionError(completionProblem);
-        messages.push({ role: "user", content: COMPLETION_REPAIR_PROMPT });
+        messages.push({ role: "user", content: completionRepairPrompt(emptyAnswerRepair,
+          tools.length > 0 && roundCount < MAX_TOOL_EXECUTION_ROUNDS) });
         continueLoop = true;
         continue;
       }
+      emptyAnswerRepair = false;
     }
 
     // Process completed tool calls
