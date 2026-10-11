@@ -159,22 +159,7 @@ export interface DeliveryGate {
  */
 export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   const { emit, editedPaths, planWrites, filesFromSha, logPrefix } = deps;
-  let checkDeadline = Number.POSITIVE_INFINITY;
-  // Share one wall budget across probes, compilation, tests and diff review.
-  const host: RepoHost = {
-    ...deps.host,
-    exec: async (command, options) => {
-      const left = checkDeadline - Date.now();
-      if (left <= 0) throw new Error("Repository validation wall budget exhausted");
-      return deps.host.exec(command, {
-        ...options,
-        timeoutMs: Math.min(options?.timeoutMs ?? 30_000, left),
-      });
-    },
-    readFile: (path) => deps.host.readFile(path),
-    writeFile: (path, content) => deps.host.writeFile(path, content),
-    mkdir: (path) => deps.host.mkdir(path),
-  };
+  let validationTail = Promise.resolve();
   const verification = deps.verification ?? newVerificationSink();
   /** The perimeter, or `undefined` when nothing limits (clone mode). A perimeter
    * which LIFTS limits nothing either: better a diff too wide than a door
@@ -209,6 +194,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * in the end: a checker failure never prevents a round from ending.
    */
   const typeCheckBlock = async (
+    host: RepoHost,
     budgetMs: number,
     publishStatus = true,
   ): Promise<DeliveryCheckResult> => {
@@ -262,6 +248,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    *    the full cost rather than silently skipping verification.
    */
   const testBlock = async (
+    host: RepoHost,
     budgetMs: number,
     publishStatus = true,
   ): Promise<DeliveryCheckResult> => {
@@ -281,7 +268,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     }
 
     if (budgetMs < TEST_RELATED_MIN_BUDGET_MS) return { block: null, status: null };
-    const scope = await testScopeForTurn(budgetMs);
+    const scope = await testScopeForTurn(host, budgetMs);
     if (!scope) return { block: null, status: null };
     const startedAt = Date.now();
     const out = await testFailuresForTurn(host, scope).catch(() => {
@@ -310,7 +297,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * treated as a big trick: the measure is used to save work, not to avoid it
    * dispense on a doubt.
    */
-  const testScopeForTurn = async (budgetMs: number): Promise<TestScope | null> => {
+  const testScopeForTurn = async (host: RepoHost, budgetMs: number): Promise<TestScope | null> => {
     const stat = await turnDiffStat(host, filesFromSha, await scope()).catch(() => null);
     const small =
       stat !== null &&
@@ -350,7 +337,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * written — `git grep`, therefore always read-only, and always
    * best-effort: their breakdown costs the second block, never the rereading.
    */
-  const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
+  const selfReviewBlock = async (host: RepoHost, budgetMs: number): Promise<string | null> => {
     if (!repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
     const startedAt = Date.now();
     const { diff, porcelain } = await turnDiff(host, filesFromSha, await scope()).catch(() => ({
@@ -399,8 +386,8 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     planChecked = true;
     const startedAt = Date.now();
     const [review, closure] = await Promise.all([
-      planReviewForTurn(host, planWrites.markdown).catch(() => null),
-      planClosureForTurn(host, planWrites.markdown).catch(() => null),
+      planReviewForTurn(deps.host, planWrites.markdown).catch(() => null),
+      planClosureForTurn(deps.host, planWrites.markdown).catch(() => null),
     ]);
     const block = [review, closure].filter(Boolean).join("\n\n---\n\n") || null;
     await emit("status", {
@@ -431,23 +418,45 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * over delivering is worse than an agent who delivers red by saying so.
    */
   const submitChecks = async (budgetMs: number, explicit = false, wallBudgetMs = VALIDATION_WALL_BUDGET_MS): Promise<string | null> => {
-    noteEdits();
-    if ((!explicit && submitChecked) || !repoTouched) return null;
-    if (!explicit) submitChecked = true;
-    // Shared VM memory must accommodate one expensive check at a time.
+    // Include queueing time so parallel tool requests cannot extend their wall budget.
     const started = Date.now();
-    checkDeadline = started + Math.max(0, Math.min(budgetMs, wallBudgetMs));
-    const remaining = () => Math.max(0, budgetMs - (Date.now() - started));
+    const checkDeadline = started + Math.max(0, Math.min(budgetMs, wallBudgetMs));
+    const previous = validationTail;
+    let release!: () => void;
+    validationTail = new Promise<void>((resolve) => { release = resolve; });
+    await previous;
     try {
-      const typeCheck = await typeCheckBlock(remaining());
-      const tests = await testBlock(remaining());
-      const blocks = [typeCheck.block, tests.block, await selfReviewBlock(remaining())].filter(Boolean);
+      noteEdits();
+      if ((!explicit && submitChecked) || !repoTouched) return null;
+      if (!explicit) submitChecked = true;
+      const exhausted = "Repository validation reached its wall budget. Checks that did not finish are unverified. Run the remaining targeted checks explicitly before reporting success.";
+      if (Date.now() >= checkDeadline) return exhausted;
+      // Each invocation owns its deadline; unrelated plan checks use the original host.
+      const host: RepoHost = {
+        ...deps.host,
+        exec: async (command, options) => {
+          const left = checkDeadline - Date.now();
+          if (left <= 0) throw new Error("Repository validation wall budget exhausted");
+          return deps.host.exec(command, {
+            ...options,
+            timeoutMs: Math.min(options?.timeoutMs ?? 30_000, left),
+          });
+        },
+        readFile: (path) => deps.host.readFile(path),
+        writeFile: (path, content) => deps.host.writeFile(path, content),
+        mkdir: (path) => deps.host.mkdir(path),
+      };
+      const remaining = () => Math.max(0, budgetMs - (Date.now() - started));
+      // Shared VM memory must accommodate one expensive check at a time.
+      const typeCheck = await typeCheckBlock(host, remaining());
+      const tests = await testBlock(host, remaining());
+      const blocks = [typeCheck.block, tests.block, await selfReviewBlock(host, remaining())].filter(Boolean);
       const report = blocks.length > 0 ? blocks.join("\n\n---\n\n") : null;
       return Date.now() >= checkDeadline
-        ? [report, "Repository validation reached its wall budget. Checks that did not finish are unverified. Run the remaining targeted checks explicitly before reporting success."].filter(Boolean).join("\n\n")
+        ? [report, exhausted].filter(Boolean).join("\n\n")
         : report;
     } finally {
-      checkDeadline = Number.POSITIVE_INFINITY;
+      release();
     }
   };
 
