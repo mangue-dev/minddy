@@ -133,3 +133,10 @@ verified pinned Codex 0.162.1 in 4,579 ms, then verified the retained installati
 in 51 ms. The container mounted only the built bundle and received no application
 environment, job, authentication profile or model request. These are isolated
 bootstrap timings, not measurements of hosted sandbox or provider latency.
+
+After integrating main's PR #406, CI exposed a PR-filter test that asserted the
+new link's visible section after network completion but before React Query's
+batched observer notification. The test now waits for the same visible state,
+flushing React updates between attempts; its assertions and application behavior
+are unchanged. All eight tests in that file pass. This test-only synchronization
+has no public documentation impact.
