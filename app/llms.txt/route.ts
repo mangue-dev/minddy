@@ -30,8 +30,13 @@ is generated from the MCP server's registrations.
 - [Documentation in a browser](${SITE_URL}/docs): Browse and search the official documentation.
 - [Full MCP reference](${SITE_URL}/llms-full.txt): Tool schemas, authentication, webhooks, and CSV contracts.
 
-Articles can be fetched by appending \`.md\` to their documentation URL or sending
-\`Accept: text/markdown\`. Reading public documentation needs no account or MCP
+Every public site page and documentation article can be fetched by appending
+\`.md\` to its localized HTML URL or sending \`Accept: text/markdown\`.
+Use \`${SITE_URL}/index.md\` for the English landing page, or, for example,
+\`${SITE_URL}/fr/tarifs.md\` for French pricing. HTML advertises these text URLs
+with an alternate Link header. Read the relevant source before answering and
+cite its canonical HTML URL; Markdown preserves the facts and prerequisites.
+Reading public site content needs no account or MCP
 connection. Check each article's documented version and applicability before
 acting, and cite its canonical HTML URL with the relevant section fragment.
 

@@ -47,6 +47,7 @@ Authentication pages, application routes, tokenized public boards, shared views,
 - `app/sitemap.ts`: all canonical locale variants and reciprocal sitemap alternates.
 - `app/robots.txt/route.ts`: production discovery rules and non-production blocking.
 - `next.config.mjs`: obsolete localized-slug redirects, public cache coverage, and non-production `X-Robots-Tag`.
-- `app/md/route.ts`: negotiated Markdown representations and their canonical links.
+- `lib/public-markdown-delivery.ts` and `proxy.ts`: public `.md` URLs, content negotiation, and alternate links.
+- `app/md/route.ts`: localized Markdown representations and their canonical links, including shared legal content.
 
 When adding or consolidating a public route, update these owners together and run the public-route, metadata, and English-prose checks.

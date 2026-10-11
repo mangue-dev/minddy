@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isPrimaryHost, normalizeHost } from "@/lib/public-hosts";
 import { documentationPath, resolveDocumentationPath } from "@/lib/documentation-core.mjs";
 import { documentationMarkdownPath, prefersDocumentationMarkdown, resolveDocumentationDelivery } from "@/lib/documentation-delivery";
+import { publicMarkdownPath, resolvePublicMarkdownDelivery } from "@/lib/public-markdown-delivery";
 import { detectFromAcceptLanguage } from "@/lib/accept-language";
 import {
   PUBLIC_ROUTE_PATHS,
@@ -205,7 +206,7 @@ function sessionUserMetadata(
  * rewritten to its canonical English route with `x-minddy-locale`, so one page
  * implementation can serve independently indexable and measurable variants.
  */
-function serveLocalizedPublicRoute(request: NextRequest, pathname: string): NextResponse {
+function serveLocalizedPublicRoute(request: NextRequest, pathname: string, markdownRequested = false): NextResponse {
   const route = routeByPath(pathname);
   const locale = localeForPublicPath(pathname) ?? "en";
   const documentation = resolveDocumentationPath(pathname);
@@ -228,22 +229,20 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
     return response;
   }
 
-  const markdownPath = route && !documentation ? `/md?route=${route.key}&locale=${locale}` : null;
+  const markdownPath = route ? publicMarkdownPath(pathname) : null;
 
   // Content negotiation (MIN-88). An agent who explicitly requests
   // Markdown receives the content of the page without the 440 KB of markup it
   // has nothing to do. `app/md/route.ts` returns it from the same i18n keys.
-  if (markdownPath && prefersMarkdown(request.headers.get("accept"))) {
-    // The requested page travels in `ROUTE_HEADER`, not in this query
-    // rewrite: on a middleware rewrite, Next 16 gives the route
-    // handle the ORIGINAL URL, so `/md` never saw `?route=…` and
-    // fell back on its default — all the pages of the site used Markdown
-    // from the landing (MIN-93). The query remains in the rewritten URL so that
-    // logs say what was served.
-    return NextResponse.rewrite(
-      new URL(markdownPath, request.url),
+  if (markdownPath && (markdownRequested || prefersDocumentationMarkdown(request.headers.get("accept")))) {
+    // Next preserves the original URL through a rewrite. Trusted request
+    // headers select its page and language without depending on query parameters.
+    const response = NextResponse.rewrite(
+      rewriteTo(request, "/md"),
       withRequestHeaders(request, headers),
     );
+    response.headers.append("Vary", "Accept");
+    return response;
   }
 
   const response = pathname !== englishPath
@@ -253,12 +252,12 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
       )
     : NextResponse.next(withRequestHeaders(request, headers));
 
-  // …and the HTML page itself announces its Markdown version, for those who do not think
-  // not to ask for it.
+  // Advertise the stable text URL so agents can discover it from HTML.
+  response.headers.append("Vary", "Accept");
   if (markdownPath) {
     response.headers.append(
       "Link",
-      `<${markdownPath}>; rel="alternate"; type="text/markdown"`,
+      `<${markdownPath}>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"`,
     );
   }
   return response;
@@ -268,18 +267,6 @@ function rewriteTo(request: NextRequest, pathname: string): URL {
   const url = request.nextUrl.clone();
   url.pathname = pathname;
   return url;
-}
-
-/**
- * `text/markdown` must be requested EXPLICITLY: a browser sends
- * `Accept: text/html,…,*​/*`, and the wildcard must never be enough to switch a
- * public page in plain text.
- */
-function prefersMarkdown(accept: string | null): boolean {
-  if (!accept) return false;
-  return accept
-    .split(",")
-    .some((part) => part.trim().toLowerCase().startsWith("text/markdown"));
 }
 
 /** Sends the visitor to a dependency-free recovery page while preserving their target. */
@@ -354,6 +341,18 @@ async function routeRequest(request: NextRequest) {
         return NextResponse.redirect(target, 307);
       }
     }
+    return serveLocalizedPublicRoute(request, pathname);
+  }
+
+  const markdownDelivery = resolvePublicMarkdownDelivery(pathname);
+  if (markdownDelivery) {
+    return serveLocalizedPublicRoute(request, markdownDelivery.pathname, true);
+  }
+  // Text retrieval is independent of sessions, locale cookies, and backend health.
+  if (PUBLIC_ROUTE_PATHS.has(pathname) && prefersDocumentationMarkdown(request.headers.get("accept"))) {
+    return serveLocalizedPublicRoute(request, pathname, true);
+  }
+  if ((!supabaseUrl || !supabaseKey) && PUBLIC_ROUTE_PATHS.has(pathname)) {
     return serveLocalizedPublicRoute(request, pathname);
   }
 
