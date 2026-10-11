@@ -202,6 +202,7 @@ describe("agent run notifications", () => {
       outcome: "Implemented",
       error_message: null,
       pr_url: null,
+      started_at: "2026-08-25T12:00:00.000Z",
       rest_claimed_at: "2026-08-25T12:01:00.000Z",
     };
     await stampRunResult("run-1", { status: "completed" });
@@ -211,6 +212,8 @@ describe("agent run notifications", () => {
     expect(h.resumeNumo).toHaveBeenCalledWith(expect.objectContaining({
       runId: "run-1",
       type: "worker_completed",
+      expectedRun: { status: "completed", started_at: "2026-08-25T12:00:00.000Z",
+        rest_claimed_at: "2026-08-25T12:01:00.000Z" },
       eventId: expect.stringMatching(/^[0-9a-f-]{36}$/),
     }));
     expect(h.executeNumo).toHaveBeenCalledOnce();

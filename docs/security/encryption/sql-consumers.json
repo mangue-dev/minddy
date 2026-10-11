@@ -6600,25 +6600,6 @@
       "protectedRelations": [],
       "functionReferences": []
     },
-    "resume_numo_turn_from_worker(uuid,uuid,text,jsonb)": {
-      "sha256": "61963942f6e87d032ccdaef1807cd6ef74c4224fe848f385f5484f053c9f24d4",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "numo_turn_events",
-        "numo_assistant_turns"
-      ],
-      "protectedRelations": [
-        "numo_turn_events",
-        "numo_assistant_turns"
-      ],
-      "functionReferences": [
-        "append_numo_turn_event"
-      ]
-    },
     "save_feedback_post_content(uuid,uuid,bigint,jsonb)": {
       "sha256": "a4f5660b2650e3492df9b2f4c476d9eb894b188037a6be76f18c3ed6ee98d85f",
       "securityDefiner": true,
@@ -9504,6 +9485,27 @@
       ],
       "functionReferences": [
         "check_native_agent_lease"
+      ]
+    },
+    "resume_numo_turn_from_worker(uuid,uuid,text,jsonb,jsonb)": {
+      "sha256": "af6afabad15725664780a3b9a5e0031b9b83d18211d93089b515286c994eac0a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "agent_runs",
+        "numo_turn_events",
+        "numo_assistant_turns"
+      ],
+      "protectedRelations": [
+        "agent_runs",
+        "numo_turn_events",
+        "numo_assistant_turns"
+      ],
+      "functionReferences": [
+        "append_numo_turn_event"
       ]
     }
   },

@@ -71,3 +71,58 @@ server and one browser session at a time, with the browser closed before compila
 No production deployment or paid native provider run was performed. The exact
 reported premature Numo wake-up and cold-start provider latency still require
 operational confirmation; protective behavior is covered by regression tests.
+
+## Follow-up: parent authority and native cold bootstrap
+
+A read-only audit of the three MIN-678 worker executions found approximately
+2, 38 and 74 seconds between creation and claim, followed by 24–25 seconds before
+`sandbox_ready` and another 17–19 seconds before the first tool. The two delayed
+claims coincide with scheduled drain ticks; this is evidence of queue latency,
+not a measurement of how much any individual maintenance step contributed.
+The parent final responses followed their workers by approximately 9–10 seconds.
+No intermediate parent response in these recorded executions proves the reported
+premature wake-up.
+
+Two concrete completion races were corrected. The worker-result RPC now locks
+parent then worker, checks terminal state and event type, and compares the
+application's observed `started_at` and `rest_claimed_at` generation before
+queuing a continuation. This closes the race between the application read and
+worker resumption. Codex notifications are accepted only for the active thread
+and turn; a delayed completion from an earlier repair cannot finish the new turn.
+A completion arriving before its `turn/start` response no longer restores a stale
+turn identifier. These identifiers are mandatory in the pinned upstream
+[turn completion protocol](https://raw.githubusercontent.com/openai/codex/rust-v0.162.1/codex-rs/app-server-protocol/schema/typescript/v2/TurnCompletedNotification.ts).
+
+Launch and resume now schedule the particular eligible worker without putting
+unrelated watchdog, reaper and allocation cleanup ahead of bootstrap. Deployment
+scope, local-execution exclusion, due time, atomic claim and sandbox admission
+remain enforced; scheduled recovery still performs maintenance. On fresh native
+sandboxes the pinned CLI installs alongside repository cloning, before credentials
+are imported. Both tasks settle before a failing allocation can be retired.
+The supervisor verifies and reuses the installed runtime, then performs the same
+isolation, authentication and guarded MCP negotiation. Account inspection no
+longer requests an extra proactive OAuth refresh on every cold start, matching the
+upstream [account-read contract](https://raw.githubusercontent.com/openai/codex/rust-v0.162.1/codex-rs/app-server-protocol/schema/typescript/v2/GetAccountParams.ts).
+
+Apply migration `20270109200041` before the updated server. The new optional
+argument preserves earlier four-argument callers during rollout. The focused
+PostgreSQL 16 probe applies the actual migration in a disposable container with
+minimal synthetic tables and no network or application database URL. It covers
+active workers, superseded generations, result types, duplicate delivery, legacy
+call compatibility and delivery racing an uncommitted worker resumption. This is
+not a full Supabase replay. The SQL definition and service-only permissions were
+introspected and reconciled into the retained encryption inventories. The server
+consumer inventory also includes the terminal metadata read missing from the
+initial PR check.
+
+These changes affect internal scheduling and completion authority. The six
+`code-work` revision 8 guides and their figures still describe the same controls,
+wait states and delivery behavior, so no further public article edit is required.
+Regression results are recorded below. No production migration, deployment or paid
+native model run was performed; actual post-deployment startup timings and the
+original reported wake-up remain subject to operational confirmation.
+
+Follow-up verification: all 154 targeted tests across 12 suites passed, plus both
+opt-in PostgreSQL concurrency/semantics probes. Typecheck, focused lint, both
+worker bundle builds, encryption access/schema checks, owned-English check,
+documentation/release checks, knowledge check and `git diff --check` passed.

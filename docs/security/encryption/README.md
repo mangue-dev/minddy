@@ -2500,3 +2500,23 @@ model, explicit conversation choices take precedence, and admitted turns retain
 their frozen configuration. Apply migration `20270109200040` before enabling the
 updated application. This change was exercised only against the local Docker
 pilot; no remote database migration or production activation is claimed.
+
+## Numo worker completion authority (2026-10-11)
+
+Migration `20270109200041` moves the worker-generation check into the service-only
+completion RPC. Parent and worker rows are locked in that order with
+`FOR NO KEY UPDATE`; terminal status, parent ownership, result type and observed
+start/rest timestamps must agree before a parent continuation is queued. It reads
+routing/state metadata and retains the encrypted event writer. No table, column,
+view, trigger, encryption target or authenticated permission changes are needed.
+Apply the migration before updating the server; the defaulted fifth argument
+preserves existing four-argument callers during rollout.
+
+The actual migration and concurrent resumption were exercised in a disposable
+PostgreSQL 16 container with synthetic minimal tables, no network and no
+application database URL. The function definition, empty search path and
+service-only ACL were introspected; only that function record and migration hash
+were reconciled into the retained inventories. This was a focused RPC audit,
+not a full schema replay. Application consumers were refreshed to include the
+terminal state/generation read and shifted call sites. No production data or
+migration was changed by this audit.

@@ -383,6 +383,7 @@ describe("native CLI protocol", () => {
       if (request.id === undefined) return;
       const result = request.method === "account/read" ? { account: { type: "chatgpt" } }
         : request.method === "thread/start" ? { thread: { id: "thread" } }
+        : request.method === "turn/start" ? { turn: { id: "turn" } }
         : request.method === "mcpServerStatus/list" ? { data: [{ name: "minddy", tools: { read_issue: {} } }] } : {};
       queueMicrotask(() => child.stdout.write(`${JSON.stringify({ id: request.id, result })}\n`));
     });
@@ -424,14 +425,14 @@ describe("native CLI protocol", () => {
       await expect(runtime.close()).rejects.toThrow("stop unconfirmed");
     } finally { vi.useRealTimers(); }
   });
-  const fixture = `const {createInterface}=require('node:readline');const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='thread/start')result={thread:{id:'thread'}};if(r.method==='mcpServerStatus/list')result={data:[{name:'minddy',tools:{read_issue:{name:'read_issue'}}}]};if(r.method==='turn/start'){result={turn:{id:'turn'}};setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:'Native reply'}});send({method:'turn/completed',params:{turn:{status:'completed'}}})},40)}send({id:r.id,result})});`;
+  const fixture = `const {createInterface}=require('node:readline');const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='thread/start')result={thread:{id:'thread'}};if(r.method==='mcpServerStatus/list')result={data:[{name:'minddy',tools:{read_issue:{name:'read_issue'}}}]};if(r.method==='turn/start'){result={turn:{id:'turn'}};setTimeout(()=>{send({method:'item/agentMessage/delta',params:{threadId:'thread',turnId:'turn',delta:'Native reply'}});send({method:'turn/completed',params:{threadId:'thread',turn:{id:'turn',status:'completed'}}})},40)}send({id:r.id,result})});`;
   it.each(["success", "terminal"])("waits through retryable Codex errors until %s", async (outcome) => {
     const { job } = await setup();
-    const notification = "send({method:'error',params:{willRetry:true,error:{codexErrorInfo:'serverOverloaded',message:'private provider transcript'}}});";
-    const terminal = outcome === "success" ? "send({method:'turn/completed',params:{turn:{status:'completed'}}})"
-      : "send({method:'turn/completed',params:{turn:{status:'failed',error:{codexErrorInfo:'serverOverloaded'}}}})";
+    const notification = "send({method:'error',params:{threadId:'thread',turnId:'turn',willRetry:true,error:{codexErrorInfo:'serverOverloaded',message:'private provider transcript'}}});";
+    const terminal = outcome === "success" ? "send({method:'turn/completed',params:{threadId:'thread',turn:{id:'turn',status:'completed'}}})"
+      : "send({method:'turn/completed',params:{threadId:'thread',turn:{id:'turn',status:'failed',error:{codexErrorInfo:'serverOverloaded'}}}})";
     const script = fixture.replace("send({method:'item/agentMessage/delta'", notification + "send({method:'item/agentMessage/delta'")
-      .replace("send({method:'turn/completed',params:{turn:{status:'completed'}}})", terminal);
+      .replace("send({method:'turn/completed',params:{threadId:'thread',turn:{id:'turn',status:'completed'}}})", terminal);
     const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
     disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
     const events = [];
@@ -442,7 +443,7 @@ describe("native CLI protocol", () => {
   });
   it("preserves terminal unauthorized Codex notifications for vault invalidation", async () => {
     const { job } = await setup();
-    const script = fixture.replace("send({method:'item/agentMessage/delta'", "send({method:'error',params:{willRetry:false,error:{codexErrorInfo:'unauthorized'}}});send({method:'item/agentMessage/delta'");
+    const script = fixture.replace("send({method:'item/agentMessage/delta'", "send({method:'error',params:{threadId:'thread',turnId:'turn',willRetry:false,error:{codexErrorInfo:'unauthorized'}}});send({method:'item/agentMessage/delta'");
     const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
     disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
     for await (const event of runtime.events()) if (event.type === "failed") { expect(event.nativeCode).toBe("unauthorized"); break; }

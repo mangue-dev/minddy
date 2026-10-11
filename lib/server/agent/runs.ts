@@ -154,6 +154,8 @@ export async function deliverAgentDelegationResult(
     projectId: run.project_id,
     eventId: numoWorkerEventId(run),
     type,
+    expectedRun: { status: run.status, started_at: run.started_at ?? null,
+      rest_claimed_at: run.rest_claimed_at ?? null },
     payload: {
       run_id: run.id,
       agent_engine: run.agent_engine,

@@ -1586,6 +1586,7 @@ export async function resumeNumoTurnFromWorker(input: {
   eventId: string;
   type: "worker_completed" | "worker_failed" | "worker_input";
   payload: Record<string, unknown>;
+  expectedRun?: { status: string; started_at: string | null; rest_claimed_at: string | null };
 }): Promise<"queued" | "duplicate" | "ignored"> {
   const service = getServiceClient();
   const payload = await encodeWorkerEventPayload(service, input);
@@ -1594,6 +1595,7 @@ export async function resumeNumoTurnFromWorker(input: {
     p_event_id: input.eventId,
     p_type: input.type,
     p_payload: payload,
+    p_expected_run: input.expectedRun ?? null,
   });
   if (error) throw new Error(error.message);
   return data as "queued" | "duplicate" | "ignored";

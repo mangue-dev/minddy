@@ -98,7 +98,7 @@ import {
   buildNativeAgentNetworkPolicy,
   AGENT_LLM_PLACEHOLDER_KEY,
 } from "./network-policy";
-import { startVmLoop } from "./vm-launch";
+import { prepareFreshSandbox, startVmLoop } from "./vm-launch";
 import { sealAgentSandboxForgeRefreshPolicy } from "./sandbox";
 import {
   isCurrentRepoJob,
@@ -974,41 +974,48 @@ export async function executeAgentRun(
           // receives placeholder/request data and a credential-free Git remote only.
           networkPolicy,
           onCreate: async (fresh) => {
-            sandboxRepoUrl = await configureSandboxRepo(fresh);
-            if (prRun && !run.branch_name) {
-              // A PR run always has its repository — the launch resolves the project
-              // THROUGH the link — so `target`/`forge` are non-null here by
-              // construction; the assertions only surface that invariant.
-              // By the PR's SERVER REF, not the branch name: on a fork, the head branch
-              // does not exist in the base repository (see `clonePullRequest`). The
-              // checkout is named after the writable run branch, so later commits
-              // never target the provider's read-only virtual ref.
-              //
-              // The diff base is requested from the FORGE (MIN-258), not inferred from
-              // the clone: `origin/<base>` is a moving tip, and diffing against it would
-              // make every commit merged into the base since the PR opened look like a
-              // deletion from the PR. Best-effort on both sides — an unreadable merge
-              // base degrades the review but does not cancel it. The head is given by
-              // its SHA: on a fork, its branch name does not exist here.
-              const baseSha = await prBaseShaPromise;
-              await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
-                authUrl: sandboxRepoUrl,
-                baseBranch,
-                headRef: pullRequestHeadRef(prRun.provider, prRun.number),
-                headBranch: prRun.headBranch,
-                localBranch: workBranch,
-                baseSha,
-              });
-              return;
-            }
-            // The committer identity is no longer written into the clone (MIN-358): it
-            // travels in the job and is supplied with `git -c`, on the only command
-            // that commits. A value used in one place cannot leak into someone's repo.
-            await cloneRepo(sandboxHost(fresh, cloudLayout()), {
-              authUrl: sandboxRepoUrl,
-              baseBranch,
-              workBranch,
-            });
+            const cloneUrl = await configureSandboxRepo(fresh);
+            sandboxRepoUrl = cloneUrl;
+            await prepareFreshSandbox(
+              fresh,
+              isNativeAgentEngine(run.agent_engine) ? run.agent_engine : null,
+              async () => {
+                if (prRun && !run.branch_name) {
+                  // A PR run always has its repository — the launch resolves the project
+                  // THROUGH the link — so `target`/`forge` are non-null here by
+                  // construction; the assertions only surface that invariant.
+                  // By the PR's SERVER REF, not the branch name: on a fork, the head branch
+                  // does not exist in the base repository (see `clonePullRequest`). The
+                  // checkout is named after the writable run branch, so later commits
+                  // never target the provider's read-only virtual ref.
+                  //
+                  // The diff base is requested from the FORGE (MIN-258), not inferred from
+                  // the clone: `origin/<base>` is a moving tip, and diffing against it would
+                  // make every commit merged into the base since the PR opened look like a
+                  // deletion from the PR. Best-effort on both sides — an unreadable merge
+                  // base degrades the review but does not cancel it. The head is given by
+                  // its SHA: on a fork, its branch name does not exist here.
+                  const baseSha = await prBaseShaPromise;
+                  await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
+                    authUrl: cloneUrl,
+                    baseBranch,
+                    headRef: pullRequestHeadRef(prRun.provider, prRun.number),
+                    headBranch: prRun.headBranch,
+                    localBranch: workBranch,
+                    baseSha,
+                  });
+                  return;
+                }
+                // The committer identity is no longer written into the clone (MIN-358): it
+                // travels in the job and is supplied with `git -c`, on the only command
+                // that commits. A value used in one place cannot leak into someone's repo.
+                await cloneRepo(sandboxHost(fresh, cloudLayout()), {
+                  authUrl: cloneUrl,
+                  baseBranch,
+                  workBranch,
+                });
+              },
+            );
           },
       });
     const { sandbox: sb, created: sandboxCreated } = sandboxResult;
