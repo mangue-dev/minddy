@@ -495,7 +495,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  if (resumed) kickAgentDrain(getServiceClient());
+  if (resumed) kickAgentDrain(getServiceClient(), runId);
 
   return NextResponse.json({ ok: true, status: run.status, messageId });
 }

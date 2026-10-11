@@ -16,6 +16,8 @@ The native preview exposes guarded Minddy tools through MCP. Provider-native bui
 
 Native authentication or subscription limits stop native work without switching to an API provider or another payer. Users reconnect the selected account or explicitly choose OpenCode. Existing workers keep their frozen engine. Native subscriptions fund native model usage; Numo calls and sandbox compute still follow Minddy usage and budget rules. Paid Claude Code execution remains unvalidated in this preview. The native connection controls include a two-sandbox access and Minddy-tool diagnostic; unobserved authentication renewal is reported separately.
 
+Stopping Numo stops only its turn. Already admitted code workers, including queued runs, continue with their messages and questions preserved; their results cannot automatically resume the stopped turn. Stop a worker separately from **Agent actions** on its card.
+
 Routines are scheduled Numo requests. Each occurrence starts a new Numo conversation with the saved instruction and project context. Numo can use Minddy tools directly and delegate repository work only when needed. The conversation records the result and any request for user input.
 
 minddy also exposes an OAuth-based MCP server for external tools. Compatible coding agents can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages, feedback posts, cycles, routines, and the task notebook. The MCP setup page provides the endpoint and setup instructions for supported clients. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.

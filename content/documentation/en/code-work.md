@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls",
+    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; delegated worker reliability and card controls",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -46,14 +46,15 @@
       "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
       "lib/native-agent-models.ts",
       "components/settings/native-agent-model-preferences.tsx",
-      "content/documentation/reviews/min-676-model-controls-2026-10-10.md"
+      "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
+      "content/documentation/reviews/agent-reliability-and-cards-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance)",
-    "date": "2026-10-10"
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance)",
+    "date": "2026-10-11"
   },
   "related": [
     "numo",
@@ -73,17 +74,18 @@
       "id": "delegate-code-work-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/delegate-code-work-workflow.png",
-      "alt": "Completed code-worker card with model, light reasoning, two changed files, branch, PR #1 and corrected commit.",
-      "caption": "Historical OpenCode example: Card from the real correction of the existing PR, showing its updated commit and link. Inspect the diff and checks before merging; the completion badge alone does not establish acceptance.",
-      "revision": 7,
+      "alt": "Demonstration worker card with state, elapsed time, Codex, model, thinking, branch copy, PR button and View work.",
+      "caption": "Illustrative card rendered from the updated component with demonstration data. The actions open the work panel, copy the branch or open the PR in Minddy. This example does not establish successful provider execution or passing checks.",
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-11",
       "viewport": [
-        912,
-        179
+        568,
+        379
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "review-pull-requests-workflow",
@@ -91,7 +93,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "The real corrected PR remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -119,13 +121,17 @@ Hosted Codex subscription authentication is not available for general use. OpenA
 
 The delegated-work card, worker details and code-worker conversation show the engine used by that run: **Codex**, **Claude Code** or **OpenCode**, with its logo. This identity is saved when the worker starts. Changing account settings affects new workers; it does not relabel an existing run. Older runs without saved engine metadata show a generic code-agent label.
 
+The vertical card shows the current state, execution time, engine, model, thinking, changed files and branch. Its timer adds resumed work and pauses while waiting for your answer. Use the branch copy icon to copy its full name. Open **Agent actions** to **Stop** the worker. **View work** opens the activity panel with the same information. **View pull request** opens the linked PR inside Minddy.
+
+Implementation is delivered through a pull request. If publication is blocked, Numo reports the delivery failure. Validation runs separately from publication; unfinished checks do not count as passing. The PR description in Minddy retains the Numo footer with its model, environment and thinking.
+
 1. Open the issue and describe expected behavior, constraints and acceptance checks.
 2. Open Numo with the issue context. Ask it to inspect the repository before writing a code-level plan. Unverified filenames and APIs are not implementation evidence.
 3. Request implementation explicitly. Numo delegates branch changes to the worker, which clones the linked repository in the server sandbox.
 4. Follow the delegated-work card for progress, changed files, checks and any questions. Answer requested input in the conversation.
 5. Open the attached pull request. Review the diff and recorded checks against the acceptance criteria before merging. A preview is available only when the deployment provider produced one.
 
-![Completed code-worker card with model, light reasoning, two changed files, branch, PR #1 and corrected commit.](/documentation/en/delegate-code-work-workflow.png)
+![Demonstration worker card with state, elapsed time, Codex, model, thinking, branch copy, PR button and View work.](/documentation/en/delegate-code-work-workflow.png)
 
 ### Continue safely {#continuation}
 

@@ -5,6 +5,7 @@ vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) 
 const h = vi.hoisted(() => ({ user: "owner", provider: "openrouter", authenticated: true,
   rows: new Map<string, string | null>(), reads: [] as string[], writes: [] as Record<string, unknown>[],
   readError: false, blockedModel: false,
+  readCode: "PGRST205", capture: vi.fn(),
 }));
 function database() {
   return { from: (table: string) => {
@@ -14,7 +15,8 @@ function database() {
       maybeSingle: async () => {
         const id = `${filters.user_id}:${filters.provider}`; h.reads.push(id);
         return { data: h.rows.has(id) ? { model: h.rows.get(id) } : null,
-          error: h.readError ? { message: "Unavailable" } : null };
+          error: h.readError ? { code: h.readCode, message: "Private database response", details: "private-row" } : null,
+          status: h.readError ? 503 : 200 };
       }, upsert: async (row: Record<string, unknown>) => {
         h.writes.push(row); h.rows.set(`${row.user_id}:${row.provider}`, row.model as string | null);
         return { error: null };
@@ -35,17 +37,20 @@ vi.mock("@/lib/server/ai-runtime", () => ({
 vi.mock("@/lib/server/agent/models-catalog", () => ({ getOpenRouterConversationModels: async () => [{ id: "allowed" }],
   getAssistantModelsForUser: async () => ({ models: h.provider === "generic" ? [] : [{ id: "allowed" }] }) }));
 vi.mock("@/lib/server/assistant/reasoning", () => ({ getAssistantReasoningLevel: async () => "off" }));
+vi.mock("@/lib/server/error-tracking", () => ({ captureServerException: h.capture }));
 vi.mock("@/lib/server/agent/model-plan", () => ({ ensureModelInPlan: async () => {
   if (h.blockedModel) throw new PlanLimitError("model_above_plan");
 } }));
 const { GET, PUT } = await import("@/app/api/account/numo-preferences/route");
 const { getNumoPreferences } = await import("./model-preferences");
+const { GET: getModels } = await import("@/app/api/assistant/models/route");
 const request = (body?: unknown) => new Request("http://localhost/api/account/numo-preferences", {
   method: body === undefined ? "GET" : "PUT", ...(body === undefined ? {} : { body: JSON.stringify(body) }),
 }) as Parameters<typeof GET>[0];
 beforeEach(() => {
   h.user = "owner"; h.provider = "openrouter"; h.authenticated = true; h.readError = false;
   h.blockedModel = false; h.rows.clear(); h.reads = []; h.writes = [];
+  h.readCode = "PGRST205"; h.capture.mockReset();
 });
 describe("personal Numo preferences", () => {
   it("persists and reloads an owner's choice while isolating another account", async () => {
@@ -93,9 +98,29 @@ describe("personal Numo preferences", () => {
     h.readError = true;
     expect((await GET(request())).status).toBe(503);
   });
+  it.each(["PGRST205", "42501", "57014"])("keeps model discovery available after a %s preference read failure", async (code) => {
+    h.readError = true; h.readCode = code;
+    const response = await getModels(request());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ models: [{ id: "allowed" }], defaultModel: null, defaultReasoning: "off" });
+    expect(h.capture).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      operation: "read_numo_preferences", diagnostics: expect.objectContaining({ code, status: 503 }),
+    }), null, { routePath: "/api/assistant/models", routeType: "route", httpMethod: "GET" });
+    expect(JSON.stringify(h.capture.mock.calls)).not.toContain("private-row");
+    await expect(getNumoPreferences("owner")).rejects.toMatchObject({ operation: "read_numo_preferences" });
+    expect((await GET(request())).status).toBe(503);
+  });
+  it("uses the personal model in the catalog and the application default when no preference is saved", async () => {
+    h.rows.set("owner:openrouter", "allowed");
+    expect(await (await getModels(request())).json()).toMatchObject({ defaultModel: "allowed" });
+    h.rows.clear();
+    expect(await (await getModels(request())).json()).toMatchObject({ defaultModel: "app-model" });
+    expect(h.capture).not.toHaveBeenCalled();
+  });
   it("requires authentication for reads and writes", async () => {
     h.authenticated = false;
     expect((await GET(request())).status).toBe(401);
+    expect((await getModels(request())).status).toBe(401);
     expect((await PUT(request({ provider: "openrouter", default_model: null }))).status).toBe(401);
     expect(h.writes).toHaveLength(0);
   });

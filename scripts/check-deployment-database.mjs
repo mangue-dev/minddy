@@ -6,6 +6,9 @@ const REQUIRED_RPC_PATHS = [
   "/rpc/auth_authorization_state",
   "/rpc/resolve_realtime_topic",
 ];
+const REQUIRED_TABLES = {
+  user_numo_preferences: ["user_id", "provider", "model", "updated_at"],
+};
 
 /**
  * Check the target schema before Vercel can replace a working deployment.
@@ -49,9 +52,18 @@ export async function checkDeploymentDatabase(env = process.env, fetcher = fetch
   }
 
   const missing = REQUIRED_RPC_PATHS.filter((path) => !schema?.paths?.[path]?.post);
+  for (const [table, columns] of Object.entries(REQUIRED_TABLES)) {
+    if (!schema?.paths?.[`/${table}`]?.get) {
+      missing.push(`/${table}`);
+      continue;
+    }
+    for (const column of columns) {
+      if (!schema?.definitions?.[table]?.properties?.[column]) missing.push(`${table}.${column}`);
+    }
+  }
   if (missing.length > 0) {
     throw new Error(
-      `Database preflight failed: missing required RPCs: ${missing.join(", ")}. ` +
+      `Database preflight failed: missing required schema entries: ${missing.join(", ")}. ` +
       "Review and apply the candidate's database migrations before retrying this deployment. " +
       "If preview shares a production database, coordinate the database upgrade with production first. " +
       "See docs/preview-database-compatibility.md.",
@@ -61,7 +73,7 @@ export async function checkDeploymentDatabase(env = process.env, fetcher = fetch
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   checkDeploymentDatabase().then(
-    () => console.log("Database preflight passed: required auth and Realtime RPCs are available."),
+    () => console.log("Database preflight passed: required auth, Realtime and Numo schema entries are available."),
     (error) => {
       console.error(error.message);
       process.exitCode = 1;

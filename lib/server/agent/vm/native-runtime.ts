@@ -44,6 +44,8 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
   let expectedClaudeTools: string[] = [];
   let claudeInitialized = false;
   let nextId = 0; let threadId = ""; let turnId = ""; let reply = ""; let closed = false;
+  let startingTurn = false;
+  const completedTurns = new Set<string>();
   const pending = new Map<number, { resolve(value: Record<string, unknown>): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
   const queue: NativeEvent[] = [];
   let wake: (() => void) | undefined;
@@ -92,12 +94,19 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
           if (typeof event.id === "number" && pending.has(event.id)) { const entry = pending.get(event.id)!; clearTimeout(entry.timer); pending.delete(event.id); if (event.error) entry.reject(new Error("Native worker protocol request rejected")); else entry.resolve(event.result ?? {}); continue; }
           if (event.id !== undefined && typeof event.method === "string") { process.stdin.write(`${JSON.stringify({ id: event.id, error: { code: -32601, message: "Use the guarded Minddy MCP tools" } })}\n`); continue; }
           const params = event.params ?? {};
-          if (event.method === "turn/started") { turnId = params.turn?.id ?? turnId; push({ type: "status", phase: "running" }); }
+          const notificationTurn = params.turn?.id ?? params.turnId;
+          if (event.method === "turn/started") {
+            if (params.threadId !== threadId || (!startingTurn && turnId !== notificationTurn) || !notificationTurn
+              || completedTurns.has(notificationTurn) || (turnId && turnId !== notificationTurn)) continue;
+            turnId = notificationTurn; push({ type: "status", phase: "running" });
+          }
+          if ((typeof event.method === "string" && event.method.startsWith("item/") || event.method === "turn/completed" || event.method === "error")
+            && (params.threadId !== threadId || !turnId || notificationTurn !== turnId)) continue;
           if (event.method === "item/agentMessage/delta" && typeof params.delta === "string") { reply = (reply + params.delta).slice(-64_000); push({ type: "text", text: params.delta, delta: true }); }
           if (event.method === "item/started" && params.item?.type === "reasoning") push({ type: "status", phase: "reasoning" });
           if (event.method === "item/started" && params.item?.type === "mcpToolCall") push({ type: "status", phase: "tool" });
           if (event.method === "item/completed" && params.item?.type === "agentMessage" && typeof params.item.text === "string") { reply = params.item.text.slice(-64_000); push({ type: "text", text: reply, delta: false }); }
-          if (event.method === "turn/completed") { turnId = ""; if (params.turn?.status === "completed") push({ type: "completed", reply }); else fail(safeNativeError(params.turn?.error?.codexErrorInfo).errorCode); }
+          if (event.method === "turn/completed") { completedTurns.add(turnId); turnId = ""; if (params.turn?.status === "completed") push({ type: "completed", reply }); else fail(safeNativeError(params.turn?.error?.codexErrorInfo).errorCode); }
           if (event.method === "error") {
             // The CLI owns transport/auth retries; only its terminal outcome ends the turn.
             if (params.willRetry === true) push({ type: "status", phase: "retrying" });
@@ -132,7 +141,15 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
   };
   const prompt = async (text: string) => {
     reply = "";
-    if (engine === "codex") { const result = await rpc("turn/start", { threadId, input: [{ type: "text", text, text_elements: [] }] }); turnId = (result.turn as { id?: string })?.id ?? turnId; }
+    if (engine === "codex") {
+      startingTurn = true; turnId = "";
+      try {
+        const result = await rpc("turn/start", { threadId, input: [{ type: "text", text, text_elements: [] }] });
+        const id = (result.turn as { id?: string })?.id;
+        if (!id) throw new Error("Native worker turn did not start");
+        if (!completedTurns.has(id)) turnId = id;
+      } finally { startingTurn = false; }
+    }
     else { if (!child) throw new Error("Native worker process is unavailable"); child.stdin.write(`${JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text }] } })}\n`); }
   };
   return {
@@ -148,7 +165,8 @@ export function createNativeRuntime(engine: NativeHarness, options: { spawn?: Na
       child = launch(engine, args, envFor(input), cwd); observe(child);
       if (engine === "codex") {
         await rpc("initialize", { clientInfo: { name: "minddy_native_worker", version: "1.0.0" } }); child.stdin.write('{"method":"initialized","params":{}}\n');
-        const auth = await rpc("account/read", { refreshToken: true }); if ((auth.account as { type?: string })?.type !== "chatgpt") throw new NativeAuthenticationRequired();
+        // Read the imported account without forcing an extra OAuth round-trip at every cold start.
+        const auth = await rpc("account/read", { refreshToken: false }); if ((auth.account as { type?: string })?.type !== "chatgpt") throw new NativeAuthenticationRequired();
         const thread = await rpc("thread/start", { ...(input.model ? { model: input.model } : {}), cwd: input.cwd, developerInstructions: input.anchor, approvalPolicy: "never", ephemeral: true, config: nativeCodexConfiguration(input) });
         if (input.model && typeof thread.model === "string" && thread.model !== input.model) {
           throw new Error("Native worker changed the frozen model");

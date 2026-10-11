@@ -4,6 +4,8 @@ import { getAssistantModelsForUser } from "@/lib/server/agent/models-catalog";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 
 import { getNumoPreferences } from "@/lib/server/assistant/model-preferences";
+import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
+import { captureServerException } from "@/lib/server/error-tracking";
 
 export const runtime = "nodejs";
 
@@ -16,6 +18,17 @@ export async function GET(request: NextRequest) {
     getAssistantModelsForUser(auth.user.id),
     getAssistantReasoningLevel(),
   ]);
-  const preferences = await getNumoPreferences(auth.user.id);
-  return Response.json({ ...catalog, defaultModel: preferences.default_model ?? preferences.application_model, defaultReasoning });
+  let defaultModel: string | null = null;
+  try {
+    const preferences = await getNumoPreferences(auth.user.id);
+    defaultModel = preferences.default_model ?? preferences.application_model;
+  } catch (error) {
+    if (!(error instanceof DatabaseOperationError) || error.operation !== "read_numo_preferences") throw error;
+    // Model discovery remains available for an explicit selection. Turn admission
+    // still requires the saved preference before choosing an implicit default.
+    await captureServerException(error, request.headers.get("cookie"), {
+      routePath: "/api/assistant/models", routeType: "route", httpMethod: "GET",
+    });
+  }
+  return Response.json({ ...catalog, defaultModel, defaultReasoning });
 }

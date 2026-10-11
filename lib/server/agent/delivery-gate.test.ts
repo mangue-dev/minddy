@@ -128,7 +128,7 @@ describe("la porte de livraison", () => {
     expect(phases).toEqual(["type_check", "tests", "self_review"]);
   });
 
-  it("starts type-checking and tests before either check finishes", async () => {
+  it("finishes type-checking before starting tests to bound peak memory", async () => {
     let resolveTypes!: (value: string) => void;
     let resolveTests!: (value: { block: string; scope: "full" }) => void;
     vi.mocked(typeErrorsForTurn).mockImplementationOnce(
@@ -142,12 +142,38 @@ describe("la porte de livraison", () => {
     const pending = gate.checkBeforeSubmit(ROOMY);
     await vi.waitFor(() => {
       expect(typeErrorsForTurn).toHaveBeenCalled();
-      expect(testFailuresForTurn).toHaveBeenCalled();
     });
+    expect(testFailuresForTurn).not.toHaveBeenCalled();
 
     resolveTypes("TYPES");
+    await vi.waitFor(() => expect(testFailuresForTurn).toHaveBeenCalled());
     resolveTests({ block: "TESTS", scope: "full" });
     await expect(pending).resolves.toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
+  });
+
+  it("shares a wall deadline across checks and reports unfinished verification", async () => {
+    let wall = 0;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => wall);
+    const timeouts: number[] = [];
+    vi.mocked(typeErrorsForTurn).mockImplementationOnce(async (host) => {
+      await host.exec("typecheck", { timeoutMs: 120_000 });
+      return null;
+    });
+    vi.mocked(testFailuresForTurn).mockImplementationOnce(async (host) => {
+      await host.exec("tests", { timeoutMs: 240_000 });
+      return null;
+    });
+    const host = { ...fakeHost(), exec: async (_command: string, options?: import("./repo-host").ShellOptions) => {
+      timeouts.push(options!.timeoutMs!);
+      wall += options!.timeoutMs!;
+      return { exitCode: 124, stdout: "", stderr: "" };
+    } };
+    try {
+      const gate = makeDeliveryGate({ host, emit: async () => {}, editedPaths: new Set(["x.ts"]),
+        planWrites: newPlanWriteSink(), filesFromSha: "base", repoTouched: true, logPrefix: "[test]" });
+      expect(await gate.checkChanges(ROOMY)).toContain("unverified");
+      expect(timeouts).toEqual([120_000, 30_000]);
+    } finally { clock.mockRestore(); }
   });
 
   it("ne s'ouvre qu'UNE fois : le second create_pr livre", async () => {

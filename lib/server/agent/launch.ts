@@ -48,7 +48,8 @@ import {
 import { decodeAgentBaseBranch } from "./run-base-branch-content";
 import { decodeAgentWorkBranch } from "./run-work-branch-content";
 import { requestedRunReservationUsd } from "./run-key";
-import { drainAgentRuns } from "./drain";
+import { drainAgentRuns, startQueuedAgentRun } from "./drain";
+import { afterOrNow } from "@/lib/server/after-safe";
 import { capability } from "@/lib/server/capabilities";
 import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { nativeWorkerModel } from "@/lib/native-worker-model";
@@ -875,7 +876,7 @@ export async function launchAgentRun(
     if (input.triggeredBy !== "automation") handOffToHuman(issueId);
   }
 
-  kickAgentDrain(service);
+  kickAgentDrain(service, run.id);
   return { ok: true, run };
 }
 
@@ -930,10 +931,11 @@ export async function continueOrLaunchAgentRun(
  * run in line — steering and provider fallback — call this kick
  * directly rather than waiting for a tick.
  */
-export function kickAgentDrain(service: SupabaseClient): void {
-  after(async () => {
+export function kickAgentDrain(service: SupabaseClient, runId?: string): void {
+  afterOrNow(async () => {
     try {
-      await drainAgentRuns(service);
+      if (runId) await startQueuedAgentRun(service, runId);
+      else await drainAgentRuns(service);
     } catch {
       console.error("[agent-launch] kick_drain_failed");
     }

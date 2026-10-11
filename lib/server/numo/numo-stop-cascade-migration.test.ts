@@ -12,7 +12,7 @@ function operation(name: string) {
   return sql.slice(start);
 }
 
-describe("Numo stop cascade migration (MIN-599)", () => {
+describe("Historical Numo stop cascade migration (MIN-599)", () => {
   it("interrupts every live worker of the turn, not only the awaited one", () => {
     const stop = operation("request_numo_turn_stop");
     expect(stop).toContain(
@@ -51,26 +51,30 @@ describe("Numo stop cascade migration (MIN-599)", () => {
   });
 });
 
-describe("Numo stop cascade after encryption migrations", () => {
+describe("Independent Numo stop after encryption migrations", () => {
   const latestRecovery = migrationFiles()
     .map((file) => canonicalSql(readMigration(file)))
     .filter((contents) => contents.includes(
       "create or replace function public.recover_stale_numo_turns()",
     ))
+    .at(-1)!
+    .split("create or replace function public.recover_stale_numo_turns()").at(-1)!;
+
+  const latestStop = migrationFiles()
+    .map((file) => canonicalSql(readMigration(file)))
+    .filter((contents) => contents.includes("create or replace function public.request_numo_turn_stop("))
     .at(-1)!;
 
-  it("retains the all-worker stop cascade in the last recovery definition", () => {
-    expect(latestRecovery).toContain(
-      "parent_numo_turn_id = v_turn.id and status in ('queued', 'running')",
-    );
-    expect(latestRecovery).not.toContain("id = v_turn.active_run_id");
-    expect(latestRecovery).toContain(
-      "select id from public.agent_runs where parent_numo_turn_id = v_turn.id",
-    );
-    expect(latestRecovery).toContain("consumed_at is null");
-    expect(latestRecovery).toContain(
-      "parent_numo_turn_id = v_turn.id and status = 'pending'",
-    );
+  it("preserves workers, steering and questions in the latest stop and recovery definitions", () => {
+    for (const definition of [latestStop, latestRecovery]) {
+      expect(definition).not.toContain("update public.agent_runs");
+      expect(definition).not.toContain("update public.agent_run_messages");
+      expect(definition).not.toContain("update public.agent_run_input_requests");
+      expect(definition).toContain("from public, anon, authenticated");
+      expect(definition).toContain("to service_role");
+    }
+    expect(latestStop).toContain("conversation_id = p_conversation_id and user_id = p_user_id");
+    expect(latestStop).toContain("pg_advisory_xact_lock");
   });
 
   it("leaves protected worker handoff to the application and clears error copies", () => {

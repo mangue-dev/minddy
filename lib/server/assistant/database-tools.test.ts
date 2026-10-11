@@ -458,7 +458,7 @@ describe("conversation action targets", () => {
           authorized_work:
             mode === "review"
               ? ["read_repository", "run_verification"]
-              : ["read_repository", "modify_repository", "run_verification"],
+              : ["read_repository", "modify_repository", "run_verification", "manage_pull_request"],
         },
         conversation,
       );

@@ -4,12 +4,13 @@ import { DEFAULT_AGENT_PROVIDER } from "@/lib/agent-providers";
 import { getUserByok } from "@/lib/server/agent/model";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 import type { AgentProviderId } from "@/lib/agent-providers";
+import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 
 /** Each provider has its own model namespace and saved account default. */
 export async function getNumoDefaultModel(userId: string, provider: AgentProviderId): Promise<string | null> {
-  const { data, error } = await getServiceClient().from("user_numo_preferences")
+  const { data, error, status } = await getServiceClient().from("user_numo_preferences")
     .select("model").eq("user_id", userId).eq("provider", provider).maybeSingle();
-  if (error) throw new Error("Could not load Numo preferences");
+  if (error) throw new DatabaseOperationError("read_numo_preferences", error, status);
   return data?.model ?? null;
 }
 

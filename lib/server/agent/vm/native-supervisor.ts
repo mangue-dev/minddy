@@ -2,6 +2,8 @@ import { constants } from "node:fs";
 import { open, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
+import { hasSerializedToolCall } from "@/lib/ai-completion";
+import { looksLikeUnexecutedPreamble, MAX_COMPLETION_REPAIRS, OPENCODE_CONTINUATION_REPAIR } from "./opencode-continuation";
 import { nativeWorkerPaths, type NativeWorkerMessage } from "@/lib/native-agent-worker";
 import { promptWithMentions, type AgentUserMessage } from "@/lib/agent-mentions";
 import { parseAskUserQuestions } from "@/lib/ask-user";
@@ -130,7 +132,10 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
   };
   const previousPath = process.env.PATH;
   try {
+    heartbeat = setInterval(() => { void cp.heartbeat().then((running) => { if (!running) return stop("interrupted"); }).catch(() => {}); }, 15_000);
+    await cp.emit("status", { phase: "native_preparing" });
     const bins = await (deps.installCli ?? installNativeWorkerCli)(native.engine, `${job.layout.root}/native-runtime`);
+    if (stopped) throw new Error("Native startup interrupted");
     process.env.PATH = `${bins}:${previousPath ?? "/usr/bin:/bin"}`;
     await host.verifyIsolation();
     const profile = await readImportedProfile(paths.profileImportPath);
@@ -169,7 +174,10 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
     if (!initial) throw new Error("Native worker requires a user request");
     const conventions = await nativeRepositoryInstructions(host, job.anchor === "pr");
     const initialHistoryIndex = history.length;
+    await cp.emit("status", { phase: "native_starting" });
     await runtime.start({ cwd: job.layout.repoDir, anchor: `${input.anchorInstructions}\n\n${conventions}\n\n${describeAgentHarnessCapabilities(native.engine)}\nUse only the guarded Minddy MCP tools for repository work. Native shell, edits, images and subagents are unavailable.`, prompt: initial, history, mcpUrl: mcp.url, mcpToken, privateRoot: native.privateRoot, profileRoot: native.profileRoot, model: native.model ?? null, reasoningEffort: native.reasoningEffort ?? null, toolNames: mcp.toolNames });
+    if (stopped) throw new Error("Native startup interrupted");
+    await cp.emit("status", { phase: "native_ready" });
     registerNativeProfileSecrets(await exportProfile(native.profileRoot, native.engine), secrets);
     history.splice(initialHistoryIndex, 0, { role: "user", text: outward(initial) }); pendingSteering = [];
     const tick = async () => {
@@ -185,7 +193,6 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
       finally { lifecycleBusy = false; }
     };
     beat = setInterval(() => { if (!lifecycleTask) lifecycleTask = tick().finally(() => { lifecycleTask = undefined; }); }, deps.lifecycleBeatMs ?? 1000);
-    heartbeat = setInterval(() => { void cp.heartbeat().then((running) => { if (!running) return stop("interrupted"); }).catch(() => {}); }, 15_000);
     checkpointTimer = setInterval(() => { void cp.saveCheckpointQuietly(checkpoint()).then((running) => { if (!running) return stop("interrupted"); }).catch(() => {}); }, 30_000);
     deadlineTimer = setTimeout(() => { void stop("error", "turnTooLong"); }, Math.max(1, deadline - (now() - started)));
     let repairs = 0;
@@ -197,9 +204,18 @@ export async function runNativeTurn(job: VmJob, input: SupervisorInput, rawCp: C
       if (event.type === "completed") {
         reply = event.reply;
         if (askedUser) { status = "interrupted"; errorCode = undefined; history.push({ role: "assistant", text: outward(reply) }); break; }
-        if (job.pullRequestDelivery?.required && !delivered && job.writesToRepo && repairs++ < 2) { const repair = "The requested work is not delivered yet. Finish the implementation, run validate_changes, and use create_pr. Report an actual blocking condition if publication is impossible."; history.push({ role: "assistant", text: outward(reply) }, { role: "user", text: repair }); await runtime.steer(repair); reply = ""; continue; }
-        if (job.pullRequestDelivery?.required && !delivered && job.writesToRepo) { status = "error"; errorCode = "replyIncomplete"; }
-        else { status = "completed"; errorCode = undefined; }
+        const missingPr = job.pullRequestDelivery?.required && !delivered && job.writesToRepo;
+        const incomplete = !reply.trim() || hasSerializedToolCall(reply) || looksLikeUnexecutedPreamble(reply);
+        if (missingPr || incomplete) {
+          if (repairs++ < MAX_COMPLETION_REPAIRS) {
+            const repair = missingPr
+              ? "The requested work is not delivered yet. Finish the implementation, run validate_changes, and use create_pr. Report an actual blocking condition if publication is impossible."
+              : OPENCODE_CONTINUATION_REPAIR;
+            history.push({ role: "assistant", text: outward(reply) }, { role: "user", text: repair });
+            await runtime.steer(repair); reply = ""; continue;
+          }
+          status = "error"; errorCode = "replyIncomplete";
+        } else { status = "completed"; errorCode = undefined; }
         history.push({ role: "assistant", text: outward(reply) }); break;
       }
     }

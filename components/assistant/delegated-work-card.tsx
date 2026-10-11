@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, LoaderCircleIcon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, BotIcon, CancelCircleIcon as Ban, CheckIcon, Copy01Icon, GitBranchIcon, GitCommitIcon, GitPullRequestIcon, HelpCircleIcon, LinkSquare01Icon, LoaderCircleIcon, MoreHorizontalIcon, PackageIcon, SquareIcon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import Link from "@/components/app-link";
 import { useEffect, useMemo, useState } from "react";
@@ -9,19 +9,22 @@ import { useSearchParams } from "next/navigation";
 import { useNow, useTranslations } from "next-intl";
 import {
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Spinner,
   toast,
   cn,
 } from "mangue-ui";
 import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { AgentDiffSheet } from "@/components/agent/agent-diff-sheet";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import { AppIcon } from "@/components/icon";
 import { ModelLogo } from "@/components/model-logo";
 import { AgentEngineBadge } from "@/components/agent/agent-engine-badge";
-import { isNativeAgentEngine } from "@/lib/agent-engines";
-import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { agentEngineDisplay } from "@/lib/agent-engine-display";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
 import {
   interruptAgentRunApi,
   isAgentRunWorking,
@@ -29,6 +32,7 @@ import {
 } from "@/lib/agent-api";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import { formatModelName } from "@/lib/model-display";
+import { delegatedWorkDurationMs } from "@/lib/delegated-work-duration";
 import { settledAgentLocalDiff } from "@/lib/agent-local-diff";
 import { sessionSubagents, type TurnSubagent } from "@/lib/agent-subagents";
 import {
@@ -115,19 +119,19 @@ const REASONING_LABEL_KEYS = {
  */
 function NumoModelLine({
   model,
-  reasoningLevel,
   label,
+  name,
 }: {
   model: string | null | undefined;
-  reasoningLevel: ReasoningLevel | null | undefined;
   label: string;
+  name?: string;
 }) {
   if (!model) return null;
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5">
       <ModelLogo model={model} size={13} />
-      <span className="truncate text-foreground/80">{formatModelName(model)}</span>
-      {reasoningLevel ? (
+      <span className="truncate text-foreground/80">{name ?? formatModelName(model)}</span>
+      {label ? (
         <span className="shrink-0 text-muted-foreground">
           {label}
         </span>
@@ -142,46 +146,65 @@ function msOr(iso: string | null, fallback: number): number {
   return Number.isNaN(ms) ? fallback : ms;
 }
 
-/**
- * Stop the delegated worker on the first click. The card and detail panel
- * share a stopping state while the server cancels its execution and prevents
- * Numo from automatically continuing the interrupted work.
- */
-function DelegatedWorkStopButton({
-  working,
-  stopping,
-  onStop,
-}: {
+/** Keep interruption in the same actions menu on the card and worker details. */
+function DelegatedWorkStopButton({ working, stopping, onStop }: {
   working: boolean;
   stopping: boolean;
   onStop: () => void;
 }) {
   const t = useTranslations("Agent");
-
   if (!working) return null;
-
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          className="shrink-0 text-muted-foreground"
-          disabled={stopping}
-          onClick={onStop}
-          aria-label={t("delegatedWorkStop")}
-        >
-          {stopping ? (
-            <Spinner className="size-3.5" aria-hidden />
-          ) : (
-            <HugeiconsIcon icon={SquareIcon} className="size-3.5" aria-hidden />
-          )}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" size="icon-sm" variant="ghost"
+          className="shrink-0 text-muted-foreground" disabled={stopping}
+          aria-label={t("delegatedWorkActions")}>
+          {stopping ? <Spinner className="size-4" aria-hidden />
+            : <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" aria-hidden />}
         </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{t("delegatedWorkStop")}</TooltipContent>
-    </Tooltip>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem variant="destructive" onSelect={onStop}>
+          <HugeiconsIcon icon={SquareIcon} className="size-3.5" aria-hidden />
+          {t("delegatedWorkStop")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
+}
+
+function DelegatedBranchLine({ branch }: { branch: string }) {
+  const t = useTranslations("PullRequests");
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(branch); setCopied(true); }
+    catch { toast.error(t("copyFailed")); }
+  };
+  return <div className="flex w-full min-w-0 items-center gap-2">
+    <HugeiconsIcon icon={GitBranchIcon} className="size-3.5 shrink-0" aria-hidden />
+    <AppTooltip label={branch}><span className="min-w-0 flex-1 truncate font-mono">{branch}</span></AppTooltip>
+    <AppTooltip label={t("copyBranch")}><Button type="button" size="icon-sm" variant="ghost"
+      className="shrink-0 text-muted-foreground" aria-label={t("copyBranch")} onClick={() => void copy()}>
+      <HugeiconsIcon icon={copied ? CheckIcon : Copy01Icon} className="size-3.5" aria-hidden />
+    </Button></AppTooltip>
+  </div>;
+}
+
+function DelegatedPrButton({ run }: { run: AgentRunSummary }) {
+  const t = useTranslations("Agent");
+  if (!run.pr_url) return null;
+  return <Button asChild variant="outline" size="sm" className="w-full">
+    <Link href={`/pull-requests?run=${encodeURIComponent(run.id)}`}>
+      <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" aria-hidden />
+      {t("viewPullRequest")}{run.pr_number ? ` #${run.pr_number}` : ""}
+    </Link>
+  </Button>;
 }
 
 /** Compact ticking chrono, same format as the agent pill ("2 min 3s"). */
@@ -207,19 +230,24 @@ function DelegatedWorkMeta({
   state,
   run,
   changedFileCount,
+  events,
 }: {
   state: DelegatedWorkState;
   run: AgentRunSummary | null | undefined;
   changedFileCount: number;
+  events: Parameters<typeof delegatedWorkDurationMs>[1];
 }) {
   const t = useTranslations("Agent");
   const tNativeModels = useTranslations("NativeAgentModels");
   const working = state === "starting" || state === "queued" || state === "running";
   const now = useNow({ updateInterval: working ? 1000 : undefined });
+  const phase = events.filter((event) => event.type === "status" && event.payload?.phase).at(-1)?.payload?.phase;
+  const startupKey = phase === "native_preparing" ? "preparingEngine" : phase === "native_starting" ? "startingEngine" : null;
   const StateIcon = STATE_ICONS[state];
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+    <div className="grid gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-3">
       <span
         className={cn(
           "inline-flex items-center gap-1",
@@ -240,26 +268,27 @@ function DelegatedWorkMeta({
           )}
           aria-hidden
         />
-        {t(`delegatedWorkState_${state}`)}
+        {state === "running" && startupKey ? t(startupKey, { agent: agentEngineDisplay(run?.agent_engine).name ?? t("engineLegacyLabel") }) : t(`delegatedWorkState_${state}`)}
       </span>
-      {working && run ? (
+      {run ? (
         <span className="shrink-0 tabular-nums">
-          {elapsedLabel(t, now.getTime() - Date.parse(run.started_at ?? run.created_at))}
+          {elapsedLabel(t, delegatedWorkDurationMs(run, events, now.getTime()))}
         </span>
       ) : null}
-      {run ? <AgentEngineBadge engine={run.agent_engine} size={13} /> : null}
-      {run && isNativeAgentEngine(run.agent_engine) ? <>
-        <span>{t("nativeHarnessModel", { model: run.model && !run.model.endsWith("/default")
-          ? run.model.slice(run.agent_engine.length + 1) : tNativeModels("automatic") })}</span>
-        <span>{t("nativeHarnessThinking", { level: run.native_reasoning_effort
-          ? tNativeModels(`effort_${run.native_reasoning_effort}` as Parameters<typeof tNativeModels>[0])
-          : tNativeModels("automatic") })}</span>
-      </> : null}
-      {!isNativeAgentEngine(run?.agent_engine) ? <NumoModelLine
-        model={run?.model}
-        reasoningLevel={run?.reasoning_level}
-        label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
-      /> : null}
+      </div>
+      <div className="grid gap-2">
+        <AgentEngineBadge engine={run?.agent_engine} size={14} />
+        {isNativeAgentEngine(run?.agent_engine) ? <NumoModelLine
+          model={`${run?.agent_engine === "codex" ? "openai" : "anthropic"}/${run?.model?.split("/").slice(1).join("/") || "default"}`}
+          name={!run?.model || run.model.endsWith("/default") ? tNativeModels("automatic") : formatModelName(run.model)}
+          label={run?.native_reasoning_effort
+            ? tNativeModels(`effort_${run.native_reasoning_effort}` as Parameters<typeof tNativeModels>[0])
+            : tNativeModels("automatic")}
+        /> : <NumoModelLine
+          model={run?.model}
+          label={run?.reasoning_level ? t(REASONING_LABEL_KEYS[run.reasoning_level]) : ""}
+        />}
+      </div>
       {changedFileCount > 0 ? (
         <span>{t("filesChanged", { count: changedFileCount })}</span>
       ) : null}
@@ -273,9 +302,13 @@ function DelegatedWorkMeta({
  * still moving under the hood" without opening the side panel — while a girl
  * works, the parent emits nothing and the thread above stands perfectly still.
  */
-function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
+function DelegatedSubagents({ subagents, active, settledAt }: {
+  subagents: TurnSubagent[];
+  active: boolean;
+  settledAt?: string | null;
+}) {
   const t = useTranslations("Agent");
-  const runningCount = subagents.filter((subagent) => !subagent.endedAt).length;
+  const runningCount = subagents.filter((subagent) => active && !subagent.endedAt).length;
   const now = useNow({ updateInterval: runningCount > 0 ? 1000 : undefined });
 
   return (
@@ -292,9 +325,9 @@ function DelegatedSubagents({ subagents }: { subagents: TurnSubagent[] }) {
       </p>
       <ul className="mt-1.5 grid gap-1">
         {subagents.map((subagent) => {
-          const running = !subagent.endedAt;
+          const running = active && !subagent.endedAt;
           const start = msOr(subagent.startedAt, now.getTime());
-          const end = running ? now.getTime() : msOr(subagent.endedAt, start);
+          const end = running ? now.getTime() : msOr(subagent.endedAt ?? settledAt ?? null, start);
 
           return (
             <li
@@ -396,65 +429,23 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
     <>
       <div
         className={cn(
-          "flex w-full flex-col gap-3 rounded-xl border bg-card p-3 shadow-xs",
+          "flex w-full flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs",
           state === "waiting_input" && "border-amber-500/40",
           state === "failed" && "border-destructive/40",
         )}
         data-delegated-work-id={runId ?? call.id}
       >
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-sm font-medium leading-5">{title}</p>
-            <div className="mt-1">
-              <DelegatedWorkMeta
-                state={state}
-                run={run}
-                changedFileCount={changedFileCount}
-              />
-            </div>
-          </div>
-          {runId ? (
-            <DelegatedWorkStopButton
-              working={working}
-              stopping={stopping}
-              onStop={() => void stopWorker()}
-            />
-          ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            disabled={!runId}
-            onClick={() => setDetailsOpen(true)}
-          >
-            <McpAgentLogo agent={agentEngineDisplay(run?.agent_engine).logo} className="size-4" />
-            {t("delegatedWorkView")}
-          </Button>
+        <div className="flex min-w-0 items-start gap-3">
+          <p className="min-w-0 flex-1 line-clamp-2 text-sm font-medium leading-5">{title}</p>
+          {runId ? <DelegatedWorkStopButton working={working} stopping={stopping} onStop={() => void stopWorker()} /> : null}
         </div>
+        <DelegatedWorkMeta state={state} run={run} events={events} changedFileCount={changedFileCount} />
         {subagents.length > 0 ? (
-          <DelegatedSubagents subagents={subagents} />
+          <DelegatedSubagents subagents={subagents} active={working} settledAt={run?.completed_at ?? run?.updated_at} />
         ) : null}
         {run?.pr_url || run?.branch_name || artifacts.length > 0 ? (
           <div className="flex flex-wrap items-center gap-3 border-t pt-2 text-xs text-muted-foreground">
-            {run?.branch_name ? (
-              <span className="inline-flex min-w-0 items-center gap-1">
-                <HugeiconsIcon icon={GitBranchIcon} className="size-3.5 shrink-0" aria-hidden />
-                <span className="truncate font-mono">{run.branch_name}</span>
-              </span>
-            ) : null}
-            {run?.pr_url ? (
-              <Link
-                href={run.pr_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-foreground hover:underline"
-              >
-                <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" aria-hidden />
-                {run.pr_number ? `#${run.pr_number}` : t("viewPullRequest")}
-                <HugeiconsIcon icon={LinkSquare01Icon} className="size-3" aria-hidden />
-              </Link>
-            ) : null}
+            {run?.branch_name ? <DelegatedBranchLine branch={run.branch_name} /> : null}
             {artifacts.map((artifact) => {
               if (
                 artifact.kind === "pull_request" &&
@@ -469,15 +460,15 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 <>
                   <AppIcon icon={ArtifactIcon} className="size-3.5 shrink-0" aria-hidden />
                   <span className="max-w-64 truncate font-mono">{artifact.ref}</span>
-                  {artifact.url ? <HugeiconsIcon icon={LinkSquare01Icon} className="size-3 shrink-0" aria-hidden /> : null}
+                  {artifact.url && artifact.kind !== "pull_request" ? <HugeiconsIcon icon={LinkSquare01Icon} className="size-3 shrink-0" aria-hidden /> : null}
                 </>
               );
               return artifact.url ? (
                 <Link
                   key={`${artifact.kind}:${artifact.ref}:${artifact.url}`}
-                  href={artifact.url}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={artifact.kind === "pull_request" && runId ? `/pull-requests?run=${encodeURIComponent(runId)}` : artifact.url}
+                  target={artifact.kind === "pull_request" ? undefined : "_blank"}
+                  rel={artifact.kind === "pull_request" ? undefined : "noreferrer"}
                   className="inline-flex min-w-0 items-center gap-1 text-foreground hover:underline"
                 >
                   {content}
@@ -493,6 +484,10 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
             })}
           </div>
         ) : null}
+        {run ? <DelegatedPrButton run={run} /> : null}
+        <Button type="button" variant="default" size="sm" className="w-full" disabled={!runId} onClick={() => setDetailsOpen(true)}>
+          {t("delegatedWorkView")}
+        </Button>
       </div>
 
       {runId ? (
@@ -507,16 +502,17 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
           >
             <SidePanelHeader className="border-b-0">
               <div className="flex min-w-0 flex-1 items-start gap-2">
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <div className="flex min-w-0 flex-1 flex-col gap-4">
                   <SidePanelTitle className="line-clamp-2 text-sm font-medium leading-5">
                     {title}
                   </SidePanelTitle>
-                  <SidePanelDescription>
-                    <DelegatedWorkMeta
+                  <SidePanelDescription asChild>
+                    <div><DelegatedWorkMeta
                       state={state}
                       run={run}
+                      events={events}
                       changedFileCount={changedFileCount}
-                    />
+                    /></div>
                   </SidePanelDescription>
                 </div>
                 <DelegatedWorkStopButton
@@ -526,6 +522,11 @@ export function DelegatedWorkCard({ call }: { call: DelegatedWorkCall }) {
                 />
               </div>
             </SidePanelHeader>
+            {run?.branch_name || run?.pr_url ? <div className="grid gap-3 px-4 pb-3 text-xs text-muted-foreground">
+              {run.branch_name ? <DelegatedBranchLine branch={run.branch_name} /> : null}
+              <DelegatedPrButton run={run} />
+            </div> : null}
+            {subagents.length > 0 ? <div className="px-4 pb-3"><DelegatedSubagents subagents={subagents} active={working} settledAt={run?.completed_at ?? run?.updated_at} /></div> : null}
             <SidePanelBody className="flex min-h-0 flex-1 flex-col p-0">
               {/* The feed scrolls itself (`overflow-y-auto`); the muted note
               stays pinned at the bottom of the panel, under the thread. */}

@@ -101,6 +101,7 @@ const service = {
       return { data: [h.turn], error: null };
     }
     if (name === "checkpoint_numo_turn") {
+      if (h.turn?.status === "stopping" && args.p_status !== "stopped") return { data: [], error: null };
       h.checkpoints.push(args);
       h.turn = {
         ...h.turn,
@@ -112,6 +113,7 @@ const service = {
       return { data: [h.turn], error: null };
     }
     if (name === "checkpoint_numo_tool_round") {
+      if (h.turn?.status === "stopping") return { data: [], error: null };
       const messageId = "assistant-tool-round";
       const checkpoint = {
         phase: "tools",
@@ -824,7 +826,7 @@ describe("durable Numo execution", () => {
     });
   });
 
-  it("interrupts a worker launched concurrently with a stop request", async () => {
+  it("preserves a worker launched concurrently with a Numo stop request", async () => {
     h.processChat.mockImplementation(async () => {
       h.turn = {
         ...h.turn,
@@ -850,11 +852,37 @@ describe("durable Numo execution", () => {
     });
 
     expect(result.status).toBe("stopped");
-    expect(h.interruptions).toEqual(["51600000-0000-4000-8000-000000000001"]);
+    expect(h.interruptions).toEqual([]);
     expect(h.checkpoints.at(-1)).toMatchObject({
       p_status: "stopped",
       p_active_run_id: "51600000-0000-4000-8000-000000000099",
     });
+  });
+
+  it("handles revoked tool checkpoint authority without interrupting admitted workers", async () => {
+    h.processChat.mockImplementation(async (_messages, _tools, _emitter, context) => {
+      h.turn = { ...h.turn, status: "stopping" };
+      await context.persistToolRound({ assistantContent: "Preparing a tool", assistantReasoning: null,
+        pendingToolCalls: [], roundCount: 1 });
+      throw new Error("A revoked tool checkpoint must not resume the model");
+    });
+    const result = await executeNumoTurn({ turnId: h.turn!.id as string,
+      readClient: service, aiRuntime: runtime });
+    expect(result.status).toBe("stopped");
+    expect(h.interruptions).toEqual([]);
+    expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "stopped" });
+  });
+
+  it("finishes Numo stopping after an execution failure without interrupting workers", async () => {
+    h.processChat.mockImplementation(async () => {
+      h.turn = { ...h.turn, status: "stopping" };
+      throw new Error("Provider connection closed during Stop");
+    });
+    const result = await executeNumoTurn({ turnId: h.turn!.id as string,
+      readClient: service, aiRuntime: runtime });
+    expect(result.status).toBe("stopped");
+    expect(h.interruptions).toEqual([]);
+    expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "stopped" });
   });
 
   it("returns the authoritative stopped state when a mutation finishes after its claim was revoked", async () => {

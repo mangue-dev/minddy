@@ -55,7 +55,7 @@ vi.mock("@/lib/server/numo/turns", () => ({
   executeNumoTurn: (...args: unknown[]) => h.executeNumo(...args),
 }));
 
-const { notifyAgentRun, notifyDelegatedAgentRun, stampRunResult } = await import("./runs");
+const { notifyAgentRun, notifyDelegatedAgentRun, stampRunResult, deliverAgentDelegationResult } = await import("./runs");
 
 const terminalRun = {
   id: "run-1",
@@ -178,6 +178,21 @@ describe("agent run notifications", () => {
     ]);
   });
 
+  it.each(["queued", "running"] as const)("never wakes Numo for a %s worker", async (status) => {
+    const run = { ...terminalRun, status } as Parameters<typeof deliverAgentDelegationResult>[0];
+    expect(await deliverAgentDelegationResult(run)).toBe("ignored");
+    expect(h.resumeNumo).not.toHaveBeenCalled();
+    expect(h.executeNumo).not.toHaveBeenCalled();
+  });
+
+  it("ignores a delayed terminal notification from before a resumed worker turn", async () => {
+    const ended = { ...terminalRun, started_at: "2026-10-11T12:00:00Z", rest_claimed_at: "2026-10-11T12:02:00Z" };
+    h.returnedRun = { ...ended, status: "running", started_at: "2026-10-11T12:03:00Z", rest_claimed_at: null };
+    expect(await deliverAgentDelegationResult(ended as Parameters<typeof deliverAgentDelegationResult>[0])).toBe("ignored");
+    expect(h.resumeNumo).not.toHaveBeenCalled();
+    expect(h.executeNumo).not.toHaveBeenCalled();
+  });
+
   it("queues one durable parent continuation from the guarded chat-run ending", async () => {
     h.returnedRun = {
       ...terminalRun,
@@ -187,6 +202,7 @@ describe("agent run notifications", () => {
       outcome: "Implemented",
       error_message: null,
       pr_url: null,
+      started_at: "2026-08-25T12:00:00.000Z",
       rest_claimed_at: "2026-08-25T12:01:00.000Z",
     };
     await stampRunResult("run-1", { status: "completed" });
@@ -196,6 +212,8 @@ describe("agent run notifications", () => {
     expect(h.resumeNumo).toHaveBeenCalledWith(expect.objectContaining({
       runId: "run-1",
       type: "worker_completed",
+      expectedRun: { status: "completed", started_at: "2026-08-25T12:00:00.000Z",
+        rest_claimed_at: "2026-08-25T12:01:00.000Z" },
       eventId: expect.stringMatching(/^[0-9a-f-]{36}$/),
     }));
     expect(h.executeNumo).toHaveBeenCalledOnce();

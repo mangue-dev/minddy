@@ -28,6 +28,6 @@ describe("launch without waiting for the session title", () => {
     expect(source).not.toContain("if (run.local_exec) {");
     expect(source).not.toContain("if (!run.local_exec)");
     expect(source).toContain("await recordLaunch();");
-    expect(source).toContain("kickAgentDrain(service);");
+    expect(source).toContain("kickAgentDrain(service, run.id);");
   });
 });

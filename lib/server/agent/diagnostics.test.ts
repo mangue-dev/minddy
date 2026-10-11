@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   detectTestRunner,
+  detectTypeChecker,
+  typeErrorsForTurn,
+  testFailuresForTurn,
   formattedDiagnosticCount,
   formatTestFailures,
   looksLikeTestCommand,
@@ -251,7 +254,7 @@ const VITEST_COLLECT_OUT = `
  FAIL  lib/zz-probe-b.test.ts [ lib/zz-probe-b.test.ts ]
 Error: Cannot find module './zz-gone-module' imported from /Users/clementguerin/Projets/minddy-ticketing/minddy/lib/zz-probe-b.test.ts
  ❯ lib/zz-probe-b.test.ts:2:1
-      1| import { describe, expect, it } from "vitest";
+      1| import { describe, expect, it, vi } from "vitest";
       2| import { renamed } from "./zz-gone-module";
        | ^
       3|
@@ -299,7 +302,7 @@ const VITEST_COLLECT_ONLY_OUT = `
  FAIL  lib/zz-probe-b.test.ts [ lib/zz-probe-b.test.ts ]
 Error: Cannot find module './zz-gone-module' imported from /Users/clementguerin/Projets/minddy-ticketing/minddy/lib/zz-probe-b.test.ts
  ❯ lib/zz-probe-b.test.ts:2:1
-      1| import { describe, expect, it } from "vitest";
+      1| import { describe, expect, it, vi } from "vitest";
       2| import { renamed } from "./zz-gone-module";
        | ^
       3|
@@ -652,12 +655,12 @@ describe("le registre de vérification", () => {
 });
 
 describe("relatedTestCommand", () => {
-  it("bâtit le passage ciblé de vitest et de jest, chemins échappés", () => {
+  it("bounds Vitest and Jest workers and escapes related paths", () => {
     expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, ["lib/a b.ts"])).toBe(
-      "./node_modules/.bin/vitest related --run --passWithNoTests 'lib/a b.ts' 2>&1",
+      "./node_modules/.bin/vitest related --run --maxWorkers=2 --passWithNoTests 'lib/a b.ts' 2>&1",
     );
     expect(relatedTestCommand({ script: "jest", bin: "jest" }, ["lib/a.ts"])).toBe(
-      "./node_modules/.bin/jest --findRelatedTests --passWithNoTests 'lib/a.ts' 2>&1",
+      "./node_modules/.bin/jest --findRelatedTests --maxWorkers=2 --passWithNoTests 'lib/a.ts' 2>&1",
     );
   });
 
@@ -667,5 +670,33 @@ describe("relatedTestCommand", () => {
     expect(relatedTestCommand({ script: "mocha", bin: "mocha" }, ["lib/a.ts"])).toBeNull();
     expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, [])).toBeNull();
     expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, ["  "])).toBeNull();
+  });
+});
+
+
+describe("bounded sandbox diagnostics", () => {
+  const host = (exec: RepoHost["exec"], script = "vitest run"): RepoHost => ({
+    layout: cloudLayout(), processIsolation: "sandbox", exec,
+    readFile: async () => JSON.stringify({ scripts: { test: script } }),
+    writeFile: async () => {}, mkdir: async () => {},
+  });
+  it("uses the installed JavaScript compiler when the default compiler cannot start", async () => {
+    const exec = vi.fn<RepoHost["exec"]>().mockResolvedValueOnce({ exitCode: 2, stdout: "", stderr: "readlink /proc/self/exe denied" })
+      .mockResolvedValueOnce({ exitCode: 0, stdout: "Version 5.9.3", stderr: "" });
+    expect(await detectTypeChecker(host(exec))).toEqual({ major: 5, command: "node ./node_modules/typescript-api/bin/tsc" });
+  });
+  it("caps compiler heap and leaves native isolation in place", async () => {
+    const exec = vi.fn<RepoHost["exec"]>().mockResolvedValueOnce({ exitCode: 0, stdout: "Version 5.9.3", stderr: "" })
+      .mockResolvedValueOnce({ exitCode: 0, stdout: "", stderr: "" });
+    await typeErrorsForTurn(host(exec), ["x.ts"]);
+    expect(exec.mock.calls[1][1]?.env).toEqual({ NODE_OPTIONS: "--max-old-space-size=3072" });
+  });
+  it("runs tests outside production mode with bounded runner workers", async () => {
+    const exec = vi.fn<RepoHost["exec"]>().mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
+    await testFailuresForTurn(host(exec));
+    expect(exec.mock.calls[1][0]).toBe("npm run test --silent -- --maxWorkers=2 2>&1");
+    expect(exec.mock.calls[1][1]?.env?.NODE_ENV).toBe("test");
+    await testFailuresForTurn(host(exec, "mocha"));
+    expect(exec.mock.calls[3][0]).toBe("npm run test --silent 2>&1");
   });
 });

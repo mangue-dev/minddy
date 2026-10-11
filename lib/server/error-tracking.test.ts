@@ -100,6 +100,24 @@ describe("server error tracking", () => {
     );
   });
 
+  it("reports structural database diagnostics without the original response", async () => {
+    stubWorkingConfiguration();
+    const { DatabaseOperationError } = await import("./failure-diagnostics");
+    const { captureServerException } = await import("./error-tracking");
+    const error = new DatabaseOperationError("read_numo_preferences", {
+      code: "PGRST205", message: "private-account-data", details: "private-row", hint: "private-hint",
+    }, 404);
+    await captureServerException(error, null);
+    expect(posthogMock.captureExceptionImmediate).toHaveBeenCalledExactlyOnceWith(error, undefined, {
+      failure_kind: "database_error", failure_code: "PGRST205", failure_status: 404,
+      $process_person_profile: false,
+    });
+    const serialized = JSON.stringify(posthogMock.captureExceptionImmediate.mock.calls);
+    expect(serialized).not.toContain("private-account-data");
+    expect(serialized).not.toContain("private-row");
+    expect(serialized).not.toContain("private-hint");
+  });
+
   it("parses the distinct id from the raw cookie header only", async () => {
     stubWorkingConfiguration();
     const { parsePostHogDistinctId } = await import("./error-tracking");

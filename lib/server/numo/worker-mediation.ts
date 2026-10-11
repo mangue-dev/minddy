@@ -115,7 +115,7 @@ export async function answerNumoWorkerInput(input: {
   });
   if (error) throw new Error(`Worker input resume failed: ${error.message}`);
   if (data === "queued") {
-    kickAgentDrain(service);
+    kickAgentDrain(service, input.correlation.runId);
     return {
       action: "answered",
       turnId: input.correlation.parentTurnId,
@@ -123,7 +123,7 @@ export async function answerNumoWorkerInput(input: {
     };
   }
   if (data === "already") {
-    kickAgentDrain(service);
+    kickAgentDrain(service, input.correlation.runId);
     return {
       action: "already",
       turnId: input.correlation.parentTurnId,
@@ -194,7 +194,7 @@ export async function steerNumoWorker(input: {
   } | null;
   if (result?.action === "none") return { action: "none" };
   if (result?.action === "steered" && result.turn_id && result.run_id) {
-    kickAgentDrain(service);
+    kickAgentDrain(service, result.run_id);
     return { action: "steered", turnId: result.turn_id, runId: result.run_id };
   }
   return { action: "refused", reason: result?.result ?? "worker_steering_refused" };
@@ -324,7 +324,7 @@ export async function relaunchNumoWorkerRun(input: {
     .eq("id", input.runId);
 
   const resumed = await getRun(input.runId);
-  if (resumed) kickAgentDrain(getServiceClient());
+  if (resumed) kickAgentDrain(getServiceClient(), input.runId);
   if (!resumed) return { ok: false, code: "not_found" };
   return { ok: true, run: resumed };
 }

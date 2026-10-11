@@ -3,13 +3,14 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AgentRunEvent, AgentRunSummary } from "./agent-api";
 import { TooltipProvider } from "mangue-ui";
 
 const h = vi.hoisted(() => ({
   fetch: vi.fn(),
   error: vi.fn(),
-  run: { status: "running", title: "Implement the selected issue" },
-  events: [],
+  run: { status: "running", title: "Implement the selected issue" } as Partial<AgentRunSummary>,
+  events: [] as AgentRunEvent[],
   now: new Date("2026-10-01T12:00:00Z"),
 }));
 
@@ -18,6 +19,7 @@ vi.mock("next-intl", () => ({
   useNow: () => h.now,
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
+vi.mock("@/components/app-link", () => ({ default: (props: Record<string, unknown>) => createElement("a", props) }));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("./analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("./use-agent-runs", () => ({
@@ -35,6 +37,7 @@ vi.mock("mangue-ui", async () => ({
   ...await import("mangue-ui/components/ui/button"),
   ...await import("mangue-ui/components/ui/tooltip"),
   ...await import("mangue-ui/components/ui/popover"),
+  ...await import("mangue-ui/components/ui/dropdown-menu"),
   ...await import("mangue-ui/components/ui/side-panel"),
   ...await import("mangue-ui/components/ui/spinner"),
   ...await import("mangue-ui/lib/utils"),
@@ -49,6 +52,8 @@ let container: HTMLDivElement;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.run.status = "running";
+  h.run.pr_url = null; h.run.branch_name = null; h.run.id = runId;
+  h.events = [];
   vi.stubGlobal("fetch", h.fetch);
   vi.stubGlobal("matchMedia", () => ({
     matches: false, addListener: vi.fn(), removeListener: vi.fn(),
@@ -75,7 +80,15 @@ async function render() {
 }
 
 function stopButtons() {
-  return [...document.querySelectorAll<HTMLButtonElement>('button[aria-label="delegatedWorkStop"]')];
+  return [...document.querySelectorAll<HTMLButtonElement>('button[aria-label="delegatedWorkActions"]')];
+}
+
+async function selectStop(anchor: HTMLButtonElement) {
+  await act(async () => anchor.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })));
+  const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((element) => element.textContent?.includes("delegatedWorkStop"))!;
+  expect(item).toBeDefined();
+  expect(item.dataset.variant).toBe("destructive");
+  await act(async () => item.click());
 }
 
 function expectStopPending(button: HTMLButtonElement) {
@@ -88,7 +101,7 @@ describe("delegated worker Stop buttons", () => {
     h.fetch.mockImplementation(() => new Promise(() => {}));
     await render();
     const [stop] = stopButtons();
-    await act(async () => stop.click());
+    await selectStop(stop);
     expect(h.fetch).toHaveBeenCalledExactlyOnceWith(`/api/agent-runs/${runId}/stop`, { method: "POST" });
     expectStopPending(stop);
     expect(document.querySelector('[role="dialog"]')).toBeNull();
@@ -103,7 +116,7 @@ describe("delegated worker Stop buttons", () => {
     await act(async () => view.click());
     const stops = stopButtons();
     expect(stops).toHaveLength(2);
-    await act(async () => stops[1].click());
+    await selectStop(stops[1]);
     expect(h.fetch).toHaveBeenCalledExactlyOnceWith(`/api/agent-runs/${runId}/stop`, { method: "POST" });
     stops.forEach(expectStopPending);
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
@@ -113,11 +126,26 @@ describe("delegated worker Stop buttons", () => {
     h.fetch.mockResolvedValue(Response.json({ error: "Stop was not acknowledged" }, { status: 500 }));
     await render();
     const [stop] = stopButtons();
-    await act(async () => stop.click());
+    await selectStop(stop);
     expect(h.fetch).toHaveBeenCalledTimes(1);
     expect(h.error).toHaveBeenCalledWith("Stop was not acknowledged");
     expect(stop.disabled).toBe(false);
     expect(stop.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it("places the internal PR button before View work and copies the branch", async () => {
+    h.run.branch_name = "numo/min-678-filter"; h.run.pr_url = "https://github.com/example/app/pull/406"; h.run.pr_number = 406;
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await render();
+    const pr = container.querySelector<HTMLAnchorElement>('a[href="/pull-requests?run=' + runId + '"]')!;
+    expect(pr.textContent).toContain("viewPullRequest #406");
+    expect(pr.target).toBe("");
+    const view = [...container.querySelectorAll("button")].find((button) => button.textContent?.includes("delegatedWorkView"))!;
+    expect(pr.compareDocumentPosition(view) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const copy = container.querySelector<HTMLButtonElement>('button[aria-label="copyBranch"]')!;
+    await act(async () => copy.click());
+    expect(writeText).toHaveBeenCalledWith("numo/min-678-filter");
   });
 
   it("does not offer Stop after the worker settles", async () => {

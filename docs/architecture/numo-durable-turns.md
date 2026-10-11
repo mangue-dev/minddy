@@ -34,10 +34,13 @@ An unfinished read may be retried; an unfinished mutation becomes
 `reconciling`. Tool result messages are unique per turn and tool-call ID.
 The assistant tool-call message and the checkpoint that authorizes tool
 execution commit atomically, so recovery cannot observe an orphaned call.
-If a stop races a known worker launch, recording the tool result also attaches
-the run to its parent so the execution-side stop can interrupt it. Stopping a
-waiting parent marks its active worker for interruption in the same transaction;
-stale-stop recovery covers a launch that completed after the stop request.
+Stopping Numo retires only its turn and execution claim. Admitted workers,
+including queued runs, keep their independent authority, queued steering and
+pending questions. Stale-stop recovery has the same scope. New worker admission
+still requires a live parent; an insertion that completes after that authority
+is revoked is interrupted before execution. Explicit worker Stop interrupts only
+that worker and retires its parent to suppress automatic retries; admitted
+siblings remain individually controllable.
 
 The checkpoint records the safe round boundary and any worker event used to
 continue. It contains no credentials. Live-only tool secrets are not written to
@@ -51,7 +54,7 @@ parent event. `resume_numo_turn_from_worker` appends that event and queues the
 parent in one transaction only when the run is still current.
 
 Duplicate event IDs return `duplicate`. Late or reordered events for an old run
-return `ignored`. Therefore they cannot replay a completed mutation or create a
+return `ignored`. Results also leave stopped parents terminal. Therefore they cannot replay a completed mutation or create a
 second task. Recovery also joins waiting parents to durable terminal worker
 rows, covering both an interrupted post-commit callback and a worker that
 finished before its parent entered `waiting_work`.

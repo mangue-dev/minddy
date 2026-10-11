@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls",
+    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; delegated worker reliability and card controls",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -46,14 +46,15 @@
       "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
       "lib/native-agent-models.ts",
       "components/settings/native-agent-model-preferences.tsx",
-      "content/documentation/reviews/min-676-model-controls-2026-10-10.md"
+      "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
+      "content/documentation/reviews/agent-reliability-and-cards-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance)",
-    "date": "2026-10-10"
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance)",
+    "date": "2026-10-11"
   },
   "related": [
     "numo",
@@ -74,17 +75,18 @@
       "id": "delegate-code-work-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/delegate-code-work-workflow.png",
-      "alt": "Cartão do worker concluído com modelo, raciocínio leve, dois arquivos alterados, branch, PR nº 1 e commit corrigido.",
-      "caption": "Exemplo histórico do OpenCode: Cartão da correção real do PR existente, com o commit atualizado e seu link. Revise o diff e as verificações antes do merge; o estado concluído por si só não comprova que os critérios de aceitação foram atendidos.",
-      "revision": 7,
+      "alt": "Cartão de demonstração com estado, duração, Codex, modelo, raciocínio, cópia da branch, botão PR e Ver trabalho.",
+      "caption": "Cartão ilustrativo do componente atualizado com dados de demonstração. As ações abrem o painel de trabalho, copiam a branch ou abrem a PR no Minddy. Este exemplo não comprova uma execução bem-sucedida do provedor nem verificações aprovadas.",
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-11",
       "viewport": [
-        912,
-        179
+        568,
+        379
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "review-pull-requests-workflow",
@@ -92,7 +94,7 @@
       "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
       "alt": "Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.",
       "caption": "O PR real corrigido permanece aberto, sem merge. O diff remove os espaços ao redor do nome e usa World quando o valor é vazio. Esta instância não pode solicitar autorização de usuário do GitHub; a indicação de prontidão não concede permissão de merge nem comprova que a CI do provedor passou.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -120,13 +122,17 @@ A autenticação Codex por assinatura em serviços hospedados não está dispon�
 
 O cartão do trabalho delegado, os detalhes do agente e sua conversa mostram o mecanismo daquela execução com seu logo: **Codex**, **Claude Code** ou **OpenCode**. Essa identidade é salva ao iniciar o agente. Alterar as configurações da conta afeta novos agentes; não muda a identificação de uma execução existente. Execuções antigas sem mecanismo salvo mostram um rótulo genérico de agente de código.
 
+O cartão vertical mostra o estado atual, o tempo de execução, o mecanismo, o modelo, o raciocínio, os arquivos alterados e a branch. O timer soma o trabalho retomado e pausa enquanto aguarda sua resposta. O ícone de cópia permite copiar o nome completo da branch. Abra **Ações do agente** para **Parar** o trabalho. **Ver trabalho** abre o painel de atividade com as mesmas informações. **Ver pull request** abre a PR vinculada dentro do Minddy.
+
+A implementação é entregue por uma pull request. Se a publicação estiver bloqueada, o Numo informa a falha na entrega. A verificação ocorre separadamente; verificações incompletas não contam como aprovadas. A descrição da PR no Minddy preserva o rodapé do Numo com modelo, ambiente e raciocínio.
+
 1. Abra a tarefa e descreva comportamento esperado, restrições e verificações de aceitação.
 2. Abra o Numo com esse contexto. Peça a inspeção do repositório antes de um plano técnico. Nomes de arquivos e APIs não verificados não comprovam a implementação.
 3. Solicite explicitamente a implementação. O Numo delega alterações na branch ao worker, que clona o repositório na sandbox do servidor.
 4. Acompanhe progresso, arquivos, verificações e perguntas no cartão do worker. Responda na conversa.
 5. Abra a pull request vinculada. Revise diff e verificações diante dos critérios antes de mesclar. Só há prévia se o provedor de implantação tiver produzido uma.
 
-![Cartão do worker concluído com modelo, raciocínio leve, dois arquivos alterados, branch, PR nº 1 e commit corrigido.](/documentation/pt-BR/delegate-code-work-workflow.png)
+![Cartão de demonstração com estado, duração, Codex, modelo, raciocínio, cópia da branch, botão PR e Ver trabalho.](/documentation/pt-BR/delegate-code-work-workflow.png)
 
 ### Continuar com segurança {#continuation}
 

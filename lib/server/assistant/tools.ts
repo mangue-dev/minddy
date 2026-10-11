@@ -2250,12 +2250,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               enum: ["read_repository", "modify_repository", "run_verification", "commit_changes", "manage_pull_request", "update_issue_plan"],
             },
             description:
-              "Explicit work Numo authorizes for this task. Grant only what the user's request requires.",
+              "Explicit work Numo authorizes for this task. Implementation includes modifying the repository, committing changes and managing its pull request. Grant only what the user's request requires.",
           },
           requires_pull_request: {
             type: "boolean",
             description:
-              "Set true when the user or routine requests delivery through a pull request. Requires manage_pull_request authorization. The worker must produce a real PR or return an explicit delivery failure; a branch alone is insufficient. Set false for inspection or work without requested PR delivery.",
+              "Set true for implementation and whenever the user or routine requests delivery through a pull request. Requires manage_pull_request authorization. The worker must produce a real PR or return an explicit delivery failure; a branch alone is insufficient. Set false for inspection, planning or verification without implementation.",
           },
           expected_output: {
             type: "array",

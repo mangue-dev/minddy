@@ -2500,3 +2500,45 @@ model, explicit conversation choices take precedence, and admitted turns retain
 their frozen configuration. Apply migration `20270109200040` before enabling the
 updated application. This change was exercised only against the local Docker
 pilot; no remote database migration or production activation is claimed.
+
+## Numo worker completion authority (2026-10-11)
+
+Migration `20270109200041` moves the worker-generation check into the service-only
+completion RPC. Parent and worker rows are locked in that order with
+`FOR NO KEY UPDATE`; terminal status, parent ownership, result type and observed
+start/rest timestamps must agree before a parent continuation is queued. It reads
+routing/state metadata and retains the encrypted event writer. No table, column,
+view, trigger, encryption target or authenticated permission changes are needed.
+Apply the migration before updating the server; the defaulted fifth argument
+preserves existing four-argument callers during rollout.
+
+The actual migration and concurrent resumption were exercised in a disposable
+PostgreSQL 16 container with synthetic minimal tables, no network and no
+application database URL. The function definition, empty search path and
+service-only ACL were introspected; only that function record and migration hash
+were reconciled into the retained inventories. This was a focused RPC audit,
+not a full schema replay. Application consumers were refreshed to include the
+terminal state/generation read and shifted call sites. No production data or
+migration was changed by this audit.
+
+
+## Independent Numo Stop (2026-10-11)
+
+Migration `20270109200042` removes worker mutations from the service-only Numo
+Stop and stale-stop recovery functions. Numo retains its existing claim and
+conversation state transitions; admitted workers, queued steering and pending
+questions retain their independent state. The individual worker Stop RPC is
+unchanged. Late results cannot queue a stopped parent through the guarded
+completion RPC introduced by migration `20270109200041`.
+
+The focused PostgreSQL 16 probe applies the actual migrations to synthetic
+minimal tables in a disposable container without network access or an application
+database URL. It verifies all seven stoppable parent states, repeated Stop,
+owner isolation, unchanged worker/message/question rows, ignored late completion,
+stale-stop recovery and individual worker Stop after the parent has stopped.
+The two changed function definitions, empty search paths and service-only ACLs
+were introspected. Only these function records and the new migration hash were
+updated in the retained inventory; the application consumer inventory removes
+parent-wide worker writes. No columns, encryption targets, views, triggers or
+public grants change. Apply the migration before the updated application;
+no remote migration or production activation was performed.

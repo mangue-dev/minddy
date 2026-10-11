@@ -2053,7 +2053,11 @@ export async function executeTool(
         const constraints = delegationStrings(args.constraints);
         const authorizedWork = delegationAuthorizations(args.authorized_work);
         const expectedOutput = delegationStrings(args.expected_output);
-        const requiresPullRequest = args.requires_pull_request === true;
+        const requiresPullRequest = args.requires_pull_request === true
+          || (authorizedWork.includes("modify_repository") && authorizedWork.includes("manage_pull_request"));
+        if (durableDelegation && authorizedWork.includes("modify_repository") && !authorizedWork.includes("manage_pull_request")) {
+          return toolError("Implementation requires pull request delivery. Include manage_pull_request in authorized_work.");
+        }
         if (requiresPullRequest && !authorizedWork.includes("manage_pull_request")) {
           return toolError("PR delivery requires manage_pull_request authorization.");
         }

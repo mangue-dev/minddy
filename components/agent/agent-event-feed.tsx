@@ -1180,6 +1180,9 @@ export function AgentEventFeed({
     [events, prompt, promptMentions],
   );
 
+  const startupPhase = events.filter((event) => event.type === "status" && event.payload?.phase).at(-1)?.payload?.phase;
+  const startupKey = startupPhase === "native_preparing" ? "preparingEngine" : startupPhase === "native_starting" ? "startingEngine" : null;
+
   // Optimistic bubbles still to be displayed: duplicated against ALL texts
   // user received (bubbles AND answers absorbed by a question line).
   const stillPending = unechoedMessages(pendingUserMessages, userTexts);
@@ -1442,7 +1445,7 @@ export function AgentEventFeed({
                   // machine. To say “sandbox” here would be wrong, and that would be the
                   // first thing the user reads from a local run.
                   t(localExec ? "openingLocalTurn" : "openingSandbox")
-                : t("engineWorking", { agent: agentEngineDisplay(engine).name ?? t("engineLegacyLabel") })}
+                : t(startupKey ?? "engineWorking", { agent: agentEngineDisplay(engine).name ?? t("engineLegacyLabel") })}
             </span>
           </div>
         ) : emptyAtRest ? (

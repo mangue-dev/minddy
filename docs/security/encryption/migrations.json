@@ -249,5 +249,7 @@
   "20270109200037_abandoned_native_completion.sql": "9b40f1cdd241fd2d176e89495b609bcd1d8b0fc0bc6b0d7db4dcb0752795165b",
   "20270109200038_atomic_native_worker_profile.sql": "4965ea1121b983cbe7d4a69cdc94baaad1a7ca0e05388c01e364461bd2baa911",
   "20270109200039_native_agent_model_preferences.sql": "b1be4c3162cf788e278c83781813301d37c634c91fc40b68fc950185014fed80",
-  "20270109200040_personal_numo_model_preferences.sql": "66ecf1a951f3bde19af849056ca2646f304384d6dd590233bf6b211b258b000a"
+  "20270109200040_personal_numo_model_preferences.sql": "66ecf1a951f3bde19af849056ca2646f304384d6dd590233bf6b211b258b000a",
+  "20270109200041_numo_worker_completion_authority.sql": "111bb717260f9aba17a30d8f0ca461f6cac0c04425fe94192758f10c45e51c95",
+  "20270109200042_numo_stop_preserves_workers.sql": "4b7e016df06234ee78d27e8bdde413e8e10c82939eb8ccce57620495c42b50e8"
 }

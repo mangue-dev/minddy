@@ -8,6 +8,8 @@ import { opencodeSupervisorDeps } from "./opencode-host";
 import { prepareSandboxGithubCli } from "./github-cli";
 import { runOpencodeTurn } from "./supervisor";
 import { runNativeTurn } from "./native-supervisor";
+import { installNativeWorkerCli } from "./native-cli-install";
+import { isNativeHarness } from "@/lib/native-agent-prototype";
 import { isNativeAgentEngine } from "@/lib/agent-engines";
 import {
   isLocalJob,
@@ -62,6 +64,13 @@ function jobPathFromArgv(): string {
 }
 
 async function main(): Promise<void> {
+  if (process.argv[2] === "--prepare-native-cli") {
+    const engine = process.argv[3];
+    if (!isNativeHarness(engine)) throw new Error("Unsupported native CLI engine");
+    // Bootstrap runs before importing credentials or reading a conversation job.
+    await installNativeWorkerCli(engine, `${cloudLayout().root}/native-runtime`);
+    return;
+  }
   /**
    * THE JOB IS READ RAW, THEN VALIDATED IN THE `try` (MIN-354) — and not before.
    *

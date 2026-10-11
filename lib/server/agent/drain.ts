@@ -458,10 +458,13 @@ export async function reapDeadVmRuns(
 
 /** Read due work from legacy exact URLs and encrypted equality prefixes. */
 async function dueRunsForDeployment(service: SupabaseClient, scope: string | null,
-  encryptedPrefix: string | null): Promise<Array<{ id: string }>> {
-  const base = () => service.from("agent_runs").select("id,not_before,created_at")
-    .eq("status", "queued").not("local_exec", "is", true)
-    .lte("not_before", new Date().toISOString());
+  encryptedPrefix: string | null, runId?: string): Promise<Array<{ id: string }>> {
+  const base = () => {
+    const query = service.from("agent_runs").select("id,not_before,created_at")
+      .eq("status", "queued").not("local_exec", "is", true)
+      .lte("not_before", new Date().toISOString());
+    return runId ? query.eq("id", runId) : query;
+  };
   const candidates = await Promise.all([
     (scope === null ? base().is("deployment_url", null)
       : base().eq("deployment_url", scope))
@@ -475,6 +478,16 @@ async function dueRunsForDeployment(service: SupabaseClient, scope: string | nul
   return candidates.flatMap((candidate) => candidate.data ?? [])
     .sort((a, b) => a.not_before.localeCompare(b.not_before) ||
       a.created_at.localeCompare(b.created_at)).slice(0, 10);
+}
+
+/** Start the requested worker without putting unrelated recovery ahead of its bootstrap. */
+export async function startQueuedAgentRun(service: SupabaseClient, runId: string): Promise<void> {
+  const scope = currentDeploymentScope();
+  const prefix = scope && hasDataRootKey() ? await deploymentLookupPrefix(scope) : null;
+  const rows = await dueRunsForDeployment(service, scope, prefix, runId);
+  if (!rows.some((row) => row.id === runId)) return;
+  const run = await claimRun(runId);
+  if (run) await executeAgentRun(run, { deadlineMs: DRAIN_TIME_BUDGET_MS });
 }
 
 export async function drainAgentRuns(

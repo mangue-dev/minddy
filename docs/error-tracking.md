@@ -59,11 +59,17 @@ independent gates:
 | Browser (unhandled) | `posthog-js` exception autocapture, enabled by the flag in `components/posthog-init.tsx` | Window errors and unhandled promise rejections |
 | Browser (React boundary) | `captureClientException` from `app/error.tsx` via `lib/analytics.ts` | Render errors, which React swallows before the window listener |
 | Server (request context) | `onRequestError` hook in `instrumentation.ts` → `lib/server/error-tracking.ts` | Route handlers, server actions, RSC rendering errors |
+| Server (handled preference read) | `captureServerException` from `/api/assistant/models` | Personal Numo preference read failures; the model catalog remains available with an unknown default |
 | Server (background) | `enableExceptionAutocapture` on the shared `posthog-node` client | Uncaught exceptions and unhandled rejections outside requests (crons, agent code) |
 
-Server exception events carry only template facts: `route_path` (the route
+Server exception context carries template facts: `route_path` (the route
 template, never the concrete URL or query), `route_type`, `http_method`, and
-an optional revalidate reason. The `distinct_id` comes from the visitor's
+an optional revalidate reason. `DatabaseOperationError` also supplies
+`failure_kind`, an optional validated SQL/PostgREST/transport `failure_code`,
+and an optional HTTP `failure_status`. Its exception message names the operation;
+the wrapper does not retain upstream database messages, hints or row values.
+These fields distinguish a missing migration from a permission error or timeout.
+The `distinct_id` comes from the visitor's
 PostHog cookie when present, and no person profile is created for anonymous
 ids. Console output is never captured (`capture_console_errors: false`), and
 neither DOM autocapture nor session recording is enabled.

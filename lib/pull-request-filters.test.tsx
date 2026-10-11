@@ -252,7 +252,11 @@ describe("Pull Requests completed filter", () => {
     rows = [item("open", "other")];
     await render();
     await flush();
-    expect(option(en.PullRequests.sectionCreatedByMe).hasAttribute("data-checked")).toBe(true);
+    // A finished request can precede React Query's batched observer notification.
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(option(en.PullRequests.sectionCreatedByMe).hasAttribute("data-checked")).toBe(true);
+    });
     expectCompleted(false);
     expect(container.querySelector('[data-navigation-href="/pull-requests?pr=other"]')).not.toBeNull();
   });
