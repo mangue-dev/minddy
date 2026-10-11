@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -35,12 +35,13 @@
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-677-editor-captures.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "revision": 5,
+    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (it translation, label and retained-meaning self-review)",
     "date": "2026-10-11"
   },
@@ -54,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/scheduled-routines-workflow.png",
-      "alt": "Routine di evento con condizioni E/O annidate.",
+      "alt": "Schede degli attivatori, scelta dell’evento, gruppi E/O annidati e ritardo di avvio separato.",
       "caption": "Dimostrazione locale dell’editor effettivo degli attivatori. Nessuna routine è stata salvata o eseguita.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
         788,
-        1339
+        1257
       ],
       "theme": "light",
       "padding": 24,
@@ -84,6 +85,8 @@ Scegli un attivatore:
 - **Evento:** creazione di ticket, ingresso in uno stato specifico, assegnazione, commento su un ticket seguito o ricezione di feedback. Seleziona stato, persona o ticket quando richiesto. L’attivatore di stato comprende i ticket creati direttamente in quello stato. L’assegnazione richiede un cambio effettivo della persona assegnata.
 - **Voce di database:** scegli un database di pagine del progetto. Creazione, duplicazione, importazione di database o spostamento nel database contano come arrivo. Ripristinare una voce non crea un nuovo arrivo.
 
+Per un attivatore di evento o database, seleziona la sua scheda e configura **Quando accade questo**. Le **Condizioni** sono facoltative: senza filtri, ogni evento corrispondente può avviare la routine. Imposta il ritardo separatamente in **Momento di avvio**. Le condizioni numerate e i gruppi rientrati mostrano quali regole appartengono allo stesso gruppo. Usa le frecce e Invio nei selettori; gli elenchi lunghi includono un campo di ricerca.
+
 Se necessario, imposta un’attesa dopo l’evento da 0 a 120 minuti. Conserva il fuso orario nel contesto di Numo. Le routine di evento e database attendono arrivi futuri senza una prossima data pianificata. L’elaborazione automatica richiede lo scheduler dell’istanza; l’avvio manuale resta disponibile.
 
 ## Costruire condizioni che possono attendere {#conditions}
@@ -94,7 +97,7 @@ Esempio: ingresso in Triage E categoria Backend E (una persona è assegnata O la
 
 Una voce senza la proprietà richiesta attende una modifica che soddisfi il filtro. Eliminare una proprietà referenziata o cambiarne il tipo mostra un errore di filtro: correggi le condizioni prima di proseguire. L’attesa si applica anche quando il filtro diventa vero più tardi. La ricezione di feedback include contenuti privati e in revisione; Numo non li pubblica e non aggira la moderazione.
 
-![Routine di evento con condizioni E/O annidate.](/documentation/it/scheduled-routines-workflow.png)
+![Schede degli attivatori, scelta dell’evento, gruppi E/O annidati e ritardo di avvio separato.](/documentation/it/scheduled-routines-workflow.png)
 
 ## Gestire e verificare le esecuzioni {#runs}
 

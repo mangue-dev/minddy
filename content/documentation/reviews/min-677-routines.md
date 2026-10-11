@@ -81,3 +81,33 @@ candidate; no production or desktop publication was performed.
   and 92/92 workflows published in all six locales. `check:knowledge`,
   `check:owned-english`, `check:encrypted-access`, encryption inventory, lint,
   typecheck and whitespace checks passed.
+
+## Trigger editor usability follow-up
+
+On 2026-10-11, agent:/root reviewed the trigger configuration shared by creation
+and editing. Browser selection controls were replaced with Minddy Select,
+Popover/Command and Checkbox components. Trigger cards precede distinct event,
+optional conditions and launch-delay sections. Numbered rules, indented AND/OR
+groups, explicit removal names, app tooltips, visible focus rings and restored
+focus after removal make the structure and keyboard flow easier to follow.
+Single imported conditions can now be extended into groups without discarding
+them. Group labels wrap on narrow screens so AND/OR remains visible. Container
+width governs the trigger-card and event-field layouts.
+
+Workflow N06, article `scheduled-routines` and figure
+`scheduled-routines-workflow` were updated to revision 5 in all six locales.
+Agent:/root checked the translated control labels, new instructions, alternative
+text and actual light-mode captures. The English mobile PR capture was renewed.
+The capture script uses only local query fixtures and blocks external requests.
+
+Actual Playwright checks passed for arrow-key/Enter selection, searchable-person
+selection, nested insertion/removal, restored focus, multiple values, boolean
+false, an empty numeric input, decimals, schedule-only field visibility and
+390-pixel mobile layouts. The nested French group label was checked for clipping.
+The capture record contains the results and exact image dimensions. No routine
+was persisted or executed.
+
+The four relevant Vitest suites passed all 20 tests. Typecheck, lint,
+`check:documentation`, `check:documentation:release`, `check:knowledge`,
+`check:owned-english` and whitespace checks passed. Backend behavior and the
+previous broader validation results above retain their prior evidence.

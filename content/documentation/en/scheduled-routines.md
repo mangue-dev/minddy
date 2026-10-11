@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -35,12 +35,13 @@
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-677-editor-captures.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "revision": 5,
+    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (en translation, label and retained-meaning self-review)",
     "date": "2026-10-11"
   },
@@ -54,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/scheduled-routines-workflow.png",
-      "alt": "Event routine with nested AND/OR conditions.",
+      "alt": "Trigger cards, event selection, nested AND/OR groups and a separate launch delay.",
       "caption": "Local demonstration of the actual trigger editor. No routine was saved or executed.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
         788,
-        1319
+        1237
       ],
       "theme": "light",
       "padding": 24,
@@ -84,6 +85,8 @@ Choose one trigger:
 - **Event:** choose issue creation, entry into a target status, assignment, a comment on a followed issue, or feedback receipt. Choose the target status, person or followed issue where requested. A status trigger includes issues created directly in that status. Assignment requires an actual change of assignee.
 - **Database entry:** choose a page database in this project. A creation, duplicate, database import or move into that database counts as an arrival. Restoring an entry does not create a new arrival.
 
+For an event or database trigger, select its card and configure **When this happens**. **Conditions** are optional: without them, every matching event can start the routine. Set the delay separately under **Start timing**. The numbered conditions and indented groups show which rules belong together. Use arrow keys and Enter in the pickers; longer lists include a search field.
+
 Set the delay after an event if needed, from 0 to 120 minutes. Keep your timezone for Numo's context. Event and database routines listen for future arrivals and have no next scheduled date. Automatic processing requires the instance scheduler; a manual run remains available.
 
 ## Build conditions that can wait {#conditions}
@@ -94,7 +97,7 @@ For example: entry into Triage AND category Backend AND (an assignee is present 
 
 An entry created without its required property stays waiting until an edit satisfies the filter. Removing a referenced property or changing its type shows a filter error: correct the routine's conditions before continuing. The delay is also respected when a filter becomes true. Feedback receipt includes private and pending feedback; running Numo does not publish it or bypass moderation.
 
-![Event routine with nested AND/OR conditions.](/documentation/en/scheduled-routines-workflow.png)
+![Trigger cards, event selection, nested AND/OR groups and a separate launch delay.](/documentation/en/scheduled-routines-workflow.png)
 
 ## Manage and verify runs {#runs}
 

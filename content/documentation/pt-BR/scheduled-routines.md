@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -35,12 +35,13 @@
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-677-editor-captures.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "revision": 5,
+    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (pt-BR translation, label and retained-meaning self-review)",
     "date": "2026-10-11"
   },
@@ -54,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/scheduled-routines-workflow.png",
-      "alt": "Rotina por evento com condições E/OU aninhadas.",
+      "alt": "Cartões de gatilhos, seleção do evento, grupos E/OU aninhados e atraso de início separado.",
       "caption": "Demonstração local do editor real de gatilhos. Nenhuma rotina foi salva ou executada.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
         788,
-        1339
+        1277
       ],
       "theme": "light",
       "padding": 24,
@@ -84,6 +85,8 @@ Escolha um gatilho:
 - **Evento:** criação de ticket, entrada em um status específico, atribuição, comentário em um ticket acompanhado ou recebimento de feedback. Selecione status, pessoa ou ticket quando solicitado. O gatilho de status inclui tickets criados diretamente nesse status. Uma atribuição exige uma mudança real da pessoa responsável.
 - **Entrada de banco:** escolha um banco de páginas do projeto. Criação, duplicação, importação de banco ou movimentação para esse banco contam como chegada. Restaurar uma entrada não gera outra chegada.
 
+Para um gatilho de evento ou de base, selecione seu cartão e configure **Quando isso acontece**. As **Condições** são opcionais: sem filtros, cada evento correspondente pode iniciar a rotina. Defina o atraso separadamente em **Momento de início**. As condições numeradas e os grupos recuados mostram quais regras pertencem ao mesmo grupo. Use as setas e Enter nos seletores; as listas longas incluem um campo de busca.
+
 Se necessário, defina uma espera após o evento de 0 a 120 minutos. Mantenha seu fuso no contexto de Numo. Rotinas de evento e banco aguardam chegadas futuras sem próxima data agendada. O processamento automático precisa do scheduler da instância; a execução manual continua disponível.
 
 ## Criar condições que podem aguardar {#conditions}
@@ -94,7 +97,7 @@ Exemplo: entrada em Triagem E categoria Backend E (há uma pessoa responsável O
 
 Uma entrada sem a propriedade exigida aguarda uma edição que satisfaça o filtro. Remover uma propriedade referenciada ou mudar seu tipo mostra um erro de filtro: corrija as condições antes de continuar. A espera configurada também é respeitada quando o filtro é satisfeito mais tarde. O recebimento de feedback inclui conteúdo privado e pendente; Numo não o publica nem contorna a moderação.
 
-![Rotina por evento com condições E/OU aninhadas.](/documentation/pt-BR/scheduled-routines-workflow.png)
+![Cartões de gatilhos, seleção do evento, grupos E/OU aninhados e atraso de início separado.](/documentation/pt-BR/scheduled-routines-workflow.png)
 
 ## Gerenciar e verificar execuções {#runs}
 

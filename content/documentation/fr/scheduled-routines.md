@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -35,12 +35,13 @@
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-677-editor-captures.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "revision": 5,
+    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (fr translation, label and retained-meaning self-review)",
     "date": "2026-10-11"
   },
@@ -54,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/scheduled-routines-workflow.png",
-      "alt": "Routine d’événement avec conditions ET/OU imbriquées.",
+      "alt": "Cartes de déclencheurs, choix de l’événement, groupes ET/OU imbriqués et délai de lancement séparé.",
       "caption": "Démonstration locale du véritable éditeur de déclencheurs. Aucune routine n’a été enregistrée ou exécutée.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
         788,
-        1339
+        1277
       ],
       "theme": "light",
       "padding": 24,
@@ -84,6 +85,8 @@ Choisissez un déclencheur :
 - **Événement :** choisissez la création d’un ticket, son entrée dans un statut cible, une affectation, un commentaire sur un ticket suivi ou la réception d’un retour. Sélectionnez le statut, la personne ou le ticket demandé. Le déclencheur de statut inclut les tickets créés directement dans ce statut. Une affectation exige un changement réel de personne assignée.
 - **Entrée de base :** choisissez une base de pages de ce projet. Une création, duplication, import de base ou déplacement vers cette base compte comme une arrivée. Restaurer une entrée ne crée pas une nouvelle arrivée.
 
+Pour un déclencheur d’événement ou de base, sélectionnez sa carte puis configurez **Quand cela se produit**. Les **Conditions** sont facultatives : sans filtre, chaque événement correspondant peut lancer la routine. Réglez le délai séparément dans **Délai de lancement**. Les conditions numérotées et les groupes en retrait montrent quelles règles vont ensemble. Utilisez les flèches et Entrée dans les sélecteurs ; les listes longues disposent d’un champ de recherche.
+
 Réglez si nécessaire le délai après l’événement, de 0 à 120 minutes. Conservez votre fuseau pour le contexte de Numo. Les routines d’événement et de base écoutent les prochaines arrivées sans date planifiée. Le traitement automatique nécessite le scheduler de l’instance ; une exécution manuelle reste possible.
 
 ## Construire des conditions qui peuvent attendre {#conditions}
@@ -94,7 +97,7 @@ Exemple : entrée en Triage ET catégorie Backend ET (une personne est assignée
 
 Une entrée créée sans sa propriété requise attend qu’une modification satisfasse le filtre. Supprimer une propriété référencée ou changer son type affiche une erreur de filtre : corrigez les conditions de la routine avant de poursuivre. Le délai reste respecté lorsqu’un filtre devient vrai. La réception d’un retour inclut les retours privés et en attente ; Numo ne les publie pas et ne contourne pas leur modération.
 
-![Routine d’événement avec conditions ET/OU imbriquées.](/documentation/fr/scheduled-routines-workflow.png)
+![Cartes de déclencheurs, choix de l’événement, groupes ET/OU imbriqués et délai de lancement séparé.](/documentation/fr/scheduled-routines-workflow.png)
 
 ## Gérer et vérifier les exécutions {#runs}
 

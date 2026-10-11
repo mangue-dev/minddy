@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -35,12 +35,13 @@
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-677-editor-captures.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "revision": 5,
+    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (es translation, label and retained-meaning self-review)",
     "date": "2026-10-11"
   },
@@ -54,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/es/scheduled-routines-workflow.png",
-      "alt": "Rutina por evento con condiciones Y/O anidadas.",
+      "alt": "Tarjetas de desencadenantes, selección del evento, grupos Y/O anidados y retraso de inicio separado.",
       "caption": "Demostración local del editor real de desencadenantes. No se guardó ni ejecutó ninguna rutina.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
         788,
-        1339
+        1277
       ],
       "theme": "light",
       "padding": 24,
@@ -84,6 +85,8 @@ Elige un desencadenante:
 - **Evento:** creación de incidencia, entrada en un estado objetivo, asignación, comentario en una incidencia seguida o recepción de feedback. Elige el estado, persona o incidencia que se solicite. El evento de estado incluye incidencias creadas directamente en ese estado. Una asignación requiere un cambio real de persona asignada.
 - **Entrada de base:** elige una base de páginas del proyecto. La creación, duplicación, importación de una base o traslado hacia esa base cuentan como llegada. Restaurar una entrada no genera una nueva llegada.
 
+Para un desencadenante de evento o de base, selecciona su tarjeta y configura **Cuando ocurre esto**. Las **Condiciones** son opcionales: sin filtros, cada evento coincidente puede iniciar la rutina. Define el retraso por separado en **Momento de inicio**. Las condiciones numeradas y los grupos con sangría muestran qué reglas van juntas. Usa las flechas y Entrar en los selectores; las listas largas incluyen un campo de búsqueda.
+
 Si hace falta, configura una espera tras el evento de 0 a 120 minutos. Tu zona horaria sigue formando parte del contexto de Numo. Las rutinas de evento y base esperan futuras llegadas sin fecha planificada. El procesamiento automático necesita el scheduler de la instancia; el inicio manual sigue disponible.
 
 ## Crear condiciones que pueden esperar {#conditions}
@@ -94,7 +97,7 @@ Ejemplo: entrada en Triaje Y categoría Backend Y (hay una persona asignada O la
 
 Una entrada sin su propiedad obligatoria espera hasta que una edición cumpla el filtro. Eliminar una propiedad referenciada o cambiar su tipo muestra un error de filtro: corrige las condiciones antes de continuar. La espera configurada se respeta aunque el filtro se cumpla más tarde. La recepción de feedback incluye contenido privado y pendiente; Numo no lo publica ni evita su moderación.
 
-![Rutina por evento con condiciones Y/O anidadas.](/documentation/es/scheduled-routines-workflow.png)
+![Tarjetas de desencadenantes, selección del evento, grupos Y/O anidados y retraso de inicio separado.](/documentation/es/scheduled-routines-workflow.png)
 
 ## Gestionar y comprobar ejecuciones {#runs}
 

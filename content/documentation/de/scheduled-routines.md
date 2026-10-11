@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -35,12 +35,13 @@
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-677-editor-captures.json"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "revision": 5,
+    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (de translation, label and retained-meaning self-review)",
     "date": "2026-10-11"
   },
@@ -54,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/scheduled-routines-workflow.png",
-      "alt": "Ereignisroutine mit verschachtelten UND/ODER-Bedingungen.",
+      "alt": "Auslöserkarten, Ereignisauswahl, verschachtelte UND/ODER-Gruppen und separate Startverzögerung.",
       "caption": "Lokale Demonstration des tatsächlichen Auslösereditors. Keine Routine wurde gespeichert oder ausgeführt.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
         788,
-        1339
+        1257
       ],
       "theme": "light",
       "padding": 24,
@@ -84,6 +85,8 @@ Wählen Sie einen Auslöser:
 - **Ereignis:** Ticketerstellung, Eintritt in einen Zielstatus, Zuweisung, Kommentar zu einem verfolgten Ticket oder eingegangenes Feedback. Wählen Sie den erforderlichen Status, die Person oder das Ticket. Der Statusauslöser umfasst direkt in diesem Status erstellte Tickets. Eine Zuweisung erfordert einen tatsächlichen Wechsel der zuständigen Person.
 - **Datenbankeintrag:** wählen Sie eine Seitendatenbank dieses Projekts. Erstellung, Duplizierung, Datenbankimport oder Verschieben in diese Datenbank gelten als Eingang. Die Wiederherstellung eines Eintrags erzeugt keinen neuen Eingang.
 
+Wählen Sie für einen Ereignis- oder Datenbankauslöser dessen Karte und konfigurieren Sie **Wenn dies geschieht**. **Bedingungen** sind optional: Ohne Filter kann jedes passende Ereignis die Routine starten. Stellen Sie die Verzögerung separat unter **Startzeitpunkt** ein. Nummerierte Bedingungen und eingerückte Gruppen zeigen, welche Regeln zusammengehören. Verwenden Sie Pfeiltasten und Eingabe in den Auswahlfeldern; längere Listen haben ein Suchfeld.
+
 Stellen Sie bei Bedarf eine Verzögerung nach dem Ereignis zwischen 0 und 120 Minuten ein. Ihre Zeitzone bleibt Teil des Numo-Kontexts. Ereignis- und Datenbankroutinen warten auf künftige Eingänge und haben keinen nächsten geplanten Termin. Die automatische Verarbeitung benötigt den Scheduler der Instanz; ein manueller Start bleibt möglich.
 
 ## Bedingungen mit Wartezustand erstellen {#conditions}
@@ -94,7 +97,7 @@ Beispiel: Eintritt in Triage UND Kategorie Backend UND (eine Person ist zugewies
 
 Ein Eintrag ohne erforderliche Eigenschaft wartet auf eine passende Bearbeitung. Wird eine referenzierte Eigenschaft entfernt oder ihr Typ geändert, erscheint ein Filterfehler: korrigieren Sie die Bedingungen vor dem Fortsetzen. Die Verzögerung gilt auch, wenn ein Filter später erfüllt wird. Feedbackeingänge umfassen private und noch nicht geprüfte Rückmeldungen; Numo veröffentlicht sie nicht und umgeht keine Moderation.
 
-![Ereignisroutine mit verschachtelten UND/ODER-Bedingungen.](/documentation/de/scheduled-routines-workflow.png)
+![Auslöserkarten, Ereignisauswahl, verschachtelte UND/ODER-Gruppen und separate Startverzögerung.](/documentation/de/scheduled-routines-workflow.png)
 
 ## Ausführungen verwalten und prüfen {#runs}
 
