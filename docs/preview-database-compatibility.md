@@ -2,8 +2,9 @@
 
 Vercel builds run `npm run check:deployment-db` before compiling the app. The
 check reads the target PostgREST OpenAPI schema with the deployment's service
-credentials and requires the auth and Realtime RPCs used by this candidate.
-Missing configuration, an unavailable schema, or a missing RPC stops the build
+credentials and requires the auth and Realtime RPCs used by this candidate,
+plus the `user_numo_preferences` table and its account/provider/model columns.
+Missing configuration, an unavailable schema, or a missing required entry stops the build
 before Vercel replaces the current deployment. It does not apply migrations,
 change grants, query account data, or substitute weaker authorization checks.
 Local builds and immutable self-hosted image builds remain independent of a
@@ -11,7 +12,17 @@ running database; self-hosted upgrades still use the bootstrap verification.
 
 This check detects missing entry points, not complete migration compatibility.
 Review the migration history and test the target database before promotion.
-Keep the required RPC list current when adding mandatory startup dependencies.
+Keep the required schema entries current when adding mandatory startup dependencies.
+
+Numo's personal model defaults require
+`20270109200040_personal_numo_model_preferences.sql`. A failed preference read
+does not remove the model catalog: `/api/assistant/models` reports the database
+failure and returns the available choices with an unknown (`null`) default.
+An explicit model can still be selected. Settings reads and turn admission
+without an explicit model continue to fail rather than silently replace a saved
+choice. `DatabaseOperationError` exceptions report only structural failure kind,
+code and HTTP status to PostHog, alongside the operation name in the exception;
+upstream database messages, hints and row values are not retained by that wrapper.
 
 Worker Stop prefers `request_numo_worker_stop`, introduced by
 `20270109200021_numo_durable_worker_stop.sql`. Until that additive migration is

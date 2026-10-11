@@ -2,6 +2,7 @@ import "server-only";
 
 import { ERROR_TRACKING_FLAG, isErrorTrackingFlagOn } from "@/lib/error-tracking-flag";
 import { posthogCookieName, readPosthogDistinctId } from "@/lib/posthog-cookie";
+import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 import {
   getServerPostHog,
   sanitizeServerProperties,
@@ -25,8 +26,8 @@ import {
  *    escape hatch. Self-hosted instances that never opted into PostHog report
  *    nothing, exactly as they do for analytics.
  *
- * Minimization: only template facts leave (`route_path`, `route_type`,
- * `http_method`) — never the concrete URL, query, headers, or free text. The
+ * Minimization: only template facts and structural database failure metadata
+ * leave — never the concrete URL, query, headers, or database response text. The
  * `distinct_id` comes from the browser's PostHog cookie when present, and no
  * person profile is created for it.
  *
@@ -91,6 +92,11 @@ export async function captureServerException(
       route_type: context.routeType,
       http_method: context.httpMethod,
       revalidate_reason: context.revalidateReason,
+      ...(error instanceof DatabaseOperationError ? {
+        failure_kind: error.diagnostics.kind,
+        failure_code: error.diagnostics.code,
+        failure_status: error.diagnostics.status,
+      } : {}),
       // Attach to the visitor's PostHog identity without creating a person
       // profile — an anonymous cookie id must not spawn one (same rule as
       // the anonymous public-upload analytics events).

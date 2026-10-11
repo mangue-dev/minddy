@@ -126,6 +126,17 @@ describe("Numo conversation configuration", () => {
     await resolveNumoTurnConfiguration({ userId: "user", model: "chosen-model" });
     expect(getNumoPreferences).not.toHaveBeenCalled();
   });
+  it("refuses an implicit default during a preference outage while allowing an explicit model", async () => {
+    const failure = new Error("Preference storage is unavailable");
+    vi.mocked(getNumoPreferences).mockRejectedValue(failure);
+    await expect(resolveNumoTurnConfiguration({ userId: "user" })).rejects.toBe(failure);
+    expect(h.runtime).not.toHaveBeenCalled();
+    expect(h.plan).not.toHaveBeenCalled();
+    vi.mocked(getNumoPreferences).mockClear();
+    await expect(resolveNumoTurnConfiguration({ userId: "user", model: "chosen-model" }))
+      .resolves.toMatchObject({ model: "chosen-model" });
+    expect(getNumoPreferences).not.toHaveBeenCalled();
+  });
   it("does not apply personal workspace defaults to documentation help", async () => {
     await resolveNumoTurnConfiguration({ userId: "user", managedOnly: true });
     expect(getNumoPreferences).not.toHaveBeenCalled();
