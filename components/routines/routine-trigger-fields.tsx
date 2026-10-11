@@ -145,14 +145,14 @@ export function RoutineTriggerFields({ projectId, value, onChange }: { projectId
         <legend className="mb-2"><span className="flex items-center gap-1.5 text-sm font-semibold">{t("triggerLabel")}<HelpHint label={t("triggerHelpLabel", { label: t("triggerLabel") })}>{t("triggerChooseHelp")}</HelpHint></span></legend>
         <div className="grid grid-cols-2 gap-2">
           {types.map(type => (
-            <Button key={type.id} type="button" variant="outline" aria-pressed={mode === type.id}
-              className={cn("h-auto min-w-0 items-start justify-start gap-3 whitespace-normal rounded-xl p-3 text-left", focusRing, mode === type.id && "border-primary bg-primary/5")}
+            <Button key={type.id} type="button" variant={mode === type.id ? "default" : "outline"} aria-pressed={mode === type.id}
+              className={cn("h-auto min-w-0 items-start justify-start gap-3 whitespace-normal rounded-xl p-3 text-left", focusRing)}
               onClick={() => { if (mode !== type.id) onChange(type.id === "schedule" ? { type: "schedule" } : { type: "event", event: "issue.created" }); }}>
-              <HugeiconsIcon icon={type.icon} aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={type.icon} aria-hidden className={cn("mt-0.5 size-4 shrink-0", mode !== type.id && "text-muted-foreground")} />
               <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="flex items-center justify-between gap-2 text-sm font-medium">
                   {t(`trigger_${type.id}`)}
-                  {mode === type.id && <HugeiconsIcon icon={CheckIcon} aria-hidden className="size-4 shrink-0 text-primary" />}
+                  {mode === type.id && <HugeiconsIcon icon={CheckIcon} aria-hidden className="size-4 shrink-0" />}
                 </span>
               </span>
             </Button>

@@ -32,7 +32,10 @@ function Editor({initial}){const [value,setValue]=useState(initial);window.readR
 createRoot(document.getElementById("root")).render(<App/>);`;
 const bundle = await build({ stdin: { contents: entry, resolveDir: root, loader: "tsx" }, bundle: true, alias: { "mangue-ui/lib/utils": "mangue-ui/lib/utils.ts" }, platform: "browser", format: "iife", jsx: "automatic", write: false, define: { "process.env.NODE_ENV": '"production"', "process.env": '{}' } });
 const sources = ["components/routines/routine-trigger-fields.tsx", "components/ui", "components/settings/help-hint.tsx", "components/issue-indicators.tsx", "components/user-avatar.tsx", "node_modules/mangue-ui/src"];
-const css = await postcss([tailwind({ base: root })]).process(`@import "tailwindcss" source(none); @import "mangue-ui/tokens.css"; ${sources.map(source => `@source "${resolve(source)}";`).join("\n")} body{font-family:system-ui,sans-serif;background:var(--background);color:var(--foreground);padding:24px}main{max-width:740px;margin:auto;border:1px solid var(--border);border-radius:12px;padding:24px;background:var(--background)}input,select{min-width:0}`, { from: resolve(out, "preview.css") });
+const applicationStyles = await readFile("app/globals.css", "utf8");
+const primaryTokens = applicationStyles.match(/(?::root|\.dark)\s*\{[^{}]*--primary:[^{}]*\}/g);
+if (!primaryTokens?.length) throw new Error("Application primary theme tokens are missing");
+const css = await postcss([tailwind({ base: root })]).process(`@import "tailwindcss" source(none); @import "mangue-ui/tokens.css"; ${sources.map(source => `@source "${resolve(source)}";`).join("\n")} ${primaryTokens.join("\n")} body{font-family:system-ui,sans-serif;background:var(--background);color:var(--foreground);padding:24px}main{max-width:740px;margin:auto;border:1px solid var(--border);border-radius:12px;padding:24px;background:var(--background)}input,select{min-width:0}`, { from: resolve(out, "preview.css") });
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${css.css}</style></head><body><div id="root"></div><script>window.catalogs=${JSON.stringify(catalogs)};</script><script>${bundle.outputFiles[0].text.replaceAll("</script", "<\\/script")}</script></body></html>`;
 await writeFile(resolve(out,"index.html"),html);
 const server = createServer((_request, response) => { response.setHeader("Content-Type", "text/html; charset=utf-8"); response.end(html); });
@@ -57,6 +60,10 @@ try {
       await preview.locator("#control").screenshot({path:${JSON.stringify(out)}+"/"+locale+".png",scale:"device"});
       records.push({locale,viewport:[Math.round(bounds.width)+48,Math.round(bounds.height)+48]});
     }
+    await preview.evaluate(()=>{window.setRoutineDemo({locale:"fr",mode:"event"});document.documentElement.classList.add("dark")});
+    await preview.getByRole("button",{name:${JSON.stringify(catalogs.fr.Routines.trigger_event)},exact:true}).waitFor();
+    await preview.locator("#control").screenshot({path:${JSON.stringify(out)}+"/dark-fr.png",scale:"device",animations:"disabled"});
+    await preview.evaluate(()=>document.documentElement.classList.remove("dark"));
     await preview.evaluate(()=>window.setRoutineDemo({locale:"en",mode:"database"}));
     await preview.evaluate(()=>window.setRoutineTrigger({type:"event",event:"issue.created",delayMinutes:5}));
     await preview.getByRole("combobox",{name:"Event",exact:true}).click();
@@ -165,6 +172,6 @@ try {
     await mkdir(`public/documentation/${record.locale}`,{recursive:true});
     await sharp(resolve(out,`${record.locale}.png`)).extend({left:48,top:48,right:48,bottom:48,background:{r:0,g:0,b:0,alpha:0}}).withIccProfile("srgb").png().toFile(`public/documentation/${record.locale}/scheduled-routines-workflow.png`);
   }
-  await writeFile("content/documentation/reviews/min-677-editor-captures.json",JSON.stringify({date:new Date().toISOString(),method:"Actual RoutineTriggerFields React component, local query-cache demonstrations only, external requests blocked, no business writes, native 2x pixels.",...checks},null,2)+"\n");
+  await writeFile("content/documentation/reviews/min-677-editor-captures.json",JSON.stringify({date:new Date().toISOString(),method:"Actual RoutineTriggerFields React component with application primary theme tokens, local query-cache demonstrations only, external requests blocked, no business writes, native 2x pixels.",...checks},null,2)+"\n");
   console.log(JSON.stringify(checks));
 } finally { await invoke(["close"]); server.close(); }

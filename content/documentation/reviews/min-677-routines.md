@@ -172,3 +172,13 @@ background wakeup from a preceding database conversion test calling the shared
 RPC mock after reset. The database-tool suite now stubs that opportunistic wakeup
 while retaining the guarded-write and no-RPC assertions. Its 14 tests pass;
 production behavior is unchanged.
+
+## Selected trigger button styling
+
+On 2026-10-12, the selected trigger mode was changed to the canonical Minddy
+primary button variant. Its icons inherit the primary foreground for contrast.
+The capture harness now reads the application's primary theme overrides; the
+selected button was visually checked in both the light and dark themes.
+The actual editor captures were renewed in all six locales and on mobile.
+The existing guide text, figure metadata and procedures remain accurate.
+Keyboard/mobile capture checks, typecheck, lint and whitespace checks passed.
