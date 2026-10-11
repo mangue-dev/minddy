@@ -1,4 +1,10 @@
 import type { NextRequest } from "next/server";
+import { resolvePublicMarkdownDelivery } from "@/lib/public-markdown-delivery";
+import { renderLegalContent, isLegalContentKey } from "@/lib/server/legal-markdown";
+import { documentationMarkdownResponse } from "@/lib/server/documentation-markdown";
+import { resolveDocumentationDelivery } from "@/lib/documentation-delivery";
+import { documentationPath } from "@/lib/documentation-core.mjs";
+import { selfHostingRelease } from "@/lib/self-hosting-release";
 import { getTranslations } from "next-intl/server";
 import { standaloneMobileInstallGuideCopy } from "@/components/marketing/mobile-install-guide-copy";
 import { locales, defaultLocale, type Locale } from "@/i18n/config";
@@ -42,9 +48,8 @@ import {
  *
  * **What it is not.** It is not a byte-for-byte mirror of the HTML. The content
  * is rebuilt from the same i18n keys as the components, while its order and
- * grouping are adapted for a text reader. The four legal pages return their
- * title, description, and a link: their bodies are structured prose in JSX,
- * and reproducing them here would create a second source of legal truth.
+ * grouping are adapted for a text reader. Legal bodies share their server
+ * components with HTML, preserving the full text without a second source.
  */
 
 const KEYS = new Set<string>(PUBLIC_ROUTES.map((route) => route.key));
@@ -83,9 +88,10 @@ function isDownloadPlatformRoute(key: PublicRouteKey): key is DownloadPlatformRo
  */
 function requested(request: NextRequest): { rawKey: string; rawLocale: string } {
   const params = request.nextUrl.searchParams;
+  const delivery = resolvePublicMarkdownDelivery(request.nextUrl.pathname);
   return {
-    rawKey: request.headers.get("x-minddy-route") ?? params.get("route") ?? "",
-    rawLocale: request.headers.get("x-minddy-locale") ?? params.get("locale") ?? "",
+    rawKey: delivery?.route.key ?? request.headers.get("x-minddy-route") ?? params.get("route") ?? "",
+    rawLocale: delivery?.locale ?? request.headers.get("x-minddy-locale") ?? params.get("locale") ?? "",
   };
 }
 
@@ -97,6 +103,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     ? rawLocale
     : defaultLocale) as Locale;
 
+  if (resolveDocumentationDelivery(request.nextUrl.pathname)) return documentationMarkdownResponse(request.url);
+  if (key === "documentation") {
+    return documentationMarkdownResponse(new URL(documentationPath(null, locale) + ".md", request.url).href);
+  }
   const route = routeByKey(key);
   const canonical = `${SITE_URL}${publicPathForLocale(route, locale)}`;
 
@@ -105,18 +115,23 @@ export async function GET(request: NextRequest): Promise<Response> {
   else if (key === "pricing") body = await renderPricing(locale, canonical);
   else if (key === "mcp") body = await renderMcp(locale, canonical);
   else if (key === "selfHosting") body = await renderSelfHosting(locale, canonical);
+  else if (key === "selfHostingInstall") body = await renderSelfHostingInstall(locale, canonical);
   else if (key === "download") body = await renderDownload(locale, canonical);
   else if (isDownloadPlatformRoute(key))
     body = await renderDownloadPlatform(key, locale, canonical);
   else if (key === "changelog") body = await renderChangelog(locale, canonical);
   else if (COMPARISON_BY_ROUTE.has(key))
     body = await renderComparison(COMPARISON_BY_ROUTE.get(key)!, locale, canonical);
-  else body = await renderLegal(key, locale, canonical);
+  else if (isLegalContentKey(key)) body = await renderLegalContent(key, locale) + `\n${MARKDOWN_LOCALE_COPY[locale].canonical}: ${canonical}\n`;
+  else throw new Error(`Missing public Markdown renderer: ${key}`);
 
   return new Response(body, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
-      Link: `<${canonical}>; rel="canonical"`,
+      "Content-Language": locale,
+      "X-Robots-Tag": "noindex, follow",
+      Vary: "Accept",
+      Link: `<${canonical}>; rel="canonical", <${SITE_URL}/llms.txt>; rel="describedby"`,
       "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
     },
   });
@@ -528,16 +543,31 @@ async function renderComparison(
   ].join("\n\n") + "\n";
 }
 
-async function renderLegal(
-  key: PublicRouteKey,
-  locale: Locale,
-  canonical: string,
-): Promise<string> {
-  const route = routeByKey(key);
-  const t = await getTranslations({ locale, namespace: route.namespace });
+/** A static reading path through the wizard's choices and authoritative procedures. */
+async function renderSelfHostingInstall(locale: Locale, canonical: string): Promise<string> {
+  const t = await getTranslations({ locale, namespace: "SelfHostingInstall" });
+  const guide = (id: string) => `${SITE_URL}${documentationPath(id, locale)}.md`;
   return [
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
-    `${MARKDOWN_LOCALE_COPY[locale].fullHtml}: ${canonical}`,
+    `## ${t("routeTitle")}`, t("routeBody"),
+    `### ${t("localTitle")}`, t("localBody"), t("localBoundary"), t("localMcpAccessHelp"),
+    `[${t("releaseProcedureGuide")}](${guide("install-locally")})`,
+    `### ${t("teamTitle")}`, t("teamBody"), t("privateMcpAccessHelp"),
+    `[${t("releaseProcedureGuide")}](${guide("install-a-server")})`,
+    `## ${t("releaseTitle")}`, t("releaseProcedureBody").replaceAll("MINDDY_RELEASE_TAG", selfHostingRelease.tag),
+    `[${t("openRelease")}](${MINDDY_REPOSITORY_URL}/releases/tag/${selfHostingRelease.tag})`,
+    `[${t("verifyRelease")}](${guide("self-hosted-compatibility")})`,
+    `## ${t("methodTitle")}`, t("methodBody"),
+    `### ${t("methodAgentTitle")}`, t("methodAgentBody"),
+    `### ${t("methodManualTitle")}`, t("methodManualBody"),
+    `## ${t("encryptionChoiceTitle")}`, t("encryptionChoiceBody"),
+    t("encryptionReleaseBody").replaceAll("MINDDY_RELEASE_TAG", selfHostingRelease.tag), t("encryptionReleaseKeyNote"),
+    `[${t("encryptionReleaseGuide")}](${guide("workspace-encryption")})`,
+    `## ${t("featuresTitle")}`, t("featuresBody"),
+    `### ${t("serviceEmailTitle")}`, t("serviceEmailBody"), t("serviceEmailSetup"),
+    `### ${t("servicePushTitle")}`, t("servicePushBody"), t("servicePushSetup"), t("servicesExcluded"),
+    `## ${t("migrateTitle")}`, t("migrateBody"),
+    `### ${t("exportTitle")}`, t("exportGoal"), `1. ${t("exportOne")}\n2. ${t("exportTwo")}`, t("exportNote"),
     links(locale),
   ].join("\n\n") + "\n";
 }

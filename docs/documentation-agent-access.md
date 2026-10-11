@@ -1,4 +1,4 @@
-# Documentation access for agents
+# Public site and documentation access for agents
 
 Minddy serves public documentation through ordinary HTTP requests. An assistant
 can discover it through web search or the existing sitemap, read HTML, or fetch
@@ -65,15 +65,49 @@ Screenshots retain their image links, alternative text, and captions. Fenced
 commands and inline code are preserved verbatim. The original locale prose and
 its safety, permission, release, and edition boundaries remain authoritative.
 
-This work covers the official documentation. It does not add `.md` exports to
-all marketing, legal, feedback, shared-view, or published workspace pages.
+The same retrieval convention covers every registered public site page in
+`lib/public-routes.ts`, across all six locales. Append `.md` to the localized
+HTML URL, for example `/pricing.md`, `/fr/tarifs.md`, or
+`/pt-br/auto-hospedagem/instalar.md`. Use `/index.md` for the English landing
+page; `/.md` also supports a literal suffix on `/`. Localized landing pages use
+`/fr.md`, `/de.md`, `/es.md`, `/it.md`, and `/pt-br.md`.
+
+Site HTML advertises the suffix URL with an alternate `Link` header. Both
+representations vary on `Accept`; an explicit suffix always selects Markdown,
+while negotiation respects quality values and a higher HTML preference.
+Markdown carries `Content-Type: text/markdown; charset=utf-8`,
+`Content-Language`, the canonical HTML link, and `noindex, follow` to keep HTML
+as the search result. Text retrieval does not read or rotate account sessions,
+bounce signed-in readers into the app, or redirect according to locale cookies.
+It also works when Supabase is unconfigured or unavailable.
+
+Product pages keep their existing text-oriented grouping and shared translation
+keys. Legal exports project the same server components as HTML, preserving all
+paragraphs, lists, external links, and cookie tables. The installation wizard's
+static representation describes its choices and links to the published local,
+server, compatibility, and encryption procedures; use those complete procedures
+before installing, rather than inferring choices from an interactive wizard.
+No rewriting service or second set of product claims is involved.
+
+Existing `/md?route=<key>&locale=<locale>` links remain supported. A suffix URL
+selects its registered page and language regardless of conflicting query values.
+Unknown site suffixes are not mapped to an unrelated page. Authentication pages,
+application screens, tokenized feedback boards, shared views, and published
+workspace pages are outside this site's export contract.
 The existing MCP contract endpoints keep their role; a separate documentation
 MCP or vector search service is unnecessary for ordinary HTTP retrieval.
 
 The [llms.txt proposal](https://llmstxt.org/) describes a compact index, Markdown
 page representations, and discovery through standard HTTP link relations.
-It is a retrieval convention, not a guarantee that every assistant will discover
-or follow it. [Google's AI search guidance](https://developers.google.com/search/docs/appearance/ai-features)
+[Mintlify's agent documentation](https://github.com/mintlify/docs/blob/main/ai-native.mdx)
+also exposes page Markdown through `.md` URLs, and
+[Cloudflare's Markdown for Agents](https://blog.cloudflare.com/markdown-for-agents/)
+uses `Accept: text/markdown` and `Vary: Accept`. These sources informed the
+suffix, discovery, and content-negotiation contract above. Keep the same facts
+and applicability limits in both representations, with concise headings, lists,
+and canonical citations for text readers. This is a retrieval convention, not a
+guarantee that every assistant will discover or follow it.
+[Google's AI search guidance](https://developers.google.com/search/docs/appearance/ai-features)
 still relies on ordinary indexing and accessible text. Keep HTML, the sitemap,
 and robots policy working alongside the agent entry points.
 
@@ -85,12 +119,14 @@ content. Verify a representative task from the index through search to its
 complete article, including commands, applicability, and section citations.
 
 ```sh
-npm run test -- lib/documentation-delivery.test.ts lib/server/documentation-markdown.test.ts lib/documentation.test.ts lib/proxy-trust-headers.test.ts
+npm run test -- lib/public-markdown-delivery.test.ts lib/server/public-markdown.test.ts lib/documentation-delivery.test.ts lib/server/documentation-markdown.test.ts lib/documentation.test.ts lib/proxy-trust-headers.test.ts
 npm run check:documentation
+npm run check:knowledge
 npm run check:owned-english
 git diff --check
 ```
 
-The delivery tests exercise all six languages, aliases, content negotiation,
+The delivery tests exercise all registered site routes in six languages, full
+legal bodies and cookie tables, installer sources, aliases, content negotiation,
 publication boundaries, generated links, diagrams, code preservation, and
 search. They run without a development server, browser capture, or Docker.

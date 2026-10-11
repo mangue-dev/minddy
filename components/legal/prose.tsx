@@ -1,3 +1,4 @@
+import type { Locale } from "@/i18n/config";
 import type { ReactNode } from "react";
 import { getLocale } from "next-intl/server";
 
@@ -63,10 +64,12 @@ export function List({ children }: { children: ReactNode }) {
  */
 export async function TermList({
   items,
+  locale: requestedLocale,
 }: {
+  locale?: Locale;
   items: { term: string; desc: string }[];
 }) {
-  const locale = await getLocale();
+  const locale = requestedLocale ?? await getLocale();
   const separator = locale === "fr" ? " : " : ": ";
 
   return (
