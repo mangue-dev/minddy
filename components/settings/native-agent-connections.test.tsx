@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { act, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { act, cloneElement, isValidElement, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
 import { NativeAgentConnections } from "./native-agent-connections";
 
+const desktop = vi.hoisted(() => ({ getDesktopBridge: vi.fn(), openExternal: vi.fn() }));
 const api = vi.hoisted(() => ({
   fetchNativeConnections: vi.fn(), startNativeLogin: vi.fn(), readNativeLogin: vi.fn(),
   cancelNativeLogin: vi.fn(), submitNativeLoginCode: vi.fn(),
@@ -19,13 +20,21 @@ vi.mock("@/lib/native-agent-prototype-api", async (original) => ({
 }));
 vi.mock("mangue-ui", () => ({
   Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  Button: ({ size: _size, variant: _variant, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string }) => <button {...props} />,
+  Button: ({ size: _size, variant: _variant, asChild, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string; asChild?: boolean }) => asChild && isValidElement(children) ? cloneElement(children, props) : <button {...props}>{children}</button>,
+  Spinner: () => <span aria-hidden>Loading</span>,
   Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   Select: ({ value, disabled, onValueChange, children }: { value: string; disabled: boolean; onValueChange: (value: string) => void; children: ReactNode }) => <select aria-label="Code agent" value={value} disabled={disabled} onChange={(event) => onValueChange(event.target.value)}>{children}</select>,
   SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
   SelectTrigger: () => null,
   SelectValue: () => null,
   SelectItem: ({ value, disabled, children }: { value: string; disabled?: boolean; children: ReactNode }) => <option value={value} disabled={disabled}>{children}</option>,
+}));
+vi.mock("@/lib/desktop/bridge", () => ({ getDesktopBridge: desktop.getDesktopBridge }));
+vi.mock("@/components/wizard/wizard-dialog", () => ({
+  WizardDialog: ({ steps, stepIndex, onSubmit, onOpenChange, submitting, error }: import("react").ComponentProps<typeof import("@/components/wizard/wizard-dialog").WizardDialog>) => {
+    const step = steps[stepIndex];
+    return <div role="dialog"><button onClick={() => onOpenChange(false)}>Close wizard</button><h2>{step.title}</h2>{step.content}{error && <p role="alert">{error}</p>}{!step.hideSubmit && <button disabled={submitting || step.submitDisabled} onClick={() => onSubmit(step.id)}>{step.submitLabel}</button>}</div>;
+  },
 }));
 vi.mock("./settings-ui", () => ({
   SettingsGroup: ({ title, action, children, className }: { title: ReactNode; action: ReactNode; children: ReactNode; className: string }) => <section className={className}><h2>{title}</h2>{action}{children}</section>,
@@ -75,6 +84,7 @@ it("uses native approval links and clears a pending login when settings close", 
     verificationUrl: "https://auth.openai.com/codex/device", userCode: "ABCD-1234" });
   await render({ defaultEngine: "codex" });
   await click("Connect Codex");
+  await click("Start connection");
   expect(host.querySelector("a")?.href).toBe("https://auth.openai.com/codex/device");
   expect(host.querySelector("a")?.rel).toBe("noopener noreferrer");
   expect(host.textContent).toContain("ABCD-1234");
@@ -89,6 +99,7 @@ it("rejects lookalike approval hosts and never renders raw native errors", async
   api.readNativeLogin.mockResolvedValue({ attemptId: "one", status: "failed", errorCode: "sk-native-secret" });
   await render({ defaultEngine: "codex" });
   await click("Connect Codex");
+  await click("Start connection");
   expect(host.querySelector("a")).toBeNull();
   await act(() => vi.advanceTimersByTimeAsync(2000));
   expect(host.querySelector('[role="alert"]')?.textContent).toBe("The request failed. Try again.");
@@ -162,6 +173,7 @@ it("cancels a pending connection when the selected agent changes", async () => {
     verificationUrl: "https://auth.openai.com/codex/device", userCode: "ABCD-1234" });
   await render({ defaultEngine: "codex" });
   await click("Connect Codex");
+  await click("Start connection");
   await render({ defaultEngine: "claude_code" });
   expect(api.cancelNativeLogin).toHaveBeenCalledWith("codex", "pending");
   expect(host.textContent).not.toContain("ABCD-1234");
@@ -175,4 +187,124 @@ it("labels OpenCode with its actual API payer and hides native connection action
   expect(host.querySelector("button")).toBeNull();
   await render({ onEngineChange: vi.fn(), openCodeProviderLabel: "OpenRouter" });
   expect(host.textContent).toContain("OpenCode (OpenRouter)");
+});
+
+it("prepares login without starting a session and closes without cancelling one", async () => {
+  await render({ defaultEngine: "codex" });
+  await click("Connect Codex");
+  expect(host.querySelector('[role="dialog"]')).not.toBeNull();
+  expect(api.startNativeLogin).not.toHaveBeenCalled();
+  await click("Close wizard");
+  expect(host.querySelector('[role="dialog"]')).toBeNull();
+  expect(api.cancelNativeLogin).not.toHaveBeenCalled();
+});
+
+it("copies the exact device code and reports clipboard failures without leaking errors", async () => {
+  const writeText = vi.fn().mockRejectedValueOnce(new Error("secret clipboard failure")).mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  api.startNativeLogin.mockResolvedValue({ attemptId: "copy", status: "waiting", verificationUrl: "https://auth.openai.com/codex/device", userCode: "DEMO-12345" });
+  await render({ defaultEngine: "codex" });
+  await click("Connect Codex"); await click("Start connection");
+  expect(host.querySelector('a')?.target).toBe("_blank");
+  expect(host.querySelector('a')?.getAttribute('referrerpolicy')).toBe("no-referrer");
+  await click("Copy code");
+  expect(host.textContent).toContain(messages.NativeAgentConnections.wizardCopyError);
+  expect(host.innerHTML).not.toContain("secret clipboard failure");
+  await click("Copy code");
+  expect(writeText).toHaveBeenLastCalledWith("DEMO-12345");
+  expect(host.textContent).toContain("Code copied");
+});
+
+it("advances automatically after approval and keeps the connected session when closing", async () => {
+  api.startNativeLogin.mockResolvedValue({ attemptId: "approved", status: "waiting", verificationUrl: "https://auth.openai.com/codex/device", userCode: "DEMO-12345" });
+  api.readNativeLogin.mockResolvedValue({ attemptId: "approved", status: "connected" });
+  await render({ defaultEngine: "codex" });
+  await click("Connect Codex"); await click("Start connection");
+  await act(() => vi.advanceTimersByTimeAsync(2000));
+  expect(host.textContent).toContain("Codex is connected");
+  expect(host.textContent).not.toContain("DEMO-12345");
+  await click("Done");
+  expect(api.cancelNativeLogin).not.toHaveBeenCalled();
+});
+
+it("cancels a login response that arrives after the wizard closes", async () => {
+  let resolve!: (value: unknown) => void;
+  api.startNativeLogin.mockReturnValue(new Promise(done => { resolve = done; }));
+  await render({ defaultEngine: "codex" });
+  await click("Connect Codex"); await click("Start connection");
+  expect([...host.querySelectorAll('button')].find(button => button.textContent === "Start connection")?.disabled).toBe(true);
+  await click("Close wizard");
+  await act(() => resolve({ attemptId: "late", status: "waiting", userCode: "DEMO-12345" }));
+  expect(api.cancelNativeLogin).toHaveBeenCalledWith("codex", "late");
+  expect(host.textContent).not.toContain("DEMO-12345");
+});
+
+it("resumes an existing attempt without creating another approval", async () => {
+  api.fetchNativeConnections.mockResolvedValue({ enabled: true, connections: [{ engine: "codex", status: "connecting", attemptId: "resume", updatedAt: null }] });
+  api.readNativeLogin.mockResolvedValue({ attemptId: "resume", status: "waiting", verificationUrl: "https://auth.openai.com/codex/device", userCode: "DEMO-12345" });
+  await render({ defaultEngine: "codex" });
+  await click("Continue connection"); await click("Resume connection");
+  expect(api.readNativeLogin).toHaveBeenCalledWith("codex", "resume");
+  expect(api.startNativeLogin).not.toHaveBeenCalled();
+  await click(messages.NativeAgentConnections.cancel);
+  expect(api.cancelNativeLogin).toHaveBeenCalledWith("codex", "resume");
+});
+
+it("guides Claude through browser approval and a masked return code", async () => {
+  api.startNativeLogin.mockResolvedValue({ attemptId: "claude", status: "waiting", verificationUrl: "https://claude.ai/oauth/authorize" });
+  api.submitNativeLoginCode.mockResolvedValue({ attemptId: "claude", status: "connected" });
+  await render({ defaultEngine: "claude_code" });
+  await click("Connect Claude Code"); await click("Start connection");
+  expect(host.querySelector('a')?.href).toBe("https://claude.ai/oauth/authorize");
+  await click("I have the code");
+  const input = host.querySelector('input')!;
+  expect(input.type).toBe("password");
+  expect(input.autocomplete).toBe("off");
+  expect([...host.querySelectorAll('button')].find(button => button.textContent === messages.NativeAgentConnections.complete)?.disabled).toBe(true);
+  await act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'return-code');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await click(messages.NativeAgentConnections.complete);
+  expect(api.submitNativeLoginCode).toHaveBeenCalledWith("claude_code", "claude", "return-code");
+  expect(host.textContent).toContain("Claude Code is connected");
+  expect(host.innerHTML).not.toContain("return-code");
+});
+
+
+it("opens the official approval URL in the desktop browser only on an explicit click", async () => {
+  desktop.getDesktopBridge.mockReturnValue({ openExternal: desktop.openExternal });
+  api.startNativeLogin.mockResolvedValue({ attemptId: "desktop", status: "waiting", verificationUrl: "https://auth.openai.com/codex/device", userCode: "DEMO-12345" });
+  await render({ defaultEngine: "codex" });
+  await click("Connect Codex"); await click("Start connection");
+  expect(desktop.openExternal).not.toHaveBeenCalled();
+  await act(() => host.querySelector('a')!.click());
+  expect(desktop.openExternal).toHaveBeenCalledWith("https://auth.openai.com/codex/device");
+});
+
+it("retries transient confirmation failures and hides stale codes after expiration", async () => {
+  api.startNativeLogin.mockResolvedValue({ attemptId: "poll", status: "waiting", verificationUrl: "https://auth.openai.com/codex/device", userCode: "DEMO-12345" });
+  api.readNativeLogin.mockRejectedValueOnce(new Error("private failure")).mockResolvedValue({ attemptId: "poll", status: "expired" });
+  await render({ defaultEngine: "codex" });
+  await click("Connect Codex"); await click("Start connection");
+  await act(() => vi.advanceTimersByTimeAsync(2000));
+  expect(host.textContent).toContain(messages.NativeAgentConnections.wizardPollError);
+  expect(host.innerHTML).not.toContain("private failure");
+  await act(() => vi.advanceTimersByTimeAsync(5000));
+  expect(host.textContent).not.toContain("DEMO-12345");
+  expect(host.textContent).toContain(messages.NativeAgentConnections.expired);
+  await click("Try again");
+  expect(api.startNativeLogin).toHaveBeenCalledTimes(2);
+});
+
+it("returns Claude to browser approval when retrying an expired return-code step", async () => {
+  api.startNativeLogin.mockResolvedValue({ attemptId: "retry-claude", status: "waiting", verificationUrl: "https://claude.ai/oauth/authorize" });
+  api.readNativeLogin.mockResolvedValue({ attemptId: "retry-claude", status: "expired" });
+  await render({ defaultEngine: "claude_code" });
+  await click("Connect Claude Code"); await click("Start connection"); await click("I have the code");
+  await act(() => vi.advanceTimersByTimeAsync(2000));
+  await click("Try again");
+  expect(host.querySelector('a')?.href).toBe("https://claude.ai/oauth/authorize");
+  expect(host.querySelector('input')).toBeNull();
+  expect(api.startNativeLogin).toHaveBeenCalledTimes(2);
 });

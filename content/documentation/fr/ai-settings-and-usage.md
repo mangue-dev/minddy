@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
@@ -68,13 +68,15 @@
       "components/settings/native-agent-model-preferences.tsx",
       "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
       "content/documentation/reviews/min-676-review-fixes-2026-10-11.md",
-      "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md"
+      "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md",
+      "components/settings/native-agent-login-wizard.tsx",
+      "content/documentation/reviews/min-676-native-login-wizard-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference); agent:/root (guided connection source, behavior fixtures and local visual review; no live provider authentication)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance); agent:/root (six-locale wizard procedure equivalence; no human acceptance)",
     "date": "2026-10-11"
   },
   "related": [
@@ -96,7 +98,7 @@
       "src": "/documentation/fr/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Les connexions, le routage par capacité et le modèle Numo personnel sont des réglages distincts.",
       "caption": "Plusieurs fournisseurs peuvent rester connectés. Le routage choisit le fournisseur par capacité ; le défaut Numo est enregistré par compte et fournisseur.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -129,7 +131,7 @@
       "src": "/documentation/fr/plans-and-ai-usage-workflow.png",
       "alt": "Page d’usage IA du compte de démonstration.",
       "caption": "Page d’usage IA du compte de démonstration. Le budget actuel, les catégories et l’historique proviennent du compte ; aucun achat ni travail facturé n’a été déclenché.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -172,7 +174,9 @@ Après la reconnexion, demandez explicitement à Numo de poursuivre le travail d
 
 Dans **Agent de code**, choisissez **OpenCode (Minddy Cloud)** ou OpenCode avec le fournisseur de modèles de texte configuré ci-dessus. Le contrôle **Fournisseur IA** choisit le financement du travail de code indépendamment des autres usages API. Configurez ici le modèle et le raisonnement OpenCode. La région et la taille de sandbox se trouvent dans la même section et s’appliquent aux agents de code hébergés.
 
-Choisissez d’abord **Codex** ou **Claude Code** pour afficher uniquement les contrôles de connexion de cet agent. Le sélectionner ne le connecte pas et ne lance aucun travail. Les contrôles actuels de connexion Codex décrivent le prototype technique historique ; ne les utilisez pas dans Minddy hébergé avant qu’une intégration autorisée remplace ce mécanisme. Pour les comptes Claude activés, **Connecter Claude Code** démarre l’autorisation dans le navigateur. Autorisez uniquement sur la page officielle Claude et collez seulement son code d’autorisation dans Minddy, puis choisissez **Terminer la connexion** si demandé. **Annuler la connexion** arrête une tentative. **Déconnecter** supprime l’accès enregistré par Minddy ; cela ne résilie pas l’abonnement et ne prouve pas la révocation OAuth distante.
+Choisissez d’abord **Codex** ou **Claude Code** pour afficher uniquement les contrôles de connexion de cet agent. Le sélectionner ne le connecte pas et ne lance aucun travail. Les contrôles actuels de connexion Codex décrivent le prototype technique historique ; ne les utilisez pas dans Minddy hébergé avant qu’une intégration autorisée remplace ce mécanisme. **Déconnecter** supprime l’accès enregistré par Minddy ; cela ne résilie pas l’abonnement et ne prouve pas la révocation OAuth distante.
+
+La connexion suit un assistant en plusieurs étapes. **Connecter Codex** ou **Connecter Claude Code** ouvre la préparation sans lancer la connexion ; **Commencer la connexion** démarre l’autorisation. Dans le prototype privé Codex, **Copier le code** copie exactement le code affiché et **Ouvrir le navigateur** ouvre la page officielle dans un nouvel onglet ou le navigateur du bureau. Saisissez-y le code ; la confirmation s’affiche automatiquement. Pour Claude, ouvrez la page officielle, autorisez, choisissez **J’ai reçu le code**, collez le code de retour dans le champ masqué et choisissez **Terminer la connexion**. **Terminer** ferme la confirmation. Fermer l’assistant ou choisir **Annuler la connexion** arrête l’autorisation en attente ; une tentative expirée propose **Recommencer**. Cette connexion concerne uniquement les agents de code, pas Numo. L’accès enregistré survit au remplacement des sandboxes. Claude reste expérimental et son exécution payante n’est pas testée.
 
 L’authentification Codex par abonnement dans les services hébergés n’est pas disponible pour un usage général. OpenAI exclut explicitement l’authentification app-server des services hébergés et les oriente vers son programme Sign in with ChatGPT. Minddy doit utiliser une intégration autorisée avant son ouverture. Les tests techniques restreints ne prouvent ni l’autorisation du fournisseur ni la reprise après expiration naturelle des tokens. L’exécution payante de Claude Code reste non testée. Retirer les badges de l’interface ne change pas ces conditions de disponibilité. [OpenAI app-server](https://learn.chatgpt.com/docs/app-server#auth-endpoints), [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source).
 
