@@ -2520,3 +2520,25 @@ were reconciled into the retained inventories. This was a focused RPC audit,
 not a full schema replay. Application consumers were refreshed to include the
 terminal state/generation read and shifted call sites. No production data or
 migration was changed by this audit.
+
+
+## Independent Numo Stop (2026-10-11)
+
+Migration `20270109200042` removes worker mutations from the service-only Numo
+Stop and stale-stop recovery functions. Numo retains its existing claim and
+conversation state transitions; admitted workers, queued steering and pending
+questions retain their independent state. The individual worker Stop RPC is
+unchanged. Late results cannot queue a stopped parent through the guarded
+completion RPC introduced by migration `20270109200041`.
+
+The focused PostgreSQL 16 probe applies the actual migrations to synthetic
+minimal tables in a disposable container without network access or an application
+database URL. It verifies all seven stoppable parent states, repeated Stop,
+owner isolation, unchanged worker/message/question rows, ignored late completion,
+stale-stop recovery and individual worker Stop after the parent has stopped.
+The two changed function definitions, empty search paths and service-only ACLs
+were introspected. Only these function records and the new migration hash were
+updated in the retained inventory; the application consumer inventory removes
+parent-wide worker writes. No columns, encryption targets, views, triggers or
+public grants change. Apply the migration before the updated application;
+no remote migration or production activation was performed.

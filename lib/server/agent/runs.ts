@@ -786,7 +786,7 @@ async function hydrateRun(row: AgentRun | null): Promise<AgentRun | null> {
       await decodeAgentLaunch(row)))))))))) : null;
 }
 
-/** Only gate new workers; an individual stop must leave running siblings alone. */
+/** Only gate new workers; stopping Numo preserves admitted workers. */
 async function numoParentAllowsNewWorker(run: AgentRun): Promise<boolean> {
   if (!run.parent_numo_turn_id) return true;
   if (!run.created_by || !run.parent_numo_conversation_id) return false;

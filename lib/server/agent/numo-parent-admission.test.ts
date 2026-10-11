@@ -26,7 +26,7 @@ vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({
       if (table === "project_git_links") return { data: null, error: null };
       if (table !== "agent_runs") throw new Error(`Unexpected table: ${table}`);
       if (insert) {
-        // The stop cascade has already scanned the queue when this insert lands.
+        // Numo loses launch authority before this insertion finishes.
         if (h.stopBeforeInsertCommit) h.parentStatus = "stopped";
         h.run = { ...insert, id: "worker-1", interrupt_requested: false };
       }
@@ -80,7 +80,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("Numo delegated worker admission", () => {
-  it("interrupts a BYOK worker inserted after the stop cascade already ran", async () => {
+  it("interrupts a BYOK worker whose admission finishes after Numo loses launch authority", async () => {
     h.stopBeforeInsertCommit = true;
     const run = await createRun(input);
     expect(run.interrupt_requested).toBe(true);
@@ -88,7 +88,7 @@ describe("Numo delegated worker admission", () => {
     expect(h.parentReads).toEqual([{ id: "turn-1", conversation_id: "conversation-1", user_id: "user-1" }]);
   });
 
-  it.each(["cloud", "local"])("preserves a queued %s sibling after an individual stop retires the parent", async (mode) => {
+  it.each(["cloud", "local"])("preserves a queued %s sibling after a stop retires the parent", async (mode) => {
     await createRun(input);
     h.parentStatus = "stopped";
     const run = mode === "cloud" ? await claimRun("worker-1") : await claimLocalRun({
@@ -98,7 +98,7 @@ describe("Numo delegated worker admission", () => {
     expect(h.run).toMatchObject({ status: "running", interrupt_requested: false });
   });
 
-  it("admits an active parent and preserves already-running sibling authority after an individual stop", async () => {
+  it("admits an active parent and preserves already-running sibling authority after a parent stop", async () => {
     await createRun(input);
     const claimed = await claimRun("worker-1");
     expect(claimed?.status).toBe("running");

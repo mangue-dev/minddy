@@ -19,7 +19,7 @@ DECLARE
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.projects(id,owner_id,name,key)
-    VALUES(project,actor,'Stop cascade fixture','STOP');
+    VALUES(project,actor,'Independent Stop fixture','STOP');
   INSERT INTO public.conversations(id,user_id,project_id,status,error_message)
     VALUES(conversation,actor,project,'generating',cipher),
       (retry_conversation,actor,project,'generating',cipher),
@@ -51,21 +51,17 @@ BEGIN
   IF public.recover_stale_numo_turns() <> 3 THEN
     RAISE EXCEPTION 'stale turn recovery count is incorrect';
   END IF;
-  IF EXISTS(SELECT 1 FROM public.agent_runs WHERE id IN (awaited,extra)
-      AND NOT interrupt_requested) OR
-      EXISTS(SELECT 1 FROM public.agent_runs WHERE id IN (terminal,unrelated)
-        AND interrupt_requested) THEN
-    RAISE EXCEPTION 'stale stop failed to interrupt precisely its live workers';
+  IF EXISTS(SELECT 1 FROM public.agent_runs
+      WHERE id IN (awaited,extra,terminal,unrelated) AND interrupt_requested) THEN
+    RAISE EXCEPTION 'stale Numo stop interrupted an independent worker';
   END IF;
   IF EXISTS(SELECT 1 FROM public.agent_run_messages
-      WHERE run_id IN (awaited,extra,terminal) AND consumed_at IS NULL) OR
-      EXISTS(SELECT 1 FROM public.agent_run_messages
-        WHERE run_id=unrelated AND consumed_at IS NOT NULL) THEN
-    RAISE EXCEPTION 'stale stop failed to discard precisely its queued steering';
+      WHERE run_id IN (awaited,extra,terminal,unrelated) AND consumed_at IS NOT NULL) THEN
+    RAISE EXCEPTION 'stale Numo stop discarded queued worker steering';
   END IF;
   IF EXISTS(SELECT 1 FROM public.agent_run_input_requests
-      WHERE parent_numo_turn_id=turn AND status<>'canceled') THEN
-    RAISE EXCEPTION 'stale stop left a pending worker question';
+      WHERE parent_numo_turn_id=turn AND status<>'pending') THEN
+    RAISE EXCEPTION 'stale Numo stop canceled a pending worker question';
   END IF;
   IF EXISTS(SELECT 1 FROM public.numo_assistant_turns WHERE id=turn
       AND (status<>'stopped' OR claim_token IS NOT NULL OR claimed_at IS NOT NULL

@@ -140,3 +140,37 @@ batched observer notification. The test now waits for the same visible state,
 flushing React updates between attempts; its assertions and application behavior
 are unchanged. All eight tests in that file pass. This test-only synchronization
 has no public documentation impact.
+
+
+## Independent Numo Stop
+
+The owner requested that Stop Numo leave delegated workers running. The request
+stop path, all three executor stop paths and SQL stale-stop recovery now stop
+only the parent. Admitted queued/running workers, queued messages and pending
+questions remain intact. New worker admission still requires a live parent;
+individual worker Stop remains scoped to that worker and suppresses parent
+continuation. No automatic worker result can revive a stopped Numo turn.
+
+Affected public article: `numo` revision 11 in `en`, `fr`, `de`, `es`, `it` and
+`pt-BR`, workflows `N01`, `N02`, `T05`, `N08` and `N05`; this branch's 0.11.1
+candidate requires migration `20270109200042`. Each locale now explains the
+separate Stop controls, preserved queued work and suppression of automatic
+continuation. Existing conversation, permissions, execution-model and MCP
+figures show no parent-stop cascade and remain accurate; original capture dates
+and evidence are retained. Worker-card screenshots in `code-work` are unchanged.
+Internal durable-turn and assistant knowledge references were corrected too.
+
+Application regressions cover request cancellation, concurrent worker launch,
+revoked tool checkpoint authority, provider failure while stopping and steering
+submission races. The disposable PostgreSQL probe verifies the actual migration,
+recovery, owner isolation, late completion and individually scoped worker Stop.
+SQL/encryption audit scope and rollout are recorded in
+`docs/security/encryption/README.md`. This is source, agent language and focused
+runtime review; no hosted UI or production execution is claimed.
+
+Independent Stop verification: 90 focused application tests across six suites and
+five opt-in PostgreSQL tests passed, including the updated encrypted stale-stop
+SQL regression. Typecheck, focused lint, documentation (92/92 workflows in all
+six languages), knowledge, owned-English, encryption schema/access checks and
+`git diff --check` passed. No unrelated source, locale runtime strings, production
+configuration or existing migration was changed.

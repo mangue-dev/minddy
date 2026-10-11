@@ -46,7 +46,6 @@ import {
 import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
 import { workerHarnessContext } from "@/lib/server/assistant/worker-harness-context";
 import { buildAccountWorkerContext } from "@/lib/server/assistant/account-worker-context";
-import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-input-cancel";
 import {
   AmbiguousToolExecutionError,
   NumoCompletionError,
@@ -62,7 +61,6 @@ import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
 import { parseAgentDelegationResult } from "@/lib/server/agent/agent-contract";
 import {
   deliverAgentDelegationResult,
-  discardPendingWorkerMessages,
   getRun,
   notifyDelegatedAgentRun,
 } from "@/lib/server/agent/runs";
@@ -913,28 +911,6 @@ async function stopRequested(service: SupabaseClient, turnId: string, claimToken
   return !data || (data as { status?: string }).status !== "running";
 }
 
-/**
- * Stop EVERY live worker of a turn (MIN-599): the awaited run, but also any
- * other worker the turn left running (multi-launch tool round, relaunch race).
- * The turn is the ownership boundary, `parent_numo_turn_id` is the join — the
- * same cascade as the SQL stop RPC, for the in-process paths.
- */
-async function interruptTurnWorkers(service: SupabaseClient, turnId: string) {
-  const { data: authority, error: authorityError } = await service
-    .from("numo_assistant_turns").select("status").eq("id", turnId).maybeSingle();
-  if (authorityError) throw new Error("Unable to read Numo stop scope");
-  // Individual worker stops retire the parent atomically. Global stops have
-  // already cascaded in SQL; an executor with a revoked claim cannot widen it.
-  if (!authority || authority.status === "stopped") return;
-  const { error } = await service.from("agent_runs")
-    .update({ interrupt_requested: true })
-    .eq("parent_numo_turn_id", turnId)
-    .in("status", ["queued", "running"]);
-  if (error) {
-    console.error("[numo-turn] worker_interrupt_failed", turnId);
-  }
-}
-
 async function saveFinalMessage(input: {
   service: SupabaseClient;
   turnId: string;
@@ -1311,7 +1287,6 @@ async function executeClaimedNumoTurn(input: {
       const activeRunId = result.suspension?.kind === "work"
         ? result.suspension.runId
         : claimed.active_run_id;
-      await interruptTurnWorkers(service, claimed.id);
       const turn = await checkpointTurn({
         service,
         turnId: claimed.id,
@@ -1460,7 +1435,6 @@ async function executeClaimedNumoTurn(input: {
         return { status: "not_claimed" };
       }
       if (current?.status === "stopping" && current.claim_token === claimToken) {
-        await interruptTurnWorkers(service, current.id);
         const stopped = await checkpointTurn({
           service,
           turnId: claimed.id,
@@ -1528,7 +1502,6 @@ async function executeClaimedNumoTurn(input: {
       }
       turn = await hydrateNumoTurn(data as NumoTurn);
       if (turn.status === "stopping" && turn.claim_token === claimToken) {
-        await interruptTurnWorkers(service, turn.id);
         turn = await checkpointTurn({
           service,
           turnId: claimed.id,
@@ -1685,20 +1658,6 @@ export async function requestNumoRequestStop(input: {
   }
   if (turn.status !== "stopped") return turn;
   signalLocalTurnStop(turn.id);
-  // Retire authority first: a concurrent worker admission checks its parent's
-  // live status and cannot launch after this boundary. Repeat the cascade on
-  // retries so a failed network write never becomes an acknowledged stop.
-  const [workerRead, workerInterrupt] = await Promise.all([
-    service.from("agent_runs").select("id").eq("parent_numo_turn_id", turn.id),
-    service.from("agent_runs").update({ interrupt_requested: true }).eq("parent_numo_turn_id", turn.id)
-      .in("status", ["queued", "running"]),
-    cancelStoppedTurnWorkerInputs(turn.id),
-  ]);
-  const { data: workers, error: workersError } = workerRead;
-  if (workersError) throw new Error("Unable to read Numo stop scope");
-  if (workerInterrupt.error) throw new Error("Unable to stop Numo workers");
-  const workerIds = (workers ?? []).map(worker => worker.id as string);
-  await Promise.all(workerIds.map(discardPendingWorkerMessages));
   const { data: conversationVersion, error: versionError } = await conversationVersionRead;
   if (versionError) throw new Error("Unable to read Numo conversation version");
   if (conversationVersion?.updated_at) {
