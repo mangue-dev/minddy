@@ -34,7 +34,7 @@ vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({
     }
     if (name === "arm_routine_event") {
       const e = h.tables.routine_events.find(row => row.id === args.p_event_id)!;
-      if (!h.tables.routine_armings.some(row => row.event_id === e.id)) h.tables.routine_armings.push({ id: randomUUID(), routine_id: args.p_routine_id, revision: args.p_revision, event_id: e.id, project_id: e.project_id, subject_type: e.subject_type, subject_id: e.subject_id, state: "armed", request_id: randomUUID(), attempts: 0, retry_at: new Date(Date.now()+Number(args.p_delay_minutes)*60_000).toISOString() });
+      if (!h.tables.routine_armings.some(row => row.event_id === e.id && row.routine_id === args.p_routine_id)) h.tables.routine_armings.push({ id: randomUUID(), routine_id: args.p_routine_id, revision: args.p_revision, event_id: e.id, project_id: e.project_id, subject_type: e.subject_type, subject_id: e.subject_id, state: "armed", request_id: randomUUID(), attempts: 0, retry_at: new Date(Date.now()+Number(args.p_delay_minutes)*60_000).toISOString() });
     }
     if (name === "claim_routine_arming") {
       const a = h.tables.routine_armings.find(row => row.id === args.p_id)!;
@@ -55,6 +55,55 @@ beforeEach(() => {
   h.owner=true; h.claims=[]; h.start.mockReset().mockResolvedValue({turn:{id:"turn"}}); h.execute.mockReset().mockResolvedValue({});
 });
 describe("durable routine orchestration", () => {
+  it("bounds fan-out admissions, finishes the event and lets the Numo drain execute queued turns", async () => {
+    h.tables.issues[0].assignee_id = "person";
+    const first = h.tables.agent_routines[0];
+    h.tables.agent_routines = Array.from({ length: 7 }, (_, i) => ({ ...first, id: i ? randomUUID() : routine }));
+    // An inline model call would never return within the event-processing tick.
+    h.execute.mockImplementation(() => new Promise(() => {}));
+    emit(1);
+    await processRoutineEvents(2);
+    expect(h.start).toHaveBeenCalledTimes(2);
+    expect(h.execute).not.toHaveBeenCalled();
+    expect(h.tables.routine_events[0].processed_at).toBeTruthy();
+    expect(h.tables.routine_events[0].lease_until).toBeNull();
+    expect(h.tables.routine_armings).toHaveLength(7);
+    expect(h.tables.routine_armings.filter(a => a.state === "armed")).toHaveLength(5);
+    const deferred = h.tables.routine_armings[2].request_id;
+    await processRoutineEvents(2);
+    expect(h.start).toHaveBeenCalledTimes(4);
+    expect(h.start).toHaveBeenNthCalledWith(3, expect.objectContaining({ requestId: deferred }));
+  });
+
+  it("shares the admission allowance across new events, quota failures and retries", async () => {
+    h.tables.issues[0].assignee_id = "person";
+    const first = h.tables.agent_routines[0];
+    h.tables.agent_routines = Array.from({ length: 4 }, (_, i) => ({ ...first, id: i ? randomUUID() : routine }));
+    h.start.mockRejectedValue(new Error("usage_budget_exceeded"));
+    emit(1);
+    await processRoutineEvents(1);
+    expect(h.start).toHaveBeenCalledTimes(1);
+    h.tables.routine_armings[0].retry_at = new Date(0).toISOString();
+    emit(2, "issue.updated", { status: "triage", assignee: "person" });
+    await processRoutineEvents(1);
+    expect(h.start).toHaveBeenCalledTimes(2);
+    expect(h.claims[1]).toBe(h.claims[0]);
+    expect(h.tables.routine_armings[0].state).toBe("reserved");
+  });
+
+  it("cancels deferred status armings even after the admission allowance is spent", async () => {
+    h.tables.issues[0].assignee_id = "person";
+    const first = h.tables.agent_routines[0];
+    h.tables.agent_routines = Array.from({ length: 4 }, (_, i) => ({ ...first, id: i ? randomUUID() : routine }));
+    emit(1);
+    emit(2, "issue.status_changed", { status: "backlog" });
+    await processRoutineEvents(2);
+    expect(h.start).toHaveBeenCalledTimes(2);
+    expect(h.tables.routine_events.every(e => e.processed_at)).toBe(true);
+    expect(h.tables.routine_armings.filter(a => a.state === "cancelled")).toHaveLength(2);
+    expect(h.tables.routine_armings.every(a => ["consumed", "cancelled"].includes(a.state as string))).toBe(true);
+  });
+
   it("keeps an unmatched item armed and consumes it once after a later edit", async () => {
     emit(1); await processRoutineEvents();
     expect(h.tables.routine_armings[0].state).toBe("armed"); expect(h.start).not.toHaveBeenCalled();

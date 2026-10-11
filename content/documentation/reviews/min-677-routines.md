@@ -146,3 +146,22 @@ Three relevant Vitest suites passed all 18 tests. Typecheck, lint,
 `check:documentation`, `check:documentation:release`, `check:knowledge`,
 `check:owned-english` and whitespace checks passed. This follow-up changes the
 editor only; the previous backend validation remains applicable.
+
+## Pull request review corrections
+
+On 2026-10-12, agent:/root addressed the three unresolved reviews in PR #410.
+The code-worker schema renderer escapes script delimiters and Unicode line
+boundaries for descriptions, constants, enums and property names while retaining
+their parsed values. Event processing shares one admission allowance across
+fan-out and retries, counts failed admissions, and preserves deferred arming
+identities. Cancellation events still invalidate deferred armings. Admission
+persists queued turns for the existing bounded Numo drain instead of executing
+models inside the event lease. MCP list/create/update responses now expose the
+complete trigger without removing cadence fields used by existing clients.
+
+Five targeted Vitest suites passed all 78 tests, including generated-schema
+round trips, high fan-out, quota retries, deferred cancellation, durable Numo
+dispatch and real MCP response handlers. Typecheck, lint, owned-English and
+whitespace checks passed. Public documentation impact: these fixes restore the
+already documented trigger and scheduler behavior; no guide, control label or
+figure changes are needed.

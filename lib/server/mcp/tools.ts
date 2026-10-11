@@ -373,6 +373,7 @@ function mcpRoutine(routine: Routine) {
     id: routine.id,
     title: routine.title,
     prompt: routine.prompt,
+    trigger: routine.trigger,
     /** What one occurrence can spend, as a percentage of monthly usage. */
     max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,
@@ -4894,9 +4895,10 @@ export function registerMinddyTools(
     {
       title: "List routines",
       description:
-        "List the project's ROUTINES — scheduled Numo conversations that use " +
+        "List the project's ROUTINES — scheduled or event-triggered Numo conversations that use " +
         "Minddy tools directly and may delegate code when needed. Each one gives its id, title, the instruction it " +
-        "runs, its cadence (frequency + hour/minute + weekdays or days_of_month + " +
+        "runs, its trigger (schedule, issue/feedback event or database arrival, including conditions and delay), " +
+        "cadence fields for schedules (frequency + hour/minute + weekdays or days_of_month + " +
         "IANA timezone), spending cap, whether it is enabled, when it last ran, when " +
         "it runs next, and the code of the last missed occurrence. Call " +
         "it before creating one, to adjust what is already scheduled instead of " +

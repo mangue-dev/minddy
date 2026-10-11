@@ -246,9 +246,12 @@ type JsonSchema = {
   required?: string[];
 };
 
-/** `"a\nb"` → a safe TypeScript literal. `JSON.stringify` escapes everything. */
-function literal(value: string): string {
-  return JSON.stringify(value);
+/** Serialize data as a JavaScript literal, including script and line boundaries. */
+function literal(value: unknown): string {
+  const json = JSON.stringify(value);
+  if (json === undefined) throw new Error("Cannot render an undefined schema literal");
+  return json.replace(/[<>\u2028\u2029]/g, char =>
+    `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
 }
 
 /**
@@ -308,7 +311,7 @@ export function schemaExpression(schema: JsonSchema, path = "args", definitions:
     const nested = new Map(refs).set(schema.$ref, variable);
     return `(() => { const ${variable} = tool.schema.lazy(() => ${schemaExpression(definition, path, definitions, nested)}); return ${variable}; })()`;
   }
-  if (Object.hasOwn(schema, "const")) return `tool.schema.literal(${JSON.stringify(schema.const)})`;
+  if (Object.hasOwn(schema, "const")) return `tool.schema.literal(${literal(schema.const)})`;
   const describe = (expr: string) =>
     schema.description
       ? `${expr}.describe(${literal(retargetToolNames(schema.description))})`
@@ -320,7 +323,7 @@ export function schemaExpression(schema: JsonSchema, path = "args", definitions:
     if (!schema.enum.every((v) => typeof v === "string")) {
       throw new Error(`${path}: non-string enum is unsupported`);
     }
-    return describe(`tool.schema.enum(${JSON.stringify(schema.enum)})`);
+    return describe(`tool.schema.enum(${literal(schema.enum)})`);
   }
 
   const variants = schema.anyOf ?? (Array.isArray(schema.type)
@@ -357,7 +360,7 @@ export function schemaExpression(schema: JsonSchema, path = "args", definitions:
       const required = new Set(schema.required ?? []);
       const entries = Object.entries(properties).map(([name, raw]) => {
         const inner = schemaExpression(raw as JsonSchema, `${path}.${name}`, definitions, refs);
-        return `    ${JSON.stringify(name)}: ${inner}${required.has(name) ? "" : ".optional()"},`;
+        return `    ${literal(name)}: ${inner}${required.has(name) ? "" : ".optional()"},`;
       });
       const passthrough = schema.additionalProperties === true ? ".passthrough()" : schema.additionalProperties === false ? ".strict()" : "";
       return describe(`tool.schema.object({\n${entries.join("\n")}\n  })${passthrough}`);
@@ -377,7 +380,7 @@ function argsBlock(def: AgentToolDef): string {
       `${def.function.name}.${name}`,
       def.function.parameters.$defs,
     );
-    return `    ${JSON.stringify(name)}: ${expr}${req.has(name) ? "" : ".optional()"},`;
+    return `    ${literal(name)}: ${expr}${req.has(name) ? "" : ".optional()"},`;
   });
   return entries.length ? `{\n${entries.join("\n")}\n  }` : "{}";
 }

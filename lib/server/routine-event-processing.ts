@@ -5,7 +5,6 @@ import { decodeIssue } from "@/lib/server/issue-store";
 import { decodePage } from "@/lib/server/page-content";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
-import { executeNumoTurn } from "@/lib/server/numo/turns";
 import { assertPropertyConditions, evaluateRoutineConditions, parseRoutineTrigger, RoutineTriggerError, type ConditionContext, type RoutineTrigger } from "@/lib/routine-triggers";
 import type { Routine } from "@/lib/server/routines";
 
@@ -19,6 +18,7 @@ interface Arming {
   subject_type: RoutineEventRow["subject_type"]; subject_id: string;
   retry_at: string; state: string; request_id: string; lease_token: string | null; attempts: number;
 }
+interface AdmissionBudget { remaining: number }
 function single<T>(value: unknown): T | null { return (Array.isArray(value) ? value[0] : value) as T | null; }
 function check(error: { message: string } | null) { if (error) throw new Error(error.message); }
 
@@ -68,7 +68,7 @@ async function subjectContext(routine: Routine, arming: Arming, trigger: Routine
   return {};
 }
 
-async function evaluateArming(arming: Arming, routine: Routine, event?: RoutineEventRow): Promise<void> {
+async function evaluateArming(arming: Arming, routine: Routine, budget: AdmissionBudget, event?: RoutineEventRow): Promise<void> {
   const service = getServiceClient();
   const update = async (values: Record<string, unknown>) => {
     const result = await service.from("routine_armings").update({ ...values, updated_at: new Date().toISOString() }).eq("id", arming.id).in("state", ["armed", "reserved"]);
@@ -79,6 +79,9 @@ async function evaluateArming(arming: Arming, routine: Routine, event?: RoutineE
   const trigger = parseRoutineTrigger(routine.trigger);
   if (event?.cause_routine_id === routine.id || event?.cause_routine_ids?.includes(routine.id)) return;
   if (event && event.id !== arming.event_id && eventCancelsArming(trigger, event)) { await update({ state: "cancelled" }); return; }
+  // Continue processing cancellation events after the admission allowance is
+  // spent. Other armings retain their identity and remain eligible next tick.
+  if (budget.remaining <= 0) return;
   let context: ConditionContext | null;
   try { context = await subjectContext(routine, arming, trigger); }
   catch (error) {
@@ -106,16 +109,18 @@ async function evaluateArming(arming: Arming, routine: Routine, event?: RoutineE
   check(claim.error);
   const claimed = single<Arming>(claim.data);
   if (!claimed?.id) return;
+  // Failed admissions count too, so quota failures cannot exhaust this tick.
+  budget.remaining--;
   try {
     const sourceResult = await service.from("routine_events").select("cause_routine_ids").eq("id", claimed.event_id).maybeSingle();
     check(sourceResult.error);
     const source = sourceResult.data;
-    const started = await startRoutineOccurrence({ routine, origin: trigger.type === "database" ? "database" : "event", requestId: claimed.request_id, armingId: claimed.id, provenance: { eventId: String(claimed.event_id), subjectId: claimed.subject_id, subjectType: claimed.subject_type, causeRoutineIds: source?.cause_routine_ids ?? [] } });
+    await startRoutineOccurrence({ routine, origin: trigger.type === "database" ? "database" : "event", requestId: claimed.request_id, armingId: claimed.id, provenance: { eventId: String(claimed.event_id), subjectId: claimed.subject_id, subjectType: claimed.subject_type, causeRoutineIds: source?.cause_routine_ids ?? [] } });
     const bound = await service.from("routine_armings").update({ state: "consumed", lease_until: null, error_code: null }).eq("id", claimed.id).eq("lease_token", claimed.lease_token);
     check(bound.error);
     await service.from("agent_routines").update({ last_run_at: new Date().toISOString(), last_error: null }).eq("id", routine.id);
-    // The durable Numo scheduler resumes a turn if this process dies here.
-    await executeNumoTurn({ turnId: started.turn.id, readClient: service });
+    // Admission persists a queued turn. The bounded Numo drain executes it;
+    // model/tool execution must not hold this event's lease or delay schedules.
   } catch (error) {
     const code = (error as { code?: string }).code === "usage_budget_exceeded" || (error as Error).message === "usage_budget_exceeded" ? "quota" : "launchFailed";
     const result = await service.from("routine_armings").update({ state: claimed.attempts >= 8 ? "failed" : "reserved", error_code: code, lease_until: null, retry_at: new Date(Date.now() + Math.min(3600, 60 * 2 ** claimed.attempts) * 1000).toISOString() }).eq("id", claimed.id).eq("lease_token", claimed.lease_token).eq("state", "reserved");
@@ -123,7 +128,7 @@ async function evaluateArming(arming: Arming, routine: Routine, event?: RoutineE
   }
 }
 
-async function processEvent(event: RoutineEventRow) {
+async function processEvent(event: RoutineEventRow, budget: AdmissionBudget) {
   const service = getServiceClient();
   const result = await service.from("agent_routines").select("*").eq("project_id", event.project_id).eq("enabled", true).is("deleted_at", null).neq("trigger_type", "schedule");
   check(result.error);
@@ -136,13 +141,14 @@ async function processEvent(event: RoutineEventRow) {
     }
     const pending = await service.from("routine_armings").select("*").eq("routine_id", routine.id).eq("subject_type", event.subject_type).eq("subject_id", event.subject_id).in("state", ["armed", "reserved"]);
     check(pending.error);
-    for (const arming of pending.data ?? []) await evaluateArming(arming as Arming, routine, event);
+    for (const arming of pending.data ?? []) await evaluateArming(arming as Arming, routine, budget, event);
   }
 }
 
-/** Bounded work, ordered per item; the cron is the durable recovery path. */
+/** Bound journal rows and total admissions, including retries; never execute turns inline. */
 export async function processRoutineEvents(limit = 20): Promise<{ events: number; retries: number }> {
   const service = getServiceClient();
+  const budget: AdmissionBudget = { remaining: limit };
   let events = 0;
   while (events < limit) {
     const batch = await service.rpc("claim_routine_events", { p_limit: Math.min(limit - events, 10) });
@@ -150,7 +156,7 @@ export async function processRoutineEvents(limit = 20): Promise<{ events: number
     if (!batch.data?.length) break;
     for (const event of batch.data as RoutineEventRow[]) {
       try {
-        await processEvent(event);
+        await processEvent(event, budget);
         const done = await service.from("routine_events").update({ processed_at: new Date().toISOString(), lease_until: null, error_code: null }).eq("id", event.id).eq("lease_token", event.lease_token);
         check(done.error);
       } catch {
@@ -165,7 +171,7 @@ export async function processRoutineEvents(limit = 20): Promise<{ events: number
   for (const arming of retry.data ?? []) {
     const row = await service.from("agent_routines").select("*").eq("id", arming.routine_id).is("deleted_at", null).maybeSingle();
     check(row.error);
-    if (row.data) await evaluateArming(arming as Arming, await decodeRoutine(row.data, row.data.owner_id) as unknown as Routine);
+    if (row.data) await evaluateArming(arming as Arming, await decodeRoutine(row.data, row.data.owner_id) as unknown as Routine, budget);
   }
   check((await service.rpc("cleanup_routine_events")).error);
   return { events, retries: retry.data?.length ?? 0 };
