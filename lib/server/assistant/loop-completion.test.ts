@@ -2,9 +2,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProcessChatCheckpoint, ProcessChatContext } from "./loop";
 
-const h = vi.hoisted(() => ({ fetchModel: vi.fn(), executeTool: vi.fn() }));
+const h = vi.hoisted(() => ({ fetchModel: vi.fn(), executeTool: vi.fn(), modelInfo: vi.fn() }));
 vi.mock("./execute-tool", () => ({ executeTool: h.executeTool }));
 vi.mock("@/lib/server/ai-runtime", () => ({ fetchAiChat: h.fetchModel }));
+vi.mock("@/lib/server/agent/openrouter-index", () => ({
+  getOpenRouterModelInfo: h.modelInfo,
+  getCachedOpenRouterModelInfo: vi.fn(() => null),
+  loadOpenRouterIndex: vi.fn(),
+}));
 
 const { processChat, NumoCompletionError } = await import("./loop");
 
@@ -64,6 +69,7 @@ describe("Numo completion contract", () => {
     vi.clearAllMocks();
     process.env.OPENROUTER_API_KEY = "test-key";
     h.executeTool.mockResolvedValue({ success: true, result: { run_id: "worker" } });
+    h.modelInfo.mockResolvedValue(null);
   });
 
   it("repairs split incident XML into one native launch and a durable worker wait", async () => {
@@ -157,6 +163,126 @@ describe("Numo completion contract", () => {
     h.fetchModel.mockImplementation(async () => ({ model: "model", response: build() }));
     await expect(run()).rejects.toThrow(NumoCompletionError);
     expect(h.fetchModel).toHaveBeenCalledTimes(3);
+    expect(h.executeTool).not.toHaveBeenCalled();
+  });
+
+  it("repairs a reasoning-only worker-result reply with optional reasoning disabled", async () => {
+    h.modelInfo.mockResolvedValue({ reasoning: { mandatory: false } });
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: response([
+      { delta: { reasoning: "The worker saved the plan; report its outcome." } },
+      { delta: { content: "\n" }, finish_reason: "stop" },
+    ]) }).mockResolvedValueOnce({ model: "model", response: textResponse("The implementation plan was saved to MIN-677.") });
+    const ctx = context();
+    const emitter = { emit: vi.fn() };
+    const result = await processChat([
+      { role: "user", content: "Generate an implementation plan for MIN-677." },
+      { role: "system", content: "Validated durable code-worker result: the plan was saved to MIN-677." },
+    ], [], emitter as never, ctx);
+
+    expect(result.fullContent).toBe("The implementation plan was saved to MIN-677.");
+    expect(result.suspension).toBeNull();
+    expect(h.fetchModel).toHaveBeenCalledTimes(2);
+    const initial = h.fetchModel.mock.calls[0][2]("model");
+    const repair = h.fetchModel.mock.calls[1][2]("model");
+    expect(initial.reasoning).toEqual({ effort: "medium" });
+    expect(repair.reasoning).toEqual({ enabled: false });
+    expect(repair.tools).toBeUndefined();
+    expect(repair.messages.at(-1).content).toContain("Reasoning alone is not a reply");
+    expect(repair.messages.at(-1).content).toContain("No tools are available");
+    expect(ctx.persistCheckpoint).toHaveBeenCalledWith(expect.objectContaining({
+      emptyAnswerRepair: true, completionRepairs: 1, completionRepairPending: true,
+    }));
+    expect(ctx.onGeneration).toHaveBeenCalledTimes(2);
+    expect(ctx.beforeGeneration).toHaveBeenCalledTimes(2);
+    expect(h.executeTool).not.toHaveBeenCalled();
+    expect(emitter.emit).toHaveBeenCalledWith("content_delta", {
+      delta: "The implementation plan was saved to MIN-677.",
+    });
+  });
+
+  it.each([
+    ["mandatory", { reasoning: { mandatory: true } }],
+    ["unknown model", null],
+    ["unknown reasoning capability", { reasoning: null }],
+  ])("preserves reasoning when repairing an empty reply from a %s", async (_name, info) => {
+    h.modelInfo.mockResolvedValue(info);
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse("") })
+      .mockResolvedValueOnce({ model: "model", response: textResponse("The plan was saved.") });
+    await run();
+    expect(h.fetchModel.mock.calls[1][2]("model").reasoning).toEqual({ effort: "medium" });
+  });
+
+  it("keeps reasoning-only failures bounded even when optional reasoning is disabled", async () => {
+    h.modelInfo.mockResolvedValue({ reasoning: { mandatory: false } });
+    h.fetchModel.mockImplementation(async () => ({ model: "model", response: response([
+      { delta: { reasoning: "The task is complete." }, finish_reason: "stop" },
+    ]) }));
+    const ctx = context();
+    await expect(run(ctx)).rejects.toThrow("the response was empty");
+    expect(h.fetchModel).toHaveBeenCalledTimes(3);
+    expect(ctx.onGeneration).toHaveBeenCalledTimes(3);
+    expect(ctx.persistCheckpoint).toHaveBeenLastCalledWith(expect.objectContaining({
+      emptyAnswerRepair: true, completionRepairs: 2, completionRepairExhausted: true,
+    }));
+    expect(h.executeTool).not.toHaveBeenCalled();
+  });
+
+  it("preserves the direct provider request when repairing an empty BYOK reply", async () => {
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse("") })
+      .mockResolvedValueOnce({ model: "model", response: textResponse("The plan was saved.") });
+    await run(context({ aiRuntime: {
+      provider: "anthropic", mode: "byok", apiKey: "byok-key", model: "model",
+      baseUrl: "https://api.anthropic.com/v1", requestProfile: {
+        usageAccounting: false, streamUsage: false, outputTokenField: "max_tokens",
+        attribution: false, promptCaching: false,
+      },
+    } }));
+    expect(h.modelInfo).not.toHaveBeenCalled();
+    expect(h.fetchModel.mock.calls[1][2]("model").reasoning).toEqual({ effort: "medium" });
+  });
+
+  it("observes Stop during the repair capability lookup before opening another generation", async () => {
+    let stopped = false;
+    h.modelInfo.mockImplementation(async () => {
+      stopped = true;
+      return { reasoning: { mandatory: false } };
+    });
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse("") });
+    const result = await run(context({ shouldStop: async () => stopped }));
+    expect(result.fullContent).toBe("");
+    expect(h.fetchModel).toHaveBeenCalledTimes(1);
+    expect(h.executeTool).not.toHaveBeenCalled();
+  });
+
+  it("restores the selected reasoning effort after an empty repair executes a valid tool", async () => {
+    h.modelInfo.mockResolvedValue({ reasoning: { mandatory: false } });
+    const readCall = { ...CALL, function: { name: "list_issues", arguments: "{}" } };
+    h.executeTool.mockResolvedValue({ success: true, result: { issues: [] } });
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse("") })
+      .mockResolvedValueOnce({ model: "model", response: response([
+        { delta: { tool_calls: [readCall] }, finish_reason: "tool_calls" },
+      ]) }).mockResolvedValueOnce({ model: "model", response: textResponse("No issues were found.") });
+    const result = await processChat([{ role: "user", content: "List the issues." }],
+      [{ ...TOOL, function: { ...TOOL.function, name: "list_issues" } }],
+      { emit: vi.fn() } as never, context());
+    expect(result.fullContent).toBe("No issues were found.");
+    expect(h.fetchModel.mock.calls[1][2]("model").reasoning).toEqual({ enabled: false });
+    expect(h.fetchModel.mock.calls[2][2]("model").reasoning).toEqual({ effort: "medium" });
+    expect(h.executeTool).toHaveBeenCalledTimes(1);
+  });
+
+  it("restores the visible-answer repair mode after an interrupted durable retry", async () => {
+    h.modelInfo.mockResolvedValue({ reasoning: { mandatory: false } });
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse("The plan was saved.") });
+    const result = await run(context({ resumeCheckpoint: {
+      phase: "model", roundCount: 1, completionRepairs: 1,
+      completionRepairPending: true, emptyAnswerRepair: true,
+    } }));
+    expect(result.fullContent).toBe("The plan was saved.");
+    const request = h.fetchModel.mock.calls[0][2]("model");
+    expect(request.reasoning).toEqual({ enabled: false });
+    expect(request.messages.at(-1).content).toContain("no visible answer");
+    expect(request.tools).toEqual([TOOL]);
     expect(h.executeTool).not.toHaveBeenCalled();
   });
 
