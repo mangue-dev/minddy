@@ -311,6 +311,8 @@
     "back": "Retour aux réglages"
   },
   "Resources": {
+    "downloadFailed": "Impossible de télécharger ce fichier. Réessayez.",
+    "actions": "Actions du fichier",
     "attach": "Joindre des fichiers",
     "addFiles": "Ajouter des fichiers",
     "add": "Ajouter une ressource",
@@ -2060,6 +2062,7 @@
     "deleteDescription": "Ce brouillon sera supprimé définitivement."
   },
   "Pages": {
+    "filePreview": "Afficher le fichier",
     "placeholder": "Écrivez, ou tapez « / » pour insérer un bloc…",
     "slashNoResult": "Aucun bloc",
     "blockParagraph": "Texte",

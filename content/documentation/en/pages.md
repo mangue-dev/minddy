@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-680)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,14 +57,17 @@
       "components/pages/page-document-actions.tsx",
       "lib/server/pages-export.ts",
       "components/pages/page-print-view.tsx",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-680-file-preview.md",
+      "components/file-viewer.tsx",
+      "components/image-viewer.tsx"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 9,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
     "language": "agent:/root (en changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [
     "notifications-and-inbox",
@@ -99,7 +102,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +118,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +134,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,7 +150,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +166,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -195,7 +198,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -204,6 +207,23 @@
       ],
       "theme": "light",
       "padding": 24
+    },
+    {
+      "id": "page-file-preview",
+      "kind": "screenshot",
+      "src": "/documentation/en/file-preview.png",
+      "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
+      "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
+      "revision": 9,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        1168,
+        808
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -213,7 +233,8 @@
     "page-files-steps",
     "page-history-steps",
     "publish-a-page-steps",
-    "import-export-and-print-pages-steps"
+    "import-export-and-print-pages-steps",
+    "page-file-preview"
   ]
 }
 ---
@@ -272,6 +293,10 @@ A missing thread anchor can follow document edits; read the discussion before mo
 Open the page as a project member and use its attachment or upload controls. Select a nonempty file within the 10 MB per-file limit. Your account or instance storage quota can impose an additional limit. Keep the original until the upload succeeds.
 
 Images can be inserted as image blocks, and other documents can be attached as file blocks. The server determines the stored media type from the bytes rather than trusting the filename or browser label. Upload acceptance does not guarantee that every format has an inline preview; use the file download when a preview is unavailable.
+
+In the project editor, click an image or the name of a supported file block to open the same full-window reader used by issue attachments. Markdown (`.md`), plain text (`.txt`, `.text`), CSV, PDF and supported audio or video open in dedicated containers. Use Close or Escape to return to the page. The File actions (`…`) menu offers Download; Remove is available only in an editable page and removes the block from the document. The file block also keeps its direct Download control. Unsupported formats, external file links and file blocks on published pages retain their download behavior. Published images use the reader without a removal action.
+
+![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.](/documentation/en/file-preview.png)
 
 Check that the file appears in the page and open or download it. File bytes live in Storage, while the page and file metadata determine access. A successful page save alone does not prove the file bytes are available.
 

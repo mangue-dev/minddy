@@ -58,6 +58,16 @@ describe("attachmentPreviewKind", () => {
     expect(attachmentPreviewKind(mimeType)).toBeNull();
   });
 
+  it.each(["notes.txt", "notes.TEXT", " notes.text "])(
+    "previews plain text %s with generic MIME metadata", (name) => {
+      expect(attachmentPreviewKind("application/octet-stream", name)).toBe("document");
+    },
+  );
+
+  it("does not infer text from an embedded extension", () => {
+    expect(attachmentPreviewKind("application/octet-stream", "notes.txt.exe")).toBeNull();
+  });
+
   it("recognizes Markdown by filename when its MIME type is generic", () => {
     expect(attachmentPreviewKind("application/octet-stream", "README.md")).toBe(
       "document",

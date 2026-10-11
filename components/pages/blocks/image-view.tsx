@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ImageNotFound01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
   NodeViewWrapper,
@@ -18,6 +18,8 @@ import {
   IMAGE_MIN_WIDTH,
   clampImageWidth,
 } from "@/components/pages/blocks/image";
+import { FileViewer } from "@/components/file-viewer";
+import { fileDownloadHref } from "@/lib/page-files";
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
 
 /**
@@ -40,7 +42,7 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
  * node, one more cursor position, and one more markdown round trip to reinvent
  * for the same sentence.
  */
-export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewProps) {
+export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }: NodeViewProps) {
   const t = useTranslations("Pages");
   const uploads = usePageUploadsContext();
   const src = (node.attrs.src as string | null) ?? null;
@@ -91,15 +93,6 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
   /* ── Preview on click ───────────────────────── ────────────────────────── */
 
   const [zoomed, setZoomed] = useState(false);
-  useEffect(() => {
-    if (!zoomed) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setZoomed(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [zoomed]);
-
   const displayed = src ?? upload?.previewUrl ?? null;
   const failed = upload?.status === "failed";
   // Neither address nor sending: the block survived a tab closed in the middle of sending.
@@ -131,6 +124,9 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
  302 redirect to a signed URL, which Next's optimizer can neither cache nor resize — it would do one more
  round trip to render exactly the same byte. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
+          <button type="button" disabled={!src} aria-label={t("imageOpen")} aria-haspopup="dialog"
+            className="block w-full text-left disabled:cursor-default"
+            onClick={() => { if (src) setZoomed(true); }}>
           <img
             src={displayed}
             alt={alt}
@@ -163,10 +159,8 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
               src && "cursor-zoom-in",
               !src && "opacity-60"
             )}
-            onClick={() => {
-              if (src) setZoomed(true);
-            }}
           />
+          </button>
 
           {upload?.status === "uploading" && (
             <div className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-muted">
@@ -247,25 +241,16 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
         />
       )}
 
-      {zoomed && src && (
-        // Preview on click: a layer, closed by ESC or by any click
-        // Or. No mango-ui dialog — block register should remain
-        // importable outside the browser, and this view is already all you need.
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("imageOpen")}
-          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/80 p-8"
-          onClick={() => setZoomed(false)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={src}
-            alt={alt}
-            className="max-h-full max-w-full object-contain"
-          />
-        </div>
-      )}
+      {src && <FileViewer
+        src={src}
+        downloadHref={fileDownloadHref(src) ?? src}
+        fileName={alt || upload?.file.name || t("blockImage")}
+        mimeType="image/png"
+        open={zoomed}
+        onOpenChange={setZoomed}
+        onRemove={editor.isEditable ? deleteNode : undefined}
+      />}
+
     </NodeViewWrapper>
   );
 }

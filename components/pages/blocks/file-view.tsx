@@ -8,6 +8,9 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from "@tiptap/react";
+import { useState } from "react";
+import { FileViewer } from "@/components/file-viewer";
+import { attachmentPreviewKind } from "@/lib/attachment-preview";
 import { useLocale, useTranslations } from "next-intl";
 import { cx } from "@/components/pages/blocks/cx";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";
@@ -15,7 +18,7 @@ import {
   NODE_LINK_CLASS,
   isPlainNavigationClick,
 } from "@/components/editor-node-link";
-import { fileDownloadHref, formatFileSize } from "@/lib/page-files";
+import { fileDownloadHref, filePreviewHref, formatFileSize } from "@/lib/page-files";
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
 
 /**
@@ -32,7 +35,7 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
  * The download address depends on the form of the `src` — application or URL
  * signed by a published page: cf. `fileDownloadHref` (lib/page-files.ts).
  */
-export function FileView({ node, selected }: NodeViewProps) {
+export function FileView({ node, selected, editor, deleteNode }: NodeViewProps) {
   const t = useTranslations("Pages");
   const locale = useLocale();
   const uploads = usePageUploadsContext();
@@ -51,25 +54,14 @@ export function FileView({ node, selected }: NodeViewProps) {
   // The rule lives in lib/page-files.ts, along with the rest of what this module knows
   // of a file address — and it is tested there.
   const href = src ? fileDownloadHref(src) : null;
+  const previewSrc = src && attachmentPreviewKind(mime, name) ? filePreviewHref(src) : null;
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const failed = upload?.status === "failed";
   const abandoned = !src && !upload;
   const weight = formatFileSize(size, locale);
 
-  return (
-    <NodeViewWrapper
-      as="div"
-      className={cx(
-        "my-1 flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors",
-        src && "hover:bg-muted",
-        // Selected, the line DARKENS and nothing more (MIN-282):
-        // the blue ring doubled a frame that this block already has, and two lines
-        // concentric with two rays reads like a rendering defect. THE
-        // radius, he remains - here he draws a map, he does not crop anything.
-        selected && "bg-muted"
-      )}
-      contentEditable={false}
-    >
+  const fileLabel = <>
       <ResourceTypeIcon
         mime={mime}
         name={name}
@@ -95,6 +87,34 @@ export function FileView({ node, selected }: NodeViewProps) {
                 : weight}
         </span>
       </span>
+  </>;
+
+  return (
+    <NodeViewWrapper
+      as="div"
+      className={cx(
+        "my-1 flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors",
+        src && "hover:bg-muted",
+        // Selected, the line DARKENS and nothing more (MIN-282):
+        // the blue ring doubled a frame that this block already has, and two lines
+        // concentric with two rays reads like a rendering defect. THE
+        // radius, he remains - here he draws a map, he does not crop anything.
+        selected && "bg-muted"
+      )}
+      contentEditable={false}
+    >
+      {previewSrc && href ? <a href={href} draggable={false}
+        className={cx(NODE_LINK_CLASS, "flex min-w-0 flex-1 items-center gap-3 text-left no-underline")}
+        aria-label={`${t("filePreview")}: ${name}`} aria-haspopup="dialog"
+        onClick={event => {
+          if (!isPlainNavigationClick(event)) return;
+          event.preventDefault();
+          setPreviewOpen(true);
+        }}>
+        {fileLabel}
+      </a> : <div className="flex min-w-0 flex-1 items-center gap-3">
+        {fileLabel}
+      </div>}
 
       {upload?.status === "uploading" && (
         <span className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
@@ -148,6 +168,8 @@ export function FileView({ node, selected }: NodeViewProps) {
           {t("fileDownload")}
         </a>
       )}
+      {previewSrc && href && <FileViewer src={previewSrc} downloadHref={href} fileName={name} mimeType={mime}
+        open={previewOpen} onOpenChange={setPreviewOpen} onRemove={editor.isEditable ? deleteNode : undefined} />}
     </NodeViewWrapper>
   );
 }

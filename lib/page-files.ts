@@ -51,7 +51,7 @@ export function pageFileStoragePrefix(projectId: string, pageId: string): string
   return `projects/${projectId}/pages/${pageId}`;
 }
 
-/** L'adresse publique (au sens : de l'application) d'un fichier de page. */
+/** The stable application URL of a page file. */
 export function pageFileUrl(projectId: string, fileId: string): string {
   return `/api/projects/${projectId}/pages/files/${fileId}`;
 }
@@ -147,13 +147,21 @@ export function normalizePageFileSrc(src: unknown): string | null {
  *
  * `null` when the address is refused (MIN-350): the view then does not display
  * anchor at all, rather than an anchor towards a protocol that we don't want
- * suivre.
+ * follow.
  */
 export function fileDownloadHref(src: string): string | null {
   const ours = normalizePageFileSrc(src);
   if (!ours) return null;
   if (!pageFileIdFromSrc(ours)) return ours;
   return `${ours}?download=1`;
+}
+
+/** Preview private page files through the authenticated, sandboxed attachment proxy.
+ * Published and external URLs keep their signed disposition and download behavior. */
+export function filePreviewHref(src: string): string | null {
+  const normalized = normalizePageFileSrc(src);
+  if (!normalized || !pageFileIdFromSrc(normalized)) return null;
+  return `${normalized}?preview=1`;
 }
 
 /**
@@ -189,7 +197,7 @@ export function pageFileIdsInBody(body: unknown): Set<string> {
   return ids;
 }
 
-/* ── Ce qu'on affiche d'un fichier ────────────────────────────────────────── */
+/* File display helpers. */
 
 /** `1,4 Mo` — the size of a file, in units that the eye reads at once.
     Deliberately without i18n: a number and a unit symbol, identical in
@@ -215,7 +223,7 @@ export function isImageMime(mime: string | null | undefined): boolean {
 }
 
 /** Storage keys refuse the exotic; the DISPLAYED name keeps it. Mirror
-    exact du nettoyeur des ressources (lib/use-attachment-uploads.ts). */
+    the resource upload key sanitizer (lib/use-attachment-uploads.ts). */
 export function sanitizeFileKey(name: string): string {
   const sanitized = name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
   return (sanitized || "fichier").slice(-140);

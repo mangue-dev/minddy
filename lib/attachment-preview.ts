@@ -37,6 +37,12 @@ export function isMarkdownFileName(
   return typeof fileName === "string" && /\.md$/i.test(fileName.trim());
 }
 
+/** Plain text filename fallback for uploads with generic MIME metadata. */
+export function isPlainTextAttachment(rawMimeType: string | null | undefined, fileName?: string | null): boolean {
+  return normalizeMimeType(rawMimeType) === "text/plain" ||
+    (typeof fileName === "string" && /\.(txt|text)$/i.test(fileName.trim()));
+}
+
 const DOCUMENT_MIME_TYPES: ReadonlySet<string> = new Set([
   "application/javascript",
   "application/json",
@@ -58,7 +64,7 @@ export function attachmentPreviewKind(
   fileName?: string | null,
 ): AttachmentPreviewKind | null {
   const mimeType = normalizeMimeType(rawMimeType);
-  if (isMarkdownFileName(fileName) || isCsvAttachment(mimeType, fileName)) {
+  if (isMarkdownFileName(fileName) || isCsvAttachment(mimeType, fileName) || isPlainTextAttachment(mimeType, fileName)) {
     return "document";
   }
   if (!mimeType) return null;
