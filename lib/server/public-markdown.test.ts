@@ -83,6 +83,21 @@ describe("public site Markdown content", () => {
     expect(cells).toEqual(["Name | key", "Purpose", "Duration", String.raw`path\|name`, "[required] *literal*", "line break"]);
   });
 
+  it.each([0, 1, 2, 3, 4])("preserves %i backslashes before table delimiters without injecting columns", async count => {
+    const literal = "\\".repeat(count) + "|value|" + "\\".repeat(count);
+    const body = await legalProseMarkdown(createElement(CookieTable, {
+      caption: "Storage", description: "Literal values",
+      headers: { name: literal, purpose: "Purpose", duration: "Duration" },
+      rows: [{ name: literal, purpose: "first\r\nsecond\rthird", duration: literal }],
+    }));
+    const tokens = new MarkdownIt().parse(body, {});
+    expect(tokens.filter(token => token.type === "th_open")).toHaveLength(3);
+    expect(tokens.filter(token => token.type === "td_open")).toHaveLength(3);
+    const cells = tokens.filter(token => token.type === "inline").slice(-6)
+      .map(token => token.children?.map(child => child.content).join(""));
+    expect(cells).toEqual([literal, "Purpose", "Duration", literal, "first second third", literal]);
+  });
+
   it("preserves direct legacy /md query access, including the documentation index", async () => {
     const query = await GET(new NextRequest(`${SITE_URL}/md?route=privacy&locale=de`));
     expect(await query.text()).toBe(await (await GET(new NextRequest(`${SITE_URL}/de/datenschutz.md`))).text());

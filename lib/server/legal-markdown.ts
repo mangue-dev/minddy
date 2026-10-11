@@ -16,7 +16,8 @@ export function isLegalContentKey(key: string): key is LegalContentKey {
 }
 
 const primitives = new Set<unknown>(Object.values(prose));
-const escapeText = (value: string) => value.replace(/([\\`*_[\]<>])/g, "\\$1");
+// Escape literal text once, including backslashes and table delimiters together.
+const escapeText = (value: string) => value.replace(/([\\`*_[\]<>|])/g, "\\$1");
 
 /** Project the shared, server-only legal body, preserving every paragraph and table. */
 export async function legalProseMarkdown(node: ReactNode): Promise<string> {
@@ -39,7 +40,7 @@ export async function legalProseMarkdown(node: ReactNode): Promise<string> {
     case "li": return `- ${children.trim()}\n`;
     case "dt": return `- **${children.trim()}**: `;
     case "dd": return `${children.trim()}\n`;
-    case "th": case "td": return `${children.trim().replace(/\|/g, "\\|").replace(/\n/g, " ")} | `;
+    case "th": case "td": return `${children.trim().replace(/\r\n?|\n/g, " ")} | `;
     case "tr": return `| ${children.trim()}\n`;
     case "thead": {
       const columns = (children.match(/(?<!\\)\|/g)?.length ?? 0) - 1;

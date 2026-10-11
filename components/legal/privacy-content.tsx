@@ -19,10 +19,9 @@ export async function PrivacyContent({ locale }: { locale: Locale }) {
     { term: t("dataAccount"), desc: t("dataAccountDesc") },
     { term: t("dataContent"), desc: t("dataContentDesc") },
     { term: t("dataUsage"), desc: t("dataUsageDesc") },
-    // MIN-296 — browser editor push service is a
-    // full recipient (he receives the subscription address), and he
-    // was not named anywhere. The content is illegible: the load
-    // useful is encrypted with the device keys (RFC 8291).
+    // MIN-296: the browser vendor's push service receives the subscription
+    // address and must be listed as a recipient. It cannot read the payload,
+    // which is encrypted with the subscribing device's keys (RFC 8291).
     { term: t("dataPush"), desc: t("dataPushDesc") },
     { term: t("dataAI"), desc: t("dataAIDesc") },
     { term: t("dataGit"), desc: t("dataGitDesc") },
@@ -104,11 +103,10 @@ export async function PrivacyContent({ locale }: { locale: Locale }) {
       <Section title={t("processorTitle")}>
         <P>{t("processorP1")}</P>
         <P>{t("processorP2")}</P>
-        {/* MIN-119 — each return placed on a board goes through a model
- (moderation, categorization, translation), and a dictation adds
- the audio. Keeping it quiet was tantamount to not declaring a recipient, for people who don't even have an account with us. And these are the same
- suppliers as those in the next section: what we cannot
- guarantee there, we cannot guarantee here either. */}
+        {/* MIN-119: public feedback is processed by AI providers for moderation,
+            categorization, and translation; dictation also sends audio. Disclose
+            these recipients even for participants without a Minddy account.
+            The provider retention limits described below apply here too. */}
         <P>{t("processorP3")}</P>
       </Section>
 
@@ -116,21 +114,19 @@ export async function PrivacyContent({ locale }: { locale: Locale }) {
         <P>{t("agentText")}</P>
       </Section>
 
-      {/* MIN-119 — the final recipient is not OpenRouter but the
- provider of the selected model, and its retention policy varies.
- Saying “transmitted to OpenRouter” and stopping there named the gateway in
- leaving the recipient silent; Article 13 demands the opposite. We don't promise
- so nothing about this step — we describe it. */}
+      {/* MIN-119: OpenRouter routes requests to the selected model's provider,
+          whose retention policy may differ. Article 13 requires disclosing the
+          recipient beyond the gateway. Describe this processing without making
+          retention guarantees that Minddy cannot enforce. */}
       <Section title={t("aiProvidersTitle")}>
         <P>{t("aiProvidersGateway")}</P>
         <P>{t("aiProvidersRetention")}</P>
         <P>{t("aiProvidersChoice")}</P>
       </Section>
 
-      {/* Audience measurement (MIN-78). Dedicated section rather than a line in the
- data table: the collection has three regimes depending on the choice made
- on the banner, and "before any choice" is the case that no one
- ever explains even though it is the most common. */}
+      {/* MIN-78: explain analytics in a dedicated section because collection
+          differs before a consent choice, after acceptance, and after rejection.
+          Include the initial state as well as the two explicit choices. */}
       <Section title={t("analyticsTitle")}>
         <Intro>{t("analyticsIntro")}</Intro>
         <P>{t("analyticsAnonymous")}</P>
@@ -162,11 +158,9 @@ export async function PrivacyContent({ locale }: { locale: Locale }) {
         </P>
       </Section>
 
-      {/* Self-service access and erasure (MIN-119). Section apart from the block
- “Your rights”: this one lists what the law grants, this one says
- where to click. The warning about owned projects is there in all
- letters — this is the consequence that "delete my account" does not leave
- guessing. */}
+      {/* MIN-119: distinguish legal rights from the app controls for exercising
+          them. State that account deletion also deletes owned projects so readers
+          understand the consequences before using the deletion control. */}
       <Section title={t("selfServiceTitle")}>
         <Intro>{t("selfServiceIntro")}</Intro>
         <List>

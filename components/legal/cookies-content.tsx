@@ -47,10 +47,8 @@ export async function CookiesContent({ locale }: { locale: Locale }) {
                 purpose: t("essentialCookie2Purpose"),
                 duration: t("essentialCookie2Duration"),
               },
-              // MIN-119 — a public feedback board session. She is not
-              // not posted on minddy.app but on the board we visit, there
-              // included under the domain of its publisher: all the more reason for the
-              // declare, this is the only place that talks about it.
+              // MIN-119: disclose the public feedback session cookie on the
+              // board's origin, including boards on a publisher's custom domain.
               {
                 name: t("essentialCookie3Name"),
                 purpose: t("essentialCookie3Purpose"),
@@ -74,8 +72,8 @@ export async function CookiesContent({ locale }: { locale: Locale }) {
             ]}
           />
 
-          {/* No badge: local storage is not subject to consent,
- it is an interface state that does not leave the device. */}
+          {/* These local preferences remain on the device and do not belong to
+              an analytics consent category, so they have no consent badge. */}
           <CookieTable
             caption={t("localStorageName")}
             description={t("localStorageDesc")}
