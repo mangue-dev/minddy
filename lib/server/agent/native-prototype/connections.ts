@@ -323,8 +323,10 @@ export async function testNativeConnection(userId: string, engine: NativeHarness
       result.allocations.push(item);
       await getNativeRuntime(lease, { execution: true });
       stage = "profile_import";
-      await allocation.request("/profile/import", { profile });
+      // A lost response cannot prove that credentials never entered the CLI.
+      // Export or invalidate the profile before releasing this writer lease.
       imported = true;
+      await allocation.request("/profile/import", { profile });
       await getNativeRuntime(lease, { execution: true });
       stage = "auth_check";
       const auth = await allocation.request("/auth/check", { engine });

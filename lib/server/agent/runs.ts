@@ -2332,7 +2332,7 @@ async function stopNumoWorkerBeforeMigration(service: SupabaseClient, runId: str
     .select("id").maybeSingle();
   if (retireError) throw new Error("Unable to revoke stopped worker continuation");
   await discardPendingWorkerMessages(runId);
-  const { cancelStoppedWorkerInput } = await import("@/lib/server/numo/worker-mediation");
+  const { cancelStoppedWorkerInput } = await import("@/lib/server/numo/worker-input-cancel");
   await cancelStoppedWorkerInput(runId);
   await requestInterrupt(runId);
   if (retired) {

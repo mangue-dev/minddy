@@ -46,7 +46,7 @@ import {
 import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
 import { workerHarnessContext } from "@/lib/server/assistant/worker-harness-context";
 import { buildAccountWorkerContext } from "@/lib/server/assistant/account-worker-context";
-import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-mediation";
+import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-input-cancel";
 import {
   AmbiguousToolExecutionError,
   NumoCompletionError,

@@ -174,6 +174,43 @@ describe("private native subscription orchestration", () => {
     expect(h.current).toBeNull();
   });
 
+  it("invalidates an uncertain imported profile when neither the import response nor export can be recovered", async () => {
+    h.create.mockImplementationOnce(async (name, _token, _engine, onCreated) => {
+      const allocation = { name, destroy: vi.fn(async () => {}),
+        request: vi.fn(async (operation: string) => {
+          if (operation === "/profile/import") throw new Error("Import succeeded but its response was lost");
+          throw new Error("Profile export unavailable");
+        }),
+      };
+      h.allocations.push(allocation); await onCreated?.(allocation); return allocation;
+    });
+    const result = await testNativeConnection(USER, "codex");
+    expect(result.passed).toBe(false);
+    expect(h.disconnect).toHaveBeenCalledWith(USER, "codex", expect.objectContaining({ leaseId: ORIGINAL_LEASE }));
+    expect(h.profile).toBeNull();
+    expect(h.current).toBeNull();
+    expect(h.allocations[0].request).toHaveBeenCalledWith("/profile/export", { engine: "codex" });
+    expect(h.allocations[0].destroy).toHaveBeenCalled();
+  });
+
+  it("recovers a renewed profile after a lost import response before destroying the sandbox", async () => {
+    h.create.mockImplementationOnce(async (name, _token, _engine, onCreated) => {
+      const allocation = { name, destroy: vi.fn(async () => { h.events.push("destroy:1"); }),
+        request: vi.fn(async (operation: string) => {
+          if (operation === "/profile/export") return profile("recovered");
+          throw new Error("Import succeeded but its response was lost");
+        }),
+      };
+      h.allocations.push(allocation); await onCreated?.(allocation); return allocation;
+    });
+    const result = await testNativeConnection(USER, "codex");
+    expect(result.passed).toBe(false);
+    expect(h.profile).toEqual(profile("recovered"));
+    expect(h.disconnect).not.toHaveBeenCalled();
+    expect(h.events.indexOf("profile:saved")).toBeLessThan(h.events.indexOf("destroy:1"));
+    expect(h.current).toBeNull();
+  });
+
   it("persists login once and reports completion after its runtime has been destroyed", async () => {
     h.profile = null; h.mode = "login";
     const login = await startNativeLogin(USER, "codex");

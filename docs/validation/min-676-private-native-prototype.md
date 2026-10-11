@@ -559,3 +559,41 @@ updated in all six locales; the obsolete provider screenshots were replaced by
 reviewed localized responsive diagrams and SVG fallbacks. Claude remains
 experimental and untested; no native provider run, remote migration or deployment
 was performed in this follow-up.
+
+## Final PR review (2026-10-11)
+
+PR #404 now describes the implemented subscription workers and account AI
+controls rather than the original feasibility-only delivery. The final code
+review covered credential custody and continuity, atomic commits, lease and
+allocation fencing, watchdog recovery, native runtime shutdown, guarded MCP
+tools, model selection and personal Numo preferences.
+
+The cold-sandbox validation endpoint marked credentials as imported only after
+receiving the import response. If the remote import succeeded but its response
+was lost, and profile export was unavailable, cleanup could release the lease
+while retaining the earlier, potentially rotated profile. Import is now marked
+uncertain before transport. Cleanup recovers and saves the exported profile
+before destruction when possible; otherwise it invalidates the connection and
+requires reconnection. A regression reproduced the retained-profile defect
+before the fix; two regressions cover both recoverable and unrecoverable exports.
+
+The full suite also exposed a stop-compatibility test timeout followed by an
+uninitialized import binding. Loading the worker-mediation module to cancel a
+question also loaded worker launch and run dependencies. Cancellation now lives
+in `lib/server/numo/worker-input-cancel.ts`, which depends only on the service
+client. Both worker and parent-turn stop paths use this lightweight module;
+their database scope and stop ordering remain unchanged. Existing stop and
+mediation regressions pass without loading the launch graph for cancellation.
+The reviewed database consumer inventory and encrypted-access allowlist were
+updated for the moved metadata-only writes.
+
+The seven native connection, worker, recovery, atomic profile, model, partial
+preference and Numo preference SQL suites passed against local Docker, with
+transaction rollback. This correction does not change public controls or the
+documented authentication contract, so the six public guides require no edits.
+No live provider session was used for this review. Claude remains experimental
+and live-untested, and natural wall-clock expiry remains unverified.
+
+Final local verification passed: 10,821 Vitest tests (113 existing skips), all
+seven Docker SQL suites, lint, typecheck, the agent VM build, encryption schema
+and access audits, documentation, knowledge, owned-English and whitespace checks.

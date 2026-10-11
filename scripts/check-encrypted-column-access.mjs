@@ -141,6 +141,7 @@ const rules = [
     access: /\.\s*from\s*\(\s*["'`]agent_run_input_requests["'`]\s*\)/,
     allowed: new Set(["app/api/assistant/conversations/[id]/status/route.ts",
       "lib/server/numo/worker-mediation.ts",
+      "lib/server/numo/worker-input-cancel.ts",
       "lib/server/encryption/agent-queue-backfill.ts"]),
   },
   {

@@ -10290,52 +10290,52 @@
     "storage": false
   },
   {
-    "file": "lib/server/numo/worker-mediation.ts",
+    "file": "lib/server/numo/worker-input-cancel.ts",
     "operation": "from",
     "resource": "agent_run_input_requests",
-    "line": 41,
+    "line": 7,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/worker-input-cancel.ts",
+    "operation": "from",
+    "resource": "agent_run_input_requests",
+    "line": 14,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "from",
     "resource": "agent_run_input_requests",
-    "line": 48,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/worker-mediation.ts",
-    "operation": "from",
-    "resource": "agent_run_input_requests",
-    "line": 98,
+    "line": 84,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "rpc",
     "resource": "resume_numo_worker_input",
-    "line": 116,
+    "line": 102,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 167,
+    "line": 153,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "rpc",
     "resource": "steer_numo_worker",
-    "line": 192,
+    "line": 178,
     "storage": false
   },
   {
     "file": "lib/server/numo/worker-mediation.ts",
     "operation": "from",
     "resource": "agent_runs",
-    "line": 332,
+    "line": 318,
     "storage": false
   },
   {
