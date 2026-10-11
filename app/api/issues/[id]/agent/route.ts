@@ -44,7 +44,7 @@ export const runtime = "nodejs";
 // to decide visibility. The service-key query needs them before it can return a
 // safe public response.
 const RUN_COLUMNS =
-  "id, project_id, conversation_id, parent_numo_turn_id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
+  "id, project_id, conversation_id, parent_numo_turn_id, status, model, agent_engine, model_forced, reasoning_level, native_reasoning_effort, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

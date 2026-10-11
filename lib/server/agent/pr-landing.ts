@@ -604,6 +604,8 @@ export async function openPullRequestAfterPush(
         : "local"
       : "cloud",
     reasoningLevel: run.reasoning_level,
+    ...((run.agent_engine === "codex" || run.agent_engine === "claude_code")
+      ? { nativeReasoningEffort: run.native_reasoning_effort ?? null } : {}),
     issueIdentifier: issue?.identifier,
   });
   const prBody = `${body?.trim() || prTitle}\n\n---\n${footer}`;

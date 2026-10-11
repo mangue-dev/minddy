@@ -1,4 +1,6 @@
 import "server-only";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { abortNativeWorkerConnection, releaseNativeWorkerConnection, getNativeWorkerCleanupLease } from "./native-worker-connections";
 
 import { randomUUID } from "node:crypto";
 
@@ -75,7 +77,7 @@ export async function reapIdleSandboxes(
   const cutoff = new Date(Date.now() - SANDBOX_IDLE_REAP_MS).toISOString();
   const { data } = await service
     .from("agent_runs")
-    .select("id, sandbox_id, provider_key_id")
+    .select("id, sandbox_id, provider_key_id, agent_engine")
     .in("status", RESTING_STATUSES)
     .not("sandbox_id", "is", null)
     .is("sandbox_stopped_at", null)
@@ -86,6 +88,7 @@ export async function reapIdleSandboxes(
     id: string;
     sandbox_id: string | null;
     provider_key_id: string | null;
+    agent_engine?: string;
   }>;
   let reaped = 0;
   for (const row of rows) {
@@ -109,7 +112,12 @@ export async function reapIdleSandboxes(
       .maybeSingle();
     if (!claimed) continue; // resumption/competing activity → we leave the VM alone
     try {
-      await stopSandboxByName(row.sandbox_id);
+      if (isNativeAgentEngine(row.agent_engine)) {
+        const lease = await getNativeWorkerCleanupLease(row.id, row.sandbox_id);
+        if (lease) await releaseNativeWorkerConnection(row.id, { stopped: true }, lease);
+      } else {
+        await stopSandboxByName(row.sandbox_id);
+      }
     // VM first, key second: in that order, a revocation that fails
     // leaves a capped key without a machine to use it. The reverse order
     // would open a window where the VM is still running with a dead key, and that's it
@@ -212,7 +220,7 @@ export async function reapDeadVmRuns(
   const { data } = await service
     .from("agent_runs")
     .select(
-      "id, sandbox_id, sandbox_billing, loop_command_id, local_exec, created_by, project_id, issue_id, conversation_id, provider_key_id, run_id, routine_id, parent_numo_conversation_id, parent_numo_turn_id, continuations, started_at, last_activity_at, cost_usd",
+      "id, agent_engine, sandbox_id, sandbox_billing, loop_command_id, local_exec, created_by, project_id, issue_id, conversation_id, provider_key_id, run_id, routine_id, parent_numo_conversation_id, parent_numo_turn_id, continuations, started_at, last_activity_at, cost_usd, sandbox_reap_claim",
     )
     .eq("status", "running")
     .lt("last_activity_at", cutoff)
@@ -228,6 +236,7 @@ export async function reapDeadVmRuns(
     issue_id: string | null;
     conversation_id: string;
     provider_key_id: string | null;
+    agent_engine?: string;
     run_id: string | null;
     routine_id: string | null;
     parent_numo_turn_id: string | null;
@@ -236,6 +245,7 @@ export async function reapDeadVmRuns(
     started_at: string | null;
     last_activity_at: string | null;
     cost_usd: number;
+    sandbox_reap_claim?: string | null;
   }>;
 
   /**
@@ -267,8 +277,10 @@ export async function reapDeadVmRuns(
 
   let reaped = 0;
   for (const { row, alive } of verdicts) {
-    if (alive === true) continue; // the process lives: we don’t touch anything.
-    if (alive === null) {
+    const native = isNativeAgentEngine(row.agent_engine);
+    const recovering = native && Boolean(row.sandbox_reap_claim);
+    if (!recovering && alive === true) continue;
+    if (!recovering && alive === null) {
       /**
        * A cloud run has two independent signals: the supervisor heartbeat and
        * the Sandbox command probe. Repeated loss of both reaches the shorter
@@ -288,26 +300,24 @@ export async function reapDeadVmRuns(
       if (!lost) continue;
     }
 
-    /**
-     * STAMP FIRST, THREAD THEN — the reverse order of the original, and
-     * it's a production lesson.
-     *
-     * The argument before was: "if the stamp fails behind, the user
-     * will still have read why for his turn stopped.” But the only way
-     * this stamp fails is by keeping it `status in ('running')`, that is:
-     * **someone finished this run in the meantime**. The round then didn't stop
-     * at all — it just ended. So we wrote a failure message
-     * in a conversation that ended well, and that's what we read
-     * on the run of PR 51.
-     *
-     * What we lose is a case that doesn't exist: a refused stamp left, in
-     * the old order, an orphan error; in this one, the following passage of the
-     * drain will see the run again if it really remained `running`.
-     *
-     * The CHECKPOINT IS NOT TOUCHED: the one at the base is the last
-     * saved periodically by the loop, at a boundary of safe round.
-     * This is exactly what the next round should start from.
-     */
+    let recoveryClaim: string | null = null;
+    if (native) {
+      // The atomic claim rejects a refreshed snapshot, fences native execution
+      // and reserves /rest before any profile invalidation or physical cleanup.
+      // A retained claim is retryable after a crash or uncertain provider stop.
+      const { data: claim, error: claimError } = await service.rpc("claim_native_worker_recovery", {
+        p_run_id: row.id, p_started_at: row.started_at,
+        p_last_activity_at: row.last_activity_at, p_loop_command_id: row.loop_command_id,
+        p_sandbox_name: row.sandbox_id, p_claim_id: randomUUID(),
+      });
+      if (claimError) throw new Error("Unable to claim native worker recovery");
+      if (typeof claim !== "string" || !claim) continue;
+      recoveryClaim = claim;
+      const lease = row.sandbox_id ? await getNativeWorkerCleanupLease(row.id, row.sandbox_id) : null;
+      if (lease) await abortNativeWorkerConnection(row.id, lease);
+    }
+    // Publish failure only after native physical cleanup is confirmed. On an
+    // exception, leave the durable claim for the next watchdog/lease sweep.
     const stamped = await stampRun(
       row.id,
       {
@@ -318,6 +328,7 @@ export async function reapDeadVmRuns(
         last_activity_at: new Date().toISOString(),
         interrupt_requested: false,
         loop_command_id: null,
+        ...(native ? { sandbox_reap_claim: null, sandbox_reap_claimed_at: null } : {}),
       },
       {
         expected: {
@@ -325,6 +336,7 @@ export async function reapDeadVmRuns(
           last_activity_at: row.last_activity_at,
           loop_command_id: row.loop_command_id,
           sandbox_id: row.sandbox_id,
+          ...(native ? { sandbox_reap_claim: recoveryClaim } : {}),
         },
       },
     );

@@ -27,6 +27,7 @@ const h = vi.hoisted(() => ({
   fetchModelIndex: vi.fn(),
   recordAiUsage: vi.fn(),
   deliverAgentDelegationResult: vi.fn(),
+  buildAccountWorkerContext: vi.fn(),
 }));
 
 function queryFor(table: string) {
@@ -146,6 +147,9 @@ const service = {
 } as unknown as SupabaseClient;
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
+vi.mock("@/lib/server/assistant/account-worker-context", () => ({
+  buildAccountWorkerContext: (...args: unknown[]) => h.buildAccountWorkerContext(...args),
+}));
 vi.mock("@/lib/server/ai-provider-request", () => ({
   fetchAiProviderBytes: (...args: unknown[]) => h.fetchModelIndex(...args),
 }));
@@ -283,6 +287,8 @@ beforeEach(() => {
   h.fetchModelIndex.mockRejectedValue(new Error("Catalog unavailable"));
   h.recordAiUsage.mockReset();
   h.deliverAgentDelegationResult.mockReset();
+  h.buildAccountWorkerContext.mockReset();
+  h.buildAccountWorkerContext.mockResolvedValue('\n## Account code-worker selection\n{"selected_engine":"codex","engine_name":"Codex"}');
   vi.mocked(resolveAiRuntime).mockResolvedValue(runtime as never);
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
@@ -304,6 +310,12 @@ describe("durable Numo execution", () => {
     expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_help"]);
     expect(context).toMatchObject({ documentationHelp: true, userId: h.turn.user_id });
     expect(resolveAiRuntime).toHaveBeenCalledWith(expect.objectContaining({ managedOnly: true }));
+    expect(h.buildAccountWorkerContext).not.toHaveBeenCalled();
+  });
+  it("injects current account worker identity before the first ordinary Numo response", async () => {
+    await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime });
+    expect(h.buildAccountWorkerContext).toHaveBeenCalledWith(h.turn!.user_id);
+    expect(h.processChat.mock.calls[0][0][0].content).toContain('"selected_engine":"codex"');
   });
   it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
     let releaseCatalog!: () => void;
@@ -531,7 +543,7 @@ describe("durable Numo execution", () => {
       phase: "worker_result",
       worker_event: {
         type: "worker_completed",
-        payload: { status: "completed", outcome: "Tests pass" },
+        payload: { status: "completed", outcome: "Tests pass", agent_engine: "claude_code" },
       },
     });
     await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
@@ -541,6 +553,12 @@ describe("durable Numo execution", () => {
     expect(prompt).toContain("worker_completed");
     expect(prompt).toContain('\\"status\\":\\"completed\\"');
     expect(prompt).toContain("Tests pass");
+    expect(prompt).toContain("Frozen worker harness");
+    expect(prompt).toContain('\\"selected_engine\\":\\"codex\\"');
+    expect(prompt).toContain('\\"engine\\":\\"claude_code\\"');
+    expect(prompt).toContain('\\"engine_name\\":\\"Claude Code\\"');
+    expect(prompt).toContain('\\"subagents\\":false');
+    expect(prompt).toContain("Paid Claude execution has not been validated");
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
   });
 
@@ -552,6 +570,7 @@ describe("durable Numo execution", () => {
         worker_event: {
           type: "worker_input",
           payload: {
+            agent_engine: "codex",
             result: {
               version: 1,
               status: "needs_input",

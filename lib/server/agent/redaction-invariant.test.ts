@@ -6,39 +6,22 @@ import { describe, expect, it } from "vitest";
 import { LIVE_AGENT_ENGINES, type LiveAgentEngine } from "@/lib/agent-engines";
 import { redactDeep, SecretRedactor } from "./redact";
 
-/**
- * MIN-328 — THE SUBSTITUTION OF SECRETS, ENGINE BY ENGINE.
- *
- * The invariant of MIN-239 is in one sentence: **the forge token does not reach
- * never the model, and never enter into what we persist**. It was true
- * when there was only one harness — the homemade buckle made each
- * message `role:"tool"` and substituted it in passing. A second engine arrived,
- * it has become THE engine, and it executes its tools without going through us again:
- * the invariant remained written as a comment while the path it described
- * was no longer borrowed by anyone. Nobody saw it, because a secret that
- * passe ne casse rien.
- *
- * Hence this test, and its form: it iterates on `LIVE_AGENT_ENGINES`, the engines which
- * can still play a trick. AN MORE engine without entry into the table
- * below drops the sequel — it's exactly like that
- * that it has passed, and it is the only place in the depot that would notice it.
- *
- * Lexical rather than runtime, like [engine-wiring.test.ts](engine-wiring.test.ts):
- * These paths require a microVM, an opencode server, and a provider. THE
- * BEHAVIOR is proven elsewhere, on the real code — `llm-proxy.test.ts`
- * (the outgoing body), `supervisor.test.ts` (the pushed log), and this file
- * for depth substitution.
- */
+/** Every declared harness must protect provider output and persistent events. */
 
 function read(file: string): string {
   return readFileSync(join(__dirname, file), "utf8");
 }
 
 /** Which must be true, for each engine, on the path to the model. */
+const nativeChecks = [{ what: "native outputs are recursively redacted", file: "vm/native-supervisor.ts",
+  contains: "redactDeep" }, { what: "provider credentials are registered before invocation", file: "vm/native-supervisor.ts",
+  contains: "SecretRedactor" }];
 const CHECKS: Record<LiveAgentEngine, Array<{ what: string; file: string; contains: string }>> = {
+  codex: nativeChecks,
+  claude_code: nativeChecks,
   opencode: [
     {
-      what: "le corps sortant vers le fournisseur est substitué",
+      what: "outbound provider bodies are redacted",
       file: "vm/llm-proxy.ts",
       contains: "if (opts.redact) body = opts.redact(body)",
     },
@@ -46,29 +29,29 @@ const CHECKS: Record<LiveAgentEngine, Array<{ what: string; file: string; contai
       // The field alone, not the entire call: the call gained an option in MIN-357
       // (the key to the model on a local tour) and will win others. What we
       // guard here is that the register ARRIVES there, not the form of the day.
-      what: "le superviseur donne bien son registre au proxy",
+      what: "the supervisor shares its redactor with the proxy",
       file: "vm/supervisor.ts",
       contains: "redact: secrets.redact,",
     },
     {
-      what: "le journal poussé en base est substitué",
+      what: "persisted journals are redacted",
       file: "vm/supervisor.ts",
       contains: "redactDeep(raw, secrets.redact)",
     },
     {
-      what: "le fil d'events l'est en profondeur",
+      what: "event payloads are recursively redacted",
       file: "vm/supervisor.ts",
       contains: "return redactDeep(payload, secrets.redact)",
     },
   ],
 };
 
-describe("chaque moteur substitue les secrets avant le modèle", () => {
-  it("aucun moteur déclaré n'est laissé sans garde", () => {
+describe("every engine redacts secrets before model access", () => {
+  it("every declared engine has a redaction guard", () => {
     // The heart of the test: adding a motor without saying what protects it fails HERE,
     // with the name of the engine, rather than six months later in an audit.
     for (const engine of LIVE_AGENT_ENGINES) {
-      expect(CHECKS[engine], `le moteur "${engine}" n'a aucune garde déclarée`).toBeTruthy();
+      expect(CHECKS[engine], `engine "${engine}" has no declared guard`).toBeTruthy();
       expect(CHECKS[engine].length).toBeGreaterThan(0);
     }
   });
@@ -90,12 +73,12 @@ describe("chaque moteur substitue les secrets avant le modèle", () => {
  * (`{ part: { state: { output } } }`, share tables): the secret passed,
  * and persisted in `agent_run_events`, rereadable by any member of the project.
  */
-describe("la substitution descend dans les payloads imbriqués", () => {
+describe("redaction handles nested payloads", () => {
   const TOKEN = "ghs_16C7e42F292c6912E7710c838347Ae178B4a";
   const secrets = new SecretRedactor();
   secrets.add(TOKEN);
 
-  it("substitue à trois niveaux, tableaux compris", () => {
+  it("redacts three levels including arrays", () => {
     const out = redactDeep(
       {
         name: "bash",
@@ -116,7 +99,7 @@ describe("la substitution descend dans les payloads imbriqués", () => {
     });
   });
 
-  it("laisse passer ce qui n'est pas du texte", () => {
+  it("preserves non-text values", () => {
     const out = redactDeep({ n: 3, ok: true, nothing: null, when: undefined }, secrets.redact);
     expect(out).toEqual({ n: 3, ok: true, nothing: null, when: undefined });
   });

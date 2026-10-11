@@ -56,6 +56,7 @@ describe("unified Numo lifecycle boundary", () => {
 
   it("keeps voluntary product actions on the shared composer contract", () => {
     for (const file of [
+      "components/agent/agent-conversation.tsx",
       "components/feedback/feedback-setup-wizard.tsx",
       "components/global-board.tsx",
       "components/home/home-numo-composer.tsx",

@@ -8,6 +8,7 @@ import { decodePullRequestUrlRow } from "@/lib/server/agent/pull-request-url-con
 import { decodePullRequestContentRow } from "@/lib/server/agent/pull-request-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import type { AssistantMention } from "@/lib/assistant-types";
+import type { AgentEngine } from "@/lib/agent-engines";
 
 /**
  * GLOBAL list of code agent (Numo) conversations, all projects
@@ -46,6 +47,7 @@ interface RunRow {
   pull_request_id: string | null;
   status: AgentRunStatus;
   model: string | null;
+  agent_engine: AgentEngine | null;
   triggered_by: "button" | "chat" | "mention";
   prompt: string | null;
   prompt_mentions: AssistantMention[] | null;
@@ -95,6 +97,7 @@ export interface AgentSessionListItem {
   runId: string;
   status: AgentRunStatus;
   model: string | null;
+  agent_engine: AgentEngine | null;
   triggered_by: RunRow["triggered_by"];
   /**
    * The title written at launch by the small model (the title of the PR for a
@@ -145,7 +148,7 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  const baseColumns = "id, project_id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, triggered_by, prompt, prompt_mentions, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, encrypted_content, encryption_version, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)";
+  const baseColumns = "id, project_id, conversation_id, parent_numo_turn_id, issue_id, pull_request_id, status, model, agent_engine, triggered_by, prompt, prompt_mentions, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number), project:projects(id, key, name, encrypted_content, encryption_version, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)";
   const readRuns = (columns: string) => auth.supabase
     .from("agent_runs")
     .select(columns)
@@ -225,6 +228,7 @@ export async function GET(request: NextRequest) {
     runId: r.id,
     status: r.status,
     model: r.model,
+    agent_engine: r.agent_engine,
     triggered_by: r.triggered_by,
     // The title of the PR for a reread (she already has one written), otherwise
     // that of the titrator. Failing — run before `agent_runs.title`, or generation

@@ -10,8 +10,8 @@ function source(relativePath: string): string {
 describe("account worker model boundary", () => {
   it("funnels every Numo-delegated worker through the shared launcher", () => {
     const launch = source("lib/server/agent/launch.ts");
-    expect(launch).toContain("const resolved = await resolveAgentModel(input.userId);");
-    expect(launch).toContain("const reasoningLevel = await resolveReasoningLevel(input.userId);");
+    expect(launch).toContain("resolveAgentModel(input.userId)");
+    expect(launch).toMatch(/native\s*\?\s*"medium"(?:\s+as const)?\s*:\s*await resolveReasoningLevel\(input.userId\)/);
 
     expect(source("lib/server/assistant/execute-tool.ts"))
       .toContain("launchAgentRun({");

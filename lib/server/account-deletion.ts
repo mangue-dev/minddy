@@ -15,6 +15,7 @@ import { deleteSandboxByName } from "@/lib/server/agent/sandbox";
 import { agentSandboxName, legacyAgentSandboxName } from "@/lib/server/agent/network-policy";
 import { listScopedAgentRuns, type ErasableAgentRun } from "@/lib/server/agent/sandbox-erasure";
 import { eraseSandboxAllocations } from "@/lib/server/agent/sandbox-allocation";
+import { eraseNativePrototypeAccount } from "@/lib/server/agent/native-prototype/connections";
 import { revokeRunKeyStrict } from "@/lib/server/agent/run-key";
 import { decodeProjectName } from "@/lib/server/project-content";
 
@@ -171,9 +172,12 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
     p_user_id: userId,
   });
   if (fenceError || fenced !== true) throw new Error("Unable to fence Agent runs for account erasure");
+  // Native controllers must stop before the Auth cascade removes their encrypted
+  // control descriptors and user keys. Cleanup remains active when the pilot is disabled.
+  await eraseNativePrototypeAccount(userId);
   await eraseSandboxAllocations("account", userId);
 
-  // ── 1. Abonnement Stripe ────────────────────────────────────────────────
+  // ── 1. Stripe subscription ─────────────────────────────────────────────
   let subscriptionCanceled = false;
   const { data: billing } = await service
     .from("billing_accounts")
@@ -194,7 +198,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
     }
   }
 
-  // ── 2. Objets de stockage ───────────────────────────────────────────────
+  // ── 2. Storage objects ─────────────────────────────────────────────────
   // The `attachments` lines cascade with the project, the FILES do not: without
   // this passage they would remain in the bucket with nothing left to designate them.
   const ownedIds = await listAccountScopedIds(service, "projects", userId);
@@ -244,7 +248,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   }
 
   // Assistant chat uploads: no basic lines, only
-  // objets sous `chat/{user_id}/`.
+  // objects under `chat/{user_id}/`.
   const chatObjects = await listStoragePrefix(service, "attachments", `chat/${userId}`);
   removedStorageObjects += await removeObjects(service, "attachments", chatObjects, warnings);
 

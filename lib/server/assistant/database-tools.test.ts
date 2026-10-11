@@ -119,6 +119,34 @@ describe("code-worker launch diagnostics", () => {
         error: expect.stringContaining("usage limit") },
     });
   });
+
+  it.each(["codex", "claude_code"])("reports frozen %s adapter capabilities on a delegated worker", async (engine) => {
+    h.launch.mockResolvedValueOnce({ ok: true, run: { id: "native-run", agent_engine: engine,
+      conversation_id: "worker", status: "queued", model: `${engine}/fixture-model`,
+      native_reasoning_effort: "high", reasoning_level: null } });
+    const result = await executeTool("launch_code_agent", { prompt: "Inspect the repository" }, ctx);
+    expect(result).toMatchObject({ success: true, result: {
+      engine, model: `${engine}/fixture-model`, native_reasoning_effort: "high",
+      harness_capabilities: { funding: "subscription", modelSelection: "native_account_model",
+        minddyTools: true, subagents: false, nativeBuiltinTools: false, imageInput: false },
+      harness_description: expect.stringContaining("mediate questions"),
+    } });
+  });
+
+  it.each(["nativeConnectionRequired", "nativeAgentUnavailable"])("explains %s without suggesting automatic API fallback", async (error) => {
+    h.launch.mockResolvedValueOnce({ ok: false, error });
+    const result = await executeTool("launch_code_agent", { prompt: "Inspect the repository" }, ctx);
+    expect(result).toMatchObject({ success: false, result: { error_code: error, retryable: false,
+      error: expect.stringContaining("Do not switch harness, provider or payer automatically") } });
+    expect(h.launch).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a forged native engine override before launching", async () => {
+    expect(await executeTool("launch_code_agent", { engine: "codex", prompt: "Inspect" }, ctx)).toMatchObject({
+      success: false, result: { error: expect.stringContaining("cannot be overridden") },
+    });
+    expect(h.launch).not.toHaveBeenCalled();
+  });
 });
 
 describe("Numo database tool dispatch", () => {

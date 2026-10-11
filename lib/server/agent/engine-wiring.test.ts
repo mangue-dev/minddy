@@ -3,38 +3,17 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-/**
- * MIN-286 lot 3 — MOTOR WIRING, checked in SOURCE.
- *
- * Why lexically and not at runtime: the three points below live
- * on a path that requires a base, a microVM and a template
- * ([execute.ts](execute.ts), [vm/main.ts](vm/main.ts)) — the same reasoning as
- * [vm-launch.test.ts](vm-launch.test.ts), which similarly keeps an invariant
- * that the compiler will never see. Each of these three types perfectly en
- * being false, and each, false, makes the toggle lie rather than breaking it:
- *
- * 1. **The engine is written on the line, and the microVM with it.** The column
- * `loop_in_vm` is read by the watchdog (`reapDeadVmRuns` wants it true):
- * a line that would say `false` when playing in the VM would never be found
- * dead.
- * 2. **The function composes the opencode entry** — anchor and prompt — and
- * gathers the memory of the previous round since `agent_run_journal`.
- * 3. **`vm/main.ts` raises** rather than posting a round without its entry.
- *
- * Since the removal of the home loop (2026-08-14), there is no longer any engine
- * to choose: `agent_engine` remains written on the line to SAY who played a
- * run, it no longer decides anything.
- */
+/** Architectural guards supplement executable adapter and protocol tests. */
 
 function read(file: string): string {
   return readFileSync(join(__dirname, file), "utf8");
 }
 
-describe("createRun écrit le moteur du run, sans drapeau", () => {
+describe("createRun freezes the selected harness", () => {
   const source = read("runs.ts");
 
-  it("part sur opencode et l'inscrit sur la ligne", () => {
-    expect(source).toContain("const engine = AGENT_ENGINE");
+  it("defaults legacy runs to OpenCode and records the harness", () => {
+    expect(source).toContain("const engine = input.engine ?? AGENT_ENGINE");
     expect(source).toContain("agent_engine: engine");
     // No more list of projects to keep: a switch only one person
     // could operate is not worth the surface area it adds.
@@ -42,22 +21,22 @@ describe("createRun écrit le moteur du run, sans drapeau", () => {
     expect(source).not.toContain("loopInVmForProject");
   });
 
-  it("dit aussi que le run tourne dans la microVM", () => {
+  it("records hosted execution on each run", () => {
     // opencode ONLY runs there: its supervisor controls a server living next door
     // from the repository, there is no version in the function.
     expect(source).toContain("const loopInVm = true");
   });
 });
 
-describe("execute.ts passe le moteur et son entrée à la microVM", () => {
+describe("bootstrap passes the harness and input to the VM", () => {
   const source = read("execute.ts");
 
-  it("compose l'ancrage et le prompt du tour", () => {
+  it("composes the turn anchor and prompt", () => {
     expect(source).toContain("buildOpencodeAnchor({");
     expect(source).toContain("userPromptFromMessages(messages)");
   });
 
-  it("DIT au tour repris ce qu'il a perdu quand la boucle l'avait mené", () => {
+  it("describes unavailable legacy memory on resume", () => {
     // A conversation written by the home loop lives in `checkpoint.messages`,
     // and no one knows how to play it again. Resumed in silence, she would respond
     // the model has a message of which it does not see the context: the agent would seem
@@ -67,7 +46,7 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
     expect(source).toContain("priorConversationLost(run)");
   });
 
-  it("n'envoie plus de conversation du tout à la microVM", () => {
+  it("does not duplicate OpenCode conversation state", () => {
     // Opencode's history is its event log. A `messages` field
     // on the job would pay the ticket context twice, once in prompt and
     // once in conversation dead.
@@ -93,7 +72,7 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
   it("loads a bounded journal and cold-starts when it cannot be replayed", () => {
     expect(source).toContain("await loadRunJournal(run.id, journalPointer.sessionId)");
     expect(source).toContain("const priorMemoryUnavailable =");
-    expect(source).toContain("if (canResumeOpencode)");
+    expect(source).toContain("if (canResumeOpencode || canResumeNative)");
     expect(source).toContain(
       "...(opencodeJournal ? { opencode: opencodeJournal } : {})",
     );
@@ -104,7 +83,7 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
     // OVER the restored history — the agent would reread the initial instruction
     // as if she had just arrived. This is what `VmJob.opencodeInput` promises in
     // all letters (“`prompt` is empty on a RESUME round”).
-    expect(source).toContain("if (canResumeOpencode)");
+    expect(source).toContain("if (canResumeOpencode || canResumeNative)");
   });
 
   it("restores the trusted PR base when a resumed review needs a fresh checkout", () => {
@@ -119,22 +98,22 @@ describe("execute.ts passe le moteur et son entrée à la microVM", () => {
   });
 });
 
-describe("vm/main.ts ne connaît plus qu'un moteur", () => {
+describe("VM entrypoint dispatches the frozen harness", () => {
   const source = read("vm/main.ts");
 
-  it("appelle le superviseur, sans aiguillage", () => {
+  it("dispatches native and OpenCode supervisors", () => {
     expect(source).toContain("runOpencodeTurn");
-    // The switch left with the loop: no more `job.engine`, no more
-    // second path to maintain in the microVM.
-    expect(source).not.toContain("job.engine");
+    // Legacy jobs default to OpenCode; native jobs explicitly select their adapter.
+    expect(source).toContain("isNativeAgentEngine(job.engine)");
+    expect(source).toContain("runNativeTurn(job");
     expect(source).not.toContain("runVmTurn");
   });
 
-  it("lève plutôt que de poster un tour vide", () => {
+  it("rejects missing OpenCode turn input", () => {
     expect(source).toContain("job carries no opencodeInput");
     // The global `try` of `main` makes it an error report: this can be seen in the
-    // fil, au lieu d'un tour qui tourne sans savoir ce qu'on lui demande.
-    expect(source).toContain("report = await runOpencodeTurnHere");
+    // thread instead of starting a turn without instructions.
+    expect(source).toContain("await runOpencodeTurnHere(job");
   });
 });
 

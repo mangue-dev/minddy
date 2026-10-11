@@ -57,6 +57,7 @@ const service = vi.hoisted(() => {
   };
 
   const deleteUser = vi.fn(async () => ({ error: null }));
+  const nativeErase = vi.fn(async (_userId: string) => {});
   const rpc = vi.fn(async (name: string) => ({ data: name === "revoke_agent_sandbox_allocations" ? [] : true, error: null }));
 
   const client = {
@@ -97,7 +98,7 @@ const service = vi.hoisted(() => {
     auth: { admin: { deleteUser } },
   };
 
-  return { client, removed, objects, tables, deleteUser, rpc };
+  return { client, removed, objects, tables, deleteUser, rpc, nativeErase };
 });
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -111,6 +112,10 @@ vi.mock("@/lib/server/stripe", () => ({
 
 vi.mock("@/lib/server/page-files", () => ({
   pageFilePathsForProjects: async () => [] as string[],
+}));
+
+vi.mock("@/lib/server/agent/native-prototype/connections", () => ({
+  eraseNativePrototypeAccount: service.nativeErase,
 }));
 
 const { deleteAccount } = await import("./account-deletion");
@@ -129,6 +134,8 @@ beforeEach(() => {
   for (const key of Object.keys(service.tables)) delete service.tables[key];
   service.deleteUser.mockClear();
   service.rpc.mockClear();
+  service.nativeErase.mockReset();
+  service.nativeErase.mockResolvedValue(undefined);
 
   service.tables.projects = [{ id: PROJECT }];
   service.tables.attachments = [{ storage_path: `projects/${PROJECT}/a/note.pdf` }];
@@ -296,5 +303,25 @@ describe("deleteAccount storage cleanup", () => {
   it("deletes the auth account after storage cleanup", async () => {
     await deleteAccount(USER);
     expect(service.deleteUser).toHaveBeenCalledWith(USER);
+  });
+
+  it("stops native subscription runtimes after the committed fence and before deleting Auth keys", async () => {
+    await deleteAccount(USER);
+    expect(service.rpc.mock.calls[0][0]).toBe("begin_agent_account_erasure");
+    expect(service.nativeErase).toHaveBeenCalledWith(USER);
+    expect(service.rpc.mock.invocationCallOrder[0]).toBeLessThan(service.nativeErase.mock.invocationCallOrder[0]);
+    expect(service.nativeErase.mock.invocationCallOrder[0]).toBeLessThan(service.deleteUser.mock.invocationCallOrder[0]);
+  });
+
+  it("retains the account and control descriptors when a native runtime cannot be stopped", async () => {
+    service.nativeErase.mockRejectedValueOnce(new Error("Native sandbox stop is unconfirmed"));
+    await expect(deleteAccount(USER)).rejects.toThrow("stop is unconfirmed");
+    expect(service.rpc.mock.calls[0][0]).toBe("begin_agent_account_erasure");
+    expect(service.deleteUser).not.toHaveBeenCalled();
+    expect(service.removed).toEqual([]);
+
+    await deleteAccount(USER);
+    expect(service.nativeErase).toHaveBeenCalledTimes(2);
+    expect(service.deleteUser).toHaveBeenCalledTimes(1);
   });
 });

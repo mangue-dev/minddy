@@ -44,6 +44,8 @@ import {
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
+import { workerHarnessContext } from "@/lib/server/assistant/worker-harness-context";
+import { buildAccountWorkerContext } from "@/lib/server/assistant/account-worker-context";
 import { cancelStoppedTurnWorkerInputs } from "@/lib/server/numo/worker-mediation";
 import {
   AmbiguousToolExecutionError,
@@ -584,6 +586,7 @@ async function buildExecutionInput(input: {
   } else {
     systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
   }
+  if (!intent.documentation) systemPrompt += await buildAccountWorkerContext(turn.user_id);
   if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
   if (intent.automation) {
     const operation = intent.automation;
@@ -603,7 +606,7 @@ async function buildExecutionInput(input: {
     systemPrompt += `\n## Routine occurrence
 - This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
 - Complete the routine instruction as a Numo conversation. Use Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work that does not require a repository.
-- Delegate with launch_code_agent only when repository inspection or code changes are actually necessary. The worker uses the owner's current Account code model; never ask for or choose a routine-specific worker model.
+- Delegate with launch_code_agent only when repository inspection or code changes are actually necessary. The worker uses the owner's selected Account engine and its API or connected subscription defaults; never ask for or choose a routine-specific worker engine or model.
 - If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.
 - When the instruction requests a pull request, set requires_pull_request: true and authorize manage_pull_request in the worker brief. Treat missing PR artifacts or partial worker results as incomplete delivery; finish the work or explain the concrete failure in the occurrence result.
 - A delegated worker result is intermediate. Interpret it and finish the occurrence in this conversation.`;
@@ -709,6 +712,7 @@ async function buildExecutionInput(input: {
   let workerInput: WorkerInputCorrelation | undefined;
   if (workerEvent) {
     const durableResult = workerDelegationResult(workerEvent);
+    const harness = workerHarnessContext({ agent_engine: workerEvent.payload.agent_engine });
     const request = durableResult.inputRequest;
     if (durableResult.status === "needs_input" && request) {
       workerInput = {
@@ -720,8 +724,8 @@ async function buildExecutionInput(input: {
     messages.push({
       role: "system",
       content: workerInput
-        ? `[Validated durable code-worker input request]\n${JSON.stringify(durableResult)}\nYou alone mediate this worker's interaction with the user. If the parent conversation already determines a reliable answer, call answer_code_worker with the exact supplied identifiers and a self-contained answer. Otherwise call ask_user with the minimum blocking questions; never expose or refer the user to a separate worker conversation. Do not present this as the final result while the worker is waiting.`
-        : `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer.`,
+        ? `[Validated durable code-worker input request]\n${JSON.stringify(durableResult)}\n[Frozen worker harness]\n${JSON.stringify(harness)}\nYou alone mediate this worker's interaction with the user. If the parent conversation already determines a reliable answer, call answer_code_worker with the exact supplied identifiers and a self-contained answer. Otherwise call ask_user with the minimum blocking questions; never expose or refer the user to a separate worker conversation. Do not present this as the final result while the worker is waiting. Respect these frozen adapter capabilities; do not promise unavailable native built-ins, images or subagents.`
+        : `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\n[Frozen worker harness]\n${JSON.stringify(harness)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer. Respect these frozen adapter capabilities; do not promise unavailable native built-ins, images or subagents.`,
     });
   }
 

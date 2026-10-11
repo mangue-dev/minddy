@@ -1,19 +1,19 @@
 "use client";
 
-import {useState} from "react";
+import {useState, type ReactNode} from "react";
 import {useLocale, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
-import {Badge, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, toast} from "mangue-ui";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue, toast} from "mangue-ui";
 
 import {SettingsEmpty, SettingsGroup, SettingsRow} from "./settings-ui";
-import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
+import {SETTINGS_SECTIONS, settingsSectionAnchor} from "@/lib/settings-sections";
 import {saveAgentPreferencesApi} from "@/lib/agent-keys-api";
 import {agentPreferencesQueryKey, useAgentPreferencesQuery} from "@/lib/use-agent-preferences-query";
 import {isSandboxRegion, isSandboxSize, SANDBOX_RESOURCES, SANDBOX_SIZES, sandboxUsagePercentPerHour} from "@/lib/agent-sandbox-config";
 import type {SandboxPreferences} from "@/lib/agent-sandbox-config";
 import {useBillingSummary} from "@/lib/use-billing-query";
 
-export function AccountSandboxSection() {
+export function AccountSandboxSection({ embedded = false }: { embedded?: boolean } = {}) {
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
   const locale = useLocale();
@@ -41,12 +41,7 @@ export function AccountSandboxSection() {
     }
   };
 
-  return (
-    <SettingsGroup
-      anchor={SETTINGS_SECTIONS.accountSandbox}
-      title={t("sandboxTitle")}
-      action={<Badge variant="secondary">{t("sandboxExperimental")}</Badge>}
-    >
+  const body: ReactNode = (<>
       {loading ? <SettingsEmpty>{tc("loading")}</SettingsEmpty> : error ? (
         <SettingsEmpty>{t("sandboxLoadError")}</SettingsEmpty>
       ) : (
@@ -101,6 +96,10 @@ export function AccountSandboxSection() {
           </SettingsRow>
         </>
       )}
-    </SettingsGroup>
-  );
+  </>);
+  if (embedded) return <div id={settingsSectionAnchor(SETTINGS_SECTIONS.accountSandbox)} className="scroll-mt-20 pt-4">
+    <h3 className="pb-1 text-sm font-medium">{t("sandboxTitle")}</h3>
+    {body}
+  </div>;
+  return <SettingsGroup anchor={SETTINGS_SECTIONS.accountSandbox} title={t("sandboxTitle")}>{body}</SettingsGroup>;
 }

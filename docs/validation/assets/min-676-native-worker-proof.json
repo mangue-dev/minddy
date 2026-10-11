@@ -1,0 +1,56 @@
+{
+  "recordedAt": "2026-10-10T17:51:03.348486+00:00",
+  "codexVersion": "0.162.1",
+  "claudeCodeVersion": "2.1.296",
+  "database": "isolated local Docker Supabase",
+  "transport": "private SDK mailbox to the actual owner-scoped Minddy handler",
+  "distinctAllocations": true,
+  "turns": [
+    {
+      "status": "completed",
+      "nativeAuthExportReady": true,
+      "calls": 1,
+      "successfulCalls": 1,
+      "writeObserved": true,
+      "readObserved": true,
+      "commandObserved": true,
+      "fileMatches": true,
+      "markerMatches": true,
+      "checkpointEngine": "codex",
+      "checkpointHistoryCount": 2,
+      "costUsd": 0,
+      "sandboxMs": 26873,
+      "allocationDestroyed": true
+    },
+    {
+      "status": "completed",
+      "nativeAuthExportReady": true,
+      "calls": 1,
+      "successfulCalls": 1,
+      "writeObserved": true,
+      "readObserved": true,
+      "commandObserved": true,
+      "fileMatches": true,
+      "markerMatches": true,
+      "checkpointEngine": "codex",
+      "checkpointHistoryCount": 2,
+      "costUsd": 0,
+      "sandboxMs": 27778,
+      "allocationDestroyed": true
+    }
+  ],
+  "finalVault": {
+    "status": "connected",
+    "generation": 2,
+    "revision": 84,
+    "format": 3,
+    "leaseCleared": true,
+    "runtimeCleared": true
+  },
+  "ledger": {
+    "sandboxComputeRows": 2,
+    "apiInferenceRows": 0
+  },
+  "claudePaidExecutionValidated": false,
+  "uiToPullRequestValidated": false
+}

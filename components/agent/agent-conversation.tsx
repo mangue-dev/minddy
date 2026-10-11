@@ -23,6 +23,7 @@ import { AskUserCard } from "@/components/assistant/ask-user-card";
 import { parseAskUserQuestions, type AskUserQuestion } from "@/lib/ask-user";
 import { unechoedMessages } from "@/lib/agent-pending";
 import {
+  ApiError,
   heartbeatAgentRunApi,
   interruptAgentRunApi,
   isAgentRunActive,
@@ -43,6 +44,9 @@ import {
 } from "@/lib/use-agent-runs";
 import { useAgentErrorMessage } from "@/lib/use-agent-error-message";
 import { ModelBadge } from "@/components/model-badge";
+import { AgentEngineBadge } from "./agent-engine-badge";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { agentEngineDisplay } from "@/lib/agent-engine-display";
 import { ModelCombobox } from "./model-combobox";
 import { ReasoningCombobox } from "./reasoning-combobox";
 import { useAgentRunLocalDiff } from "@/lib/use-agent-run-live";
@@ -56,7 +60,7 @@ import { AgentDiffSheet } from "./agent-diff-sheet";
 import { AgentActivityPill } from "./agent-activity-pill";
 import { turnSubagents } from "@/lib/agent-subagents";
 import { livePlan } from "@/lib/agent-plan";
-import { useSuppressAssistantFab } from "@/lib/assistant-panel-context";
+import { useAssistantPanelActions, useSuppressAssistantFab } from "@/lib/assistant-panel-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
@@ -123,6 +127,7 @@ export function AgentConversation({
   headerActions?: ReactNode;
 }) {
   const t = useTranslations("Agent");
+  const tNativeModels = useTranslations("NativeAgentModels");
   const tToolCall = useTranslations("ToolCall");
   const queryClient = useQueryClient();
   const { mentionables, links, onMentionQuery } =
@@ -166,6 +171,7 @@ export function AgentConversation({
   // Explicitly open run: `initialRunId`, a run chosen from the history,
   // or the one we just launched. `null` → we fall back on the ACTIVE run of the outcome.
   const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
+  const { openIntent } = useAssistantPanelActions();
   // Messages sent for which the server echo has not yet arrived (optimistic bubbles).
   const [pendingMessages, setPendingMessages] = useState<
     Array<{ id: string; text: string; mentions: AssistantMention[] }>
@@ -535,6 +541,19 @@ export function AgentConversation({
         const i = p.findIndex((message) => message.id === messageId);
         return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)];
       });
+      if (err instanceof ApiError && err.code === "nativeContinuationRequiresNumo") {
+        openIntent({
+          source: "code_worker", action: "custom", projectId,
+          prompt: text, mentions, attachments,
+          pageContext: {
+            ...(projectId ? { projectId } : {}),
+            ...(issueId ? { issueId, issueIdentifier } : {}),
+            ...(liveRun.pull_request_id ? { pullRequestId: liveRun.pull_request_id } : {}),
+            codeWorkerRunId: liveRun.id,
+          },
+        });
+        return;
+      }
       toast.error(agentErrorMessage(err));
     }
   };
@@ -649,9 +668,15 @@ export function AgentConversation({
       <div className="flex h-full flex-col overflow-hidden">
         {/* Host title on the left and session actions on the shared 60 px line. */}
         <AppContentHeader contentClassName="gap-2">
-          {headerTitle ??
+          {headerTitle != null ? <div className="flex min-w-0 flex-1 items-center gap-2">
+            {headerTitle}
+            {liveRun && <AgentEngineBadge engine={liveRun.agent_engine} className="shrink-0" />}
+          </div> :
             (liveRun ? (
-              <ModelBadge model={liveRun.model} className="min-w-0 shrink" />
+              <span className="flex min-w-0 items-center gap-2">
+                <AgentEngineBadge engine={liveRun.agent_engine} />
+                {!isNativeAgentEngine(liveRun.agent_engine) && <ModelBadge model={liveRun.model} className="min-w-0 shrink" />}
+              </span>
             ) : (
               <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
                 <NumoIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -678,6 +703,7 @@ export function AgentConversation({
           {phase === "live" && liveRun ? (
             <AgentEventFeed
               runId={liveRun.id}
+              engine={liveRun.agent_engine}
               status={liveRun.status}
               stopping={stopping}
               prompt={liveRun.prompt}
@@ -757,6 +783,7 @@ export function AgentConversation({
                   ) : null}
                   <ChatInput
                     key={liveRun.id}
+                    hideAttach={isNativeAgentEngine(liveRun.agent_engine)}
                     onSend={(message, attachments, mentions) =>
                       void sendLive(message, attachments, mentions)
                     }
@@ -791,7 +818,15 @@ export function AgentConversation({
                             : t("pastRunPlaceholder")
                     }
                     leadingControls={
-                      <>
+                      isNativeAgentEngine(liveRun.agent_engine) ? <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
+                        <AgentEngineBadge engine={liveRun.agent_engine} />
+                        <span className="text-xs text-muted-foreground">{liveRun.model && !liveRun.model.endsWith("/default")
+                          ? t("nativeHarnessModel", { model: liveRun.model.slice(liveRun.agent_engine.length + 1) })
+                          : t("nativeHarnessDefault", { agent: agentEngineDisplay(liveRun.agent_engine).name! })}</span>
+                        <span className="text-xs text-muted-foreground">{t("nativeHarnessThinking", { level: liveRun.native_reasoning_effort
+                          ? tNativeModels(`effort_${liveRun.native_reasoning_effort}` as Parameters<typeof tNativeModels>[0])
+                          : tNativeModels("automatic") })}</span>
+                      </span> : <>
                         {/* Fixed model for the session: locked picker + tooltip. */}
                         <ModelCombobox
                           variant="compact"
@@ -818,6 +853,9 @@ export function AgentConversation({
                       </>
                     }
                   />
+                  {isNativeAgentEngine(liveRun.agent_engine) && <p className="px-3 pb-2 text-xs text-muted-foreground">
+                    {t("nativeHarnessInputHint", { agent: agentEngineDisplay(liveRun.agent_engine).name! })}
+                  </p>}
                 </div>
               ) : null}
             </div>

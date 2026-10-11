@@ -6,11 +6,15 @@ const h = vi.hoisted(() => ({
   getServiceClient: vi.fn(),
   drainAgentRuns: vi.fn(),
   drainNumoTurns: vi.fn(),
+  reapNativePrototypeConnections: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: h.getServiceClient }));
 vi.mock("@/lib/server/agent/drain", () => ({ drainAgentRuns: h.drainAgentRuns }));
 vi.mock("@/lib/server/numo/turns", () => ({ drainNumoTurns: h.drainNumoTurns }));
+vi.mock("@/lib/server/agent/native-prototype/connections", () => ({
+  reapNativePrototypeConnections: h.reapNativePrototypeConnections,
+}));
 
 import { GET } from "@/app/api/cron/agent-drain/route";
 import { GET as GET_NUMO } from "@/app/api/cron/numo-turns/route";
@@ -21,6 +25,7 @@ beforeEach(() => {
   h.getServiceClient.mockReset();
   h.drainAgentRuns.mockReset();
   h.drainNumoTurns.mockReset();
+  h.reapNativePrototypeConnections.mockReset().mockResolvedValue({ stopped: 0, pending: 0 });
 });
 
 describe("optional scheduler", () => {
@@ -48,6 +53,7 @@ describe("optional scheduler", () => {
     expect(response.status).toBe(401);
     expect(h.getServiceClient).not.toHaveBeenCalled();
     expect(h.drainAgentRuns).not.toHaveBeenCalled();
+    expect(h.reapNativePrototypeConnections).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -66,7 +72,33 @@ describe("optional scheduler", () => {
     expect(response.status).toBe(200);
     expect(h.getServiceClient).toHaveBeenCalledOnce();
     expect(h.drainAgentRuns).toHaveBeenCalledOnce();
+    expect(h.reapNativePrototypeConnections).toHaveBeenCalledOnce();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps queue draining available when native cleanup fails", async () => {
+    vi.stubEnv("CRON_SECRET", "x".repeat(32));
+    const service = {};
+    h.getServiceClient.mockReturnValue(service);
+    h.reapNativePrototypeConnections.mockRejectedValue(new Error("cleanup unavailable"));
+    h.drainAgentRuns.mockResolvedValue({ claimed: 1 });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      const response = await GET(new NextRequest("http://localhost/api/cron/agent-drain", {
+        method: "GET",
+        headers: { authorization: `Bearer ${"x".repeat(32)}` },
+      }));
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ok: true, claimed: 1, kicked: 0, stalled: 0 });
+      expect(h.reapNativePrototypeConnections).toHaveBeenCalledOnce();
+      expect(h.drainAgentRuns).toHaveBeenCalledWith(service, { budgetMs: 210_000 });
+      expect(error).toHaveBeenCalledWith("[agent-drain] native preview cleanup pending");
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
   });
 
   it("drains one durable Numo continuation with the cron secret", async () => {

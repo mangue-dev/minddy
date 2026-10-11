@@ -1546,7 +1546,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the automation preset with its start delay and per-effort switches, analytics consent, the code agent's default model, reasoning level, branch prefix and sandbox (region, size). Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, the automation preset with its start delay and per-effort switches, analytics consent, the code agent's selected engine, adapter capabilities, safe native connection status, OpenCode model and reasoning defaults, branch prefix and sandbox (region, size). Native credentials and login capabilities are never returned. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1555,7 +1555,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_account_settings",
       description:
-        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user. The code-worker model and reasoning are read-only here and can only be changed by the user in Account settings.",
+        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user. The code-agent engine, model and reasoning are read-only here and can only be changed by the user in Account settings.",
       parameters: {
         type: "object",
         properties: {
@@ -2188,7 +2188,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "launch_code_agent",
       description:
-        "Delegate a complete repository task to the code worker owned by this Numo turn, using the model and reasoning configured by the user in Account settings. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed — CODE work: writing files, pushing, rebasing, revising a branch, or a line-anchored review. Merging, renaming, commenting on or resolving the review conversations of a pull request is NOT repository work: those gestures go through merge_pull_request, update_pull_request, post_pull_request_comment and resolve_pull_request_threads directly. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Model and reasoning overrides are never accepted.",
+        "Delegate a complete repository task to the code worker owned by this Numo turn, using the engine selected by the user in Account settings. Read get_account_settings for adapter capabilities: OpenCode uses API model/reasoning preferences; native Codex or Claude Code uses the connected subscription and CLI defaults, with guarded Minddy MCP tools. Native built-in tools, images and subagents are unavailable; mediate questions through Numo. Authentication or subscription failures do not fall back to API billing. Launch results describe the frozen worker capabilities. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed — CODE work: writing files, pushing, rebasing, revising a branch, or a line-anchored review. Merging, renaming, commenting on or resolving the review conversations of a pull request is NOT repository work: those gestures go through merge_pull_request, update_pull_request, post_pull_request_comment and resolve_pull_request_threads directly. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Engine, model and reasoning overrides are never accepted.",
       parameters: {
         type: "object",
         properties: {
