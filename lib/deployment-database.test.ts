@@ -9,15 +9,22 @@ const env = {
 const paths = {
   "/rpc/auth_authorization_state": { post: {} },
   "/rpc/resolve_realtime_topic": { post: {} },
+  "/user_numo_preferences": { get: {} },
+};
+const definitions = {
+  user_numo_preferences: { properties: {
+    user_id: { type: "string" }, provider: { type: "string" },
+    model: { type: "string" }, updated_at: { type: "string" },
+  } },
 };
 
 describe("deployment database preflight", () => {
-  it("accepts the preceding schema while worker Stop uses its compatibility path", async () => {
-    await expect(checkDeploymentDatabase(env, vi.fn().mockResolvedValue(Response.json({ paths }))))
+  it("accepts the required schema without the optional worker Stop RPC", async () => {
+    await expect(checkDeploymentDatabase(env, vi.fn().mockResolvedValue(Response.json({ paths, definitions }))))
       .resolves.toBeUndefined();
   });
   it("checks the role-filtered schema without invoking application RPCs", async () => {
-    const fetcher = vi.fn().mockResolvedValue(Response.json({ paths }));
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ paths, definitions }));
     await checkDeploymentDatabase(env, fetcher);
     expect(fetcher).toHaveBeenCalledOnce();
     const [url, options] = fetcher.mock.calls[0];
@@ -38,7 +45,7 @@ describe("deployment database preflight", () => {
 
   it.each(Object.keys(paths))("blocks a deployment when %s is missing", async (missing) => {
     const present = Object.fromEntries(Object.entries(paths).filter(([key]) => key !== missing));
-    const fetcher = vi.fn().mockResolvedValue(Response.json({ paths: present }));
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ paths: present, definitions }));
     await expect(checkDeploymentDatabase(env, fetcher)).rejects.toThrow(missing);
   });
 
@@ -46,7 +53,7 @@ describe("deployment database preflight", () => {
     "rejects an incomplete schema: %j",
     async (schema) => {
       await expect(checkDeploymentDatabase(env, vi.fn().mockResolvedValue(Response.json(schema))))
-        .rejects.toThrow("missing required RPCs");
+        .rejects.toThrow("missing required schema entries");
     },
   );
 
