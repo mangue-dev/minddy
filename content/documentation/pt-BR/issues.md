@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-680)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -88,14 +88,17 @@
       "lib/export-api.ts",
       "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-680-file-preview.md",
+      "components/file-viewer.tsx",
+      "components/image-viewer.tsx"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 10,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
     "language": "agent:/root (pt-BR changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [
     "feedback",
@@ -141,7 +144,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado com título, descrição e propriedades que podem ser escolhidas manualmente.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -157,7 +160,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -173,7 +176,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -189,7 +192,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -205,7 +208,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -221,7 +224,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -237,7 +240,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -253,7 +256,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -269,7 +272,7 @@
       "src": "/documentation/pt-BR/work-bulk-actions.png",
       "alt": "Menu de ações para dois tickets de demonstração selecionados.",
       "caption": "O menu atua nos tickets selecionados. Nenhuma alteração em grupo foi enviada nesta captura.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -285,12 +288,29 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "issue-file-preview",
+      "kind": "screenshot",
+      "src": "/documentation/pt-BR/file-preview.png",
+      "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar e Remover.",
+      "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Remover.",
+      "revision": 10,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        1168,
+        808
       ],
       "theme": "light",
       "padding": 24,
@@ -307,7 +327,8 @@
     "implementation-plans-steps",
     "recurring-issues-steps",
     "bulk-issue-actions-steps",
-    "import-issues-workflow"
+    "import-issues-workflow",
+    "issue-file-preview"
   ]
 }
 ---
@@ -389,6 +410,10 @@ Confira os filtros se uma tarefa desaparecer depois de encerrada. Abra-a novamen
 Abra a linha do tempo da discussão do problema para adicionar um comentário. Explique uma decisão, pergunta ou resultado de verificação para que outro membro entenda o que mudou. Use menções quando precisar de uma pessoa ou objeto vinculado no contexto; as notificações ainda dependem das preferências do destinatário e da entrega no dispositivo.
 
 Anexe uma página relevante do projeto, um arquivo ou um link pelos controles de recursos. Uma página vinculada é um recurso atualizado: seu título acompanha renomeações e o conteúdo pode evoluir. Um arquivo é um anexo armazenado, não uma garantia de que uma URL externa continuará disponível.
+
+Clique em um recurso de arquivo compatível para abrir a prévia em toda a janela. Imagens, PDF, Markdown (`.md`), texto simples (`.txt`, `.text`), CSV e formatos de áudio ou vídeo compatíveis usam o mesmo visualizador. O Markdown recebe formatação, o texto permanece literal e o CSV abre como tabela com rolagem. Use Fechar ou Escape para voltar ao ticket. O menu Ações do arquivo (`…`) oferece Baixar e, quando você pode remover esse recurso, Remover. A remoção desvincula o recurso deste contexto. Os formatos não compatíveis mantêm a ação de download.
+
+![Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar e Remover.](/documentation/pt-BR/file-preview.png)
 
 ![Janela para adicionar um link com um endereço de contato de exemplo.](/documentation/pt-BR/work-resources.png)
 

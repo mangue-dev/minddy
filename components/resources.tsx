@@ -7,26 +7,22 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, AttachmentIcon, Cancel01Icon, File02Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/app-link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Button, Command, CommandEmpty, CommandInput, CommandItem, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  Input, Spinner, cn, useTheme,
+  Input, Spinner, cn,
 } from "mangue-ui";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EntityPill, type PillRadius } from "@/components/entity-pill";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
   attachmentPreviewKind,
-  isMarkdownFileName,
-  withAttachmentPreviewTheme,
-  type AttachmentPreviewKind,
 } from "@/lib/attachment-preview";
-import { Markdown } from "@/components/markdown";
+import { FileViewer } from "@/components/file-viewer";
 import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { flattenPageTree } from "@/lib/pages";
-import { formatFileSize } from "@/lib/page-files";
 import type { PendingResource } from "@/lib/use-attachment-uploads";
 import {
   Tooltip,
@@ -550,116 +546,6 @@ function ResourceFigure({ children }: { children: React.ReactNode }) {
   );
 }
 
-function MarkdownAttachmentPreview({ src }: { src: string }) {
-  const t = useTranslations("Resources");
-  const [content, setContent] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setContent(null);
-    setFailed(false);
-
-    void fetch(src, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("Markdown preview request failed");
-        return response.text();
-      })
-      .then((text) => {
-        if (!controller.signal.aborted) setContent(text);
-      })
-      .catch((error: unknown) => {
-        if (
-          controller.signal.aborted ||
-          (error instanceof Error && error.name === "AbortError")
-        ) {
-          return;
-        }
-        setFailed(true);
-      });
-
-    return () => controller.abort();
-  }, [src]);
-
-  if (failed) {
-    return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-        {t("previewFailed")}
-      </div>
-    );
-  }
-
-  if (content === null) {
-    return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-        {t("previewLoading")}
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full overflow-y-auto bg-background p-6 sm:p-8">
-      <Markdown breaks={false} className="mx-auto max-w-4xl">
-        {content}
-      </Markdown>
-    </div>
-  );
-}
-
-function AttachmentPreview({
-  kind,
-  src,
-  fileName,
-}: {
-  kind: AttachmentPreviewKind;
-  src: string;
-  fileName: string;
-}) {
-  const { resolvedTheme } = useTheme();
-  if (kind === "document" && isMarkdownFileName(fileName)) {
-    return <MarkdownAttachmentPreview src={src} />;
-  }
-
-  if (kind === "image") {
-    return (
-      // Storage file behind an authenticated response; next/image cannot optimize it.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={fileName}
-        loading="lazy"
-        decoding="async"
-        className="h-full w-full object-contain p-4"
-      />
-    );
-  }
-  if (kind === "audio") {
-    return (
-      <div className="flex h-full items-center justify-center p-6">
-        <audio src={src} controls className="w-full max-w-3xl" />
-      </div>
-    );
-  }
-  if (kind === "video") {
-    return (
-      <video
-        src={src}
-        controls
-        className="h-full w-full object-contain p-4"
-        aria-label={fileName}
-      />
-    );
-  }
-  return (
-    <iframe
-      src={withAttachmentPreviewTheme(src, resolvedTheme)}
-      title={fileName}
-      sandbox=""
-      className="h-full w-full border-0 bg-white"
-    />
-  );
-}
-
 /**
  * Common display for resources everywhere in the app — a file, a link and a
  * page read as the same chip, which is the whole point of the notion (MIN-184,
@@ -705,17 +591,12 @@ export function ResourcePills({
   ) => string;
 }) {
   const t = useTranslations("Resources");
-  const locale = useLocale();
   const [preview, setPreview] = useState<ResourceLike | null>(null);
 
   const done = resources ?? [];
   const inFlight = pending ?? [];
   if (done.length === 0 && inFlight.length === 0) return null;
 
-  const activePreviewKind = attachmentPreviewKind(
-    preview?.mime_type,
-    preview?.file_name,
-  );
   const activePreviewPath = preview?.storage_path ?? null;
   const activePreviewSrc =
     preview && activePreviewPath
@@ -852,6 +733,7 @@ export function ResourcePills({
                 <button
                   type="button"
                   onClick={() => setPreview(a)}
+                  aria-label={`${label}: ${fullName}`} aria-haspopup="dialog"
                   className="flex min-w-0 items-center gap-[inherit]"
                 >
                   {body}
@@ -927,57 +809,15 @@ export function ResourcePills({
           </EntityPill>
         ))}
 
-      <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="dialog-pane-mirror flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 -translate-x-0 -translate-y-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]">
-          <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5 pr-14">
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="truncate text-sm font-medium">
-                {preview?.file_name}
-              </DialogTitle>
-              {preview?.size_bytes != null && (
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {formatFileSize(preview.size_bytes, locale)}
-                </p>
-              )}
-            </div>
-            {preview && activePreviewPath && (
-              <div className="flex shrink-0 items-center gap-2">
-                <Button asChild size="sm" variant="outline">
-                  <a
-                    href={
-                      fileHref?.(preview, "download") ??
-                      attachmentFileUrl(activePreviewPath, true)
-                    }
-                  >
-                    {t("download")}
-                  </a>
-                </Button>
-                {onRemove && (canRemove?.(preview) ?? true) && (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => {
-                      onRemove(preview);
-                      setPreview(null);
-                    }}
-                  >
-                    {t("remove")}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden bg-muted/30">
-            {preview && activePreviewSrc && activePreviewKind && (
-              <AttachmentPreview
-                kind={activePreviewKind}
-                src={activePreviewSrc}
-                fileName={preview.file_name}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {preview && activePreviewSrc && activePreviewPath && <FileViewer
+        src={activePreviewSrc}
+        downloadHref={fileHref?.(preview, "download") ?? attachmentFileUrl(activePreviewPath, true)}
+        fileName={preview.file_name}
+        mimeType={preview.mime_type}
+        open
+        onOpenChange={open => { if (!open) setPreview(null); }}
+        onRemove={onRemove && (canRemove?.(preview) ?? true) ? () => onRemove(preview) : undefined}
+      />}
     </div>
   );
 }

@@ -311,6 +311,8 @@
     "back": "Torna alle impostazioni"
   },
   "Resources": {
+    "downloadFailed": "Impossibile scaricare questo file. Riprova.",
+    "actions": "Azioni del file",
     "attach": "Allegare file",
     "addFiles": "Aggiungi file",
     "add": "Aggiungi una risorsa",
@@ -2060,6 +2062,7 @@
     "deleteDescription": "Questa bozza verrà eliminata definitivamente."
   },
   "Pages": {
+    "filePreview": "Visualizza file",
     "placeholder": "Scrivi o digita '/' per i blocchi...",
     "slashNoResult": "Nessun blocco corrispondente",
     "blockParagraph": "Testo",

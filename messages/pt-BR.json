@@ -311,6 +311,8 @@
     "back": "Voltar às configurações"
   },
   "Resources": {
+    "downloadFailed": "Não foi possível baixar este arquivo. Tente novamente.",
+    "actions": "Ações do arquivo",
     "attach": "Anexar arquivos",
     "addFiles": "Adicionar arquivos",
     "add": "Adicionar um recurso",
@@ -2060,6 +2062,7 @@
     "deleteDescription": "Este rascunho será excluído permanentemente."
   },
   "Pages": {
+    "filePreview": "Visualizar arquivo",
     "placeholder": "Escreva ou digite '/' para blocos…",
     "slashNoResult": "Nenhum bloco correspondente",
     "blockParagraph": "Texto",

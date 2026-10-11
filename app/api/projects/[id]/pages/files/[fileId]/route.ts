@@ -10,7 +10,7 @@ type RouteContext = { params: Promise<{ id: string; fileId: string }> };
 
 /**
  * GET /api/projects/[id]/pages/files/[fileId] — the port for reading a file
- * (MIN-280). `?download=1` to save it rather than display it.
+ * (MIN-280). `?download=1` saves it; `?preview=1` uses the sandboxed reader.
  *
  * It is THIS URL which is stored in the document, and it is for this that it
  * must be stable and without secrets: it survives for months in a body, it
@@ -42,6 +42,17 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!file.storage_path.startsWith(`projects/${projectId}/pages/`)) return notFound;
 
   const download = request.nextUrl.searchParams.get("download") === "1";
+  if (!download && request.nextUrl.searchParams.get("preview") === "1") {
+    // Reuse the response-level sandbox and CSV renderer after the page access checks.
+    const target = new URL("/api/attachments/file", request.nextUrl);
+    target.searchParams.set("path", file.storage_path);
+    target.searchParams.set("preview", "1");
+    const theme = request.nextUrl.searchParams.get("theme");
+    if (theme === "light" || theme === "dark") target.searchParams.set("theme", theme);
+    const response = NextResponse.redirect(target, 302);
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
   const url = await signedAttachmentUrl(service, file.storage_path, {
     download: download ? file.file_name : false,
     // The type of the LINE is authentic here: it was deducted from the bytes when sending

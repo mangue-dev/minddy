@@ -311,6 +311,8 @@
     "back": "Volver a la configuración"
   },
   "Resources": {
+    "downloadFailed": "No se pudo descargar este archivo. Inténtalo de nuevo.",
+    "actions": "Acciones del archivo",
     "attach": "Adjuntar archivos",
     "addFiles": "Añadir archivos",
     "add": "Añadir un recurso",
@@ -2060,6 +2062,7 @@
     "deleteDescription": "Este borrador se eliminará permanentemente."
   },
   "Pages": {
+    "filePreview": "Ver archivo",
     "placeholder": "Escribe o pulsa '/' para ver los bloques…",
     "slashNoResult": "No hay bloques coincidentes",
     "blockParagraph": "Texto",

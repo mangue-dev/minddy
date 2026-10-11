@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   fileDownloadHref,
+  filePreviewHref,
   formatFileSize,
   normalizePageFileSrc,
   pageFileIdFromSrc,
@@ -27,7 +28,7 @@ import {
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const FILE = "11111111-1111-4111-8111-111111111111";
 
-describe("l'adresse d'un fichier de page", () => {
+describe("page file addresses", () => {
   it("round-trips in both directions", () => {
     const url = pageFileUrl(PROJECT, FILE);
     expect(pageFileIdFromSrc(url)).toBe(FILE);
@@ -52,7 +53,7 @@ describe("l'adresse d'un fichier de page", () => {
   it("recognizes itself even when given an ORIGIN", () => {
     // The real case (MIN-284): copying and pasting an image block goes through the
     // clipboard, which carries HTML, and Chrome absolutizes the `src` there. THE
-    // corps rangeait `http://localhost:3000/api/…` — l'image ne chargeait plus
+    // Stored absolute addresses stopped working when the document moved
     // out of the post which had stuck, and the scanning, which did not recognize it
     // more, was about to delete the file she named.
     for (const origin of ["http://localhost:3000", "https://www.minddy.app"]) {
@@ -133,7 +134,7 @@ describe("files cited by a body", () => {
 });
 
 describe("displayed size", () => {
-  it("se lit d'un coup d'œil", () => {
+  it("formats readable file sizes", () => {
     expect(formatFileSize(0)).toBe("");
     expect(formatFileSize(820)).toBe("820 B");
     expect(formatFileSize(1_400)).toBe("1.4 kB");
@@ -155,8 +156,21 @@ describe("fileDownloadHref", () => {
 
   it("leaves a signed URL INTACT (MIN-283)", () => {
     // It already has its disposition: a second `download` responds 400
-    // au storage — « querystring/download must be string ».
+    // from Storage: "querystring/download must be string".
     const signed = "https://xyz.supabase.co/storage/v1/object/sign/a.pdf?token=abc&download=rapport.pdf";
     expect(fileDownloadHref(signed)).toBe(signed);
+  });
+});
+
+describe("filePreviewHref", () => {
+  it("uses the sandboxed reader for stable private page URLs", () => {
+    const url = pageFileUrl(PROJECT, FILE);
+    expect(filePreviewHref(url)).toBe(`${url}?preview=1`);
+    expect(filePreviewHref(`https://minddy.app${url}`)).toBe(`${url}?preview=1`);
+  });
+
+  it("does not alter signed or external file dispositions", () => {
+    expect(filePreviewHref("https://storage.test/file.csv?token=abc&download=1")).toBeNull();
+    expect(filePreviewHref("javascript:alert(1)")).toBeNull();
   });
 });

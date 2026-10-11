@@ -311,6 +311,8 @@
     "back": "Zurück zu den Einstellungen"
   },
   "Resources": {
+    "downloadFailed": "Diese Datei konnte nicht heruntergeladen werden. Versuchen Sie es erneut.",
+    "actions": "Dateiaktionen",
     "attach": "Dateien anhängen",
     "addFiles": "Dateien hinzufügen",
     "add": "Ressource hinzufügen",
@@ -2060,6 +2062,7 @@
     "deleteDescription": "Dieser Entwurf wird endgültig gelöscht."
   },
   "Pages": {
+    "filePreview": "Datei anzeigen",
     "placeholder": "Schreiben oder „/“ für Blöcke eingeben…",
     "slashNoResult": "Kein passender Block",
     "blockParagraph": "Text",

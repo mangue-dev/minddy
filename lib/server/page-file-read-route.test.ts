@@ -90,20 +90,41 @@ describe("GET /api/projects/[id]/pages/files/[fileId]", () => {
     expect(signOptions().download).toBe("capture.png");
   });
 
-  it("refuses a stored path outside the authorized project namespace", async () => {
+  it("redirects previews to the authenticated sandbox and forwards a known theme", async () => {
+    const response = await GET(request("?preview=1&theme=dark"), params);
+    const url = new URL(response.headers.get("location")!);
+    expect(url.pathname).toBe("/api/attachments/file");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      path: `projects/${PROJECT}/pages/p/f/capture.png`, preview: "1", theme: "dark",
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(signedAttachmentUrl).not.toHaveBeenCalled();
+  });
+
+  it("lets explicit downloads take precedence over preview mode", async () => {
+    await GET(request("?preview=1&download=1"), params);
+    expect(signOptions().download).toBe("capture.png");
+  });
+
+  it("does not forward unrecognized preview themes", async () => {
+    const response = await GET(request("?preview=1&theme=unknown"), params);
+    expect(new URL(response.headers.get("location")!).searchParams.has("theme")).toBe(false);
+  });
+
+  it.each(["", "?preview=1"])("refuses a stored path outside the authorized project namespace with %s", async (query) => {
     getPageFilePath.mockResolvedValue({
       storage_path: "projects/ffffffff-ffff-4fff-8fff-ffffffffffff/pages/p/f/capture.png",
       file_name: "capture.png",
       mime_type: "image/png",
     });
-    const response = await GET(request(), params);
+    const response = await GET(request(query), params);
     expect(response.status).toBe(404);
     expect(signedAttachmentUrl).not.toHaveBeenCalled();
   });
 
-  it("ne dit rien d'un projet qui n'est pas le mien", async () => {
+  it.each(["", "?preview=1"])("hides files from users outside the project with %s", async (query) => {
     getProjectAccess.mockResolvedValue(null);
-    const response = await GET(request(), params);
+    const response = await GET(request(query), params);
     expect(response.status).toBe(404);
     expect(signedAttachmentUrl).not.toHaveBeenCalled();
   });

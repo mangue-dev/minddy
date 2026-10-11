@@ -311,6 +311,8 @@
     "back": "Back to settings"
   },
   "Resources": {
+    "downloadFailed": "Couldn’t download this file. Try again.",
+    "actions": "File actions",
     "attach": "Attach files",
     "addFiles": "Add files",
     "add": "Add a resource",
@@ -2060,6 +2062,7 @@
     "deleteDescription": "This draft will be permanently deleted."
   },
   "Pages": {
+    "filePreview": "Preview file",
     "placeholder": "Write, or type '/' for blocks…",
     "slashNoResult": "No matching block",
     "blockParagraph": "Text",

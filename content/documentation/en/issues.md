@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-680)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -88,14 +88,17 @@
       "lib/export-api.ts",
       "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-680-file-preview.md",
+      "components/file-viewer.tsx",
+      "components/image-viewer.tsx"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 10,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
     "language": "agent:/root (en changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [
     "feedback",
@@ -140,7 +143,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft with a localized title and description and manually available properties.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -156,7 +159,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -172,7 +175,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -188,7 +191,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -204,7 +207,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -220,7 +223,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -236,7 +239,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -252,7 +255,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -268,7 +271,7 @@
       "src": "/documentation/en/work-bulk-actions.png",
       "alt": "Action menu for two selected demonstration issues.",
       "caption": "The menu applies an action to the selected issues. No grouped change was submitted in this capture.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -284,12 +287,29 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "issue-file-preview",
+      "kind": "screenshot",
+      "src": "/documentation/en/file-preview.png",
+      "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
+      "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
+      "revision": 10,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        1168,
+        808
       ],
       "theme": "light",
       "padding": 24,
@@ -306,7 +326,8 @@
     "implementation-plans-steps",
     "recurring-issues-steps",
     "bulk-issue-actions-steps",
-    "import-issues-workflow"
+    "import-issues-workflow",
+    "issue-file-preview"
   ]
 }
 ---
@@ -391,6 +412,10 @@ Check filters if an issue disappears after closing it. Reopen the issue by ident
 Open the issue's discussion timeline to add a comment. Explain a decision, question or verification result so another member can understand what changed. Use mentions when you need a person or linked object in context; notifications still depend on the recipient's preferences and device delivery.
 
 Attach a relevant project page, file or link through the resources controls. A linked page is a live resource: its title follows page renaming and its content can evolve. A file is a stored attachment rather than a guarantee that an external URL remains available.
+
+Click a supported file resource to open its preview across the whole window. Images, PDF files, Markdown (`.md`), plain text (`.txt`, `.text`), CSV files and supported audio or video use the same reader. Markdown is formatted, text stays literal, and CSV opens as a scrollable table. Use Close or Escape to return to the issue. The File actions (`…`) menu offers Download and, when you can remove this resource, Remove. Removing it detaches the resource from this context. Unsupported formats keep their download action.
+
+![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.](/documentation/en/file-preview.png)
 
 ![Add-link dialog with an example contact URL.](/documentation/en/work-resources.png)
 

@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-680)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,14 +57,17 @@
       "components/pages/page-document-actions.tsx",
       "lib/server/pages-export.ts",
       "components/pages/page-print-view.tsx",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-680-file-preview.md",
+      "components/file-viewer.tsx",
+      "components/image-viewer.tsx"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 9,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
     "language": "agent:/root (it changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [
     "notifications-and-inbox",
@@ -101,7 +104,7 @@
       "src": "/documentation/it/page-create-menu.png",
       "alt": "Menu di creazione con Nuova pagina e Nuovo database.",
       "caption": "Usa i controlli delle pagine del progetto per scegliere un documento o un database.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -117,7 +120,7 @@
       "src": "/documentation/it/page-editor.png",
       "alt": "Pagina dimostrativa con titoli, paragrafi, caselle delle attività e una menzione a un ticket.",
       "caption": "Titoli, blocchi di attività e la menzione AUR-2 organizzano la pagina. Il contenuto è un esempio dimostrativo.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -133,7 +136,7 @@
       "src": "/documentation/it/page-comments.png",
       "alt": "Attività della pagina con una modifica dimostrativa e campo del commento vuoto.",
       "caption": "Leggi l’attività e scrivi un commento nel campo. In questo esempio non è stato inviato alcun commento.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +152,7 @@
       "src": "/documentation/it/page-file-states.png",
       "alt": "Pagina dimostrativa con un caricamento incompleto e un file salvato di 67 byte con il comando Scarica.",
       "caption": "Controlla lo stato effettivo del file: il secondo allegato è disponibile, il primo caricamento incompleto no.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -165,7 +168,7 @@
       "src": "/documentation/it/page-history-preview.png",
       "alt": "Scheda Versioni con uno stato precedente espanso, autore, Ripristina e avviso di conservazione per 30 giorni.",
       "caption": "Esamina l’anteprima di uno stato salvato e confrontalo con la pagina attuale prima di ripristinarlo.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,7 +184,7 @@
       "src": "/documentation/it/page-publish.png",
       "alt": "Finestra di pubblicazione con Privato selezionato e opzioni con password o link.",
       "caption": "Privato mantiene la pagina nel progetto. Controlla chi deve leggerla prima di cambiare la pubblicazione.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -197,7 +200,7 @@
       "src": "/documentation/it/page-export.png",
       "alt": "Menu di esportazione del documento con Markdown (.md) e Stampa / PDF.",
       "caption": "Scegli Markdown per scaricare il documento oppure Stampa / PDF per aprire la vista di stampa.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -206,6 +209,23 @@
       ],
       "theme": "light",
       "padding": 24
+    },
+    {
+      "id": "page-file-preview",
+      "kind": "screenshot",
+      "src": "/documentation/it/file-preview.png",
+      "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.",
+      "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rimuovi.",
+      "revision": 9,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        1168,
+        808
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
@@ -215,7 +235,8 @@
     "page-files-steps",
     "page-history-steps",
     "publish-a-page-steps",
-    "import-export-and-print-pages-steps"
+    "import-export-and-print-pages-steps",
+    "page-file-preview"
   ]
 }
 ---
@@ -274,6 +295,10 @@ Un’ancora può mancare dopo modifiche al documento: leggi la discussione prima
 Apri la pagina come membro del progetto e usa i controlli di allegato o caricamento. Seleziona un file non vuoto entro il limite di 10 MB per file. La quota di spazio dell’account o dell’istanza può imporre un limite aggiuntivo. Mantieni l’originale fino alla riuscita del caricamento.
 
 Le immagini possono essere inserite come blocchi immagine e gli altri documenti allegati come blocchi file. Il server determina il tipo di contenuto salvato dai byte, senza fidarsi del nome del file o dell’etichetta del browser. L’accettazione del caricamento non garantisce un’anteprima nella pagina per ogni formato; scarica il file quando l’anteprima non è disponibile.
+
+Nell’editor del progetto, fai clic su un’immagine o sul nome di un blocco file supportato per aprire lo stesso visualizzatore a tutta finestra usato dagli allegati dei ticket. Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV, PDF e formati audio o video supportati si aprono in contenitori dedicati. Usa Chiudi o Escape per tornare alla pagina. Il menu Azioni del file (`…`) offre Scarica; Rimuovi è disponibile solo nelle pagine modificabili e rimuove il blocco dal documento. Il blocco file mantiene anche il comando diretto Scarica. I formati non supportati, i collegamenti a file esterni e i blocchi file nelle pagine pubblicate mantengono il comportamento di download. Le immagini pubblicate usano il visualizzatore senza l’azione di rimozione.
+
+![Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.](/documentation/it/file-preview.png)
 
 Verifica che il file compaia nella pagina e aprilo o scaricalo. I dati del file risiedono in Storage, mentre i metadati di pagina e file ne determinano l’accesso. Un salvataggio riuscito della pagina non dimostra da solo che i dati del file siano disponibili.
 

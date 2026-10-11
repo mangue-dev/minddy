@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-680)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -88,14 +88,17 @@
       "lib/export-api.ts",
       "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-680-file-preview.md",
+      "components/file-viewer.tsx",
+      "components/image-viewer.tsx"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 10,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
     "language": "agent:/root (it changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [
     "feedback",
@@ -140,7 +143,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata con titolo, descrizione e proprietà selezionabili manualmente.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -156,7 +159,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -172,7 +175,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -188,7 +191,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -204,7 +207,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -220,7 +223,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -236,7 +239,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -252,7 +255,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -268,7 +271,7 @@
       "src": "/documentation/it/work-bulk-actions.png",
       "alt": "Menu delle azioni per due ticket dimostrativi selezionati.",
       "caption": "Il menu agisce sui ticket selezionati. In questa schermata non è stata inviata alcuna modifica collettiva.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -284,12 +287,29 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
         816,
         977
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "issue-file-preview",
+      "kind": "screenshot",
+      "src": "/documentation/it/file-preview.png",
+      "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.",
+      "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rimuovi.",
+      "revision": 10,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        1168,
+        808
       ],
       "theme": "light",
       "padding": 24,
@@ -306,7 +326,8 @@
     "implementation-plans-steps",
     "recurring-issues-steps",
     "bulk-issue-actions-steps",
-    "import-issues-workflow"
+    "import-issues-workflow",
+    "issue-file-preview"
   ]
 }
 ---
@@ -388,6 +409,10 @@ Controlla i filtri se un ticket scompare dopo la chiusura. Riaprilo tramite iden
 Apri la cronologia di discussione del ticket per aggiungere un commento. Spiega una decisione, una domanda o un risultato di verifica perché un altro membro possa capire cosa è cambiato. Usa le menzioni quando serve una persona o un oggetto collegato nel contesto; le notifiche dipendono comunque dalle preferenze del destinatario e dalla consegna sul suo dispositivo.
 
 Allega una pagina pertinente del progetto, un file o un collegamento attraverso i controlli delle risorse. Una pagina collegata è una risorsa aggiornata: il suo titolo segue le rinominazioni e il contenuto può evolvere. Un file è un allegato memorizzato, non una garanzia che un URL esterno resti disponibile.
+
+Fai clic su una risorsa file supportata per aprire l’anteprima su tutta la finestra. Immagini, PDF, Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV e formati audio o video supportati usano lo stesso visualizzatore. Il Markdown viene formattato, il testo resta letterale e il CSV si apre come tabella scorrevole. Usa Chiudi o Escape per tornare al ticket. Il menu Azioni del file (`…`) offre Scarica e, se puoi rimuovere quella risorsa, Rimuovi. La rimozione scollega la risorsa da questo contesto. I formati non supportati mantengono l’azione di download.
+
+![Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.](/documentation/it/file-preview.png)
 
 ![Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.](/documentation/it/work-resources.png)
 

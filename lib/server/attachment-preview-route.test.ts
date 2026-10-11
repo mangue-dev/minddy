@@ -307,6 +307,15 @@ describe("GET /api/attachments/file proxy", () => {
     expect(response.headers.get("content-type")).toBe("text/html");
   });
 
+  it("keeps generic .text files inline for the plain text reader", async () => {
+    info.mockResolvedValue({ data: { contentType: "application/octet-stream" }, error: null });
+    download.mockResolvedValue({ data: new Blob(["Meeting notes"]), error: null });
+    const response = await GET(request(`projects/${PROJECT}/resource/notes.text`));
+    expect(response.headers.get("content-disposition")).toBe("inline");
+    expect(await response.text()).toBe("Meeting notes");
+    expect(response.headers.get("content-security-policy")).toContain("sandbox");
+  });
+
   it("proxies unsupported previews as forced downloads", async () => {
     info.mockResolvedValue({ data: { contentType: "application/zip" }, error: null });
     download.mockResolvedValue({
