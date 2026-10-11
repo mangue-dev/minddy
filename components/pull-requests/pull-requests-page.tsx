@@ -386,9 +386,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   // Deep-links: `?pr=<id>` (direct, MIN-143) and `?run=<id>` (historical — the
   // issue sidebar and all links already in circulation speak in run).
-  // Both preselect the PR. The status filter is widened ONCE, when the loaded
-  // target turns out to be invisible in the default “open” lens — after that
-  // the lens the reader picks is the master rule.
+  // Both preselect the PR. A hidden active section is enabled once when the
+  // target resolves; completed PRs require an explicit filter choice.
   const { searchParams } = useAppTabRoute();
   const runParam = searchParams.get("run");
   const prParam = searchParams.get("pr");
@@ -486,16 +485,10 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   if (resolvedDeepLinkTarget) deepLinkTargetRef.current = resolvedDeepLinkTarget;
 
   /**
-   * The deep link widens the lens AT MOST ONCE, at its resolution: a link to
-   * a merged PR arrives under the default “open” lens, and the filter moves
-   * to “all” so the target is visible. The check used to re-run on every
-   * list change — after a merge, the refetch re-pinned the merged row into
-   * the “open” response, the effect saw a target outside the lens and forced
-   * “all” again: the “open” filter had become impossible to restore. The
-   * settlement is tied to the CURRENT link and resets when it leaves the
-   * address, so re-following the same link later is a fresh load free to
-   * widen again — while the in-place loop (refetches under an unchanged
-   * `?pr=`) can never re-widen behind the reader's back.
+   * Settle each resolved link once, even when its target is completed and
+   * remains outside the filter. Only active sections may be enabled by a
+   * link; refetches and retained tabs must never enable completed PRs.
+   * Removing the link resets settlement for a later navigation.
    */
   const settledDeepLinkRef = useRef<string | null>(null);
   useEffect(() => {
@@ -517,7 +510,10 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     settledDeepLinkRef.current = deepLink;
     if (decision === "widen") {
       const target = pullRequests.find(isTarget)!;
-      setSections((previous) => new Set([...previous, pullRequestSection(target)]));
+      const section = pullRequestSection(target);
+      if (section !== "completed") {
+        setSections((previous) => new Set([...previous, section]));
+      }
     }
   }, [deepLink, sections, prParam, pullRequests, runParam]);
 
@@ -546,11 +542,9 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const applyConfirmedState = useCallback(
     (prId: string, state: PullRequestListItem["pr_state"]) => {
       updateCachedPullRequestState(queryClient, prId, state);
-      // The deep link asked for this PR while it was live; merged or closed,
-      // its job is done. Keeping `?pr=` would re-pin the row — which the lens
-      // now excludes — into every refetch, and a reload would re-widen the
-      // filter: the sidebar filter takes the master rule back. Confirmed only,
-      // so a refused merge (branch protection, lost rights) keeps the link.
+      // A terminal target fulfills the link; consume it to stop pinning the
+      // excluded row into refetches. Wait for confirmation so a refused merge
+      // (branch protection, lost rights) keeps the link.
       if (isTerminalPrState(state) && prId === deepLinkTargetRef.current) {
         consumeDeepLink();
       }
