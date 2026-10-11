@@ -156,12 +156,12 @@ describe("account import tenant isolation", () => {
   it("imports only bounded product metadata into Auth", async () => {
     const write = vi.spyOn(service.auth.admin, "updateUserById");
     await importAccountTransfer(transfer({ account: { id: SOURCE_USER, user_metadata: {
-      theme: "dark", locale: "en", automation_start_delay_min: 120, numo_default_status: "in_progress", private_notes: "PRIVATE_AUTH_SENTINEL",
+      theme: "dark", locale: "en", numo_default_status: "in_progress", private_notes: "PRIVATE_AUTH_SENTINEL",
       avatar_url: "https://example.test/PRIVATE_AUTH_SENTINEL", smart_fill: { private: "PRIVATE_AUTH_SENTINEL" },
     } } }), USER);
     expect(write).toHaveBeenCalled();
     expect(JSON.stringify(write.mock.calls)).not.toContain("PRIVATE_AUTH_SENTINEL");
-    expect(write.mock.calls[0]).toEqual([USER, { user_metadata: { theme: "dark", locale: "en", automation_start_delay_min: 120 } }]);
+    expect(write.mock.calls[0]).toEqual([USER, { user_metadata: { theme: "dark", locale: "en" } }]);
   });
 
   it("restores current onboarding progress into Auth during an account transfer", async () => {
@@ -341,4 +341,27 @@ describe("account import tenant isolation", () => {
       .rejects.toThrow("exceeds the content limit");
     expect(database.writes).toEqual([]);
   });
+});
+
+
+it("recomputes imported monthly schedules without replaying their expired appointment", async () => {
+  await importAccountTransfer(transfer({ owned_projects: [{ id: OWNED_PROJECT, owner_id: SOURCE_USER, key: "OLD", name: "Imported project" }], agent_routines: [{ id: ISSUE, project_id: OWNED_PROJECT, owner_id: SOURCE_USER, title: "Monthly review", prompt: "Review project progress", prompt_mentions: [], base_branch: null, frequency: "monthly", hour: 8, minute: 0, weekdays: [], days_of_month: [1, 15], timezone: "Europe/Paris", enabled: true, next_run_at: "2020-01-01T08:00:00Z" }] }), USER);
+  const row = database.writes.find(write => write.table === "agent_routines")!.rows[0];
+  expect(row.enabled).toBe(true);
+  expect(Date.parse(row.next_run_at as string)).toBeGreaterThan(Date.now());
+  expect(row.trigger).toEqual({ type: "schedule" });
+});
+
+it("preserves imported database schema and typed entry values for trigger review", async () => {
+  const databaseId = OBJECTIVE, entryId = ISSUE, propertyId = OTHER_OWNER;
+  await importAccountTransfer(transfer({ owned_projects: [{ id: OWNED_PROJECT, owner_id: SOURCE_USER, key: "OLD", name: "Imported project" }], pages: [{ id: databaseId, project_id: OWNED_PROJECT, title: "Requests", icon: null, content: { type: "doc", content: [] }, database_schema: [{ id: propertyId, type: "people", name: "Reviewer" }], database_title_name: "Request", property_values: {} }, { id: entryId, project_id: OWNED_PROJECT, parent_id: databaseId, title: "Request", icon: null, content: { type: "doc", content: [] }, database_schema: null, database_title_name: null, property_values: { [propertyId]: [SOURCE_USER] } }], agent_routines: [{ id: OTHER_PROJECT, project_id: OWNED_PROJECT, owner_id: SOURCE_USER, title: "Review request", prompt: "Review matching requests", prompt_mentions: [], base_branch: null, timezone: "UTC", enabled: true, trigger: { type: "database", databaseId, conditions: { field: "property", propertyId, operator: "contains", value: SOURCE_USER } } }] }), USER);
+  const rows = database.writes.find(write => write.table === "pages")!.rows;
+  expect(rows[0].database_schema).toEqual([{ id: propertyId, type: "people", name: "Reviewer" }]);
+  expect(rows[1].parent_id).toBe(rows[0].id);
+  expect(rows[1].property_values).toEqual({ [propertyId]: [USER] });
+  const routine = database.writes.find(write => write.table === "agent_routines")!.rows[0];
+  expect(routine.trigger).toMatchObject({ databaseId: rows[0].id, conditions: { propertyId, value: USER } });
+  // The fake does not persist imported pages; a missing reference must leave the routine paused.
+  expect(routine.enabled).toBe(false);
+  expect(routine.next_run_at).toBeNull();
 });

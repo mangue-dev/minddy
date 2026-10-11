@@ -20,7 +20,7 @@ const repos = new Set(projectIds.map((_, i) => `minddy-performance-fixture/proje
 const paragraph = "The team needs predictable interactions as the workspace grows. Keep the existing keyboard shortcuts, preserve unsaved changes, and reconcile remote updates without interrupting ongoing work. Measure the complete interaction before introducing another cache.";
 
 export function workload(userId) {
-  const projects = projectIds.map((pid, i) => ({ id: pid, owner_id: userId, name: `Performance ${i + 1}`, key: `PF${i + 1}`, issue_seq: 100, color: ["#3b82f6", "#8b5cf6", "#ef4444", "#10b981", "#f59e0b", "#ec4899"][i], automations_enabled: false, smart_assign_enabled: false, auto_assign_enabled: false }));
+  const projects = projectIds.map((pid, i) => ({ id: pid, owner_id: userId, name: `Performance ${i + 1}`, key: `PF${i + 1}`, issue_seq: 100, color: ["#3b82f6", "#8b5cf6", "#ef4444", "#10b981", "#f59e0b", "#ec4899"][i], smart_assign_enabled: false, auto_assign_enabled: false }));
   const issues = projects.flatMap((p, pi) => Array.from({ length: 100 }, (_, i) => {
     const issueId = id(`issue-${pi}-${i}`);
     return { id: issueId, project_id: p.id, number: i + 1, title: `Performance task ${pi + 1}.${i + 1}: ${["Navigation state", "Editor collaboration", "Release verification", "Search indexing", "Issue workflow"][i % 5]}`, description: Array(4).fill(paragraph).join("\n\n"), plan: `Verify the expected workflow.\n\n- [x] Inspect existing behavior\n- [ ] ${paragraph}\n- [ ] Verify keyboard and pointer interactions`, status: ["backlog", "todo", "in_progress", "in_review", "done"][i % 5], priority: ["low", "medium", "high", "urgent", "none"][i % 5], effort: ["xs", "s", "m", "l", "xl"][i % 5], created_by: userId, assignee_id: userId, position: i * 1000, created_at: now, updated_at: now };
@@ -49,7 +49,7 @@ export function assertScope(table, row, userId) {
   if (row.repo_full_name && !repos.has(row.repo_full_name)) throw new Error("Foreign repository");
   if (table === "projects") {
     if (row.owner_id !== userId || !projectIds.includes(row.id)) throw new Error("Project owner mismatch");
-    if (row.automations_enabled !== false || row.smart_assign_enabled !== false || row.auto_assign_enabled !== false) {
+    if (row.automations_enabled === true || row.smart_assign_enabled !== false || row.auto_assign_enabled !== false) {
       throw new Error("Fixture projects must keep automations disabled");
     }
   }

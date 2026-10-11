@@ -1,4 +1,7 @@
 "use client";
+import { RoutineTriggerFields } from "./routine-trigger-fields";
+import { parseRoutineTrigger, type RoutineTrigger } from "@/lib/routine-triggers";
+
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -101,6 +104,7 @@ export function CreateRoutineWizard({
   const [spendCap, setSpendCap] = useState(DEFAULT_MAX_SPEND_PERCENT);
   // The cadence holds in ONE state, the same as the calculation and the sentence
   // readable wait: nothing to recompose between the screen and the server.
+  const [trigger, setTrigger] = useState<RoutineTrigger>({ type: "schedule" });
   const [schedule, setSchedule] = useState<RoutineSchedule>(() => ({
     frequency: "weekly",
     hour: 9,
@@ -148,6 +152,7 @@ export function CreateRoutineWizard({
     setPrompt("");
     setPromptMentions([]);
     setSpendCap(DEFAULT_MAX_SPEND_PERCENT);
+    setTrigger({ type: "schedule" });
     setSchedule({
       frequency: "weekly",
       hour: 9,
@@ -174,6 +179,8 @@ export function CreateRoutineWizard({
     { sentence: string; first: string } | { error: string }
   >(() => {
     try {
+      parseRoutineTrigger(trigger);
+      if (trigger.type !== "schedule") return { sentence: t("triggerWaitingHelp"), first: "" };
       const at = nextRunAt(schedule, new Date());
       const sentence = describeSchedule(
         schedule,
@@ -197,11 +204,11 @@ export function CreateRoutineWizard({
         error:
           code === "unknownTimezone"
             ? "error_unknownTimezone"
-            : "error_invalidSchedule",
+            : trigger.type !== "schedule" ? "error_invalidTrigger" : "error_invalidSchedule",
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schedule, locale]);
+  }, [schedule, locale, trigger]);
 
   /** Does the cadence hold up? (the summary can then only exist) */
   const scheduleOk = !("error" in preview);
@@ -216,11 +223,14 @@ export function CreateRoutineWizard({
         prompt: prompt.trim(),
         promptMentions,
         maxSpendPercent: spendCap,
+        trigger,
+        ...(trigger.type === "schedule" ? {
         frequency: schedule.frequency,
         hour: schedule.hour,
         minute: schedule.minute,
         weekdays: schedule.weekdays,
         daysOfMonth: schedule.daysOfMonth,
+        } : {}),
         timezone: schedule.timezone,
       });
       setCreated(routine);
@@ -343,8 +353,8 @@ export function CreateRoutineWizard({
 
     schedule: {
       id: "schedule",
-      title: t("stepScheduleTitle"),
-      subtitle: t("stepScheduleDesc"),
+      title: t("triggerLabel"),
+      subtitle: t("triggerChooseHelp"),
       wide: true,
       submitLabel: t("createRoutine"),
       submitDisabled: !scheduleOk,
@@ -353,7 +363,8 @@ export function CreateRoutineWizard({
           {/* The cadence fields are the SAME as when editing a
               routine (`RoutineScheduleFields`): two separate forms
               would have ended up accepting two different things. */}
-          <RoutineScheduleFields value={schedule} onChange={setSchedule} />
+          <RoutineTriggerFields projectId={projectId} value={trigger} onChange={setTrigger} />
+          {trigger.type === "schedule" ? <RoutineScheduleFields value={schedule} onChange={setSchedule} /> : null}
 
           <SettingsRow
             label={t("spendCapLabel")}
@@ -379,7 +390,7 @@ export function CreateRoutineWizard({
               <span className="font-medium">{preview.sentence}</span>
               <span className="text-muted-foreground">
                 {" — "}
-                {t("firstRunAt", { date: preview.first })}
+                {preview.first ? t("firstRunAt", { date: preview.first }) : t("listensForEvents")}
               </span>
             </p>
           )}
@@ -402,7 +413,7 @@ export function CreateRoutineWizard({
             <span className="font-medium">{created?.title}</span>
             {"error" in preview ? null : (
               <span className="text-muted-foreground">
-                {preview.sentence} — {t("firstRunAt", { date: preview.first })}
+                {preview.sentence} — {preview.first ? t("firstRunAt", { date: preview.first }) : t("listensForEvents")}
               </span>
             )}
           </div>
@@ -481,6 +492,7 @@ export function CreateRoutineWizard({
 
 /** The refusals that the screen knows how to name. The rest is displayed as is. */
 const ROUTINE_ERROR_KEYS = new Set([
+  "invalidTrigger",
   "ownerOnly",
   "noRepo",
   "workerConfigurationManagedInSettings",

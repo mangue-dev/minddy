@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -234,6 +235,7 @@ export async function insertEvents(
   rows: EventRow[]
 ): Promise<void> {
   if (rows.length === 0) return;
+  if (rows.some(row => row.issue_id || row.page_id || row.feedback_post_id)) scheduleRoutineEvents();
   try {
     await storeIssueEvents(service, rows);
   } catch {

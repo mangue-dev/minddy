@@ -6,7 +6,6 @@ const JOBS = [
   // worker must tick every minute to honor the at-least-once schedule.
   ["* * * * *", "/api/cron/forge-relay-deliveries"],
   ["35 * * * *", "/api/cron/forge-relay-maintenance"],
-  ["*/2 * * * *", "/api/cron/automations"],
   ["*/5 * * * *", "/api/cron/smart-assign"],
   ["*/5 * * * *", "/api/cron/routines"],
   ["15 * * * *", "/api/cron/billing-sync"],

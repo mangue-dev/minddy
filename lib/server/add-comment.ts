@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
@@ -175,12 +176,15 @@ export async function addCommentToIssue({
           .select("*, attachments(*)").eq("id", commentId)
           .eq("issue_id", issueId).eq("author_id", actorId).maybeSingle();
         if (readError || !complete) throw new Error("Comment resource reconciliation failed");
+        scheduleRoutineEvents();
         return { ok: true, comment: complete, replayed: true };
       } catch (error) {
         console.error("[add-comment] attachment retry failed:", (error as Error).message);
+        scheduleRoutineEvents();
         return { ok: true, comment: existing, replayed: true, attachmentError: true };
       }
     }
+    scheduleRoutineEvents();
     return { ok: true, comment: existing, replayed: true };
   }
 
@@ -254,6 +258,8 @@ export async function addCommentToIssue({
     })),
   ];
   await insertNotifications(service, rows);
+
+  scheduleRoutineEvents();
 
   return { ok: true, comment: { ...data, attachments: attachmentRows }, ...(attachmentError ? { attachmentError } : {}) };
 }

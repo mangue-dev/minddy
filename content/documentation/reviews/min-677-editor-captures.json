@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-11T23:02:54.110Z",
+  "method": "Actual RoutineTriggerFields React component with application primary theme tokens, local query-cache demonstrations only, external requests blocked, no business writes, native 2x pixels.",
+  "records": [
+    {
+      "locale": "en",
+      "viewport": [
+        788,
+        910
+      ]
+    },
+    {
+      "locale": "fr",
+      "viewport": [
+        788,
+        910
+      ]
+    },
+    {
+      "locale": "de",
+      "viewport": [
+        788,
+        910
+      ]
+    },
+    {
+      "locale": "es",
+      "viewport": [
+        788,
+        910
+      ]
+    },
+    {
+      "locale": "it",
+      "viewport": [
+        788,
+        910
+      ]
+    },
+    {
+      "locale": "pt-BR",
+      "viewport": [
+        788,
+        910
+      ]
+    }
+  ],
+  "mobileOverflow": false,
+  "typedNumber": 7,
+  "keyboardSelection": true,
+  "removalFocus": true,
+  "singleGroup": true,
+  "unifiedEventMode": true,
+  "legacyConditionsPreserved": true,
+  "conditionIcons": true,
+  "contextualHelp": true,
+  "multipleValues": true,
+  "emptyNumber": true,
+  "decimalNumber": true,
+  "booleanFalse": true,
+  "searchKeyboardSelection": true,
+  "scheduleFields": true,
+  "conditionsMobileOverflow": false,
+  "mobileGroupRuleUntruncated": true,
+  "errors": []
+}

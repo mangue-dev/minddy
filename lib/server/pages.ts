@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
 
 import { storePageVersion, hasRecentPageVersion } from "./page-version-store";
@@ -636,6 +637,7 @@ export async function createPage({
     mcpKeyId,
     event: "page_created",
   });
+  scheduleRoutineEvents();
   return { ok: true, page };
 }
 
@@ -775,6 +777,7 @@ export async function duplicatePage(
     event: "page_created",
     scanMentions: false,
   });
+  scheduleRoutineEvents();
   return { ok: true, page: copy };
 }
 
@@ -986,6 +989,7 @@ export async function updatePage({
       event: "page_updated",
     });
   }
+  scheduleRoutineEvents();
   return { ok: true, page: await decodePage(data, actorId) };
 }
 
@@ -1170,6 +1174,7 @@ export async function trashPage(
     event: "page_trashed",
     scanMentions: false,
   });
+  scheduleRoutineEvents();
   return { ok: true, trashed: descendants.length + 1 };
 }
 
@@ -1225,6 +1230,8 @@ export async function discardPage(
       };
     });
   }
+
+  scheduleRoutineEvents();
 
   return { ok: true };
 }
@@ -1299,6 +1306,7 @@ export async function restorePage(
     event: "page_restored",
     scanMentions: false,
   });
+  scheduleRoutineEvents();
   return { ok: true, restored: result.restored };
 }
 

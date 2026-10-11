@@ -1,6 +1,6 @@
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, FlowIcon as Workflow, FolderKanbanIcon, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { SmartAssignIcon } from "@/components/smart-icons";
 
@@ -29,7 +29,6 @@ export type AccountSettingsTab =
   | "security"
   | "preferences"
   | "cycles"
-  | "automations"
   | "inbox"
   | "mcp"
   | "mcp-clients"
@@ -63,8 +62,6 @@ export const SETTINGS_SECTIONS = {
   accountCyclesEnable: "account-cycles",
   accountCyclesCadence: "account-cycles-cadence",
   accountCyclesCapture: "account-cycles-capture",
-  accountAutomations: "account-automations",
-  accountAutomationsProjects: "account-automations-projects",
   accountNotifications: "account-notifications",
   accountPushDevices: "account-push-devices",
   accountMcp: "account-mcp",
@@ -157,7 +154,6 @@ export function useSettingsSections(): SettingsSection[] {
   const tSecurity = useTranslations("AccountSecurity");
   const tData = useTranslations("AccountData");
   const tAnalytics = useTranslations("Analytics");
-  const tAutomations = useTranslations("Automations");
   const tCycles = useTranslations("Cycles");
   const tNotifications = useTranslations("NotificationSettings");
   const tPush = useTranslations("Push");
@@ -171,7 +167,6 @@ export function useSettingsSections(): SettingsSection[] {
       security: tAccount("securityTab"),
       preferences: tAccount("preferencesTab"),
       cycles: tAccount("cyclesTab"),
-      automations: tAutomations("title"),
       inbox: tAccount("inboxTab"),
       mcp: tAccount("mcpTab"),
       "mcp-clients": tAccount("mcpClientsTab"),
@@ -297,28 +292,6 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "cycle", "ajout automatique", "auto-add", "capture", "remplir",
           "fill", "automatique", "automatic",
-        ],
-      }),
-      account({
-        id: SETTINGS_SECTIONS.accountAutomations,
-        tab: "automations",
-        icon: Workflow,
-        title: tAutomations("title"),
-        keywords: [
-          "automatisation", "automatisations", "automation", "automations",
-          "agent", "numo", "boucle", "loop", "preset", "plan", "planifier",
-          "implémenter", "implementer", "implement", "vérifier", "verifier",
-          "verify",
-        ],
-      }),
-      account({
-        id: SETTINGS_SECTIONS.accountAutomationsProjects,
-        tab: "automations",
-        icon: FolderKanbanIcon,
-        title: tAutomations("projectsTitle"),
-        keywords: [
-          "automatisations", "automations", "projets", "projects",
-          "actif sur", "run on", "effort", "agent", "numo",
         ],
       }),
       account({
@@ -636,7 +609,6 @@ export function useSettingsSections(): SettingsSection[] {
     tAccount,
     tSecurity,
     tData,
-    tAutomations,
     tCycles,
     tNotifications,
     tPush,

@@ -1,5 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -109,6 +110,7 @@ export async function setIssueCategories({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
+  scheduleRoutineEvents();
   if (valid.length > 0) {
     // upsert + ignoreDuplicates: tolerate a concurrent request having already
     // inserted the same (issue_id, category_id) pair, so it can't 500 on the
@@ -125,6 +127,7 @@ export async function setIssueCategories({
     }
   }
 
+  scheduleRoutineEvents();
   // Activity: one event per added / removed category.
   const nextSet = new Set(valid);
   const events: EventRow[] = [];

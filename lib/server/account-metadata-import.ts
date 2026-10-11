@@ -1,6 +1,5 @@
 import "server-only";
 import { locales } from "@/i18n/config";
-import { isAutomationPresetId, MAX_AUTOMATION_START_DELAY_MIN } from "@/lib/automations";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { ONBOARDING_CURRENT_VERSION, ONBOARDING_STEPS, ONBOARDING_VERSION_META_KEY } from "@/lib/onboarding";
 
@@ -18,7 +17,6 @@ const ENUMS: Record<string, readonly string[]> = {
 };
 const NUMBERS: Record<string, readonly [number, number]> = {
   cycle_duration_weeks: [1, 2], cycle_start_dow: [1, 7], cycle_upcoming_count: [1, 4],
-  automation_start_delay_min: [0, MAX_AUTOMATION_START_DELAY_MIN],
   [ONBOARDING_VERSION_META_KEY]: [1, ONBOARDING_CURRENT_VERSION],
 };
 
@@ -38,16 +36,9 @@ export function selectImportedAccountMetadata(value: unknown): Record<string, un
   for (const key of ["display_name", "full_name", "name"]) {
     if (typeof source[key] === "string" && source[key].trim() && source[key].length <= 200) result[key] = source[key];
   }
-  if (isAutomationPresetId(source.automation_preset)) result.automation_preset = source.automation_preset;
   if (Array.isArray(source.onboarding_steps)) {
     const allowed: readonly string[] = [...ONBOARDING_STEPS, "key", "issue", "import"];
     result.onboarding_steps = [...new Set(source.onboarding_steps.filter((step) => allowed.includes(step)))];
-  }
-  const efforts = source.automation_efforts;
-  if (efforts && typeof efforts === "object" && !Array.isArray(efforts)) {
-    result.automation_efforts = Object.fromEntries(["xs", "s", "m", "l", "xl"]
-      .filter((key) => typeof (efforts as Record<string, unknown>)[key] === "boolean")
-      .map((key) => [key, (efforts as Record<string, unknown>)[key]]));
   }
   return result;
 }

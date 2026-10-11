@@ -42,7 +42,7 @@ test("foreign ownership and foreign parent resources are rejected", () => {
   }
 });
 
-test("reused projects and issues cannot enable paid automation or forge effects", () => {
+test("reused projects and issues cannot enable AI helpers, archived automation controls or forge effects", () => {
   for (const field of ["automations_enabled", "smart_assign_enabled", "auto_assign_enabled"]) {
     assert.throws(() => assertScope("projects", { ...fixture.projects[0], [field]: true }, user), /automations disabled/);
   }

@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,13 +45,14 @@
       "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
       "lib/database-import/types.ts",
       "lib/database-import/archive.ts",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (es complete-body second pass and corrected wording review); agent:/root (es changed-passage parity and localized-label review)",
+    "revision": 10,
+    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "language": "agent:/root (es changed-text and retained-meaning self-review)",
     "date": "2026-10-11"
   },
   "related": [
@@ -76,7 +77,7 @@
       "src": "/documentation/es/database-setup-cards.png",
       "alt": "Vista previa del componente con tarjetas para configurar una nueva base de datos con Numo o importar una existente.",
       "caption": "Sugerencias para una nueva base con datos de demostración. Elige Numo o la importación, o cierra las tarjetas para continuar manualmente.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -93,7 +94,7 @@
       "src": "/documentation/es/database-property-types.png",
       "alt": "Selector de tipo de columna con texto, número, selecciones, fechas, personas y casilla de verificación.",
       "caption": "Elige un tipo que corresponda a los valores que deseas guardar.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,7 +110,7 @@
       "src": "/documentation/es/database-entry.png",
       "alt": "Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.",
       "caption": "Abre una entrada para leer el texto completo y editar los valores según su tipo.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -125,7 +126,7 @@
       "src": "/documentation/es/database-conversion-warning.png",
       "alt": "Advertencia de conversión: cambiar de Texto a Número borra una celda incompatible, con botones para cancelar o confirmar.",
       "caption": "Revisa el número real de celdas incompatibles antes de confirmar. Cancelar conserva los valores actuales.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -141,7 +142,7 @@
       "src": "/documentation/es/database-import-review.png",
       "alt": "Revisión de un CSV local: dos páginas de entradas y dos columnas, con el botón Importar base de datos.",
       "caption": "Revisa las entradas analizadas y el número de columnas antes de importar a la base vacía.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -243,3 +244,8 @@ Tras una importación correcta, comprueba algunas entradas, sus valores, las pá
 
 
 ![Revisión de un CSV local: dos páginas de entradas y dos columnas, con el botón Importar base de datos.](/documentation/es/database-import-review.png)
+
+
+## Rutinas para nuevas entradas {#entry-routines}
+
+El propietario del proyecto puede elegir esta base como desencadenante en [Rutinas](/docs/scheduled-routines#conditions). Las condiciones usan las propiedades tipadas de la entrada. Una entrada vacía puede esperar a que se rellenen. Creación, duplicación, importación de base y traslado permitido hacia la base cuentan como llegadas; restaurar no. Eliminar una propiedad referenciada o cambiar su tipo requiere corregir el filtro de la rutina.

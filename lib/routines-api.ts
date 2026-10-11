@@ -59,6 +59,12 @@ export interface Routine {
   /** Share of the monthly budget that ONE passage can spend (1–100; 100 = without
  * own ceiling, only the account quota limits). */
   max_spend_percent: number;
+  trigger?: import("./routine-triggers").RoutineTrigger;
+  trigger_type?: "schedule" | "event" | "database";
+  trigger_revision?: number;
+  legacy_source_key?: string | null;
+  waiting_count?: number;
+  trigger_error?: string | null;
   frequency: RoutineFrequency;
   hour: number;
   minute: number;
@@ -82,9 +88,10 @@ export interface RoutineInput {
   promptMentions?: AssistantMention[];
   /** Per-occurrence cap as a percentage of monthly usage. Default: 15. */
   maxSpendPercent?: number;
-  frequency: RoutineFrequency;
-  hour: number;
-  minute: number;
+  trigger?: import("./routine-triggers").RoutineTrigger;
+  frequency?: RoutineFrequency;
+  hour?: number;
+  minute?: number;
   weekdays?: number[] | null;
   daysOfMonth?: number[] | null;
   timezone: string;
@@ -101,7 +108,10 @@ export interface RoutineRunSummary extends Omit<
   numo_status: import("./assistant-types").NumoTurnStatus | null;
   numo_conversation_id: string | null;
   conversation_id?: string | null;
-  origin: "scheduled" | "manual" | null;
+  origin: "scheduled" | "manual" | "event" | "database" | null;
+  event_id?: number | null;
+  subject_id?: string | null;
+  subject_type?: "issue" | "page" | "feedback" | null;
   scheduled_for?: string | null;
   work_run_id?: string | null;
 }
@@ -115,7 +125,8 @@ export async function createRoutineApi(
 ): Promise<{ routine: Routine }> {
   // Measure the shape of the gesture, never the instruction itself.
   trackEvent("routine_created", {
-    frequency: input.frequency,
+    frequency: input.frequency ?? "event",
+    trigger_type: input.trigger?.type ?? "schedule",
     // The chosen spending limit: this is the setting we want to know if it
     // is TOUCHED, and in what sense — a defect that no one moves is not
     // the correct default.

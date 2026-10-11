@@ -47,7 +47,6 @@ describe("server-only Numo launch surfaces", () => {
     for (const file of [
       "lib/server/assistant/execute-tool.ts",
       "app/api/cron/routines/route.ts",
-      "lib/server/automations/report.ts",
     ]) {
       expect(read(file), file).toContain("providerEndpointUnavailableFromSandbox");
     }

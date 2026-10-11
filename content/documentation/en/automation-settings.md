@@ -2,8 +2,8 @@
 {
   "id": "automation-settings",
   "locale": "en",
-  "title": "Issue automation",
-  "summary": "Separate account automation preferences from owner-only project rules.",
+  "title": "From automations to routines",
+  "summary": "Review paused migration proposals before enabling event-driven Numo work.",
   "topic": "Account and apps",
   "type": "guide",
   "audiences": [
@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -30,82 +30,40 @@
       "desktop"
     ],
     "evidence": [
-      "components/settings/account-automations-section.tsx",
       "components/settings/smart-assign-section.tsx",
       "content/knowledge/settings-and-data.md",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
       "lib/server/agent/execute.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "language": "agent:/root (en translation, label and retained-meaning self-review)",
+    "date": "2026-10-11"
   },
   "related": [],
   "aliases": [],
   "tags": [
     "Configure automatic issue work"
   ],
-  "figures": [
-    {
-      "id": "automation-settings-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/automation-settings-workflow.png",
-      "alt": "Automation preset set to None.",
-      "caption": "No preset is selected, so this account does not start automatic work.",
-      "revision": 5,
-      "reviewed": true,
-      "capturedAt": "2026-10-09",
-      "viewport": [
-        816,
-        201
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
-    },
-    {
-      "id": "automation-settings-projects-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/automation-settings-projects-workflow.png",
-      "alt": "Project selection for account automations.",
-      "caption": "Project selection for account automations. Both demonstration projects are disabled here; no automation is started.",
-      "revision": 5,
-      "reviewed": true,
-      "capturedAt": "2026-10-09",
-      "viewport": [
-        816,
-        176
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
-    }
-  ],
-  "requiredFigures": [
-    "automation-settings-workflow",
-    "automation-settings-projects-workflow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
-## Account automation choices {#automation-settings}
+## Review migrated work {#automation-settings}
 
-Open account settings' Automations section. Choose a preset, inspect its explanation and estimated usage, set the start delay and choose which effort sizes allow automatic steps. Estimates depend on the available allowance and are not fixed prices. Check the worker model in account AI settings before enabling code work. The same page lists automation switches for projects you own; members cannot enable another owner's project.
+Project automation switches and account presets, effort switches and start-delay settings have been replaced by [Routines](/docs/scheduled-routines). Open Routines as the project owner. Enabled rules from the archive are proposed once as paused routines; opening the list does not enable them or spend an execution budget.
 
-![Automation preset set to None.](/documentation/en/automation-settings-workflow.png)
+Review each proposal's instruction, status trigger, conditions, delay and spending cap. The original workflow is retained in the instruction for comparison. Check human checkpoints and any unavailable references before enabling it. Proposals require owner input at human checkpoints and default to a 15% monthly-budget cap per occurrence. They are not a silent continuation of the old chain. Pending chains and chains waiting for a human stop; already running code work can finish or be stopped in its conversation, without a successor chain step. Historical activity and account backups retain the archive.
 
-## Distinguish the mechanisms {#mechanisms}
+## Keep other project helpers distinct {#mechanisms}
 
-Smart Fill fills missing priority, effort, categories and objective; it does not choose status, assignee or due date. Account preferences distinguish filling on creation and eligible triage issues in projects you own. Automatic self-assignment on creation or start is a separate preference; start assignment only affects unassigned issues.
+Smart Fill still fills missing priority, effort, categories and objective. Smart Assign remains an owner-controlled project setting with member rules. Smart Triage remains a static rules engine. Automatic self-assignment remains a separate preference. These helpers do not activate a migrated proposal.
 
-Smart Assign is a project owner setting with per-member rules. Smart Triage uses static project rules and is distinct from AI filling or code execution. Review each rule's intended recipients and trigger before saving.
-
-Enable only the steps you want to run without another manual request. AI steps need a usable configured provider and must satisfy the usage checks that apply to that call. Compatible validated personal keys can exempt their calls from the account’s included-AI quota and move model billing to the provider. They do not make sandbox compute free; its cost is recorded separately, and a routine’s per-run budget remains a distinct limit. If unexpected work starts, inspect its issue activity and conversation, then disable the relevant account or project switch before creating more test issues.
-
-![Project selection for account automations.](/documentation/en/automation-settings-projects-workflow.png)
+Test a reviewed routine manually, inspect its private conversation and budget, then enable it to listen to future events. If unexpected work starts, pause the routine and inspect the occurrence before retrying. The [routine guide](/docs/scheduled-routines#conditions) explains waiting conditions and invalidation.

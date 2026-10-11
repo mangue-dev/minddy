@@ -1,3 +1,4 @@
+import { ROUTINE_TRIGGER_SCHEMA, CREATE_ROUTINE_DESCRIPTION, UPDATE_ROUTINE_DESCRIPTION } from "@/lib/server/routine-tool-schema";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
@@ -372,6 +373,7 @@ function mcpRoutine(routine: Routine) {
     id: routine.id,
     title: routine.title,
     prompt: routine.prompt,
+    trigger: routine.trigger,
     /** What one occurrence can spend, as a percentage of monthly usage. */
     max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,
@@ -4885,7 +4887,7 @@ export function registerMinddyTools(
   //
   // The description of `minddy_create_routine` is what `catalog.ts` replays
   // in `/llms.txt`: it must be sufficient in itself, and above all SAY WHAT
-  // IS NOT a routine. A recurring ticket, project automation and
+  // IS NOT a routine. A recurring ticket and
   // a routine looks the same from a distance; without this phrase, a client creates the
   // bad of the three and no one notices it until it turns.
   server.registerTool(
@@ -4893,9 +4895,10 @@ export function registerMinddyTools(
     {
       title: "List routines",
       description:
-        "List the project's ROUTINES — scheduled Numo conversations that use " +
+        "List the project's ROUTINES — scheduled or event-triggered Numo conversations that use " +
         "Minddy tools directly and may delegate code when needed. Each one gives its id, title, the instruction it " +
-        "runs, its cadence (frequency + hour/minute + weekdays or days_of_month + " +
+        "runs, its trigger (schedule, issue/feedback event or database arrival, including conditions and delay), " +
+        "cadence fields for schedules (frequency + hour/minute + weekdays or days_of_month + " +
         "IANA timezone), spending cap, whether it is enabled, when it last ran, when " +
         "it runs next, and the code of the last missed occurrence. Call " +
         "it before creating one, to adjust what is already scheduled instead of " +
@@ -4917,29 +4920,10 @@ export function registerMinddyTools(
     "minddy_create_routine",
     {
       title: "Create routine",
-      description:
-        "Create a ROUTINE: an instruction that starts a private Numo conversation " +
-        "on a schedule — project triage every Monday, a cycle report every Friday, " +
-        "or a monthly security review. OWNER ONLY: only the project's owner can " +
-        "create one, because it uses their AI budget; a member " +
-        "gets a 'forbidden' refusal and there is no way around it. " +
-        "It is NOT a recurring ticket (that is an issue with a `recurrence` — a " +
-        "task that comes back on a board) and NOT a project automation (those " +
-        "react to an event on an issue): nothing triggers a routine but the clock, " +
-        "and each occurrence has its own Numo conversation and history. " +
-        "There is NO name to pass: minddy writes the routine's title from its " +
-        "instruction, and rewrites it whenever the instruction changes. " +
-        "Numo uses Minddy tools directly for product work and delegates to a code " +
-        "worker only when repository access is needed. A linked repository is not " +
-        "required to create or run the routine. If a real decision is missing, the " +
-        "occurrence can pause for owner input in its conversation. So write `prompt` " +
-        "as a complete instruction: what to inspect and what outcome to produce. " +
-        "Delegated workers use the owner's current Account code model and reasoning. " +
-        "The complete occurrence, including Numo and workers, stops at 15% of the " +
-        "owner's monthly usage budget by default, so a routine cannot silently " +
-        "take the whole month (`max_spend_percent`).",
+      description: CREATE_ROUTINE_DESCRIPTION,
       inputSchema: z.object({
         project_id: PROJECT_ID,
+        trigger: ROUTINE_TRIGGER_SCHEMA.optional(),
         prompt: z
           .string()
           .min(1)
@@ -4948,7 +4932,7 @@ export function registerMinddyTools(
               "language. Numo may use Minddy tools, delegate code, or pause for owner input.",
           ),
         frequency: z
-          .enum(["daily", "weekly", "monthly"])
+          .enum(["daily", "weekly", "monthly"]).optional()
           .describe(
             "'daily', 'weekly' (then pass weekdays) or 'monthly' (then pass days_of_month).",
           ),
@@ -4956,7 +4940,7 @@ export function registerMinddyTools(
           .number()
           .int()
           .min(0)
-          .max(23)
+          .max(23).optional()
           .describe("Hour of the run, 0–23, expressed IN `timezone`."),
         timezone: z
           .string()
@@ -5018,10 +5002,11 @@ export function registerMinddyTools(
         projectId: scope.access.project.id,
         actorId: scope.userId,
         prompt: args.prompt,
+        trigger: args.trigger,
         maxSpendPercent: args.max_spend_percent ?? null,
         frequency: args.frequency,
         hour: args.hour,
-        minute: args.minute ?? 0,
+        minute: args.minute,
         weekdays: args.weekdays ?? null,
         daysOfMonth: args.days_of_month ?? null,
         timezone: args.timezone,
@@ -5035,16 +5020,10 @@ export function registerMinddyTools(
     "minddy_update_routine",
     {
       title: "Update routine",
-      description:
-        "Change an existing routine: pause it or bring it back (`enabled`), move " +
-        "its cadence or rewrite its instruction. OWNER ONLY. " +
-        "Touching the cadence — or re-enabling a paused routine — RECOMPUTES the " +
-        "next occurrence, so a change takes effect at the next one, never at the " +
-        "one already scheduled. Pausing keeps the routine in the list, where the " +
-        "user still reads its past runs; minddy_delete_routine takes it out of the " +
-        "list altogether (to the trash). Get the id from minddy_list_routines.",
+      description: UPDATE_ROUTINE_DESCRIPTION,
       inputSchema: z.object({
         project_id: PROJECT_ID,
+        trigger: ROUTINE_TRIGGER_SCHEMA.optional(),
         routine_id: z.string().uuid().describe("From minddy_list_routines."),
         prompt: z
           .string()
@@ -5094,6 +5073,7 @@ export function registerMinddyTools(
       if ("error" in scope) return scope.error;
       const result = await updateRoutine({
         routineId: args.routine_id,
+        trigger: args.trigger,
         actorId: scope.userId,
         ...(args.prompt !== undefined ? { prompt: args.prompt } : {}),
         ...(args.enabled !== undefined ? { enabled: args.enabled } : {}),

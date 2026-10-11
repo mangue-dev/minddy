@@ -55,7 +55,6 @@ import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 import { nativeWorkerModel } from "@/lib/native-worker-model";
 import { resolveWorkerHarness, NativeWorkerUnavailableError } from "./native-worker-selection";
 import { syncIssueStatusOnAgentStart } from "./issue-status-sync";
-import { handOffToHuman } from "@/lib/server/automations/hooks";
 import { generateShortTitle } from "@/lib/server/short-title";
 import { agentRunTitleSource } from "./run-title";
 import type { AssistantMention } from "@/lib/assistant-types";
@@ -866,14 +865,6 @@ export async function launchAgentRun(
 
     await recordLaunch();
 
-    // A MANUAL launch, regardless of its mode, means that someone takes the
-    // ticket in hand: the chain that was waiting for him on reprieve is canceled (MIN-147).
-    // Without that, only the implementation was covered — it alone moves the
-    // ticket —, and launching a plan or a check by hand left the
-    // reprieve to run to the end, to get back to the work we had just done
-    // take. A chain that RUNS is not concerned: there, that's what
-    // launch which is refused (`alreadyRunning`, above).
-    if (input.triggeredBy !== "automation") handOffToHuman(issueId);
   }
 
   kickAgentDrain(service, run.id);

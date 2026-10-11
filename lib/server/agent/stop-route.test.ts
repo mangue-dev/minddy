@@ -49,12 +49,6 @@ vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({}),
 }));
 
-vi.mock("@/lib/server/automations/hooks", () => ({
-  stopChainOnInterrupt: (chainId: string) => {
-    chainStops.push(chainId);
-  },
-}));
-
 let run: Record<string, unknown>;
 
 const { POST } = await import("@/app/api/agent-runs/[runId]/stop/route");
@@ -159,12 +153,12 @@ describe("POST /api/agent-runs/[runId]/stop", () => {
     expect(drainKicks).toBe(1);
   });
 
-  it("keeps stopping the automation chain of a working chain run", async () => {
+  it("stops an archived chain worker without advancing its retired chain", async () => {
     run.chain_id = "chain-1";
 
     await POST(request(), params);
 
-    expect(chainStops).toEqual(["chain-1"]);
+    expect(chainStops).toEqual([]);
   });
 
   it("does not stop the chain when the run is at rest", async () => {

@@ -76,6 +76,7 @@ interface AgentModelsResult {
   /** Identifies whether that server-side sandbox is local to the instance or hosted. */
   executionBackend: AgentExecutionBackend;
   /** Scheduled task routes are protected and can be scheduled. */
+  routineEventProcessingConfigured?: boolean;
   routineSchedulingConfigured: boolean;
   /** Instance default used by Numo when a conversation has no override. */
   defaultReasoning?: ReasoningLevel;
@@ -117,6 +118,7 @@ export async function fetchAgentModels(
     recommended?: string[];
     cloudExecutionConfigured?: boolean;
     executionBackend?: AgentExecutionBackend;
+    routineEventProcessingConfigured?: boolean;
     routineSchedulingConfigured?: boolean;
     defaultReasoning?: ReasoningLevel;
     localEndpoint?: {
@@ -142,6 +144,7 @@ export async function fetchAgentModels(
     // a loading would offer an action which the server will then refuse in 503.
     cloudExecutionConfigured: data.cloudExecutionConfigured ?? false,
     executionBackend: data.executionBackend ?? null,
+    routineEventProcessingConfigured: data.routineEventProcessingConfigured ?? false,
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     defaultReasoning: data.defaultReasoning,
     ...(localEndpoint ? { localEndpoint } : {}),
@@ -180,6 +183,7 @@ export function useAgentModelsQuery(
     recommended: data?.recommended ?? [],
     cloudExecutionConfigured: data?.cloudExecutionConfigured ?? false,
     executionBackend: data?.executionBackend ?? null,
+    routineEventProcessingConfigured: data?.routineEventProcessingConfigured ?? false,
     routineSchedulingConfigured: data?.routineSchedulingConfigured ?? false,
     defaultReasoning: data?.defaultReasoning,
     loading: isPending,

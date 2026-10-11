@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
 
 import { after } from "next/server";
@@ -47,8 +48,6 @@ import {
 } from "@/lib/cycle-move";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { scheduleRemoteStatusPush } from "@/lib/server/git/issue-push";
-import { scheduleStatusAutomations } from "@/lib/server/automations/hooks";
-import { automationSourceOf, parseAutomationOverride } from "@/lib/automations";
 import {
   cycleBelongsToUser,
   issueInProject,
@@ -121,7 +120,7 @@ export async function updateIssueFields({
   input,
   viaAssistant = false,
   viaAutomation = false,
-  viaAgentRun = false,
+
   mcpKeyId = null,
   forgeSync = null,
   expectedUpdatedAt = null,
@@ -159,6 +158,9 @@ export async function updateIssueFields({
    */
   cycleMove?: CycleMovePrecondition | null;
 }): Promise<UpdateIssueResult> {
+  if ("automation_override" in input) {
+    return { ok: false, status: 400, rawMessage: "Issue automation overrides were retired. Configure a routine instead." };
+  }
   const updates: Record<string, unknown> = {};
 
   if (typeof input.title === "string") {
@@ -243,16 +245,6 @@ export async function updateIssueFields({
       return { ok: false, status: 400, errorKey: "invalidPosition" };
     }
     updates.position = input.position;
-  }
-  // Force automations on THIS ticket (MIN-147). `null` = it follows the
-  // project rules; any other form goes through the parser, which returns `null`
-  // on what he doesn't understand — an illegible override is worth "no override",
-  // jamais un refus d'enregistrement.
-  if ("automation_override" in input) {
-    updates.automation_override =
-      input.automation_override === null
-        ? null
-        : parseAutomationOverride(input.automation_override);
   }
   if ("cycle_id" in input) {
     if (input.cycle_id !== null && typeof input.cycle_id !== "string") {
@@ -396,24 +388,15 @@ export async function updateIssueFields({
     // Repeating a completed move is a successful no-op. This keeps the domain
     // action idempotent without emitting duplicate events or touching dates.
     if (validation === "unchanged") {
-      return {
+      { scheduleRoutineEvents(); return {
         ok: true,
         issue: mapIssueRow(before),
         changed: false,
         assignmentChanged: false,
-      };
+      }; }
     }
     if (validation === "cycleSourceChanged") {
       return { ok: false, status: 409, errorKey: validation };
-    }
-  }
-  if ("automation_override" in updates) {
-    //Forcing an automation preset means engaging the quota, plan and
-    // the BYOK key of the project OWNER — the resulting runs go
-    // on his budget. So it's his alone, and 403: it's not a burden
-    // malformed, it’s a right we don’t have.
-    if (beforeProject!.owner_id !== actorId) {
-      return { ok: false, status: 403, errorKey: "ownerOnly" };
     }
   }
 
@@ -788,29 +771,6 @@ export async function updateIssueFields({
         actorId,
       });
     }
-    // Automations (MIN-147): the status change is one of the two
-    // only events that the loop needs. Same contract as its neighbors —
-    // off critical path, and silent no-op if the world has moved.
-    scheduleStatusAutomations({
-      issueId,
-      projectId: before.project_id as string,
-      from: (before.status as IssueStatus | null) ?? null,
-      to: updates.status as IssueStatus,
-      // THE ORIGIN decides whether a rule has the right to react: the presets which
-      // write code only accept a human gesture, those who check
-      // also accept an agent. Same resolver as the analytical source — one
-      // second taxonomy would diverge the day one of the two moves.
-      source: automationSourceOf({
-        raw: resolveIssueSource({
-          viaAssistant,
-          mcpKeyId,
-          forge: forgeSync,
-          actorId,
-        }),
-        viaAutomation,
-        viaAgentRun,
-      }),
-    });
   }
 
   // Server Analytics (MIN-78): same reason as for creation — a good one
@@ -842,11 +802,11 @@ export async function updateIssueFields({
   const issue = mapIssueRow(
     smartAssignee ? { ...data, assignee_id: smartAssignee } : data,
   ) as Record<string, unknown> & { category_ids: string[] };
-  return {
+  { scheduleRoutineEvents(); return {
     ok: true,
     issue,
     changed: true,
     assignmentChanged:
       (issue.assignee_id ?? null) !== (before.assignee_id ?? null),
-  };
+  }; }
 }

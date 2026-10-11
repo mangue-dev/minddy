@@ -5,7 +5,7 @@ import "server-only";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { encodeAgentVerdict, shouldEncryptAgentVerdict } from "./run-verdict-content";
+
 import {
   assertIssueInProject,
   getIssue,
@@ -73,8 +73,8 @@ import { fetchAgentLinkResource, withoutAgentLinkUrls } from "./link-resource";
  * the MCP and Numo: `appendToPlan` and `editIssueText`.
  * - `create_issue` → creates a project ticket, with the landing status chosen
  * by the launcher (Account → Preferences), like Numo chat.
- * - `create_routine` → sets a ROUTINE (MIN-185): a scheduled run which
- * returns by itself. Same manufacturer as the other three
+ * - `create_routine` → creates a schedule, event or database routine.
+ * Uses the same factory as the other three
  * doors; the caller is the launcher of the run, so a
  * run launched by a non-owner is refused.
  * Customer service: access was controlled at run launch (project member),
@@ -95,10 +95,9 @@ export interface IssueToolContext {
   /** Does the run model accept an image as input? (see `supportsImageInput`).
    * False → `read_resource` behaves exactly as before MIN-111. */
   imageInput?: boolean;
-  /** Run CURRENT — the line on which `report_verdict` writes its verdict. */
+  /** Current run identity for project-scoped tools. */
   runId?: string | null;
-  /** Run automation chain (MIN-147). It is she who decides whether
-   * `report_verdict` is served: outside the chain, no one reads a verdict. */
+  /** Historical chain reference retained for archived run contexts. */
   chainId?: string | null;
 }
 
@@ -1077,20 +1076,21 @@ async function createRoutineTool(
   const result = await createRoutine({
     projectId: ctx.projectId,
     actorId: ctx.actorId,
+    trigger: args.trigger,
     prompt: typeof args.prompt === "string" ? args.prompt : "",
     maxSpendPercent:
       typeof args.max_spend_percent === "number"
         ? args.max_spend_percent
         : null,
-    frequency: typeof args.frequency === "string" ? args.frequency : "",
-    hour: typeof args.hour === "number" ? args.hour : 9,
-    minute: typeof args.minute === "number" ? args.minute : 0,
+    frequency: typeof args.frequency === "string" ? args.frequency : undefined,
+    hour: typeof args.hour === "number" ? args.hour : undefined,
+    minute: typeof args.minute === "number" ? args.minute : undefined,
     weekdays: Array.isArray(args.weekdays)
       ? args.weekdays.filter((d): d is number => typeof d === "number")
-      : [],
+      : undefined,
     daysOfMonth: Array.isArray(args.days_of_month)
       ? args.days_of_month.filter((d): d is number => typeof d === "number")
-      : [],
+      : undefined,
     timezone: typeof args.timezone === "string" ? args.timezone : "",
   });
   if (!result.ok) {
@@ -1148,79 +1148,6 @@ function routineToolError(r: {
   }
 }
 
-/** Cap of the written verdict in base — a report, not a dissertation. */
-const VERDICT_SUMMARY_MAX_CHARS = 2000;
-const VERDICT_BLOCKER_MAX_CHARS = 400;
-const VERDICT_MAX_BLOCKERS = 20;
-
-/**
- * `report_verdict` (MIN-147): What the verifying a string
- * step concludes. Written on `agent_runs.verdict` of the CURRENT run — this is what the
- * engine reads to decide between "we continue", "we resume once" and
- * "we give up in triage".
- *
- * Used only when the run carries a string (`agentToolsFor({ chain })`) ;
- * the refusal below therefore only catches a hallucinatory appeal, but it is better
- * an explicit error than a verdict written nowhere.
- */
-async function reportVerdict(
-  ctx: IssueToolContext,
-  args: Record<string, unknown>,
-): Promise<ToolOutcome> {
-  if (!ctx.chainId || !ctx.runId) {
-    return {
-      result: {
-        error:
-          "report_verdict is only available inside an automated chain. Just answer normally.",
-      },
-      success: false,
-    };
-  }
-  if (typeof args.ok !== "boolean") {
-    return { result: { error: "ok (boolean) is required." }, success: false };
-  }
-  const summary = typeof args.summary === "string" ? args.summary.trim() : "";
-  if (!summary) {
-    return {
-      result: {
-        error: "summary (what you checked and concluded) is required.",
-      },
-      success: false,
-    };
-  }
-  const blockers = (Array.isArray(args.blockers) ? args.blockers : [])
-    .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
-    .slice(0, VERDICT_MAX_BLOCKERS)
-    .map((b) => b.trim().slice(0, VERDICT_BLOCKER_MAX_CHARS));
-
-  const service = getServiceClient();
-  const verdict = {
-    ok: args.ok,
-    summary: summary.slice(0, VERDICT_SUMMARY_MAX_CHARS),
-    blockers,
-  };
-  const storedVerdict = await shouldEncryptAgentVerdict(service, ctx.projectId)
-    ? await encodeAgentVerdict(ctx.projectId, ctx.runId, verdict)
-    : { verdict };
-  const { data, error } = await service
-    .from("agent_runs")
-    .update(storedVerdict)
-    .eq("id", ctx.runId)
-    .eq("project_id", ctx.projectId)
-    .select("id")
-    .maybeSingle();
-  if (error || !data) {
-    return {
-      result: { error: `Verdict not saved: ${error?.message ?? "run is unavailable"}` },
-      success: false,
-    };
-  }
-  return {
-    result: { ok: true, recorded: args.ok ? "pass" : "fail" },
-    success: true,
-  };
-}
-
 /** Runs a tool ticket. The caller has already routed to `ISSUE_TOOL_NAMES`. */
 export async function executeIssueTool(
   ctx: IssueToolContext,
@@ -1253,7 +1180,7 @@ export async function executeIssueTool(
       case "create_routine":
         return await createRoutineTool(ctx, args);
       case "report_verdict":
-        return await reportVerdict(ctx, args);
+        return { result: { error: "Automation verdicts were retired. Return your findings to Numo." }, success: false };
       // The project pages: same context, neighboring executor (MIN-273).
       case "list_pages":
       // `search_pages` was served to the model and routed by `ISSUE_TOOL_NAMES`,

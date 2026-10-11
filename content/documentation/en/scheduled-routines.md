@@ -2,8 +2,8 @@
 {
   "id": "scheduled-routines",
   "locale": "en",
-  "title": "Scheduled routines",
-  "summary": "Set project context, a timezone and an AI cap, then inspect each occurrence.",
+  "title": "Routines",
+  "summary": "Run Numo from a schedule, an issue event, feedback or a new database entry.",
   "topic": "Numo and integrations",
   "type": "guide",
   "audiences": [
@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -34,14 +34,16 @@
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
       "content/documentation/reviews/routine-localized-capture-candidates.json",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-677-editor-captures.json"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
+    "language": "agent:/root (en translation, label and retained-meaning self-review)",
+    "date": "2026-10-12"
   },
   "related": [],
   "aliases": [],
@@ -53,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/scheduled-routines-workflow.png",
-      "alt": "Editor of an existing paused demonstration routine, with its prompt localized for display.",
-      "caption": "Editor of an existing paused demonstration routine, with its prompt localized for display. Schedule and spending cap are unchanged; nothing was saved or executed.",
-      "revision": 3,
+      "alt": "Scheduled and event modes, one condition group, app icons and discreet information buttons.",
+      "caption": "Local demonstration of the actual trigger editor. No routine was saved or executed.",
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-12",
       "viewport": [
-        1154,
-        1016
+        788,
+        910
       ],
       "theme": "light",
       "padding": 24,
@@ -73,16 +75,37 @@
 }
 ---
 
-## Create the scheduled request {#scheduled-routines}
+## Create a routine {#scheduled-routines}
 
-Only a project owner can create its routine. Open Routines and start a new routine. Choose an owned project, write the instruction and mention the relevant issues, pages or objectives. Select the schedule and timezone; read the first-run preview before creating it. Set the per-run spending cap as a percentage of the monthly budget.
+Only the project owner can create, edit or enable a routine. Open Routines, choose an owned project and write the instruction Numo should receive. Mention relevant issues, pages or objectives. Each occurrence has a private Numo conversation, history, Minddy tools and optional code delegation. Code workers use the owner's account defaults; a repository is needed only for repository work.
 
-Every occurrence creates a new conversation with the saved instruction and context. It uses the owner's AI budget and personal MCP connections. Numo delegates repository work only when needed, using the account's worker defaults.
+Choose **Scheduled** or **Event**. Database arrivals are an option in the event list.
+
+- **Scheduled:** choose daily, weekly or monthly, the time and your timezone. Check the first-run preview.
+- **Event:** choose issue creation, entry into a target status, assignment, a comment on a followed issue, feedback receipt, or a new database entry. Choose the target status, person or followed issue where requested. A status trigger includes issues created directly in that status. Assignment requires an actual change of assignee.
+
+For a database arrival, choose **New database entry** in the event list, then a page database in this project. A creation, duplicate, database import or move into that database counts as an arrival. Restoring an entry does not create a new arrival.
+
+**Conditions** are optional: without them, every matching event can start the routine. Set the delay separately under **Start timing**. The small information buttons explain waiting behavior and timing. Pickers use the same status, priority, category and person indicators as the rest of Minddy. Use arrow keys and Enter; longer lists include search.
+
+Set the delay after an event if needed, from 0 to 120 minutes. Keep your timezone for Numo's context. Event and database routines listen for future arrivals and have no next scheduled date. Automatic processing requires the instance scheduler; a manual run remains available.
+
+## Build conditions that can wait {#conditions}
+
+Use **Add condition** to build one group of up to 16 conditions. Choose **All conditions** (AND) or **Any condition** (OR) for the whole group. Select issue status, assignee, category, priority or effort; for a database, select its typed property. Choose a compatible operator and value. People, categories and databases must belong to this project. Nested groups cannot be added. Saved nested rules keep their meaning; if they cannot be shown as one equivalent group, **Replace conditions** clears them so you can build a new group.
+
+For example: entry into Triage, with all conditions requiring category Backend and priority High. An issue arriving without a category stays waiting. Adding Backend later can start the occurrence. Once consumed, that waiting item cannot start a second occurrence. Leaving the target status cancels it; entering again creates a new waiting item. A reassignment similarly replaces its waiting item.
+
+An entry created without its required property stays waiting until an edit satisfies the filter. Removing a referenced property or changing its type shows a filter error: correct the routine's conditions before continuing. The delay is also respected when a filter becomes true. Feedback receipt includes private and pending feedback; running Numo does not publish it or bypass moderation.
+
+![Scheduled and event modes, one condition group, app icons and discreet information buttons.](/documentation/en/scheduled-routines-workflow.png)
 
 ## Manage and verify runs {#runs}
 
-Open the routine to edit its instruction or schedule, pause it, or inspect occurrences. A manual run also consumes usage. Open the occurrence conversation to read the outcome, questions, checks and delegated work. A routine waiting for input needs an answer; repeating the schedule cannot supply it.
+Open the routine to inspect waiting conditions, change its instruction or trigger, pause it, or review occurrences. Pausing, deleting or changing its configuration invalidates waiting items. Re-enabling listens to future events without replaying old arrivals. A manual run can start any trigger type without waiting for its event and also consumes usage.
 
-If a cap stops the run, inspect saved results before adjusting the cap or retrying. After a project ownership change, start a new occurrence as the current owner; old runs cannot use the previous owner's connections.
+Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by default, including Numo and delegated workers. Open its conversation to inspect the source, outcome, checks, questions and delegated work. When owner input is required, answer in that same conversation; the remaining occurrence budget is retained. Inspect saved results before adjusting a cap or retrying. After an ownership change, the previous owner's routine cannot start new work; create a routine as the current owner.
 
-![Editor of an existing paused demonstration routine, with its prompt localized for display.](/documentation/en/scheduled-routines-workflow.png)
+The cap applies when an included monthly budget is available; an uncapped personal-key mode does not acquire an artificial monthly allowance.
+
+Archived project automations appear as paused proposals when their owner opens Routines. Read the [transition guide](/docs/automation-settings) before enabling one.

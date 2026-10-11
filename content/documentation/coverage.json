@@ -684,14 +684,14 @@
   {
     "workflow": "N06",
     "article": "scheduled-routines",
-    "outcome": "Schedule edit pause and inspect recurring Numo requests",
+    "outcome": "Create and inspect Numo routines from schedules, events or database arrivals",
     "audiences": [
       "owner"
     ],
     "type": "guide",
-    "source": "K/productivity; `components/routines/routine-detail.tsx`; `components/routines/create-routine-wizard.tsx`",
-    "gaps": "Timezone/schedule, occurrence conversations, per-run cap, owner budget/connections, changed ownership and manual runs",
-    "illustration": "Reuse routines; new schedule/cap controls",
+    "source": "`lib/server/routines.ts`; `lib/server/routine-event-processing.ts`; `components/routines/routine-trigger-fields.tsx`",
+    "gaps": "Trigger ownership, typed waiting conditions, cancellation, private occurrences and shared budget",
+    "illustration": "Localized trigger editor with nested conditions",
     "requiresFigures": true,
     "section": "scheduled-routines"
   },
@@ -828,15 +828,15 @@
   {
     "workflow": "A05",
     "article": "automation-settings",
-    "outcome": "Configure account and owned-project automatic work",
+    "outcome": "Review archived automation proposals and configure owner-controlled routines",
     "audiences": [
       "owner"
     ],
     "type": "guide",
-    "source": "`components/settings/account-automations-section.tsx`; `components/settings/smart-assign-section.tsx`; K/settings-and-data",
-    "gaps": "Presets/delay/effort switches, Smart Fill/Assign/Triage differences, member rules, provider and usage prerequisites",
-    "illustration": "New automation settings",
-    "requiresFigures": true,
+    "source": "`lib/server/legacy-routine-proposals.ts`; `components/routines/routine-detail.tsx`; K/settings-and-data",
+    "gaps": "Paused proposals, filters, delay, checkpoints, spending cap and retained archive",
+    "illustration": "Transition explained in text; trigger controls illustrated in N06",
+    "requiresFigures": false,
     "section": "automation-settings"
   },
   {

@@ -31,7 +31,6 @@ import {
   buildMultiIssuePrompt,
   type IssuePromptInput,
 } from "@/lib/issue-prompt";
-import { handOffIssueApi } from "@/lib/agent-api";
 import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
@@ -109,7 +108,6 @@ export function useBulkSelectionActions({
     const autoStart = resolvePromptCopyAutoStart(userRef.current?.user_metadata);
     const moved = new Set<string>();
     for (const issue of issues) {
-      handOffIssueApi(issue.id);
       if (autoStart && shouldAutoStartOnPromptCopy(issue.status)) {
         moved.add(issue.id);
       }

@@ -1,4 +1,7 @@
 "use client";
+import { RoutineTriggerFields, RoutineTriggerSummary } from "./routine-trigger-fields";
+import type { RoutineTrigger } from "@/lib/routine-triggers";
+
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -205,6 +208,8 @@ export function RoutineDetail({
       prompt: draft.prompt.trim(),
       promptMentions: draft.promptMentions,
       maxSpendPercent: draft.spendCap,
+      trigger: draft.trigger,
+      ...(draft.trigger.type === "schedule" ? {
       frequency: draft.schedule.frequency,
       hour: draft.schedule.hour,
       minute: draft.schedule.minute,
@@ -214,6 +219,7 @@ export function RoutineDetail({
         draft.schedule.frequency === "monthly"
           ? draft.schedule.daysOfMonth
           : [],
+      } : {}),
       timezone: draft.schedule.timezone,
     });
     setDraft(null);
@@ -501,7 +507,8 @@ export function RoutineDetail({
               the screen — and “what she does” was precisely what we had come
               check. */}
           <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
-            <RoutineSummary schedule={routineSchedule(routine)} />
+            <RoutineTriggerSummary trigger={routine.trigger} projectId={routine.project_id} />
+            {(!routine.trigger || routine.trigger.type === "schedule") ? <RoutineSummary schedule={routineSchedule(routine)} /> : <p className="text-xs text-muted-foreground">{t(routine.waiting_count ? "waitingConditions" : "listensForEvents")}</p>}
 
             <p className="text-xs text-muted-foreground">
               {t("executionEnvironment")}
@@ -517,6 +524,8 @@ export function RoutineDetail({
               </p>
             ) : null}
 
+            {routine.legacy_source_key ? <p className="rounded-md border p-3 text-sm">{t("legacyProposalNotice")}</p> : null}
+            {routine.trigger_error ? <p role="alert" className="text-sm text-destructive">{["quota", "launchFailed"].includes(routine.trigger_error) ? routineErrorLabel(routine.trigger_error, t) : t("triggerFilterError")}</p> : null}
             {routine.last_error ? (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                 <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" />
@@ -625,10 +634,11 @@ export function RoutineDetail({
                                         {t(
                                           run.origin === "scheduled"
                                             ? "runOriginScheduled"
-                                            : "runOriginManual",
+                                            : run.origin === "manual" ? "runOriginManual" : run.origin === "database" ? "trigger_database" : "eventRun",
                                         )}
                                       </span>
                                     ) : null}
+                                    {run.subject_id && run.subject_type ? <span className="block truncate text-[11px] text-muted-foreground">{t(`source_${run.subject_type}`)} · {run.subject_id}</span> : null}
                                   </button>
                                 </td>
                                 <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
@@ -960,7 +970,7 @@ function optimisticNextRunAt(
   routine: Routine,
   enabled: boolean,
 ): string | null {
-  if (!enabled) return null;
+  if (!enabled || routine.trigger?.type !== "schedule" && routine.trigger != null) return null;
   try {
     return nextRunAt(routineSchedule(routine), new Date()).toISOString();
   } catch {
@@ -1058,6 +1068,7 @@ function RoutineSummary({
 
 /** The editing draft: everything that a routine exposes to adjustment. */
 interface RoutineDraft {
+  trigger: RoutineTrigger;
   prompt: string;
   promptMentions: AssistantMention[];
   /** Share of the monthly budget that ONE passage can spend (1–100). */
@@ -1068,6 +1079,7 @@ interface RoutineDraft {
 /** The draft as a recorded routine gives it. */
 function draftFrom(routine: Routine): RoutineDraft {
   return {
+    trigger: routine.trigger ?? { type: "schedule" },
     prompt: routine.prompt,
     promptMentions: routine.prompt_mentions ?? [],
     // The routines placed before the ceiling do not already carry any in the cache
@@ -1160,7 +1172,9 @@ function RoutineEditor({
       </EditorSection>
 
       {/* WHEN it starts. */}
-      <EditorSection title={t("sectionSchedule")}>
+      <EditorSection title={t("triggerLabel")}>
+        <RoutineTriggerFields projectId={projectId} value={draft.trigger} onChange={value => set("trigger", value)} />
+        {draft.trigger.type === "schedule" ? <>
         <RoutineScheduleFields
           value={draft.schedule}
           onChange={(value) => set("schedule", value)}
@@ -1169,6 +1183,7 @@ function RoutineEditor({
             at the bottom of the screen: it is their result which is read again before
             d'enregistrer. */}
         <RoutineSummary schedule={draft.schedule} />
+        </> : null}
       </EditorSection>
     </div>
   );

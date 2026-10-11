@@ -746,6 +746,7 @@ export async function POST(request: NextRequest) {
           ? {
               routineId: routineContinuation.routine.id,
               routineOrigin: routineContinuation.occurrence.origin,
+              routineProvenance: routineContinuation.occurrence.subject_id && routineContinuation.occurrence.subject_type && routineContinuation.occurrence.event_id ? { eventId: String(routineContinuation.occurrence.event_id), subjectId: routineContinuation.occurrence.subject_id, subjectType: routineContinuation.occurrence.subject_type, causeRoutineIds: routineContinuation.causeRoutineIds } : null,
               routineScheduledFor: routineContinuation.occurrence.scheduled_for,
               operationBudgetUsd: routineContinuation.remainingBudgetUsd,
               operationBudgetPercent:

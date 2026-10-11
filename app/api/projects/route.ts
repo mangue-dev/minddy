@@ -1,3 +1,4 @@
+import { projectForClient } from "@/lib/server/project-content";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   return NextResponse.json(await Promise.all((data ?? []).map((row) =>
-    decodeProject(row, auth.user.id))));
+    decodeProject(row, auth.user.id).then(projectForClient))));
 }
 
 /** POST /api/projects — create a project owned by the caller. */
@@ -166,5 +167,5 @@ export async function POST(request: NextRequest) {
     ),
   });
 
-  return NextResponse.json(await decodeProject(data, auth.user.id), { status: 201 });
+  return NextResponse.json(projectForClient(await decodeProject(data, auth.user.id)), { status: 201 });
 }

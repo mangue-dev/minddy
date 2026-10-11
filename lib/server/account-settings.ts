@@ -35,16 +35,6 @@ import {
   type CyclePrefs,
 } from "@/lib/cycle-prefs";
 import {
-  AUTOMATION_PRESET_META_KEY,
-  isAutomationPresetId,
-  resolveAutomationPreset,
-  resolveAutomationEfforts,
-  resolveAutomationStartDelayMinutes,
-  ALL_EFFORTS,
-  MAX_AUTOMATION_START_DELAY_MIN,
-  type AutomationPresetId,
-} from "@/lib/automations";
-import {
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORY_META_KEYS,
   resolveNotificationPrefs,
@@ -73,11 +63,6 @@ import {
   resolveSendMode,
   type SendMode,
 } from "@/lib/keyboard/send-shortcut";
-import { type IssueEffort } from "@/lib/issue-constants";
-import {
-  AUTOMATION_START_DELAY_META_KEY,
-  AUTOMATION_EFFORTS_META_KEY,
-} from "@/lib/automations";
 import { ANALYTICS_CONSENT_META_KEY, resolveAnalyticsConsent } from "@/lib/cookie-consent";
 import {
   isSandboxRegion,
@@ -115,13 +100,6 @@ export interface AccountSettings {
   smart_fill_triage: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
   cycles: CyclePrefs;
-  /** Automation preset (MIN-147): Numo loop applied to ALL
-  * projects owned by this account. `null` = none. */
-  automation_preset: AutomationPresetId | null;
-  /** Minutes the automation waits after its trigger before starting the agent. */
-  automation_start_delay_minutes: number;
-  /** Which ticket sizes the automation loop may run on. */
-  automation_efforts: Record<IssueEffort, boolean>;
   /** Product-analytics consent. `null` = never answered. */
   analytics_consent: "accepted" | "declined" | null;
   /** Inbox (MIN-82) — one toggle per trigger family. */
@@ -250,9 +228,6 @@ function toSettings(
     smart_fill_created: resolveSmartFillScope(meta, "created"),
     smart_fill_triage: resolveSmartFillScope(meta, "triage"),
     cycles: resolveCyclePrefs(meta),
-    automation_preset: resolveAutomationPreset(meta),
-    automation_start_delay_minutes: resolveAutomationStartDelayMinutes(meta),
-    automation_efforts: resolveAutomationEfforts(meta),
     analytics_consent: resolveAnalyticsConsent(meta),
     notifications: resolveNotificationPrefs(meta),
     agent,
@@ -298,6 +273,9 @@ export async function updateAccountSettings({
     return { ok: false, error: readErr?.message ?? "Account not found." };
   }
   const meta = (current.user.user_metadata ?? {}) as Record<string, unknown>;
+  if (["automation_preset", "automation_start_delay_minutes", "automation_start_delay_min", "automation_efforts"].some(key => key in input)) {
+    return { ok: false, error: "Project automations were replaced by routines. Configure a routine instead." };
+  }
   const next: Record<string, unknown> = { ...meta };
 
   // Numo may read and explain code-worker settings, but only the authenticated
@@ -383,59 +361,6 @@ export async function updateAccountSettings({
       }
       next[key] = input[key];
     }
-  }
-
-  // Automation preset (MIN-147). `null` erases it — that's the way to
-  // say “no more loops”, without having to turn off each project.
-  if ("automation_preset" in input) {
-    if (input.automation_preset === null) {
-      delete next[AUTOMATION_PRESET_META_KEY];
-    } else if (isAutomationPresetId(input.automation_preset)) {
-      next[AUTOMATION_PRESET_META_KEY] = input.automation_preset;
-    } else {
-      return { ok: false, error: "automation_preset is not a known preset." };
-    }
-  }
-
-  // Start delay of the automation loop: the reprieve between the trigger and
-  // the agent run. Same bounds as `resolveAutomationStartDelayMinutes`.
-  if ("automation_start_delay_minutes" in input) {
-    const n = input.automation_start_delay_minutes;
-    if (
-      typeof n !== "number" ||
-      !Number.isInteger(n) ||
-      n < 0 ||
-      n > MAX_AUTOMATION_START_DELAY_MIN
-    ) {
-      return {
-        ok: false,
-        error: `automation_start_delay_minutes must be an integer between 0 and ${MAX_AUTOMATION_START_DELAY_MIN}.`,
-      };
-    }
-    next[AUTOMATION_START_DELAY_META_KEY] = n;
-  }
-
-  // Per-effort switches of the automation loop. Partial on purpose: only the
-  // keys sent change, the others keep their value (they default to enabled).
-  if ("automation_efforts" in input) {
-    const raw = input.automation_efforts;
-    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-      return { ok: false, error: "automation_efforts must be an object of effort → boolean." };
-    }
-    const patch: Record<string, boolean> = {};
-    for (const [effort, value] of Object.entries(raw as Record<string, unknown>)) {
-      if (!ALL_EFFORTS.includes(effort as IssueEffort)) {
-        return { ok: false, error: `automation_efforts carries an unknown effort: ${effort}.` };
-      }
-      if (typeof value !== "boolean") {
-        return { ok: false, error: `automation_efforts.${effort} must be a boolean.` };
-      }
-      patch[effort] = value;
-    }
-    // Merge over the CURRENT value, not over the default: a second partial
-    // write must not re-enable a size the user disabled earlier.
-    const current = resolveAutomationEfforts(meta);
-    next[AUTOMATION_EFFORTS_META_KEY] = { ...current, ...patch };
   }
 
   // Analytics consent (GDPR). `null` clears the stored answer, so the user
@@ -552,9 +477,6 @@ export async function updateAccountSettings({
     SMART_FILL_TRIAGE_META_KEY,
     // Without it, a call carrying ONLY the preset came out here as “nothing to
     // change” — even though the block that wrote it had just placed it.
-    AUTOMATION_PRESET_META_KEY,
-    AUTOMATION_START_DELAY_META_KEY,
-    AUTOMATION_EFFORTS_META_KEY,
     ANALYTICS_CONSENT_META_KEY,
     ...NOTIFICATION_CATEGORIES.map((c) => NOTIFICATION_CATEGORY_META_KEYS[c]),
     CYCLES_ENABLED_META_KEY,

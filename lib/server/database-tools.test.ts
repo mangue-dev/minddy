@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-const h = vi.hoisted(() => ({ access: vi.fn(), getPage: vi.fn(), rpc: vi.fn(), event: vi.fn() }));
+const h = vi.hoisted(() => ({ access: vi.fn(), getPage: vi.fn(), rpc: vi.fn(), event: vi.fn(), wake: vi.fn() }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: h.access }));
 vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({ rpc: h.rpc }) }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: (fn: () => Promise<void>) => fn() }));
 vi.mock("@/lib/server/page-activity", () => ({ recordPageEvent: h.event }));
+// Keep background event processing outside these guarded-write assertions.
+vi.mock("@/lib/server/routine-hooks", async importOriginal => ({
+  ...await importOriginal<typeof import("./routine-hooks")>(),
+  scheduleRoutineEvents: h.wake,
+}));
 
 import { registerPageTools } from "./mcp/page-tools";
 import { executePageTool } from "./agent/page-tools";
@@ -71,6 +76,7 @@ describe.each(surfaces)("%s database tools", (surface) => {
     h.getPage.mockResolvedValue({ ok: true, page: { ...page, project_id: "another-project" } });
     expect(await call(surface, valueArgs)).toMatchObject({ success: false });
     expect(h.rpc).not.toHaveBeenCalled();
+    expect(h.wake).not.toHaveBeenCalled();
   });
   it("forwards schema revisions and preserves stale-write failures", async () => {
     const args = { page_id: DATABASE, operation: "schema", schema, revision: 3, titleName: "Report" };

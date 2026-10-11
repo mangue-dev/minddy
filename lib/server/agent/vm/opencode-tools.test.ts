@@ -110,8 +110,8 @@ describe("le jeu de tools de domaine sort de tools.ts, pas d'une liste", () => {
     const chain = domainToolsFor(job({ chain: true })).map(
       (t) => t.function.name,
     );
-    expect(chain).toContain("report_verdict");
-    expect(domainToolsFor(job()).map((t) => t.function.name)).toContain(
+    expect(chain).not.toContain("report_verdict");
+    expect(domainToolsFor(job()).map((t) => t.function.name)).not.toContain(
       "report_verdict",
     );
 
@@ -181,7 +181,7 @@ describe("la traduction d'un schéma", () => {
     // A silent `any` would be a tool whose model no longer knows the form.
     // Better a ride that doesn't start than a parameter that disappears quietly.
     expect(() => schemaExpression({ type: "tuple" } as never)).toThrow(
-      /sans traduction/,
+      /unsupported/,
     );
     expect(() => schemaExpression({ type: "array" })).toThrow(/items/);
   });
@@ -397,4 +397,29 @@ it("preserves nullable database values in the generated agent schema", async () 
   expect(validator.safeParse({ page_id: "entry", operation: "value", value: [42] }).success).toBe(false);
   expect(validator.safeParse({ page_id: "database", operation: "schema", titleName: 42 }).success).toBe(false);
   expect(schemaExpression({ type: ["string", "null"] })).toBe("tool.schema.union([tool.schema.string(), tool.schema.null()])");
+});
+
+it("escapes code and script boundaries while preserving schema data", async () => {
+  const { z } = await import("zod");
+  const payload = '</script><script>throw new Error("injected")</script>\u2028\u2029`\\"';
+  const generated = schemaExpression({ type: "object", required: [payload, "choice"], properties: {
+    [payload]: { const: payload },
+    choice: { type: "string", enum: [payload], description: payload },
+  } });
+  expect(generated).not.toMatch(/[<>\u2028\u2029]/);
+  const validator = new Function("tool", `return ${generated}`)({ schema: z });
+  expect(validator.parse({ [payload]: payload, choice: payload })).toEqual({ [payload]: payload, choice: payload });
+  expect(validator.shape.choice.description).toBe(payload);
+
+  const source = renderOpencodeTool({ type: "function", function: {
+    name: "example", description: payload,
+    parameters: { type: "object", properties: { [payload]: { type: "string", description: payload } }, required: [payload] },
+  } });
+  expect(source).not.toContain("</script>");
+  expect(source).not.toContain("\u2028");
+  expect(source).not.toContain("\u2029");
+  const tool = Object.assign((config: unknown) => config, { schema: z });
+  const config = new Function("tool", source.replace(/^import[^\n]+\n/m, "").replace("export default tool(", "return tool("))(tool);
+  expect(config.description).toBe(payload);
+  expect(config.args[payload].description).toBe(payload);
 });

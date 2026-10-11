@@ -30,7 +30,6 @@ export const ISSUE_TOOL_NAMES = new Set([
   "edit_issue_text",
   "create_issue",
   "create_routine",
-  "report_verdict",
   // The PAGES of the project (MIN-273) — the wiki. They travel with the tickets
   // because they have exactly the same context, the run project and its
   // actor: one more family in the routing would only have brought

@@ -66,7 +66,6 @@ import {
   mergeServerIssue,
 } from "@/lib/optimistic/issue-writes";
 import { patchSearchIndexIssue } from "@/lib/use-search-index";
-import { handOffIssueApi } from "@/lib/agent-api";
 import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
@@ -696,11 +695,6 @@ export function CommandPalette({
               resourceCount: full.resource_count,
             });
             await navigator.clipboard.writeText(prompt);
-            // Copying a prompt means taking the ticket in hand: the chain that
-            // waiting for him on reprieve is canceled (MIN-147). Here as in the menu
-            // of the board — and even when the auto-start is off, in which case the
-            // ticket is not moving and nothing else would signal it.
-            handOffIssueApi(full.id);
             if (autoStart) {
               const handle = issueWrites.begin({
                 kind: "patch",

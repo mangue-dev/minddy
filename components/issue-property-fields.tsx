@@ -1,5 +1,6 @@
 "use client";
 
+import { Dot } from "@/components/ui/color-dot";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
 
@@ -40,18 +41,10 @@ import type { Category, Member, Objective } from "@/lib/types";
 
 /* Exported so the rows that aren't a plain field picker — relations, agent —
    hang their own trigger off the same chrome. */
+export { Dot } from "@/components/ui/color-dot";
+
 export const TRIGGER =
   "-mr-1.5 flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
-
-export function Dot({ color }: { color: string | null | undefined }) {
-  return (
-    <span
-      className="size-2.5 shrink-0 rounded-full"
-      style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
-      aria-hidden
-    />
-  );
-}
 
 export function PropertyRow({
   label,

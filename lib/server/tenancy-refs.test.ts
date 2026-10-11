@@ -163,7 +163,6 @@ vi.mock("@/lib/server/feedback/status-sync", () => ({
   scheduleFeedbackStatusSync: () => {},
 }));
 vi.mock("@/lib/server/git/issue-push", () => ({ scheduleRemoteStatusPush: () => {} }));
-vi.mock("@/lib/server/automations/hooks", () => ({ scheduleStatusAutomations: () => {} }));
 vi.mock("@/lib/server/recurrence", () => ({ spawnNextOccurrence: async () => {} }));
 vi.mock("@/lib/server/entitlements", () => ({ ensureIssueLimit: async () => {} }));
 vi.mock("@/lib/server/attachments", () => ({
@@ -307,20 +306,20 @@ describe("updateIssueFields — références sortantes bornées au projet", () =
     expect(updateLog[0].values).toMatchObject({ cycle_id: "cycle-mine", assignee_id: ME });
   });
 
-  it("refuse un forçage d'automatisation à un simple membre", async () => {
+  it("rejects retired automation overrides for members", async () => {
     // It is the budget, the plan and the BYOK key of the OWNER that runs
     // consume — 403, not 400: the charge is valid, the right is not.
     const result = await patch({ automation_override: { preset: "ship" } });
 
-    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+    expect(result).toMatchObject({ ok: false, status: 400 });
     expect(updateLog).toEqual([]);
   });
 
-  it("laisse le propriétaire du projet forcer un préréglage", async () => {
+  it("rejects retired automation overrides for owners", async () => {
     const result = await patch({ automation_override: { disabled: true } }, "user-owner");
 
-    expect(result.ok).toBe(true);
-    expect(updateLog[0].values).toMatchObject({ automation_override: { disabled: true } });
+    expect(result).toMatchObject({ ok: false, status: 400 });
+    expect(updateLog).toEqual([]);
   });
 });
 

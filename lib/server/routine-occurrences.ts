@@ -46,13 +46,18 @@ async function requireProtectedRoutineCopies(service: SupabaseClient) {
   }
 }
 
-export type RoutineOccurrenceOrigin = "scheduled" | "manual";
+export type RoutineOccurrenceOrigin = "scheduled" | "manual" | "event" | "database";
 
 export interface NumoRoutineOccurrence {
   id: string;
   routine_id: string;
+  cause_routine_ids?: string[];
+  arming_id?: string | null;
   origin: RoutineOccurrenceOrigin;
   scheduled_for: string | null;
+  event_id?: number | null;
+  subject_id?: string | null;
+  subject_type?: "issue" | "page" | "feedback" | null;
   conversation_id: string;
   request_id: string;
   turn_id: string | null;
@@ -105,6 +110,8 @@ export async function startRoutineOccurrence(input: {
   origin: RoutineOccurrenceOrigin;
   scheduledFor?: string | null;
   requestId?: string;
+  armingId?: string;
+  provenance?: { eventId: string; subjectId: string; subjectType: "issue" | "page" | "feedback"; causeRoutineIds?: string[] };
   readClient?: SupabaseClient;
 }): Promise<{ occurrence: NumoRoutineOccurrence; turn: NumoTurn }> {
   const service = getServiceClient();
@@ -118,6 +125,7 @@ export async function startRoutineOccurrence(input: {
   }
 
   const { data, error } = await service.rpc("ensure_numo_routine_occurrence", {
+    ...(input.armingId ? { p_arming_id: input.armingId } : {}),
     p_routine_id: input.routine.id,
     p_user_id: input.routine.owner_id,
     p_origin: input.origin,
@@ -160,6 +168,7 @@ export async function startRoutineOccurrence(input: {
         projectId: input.routine.project_id,
         routineId: input.routine.id,
         routineTitle: input.routine.title,
+        ...(input.provenance?.subjectType === "issue" ? { issueId: input.provenance.subjectId } : {}),
       },
       mentions: input.routine.prompt_mentions,
       conversationId: occurrence.conversation_id,
@@ -170,6 +179,7 @@ export async function startRoutineOccurrence(input: {
       routine: {
         id: input.routine.id,
         origin: input.origin,
+        provenance: input.provenance,
         scheduledFor,
         budgetUsd,
         budgetPercent: input.routine.max_spend_percent,
@@ -256,6 +266,7 @@ export async function routineContinuationForConversation(
   occurrence: NumoRoutineOccurrence;
   routine: Routine;
   remainingBudgetUsd: number | null;
+  causeRoutineIds: string[];
 } | null> {
   const service = getServiceClient();
   const { data: occurrence, error } = await service
@@ -277,6 +288,7 @@ export async function routineContinuationForConversation(
   const decodedOccurrence = await readableOccurrence(occurrence as NumoRoutineOccurrence,
     routine.owner_id);
 
+  const causeRoutineIds: string[] = occurrence.cause_routine_ids ?? [];
   const plainRoutine = await decodeRoutine(routine, userId) as unknown as Routine;
   const cap = await routineRunBudgetUsd(plainRoutine);
   if (cap == null) {
@@ -284,6 +296,7 @@ export async function routineContinuationForConversation(
       occurrence: decodedOccurrence,
       routine: plainRoutine,
       remainingBudgetUsd: null,
+      causeRoutineIds,
     };
   }
   const spend = await routineOccurrenceSpend(service, [conversationId]);
@@ -292,6 +305,7 @@ export async function routineContinuationForConversation(
     occurrence: decodedOccurrence,
     routine: plainRoutine,
     remainingBudgetUsd: Math.max(0, cap - spent),
+    causeRoutineIds,
   };
 }
 
@@ -302,6 +316,7 @@ export async function recoverPendingRoutineOccurrences(limit = 10): Promise<numb
     .from("numo_routine_occurrences")
     .select("*")
     .is("turn_id", null)
+    .in("origin", ["scheduled", "manual"])
     .is("error_code", null)
     .order("created_at", { ascending: true })
     .limit(limit);

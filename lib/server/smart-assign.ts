@@ -1,3 +1,4 @@
+import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 import { categoryStore } from "@/lib/server/category-store";
@@ -103,7 +104,9 @@ export async function applySmartAssign(
   params: SmartAssignParams
 ): Promise<string | null> {
   try {
-    return await runSmartAssign(params);
+    const assigned = await runSmartAssign(params);
+    if (assigned) scheduleRoutineEvents();
+    return assigned;
   } catch (err) {
     console.error("[smart-assign] run failed:", (err as Error).message);
     return null;

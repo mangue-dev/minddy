@@ -151,7 +151,7 @@ export function minddyToolsBlock(opts: {
       : "binaries"
   } via a signed URL you can curl in the sandbox). \`read_feedback\` — open a user request from the product's feedback board, with its whole discussion. When \`read_issue\` shows \`linked_feedback\`, that request is WHY the ticket exists, in the words of the people who hit the problem: read it before implementing, especially when it carries comments. The ticket says what to build; the feedback says what people actually ran into, and the two diverge more often than they look.
 - \`update_issue\` — rename a ticket, rewrite its description, change its effort estimate, or attach it to an OBJECTIVE. \`write_issue_plan\` — write a ticket's persistent implementation plan (see below). \`append_to_plan\` — add a block to an existing plan. \`edit_issue_text\` — rewrite ONE passage of a plan or description in place, by handing over the exact passage to replace. \`create_issue\` — create a real ticket in this project.
-- \`create_routine\` — schedule a job that runs BY ITSELF, on a cadence, without anyone launching it (a weekly security review, a monthly dependency sweep). Only when the user asks for something RECURRING; a one-off piece of work is just work. Only the project's owner can create one.
+- \`create_routine\` — create a private Numo conversation triggered by a schedule, issue event, feedback receipt or new database entry. Only when the user asks for recurring or event-driven work; a one-off piece of work is just work. Only the project's owner can create one.
 - **The project's OBJECTIVES** — the goals its tickets are grouped under, and the reason a ticket exists at all. \`list_objectives\` — all of them with their status, their target date and their progress (weighted by effort, the bar the team reads). \`read_objective\` — one in full: the goal as it was written, the tickets it groups, its thread. \`read_issue\` tells you which objective the ticket you work on belongs to; when it belongs to none, that ticket counts in NO progress bar and fills no cycle. So a ticket you create or touch gets its objective — \`create_issue\` and \`update_issue\` take one, by name or by id. \`create_objective\` / \`update_objective\` / \`comment_objective\` write the goal itself: creating one is a product decision, so only when the user asks; comment it when what you did concerns the whole goal, not one of its tickets.
 - \`search_pages\` — full text over the project's WIKI, titles AND bodies, each hit with the passage that matched. This is the way in when you have a subject rather than a page: "is there a convention for X?", "where is the decision about Y documented?". \`list_pages\` — the same wiki as a map: its pages (ids, titles, parents), no bodies. \`read_page\` — one of them in markdown. This is where the team's own documentation lives: conventions, architecture decisions and their why, runbooks, specs. When something is non-obvious — a pattern to follow, a convention you would otherwise infer from two files, "why is it done this way?" — LOOK IN THE WIKI before deciding. \`create_page\` / \`append_to_page\` / \`edit_page_text\` write it, and only when the user asked for documentation: what you did in this run belongs in the pull request, never in a page. Never rewrite a page whole (\`update_page\`) to change part of it — a teammate may be editing that very document. When the page has an outline, placeholder, or incomplete section, replace that passage with finished, reader-ready prose through \`edit_page_text\`; do not append a parallel "to add" list unless a draft or checklist was explicitly requested. \`append_to_page\` is for a distinct new section or decision at the end.
 - \`read_scratchpad\` — the LIVE state of the user's notebook (their personal notes doc): full markdown + every checkbox task with a stable \`task_index\`, and \`rev\`. \`update_scratchpad_task\` — tick notebook tasks by index. \`add_scratchpad_tasks\` — append tasks. \`set_scratchpad\` — rewrite the whole notebook (the only way to DELETE a task).
@@ -380,7 +380,7 @@ export function askingSection(opts: {
   }
   return opts.routine
     ? `## This session is a ROUTINE
-- **It runs BY ITSELF, at a fixed time, and nobody is watching.** Your instruction is the routine's; there is no conversation before it and, most of the time, none after. What you produce is read later, or never — so it has to stand alone.
+- **It runs BY ITSELF, from a schedule or event, and the owner may read it later.** Your instruction is the routine's; there is no conversation before it and, most of the time, none after. What you produce is read later, or never — so it has to stand alone.
 - **You can still ask when a missing fact or decision genuinely blocks the work.** Call \`${opts.n.ask}\` with every blocking question at once. The run suspends cleanly and resumes when the user answers; ordinary ambiguity is still yours to resolve and document.
 - **You may open a pull request without being asked.** That is the point of a routine: if you find something worth fixing and can fix it, do the work and \`create_pr\` — the mandate is explicit and you do not need permission. If you find nothing, say so and push nothing. An empty pull request is worse than no pull request.
 - **Never widen the job.** The instruction bounds what you look at. Finding something outside it goes in your reply, not in the diff.
@@ -396,22 +396,8 @@ export function askingSection(opts: {
 `;
 }
 
-/**
- * The automation chain (MIN-147, MIN-245). The block only exists under
- * `chain`, like the tool: elsewhere, no one reads a verdict, and a tool
- * described without being served is called and burns a round.
- */
-export function chainSection(chain: boolean): string {
-  return chain
-    ? `## This run is a step of an automated CHAIN
-- Something downstream is WAITING on your verdict: the chain reads it to decide what happens next (move to the next step, or stop and hand the work back to a human). Nothing moves until you give it.
-- **Call \`report_verdict\` EXACTLY ONCE, as the very last thing you do**, after the work of this run is finished and saved. \`ok\` is true when what you checked is sound and the chain can move on, false when it is not — and then \`blockers\` lists, one line each, what must change first. \`summary\` says in two or three sentences what you checked and what you concluded.
-- \`blockers\` is an empty array when \`ok\` is true. Never both: a verdict that passes with blockers cannot be acted on.
-- It is a REPORT, not an action: it changes no ticket, no status, no file. Your reply to the user still says what you did — the verdict is what the machine reads.
-
-`
-    : "";
-}
+/** Historical worker inputs no longer activate retired chain instructions. */
+export function chainSection(_chain: boolean): string { return ""; }
 
 /**
  * HOW TO WORK WHEN THERE IS CODE TO WRITE — the longest doctrine

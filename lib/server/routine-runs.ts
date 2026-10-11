@@ -35,7 +35,10 @@ const MAX_LIST_RUNS = 50;
 
 export interface RoutineRunSummary {
   id: string;
-  origin: "scheduled" | "manual";
+  origin: "scheduled" | "manual" | "event" | "database";
+  event_id?: number | null;
+  subject_id?: string | null;
+  subject_type?: "issue" | "page" | "feedback" | null;
   scheduled_for: string | null;
   created_at: string;
   status: "queued" | "running" | "completed" | "failed" | "canceled";
@@ -97,6 +100,9 @@ function runSummary(
   return {
     id: occurrence.id,
     origin: occurrence.origin,
+    event_id: occurrence.event_id ?? null,
+    subject_id: occurrence.subject_id ?? null,
+    subject_type: occurrence.subject_type ?? null,
     scheduled_for: occurrence.scheduled_for,
     created_at: occurrence.scheduled_for ?? occurrence.created_at,
     status: occurrence.error_code

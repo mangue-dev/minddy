@@ -1,3 +1,7 @@
+import { withRoutineEventsSuppressed } from "@/lib/server/supabase-fetch";
+import { remapRoutineTrigger, parseRoutineTrigger } from "@/lib/routine-triggers";
+import { validateRoutineTrigger } from "@/lib/server/routine-trigger-validation";
+import { nextRunAt } from "@/lib/routine-schedule";
 import { importComment } from "./comment-store";
 import { encodeObjective } from "./objective-store";
 import { encodeCategory } from "./category-store";
@@ -19,6 +23,8 @@ import { uploadPrivateAttachmentObject } from "@/lib/server/attachments";
 import { storeProjectIcon } from "@/lib/server/project-icon";
 import { encodeView } from "@/lib/server/view-content";
 import { createSavedView } from "@/lib/server/saved-views";
+import { encodePage } from "@/lib/server/page-content";
+import { isDatabaseSchema, type DatabaseValues } from "@/lib/page-databases";
 import { encodeRoutine } from "@/lib/server/routine-content";
 import { decodeProject, encodeProject } from "@/lib/server/project-content";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
@@ -609,7 +615,7 @@ async function importSimpleEntity(
   return out.length;
 }
 
-export async function importAccountTransfer(
+async function importAccountTransferCore(
   document: AccountTransferDocument,
   userId: string,
 ): Promise<AccountImportResult> {
@@ -739,7 +745,10 @@ export async function importAccountTransfer(
     const targetId = sourceId ? pageIds.get(sourceId) : null;
     if (!sourceId || !projectId || !targetId) return [];
     return [{
-      ...pick(source, ["title", "icon", "content", "position", "favorite", "version", "created_at", "updated_at", "deleted_at", "deleted_by"]),
+      ...pick(source, ["title", "icon", "content", "position", "favorite", "version", "database_revision", "created_at", "updated_at", "deleted_at", "deleted_by"]),
+      icon: source.icon ?? null, database_schema: source.database_schema == null ? null : isDatabaseSchema(source.database_schema) ? source.database_schema : scopeError(),
+      database_title_name: source.database_title_name ?? null,
+      property_values: (source.property_values && typeof source.property_values === "object" && !Array.isArray(source.property_values) ? { ...source.property_values as DatabaseValues } : {}),
       id: targetId,
       project_id: projectId,
       parent_id: mapId(source.parent_id, pageIds),
@@ -747,7 +756,16 @@ export async function importAccountTransfer(
       updated_by: remapUser(source.updated_by, sourceUserId, userId),
     }];
   });
-  await upsertRows(service, "pages", pageRows);
+  // Remap person values using the imported parent schema before sealing page content.
+  for (const page of pageRows) {
+    const parent = pageRows.find(p => p.id === page.parent_id);
+    for (const property of parent?.database_schema ?? []) {
+      if (property.type === "people" && Array.isArray(page.property_values[property.id])) {
+        page.property_values[property.id] = (page.property_values[property.id] as string[]).map(id => id === sourceUserId ? userId : id);
+      }
+    }
+  }
+  await upsertRows(service, "pages", await Promise.all(pageRows.map(row => encodePage(row, { service }))));
   result.pages = pageRows.length;
 
   const pageFiles: TransferRow[] = document.page_files.flatMap((source) => {
@@ -902,11 +920,28 @@ export async function importAccountTransfer(
       const id = uuidValue(source, "id");
       const projectId = mapId(source.project_id, projects.projectIds);
       if (!id || !projectId) return null;
+      let trigger = parseRoutineTrigger(source.trigger);
+      let validTrigger = true;
+      try {
+        const databaseId = trigger.type === "database" ? pageIds.get(trigger.databaseId) : undefined;
+        trigger = remapRoutineTrigger(source.trigger, { pages: pageIds, issues: issueIds, categories: categoryIds, sourceUserId, targetUserId: userId, databaseSchema: trigger.type === "database" ? pageRows.find(page => page.id === databaseId)?.database_schema ?? undefined : undefined });
+        await validateRoutineTrigger(trigger, projectId, userId);
+      } catch {
+        validTrigger = false;
+        warnings.push("A routine contains unavailable trigger references and was imported paused. Review its trigger filters before enabling it.");
+      }
+      let nextRun: string | null = null;
+      if (trigger.type === "schedule" && validTrigger && source.enabled) {
+        try { nextRun = nextRunAt({ frequency: source.frequency as "daily" | "weekly" | "monthly", hour: source.hour as number, minute: source.minute as number, weekdays: source.weekdays as number[], daysOfMonth: source.days_of_month as number[], timezone: source.timezone as string }, new Date()).toISOString(); }
+        catch { validTrigger = false; warnings.push("A routine has an invalid calendar schedule and was imported paused."); }
+      }
       return encodeRoutine({ ...pick(source, ["title", "prompt",
         "prompt_mentions", "base_branch", "max_spend_percent",
         "frequency", "hour", "minute", "weekdays", "days_of_month",
         "timezone", "enabled", "next_run_at", "last_run_at",
         "last_error", "created_at", "updated_at", "deleted_at"]),
+        trigger, trigger_type: trigger.type, trigger_activated_at: new Date().toISOString(),
+        enabled: validTrigger && source.enabled === true, next_run_at: nextRun,
         deleted_by: remapUser(source.deleted_by, sourceUserId, userId),
         id, project_id: projectId, owner_id: userId },
         { service });
@@ -1178,4 +1213,9 @@ export async function importAccountTransfer(
   }
 
   return result;
+}
+
+/** Import snapshots without replaying product-event triggers. */
+export async function importAccountTransfer(document: AccountTransferDocument, userId: string): Promise<AccountImportResult> {
+  return withRoutineEventsSuppressed(() => importAccountTransferCore(document, userId));
 }

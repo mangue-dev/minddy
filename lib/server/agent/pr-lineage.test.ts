@@ -168,7 +168,6 @@ vi.mock("./drain", () => ({ drainAgentRuns: vi.fn(async () => ({ claimed: 0 })) 
 vi.mock("./drain-chain", () => ({ chainAgentDrain: vi.fn(async () => {}) }));
 vi.mock("./issue-status-sync", () => ({ syncIssueStatusOnAgentStart: vi.fn(async () => {}) }));
 vi.mock("@/lib/server/issue-events", () => ({ insertEvents: vi.fn(async () => {}) }));
-vi.mock("@/lib/server/automations/hooks", () => ({ handOffToHuman: vi.fn(() => {}) }));
 vi.mock("@/lib/server/short-title", () => ({ generateShortTitle: vi.fn(async () => "A title") }));
 // The drain leaves in `after()`: here it does not leave at all, nothing to observe.
 vi.mock("next/server", () => ({ after: vi.fn(() => {}) }));

@@ -9,7 +9,7 @@ type IssueRow = Record<string, unknown> & {
 
 /** Flatten the embedded issue_categories into a `category_ids: string[]` field. */
 export function mapIssueRow(row: IssueRow) {
-  const { issue_categories, ...rest } = row;
+  const { issue_categories, automation_override: _archivedOverride, ...rest } = row;
   return {
     ...rest,
     category_ids: (issue_categories ?? []).map((c) => c.category_id),

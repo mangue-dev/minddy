@@ -96,14 +96,9 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
       userId: "user-1",
       input: { automation_start_delay_minutes: 10, automation_efforts: { s: false } },
     });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(meta[AUTOMATION_START_DELAY_META_KEY]).toBe(10);
-    // The partial patch merges over the CURRENT value: the xl the user had
-    // disabled earlier must stay disabled, not fall back to the default.
-    expect(r.settings.automation_efforts).toEqual({
-      xs: true, s: false, m: true, l: true, xl: false,
-    });
+    expect(r).toEqual({ ok: false, error: "Project automations were replaced by routines. Configure a routine instead." });
+    expect(meta[AUTOMATION_START_DELAY_META_KEY]).not.toBe(10);
+
   });
 
   it("refuses a bad start delay and an unknown effort", async () => {

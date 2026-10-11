@@ -29,7 +29,6 @@ import { broadcastRunEvent } from "./live";
 import { currentDeploymentScope } from "./deployment";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
-import { notifyChainOfRunEnd } from "@/lib/server/automations/hooks";
 import {
   notifyRoutineOfRunEnd,
   stampRoutineRunEnd,
@@ -1880,7 +1879,6 @@ export async function stampRunResult(
     // hook. Every completion path converges here, and the transition guard above
     // ensures that only one wins, so a chain advances only once. Steering back to
     // `queued` is non-terminal and therefore excluded.
-    if (run.chain_id) notifyChainOfRunEnd(run);
     // The same mandatory transition handles routines (MIN-185): the owner learns
     // that a pull request is ready or that the run failed, and the routine retains
     // the outcome of its latest run.

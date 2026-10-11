@@ -1,3 +1,4 @@
+import { withRoutineCause } from "@/lib/server/supabase-fetch";
 import "server-only";
 import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
@@ -37,8 +38,6 @@ import { commandNote } from "@/lib/server/assistant/commands";
 import { buildDocumentationHelpPrompt } from "@/lib/server/assistant/documentation-help";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
-  AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS,
-  AUTOMATION_ASSISTANT_TOOLS,
   CONVERSATION_ASSISTANT_TOOLS,
   WORKER_MEDIATION_ASSISTANT_TOOLS,
   type AssistantToolDef,
@@ -88,7 +87,6 @@ import {
   projectNumoSurfaceTurn,
   withNumoSurfaceEmitter,
 } from "./surface-projection";
-import { notifyAutomationOfNumoTurn } from "@/lib/server/automations/numo-hooks";
 import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
 
 export const NUMO_TURN_STATUSES = [
@@ -115,7 +113,8 @@ export interface NumoTurnIntent {
   triggerSource?: "chat" | "mention";
   /** Routine operation identity; the turn id is the occurrence identity. */
   routineId?: string | null;
-  routineOrigin?: "scheduled" | "manual" | null;
+  routineOrigin?: "scheduled" | "manual" | "event" | "database" | null;
+  routineProvenance?: { eventId: string; subjectId: string; subjectType: "issue" | "page" | "feedback"; causeRoutineIds?: string[] } | null;
   routineScheduledFor?: string | null;
   /** Shared cap across parent generations and every delegated worker. */
   operationBudgetUsd?: number | null;
@@ -586,21 +585,10 @@ async function buildExecutionInput(input: {
   }
   if (!intent.documentation) systemPrompt += await buildAccountWorkerContext(turn.user_id);
   if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
-  if (intent.automation) {
-    const operation = intent.automation;
-    const plan = operation.issue.plan?.trim() || "(no implementation plan at admission)";
-    systemPrompt += `\n## Automated chain operation
-- This is step ${operation.step} of automation chain ${operation.chainId}; rule ${operation.ruleId}, mode ${operation.mode}, retry ${operation.retries}.
-- The attached issue is ${operation.issue.identifier} — ${operation.issue.title} (id: ${operation.issue.id}).
-- The implementation-plan snapshot at admission is:\n\n${plan}\n
-- Complete the requested Numo operation yourself. Use Minddy tools directly when repository work is unnecessary. Delegate through launch_code_agent only when code or repository inspection is required.
-- A delegated worker finishing is not the end of this operation. Interpret its structured result and any remaining work before concluding.
-- Call report_automation_outcome exactly once as your final tool, after all direct actions and delegated work are resolved. Report failed when the requested result was not achieved or blockers remain. Direct user questions are intentionally unavailable in an automated step; delegated-worker input is mediated through the parent conversation, while deliberate human checkpoints remain owned by the chain.`;
-  }
   if (intent.routineId) {
     const timing = intent.routineOrigin === "scheduled"
       ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
-      : "started manually";
+      : intent.routineProvenance ? `triggered by ${intent.routineProvenance.subjectType} ${intent.routineProvenance.subjectId} (event ${intent.routineProvenance.eventId})` : "started manually";
     systemPrompt += `\n## Routine occurrence
 - This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
 - Complete the routine instruction as a Numo conversation. Use Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work that does not require a repository.
@@ -728,12 +716,8 @@ async function buildExecutionInput(input: {
   }
 
   let tools: AssistantToolDef[] = input.background
-    ? workerInput
-      ? intent.automation
-        ? AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS
-        : WORKER_MEDIATION_ASSISTANT_TOOLS
-      : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : []
-    : intent.automation ? AUTOMATION_ASSISTANT_TOOLS : CONVERSATION_ASSISTANT_TOOLS;
+    ? workerInput ? WORKER_MEDIATION_ASSISTANT_TOOLS : []
+    : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
   return { messages, tools, ...(workerInput ? { workerInput } : {}) };
@@ -1148,7 +1132,7 @@ async function executeClaimedNumoTurn(input: {
     });
     console.info("[numo-chat] timing", { requestId: claimed.request_id,
       phase: "execution_prepared", executionElapsedMs: Math.round(performance.now() - executionStartedAt) });
-    const result = await processChat(execution.messages, execution.tools, emitter, {
+    const result = await withRoutineCause(claimed.intent.routineId ?? null, () => processChat(execution.messages, execution.tools, emitter, {
       projectId: claimed.intent.projectId,
       documentationHelp: !!claimed.intent.documentation,
       requireExplicitProjectTarget: true,
@@ -1169,7 +1153,6 @@ async function executeClaimedNumoTurn(input: {
       operationBudgetUsd: claimed.intent.operationBudgetUsd ?? null,
       operationBudgetPercent: claimed.intent.operationBudgetPercent ?? null,
       routineId: claimed.intent.routineId ?? null,
-      automationChainId: claimed.intent.automation?.chainId ?? null,
       triggerSource: claimed.intent.triggerSource ?? "chat",
       resumeCheckpoint: claimed.checkpoint?.phase === "model" || claimed.checkpoint?.phase === "tools"
         ? claimed.checkpoint
@@ -1281,7 +1264,7 @@ async function executeClaimedNumoTurn(input: {
         });
       },
       ...(execution.workerInput ? { workerInput: execution.workerInput } : {}),
-    });
+    }), claimed.intent.routineProvenance?.causeRoutineIds ?? []);
 
     if (input.isStopRequestedLocally() || await stopRequested(service, claimed.id, claimToken)) {
       const activeRunId = result.suspension?.kind === "work"
@@ -1543,7 +1526,6 @@ export async function executeNumoTurn(input: {
     });
     if (result.status !== "not_claimed") {
       await projectNumoSurfaceTurn(service, result.turn);
-      notifyAutomationOfNumoTurn(result.turn);
       notifyRoutineOfNumoTurn(result.turn);
     }
     return result;

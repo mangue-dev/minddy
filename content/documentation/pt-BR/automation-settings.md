@@ -2,8 +2,8 @@
 {
   "id": "automation-settings",
   "locale": "pt-BR",
-  "title": "Automação de problemas",
-  "summary": "Configure as automações da conta e diferencie as regras do projeto reservadas ao proprietário.",
+  "title": "Das automações às rotinas",
+  "summary": "Revise propostas de migração pausadas antes de ativar o trabalho Numo por evento.",
   "topic": "Conta e aplicativos",
   "type": "guide",
   "audiences": [
@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (MIN-677)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -30,82 +30,40 @@
       "desktop"
     ],
     "evidence": [
-      "components/settings/account-automations-section.tsx",
       "components/settings/smart-assign-section.tsx",
       "content/knowledge/settings-and-data.md",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
       "lib/server/agent/execute.ts",
-      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json"
+      "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
+      "content/documentation/reviews/min-677-routines.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
+    "language": "agent:/root (pt-BR translation, label and retained-meaning self-review)",
+    "date": "2026-10-11"
   },
   "related": [],
   "aliases": [],
   "tags": [
     "Configurar trabalho automático nas tarefas"
   ],
-  "figures": [
-    {
-      "id": "automation-settings-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/automation-settings-workflow.png",
-      "alt": "Predefinição de automação sem opção selecionada.",
-      "caption": "Sem predefinição selecionada, esta conta não inicia trabalho automático.",
-      "revision": 5,
-      "reviewed": true,
-      "capturedAt": "2026-10-09",
-      "viewport": [
-        816,
-        221
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
-    },
-    {
-      "id": "automation-settings-projects-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/automation-settings-projects-workflow.png",
-      "alt": "Seleção de projetos para as automações da conta.",
-      "caption": "Seleção de projetos para as automações da conta. Os dois projetos de demonstração estão desativados; nenhuma automação é iniciada.",
-      "revision": 5,
-      "reviewed": true,
-      "capturedAt": "2026-10-09",
-      "viewport": [
-        816,
-        176
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
-    }
-  ],
-  "requiredFigures": [
-    "automation-settings-workflow",
-    "automation-settings-projects-workflow"
-  ]
+  "figures": [],
+  "requiredFigures": []
 }
 ---
 
-## Opções da conta {#automation-settings}
+## Revisar o trabalho migrado {#automation-settings}
 
-Abra a seção Automações nas configurações da conta. Escolha uma configuração predefinida, leia a explicação e a estimativa de uso, defina o atraso inicial e escolha quais tamanhos de esforço permitem etapas automáticas. As estimativas dependem do saldo disponível e não são preços fixos. Antes de habilitar o trabalho de código, confira o modelo do worker nas configurações de IA da conta. A mesma página lista os controles de automação dos projetos que você possui; membros não podem habilitar o projeto de outro proprietário.
+Os interruptores de automação do projeto e os presets, filtros de esforço e espera inicial da conta foram substituídos por [Rotinas](/docs/scheduled-routines). Abra Rotinas como proprietário do projeto. As regras ativas arquivadas são propostas uma vez como rotinas pausadas; abrir a lista não as ativa nem consome orçamento de execução.
 
-![Predefinição de automação sem opção selecionada.](/documentation/pt-BR/automation-settings-workflow.png)
+Revise instruções, status do gatilho, condições, espera e limite de gasto de cada proposta. O fluxo original permanece nas instruções para comparação. Confira as validações humanas e referências indisponíveis antes de ativar. As propostas pedem a resposta do proprietário nos pontos de validação humana e limitam cada execução a 15 % do orçamento mensal por padrão. Elas não continuam silenciosamente a cadeia anterior. Cadeias pendentes ou aguardando uma pessoa param; o código em execução pode terminar ou ser interrompido na conversa, sem uma etapa seguinte da cadeia. O histórico de atividades e os backups da conta mantêm o arquivo.
 
-## Diferenciar mecanismos {#mechanisms}
+## Distinguir outras ferramentas do projeto {#mechanisms}
 
-O Smart Fill preenche prioridade, esforço, categorias e objetivo ausentes; não escolhe status, responsável nem prazo. As preferências da conta diferenciam o preenchimento na criação e o preenchimento de tarefas elegíveis da triagem em projetos dos quais você é proprietário. A autoatribuição na criação ou no início é uma preferência separada; a atribuição no início afeta apenas tarefas sem responsável.
+Smart Fill continua preenchendo prioridade, esforço, categorias e objetivo ausentes. Smart Assign permanece uma configuração do proprietário com regras por membro. Smart Triage continua usando regras estáticas. A autoatribuição permanece uma preferência separada. Essas ferramentas não ativam uma proposta migrada.
 
-O Smart Assign é uma configuração do proprietário do projeto, com regras por membro. O Smart Triage usa regras estáticas do projeto e é distinto do preenchimento por IA e da execução de código. Confira os destinatários e os gatilhos de cada regra antes de salvar.
-
-Habilite somente as etapas que deseja executar sem uma nova solicitação manual. As etapas de IA exigem um provedor configurado e utilizável e devem passar pelas verificações de orçamento aplicáveis à chamada. Chaves pessoais compatíveis e validadas podem isentar suas chamadas da cota de IA incluída da conta e transferir a cobrança dos modelos para o provedor. Elas não tornam gratuito o processamento da sandbox: o custo continua sendo registrado separadamente, e o orçamento por execução de uma rotina permanece um limite distinto. Se um trabalho inesperado começar, examine a atividade da tarefa e a conversa, depois desative o controle correspondente da conta ou do projeto antes de criar outras tarefas de teste.
-
-![Seleção de projetos para as automações da conta.](/documentation/pt-BR/automation-settings-projects-workflow.png)
+Teste manualmente uma rotina revisada, confira a conversa privada e o orçamento, e ative para ouvir eventos futuros. Se um trabalho inesperado começar, pause a rotina e confira a execução antes de tentar novamente. O [guia de rotinas](/docs/scheduled-routines#conditions) explica as condições em espera e sua invalidação.

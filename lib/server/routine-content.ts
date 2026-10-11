@@ -1,5 +1,6 @@
 import "server-only";
 
+import { parseRoutineTrigger } from "@/lib/routine-triggers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { EncryptedRowCodec, type StoredRow } from
@@ -54,7 +55,7 @@ export async function decodeRoutine(row: Row, actorId: string | null = null):
       row.encrypted_content === undefined ||
       row.encryption_version === 0 && row.encrypted_content === null) {
     if (!valid(plain)) throw new Error("Invalid legacy routine content");
-    return plain;
+    return { ...plain, trigger: parseRoutineTrigger(plain.trigger ?? undefined) };
   }
   const decoded = await new EncryptedRowCodec(getEncryptedStore()).decode(
     row as StoredRow, { table: "agent_routines", scope: owner(row) },
@@ -65,7 +66,7 @@ export async function decodeRoutine(row: Row, actorId: string | null = null):
       !ERROR_CODES.has(decoded.last_error as string)) {
     throw new Error("Invalid protected routine content");
   }
-  return decoded;
+  return { ...decoded, trigger: parseRoutineTrigger(decoded.trigger ?? undefined) };
 }
 
 /** Resolve just the title for an access-checked notification or tab label. */
@@ -103,7 +104,7 @@ export async function encodeRoutine(row: Row,
   const protect = options.force || Number(row.encryption_version ?? 0) > 0 ||
     await shouldProtectRoutines(options.service);
   if (!protect) return row;
-  const normalized = { ...row,
+  const normalized = { ...row, trigger: row.trigger ?? { type: "schedule" },
     base_branch: row.base_branch ?? null,
     last_error: row.last_error == null || ERROR_CODES.has(row.last_error as string)
       ? row.last_error ?? null : "launchFailed" };
@@ -114,6 +115,7 @@ export async function encodeRoutine(row: Row,
 
 export function routineContentValues(row: Row) {
   return { title: row.title, prompt: row.prompt,
+    trigger: row.trigger ?? null,
     prompt_mentions: row.prompt_mentions, base_branch: row.base_branch,
     last_error: row.last_error,
     encrypted_content: row.encrypted_content ?? null,

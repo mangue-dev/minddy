@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     ...catalog,
     cloudExecutionConfigured: capability("agentExecution").configured,
     executionBackend: resolveAgentExecutionBackend(process.env),
+    routineEventProcessingConfigured: capability("scheduler").configured,
     routineSchedulingConfigured: capability("scheduler").configured,
   });
 }

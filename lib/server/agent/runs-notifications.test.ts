@@ -33,9 +33,6 @@ vi.mock("@/lib/server/notifications", () => ({
 vi.mock("@/lib/server/posthog", () => ({
   captureServerEvent: vi.fn((event: Record<string, unknown>) => h.analytics.push(event)),
 }));
-vi.mock("@/lib/server/automations/hooks", () => ({
-  notifyChainOfRunEnd: vi.fn((run: { id: string }) => h.chainEnds.push(run.id)),
-}));
 vi.mock("@/lib/server/routine-hooks", () => ({
   notifyRoutineOfRunEnd: vi.fn(async (run: { id: string }) => {
     h.routineNotifications.push(run.id);

@@ -47,3 +47,15 @@ describe("agent routine content", () => {
       .rejects.toThrow();
   });
 });
+
+
+it("protects trigger filters in the envelope and decodes old envelopes as schedules", async () => {
+  const plain = { id: randomUUID(), project_id: randomUUID(), owner_id: randomUUID(), title: "Private trigger", prompt: "Review this issue", prompt_mentions: [], base_branch: null, trigger: { type: "event", event: "issue.created", conditions: { field: "category", operator: "contains", value: randomUUID() } } };
+  const sealed = await encodeRoutine(plain, { force: true });
+  expect(sealed.trigger).toBeNull();
+  expect(JSON.stringify(sealed)).not.toContain(plain.trigger.conditions.value);
+  expect((await decodeRoutine(sealed, plain.owner_id)).trigger).toEqual(plain.trigger);
+  const { trigger: _trigger, ...legacy } = plain;
+  const old = await encodeRoutine(legacy, { force: true });
+  expect((await decodeRoutine(old, plain.owner_id)).trigger).toEqual({ type: "schedule" });
+});

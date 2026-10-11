@@ -73,6 +73,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
   }
 
   const result = await updateRoutine({
+    trigger: body.trigger,
     routineId: id,
     actorId: auth.user.id,
     // Only the PRESENT fields leave: the factory distinguishes absent values

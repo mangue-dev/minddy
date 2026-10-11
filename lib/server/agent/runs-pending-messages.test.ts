@@ -14,7 +14,6 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 vi.mock("@/lib/server/notifications", () => ({ insertNotifications: vi.fn() }));
 vi.mock("@/lib/server/posthog", () => ({ captureServerEvent: vi.fn() }));
-vi.mock("@/lib/server/automations/hooks", () => ({ notifyChainOfRunEnd: vi.fn() }));
 vi.mock("@/lib/server/routine-hooks", () => ({
   notifyRoutineOfRunEnd: vi.fn(), stampRoutineRunEnd: vi.fn(),
 }));

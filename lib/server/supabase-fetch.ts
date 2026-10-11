@@ -3,6 +3,20 @@ import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { backendFetchWithTimeout } from "@/lib/backend-availability";
 
+const routineCause = new AsyncLocalStorage<string[]>();
+
+/** Attribute product writes to the routine that caused them across async tools. */
+export function withRoutineCause<T>(routineId: string | null, work: () => Promise<T>, ancestors: string[] = []): Promise<T> {
+  return routineCause.run(routineId ? [...ancestors, routineId].slice(0, 8) : [], work);
+}
+
+const eventSuppression = new AsyncLocalStorage<boolean>();
+
+/** Restoring a backup does not create product arrivals or replay archived work. */
+export function withRoutineEventsSuppressed<T>(work: () => Promise<T>): Promise<T> {
+  return eventSuppression.run(true, work);
+}
+
 const requestSignal = new AsyncLocalStorage<AbortSignal>();
 
 /** Apply a maintenance deadline to its SDK calls without affecting other requests. */
@@ -12,6 +26,16 @@ export function withSupabaseAbortSignal<T>(signal: AbortSignal, work: () => Prom
 
 function scopedOptions(input: Parameters<typeof fetch>[0], init?: RequestInit): RequestInit | undefined {
   const scoped = requestSignal.getStore();
+  const cause = routineCause.getStore();
+  if (cause?.length || eventSuppression.getStore()) {
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (cause?.length) {
+      headers.set("x-minddy-routine-cause", cause.at(-1)!);
+      headers.set("x-minddy-routine-ancestors", JSON.stringify(cause));
+    }
+    if (eventSuppression.getStore()) headers.set("x-minddy-routine-suppress", "true");
+    init = { ...init, headers };
+  }
   if (!scoped) return init;
   const signals = [scoped];
   if (input instanceof Request) signals.push(input.signal);

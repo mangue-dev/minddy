@@ -637,7 +637,7 @@ describe("durable Numo execution", () => {
     });
   });
 
-  it("keeps automated worker questions inside the chain instead of asking a user", async () => {
+  it("mediates historical worker questions through the current owner-input tools", async () => {
     const workerRunId = "51600000-0000-4000-8000-000000000006";
     h.turn = {
       ...turn({
@@ -693,8 +693,7 @@ describe("durable Numo execution", () => {
     await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
 
     expect(h.processChat.mock.calls[0][1]).toEqual([
-      { function: { name: "get_issue" } },
-      { function: { name: "report_automation_outcome" } },
+      { function: { name: "ask_user" } },
       { function: { name: "answer_code_worker" } },
     ]);
   });

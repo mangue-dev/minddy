@@ -128,21 +128,3 @@ export async function ensureAgentsAllowed(userId: string): Promise<void> {
 export async function canUseSmartAssign(ownerId: string): Promise<boolean> {
   return hasUsageBudget(ownerId);
 }
-
-/**
- * Billing gate of project automations (MIN-147). Neighbor of
- * `canUseSmartAssign`, but NOT the same: Smart Assign only looks at the budget,
- * because a routing call fits in any plan. An automation
- * launches AGENT RUNS — it must therefore also pass `allowAgents`, otherwise
- * a Free account would arm a loop whose each step would be refused at
- * launch.
- *
- * Returns a boolean: the throw is `ensureAgentsAllowed`. Called to
- * activate the AND toggle before each execution — a dry budget suspends
- * chains without data migration.
- */
-export async function canUseAutomations(ownerId: string): Promise<boolean> {
-  if (!isManagedBillingEnabled()) return true;
-  const { plan } = await getResolvedBilling(ownerId);
-  return plan.allowAgents && (await hasUsageBudget(ownerId));
-}

@@ -16,10 +16,6 @@ describe("account worker model boundary", () => {
     expect(source("lib/server/assistant/execute-tool.ts"))
       .toContain("launchAgentRun({");
 
-    const automation = source("lib/server/automations/actions.ts");
-    expect(automation).toContain("startNumoIntent({");
-    expect(automation).not.toContain("launchAgentRun({");
-
     const routine = source("app/api/cron/routines/route.ts");
     expect(routine).toContain("startRoutineOccurrence({");
     expect(routine).not.toContain("launchAgentRun({");

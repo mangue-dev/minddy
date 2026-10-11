@@ -17,12 +17,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
  * Born in the Feedback settings, extracted for Automations: two screens
  * that display the same thing should display it the same.
  */
-export function HelpHint({ children }: { children: ReactNode }) {
+export function HelpHint({ children, label }: { children: ReactNode; label?: string }) {
   const t = useTranslations("Settings");
   return (
     <Popover>
       <PopoverTrigger
-        aria-label={t("feedbackLearnMore")}
+        aria-label={label ?? t("feedbackLearnMore")}
         className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 outline-hidden transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
       >
         <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
