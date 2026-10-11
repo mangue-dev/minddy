@@ -126,3 +126,10 @@ Follow-up verification: all 154 targeted tests across 12 suites passed, plus bot
 opt-in PostgreSQL concurrency/semantics probes. Typecheck, focused lint, both
 worker bundle builds, encryption access/schema checks, owned-English check,
 documentation/release checks, knowledge check and `git diff --check` passed.
+
+The built VM bundle's `--prepare-native-cli codex` entry point also passed a real
+Linux ARM64 smoke probe in a disposable Node 24 container. It installed and
+verified pinned Codex 0.162.1 in 4,579 ms, then verified the retained installation
+in 51 ms. The container mounted only the built bundle and received no application
+environment, job, authentication profile or model request. These are isolated
+bootstrap timings, not measurements of hosted sandbox or provider latency.
