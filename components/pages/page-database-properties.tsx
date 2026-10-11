@@ -60,7 +60,7 @@ export function DatabasePropertyCell({
   };
   const label = t("editProperty", { name: property.name });
   const emptyValue = table ? "" : t("emptyValue");
-  const triggerClass = table ? TABLE_CELL_TRIGGER : `${TRIGGER} min-h-8`;
+  const triggerClass = table ? TABLE_CELL_TRIGGER : `${TRIGGER} min-h-8 min-w-0 overflow-hidden`;
   if (property.type === "created_at")
     return (
       <span className={triggerClass}>
@@ -92,7 +92,7 @@ export function DatabasePropertyCell({
         className={
           table
             ? triggerClass
-            : `${triggerClass} whitespace-normal text-left [overflow-wrap:anywhere]`
+            : `${triggerClass} text-right`
         }
         empty={emptyValue}
         save={(next, base) => saveValue(page, property.id, next, base)}

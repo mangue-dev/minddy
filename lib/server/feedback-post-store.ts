@@ -73,7 +73,7 @@ function fields(selection: string): string[] {
 class FeedbackPostQuery implements PromiseLike<Result<ProjectedRow[]>> {
   private selection = "*";
   private options?: { count?: "exact"; head?: boolean };
-  private filters: Array<{ kind: "eq" | "in" | "is" | "neq" | "not"; column: string; value: unknown; operator?: string }> = [];
+  private filters: Array<{ kind: "eq" | "in" | "is" | "neq" | "not" | "nullableIds"; column: string; value: unknown; operator?: string }> = [];
   private ordering: Array<{ column: string; ascending: boolean }> = [];
   private maximum?: number;
   private interval?: [number, number];
@@ -97,6 +97,14 @@ class FeedbackPostQuery implements PromiseLike<Result<ProjectedRow[]>> {
   in(column: string, value: unknown[]) { return this.filter("in", column, value); }
   is(column: string, value: null | boolean) { return this.filter("is", column, value); }
   not(column: string, operator: string, value: unknown) { return this.filter("not", column, value, operator); }
+  /** Match optional UUID metadata without exposing arbitrary PostgREST expressions. */
+  inNullableIds(column: "objective_id" | "author_id", values: readonly (string | null)[]) {
+    if (values.some((id) => id !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+      throw new Error("Invalid feedback metadata identifier");
+    }
+    this.filters.push({ kind: "nullableIds", column, value: values });
+    return this;
+  }
   order(column: string, options?: { ascending?: boolean }) {
     if (contentFields.has(column) || storageFields.has(column)) {
       throw new Error("Feedback content ordering requires authorized application sort");
@@ -114,7 +122,13 @@ class FeedbackPostQuery implements PromiseLike<Result<ProjectedRow[]>> {
       protectedRead ? ["*", ...joins].join(",") : this.selection, this.options,
     ) as Query;
     for (const filter of this.filters) {
-      if (filter.kind === "in") query = query.in(filter.column, filter.value as unknown[]);
+      if (filter.kind === "nullableIds") {
+        const values = filter.value as (string | null)[];
+        const ids = values.filter((id): id is string => id !== null);
+        if (!values.includes(null)) query = query.in(filter.column, ids);
+        else if (!ids.length) query = query.is(filter.column, null);
+        else query = query.or(`${filter.column}.is.null,${filter.column}.in.(${ids.join(",")})`);
+      } else if (filter.kind === "in") query = query.in(filter.column, filter.value as unknown[]);
       else if (filter.kind === "is") query = query.is(filter.column, filter.value as null | boolean);
       else if (filter.kind === "not") query = query.not(filter.column, filter.operator ?? "is", filter.value);
       else query = query[filter.kind](filter.column, filter.value);

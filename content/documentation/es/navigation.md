@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,15 @@
       "components/keyboard-cheatsheet.tsx",
       "components/issue-field-shortcuts.tsx",
       "lib/keyboard/shortcuts.ts",
-      "lib/keyboard/keyboard-context.tsx"
+      "lib/keyboard/keyboard-context.tsx",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (es changed-passage parity and label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "views",
@@ -67,7 +68,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +84,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -113,6 +114,8 @@ Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los q
 
 ### Paneles y navegación móvil {#panels}
 
+En móviles, una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página.
+
 Una incidencia se abre en un panel de detalle para mantener disponible el tablero que hay debajo. Numo se abre desde su botón flotante en un panel de conversación compartido. La bandeja de entrada se abre como un panel emergente de navegación con notificaciones e invitaciones. Los antiguos enlaces a pantallas propias de la bandeja de entrada y Numo llevan a los accesos actuales; no representan pantallas independientes actuales.
 
 En el móvil, abre el menú lateral de navegación para elegir los mismos destinos. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
@@ -122,6 +125,8 @@ En el móvil, abre el menú lateral de navegación para elegir los mismos destin
 La aplicación de escritorio añade pestañas nativas y un selector de servidor alrededor de la aplicación. Una pestaña es una superficie de navegación, no otra cuenta ni otra pertenencia a un proyecto. Comprueba la instancia seleccionada al cambiar de servidor. Consulta la guía de escritorio para la instalación, los atajos nativos y las actualizaciones; los permisos de páginas e incidencias siguen aplicándose.
 
 ## Encontrar trabajo y usar acciones de teclado {#search-and-shortcuts}
+
+El comando Documentación abre el manual público en tu idioma actual.
 
 Abre la paleta de comandos desde el control de búsqueda de la navegación. Busca un título distintivo o un identificador de incidencia y elige un resultado. Los resultados se limitan al trabajo al que tu cuenta puede acceder; conocer un identificador no da acceso a otro proyecto.
 

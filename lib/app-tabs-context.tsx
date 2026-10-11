@@ -1,7 +1,8 @@
 "use client";
 import { MobileNavigationContext, useMobileNavigation } from "./mobile-navigation-context";
 import { useMobileLayout } from "./use-mobile-layout";
-import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, useSyncExternalStore, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
@@ -48,6 +49,8 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   const session = useMemo(() => desktop && owner ? createAccountSession(owner, client) : null, [desktop, owner, client]);
   const snapshot = useSyncExternalStore(session?.subscribe ?? noSubscription, session?.getSnapshot ?? emptySnapshot, session?.getSnapshot ?? emptySnapshot);
   const [queryState, setQueryState] = useState<QueryState | null>(null);
+  const [navigationPending, startNavigation] = useTransition();
+  const tc = useTranslations("Common");
   const mobileNavigation = useMemo(() => {
     const guards = new Set<() => Promise<boolean>>();
     let pending = false;
@@ -56,16 +59,16 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
       open: (navigate: () => void) => {
         if (pending) return;
         pending = true;
-        void (async () => {
+        startNavigation(async () => {
           try {
             for (const guard of guards) if (!(await guard())) return;
-            navigate();
+            startNavigation(navigate);
           } catch (error) { console.error("Unable to save before navigation", error); }
           finally { pending = false; }
-        })();
+        });
       },
     };
-  }, [user?.id]);
+  }, [user?.id, startNavigation]);
   useEffect(() => {
     if (!user) { previous.current = null; return; }
     if (mobile === undefined) return;
@@ -87,6 +90,10 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
       {session && owner ? <AccountTabSync key={owner} owner={owner} session={session} resumeAtCurrentRoute={resumeAtCurrentRoute} onQueryState={setQueryState} /> : null}
       {session ? <PrBackgroundSync /> : null}
       {session ? <Suspense fallback={null}><AppTabRouteSync /></Suspense> : null}
+      {owner && mobile && navigationPending && <div role="progressbar" aria-label={tc("loading")}
+        className="mobile-navigation-progress fixed inset-x-0 top-0 z-[150] h-0.5 overflow-hidden bg-primary/15">
+        <div className="h-full w-1/3 bg-primary" />
+      </div>}
       {children}
     </MobileNavigationContext.Provider></Context.Provider>
   </NavigationContext.Provider></SessionContext.Provider>;

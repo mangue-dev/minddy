@@ -4,7 +4,8 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, FilterIcon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
@@ -40,8 +41,11 @@ import { AppContentHeader } from "@/components/app-content-header";
 import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
+import { FeedbackFilterMenu, type FeedbackStateFilter, type FeedbackSort } from "./feedback-filter-menu";
+import { matchesFeedbackFilters, collectionFilterParams } from "@/lib/collection-filters";
+import { useCollectionFilters } from "@/lib/use-collection-filters";
 import { SearchMenu } from "@/components/search-menu";
-import { SearchSelect, checkedProps } from "@/components/search-select";
+import { SearchSelect } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/saved-view-href";
@@ -105,10 +109,10 @@ import {
 } from "@/lib/feedback/languages";
 import {
   FEEDBACK_POST_STATUSES,
+  FEEDBACK_OPEN_STATUSES,
   FEEDBACK_TO_ISSUE_STATUS,
   isResolvedFeedbackStatus,
   type CommentVisibility,
-  type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -168,184 +172,12 @@ const LIST_BADGE = "h-5 px-2 text-[10px] [&>svg]:size-3";
 
 // ── Column filters ────────────────────────── ──────────────────────────
 
-/**
- * The filtered state. `unresolved` is not a status: it is “all that is not
- * not decided” — the starting point, and the exact counterpart of the “open” filter
- * pull requests, which also excludes merged and closed.
- */
-type FeedbackStateFilter = "unresolved" | FeedbackPostStatus | "all";
-
-/** The order of the column. `top` (the most supported first) is that of
-    server and public board; the other two are chronological. */
-type FeedbackSort = "top" | "recent" | "oldest";
-
-const SORTS: ReadonlyArray<{
-  value: FeedbackSort;
-  label: MessageKey<"FeedbackBoard">;
-}> = [
-  { value: "top", label: "sortTop" },
-  { value: "recent", label: "sortRecent" },
-  { value: "oldest", label: "sortOldest" },
-];
-
 function matchesStateFilter(post: TeamFeedbackListItem, filter: FeedbackStateFilter) {
   if (filter === "all") return true;
   if (filter === "unresolved") return !isResolvedFeedbackStatus(post.status);
   return post.status === filter;
 }
 
-/**
- * The column filter: ONE trigger for three dimensions — state,
- * sorting, and what remains to be decided. The same combobox as pull requests, for
- * the same reason: on the title line there is only room for one icon,
- * and what the wording said goes into the tooltip. A tablet signals
- * far from a filter being placed — without it, a restricted list would no longer have
- * nothing to say.
- */
-function FeedbackFilterMenu({
-  state,
-  sort,
-  onlyToReview,
-  toReviewCount,
-  onStateChange,
-  onSortChange,
-  onToReviewChange,
-}: {
-  state: FeedbackStateFilter;
-  sort: FeedbackSort;
-  onlyToReview: boolean;
-  toReviewCount: number;
-  onStateChange: (state: FeedbackStateFilter) => void;
-  onSortChange: (sort: FeedbackSort) => void;
-  onToReviewChange: (only: boolean) => void;
-}) {
-  const t = useTranslations("FeedbackBoard");
-  const tStatus = useTranslations("PublicFeedback");
-  const [open, setOpen] = useState(false);
-
-  const stateLabel =
-    state === "unresolved"
-      ? t("filterUnresolved")
-      : state === "all"
-        ? t("filterAll")
-        : tStatus(`status.${state}`);
-  // “Open, by popularity, everything” is the starting point: nothing to report.
-  const active = state !== "unresolved" || sort !== "top" || onlyToReview;
-  const tooltip = t("filterTooltip", { state: stateLabel });
-
-  const pick = (run: () => void) => {
-    run();
-    setOpen(false);
-  };
-
-  return (
-    <SearchMenu
-      open={open}
-      onOpenChange={setOpen}
-      align="end"
-      tooltip={tooltip}
-      trigger={
-        /* NO `-mr-2` here: this compensation aligns the icon on the edge
-           right of the lines of the list, and it therefore only returns to the LAST
-           action of the title line — the “+”, just after. Carried by the
-           filter too, it cropped the 8 px which separate the two buttons and
-           stuck them one to the other (the Objectives page, written afterwards, does not put it
-           than on the “+”). */
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className={SIDEBAR_COMPACT_CONTROL_CLASS}
-          aria-label={tooltip}
-        >
-          <span className="relative flex items-center justify-center">
-            <HugeiconsIcon icon={FilterIcon} className="size-[18px]" />
-            {active ? (
-              <span
-                aria-hidden
-                className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar"
-              />
-            ) : null}
-          </span>
-        </Button>
-      }
-    >
-      <CommandGroup heading={t("filterStateLabel")}>
-        <CommandItem
-          value="state-unresolved"
-          keywords={[t("filterUnresolved")]}
-          onSelect={() => pick(() => onStateChange("unresolved"))}
-          {...checkedProps(state === "unresolved")}
-        >
-          <span className="truncate">{t("filterUnresolved")}</span>
-        </CommandItem>
-        {FEEDBACK_POST_STATUSES.map((value) => (
-          <CommandItem
-            key={value}
-            value={`state-${value}`}
-            keywords={[tStatus(`status.${value}`)]}
-            onSelect={() => pick(() => onStateChange(value))}
-            {...checkedProps(state === value)}
-          >
-            {value === "spam" ? (
-              <AppIcon icon={Ban} className="size-4 shrink-0 text-muted-foreground" />
-            ) : (
-              <StatusIndicator
-                status={FEEDBACK_TO_ISSUE_STATUS[value]}
-                className="size-4 shrink-0"
-              />
-            )}
-            <span className="truncate">{tStatus(`status.${value}`)}</span>
-          </CommandItem>
-        ))}
-        <CommandItem
-          value="state-all"
-          keywords={[t("filterAll")]}
-          onSelect={() => pick(() => onStateChange("all"))}
-          {...checkedProps(state === "all")}
-        >
-          <span className="truncate">{t("filterAll")}</span>
-        </CommandItem>
-      </CommandGroup>
-
-      <CommandSeparator className="my-1" />
-      <CommandGroup heading={t("filterSortLabel")}>
-        {SORTS.map((option) => (
-          <CommandItem
-            key={option.value}
-            value={`sort-${option.value}`}
-            keywords={[t(option.label)]}
-            onSelect={() => pick(() => onSortChange(option.value))}
-            {...checkedProps(sort === option.value)}
-          >
-            <span className="truncate">{t(option.label)}</span>
-          </CommandItem>
-        ))}
-      </CommandGroup>
-
-      {/* “To be reviewed” (MIN-87): what the automatic review has not decided is
-          drowned in a list sorted by votes. The entry only appears if there is
-          matter — no dead line. */}
-      {toReviewCount > 0 ? (
-        <>
-          <CommandSeparator className="my-1" />
-          <CommandGroup>
-            <CommandItem
-              value="to-review"
-              keywords={[t("filterToReview")]}
-              onSelect={() => pick(() => onToReviewChange(!onlyToReview))}
-              {...checkedProps(onlyToReview)}
-            >
-              <span className="truncate">{t("filterToReview")}</span>
-              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                {toReviewCount}
-              </span>
-            </CommandItem>
-          </CommandGroup>
-        </>
-      ) : null}
-    </SearchMenu>
-  );
-}
 
 // ── Shared bricks list / detail ──────────────────── ─────────────────────
 
@@ -659,10 +491,12 @@ function FeedbackRow({
   categoryMap,
   memberSeeds,
   teamLanguage,
+  objective,
   onSelect,
 }: {
   projectId: string;
   post: TeamFeedbackListItem;
+  objective?: Objective;
   selected: boolean;
   boardEnabled: boolean;
   dateLabel: string;
@@ -762,6 +596,10 @@ function FeedbackRow({
           separated={!!authorLabel}
         />
       </span>
+      {objective && <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }} />
+        <span className="truncate">{objective.name}</span>
+      </span>}
     </button>
   );
 }
@@ -792,8 +630,11 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const isOwner = !!project && project.owner_id === user?.id;
   const [setupOpen, setSetupOpen] = useState(false);
 
+  const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", searchParams.has("objective") ? "all" : "unresolved");
+  const listFilters = postParam ? {} : { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
   const { data: listData, isPending } = useQuery({
-    ...feedbackQueryOptions(projectId),
+    ...feedbackQueryOptions(projectId, listFilters),
   });
   const posts = useMemo(() => listData?.posts ?? [], [listData]);
   const boardEnabled = listData?.board_enabled ?? false;
@@ -805,7 +646,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // We arrive on this page to decide what is not decided: the
   // column therefore opens on the open returns, and not on the hundreds
   // archives which buried them.
-  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", "unresolved");
+  const objectiveParam = searchParams.getAll("objective").join(",");
+  useEffect(() => { if (objectiveParam) setState("all"); }, [objectiveParam, setState]);
   const [sort, setSort] = useMobileCollectionState<FeedbackSort>(`/projects/${projectId}/feedback`, "sort", "top");
   const [onlyToReview, setOnlyToReview] = useMobileCollectionState(`/projects/${projectId}/feedback`, "onlyToReview", false);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
@@ -815,7 +657,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   const visiblePosts = useMemo(() => {
     const kept = posts.filter(
-      (p) => matchesStateFilter(p, state) && (!onlyToReview || needsHumanReview(p))
+      (p) => matchesStateFilter(p, state) && (!onlyToReview || needsHumanReview(p)) && matchesFeedbackFilters(p, properties)
     );
     /**
      * The sort chosen is the sort obtained — NOTHING goes ahead.
@@ -840,7 +682,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       if (sort === "recent") sorted.reverse();
     }
     return sorted;
-  }, [posts, state, onlyToReview, sort]);
+  }, [posts, state, onlyToReview, sort, properties]);
 
   /**
    * What the column DISPLAYS. One notch BELOW `visiblePosts`, which carries the
@@ -902,7 +744,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // pre-selected, Enter accepts it, and “Returns” for short is the same
   // name on each project — the second view would overwrite the first.
   usePublishCurrentView(browse ? null : {
-    href: buildViewHref(pathname, searchParams.toString(), {
+    href: buildViewHref(pathname, collectionFilterParams(properties, searchParams).toString(), {
       post: selectedPost?.id ?? null,
     }),
     label: project
@@ -989,21 +831,26 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   useEffect(() => {
     if (!postParam) return;
     if (!posts.some((p) => p.id === postParam)) return;
+    let nextProperties = properties;
     if (
       deepLinkNeedsAllFilter(
         posts,
         (post) => post.id === postParam,
         (post) =>
           matchesStateFilter(post, state) &&
-          (!onlyToReview || needsHumanReview(post)),
+          (!onlyToReview || needsHumanReview(post)) && matchesFeedbackFilters(post, properties),
       )
     ) {
       setState("all");
       setOnlyToReview(false);
+      nextProperties = {};
+      setProperties(nextProperties);
     }
     setSelectedId(postParam);
-    router.replace(pathname);
-  }, [postParam, posts, pathname, router, state, onlyToReview]);
+    const remaining = collectionFilterParams(nextProperties, searchParams);
+    remaining.delete("post");
+    router.replace(pathname + (remaining.size ? `?${remaining}` : ""));
+  }, [postParam, posts, pathname, router, state, onlyToReview, properties, searchParams, setProperties]);
 
   // Invalidates the list AND all project details (prefix): a merge/undo
   // also changes the canonical post, not just the one we are looking at. THE
@@ -1055,6 +902,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         actions={
           <>
             <FeedbackFilterMenu
+              projectId={projectId}
+              properties={properties} onPropertiesChange={setProperties}
+              objectives={objectives} categories={categories} posts={posts} boardEnabled={boardEnabled}
               state={state}
               sort={sort}
               onlyToReview={onlyToReview}
@@ -1133,6 +983,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                   onClick={() => {
                     setState("all");
                     setOnlyToReview(false);
+                    setProperties({});
                   }}
                 >
                   {t("emptyShowAll")}
@@ -1156,6 +1007,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                     categoryMap={categoryMap}
                     memberSeeds={memberSeeds}
                     teamLanguage={teamLanguage}
+                    objective={objectives.find((objective) => objective.id === post.objective_id)}
                     onSelect={() => setSelectedId(post.id)}
                   />
                 </li>
@@ -1465,65 +1317,14 @@ function FeedbackDetail({
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
 
-  // Post categories (MIN-52): optimistic + debounce 300 ms, like cards
-  // of outcome. Quick toggles patch the cache right away and merge into
-  // a single PUT of the final game (avoids the concurrent delete-then-insert on the
-  // junction table). Error → toast + authoritative refetch.
-  const catTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const catLatest = useRef<string[] | null>(null);
-  const flushCategories = useCallback(
-    (ids: string[]) =>
-      api(`/api/projects/${projectId}/feedback/${postId}/categories`, {
-        method: "PUT",
-        body: JSON.stringify({ category_ids: ids }),
-      }),
-    [projectId, postId]
-  );
-  const handleCategoriesChange = useCallback(
-    (ids: string[]) => {
-      queryClient.setQueryData<{ post: TeamFeedbackDetail }>(
-        ["feedback-detail", projectId, postId],
-        (old) => (old ? { post: { ...old.post, category_ids: ids } } : old)
-      );
-      queryClient.setQueryData<{ posts: TeamFeedbackListItem[]; board_enabled: boolean }>(
-        ["feedback", projectId],
-        (old) =>
-          old
-            ? {
-                ...old,
-                posts: old.posts.map((p) =>
-                  p.id === postId ? { ...p, category_ids: ids } : p
-                ),
-              }
-            : old
-      );
-      catLatest.current = ids;
-      if (catTimer.current) clearTimeout(catTimer.current);
-      catTimer.current = setTimeout(() => {
-        catTimer.current = null;
-        const finalIds = catLatest.current ?? ids;
-        catLatest.current = null;
-        void flushCategories(finalIds).catch((e: Error) => {
-          toast.error(e.message || t("errorGeneric"));
-          void queryClient.invalidateQueries({ queryKey: ["feedback", projectId] });
-          void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
-        });
-      }, 300);
-    },
-    [projectId, postId, queryClient, flushCategories, t]
-  );
-  // Exiting the detail before the end of the debounce should not lose the edition:
-  // we flush the pending write to unmount (the optimistic patch is already installed).
-  useEffect(() => {
-    return () => {
-      if (!catTimer.current) return;
-      clearTimeout(catTimer.current);
-      catTimer.current = null;
-      const ids = catLatest.current;
-      catLatest.current = null;
-      if (ids) void flushCategories(ids).catch(() => {});
-    };
-  }, [flushCategories]);
+  const saveCategories = useCallback((ids: string[]) =>
+    api(`/api/projects/${projectId}/feedback/${postId}/categories`, {
+      method: "PUT", body: JSON.stringify({ category_ids: ids }),
+    }), [projectId, postId]);
+  const categoryError = useCallback((error: unknown) => {
+    toast.error(error instanceof Error ? error.message : t("errorGeneric"));
+  }, [t]);
+  const handleCategoriesChange = useFeedbackCategories(projectId, postId, saveCategories, categoryError);
 
   // The fade that replaces the border under the top bar: it only appears
   // on the side where there is still something to discover.

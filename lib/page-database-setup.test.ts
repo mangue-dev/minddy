@@ -11,7 +11,9 @@ const { open, reportError } = vi.hoisted(() => ({ open: vi.fn(), reportError: vi
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 vi.mock('@/lib/assistant-panel-context', () => ({ useAssistantPanelActions: () => ({ open }) }));
 vi.mock('@/components/pages/database-import-dialog', () => ({ DatabaseImportDialog: () => createElement('div', { 'data-import-wizard': true }) }));
+vi.mock('@/components/ui/app-tooltip', () => ({ AppTooltip: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock('mangue-ui', () => ({
+  cn: (...values: string[]) => values.filter(Boolean).join(' '),
   Button: ({ variant: _variant, size: _size, ...props }: ComponentProps<'button'> & { variant?: string; size?: string }) => createElement('button', props),
   toast: { error: reportError },
 }));

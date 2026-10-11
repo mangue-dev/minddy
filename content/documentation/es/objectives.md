@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 development (MIN-671)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,15 @@
       "lib/server/issue-relations.ts",
       "lib/objective-momentum.ts",
       "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root (es changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 9,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root (es changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (es changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "issues",
@@ -68,7 +69,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar con un nombre de resultado de ejemplo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,4 +119,6 @@ La fecha estimada requiere al menos dos finalizaciones, una semana completa obse
 
 ## Elegir un objetivo para un comentario {#objective-feedback}
 
-Un comentario puede pertenecer a un objetivo sin convertirse en ticket. En los comentarios del proyecto, elige el objetivo en las propiedades de la solicitud. El detalle del objetivo muestra las solicitudes vinculadas, sus votos y estado público; selecciona una para leer su conversación. No contribuyen al progreso ni al ritmo de los tickets. Al convertirlas, el ticket hereda el objetivo y las categorías, salvo los cambios realizados en el formulario de creación.
+En las propiedades del objetivo, el número de comentarios abre la sección de comentarios del proyecto filtrada por este objetivo, incluidas las solicitudes resueltas. También se muestra el valor cero. Las solicitudes siguen separadas del progreso de los tickets y del impulso.
+
+Un comentario puede pertenecer a un objetivo sin convertirse en ticket. En los comentarios del proyecto, elige el objetivo en las propiedades de la solicitud. No contribuyen al progreso ni al ritmo de los tickets. Al convertirlas, el ticket hereda el objetivo y las categorías, salvo los cambios realizados en el formulario de creación.

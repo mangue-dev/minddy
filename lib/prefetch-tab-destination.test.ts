@@ -1,3 +1,4 @@
+import { feedbackQueryOptions } from "./feedback-query";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prefetchAppTabDestination } from "./prefetch-tab-destination";
@@ -32,7 +33,7 @@ describe("tab destination prefetch", () => {
     prefetchAppTabDestination(client, "/projects/p/feedback", new Set());
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
     expect(requested().sort()).toEqual(["/api/projects/p/feedback", "/api/projects/p/pages"]);
-    expect(client.getQueryData(["feedback", "p"])).toEqual({ posts: [], board_enabled: false });
+    expect(client.getQueryData(feedbackQueryOptions("p").queryKey)).toEqual({ posts: [], board_enabled: false });
     prefetchAppTabDestination(client, "/projects/p/settings", new Set());
     expect(requested()).toHaveLength(2);
   });

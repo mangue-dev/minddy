@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { requireProjectMember } from "@/lib/server/feedback/team-guard";
+import { parseFeedbackListFilters } from "@/lib/feedback-list-filters";
 import { listTeamFeedback } from "@/lib/server/feedback/team-queries";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
 import { getBoardForProject } from "@/lib/server/feedback/boards";
@@ -26,8 +27,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   // that no one can give, the public/private choice which leads nowhere).
   // So both must arrive together, otherwise the screen paints itself once
   // with these commands and then remove them.
+  const filters = parseFeedbackListFilters(request.nextUrl.searchParams);
+  if (!filters) {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
+  }
   const [posts, board] = await Promise.all([
-    listTeamFeedback(id),
+    listTeamFeedback(id, { filters }),
     getBoardForProject(id),
   ]);
   return NextResponse.json({ posts, board_enabled: board?.enabled ?? false });

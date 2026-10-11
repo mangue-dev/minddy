@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,15 @@
       "components/keyboard-cheatsheet.tsx",
       "components/issue-field-shortcuts.tsx",
       "lib/keyboard/shortcuts.ts",
-      "lib/keyboard/keyboard-context.tsx"
+      "lib/keyboard/keyboard-context.tsx",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "views",
@@ -67,7 +68,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +84,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -113,6 +114,8 @@ Persönliche Zyklen und projektübergreifende Ansichten umfassen Projekte, auf d
 
 ### Panels und mobile Navigation {#panels}
 
+Auf Mobilgeräten zeigt eine Ladeleiste am oberen Rand die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden.
+
 Ein Problem öffnet sich in einem Detailpanel, damit das darunterliegende Board verfügbar bleibt. Numo öffnet über seine schwebende Schaltfläche ein gemeinsames Gesprächspanel. Der Posteingang öffnet sich als Navigations-Popover mit Benachrichtigungen und Einladungen. Ältere eigene Posteingangs- und Numo-Links führen zu den aktuellen Einstiegspunkten; sie bezeichnen keine gesonderten aktuellen Bildschirme.
 
 Öffne auf dem Smartphone die Navigationsleiste, um dieselben Ziele auszuwählen. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
@@ -122,6 +125,8 @@ Ein Problem öffnet sich in einem Detailpanel, damit das darunterliegende Board 
 Die Desktop-App ergänzt die Anwendung um native Tabs und eine Serverauswahl. Ein Tab ist eine Navigationsfläche, keine andere Projektmitgliedschaft und kein anderes Konto. Prüfe die gewählte Instanz beim Serverwechsel. Die Desktop-Anleitung beschreibt Installation, native Tastenkürzel und Updates; die Berechtigungen für Seiten und Probleme gelten weiterhin.
 
 ## Arbeit finden und Tastaturaktionen verwenden {#search-and-shortcuts}
+
+Der Befehl Dokumentation öffnet das öffentliche Handbuch in Ihrer aktuellen Sprache.
 
 Öffne die Befehlspalette über die Suchfunktion der Navigation. Suche nach einem eindeutigen Titel oder einer Problemkennung und wähle ein Ergebnis. Ergebnisse sind auf Arbeit beschränkt, auf die dein Konto zugreifen kann; eine bekannte Kennung gewährt keinen Zugriff auf ein anderes Projekt.
 

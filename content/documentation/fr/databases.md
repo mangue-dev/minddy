@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,15 @@
       "lib/server/database-import.ts",
       "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
       "lib/database-import/types.ts",
-      "lib/database-import/archive.ts"
+      "lib/database-import/archive.ts",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/second_workflows (fr complete-body second pass and corrected wording review)",
-    "date": "2026-10-10"
+    "revision": 9,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/second_workflows (fr complete-body second pass and corrected wording review); agent:/root (fr changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "pages"
@@ -70,12 +71,29 @@
   ],
   "figures": [
     {
+      "id": "database-setup-cards-preview",
+      "kind": "screenshot",
+      "src": "/documentation/fr/database-setup-cards.png",
+      "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
+      "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
+      "revision": 9,
+      "reviewed": true,
+      "capturedAt": "2026-10-11",
+      "viewport": [
+        712,
+        240
+      ],
+      "deviceScaleFactor": 2,
+      "theme": "light",
+      "padding": 24
+    },
+    {
       "id": "create-a-database-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/database-property-types.png",
       "alt": "Sélecteur de type de colonne : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +109,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +125,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -123,7 +141,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,9 +165,14 @@ Une base de données associe un tableau de propriétés typées à une page comp
 
 ## Créer une base et ses colonnes {#create-a-database}
 
+La zone de configuration d’une nouvelle base propose deux cartes : demander à Numo de préparer la structure ou importer une base existante. Son bouton de fermeture comporte une infobulle et masque ces suggestions ; la modification manuelle reste disponible.
+
 Comme membre, ouvrez les pages, utilisez + et choisissez une base de données. Elle commence avec le nom des entrées, sans colonne optionnelle. Sa bannière propose une création avec Numo ou l’import d’une base existante. La configuration manuelle reste disponible sans IA. Choisir la création avec Numo ouvre une demande préparée avec cette base comme contexte de page, après confirmation de sa création. Relisez et envoyez la demande pour décrire la structure souhaitée ; ouvrir la conversation ne termine pas la configuration. Le travail IA nécessite un fournisseur configuré et un budget disponible ou une clé personnelle compatible. Inspectez le schéma et les entrées obtenus avant de vous y fier.
 
 Ouvrez Colonnes et ajoutez une colonne, ou utilisez + à droite du tableau. Nommez-la et choisissez Texte, Nombre, Sélection, Sélection multiple, Date de création, Date, Personnes ou Case à cocher. Utilisez la recherche du sélecteur pour retrouver un type. Enregistrez, ajoutez une entrée et vérifiez la colonne dans la liste et la page d’entrée.
+
+
+![Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.](/documentation/fr/database-setup-cards.png)
 
 ### Types et limites {#database-types}
 
@@ -164,11 +187,15 @@ Formules avancées, automatisations et vues supplémentaires ne sont pas disponi
 
 ## Modifier les cellules et pages d’une base {#database-cells-and-entries}
 
+Dans l’éditeur d’options, ajoutez une option sous les lignes existantes, même si la liste est vide. Donnez à chaque option un nom distinct et non vide, puis enregistrez. Cela fonctionne pour la sélection simple comme pour la sélection multiple.
+
 Cliquez dans une cellule ou sur une propriété au-dessus du corps de l’entrée. Entrée enregistre, Échap annule, Maj+Entrée ajoute une ligne au texte. Quitter l’éditeur enregistre. Un nombre invalide le garde ouvert jusqu’à correction ; un échec de sauvegarde rétablit la valeur et affiche une erreur.
 
 Le champ Sélection permet de choisir une option ; Sélection multiple permet d’en choisir plusieurs. Recherchez une option ou créez-la dans le menu. Ouvrez la modification des options pour renommer ou recolorer, puis enregistrez ensemble ou annulez. Les champs Date, Personnes et Case à cocher ont leurs propres commandes ; la date de création reste en lecture seule.
 
 ### Ouvrir, sélectionner et insérer {#entry-actions}
+
+Le contenu d’une entrée vide affiche un texte indicatif pour repérer la zone de rédaction. Depuis les actions d’une ligne ou une sélection de plusieurs lignes, la duplication demande confirmation avant de créer les copies. Le déplacement vers la corbeille demande aussi confirmation et conserve le fonctionnement récupérable de la corbeille, sans suppression définitive.
 
 Ouvrez une entrée dans le panneau flottant. Agrandir l’ouvre en page entière une fois les sauvegardes en attente terminées. En cas d’échec, le panneau reste ouvert pour permettre la correction. Une entrée vide reste dans la base jusqu’à suppression.
 
@@ -182,6 +209,8 @@ Recherchez, filtrez, classez et masquez les colonnes dans l’unique vue liste. 
 ![Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.](/documentation/fr/database-entry.png)
 
 ## Modifier le schéma d’une base {#change-a-database-schema}
+
+Le déplacement d’une colonne commence après un mouvement du pointeur et reste horizontal. Le curseur de déplacement apparaît uniquement pendant le glisser-déposer ; un clic normal ouvre toujours les actions de la colonne. Lorsqu’un en-tête de colonne a le focus, Entrée ou Espace ouvre ses actions. Appuyez sur F8 pour commencer le déplacement au clavier, utilisez Gauche ou Droite, puis Entrée pour confirmer ou Échap pour annuler.
 
 Dans Colonnes, l’œil montre ou masque une propriété. Cliquez sur un en-tête pour renommer ou faites-le glisser pour réordonner ; le nom reste en première position. Les options de sélection simple ou multiple se modifient depuis la cellule ou Colonnes ; noms et couleurs s’enregistrent ensemble.
 

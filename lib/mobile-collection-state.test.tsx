@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
+import { useCollectionFilters } from "./use-collection-filters";
 import { MobileCollectionStateProvider, useMobileCollectionState } from "./mobile-collection-state";
 
 const viewport = vi.hoisted(() => ({ mobile: true }));
@@ -38,5 +39,29 @@ it("retains mobile filters and group state across selection while isolating rout
     await render("mobile-again");
     expect(host.querySelector("[data-query]")?.textContent).toBe("navigation");
     expect(host.querySelector("[data-groups]")?.textContent).toBe("review");
+  } finally { await act(() => root.unmount()); }
+});
+
+it("honors an explicit objective destination over retained mobile filters and follows history changes", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  viewport.mobile = true;
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  function Controls({ params }: { params: URLSearchParams }) {
+    const [filters, change] = useCollectionFilters("/feedback", params);
+    return <button onClick={() => change({ objective: ["retained"] })}>{JSON.stringify(filters)}</button>;
+  }
+  const render = (key: string, query: string) => act(() => root.render(<MobileCollectionStateProvider><Controls key={key} params={new URLSearchParams(query)} /></MobileCollectionStateProvider>));
+  try {
+    window.history.replaceState(null, "", "/feedback?post=request#discussion");
+    await render("first", "");
+    await act(() => host.querySelector<HTMLButtonElement>("button")!.click());
+    expect(window.location.search).toBe("?post=request&objective=retained");
+    expect(window.location.hash).toBe("#discussion");
+    await render("new-destination", "objective=explicit");
+    expect(host.textContent).toContain("explicit");
+    expect(host.textContent).not.toContain("retained");
+    await render("new-destination", "");
+    expect(host.textContent).toBe("{}");
   } finally { await act(() => root.unmount()); }
 });

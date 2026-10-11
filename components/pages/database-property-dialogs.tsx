@@ -4,13 +4,14 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Input,
+  Button,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -31,6 +32,7 @@ import { usePageDatabase } from "@/lib/use-page-database";
 import {
   DATABASE_PROPERTY_TYPES,
   MAX_DATABASE_PROPERTIES,
+  MAX_DATABASE_OPTIONS,
   type DatabaseProperty,
   type DatabasePropertyType,
 } from "@/lib/page-databases";
@@ -164,6 +166,11 @@ export function DatabaseOptionsDialog({
             {t("noOptions")}
           </p>
         )}
+        <Button type="button" variant="ghost" disabled={pending || options.length >= MAX_DATABASE_OPTIONS}
+          onClick={() => setOptions((rows) => [...rows, { id: createUuid(), name: "", color: CATEGORY_COLORS[0] }])}>
+          <HugeiconsIcon icon={Add01Icon} className="size-4" />
+          {t("addOption")}
+        </Button>
       </div>
       {duplicate && (
         <p role="alert" className="text-sm text-destructive">

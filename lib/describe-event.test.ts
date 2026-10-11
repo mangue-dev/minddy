@@ -54,7 +54,7 @@ describe.each(["en", "fr"] as const)("relation activity in %s", (locale) => {
       for (const [type, prefix] of [["relation_added", "relationAdded"], ["relation_removed", "relationRemoved"]]) {
         for (const [to_value, ref] of [["objective-target", "Release readiness"], ["issue-target", "MIN-513"]]) {
           const row = event({ type, field, to_value, issue_id: parent === "issue" ? "source" : null, objective_id: parent === "objective" ? "source" : null });
-          expect(render(row, ctx, tr)).toBe(tr.t(`${prefix}_${field}`, { ref }));
+          expect(render(row, ctx, tr)).toBe(tr.t(`${parent === "objective" && type === "relation_added" ? "objectiveRelationAdded" : prefix}_${field}`, { ref }));
           expect(render(row, ctx, tr)).toContain(ref);
         }
       }
@@ -63,7 +63,7 @@ describe.each(["en", "fr"] as const)("relation activity in %s", (locale) => {
     it("preserves the legacy fallback for absent targets and relation fields", () => {
       for (const to_value of [null, "missing-target"]) {
         expect(render(event({ field: null, to_value }), ctx, tr)).toBe(
-          tr.t("relationAdded_related", { ref: tr.t("issueSome") }),
+          tr.t(parent === "objective" ? "objectiveRelationAdded_related" : "relationAdded_related", { ref: tr.t("issueSome") }),
         );
       }
     });
@@ -105,7 +105,7 @@ it("hydrates the objective timeline context from project data and tracks updates
   const build = new Function("useMemo", "members", "objectives", "issues", "projectKey", `${compiled}\nreturn result;`);
   const hydrated = build((callback: () => unknown) => callback(), ctx.members, ctx.objectives, ctx.issues, ctx.projectKey) as EventContext;
   expect(hydrated).toEqual(ctx);
-  expect(describeObjectiveEvent(event(), hydrated, translators("en"))).toBe("marked this as blocking Release readiness");
+  expect(describeObjectiveEvent(event(), hydrated, translators("en"))).toBe("marked this objective as blocking Release readiness");
   expect(text).toContain("const { objectives } = useObjectivesQuery(projectId)");
   expect(text).toContain("ctx={eventCtx}");
 });

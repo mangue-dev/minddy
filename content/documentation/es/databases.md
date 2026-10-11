@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,15 @@
       "lib/server/database-import.ts",
       "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
       "lib/database-import/types.ts",
-      "lib/database-import/archive.ts"
+      "lib/database-import/archive.ts",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (es complete-body second pass and corrected wording review)",
-    "date": "2026-10-10"
+    "revision": 9,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (es complete-body second pass and corrected wording review); agent:/root (es changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "pages"
@@ -70,12 +71,29 @@
   ],
   "figures": [
     {
+      "id": "database-setup-cards-preview",
+      "kind": "screenshot",
+      "src": "/documentation/es/database-setup-cards.png",
+      "alt": "Vista previa del componente con tarjetas para configurar una nueva base de datos con Numo o importar una existente.",
+      "caption": "Sugerencias para una nueva base con datos de demostración. Elige Numo o la importación, o cierra las tarjetas para continuar manualmente.",
+      "revision": 9,
+      "reviewed": true,
+      "capturedAt": "2026-10-11",
+      "viewport": [
+        712,
+        240
+      ],
+      "deviceScaleFactor": 2,
+      "theme": "light",
+      "padding": 24
+    },
+    {
       "id": "create-a-database-steps",
       "kind": "screenshot",
       "src": "/documentation/es/database-property-types.png",
       "alt": "Selector de tipo de columna con texto, número, selecciones, fechas, personas y casilla de verificación.",
       "caption": "Elige un tipo que corresponda a los valores que deseas guardar.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +109,7 @@
       "src": "/documentation/es/database-entry.png",
       "alt": "Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.",
       "caption": "Abre una entrada para leer el texto completo y editar los valores según su tipo.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +125,7 @@
       "src": "/documentation/es/database-conversion-warning.png",
       "alt": "Advertencia de conversión: cambiar de Texto a Número borra una celda incompatible, con botones para cancelar o confirmar.",
       "caption": "Revisa el número real de celdas incompatibles antes de confirmar. Cancelar conserva los valores actuales.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -123,7 +141,7 @@
       "src": "/documentation/es/database-import-review.png",
       "alt": "Revisión de un CSV local: dos páginas de entradas y dos columnas, con el botón Importar base de datos.",
       "caption": "Revisa las entradas analizadas y el número de columnas antes de importar a la base vacía.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,9 +165,14 @@ Una base de datos combina una tabla de propiedades tipadas con una página compl
 
 ## Crear una base de datos y sus columnas {#create-a-database}
 
+La configuración de una nueva base de datos ofrece dos tarjetas: pedir a Numo que prepare la estructura o importar una base existente. El control de cierre tiene una descripción emergente y oculta estas sugerencias; la edición manual sigue disponible.
+
 Como miembro del proyecto, abre Páginas, usa + y elige una base de datos. Una base nueva tiene el nombre de sus entradas y ninguna columna opcional. Su aviso «Nueva base de datos» ofrece configuración con Numo o importar una base existente. La configuración manual sigue disponible sin IA. Elegir la configuración con Numo abre una solicitud preparada con esta base de datos como contexto de página, una vez terminada su creación. Revisa y envía la solicitud para pedir la estructura que necesitas; abrir la conversación no completa la configuración. El trabajo real de IA necesita un proveedor configurado y uso disponible o una clave personal compatible. Comprueba el esquema y las entradas resultantes antes de utilizarlos.
 
 Abre «Columnas» y elige «Añadir columna», o usa la columna + del extremo derecho. Nombra la columna y elige Texto, Número, Selección, Selección múltiple, Fecha de creación, Fecha, Personas o Casilla de verificación. Usa el selector de tipos con búsqueda para encontrarlo. Guarda, añade una entrada y verifica que la columna aparezca en la tabla y en la página de entrada.
+
+
+![Vista previa del componente con tarjetas para configurar una nueva base de datos con Numo o importar una existente.](/documentation/es/database-setup-cards.png)
 
 ### Elegir tipos y respetar límites {#database-types}
 
@@ -164,11 +187,15 @@ No hay fórmulas avanzadas, automatizaciones ni vistas adicionales de base de da
 
 ## Editar valores y páginas de entradas de una base de datos {#database-cells-and-entries}
 
+En el editor de opciones, añade una opción debajo de las filas existentes, incluso si la lista está vacía. Dale a cada opción un nombre distinto y no vacío, y guarda. Funciona tanto para selección simple como múltiple.
+
 Pulsa una celda de la tabla o la propiedad situada sobre el cuerpo de una entrada. Enter guarda, Escape cancela y Shift+Enter inserta una línea de texto. Salir del editor guarda. Un número inválido mantiene el editor abierto hasta corregirse; un fallo de guardado revierte el valor y muestra un error.
 
 Usa una celda de Selección para una opción o Selección múltiple para varias. Busca opciones existentes o crea una nueva desde el menú. Abre «Editar opciones» para cambiar nombres o colores y después guarda el conjunto o cancela. Fecha, Personas y Casilla de verificación usan sus controles; Fecha de creación permanece en solo lectura.
 
 ### Abrir, seleccionar e insertar entradas {#entry-actions}
+
+El contenido de una entrada vacía muestra un texto indicativo para localizar el área de escritura. La duplicación desde las acciones de una fila o una selección de varias filas pide confirmación antes de crear las copias. Mover las entradas a la papelera también pide confirmación y permite recuperarlas, sin eliminarlas definitivamente.
 
 Abre una entrada para editar su página completa en un panel flotante. «Ampliar» la abre como página completa cuando terminan los guardados pendientes del documento. Si fallan, el panel permanece abierto para resolverlo. Una entrada vacía sigue en la base hasta que la elimines.
 
@@ -182,6 +209,8 @@ Busca, filtra, ordena y oculta columnas en la vista de lista única. Estas prefe
 ![Entrada de demostración con descripción, duración 2.5, casilla marcada y selección vacía.](/documentation/es/database-entry.png)
 
 ## Cambiar el esquema de una base de datos con seguridad {#change-a-database-schema}
+
+El arrastre de una columna empieza después de mover el puntero y se mantiene horizontal. El cursor de agarre aparece solo durante el arrastre; un clic normal sigue abriendo las acciones de la columna. Con el foco en el encabezado de una columna, Intro o Espacio abre sus acciones. Pulsa F8 para iniciar la reordenación, usa Izquierda o Derecha y pulsa Intro para confirmar o Escape para cancelar.
 
 En Columnas, utiliza el control del ojo para mostrar u ocultar propiedades. Haz clic en una cabecera para cambiar su nombre o arrastra las cabeceras para reordenarlas. La columna con el nombre de la entrada permanece en primer lugar. Las opciones de Selección o Selección múltiple se pueden editar desde el menú de la celda o desde Columnas; sus nombres y colores se guardan juntos.
 

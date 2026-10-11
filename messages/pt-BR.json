@@ -142,7 +142,10 @@
     "pageCreated": "criou a página",
     "pageUpdated": "editou a página",
     "pageTrashed": "moveu a página para a lixeira",
-    "pageRestored": "restaurou a página"
+    "pageRestored": "restaurou a página",
+    "objectiveRelationAdded_blocks": "marcou este objetivo como bloqueador de {ref}",
+    "objectiveRelationAdded_blocked_by": "marcou este objetivo como bloqueado por {ref}",
+    "objectiveRelationAdded_related": "vinculou este objetivo a {ref}"
   },
   "ApiErrors": {
     "invalidJson": "Solicitação inválida.",
@@ -1038,7 +1041,14 @@
     "translated": "Traduzido",
     "original": "Original",
     "translatedFrom": "Original em {language} · traduzido por Numo",
-    "translatedReadOnly": "Mude para o original para editar o texto."
+    "translatedReadOnly": "Mude para o original para editar o texto.",
+    "filterSource": "Origem",
+    "filterSource_board": "Quadro público",
+    "filterSource_api": "API",
+    "filterSource_internal": "Entrada interna",
+    "filterReview": "Revisão",
+    "filterReview_published": "Publicado",
+    "resetFilters": "Redefinir filtros"
   },
   "Categories": {
     "colorSwatchAria": "Cor {color}",
@@ -2046,7 +2056,9 @@
     "restoreFailed": "Não foi possível recuperar rascunhos. Verifique sua conexão e tente novamente.",
     "deleteFailed": "Não foi possível excluir o rascunho. Tente novamente.",
     "recoverLegacy": "Recuperar rascunhos antigos neste dispositivo",
-    "legacyWarning": "Recupere apenas rascunhos que você criou neste dispositivo."
+    "legacyWarning": "Recupere apenas rascunhos que você criou neste dispositivo.",
+    "deleteTitle": "Excluir este rascunho?",
+    "deleteDescription": "Este rascunho será excluído permanentemente."
   },
   "Pages": {
     "placeholder": "Escreva ou digite '/' para blocos…",
@@ -6404,7 +6416,7 @@
     "duplicate": "Duplicar",
     "noResults": "Nenhuma entrada corresponde à busca ou ao filtro.",
     "emptyDatabase": "Adicione sua primeira entrada. Cada entrada é uma página com seu próprio conteúdo.",
-    "deleteEntry": "Excluir entrada",
+    "deleteEntry": "Mover a entrada para a lixeira?",
     "deleteEntryBody": "Esta página e suas subpáginas serão movidas para a lixeira. Você poderá restaurá-las por lá.",
     "new": "Novo",
     "valuePlaceholder": "Digite um valor…",
@@ -6417,11 +6429,11 @@
     "selectAllEntries": "Selecionar todas as entradas",
     "selectEntry": "Selecionar {name}",
     "insertEntryHint": "Inserir abaixo · Option/Alt-clique para inserir acima",
-    "deleteEntries": "Excluir {count} entradas",
+    "deleteEntries": "Mover {count} entradas para a lixeira?",
     "columnActions": "Ações para {name}",
     "rename": "Renomear",
     "editColumn": "Editar coluna",
-    "dragColumnHint": "Clique para ver ações, arraste para reordenar",
+    "dragColumnHint": "Clique para ver ações ou arraste para reordenar. Teclado: F8 inicia, Esquerda/Direita reordena, Enter confirma, Esc cancela.",
     "conversionWarningTitle": "Alguns valores não podem ser convertidos",
     "conversionWarningDescription": "Mudar de {from} para {to} limpará {count, plural, one {# célula incompatível} other {# células incompatíveis}}. Os valores compatíveis serão convertidos. Cancele para manter a coluna atual e todos os seus valores.",
     "confirmConversion": "Mudar tipo e limpar células",
@@ -6460,7 +6472,11 @@
     "importUnavailable": "A importação de bancos de dados ainda não está disponível neste servidor. Atualize-o e aplique as migrações do banco de dados.",
     "importStorageFull": "O armazenamento do projeto está cheio. Libere espaço e tente novamente.",
     "importFailed": "Não foi possível concluir a importação. Tente novamente; a mesma importação não será adicionada duas vezes.",
-    "exportArchive": "Arquivo do banco (.zip)"
+    "exportArchive": "Arquivo do banco (.zip)",
+    "addOption": "Adicionar uma opção",
+    "moveToTrash": "Mover para a lixeira",
+    "duplicateEntries": "{count, plural, one {Duplicar esta entrada?} other {Duplicar # entradas?}}",
+    "duplicateEntriesBody": "Criar uma cópia de cada entrada selecionada e de suas subpáginas."
   },
   "AppTabs": {
     "label": "Abas do aplicativo",

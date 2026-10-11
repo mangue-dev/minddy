@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Edit04Icon, Settings02Icon } from "@hugeicons/core-free-icons";
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type HTMLAttributes } from "react";
 import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
@@ -23,8 +23,7 @@ export function DatabaseColumnName({
   database,
   property,
   onEdit,
-  onDragStart,
-  onDragEnd,
+  dragHandleProps,
   dragging = false,
   disabled = false,
 }: {
@@ -32,8 +31,7 @@ export function DatabaseColumnName({
   database: PageSummary;
   property?: DatabaseProperty;
   onEdit?: (property: DatabaseProperty) => void;
-  onDragStart?: (event: DragEvent<HTMLButtonElement>) => void;
-  onDragEnd?: () => void;
+  dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
   dragging?: boolean;
   disabled?: boolean;
 }) {
@@ -42,6 +40,9 @@ export function DatabaseColumnName({
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const suppressClick = useRef(false);
+  useEffect(() => {
+    if (dragging) { suppressClick.current = true; setMenuOpen(false); }
+  }, [dragging]);
   const Icon = property ? PROPERTY_ICONS[property.type] : null;
   const [draft, setDraft] = useState(name);
   const [base, setBase] = useState(database);
@@ -113,35 +114,31 @@ export function DatabaseColumnName({
       <AppTooltip
         label={property ? `${name} · ${t("dragColumnHint")}` : t("columnActions", { name })}
       >
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild onPointerDown={(event) => event.preventDefault()}>
           <button
             type="button"
             data-database-column-trigger={property?.id ?? "title"}
-            className={`flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${dragging ? "cursor-grabbing bg-muted" : "cursor-grab"}`}
+            className={`flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${dragging ? "cursor-grabbing bg-muted" : "cursor-default"}`}
             aria-label={t("columnActions", { name })}
             disabled={disabled || pending}
-            draggable={!!property && !disabled && !pending}
+            {...dragHandleProps}
+            style={{ touchAction: "pan-y" }}
             onPointerDownCapture={(event) => {
               if (event.button === 0) {
                 suppressClick.current = false;
-                event.stopPropagation();
               }
             }}
             onClick={(event) => {
-              if (suppressClick.current) {
+              if (dragging || suppressClick.current) {
                 event.preventDefault();
                 return;
               }
               setMenuOpen(true);
             }}
             onDoubleClick={start}
-            onDragStart={(event) => {
-              suppressClick.current = true;
-              setMenuOpen(false);
-              onDragStart?.(event);
-            }}
-            onDragEnd={onDragEnd}
             onKeyDown={(event) => {
+              if (event.key === "F8" || dragging) dragHandleProps?.onKeyDown?.(event);
+              if (event.defaultPrevented) return;
               if (event.key === "F2") {
                 event.preventDefault();
                 start();

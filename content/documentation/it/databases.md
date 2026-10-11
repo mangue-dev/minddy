@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 development (UI refinements)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,15 @@
       "lib/server/database-import.ts",
       "content/documentation/reviews/second-pass-workflows-2026-10-10.md",
       "lib/database-import/types.ts",
-      "lib/database-import/archive.ts"
+      "lib/database-import/archive.ts",
+      "content/documentation/reviews/ui-refinements-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (it complete-body second pass and corrected wording review)",
-    "date": "2026-10-10"
+    "revision": 9,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/second_workflows (second lightweight source and figure review; prior operational evidence retained; no operational rerun); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/second_workflows (it complete-body second pass and corrected wording review); agent:/root (it changed-passage parity and localized-label review)",
+    "date": "2026-10-11"
   },
   "related": [
     "pages"
@@ -70,12 +71,29 @@
   ],
   "figures": [
     {
+      "id": "database-setup-cards-preview",
+      "kind": "screenshot",
+      "src": "/documentation/it/database-setup-cards.png",
+      "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
+      "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
+      "revision": 9,
+      "reviewed": true,
+      "capturedAt": "2026-10-11",
+      "viewport": [
+        712,
+        240
+      ],
+      "deviceScaleFactor": 2,
+      "theme": "light",
+      "padding": 24
+    },
+    {
       "id": "create-a-database-steps",
       "kind": "screenshot",
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +109,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,7 +125,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -123,7 +141,7 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 7,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,9 +165,14 @@ Un database combina una tabella di proprietà strutturate con una pagina complet
 
 ## Creare un database e le sue colonne {#create-a-database}
 
+L’area di configurazione di una nuova banca dati offre due schede: chiedere a Numo di preparare la struttura o importare una banca dati esistente. Il controllo di chiusura ha un suggerimento e nasconde queste proposte; la modifica manuale resta disponibile.
+
 Come membro del progetto, apri Pagine, usa + e scegli un database. Un nuovo database ha il nome delle voci e nessuna colonna opzionale. Il banner «Nuovo database» offre la configurazione con Numo o l’importazione di un database esistente. La configurazione manuale resta disponibile senza IA. Scegliere la configurazione con Numo apre una richiesta preparata con questo database come contesto di pagina, dopo che la creazione è terminata. Controlla e invia la richiesta per chiedere la struttura necessaria; aprire la conversazione non completa la configurazione. Il lavoro effettivo dell’IA richiede un fornitore configurato e utilizzo disponibile oppure una chiave personale compatibile. Esamina lo schema e le voci risultanti prima di farvi affidamento.
 
 Apri «Colonne» e scegli «Aggiungi colonna» oppure usa la colonna + sul bordo destro della tabella. Dai un nome alla colonna e scegli Testo, Numero, Selezione, Selezione multipla, Data di creazione, Data, Persone o Casella di controllo. Usa il selettore ricercabile per trovare il tipo. Salva, aggiungi una voce e verifica che la colonna appaia in tabella e nella pagina della voce.
+
+
+![Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.](/documentation/it/database-setup-cards.png)
 
 ### Scegliere i tipi e rispettare i limiti {#database-types}
 
@@ -164,11 +187,15 @@ Formule avanzate, automazioni e viste aggiuntive non sono disponibili. Scegli un
 
 ## Modificare valori e pagine delle voci di database {#database-cells-and-entries}
 
+Nell’editor delle opzioni, aggiungi un’opzione sotto le righe esistenti, anche quando l’elenco è vuoto. Assegna a ciascuna un nome distinto e non vuoto, poi salva. Funziona sia per la selezione singola sia per quella multipla.
+
 Fai clic su una cella della tabella o sulla proprietà sopra il corpo di una voce. Enter salva, Escape annulla e Shift+Enter inserisce una riga di testo. Uscire dall’editor salva. Un numero non valido mantiene l’editor aperto finché non viene corretto; un salvataggio non riuscito ripristina il valore e segnala un errore.
 
 Usa una cella Selezione per un’opzione o Selezione multipla per diverse opzioni. Cerca quelle esistenti o creane una dal menu. Apri «Modifica opzioni» per rinominare o cambiare colori, poi salva tutto insieme o annulla. Data, Persone e Casella di controllo usano i controlli corrispondenti; Data di creazione resta in sola lettura.
 
 ### Aprire, selezionare e inserire voci {#entry-actions}
+
+Il contenuto di una voce vuota mostra un segnaposto per individuare l’area di scrittura. La duplicazione dalle azioni di riga o da una selezione di più righe richiede conferma prima di creare le copie. Anche lo spostamento nel cestino richiede conferma e consente il recupero, senza eliminare definitivamente le voci.
 
 Apri una voce per modificarne la pagina completa in un pannello flottante. «Espandi» la apre come pagina completa dopo la fine dei salvataggi del documento in attesa. Se il salvataggio fallisce, il pannello resta aperto per risolverlo. Una voce vuota resta nel database finché non viene eliminata.
 
@@ -182,6 +209,8 @@ Cerca, filtra, ordina e nascondi colonne nell’unica vista elenco. Queste prefe
 ![Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.](/documentation/it/database-entry.png)
 
 ## Modificare lo schema di un database in sicurezza {#change-a-database-schema}
+
+Il trascinamento di una colonna inizia dopo un movimento del puntatore e resta orizzontale. Il cursore di presa compare solo durante il trascinamento; un clic normale continua ad aprire le azioni della colonna. Con il focus sull’intestazione di una colonna, Invio o Spazio apre le azioni. Premi F8 per iniziare il riordino, usa Sinistra o Destra, quindi Invio per confermare o Esc per annullare.
 
 In Colonne, usa il controllo con l’occhio per mostrare o nascondere le proprietà. Fai clic su un’intestazione per rinominarla oppure trascina le intestazioni per riordinarle. La colonna con il nome della voce rimane per prima. Puoi modificare le opzioni di Selezione o Selezione multipla dal menu della cella o da Colonne; nomi e colori vengono salvati insieme.
 

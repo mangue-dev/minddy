@@ -153,7 +153,7 @@ export function DatabaseCellEditor({
         {value == null || value === "" ? (
           <span className="text-muted-foreground">{empty}</span>
         ) : (
-          String(value).slice(0, 160)
+          <span className="min-w-0 truncate">{String(value)}</span>
         )}
       </button>
       {open &&

@@ -745,51 +745,16 @@ button[data-variant="ghost"] {
       transition: none !important;
     }
   }
-
-  /* On ultrawide (≥2200px) the shell becomes a centered map (mango-ui
-     AppShell places `.ultrawide-canvas` on the body), so we re-anchor the FAB
-     Numo and its compact panel — both in `fixed` — at the bottom right corner of
-     the shell rather than at the edge of the viewport. Offset = shell centering margin
-     + 8px: for the FAB of 44px, this 8px keeps its radius of 22px concentric
-     at 30px corner of shell (30 − 8 = 22); the panel shares exactly the
-     same corner to open where the FAB is.
-
-     Web only: in the desktop app (hiddenInset window) the shell fills the
-     viewport at every size — the canvas maths would pull the buttons toward
-     the window's centre, parking them inside the content pane. The plain
-     `right-3 bottom-1` anchoring is the correct one there at any width.
-
-     Why @layer utilities + !important: the panel is positioned with
-     !important Tailwind utilities (md:!right-4 …) that live in this layer.
-     For !important declarations the order of the cascade layers is reversed, so
-     a layered !important beats a non-layered one regardless of specificity —
-     an off-layer rule would silently lose. Declared in @layer
-     utilities, it's the specificity that decides (0,2,0 beats the 0,1,0 of md:). */
-  html:not([data-desktop-app]) .ultrawide-canvas .assistant-fab-anchor,
-  html:not([data-desktop-app]) .ultrawide-canvas .assistant-panel-anchor {
-    right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
-    bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px) !important;
+  /* Shared panels stay at the viewport edges after removing the shell frame. */
+  html .ultrawide-canvas [data-slot="side-panel-content"][data-side="right"] {
+    right: 12px !important;
+    top: 12px !important;
+    bottom: 12px !important;
   }
-
-  /* Same re-anchoring for the “new version” headband (MIN-157), which lives at
-     same corner: same `right`, and a `bottom` shifted by 4.5rem to remain
-     stacked ABOVE the FAB rather than on top of it. */
-  html:not([data-desktop-app]) .ultrawide-canvas .new-version-anchor {
-    right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
-    bottom: calc(
-      max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px + 4.5rem
-    ) !important;
-  }
-
-  /* Chain of concentric rays on ultrawide: the compact panel nestles
-     in the 30px corner of the shell with the same 8px gap as the FAB, so its
-     corner goes down to 22px (30 − 8). The ChatInput keeps its gap of 6px at the edge of
-     panel (px-1.5/pb-1.5) and is already in rounded-2xl (16px = 22 − 6): the
-     coins bas restent concentriques, shell 30 → panneau 22 → input 16. Pas
-     !important necessary: ​​beats `rounded-*` utilities at specificity
-     in @layer utilities (unlike position above). */
-  .ultrawide-canvas .assistant-panel-anchor {
-    border-radius: 22px;
+  html .ultrawide-canvas [data-slot="side-panel-content"][data-side="left"] {
+    left: 12px !important;
+    top: 12px !important;
+    bottom: 12px !important;
   }
 }
 
@@ -2837,15 +2802,20 @@ html[data-desktop-platform="darwin"]
 }
 .app-workspace { padding-top: env(safe-area-inset-top); }
 .app-titlebar-safe-area { height: 44px; }
-@media (min-width: 2200px) {
-  html:not([data-desktop-app]) .app-workspace {
-    max-height: var(--spacing-app-max-h);
-    max-width: var(--spacing-app-max-w);
-    border: 1px solid var(--border);
-    border-radius: 30px;
-    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-  }
+/* The workspace fills the viewport at every screen size. */
+html:not([data-desktop-app]) .ultrawide-canvas {
+  display: block;
+  padding: 0;
 }
+html:not([data-desktop-app]) .app-workspace {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 :root[data-app-layout="desktop"] {
   .app-top-bar { display: flex; }
   &[data-desktop-app][data-app-top-bar] .desktop-drag-band { display: none; }
@@ -2976,7 +2946,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
   .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
   [data-property-row] { min-height: 52px; }
-  [data-property-row] :is(button, a[role="button"]) { min-height: 44px; min-width: 44px; }
+  [data-property-row] :is(button, a[role="button"]) { min-height: 44px; min-width: 44px; justify-content: flex-end; }
   [data-bulk-issue-actions] button { min-height: 44px; min-width: 44px; }
   :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
     -webkit-backdrop-filter: blur(4px);
@@ -3372,4 +3342,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   @starting-style {
     .documentation-numo-panel[data-state="open"] { transform: translate3d(0, 0, 0); }
   }
+}
+
+@keyframes mobile-navigation-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+.mobile-navigation-progress > div { animation: mobile-navigation-progress 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .mobile-navigation-progress > div { animation: none; width: 100%; }
 }

@@ -293,8 +293,9 @@ export function describeObjectiveEvent(
   const { t, formatDue } = tr;
   const objStatus = (v: string) => tr.tObjectiveStatus?.(v) ?? v;
   if (e.type === "created") return t("objectiveCreated");
-  if (e.type === "relation_added" || e.type === "relation_removed")
-    return describeEvent(e, ctx, tr);
+  if (e.type === "relation_added")
+    return t(`objectiveRelationAdded_${e.field ?? "related"}`, { ref: relationRef(ctx, tr, e.to_value) });
+  if (e.type === "relation_removed") return describeEvent(e, ctx, tr);
 
   if (e.type === "updated") {
     switch (e.field) {
@@ -387,6 +388,8 @@ export function describeFeedbackEvent(
 
   if (e.type === "updated") {
     switch (e.field) {
+      case "objective_id":
+        return t("objectiveChanged", { from: objectiveName(ctx, tr, e.from_value), to: objectiveName(ctx, tr, e.to_value) });
       case "title":
         return t("feedbackTitleChanged");
       case "body":

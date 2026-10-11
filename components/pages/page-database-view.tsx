@@ -33,6 +33,9 @@ import {
   AlertDialogAction,
   toast,
 } from "mangue-ui";
+import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
+import { SortableContext, useSortable, horizontalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { DatabaseColumnName } from "./database-column-name";
 import { reorderDatabaseColumns } from "@/lib/page-database-columns";
 import { DatabaseTableScroll } from "./database-table-scroll";
@@ -66,6 +69,21 @@ import {
   DatabasePropertyCell,
   PROPERTY_ICONS,
 } from "./page-database-properties";
+
+const horizontalColumnDrag: Modifier = ({ transform }) => ({ ...transform, y: 0 });
+
+function SortableDatabaseColumn({ projectId, database, property, disabled, onEdit }: {
+  projectId: string; database: PageSummary; property: DatabaseProperty; disabled: boolean;
+  onEdit: (property: DatabaseProperty) => void;
+}) {
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: property.id, disabled });
+  return <th ref={setNodeRef} scope="col" data-database-column={property.id}
+    className="relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-1 font-normal"
+    style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 1 : undefined }}>
+    <DatabaseColumnName projectId={projectId} database={database} property={property} disabled={disabled}
+      dragging={isDragging} onEdit={onEdit} dragHandleProps={{ ...attributes, ...listeners }} />
+  </th>;
+}
 
 function DatabaseSelect({
   value,
@@ -353,26 +371,9 @@ export function PageDatabaseView({
     null,
   );
   const { saveSchema, pending: schemaPending } = usePageDatabase(projectId);
-  const columnDrag = useRef<{ id: string; base: PageSummary } | null>(null);
-  const [draggingColumn, setDraggingColumn] = useState<string | null>(null);
-  const [columnDropTarget, setColumnDropTarget] = useState<{
-    id: string;
-    before: boolean;
-  } | null>(null);
-  const endColumnDrag = () => {
-    columnDrag.current = null;
-    setDraggingColumn(null);
-    setColumnDropTarget(null);
-  };
-  const dropColumn = (targetId: string, before: boolean) => {
-    const source = columnDrag.current;
-    endColumnDrag();
-    if (!source) return;
-    const schema = source.base.database_schema ?? [];
-    const next = reorderDatabaseColumns(schema, source.id, targetId, before);
-    if (next.some((property, index) => property.id !== schema[index]?.id))
-      void saveSchema(source.base, next);
-  };
+  const columnBase = useRef<PageSummary | null>(null);
+  const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
   const tPages = useTranslations("Pages");
   const {
@@ -547,6 +548,7 @@ export function PageDatabaseView({
       onOpen(created.id);
       await created.settled;
     });
+  const [duplicateTargets, setDuplicateTargets] = useState<PageSummary[]>([]);
   const duplicate = (targets: PageSummary[]) =>
     void run(async () => {
       const copies = await Promise.all(
@@ -627,16 +629,16 @@ export function PageDatabaseView({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={t("duplicate")}
-                  onClick={() => duplicate(selectedRows)}
+                  onClick={() => setDuplicateTargets(selectedRows)}
                 >
                   <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                 </Button>
               </AppTooltip>
-              <AppTooltip label={t("delete")}>
+              <AppTooltip label={t("moveToTrash")}>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={t("delete")}
+                  aria-label={t("moveToTrash")}
                   onClick={() => setRemove(selectedRows)}
                 >
                   <HugeiconsIcon icon={Delete02Icon} className="size-4" />
@@ -827,6 +829,18 @@ export function PageDatabaseView({
           {t("new")}
         </Button>
       </div>
+      <DndContext accessibility={{ screenReaderInstructions: { draggable: t("dragColumnHint") } }} sensors={columnSensors} collisionDetection={closestCenter} modifiers={[horizontalColumnDrag]}
+        onDragStart={() => { columnBase.current = database; }}
+        onDragCancel={() => { columnBase.current = null; }}
+        onDragEnd={({ active, over }) => {
+          const base = columnBase.current;
+          columnBase.current = null;
+          if (!base || !over || active.id === over.id) return;
+          const schema = base.database_schema ?? [];
+          const before = schema.findIndex((p) => p.id === active.id) > schema.findIndex((p) => p.id === over.id);
+          void saveSchema(base, reorderDatabaseColumns(schema, String(active.id), String(over.id), before));
+        }}>
+      <SortableContext items={visible.map((property) => property.id)} strategy={horizontalListSortingStrategy}>
       <DatabaseTableScroll>
         <table
           className="w-full table-fixed border-separate border-spacing-0 text-sm"
@@ -845,16 +859,7 @@ export function PageDatabaseView({
             ))}
             <col style={{ width: 56 }} />
           </colgroup>
-          <thead
-            onDragLeave={(event) => {
-              if (
-                !event.currentTarget.contains(
-                  event.relatedTarget as Node | null,
-                )
-              )
-                setColumnDropTarget(null);
-            }}
-          >
+          <thead>
             <tr className="text-left text-muted-foreground">
               <th scope="col" className="w-16 bg-background" />
               <th scope="col" className="w-8 bg-background">
@@ -886,59 +891,8 @@ export function PageDatabaseView({
               >
                 <DatabaseColumnName projectId={projectId} database={database} />
               </th>
-              {visible.map((property) => (
-                <th
-                  scope="col"
-                  key={property.id}
-                  data-database-column={property.id}
-                  className={`overflow-hidden whitespace-nowrap border-b border-border/50 p-1 font-normal ${columnDropTarget?.id === property.id ? (columnDropTarget.before ? "shadow-[inset_2px_0_0_var(--primary)]" : "shadow-[inset_-2px_0_0_var(--primary)]") : ""}`}
-                  onDragOver={(event) => {
-                    if (!columnDrag.current) return;
-                    if (columnDrag.current.id === property.id) {
-                      setColumnDropTarget(null);
-                      return;
-                    }
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.dataTransfer.dropEffect = "move";
-                    const box = event.currentTarget.getBoundingClientRect();
-                    setColumnDropTarget({
-                      id: property.id,
-                      before: event.clientX < box.left + box.width / 2,
-                    });
-                  }}
-                  onDrop={(event) => {
-                    if (!columnDrag.current) return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const box = event.currentTarget.getBoundingClientRect();
-                    dropColumn(
-                      property.id,
-                      event.clientX < box.left + box.width / 2,
-                    );
-                  }}
-                >
-                  <DatabaseColumnName
-                    projectId={projectId}
-                    database={database}
-                    property={property}
-                    disabled={schemaPending}
-                    dragging={draggingColumn === property.id}
-                    onEdit={setEditProperty}
-                    onDragStart={(event) => {
-                      event.stopPropagation();
-                      columnDrag.current = { id: property.id, base: database };
-                      setDraggingColumn(property.id);
-                      event.dataTransfer.effectAllowed = "move";
-                      event.dataTransfer.setData(
-                        "application/x-minddy-database-column",
-                        property.id,
-                      );
-                    }}
-                    onDragEnd={endColumnDrag}
-                  />
-                </th>
-              ))}
+              {visible.map((property) => <SortableDatabaseColumn key={property.id}
+                projectId={projectId} database={database} property={property} disabled={schemaPending} onEdit={setEditProperty} />)}
               <th
                 scope="col"
                 data-create-property-column
@@ -1050,7 +1004,7 @@ export function PageDatabaseView({
                               {t("openEntry")}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onSelect={() => duplicate(targets)}>
+                          <DropdownMenuItem onSelect={() => setDuplicateTargets(targets)}>
                             <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                             {t("duplicate")}
                           </DropdownMenuItem>
@@ -1082,7 +1036,7 @@ export function PageDatabaseView({
                             onSelect={() => setRemove(targets)}
                           >
                             <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                            {t("delete")}
+                            {t("moveToTrash")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1177,6 +1131,7 @@ export function PageDatabaseView({
           </div>
         )}
       </DatabaseTableScroll>
+      </SortableContext></DndContext>
       <Button
         variant="ghost"
         size="sm"
@@ -1201,6 +1156,15 @@ export function PageDatabaseView({
           onClose={() => setCreateProperty(false)}
         />
       )}
+      <AlertDialog open={duplicateTargets.length > 0} onOpenChange={(open) => { if (!open) setDuplicateTargets([]); }}>
+        <AlertDialogContent><AlertDialogHeader>
+          <AlertDialogTitle>{t("duplicateEntries", { count: duplicateTargets.length })}</AlertDialogTitle>
+          <AlertDialogDescription>{t("duplicateEntriesBody", { count: duplicateTargets.length })}</AlertDialogDescription>
+        </AlertDialogHeader><AlertDialogFooter>
+          <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={() => { duplicate(duplicateTargets); setDuplicateTargets([]); }}>{t("duplicate")}</AlertDialogAction>
+        </AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={remove.length > 0}
         onOpenChange={(open) => {
@@ -1236,7 +1200,7 @@ export function PageDatabaseView({
                 });
               }}
             >
-              {t("delete")}
+              {t("moveToTrash")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
