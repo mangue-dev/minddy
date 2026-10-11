@@ -165,3 +165,10 @@ dispatch and real MCP response handlers. Typecheck, lint, owned-English and
 whitespace checks passed. Public documentation impact: these fixes restore the
 already documented trigger and scheduler behavior; no guide, control label or
 figure changes are needed.
+
+The subsequent GitHub run marked CodeQL alert #39 fixed and passed edition
+builds, typecheck, lint and one unit-test shard. The other shard exposed a
+background wakeup from a preceding database conversion test calling the shared
+RPC mock after reset. The database-tool suite now stubs that opportunistic wakeup
+while retaining the guarded-write and no-RPC assertions. Its 14 tests pass;
+production behavior is unchanged.
