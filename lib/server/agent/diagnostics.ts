@@ -196,6 +196,8 @@ export interface TypeErrorEntry {
 export interface TypeChecker {
   /** Major version of TypeScript (`--incremental` with `--noEmit` requires TS ≥ 5). */
   major: number;
+  /** Verified repository compiler command, including compatible fallback installations. */
+  command: string;
 }
 
 /**
@@ -204,17 +206,19 @@ export interface TypeChecker {
  * in the VM, the round-trip dominates). Best effort: any failure → `null`.
  */
 export async function detectTypeChecker(host: RepoHost): Promise<TypeChecker | null> {
-  try {
-    const res = await host.exec(
-      `test -f tsconfig.json && test -x ./node_modules/.bin/tsc && ./node_modules/.bin/tsc --version`,
-      { cwd: host.layout.repoDir, timeoutMs: 30_000 },
-    );
-    if (res.exitCode !== 0) return null;
-    const major = Number(/Version (\d+)\./.exec(res.stdout)?.[1] ?? NaN);
-    return Number.isFinite(major) ? { major } : null;
-  } catch {
-    return null;
+  for (const command of ["./node_modules/.bin/tsc", "node ./node_modules/typescript-api/bin/tsc"]) {
+    const path = command.startsWith("node ") ? command.slice(5) : command;
+    try {
+      const res = await host.exec(
+        `test -f tsconfig.json && test -f ${path} && ${command} --version`,
+        { cwd: host.layout.repoDir, timeoutMs: 15_000 },
+      );
+      if (res.exitCode !== 0) continue;
+      const major = Number(/Version (\d+)\./.exec(res.stdout)?.[1] ?? NaN);
+      if (Number.isFinite(major)) return { major, command };
+    } catch { /* Try a compatible installed compiler when the default cannot start. */ }
   }
+  return null;
 }
 
 /**
@@ -238,8 +242,8 @@ export async function typeErrorsForTurn(
     checker.major >= 5 ? ` --incremental --tsBuildInfoFile ${sq(buildInfo)}` : "";
   try {
     const res = await host.exec(
-      `mkdir -p ${sq(host.layout.typecheckDir)}; ./node_modules/.bin/tsc --noEmit --pretty false${incremental} 2>&1`,
-      { cwd: host.layout.repoDir, timeoutMs: TYPECHECK_TIMEOUT_MS },
+      `mkdir -p ${sq(host.layout.typecheckDir)}; ${checker.command} --noEmit --pretty false${incremental} 2>&1`,
+      { cwd: host.layout.repoDir, timeoutMs: TYPECHECK_TIMEOUT_MS, env: { NODE_OPTIONS: "--max-old-space-size=3072" } },
     );
     // exitCode 0 = nothing to say. Non-zero WITHOUT analyzable error = tool failure
     // (unreadable tsconfig, OOM, timeout): `formatTypeErrors` returns null.
@@ -355,7 +359,7 @@ function normalizePath(path: string): string {
  * The local time is 4.4× (18.4 s on twelve cores): this is the measurement in the VM which
  * that counts, never the workstation's.
  */
-export const TEST_TIMEOUT_MS = 240_000;
+export const TEST_TIMEOUT_MS = 120_000;
 /**
  * Wall budget for a TARGETED passage (`vitest related` / `jest --findRelatedTests`).
  * The runner starts the same and only loads the subgraph of the affected files:
@@ -488,10 +492,10 @@ export function relatedTestCommand(runner: TestRunner, files: readonly string[])
   if (paths.length === 0) return null;
   const bin = `./node_modules/.bin/${runner.bin}`;
   if (runner.bin === "vitest") {
-    return `${bin} related --run --passWithNoTests ${paths.join(" ")} 2>&1`;
+    return `${bin} related --run --maxWorkers=2 --passWithNoTests ${paths.join(" ")} 2>&1`;
   }
   if (runner.bin === "jest") {
-    return `${bin} --findRelatedTests --passWithNoTests ${paths.join(" ")} 2>&1`;
+    return `${bin} --findRelatedTests --maxWorkers=2 --passWithNoTests ${paths.join(" ")} 2>&1`;
   }
   return null;
 }
@@ -523,10 +527,11 @@ export async function testFailuresForTurn(
     // other end (`UND_ERR_SOCKET: other side closed`, measured by calibrating these constants —
     // a `| tail` was enough to silence a consecutive run of 2,760 tests). A
     // runner who writes his progress holds the socket open; we leave it.
-    const res = await host.exec(related ?? `npm run test --silent 2>&1`, {
+    const workerLimit = runner.bin === "vitest" || runner.bin === "jest" ? " -- --maxWorkers=2" : "";
+    const res = await host.exec(related ?? `npm run test --silent${workerLimit} 2>&1`, {
       cwd: host.layout.repoDir,
       timeoutMs: related ? TEST_RELATED_TIMEOUT_MS : TEST_TIMEOUT_MS,
-      env: { CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" },
+      env: { NODE_ENV: "test", CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" },
     });
     const ran = related ? ("related" as const) : ("full" as const);
     // exitCode 0 = green: silence is the correct return.

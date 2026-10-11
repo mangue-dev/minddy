@@ -208,6 +208,16 @@ describe("code delegation contracts", () => {
     expect(formatAgentDelegationPrompt(required)).toContain("Required delivery: call create_pr");
   });
 
+  it("requires PR delivery for authorized implementation even when the flag is omitted or false", () => {
+    for (const flag of [undefined, false]) {
+      const required = parseAgentDelegationBrief({ ...brief, requiresPullRequest: flag,
+        authorizedWork: [...brief.authorizedWork, "manage_pull_request"] });
+      expect(required.requiresPullRequest).toBe(true);
+      expect(formatAgentDelegationPrompt(required)).toContain("Required delivery: call create_pr");
+    }
+    expect(parseAgentDelegationBrief({ ...brief, authorizedWork: ["read_repository", "manage_pull_request"] }).requiresPullRequest).toBeUndefined();
+  });
+
   it("reports missing requested PRs even when the worker claims completion", () => {
     const required = parseAgentDelegationBrief({ ...brief, requiresPullRequest: true,
       authorizedWork: [...brief.authorizedWork, "manage_pull_request"] });

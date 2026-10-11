@@ -72,10 +72,11 @@ import type { EmitAgentEvent } from "./agent-contract";
  * is “a line to withdraw” paid for four minutes. Three files and forty
  * lines cover a targeted correction and its test, not a feature. Above,
  * the entire suite takes over without discussion — and the NEW file comes out of
- * lot quelle que soit sa taille (`untracked`, cf. `turnDiffStat`).
+ * regardless of its size (`untracked`, cf. `turnDiffStat`).
  */
 export const SMALL_TURN_MAX_FILES = 3;
 export const SMALL_TURN_MAX_LINES = 40;
+export const VALIDATION_WALL_BUDGET_MS = 150_000;
 
 interface DeliveryCheckResult {
   block: string | null;
@@ -123,7 +124,7 @@ export interface DeliveryGate {
    */
   checkBeforeSubmit: (budgetMs: number) => Promise<string | null>;
   /** Run the same checks on explicit request, independently of PR publication. */
-  checkChanges: (budgetMs: number) => Promise<string | null>;
+  checkChanges: (budgetMs: number, wallBudgetMs?: number) => Promise<string | null>;
   /**
    * Control of the plan CLAIMED ON THE GESTURE, for `write_issue_plan` (cf.
    * `gateWritePlan`). Only one passage, so the question is never asked twice
@@ -135,14 +136,14 @@ export interface DeliveryGate {
   /**
    * Note pending editions as “deposit affected”: the caller does so once
    * last time before the push, where the door may never have been passed
-   * (tour sans pull request, interrompu, suspendu).
+   * (a turn without a pull request, interrupted or suspended).
    */
   noteEdits: () => void;
   /**
    * THE DEPOSIT WAS AFFECTED OTHERWISE THAN BY AN EDITING TOOL (MIN-286).
    *
    * `noteEdits` latches on `editedPaths`, which comes from the writing tools. Below
-   * opencode il n'y a plus de `delete_file` ni de `move_file` : un `rm`, un `mv`,
+   * OpenCode no longer has `delete_file` or `move_file`: `rm` or `mv`,
    * a `sed -i` or a codemod goes through the SHELL, fills nothing, and the
    * door then remained silent on a turn which nevertheless changed the deposit - neither
    * type-check, neither tests, nor rereading the diff before the pull request. The caller
@@ -157,11 +158,27 @@ export interface DeliveryGate {
  * on the TOUR and therefore arrives seeded.
  */
 export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
-  const { host, emit, editedPaths, planWrites, filesFromSha, logPrefix } = deps;
+  const { emit, editedPaths, planWrites, filesFromSha, logPrefix } = deps;
+  let checkDeadline = Number.POSITIVE_INFINITY;
+  // Share one wall budget across probes, compilation, tests and diff review.
+  const host: RepoHost = {
+    ...deps.host,
+    exec: async (command, options) => {
+      const left = checkDeadline - Date.now();
+      if (left <= 0) throw new Error("Repository validation wall budget exhausted");
+      return deps.host.exec(command, {
+        ...options,
+        timeoutMs: Math.min(options?.timeoutMs ?? 30_000, left),
+      });
+    },
+    readFile: (path) => deps.host.readFile(path),
+    writeFile: (path, content) => deps.host.writeFile(path, content),
+    mkdir: (path) => deps.host.mkdir(path),
+  };
   const verification = deps.verification ?? newVerificationSink();
   /** The perimeter, or `undefined` when nothing limits (clone mode). A perimeter
    * which LIFTS limits nothing either: better a diff too wide than a door
-   *  de livraison en panne. */
+   *  broken delivery gate. */
   const scope = async (): Promise<readonly string[] | undefined> => {
     if (!deps.scopePaths) return undefined;
     return await deps.scopePaths().catch(() => undefined);
@@ -239,10 +256,10 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * 2. **Short tour, targeted passage.** A few lines on two or three files,
    * nothing new: the `related` mode of the runner goes up the import graph and
    * covers the “it breaks elsewhere” wherever it is traceable, in a few
-   *    secondes au lieu de 80.
+   *    seconds rather than 80.
    * 3. **Otherwise, the entire sequence**, unchanged. This is the case for a new file, a
    * big diff, of a turn whose size we were unable to measure: doubt pays
-   *    plein tarif, il ne se solde pas en silence.
+   *    the full cost rather than silently skipping verification.
    */
   const testBlock = async (
     budgetMs: number,
@@ -324,7 +341,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * costs nothing — the model reads it, corrects, and recalls `create_pr`.
    *
    * During the iteration, rereading is a gesture of the model, measured by the prompt
-   * selon ce qu'il vient de faire (`git diff`, il l'a).
+   * based on the current changes (`git diff` is available).
    *
    * READ-ONLY git commands — index is never touched, end of turn
    * remains alone to stage.
@@ -346,7 +363,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     // of MIN-252 speaks, and how often.
     await emit("status", {
       phase: "self_review",
-      at: "create_pr",
+      at: "validate_changes",
       durationMs: Date.now() - startedAt,
       chars: block?.length ?? 0,
       overwrites: overwrites.length,
@@ -413,22 +430,25 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
    * attempt is a door that can refuse to open, and an agent that cannot
    * over delivering is worse than an agent who delivers red by saying so.
    */
-  const submitChecks = async (budgetMs: number, explicit = false): Promise<string | null> => {
+  const submitChecks = async (budgetMs: number, explicit = false, wallBudgetMs = VALIDATION_WALL_BUDGET_MS): Promise<string | null> => {
     noteEdits();
     if ((!explicit && submitChecked) || !repoTouched) return null;
     if (!explicit) submitChecked = true;
-    // Type-checking and testing only read the worktree, so run them together. Their
-    // status events and follow-up blocks are still published in the deliberate order
-    // below, keeping the model-facing output stable while removing their idle time.
-    const [typeCheck, tests] = await Promise.all([
-      typeCheckBlock(budgetMs, false),
-      testBlock(budgetMs, false),
-    ]);
-    for (const result of [typeCheck, tests]) {
-      if (result.status) await emit("status", result.status);
+    // Shared VM memory must accommodate one expensive check at a time.
+    const started = Date.now();
+    checkDeadline = started + Math.max(0, Math.min(budgetMs, wallBudgetMs));
+    const remaining = () => Math.max(0, budgetMs - (Date.now() - started));
+    try {
+      const typeCheck = await typeCheckBlock(remaining());
+      const tests = await testBlock(remaining());
+      const blocks = [typeCheck.block, tests.block, await selfReviewBlock(remaining())].filter(Boolean);
+      const report = blocks.length > 0 ? blocks.join("\n\n---\n\n") : null;
+      return Date.now() >= checkDeadline
+        ? [report, "Repository validation reached its wall budget. Checks that did not finish are unverified. Run the remaining targeted checks explicitly before reporting success."].filter(Boolean).join("\n\n")
+        : report;
+    } finally {
+      checkDeadline = Number.POSITIVE_INFINITY;
     }
-    const blocks = [typeCheck.block, tests.block, await selfReviewBlock(budgetMs)].filter(Boolean);
-    return blocks.length > 0 ? blocks.join("\n\n---\n\n") : null;
   };
 
   return {
@@ -438,7 +458,7 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
       repoTouched = true;
     },
     checkBeforeSubmit: submitChecks,
-    checkChanges: async (budgetMs: number) => await submitChecks(budgetMs, true),
+    checkChanges: async (budgetMs, wallBudgetMs) => await submitChecks(budgetMs, true, wallBudgetMs),
     checkPlanAfterWrite: async (budgetMs: number) => await planBlock(budgetMs),
   };
 }

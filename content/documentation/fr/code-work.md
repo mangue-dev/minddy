@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-11",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls",
+    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; delegated worker reliability and card controls",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -46,14 +46,15 @@
       "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
       "lib/native-agent-models.ts",
       "components/settings/native-agent-model-preferences.tsx",
-      "content/documentation/reviews/min-676-model-controls-2026-10-10.md"
+      "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
+      "content/documentation/reviews/agent-reliability-and-cards-2026-10-11.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance)",
-    "date": "2026-10-10"
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance)",
+    "date": "2026-10-11"
   },
   "related": [
     "numo",
@@ -73,17 +74,18 @@
       "id": "delegate-code-work-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/delegate-code-work-workflow.png",
-      "alt": "Carte du worker terminé avec modèle, raisonnement léger, deux fichiers modifiés, branche, PR n° 1 et commit corrigé.",
-      "caption": "Exemple historique OpenCode : Carte de la correction réelle de la PR existante, avec son commit actualisé et son lien. Relisez le diff et les contrôles avant de fusionner : le statut terminé ne suffit pas à valider les critères.",
-      "revision": 7,
+      "alt": "Carte de démonstration avec état, durée, Codex, modèle, réflexion, copie de branche, bouton PR et Voir le travail.",
+      "caption": "Carte illustrative issue du composant mis à jour avec des données de démonstration. Les actions ouvrent le panneau de travail, copient la branche ou ouvrent la PR dans Minddy. Cet exemple ne prouve ni une exécution réussie du fournisseur ni la réussite des contrôles.",
+      "revision": 8,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-11",
       "viewport": [
-        912,
-        179
+        568,
+        379
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "review-pull-requests-workflow",
@@ -91,7 +93,7 @@
       "src": "/documentation/fr/review-pull-requests-workflow.png",
       "alt": "Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.",
       "caption": "La véritable PR corrigée reste ouverte, sans fusion. Le diff supprime les espaces autour du nom et utilise World pour une valeur vide. Cette instance ne peut pas demander l’autorisation utilisateur GitHub ; le libellé de disponibilité ne donne pas le droit de fusionner et ne prouve pas que la CI du fournisseur a réussi.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -119,13 +121,17 @@ L’authentification Codex par abonnement dans les services hébergés n’est p
 
 La carte de travail délégué, les détails de l’agent et sa conversation affichent le moteur de cette exécution : **Codex**, **Claude Code** ou **OpenCode**, avec son logo. Cette identité est enregistrée au démarrage. Modifier les paramètres du compte concerne les nouveaux agents ; cela ne renomme pas une exécution existante. Les anciennes exécutions sans moteur enregistré affichent un libellé générique d’agent de code.
 
+La carte verticale présente l’état actuel, le temps d’exécution, le moteur, le modèle, la réflexion, les fichiers modifiés et la branche. Le timer cumule le travail repris et se met en pause en attendant votre réponse. L’icône de copie de la branche permet de copier son nom complet. Ouvrez **Actions de l’agent** pour **Arrêter** le travail. **Voir le travail** ouvre le panneau d’activité avec les mêmes informations. **Voir la pull request** ouvre la PR liée dans Minddy.
+
+L’implémentation est livrée par une pull request. Si la publication est bloquée, Numo signale l’échec de la livraison. La vérification est distincte de la publication ; les contrôles inachevés ne sont pas considérés comme réussis. La description de la PR dans Minddy conserve le footer Numo avec le modèle, l’environnement et la réflexion.
+
 1. Ouvrez le ticket et décrivez le résultat attendu, les contraintes et les critères à vérifier.
 2. Ouvrez Numo avec le contexte du ticket. Demandez une inspection du dépôt avant un plan technique. Des fichiers ou API non vérifiés ne constituent pas une preuve.
 3. Demandez explicitement l’implémentation. Numo délègue les changements de branche au worker, qui clone le dépôt lié dans le sandbox serveur.
 4. Suivez sa carte pour la progression, les fichiers, les contrôles et les questions. Répondez dans la conversation.
 5. Ouvrez la pull request liée. Relisez le diff et les contrôles face aux critères avant de fusionner. Une prévisualisation existe seulement si le fournisseur de déploiement en a produit une.
 
-![Carte du worker terminé avec modèle, raisonnement léger, deux fichiers modifiés, branche, PR n° 1 et commit corrigé.](/documentation/fr/delegate-code-work-workflow.png)
+![Carte de démonstration avec état, durée, Codex, modèle, réflexion, copie de branche, bouton PR et Voir le travail.](/documentation/fr/delegate-code-work-workflow.png)
 
 ### Reprendre sans doublon {#continuation}
 

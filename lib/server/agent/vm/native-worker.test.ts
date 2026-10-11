@@ -214,6 +214,63 @@ describe("native supervisor lifecycle", () => {
     expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(true);
     expect(JSON.parse(await readFile(context.job.nativeAgent!.profileExportPath, "utf8"))).toEqual(context.profile);
   });
+  it("heartbeats and announces native preparation while CLI installation is pending", async () => {
+    const context = await setup({ writesToRepo: false });
+    const heartbeat = vi.fn(async () => true); context.cp.heartbeat = heartbeat;
+    let release!: (bins: string) => void;
+    const installCli = vi.fn(() => new Promise<string>((resolve) => { release = resolve; }));
+    const runtime: NativeRuntime = { start: async () => {}, async *events() { yield { type: "completed", reply: "Inspection complete." }; },
+      steer: async () => {}, interrupt: async () => {}, close: async () => {} };
+    vi.useFakeTimers();
+    const pending = runNativeTurn(context.job, { prompt: "Inspect", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli });
+    try {
+      await vi.advanceTimersByTimeAsync(15_001);
+      expect(installCli).toHaveBeenCalledOnce();
+      expect(heartbeat).toHaveBeenCalledOnce();
+      expect(context.cp.emit).toHaveBeenCalledWith("status", { phase: "native_preparing" });
+    } finally { vi.useRealTimers(); release("/fixture"); }
+    expect((await pending).status).toBe("completed");
+    expect(context.cp.emit).toHaveBeenCalledWith("status", { phase: "native_ready" });
+  });
+
+  it("repairs a pending final announcement before emitting a success summary", async () => {
+    const context = await setup({ writesToRepo: false });
+    const runtime: NativeRuntime = { start: async () => {}, async *events() {
+      yield { type: "completed", reply: "I will inspect the repository now." };
+      yield { type: "completed", reply: "The repository contains the expected implementation." };
+    }, steer: vi.fn(async () => {}), interrupt: async () => {}, close: async () => {} };
+    const report = await runNativeTurn(context.job, { prompt: "Inspect", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(runtime.steer).toHaveBeenCalledOnce();
+    expect(report.status).toBe("completed");
+    expect(context.cp.emit).toHaveBeenCalledWith("summary", { text: "The repository contains the expected implementation." });
+    expect(context.cp.emit).not.toHaveBeenCalledWith("summary", { text: "I will inspect the repository now." });
+  });
+  it.each(["", "<tool_call>read_issue</tool_call>", "I will open a pull request."])("fails incomplete native results after bounded repairs: %s", async (reply) => {
+    const context = await setup({ writesToRepo: false });
+    const runtime: NativeRuntime = { start: async () => {}, async *events() {
+      for (let i = 0; i < 3; i++) yield { type: "completed", reply };
+    }, steer: vi.fn(async () => {}), interrupt: async () => {}, close: async () => {} };
+    const report = await runNativeTurn(context.job, { prompt: "Inspect", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(runtime.steer).toHaveBeenCalledTimes(2);
+    expect(report.status).toBe("error");
+    expect(report.errorCode).toBe("replyIncomplete");
+    expect(context.cp.emit).not.toHaveBeenCalledWith("summary", expect.anything());
+  });
+  it("does not complete authorized implementation without its required PR", async () => {
+    const context = await setup({ pullRequestDelivery: { required: true, delivered: false } });
+    const runtime: NativeRuntime = { start: async () => {}, async *events() {
+      for (let i = 0; i < 3; i++) yield { type: "completed", reply: "Implementation complete." };
+    }, steer: vi.fn(async () => {}), interrupt: async () => {}, close: async () => {} };
+    const report = await runNativeTurn(context.job, { prompt: "Implement", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(runtime.steer).toHaveBeenCalledTimes(2);
+    expect(report.errorCode).toBe("replyIncomplete");
+    expect(context.cp.emit).not.toHaveBeenCalledWith("summary", expect.anything());
+  });
+
   it("does not publish a success summary when the final repository publication fails", async () => {
     const context = await setup();
     expect((await context.host.exec("git init")).exitCode).toBe(0);

@@ -22,19 +22,28 @@ export async function installNativeWorkerCli(engine: NativeHarness, root: string
   await mkdir(root, { recursive: true, mode: 0o700 });
   const home = join(root, "install-home"); await mkdir(home, { recursive: true, mode: 0o700 });
   const env: NodeJS.ProcessEnv = { NODE_ENV: "production", PATH: `${dirname(process.execPath)}:${process.env.PATH ?? "/usr/bin:/bin"}`, HOME: home, LANG: "C.UTF-8", CI: "1" };
-  const packages = ["@openai/codex@0.162.1", ...(engine === "claude_code" ? ["@anthropic-ai/claude-code@2.1.296"] : [])];
-  await command("npm", ["install", "--prefix", root, "--ignore-scripts", "--no-audit", "--no-fund", ...packages], env);
+  const harnesses = engine === "codex" ? ["codex"] as const : ["codex", "claude_code"] as const;
   const bins = join(root, "node_modules", ".bin");
-  for (const harness of engine === "codex" ? ["codex"] as const : ["codex", "claude_code"] as const) {
-    const packageDir = harness === "codex" ? "@openai/codex" : "@anthropic-ai/claude-code";
-    const manifest = JSON.parse(await readFile(join(root, "node_modules", packageDir, "package.json"), "utf8"));
-    if (manifest.version !== NATIVE_WORKER_VERSIONS[harness]) throw new Error("Native CLI version mismatch");
-    if (harness === "claude_code") {
-      const target = `../@anthropic-ai/claude-code-linux-${process.arch}/claude`;
-      await access(join(bins, target)); await rm(join(bins, "claude"), { force: true }); await symlink(target, join(bins, "claude"));
+  const verify = async () => {
+    for (const harness of harnesses) {
+      const packageDir = harness === "codex" ? "@openai/codex" : "@anthropic-ai/claude-code";
+      const manifest = JSON.parse(await readFile(join(root, "node_modules", packageDir, "package.json"), "utf8"));
+      if (manifest.version !== NATIVE_WORKER_VERSIONS[harness]) throw new Error("Native CLI version mismatch");
+      const binary = join(bins, harness === "codex" ? "codex" : "claude");
+      await access(binary);
+      const version = await command(binary, ["--version"], env);
+      if (!version.split(/\s+/).includes(NATIVE_WORKER_VERSIONS[harness])) throw new Error("Native CLI binary version mismatch");
     }
-    const version = await command(join(bins, harness === "codex" ? "codex" : "claude"), ["--version"], env);
-    if (!version.split(/\s+/).includes(NATIVE_WORKER_VERSIONS[harness])) throw new Error("Native CLI binary version mismatch");
+  };
+  // Resumed snapshots retain pinned private runtimes; avoid an npm round-trip on every turn.
+  try { await verify(); return bins; } catch { /* Missing or outdated runtimes are reinstalled below. */ }
+  const packages = [`@openai/codex@${NATIVE_WORKER_VERSIONS.codex}`,
+    ...(engine === "claude_code" ? [`@anthropic-ai/claude-code@${NATIVE_WORKER_VERSIONS.claude_code}`] : [])];
+  await command("npm", ["install", "--prefix", root, "--ignore-scripts", "--no-audit", "--no-fund", ...packages], env);
+  if (engine === "claude_code") {
+    const target = `../@anthropic-ai/claude-code-linux-${process.arch}/claude`;
+    await access(join(bins, target)); await rm(join(bins, "claude"), { force: true }); await symlink(target, join(bins, "claude"));
   }
+  await verify();
   return bins;
 }

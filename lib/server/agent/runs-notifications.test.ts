@@ -55,7 +55,7 @@ vi.mock("@/lib/server/numo/turns", () => ({
   executeNumoTurn: (...args: unknown[]) => h.executeNumo(...args),
 }));
 
-const { notifyAgentRun, notifyDelegatedAgentRun, stampRunResult } = await import("./runs");
+const { notifyAgentRun, notifyDelegatedAgentRun, stampRunResult, deliverAgentDelegationResult } = await import("./runs");
 
 const terminalRun = {
   id: "run-1",
@@ -176,6 +176,21 @@ describe("agent run notifications", () => {
         agent_conversation_id: "conversation-1",
       }),
     ]);
+  });
+
+  it.each(["queued", "running"] as const)("never wakes Numo for a %s worker", async (status) => {
+    const run = { ...terminalRun, status } as Parameters<typeof deliverAgentDelegationResult>[0];
+    expect(await deliverAgentDelegationResult(run)).toBe("ignored");
+    expect(h.resumeNumo).not.toHaveBeenCalled();
+    expect(h.executeNumo).not.toHaveBeenCalled();
+  });
+
+  it("ignores a delayed terminal notification from before a resumed worker turn", async () => {
+    const ended = { ...terminalRun, started_at: "2026-10-11T12:00:00Z", rest_claimed_at: "2026-10-11T12:02:00Z" };
+    h.returnedRun = { ...ended, status: "running", started_at: "2026-10-11T12:03:00Z", rest_claimed_at: null };
+    expect(await deliverAgentDelegationResult(ended as Parameters<typeof deliverAgentDelegationResult>[0])).toBe("ignored");
+    expect(h.resumeNumo).not.toHaveBeenCalled();
+    expect(h.executeNumo).not.toHaveBeenCalled();
   });
 
   it("queues one durable parent continuation from the guarded chat-run ending", async () => {

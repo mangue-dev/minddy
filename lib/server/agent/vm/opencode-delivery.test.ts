@@ -103,6 +103,25 @@ function forwarder(success = true) {
 }
 
 describe("explicit repository validation", () => {
+  it("includes the initial repository probe in the shared validation budget", async () => {
+    let now = 0;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+    const exec = vi.fn(async () => ({ exitCode: 0, stdout: "", stderr: "" }));
+    vi.mocked(turnDiffStat).mockImplementationOnce(async () => {
+      now += 45_000;
+      return { files: ["a.ts"], lines: 1, untracked: 0 };
+    });
+    vi.mocked(typeErrorsForTurn).mockImplementationOnce(async (host) => {
+      await host.exec("type-check", { timeoutMs: 120_000 });
+      return "TYPES";
+    });
+    try {
+      const { delivery } = deliveryFor({ host: { ...fakeHost(), exec } });
+      await delivery.wrapValidateChanges(forwarder())({});
+      expect(exec).toHaveBeenCalledWith("type-check", expect.objectContaining({ timeoutMs: 105_000 }));
+    } finally { clock.mockRestore(); }
+  });
+
   it("runs checks through validate_changes without coupling them to publication", async () => {
     const { delivery } = deliveryFor();
     delivery.noteEdit(`${REPO_DIR}/lib/x.ts`);
@@ -132,7 +151,7 @@ describe("l'édition, lue sur la demande de permission", () => {
 
     expect(delivery.checkpointEditedPaths()).toEqual(["lib/x.ts"]);
 
-    const checks = await delivery.wrapCreatePr(async () => ({ result: {}, success: true }))({});
+    const checks = await delivery.wrapValidateChanges(async () => ({ result: {}, success: true }))({});
 
     expect(checks.followUp).toContain("TYPES");
     expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["lib/x.ts"]);
@@ -170,7 +189,7 @@ describe("ce que le modèle a vérifié lui-même (MIN-262)", () => {
     const { delivery, phases } = deliveryFor({ repoTouched: true });
     delivery.noteShell("npx vitest run", 0);
 
-    const out = await delivery.wrapCreatePr(async () => ({ result: {}, success: true }))({});
+    const out = await delivery.wrapValidateChanges(async () => ({ result: {}, success: true }))({});
 
     // The door still speaks (types, diff) but has not restarted ANYTHING: 80 s of wall
     // saved to learn what the turn just read.
@@ -183,7 +202,7 @@ describe("ce que le modèle a vérifié lui-même (MIN-262)", () => {
     const { delivery } = deliveryFor({ repoTouched: true });
     delivery.noteShell("npx vitest run", 1);
 
-    const out = await delivery.wrapCreatePr(async () => ({ result: {}, success: true }))({});
+    const out = await delivery.wrapValidateChanges(async () => ({ result: {}, success: true }))({});
 
     expect(out.followUp).toContain("TESTS");
   });
@@ -193,30 +212,23 @@ describe("ce que le modèle a vérifié lui-même (MIN-262)", () => {
     delivery.noteShell("npm test", 0);
     delivery.noteEdit(`${REPO_DIR}/lib/x.ts`);
 
-    const out = await delivery.wrapCreatePr(async () => ({ result: {}, success: true }))({});
+    const out = await delivery.wrapValidateChanges(async () => ({ result: {}, success: true }))({});
 
     expect(out.followUp).toContain("TESTS");
   });
 });
 
-describe("la porte de `create_pr`", () => {
-  it("rend les contrôles au premier appel sans pousser, puis livre au second", async () => {
-    const opened: string[] = [];
+describe("explicit validation and publication", () => {
+  it("publishes on the first call without restarting validation", async () => {
     const { delivery } = deliveryFor();
     delivery.noteEdit(`${REPO_DIR}/lib/x.ts`);
-    const createPr = delivery.wrapCreatePr(async (args) => {
-      opened.push(String(args.title));
-      return { result: { url: "https://pr/1" }, success: true };
-    });
-
-    const first = await createPr({ title: "Mon titre" });
-    expect(opened).toEqual([]);
-    expect(first.success).toBe(true);
-    expect(first.followUp).toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
-
-    const second = await createPr({ title: "Mon titre" });
-    expect(opened).toEqual(["Mon titre"]);
-    expect(second.followUp).toBeUndefined();
+    const handler = vi.fn(async () => ({ result: { url: "https://pr/1" }, success: true }));
+    const out = await delivery.wrapCreatePr(handler)({ title: "Implement the change" });
+    expect(handler).toHaveBeenCalledOnce();
+    expect(out.result).toEqual({ url: "https://pr/1" });
+    expect(out.followUp).toBeUndefined();
+    expect(typeErrorsForTurn).not.toHaveBeenCalled();
+    expect(testFailuresForTurn).not.toHaveBeenCalled();
   });
 
   it("laisse passer du premier coup un tour qui n'a rien touché", async () => {
@@ -224,10 +236,10 @@ describe("la porte de `create_pr`", () => {
     // “did not touch anything” since the shell counts (see the following case).
     vi.mocked(turnDiffStat).mockResolvedValueOnce({ files: [], lines: 0, untracked: 0 });
     const { delivery } = deliveryFor();
-    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+    const createPr = delivery.wrapValidateChanges(async () => ({ result: { url: "u" }, success: true }));
 
     const out = await createPr({});
-    expect(out.result).toEqual({ url: "u" });
+    expect(out.result).toMatchObject({ url: "u" });
     expect(out.followUp).toBeUndefined();
   });
 
@@ -242,7 +254,7 @@ describe("la porte de `create_pr`", () => {
  */
   it("réclame quand même ses contrôles quand le dépôt a bougé par le SHELL", async () => {
     const { delivery } = deliveryFor();
-    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+    const createPr = delivery.wrapValidateChanges(async () => ({ result: { url: "u" }, success: true }));
 
     const out = await createPr({});
     expect(out.followUp).toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
@@ -262,7 +274,7 @@ describe("la porte de `create_pr`", () => {
  */
     vi.mocked(turnDiffStat).mockResolvedValueOnce({ files: [], lines: 42, untracked: 0 });
     const { delivery } = deliveryFor({ host: repoSaying("lib/y.ts\n", "") });
-    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+    const createPr = delivery.wrapValidateChanges(async () => ({ result: { url: "u" }, success: true }));
 
     expect((await createPr({})).followUp).toBe("TYPES\n\n---\n\nTESTS\n\n---\n\nDIFF");
     expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["lib/y.ts"]);
@@ -271,7 +283,7 @@ describe("la porte de `create_pr`", () => {
   it("compte un fichier NEUF créé au shell, que git ne suit pas encore", async () => {
     vi.mocked(turnDiffStat).mockResolvedValueOnce({ files: [], lines: 0, untracked: 1 });
     const { delivery } = deliveryFor({ host: repoSaying("", "?? lib/neuf.ts\n") });
-    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+    const createPr = delivery.wrapValidateChanges(async () => ({ result: { url: "u" }, success: true }));
 
     await createPr({});
     expect(vi.mocked(typeErrorsForTurn).mock.calls[0][1]).toEqual(["lib/neuf.ts"]);
@@ -304,7 +316,7 @@ describe("la porte de `create_pr`", () => {
       host: repoSaying("", ""),
       scopePaths: async () => ["lib/a.ts"],
     });
-    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+    const createPr = delivery.wrapValidateChanges(async () => ({ result: { url: "u" }, success: true }));
 
     await createPr({});
     expect(vi.mocked(turnDiffStat).mock.calls[0][2]).toEqual(["lib/a.ts"]);
@@ -312,7 +324,7 @@ describe("la porte de `create_pr`", () => {
 
   it("ne borne RIEN en mode clone — l'arbre n'y contient que le travail de l'agent", async () => {
     const { delivery } = deliveryFor({ host: repoSaying("", "") });
-    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+    const createPr = delivery.wrapValidateChanges(async () => ({ result: { url: "u" }, success: true }));
 
     await createPr({});
     expect(vi.mocked(turnDiffStat).mock.calls[0][2]).toBeUndefined();
@@ -327,7 +339,7 @@ describe("la porte de `create_pr`", () => {
  */
     const { delivery } = deliveryFor({ host: repoSaying("lib/y.ts\n", "") });
     delivery.noteShell("npx vitest run", 0);
-    const createPr = delivery.wrapCreatePr(async () => ({ result: { url: "u" }, success: true }));
+    const createPr = delivery.wrapValidateChanges(async () => ({ result: { url: "u" }, success: true }));
 
     expect((await createPr({})).followUp).toContain("TESTS");
     expect(vi.mocked(testFailuresForTurn)).toHaveBeenCalled();

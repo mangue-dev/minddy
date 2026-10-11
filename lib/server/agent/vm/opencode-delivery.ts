@@ -5,9 +5,9 @@ import {
   type VerificationSink,
 } from "../diagnostics";
 import {
-  gateCreatePr,
   gateWritePlan,
   makeDeliveryGate,
+  VALIDATION_WALL_BUDGET_MS,
   type DeliveryGate,
   type DeliveryGateDeps,
 } from "../delivery-gate";
@@ -19,7 +19,7 @@ import type { PlatformToolHandler } from "../agent-contract";
  * DELIVERY RULES, HELD ABOVE OPENCODE (MIN-286, lot 2, task 14).
  *
  * What the harness checks has not changed one line: the validation gate
- * ([delivery-gate.ts](../delivery-gate.ts)), l'auto-relecture du diff
+ * ([delivery-gate.ts](../delivery-gate.ts)), the diff self-review
  * ([self-review.ts](../self-review.ts)), the closing of the plan
  * ([plan-closure.ts](../plan-closure.ts)) and diagnostics
  * ([diagnostics.ts](../diagnostics.ts)) are the SAME functions, with their
@@ -43,8 +43,7 @@ import type { PlatformToolHandler } from "../agent-contract";
  * `write_issue_plan` is a domain tool, while `validate_changes` is the explicit
  * supervisor preflight and `create_pr` is the publishing operation: they arrive at
  * bridge ([tool-bridge.ts](tool-bridge.ts)), which is exactly the
- *   `tool.execute.after` qu'un plugin aurait offert, sans second processus ni
- *   second vocabulaire ;
+ *   `tool.execute.after` a plugin would provide, without another process or vocabulary;
  * - **the two facts which come from the INTEGRATED tools (editing, shell) arrive
  * on stream `/event`**, which the supervisor is already reading — permission to
  * one, the part of the tool for the other.
@@ -103,7 +102,7 @@ export interface OpencodeDeliveryDeps {
   repoTouched?: boolean;
   /**
    * THE PERIMETER OF THE TOUR in current depot mode (MIN-358) — cf.
-   * `DeliveryGateDeps.scopePaths`. Absent en mode clone.
+   * `DeliveryGateDeps.scopePaths`. Absent in clone mode.
    *
    * It is the supervisor who calculates it, because he alone has the snapshot taken
    * at the START of the round; this module returns the editions of this tour in exchange
@@ -121,7 +120,7 @@ export interface OpencodeDelivery {
    * (`gateWritePlan`).
    */
   wrapDomainTool(handler: PlatformToolHandler): PlatformToolHandler;
-  /** Legacy compatibility wrapper for callers that still request delivery checks. */
+  /** Publish without repeating the explicit repository validation. */
   wrapCreatePr(handler: DeliveryTool): DeliveryTool;
   /** Explicit repository validation, separate from publishing a pull request. */
   wrapValidateChanges(handler: DeliveryTool): DeliveryTool;
@@ -239,19 +238,16 @@ export function makeOpencodeDelivery(deps: OpencodeDeliveryDeps): OpencodeDelive
     wrapDomainTool: (handler) =>
       gateWritePlan(watchPlanWrites(handler, planWrites), gate, deps.remainingMs),
 
-    wrapCreatePr: (handler) => {
-      const gated = gateCreatePr(handler, gate, deps.remainingMs);
-      // Surveyed BEFORE the door: it is she who decides to return the controls or
-      // to push, and she decides on `repoTouched`.
-      return async (args) => {
-        await probeRepoTouched();
-        return await gated(args);
-      };
+    wrapCreatePr: (handler) => async (args) => {
+      await probeRepoTouched();
+      return await handler(args);
     },
 
     wrapValidateChanges: (handler) => async (args) => {
+      const started = Date.now();
       await probeRepoTouched();
-      const checks = await gate.checkChanges(deps.remainingMs()).catch(() => null);
+      const wallBudget = Math.max(0, VALIDATION_WALL_BUDGET_MS - (Date.now() - started));
+      const checks = await gate.checkChanges(deps.remainingMs(), wallBudget).catch(() => null);
       const out = await handler(args);
       return checks
         ? { ...out, followUp: checks }

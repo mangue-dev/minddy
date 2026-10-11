@@ -458,7 +458,9 @@ export function parseAgentDelegationBrief(raw: unknown): AgentDelegationBrief {
     constraints: contractStrings(value.constraints, "constraints"),
     authorizedWork,
     expectedOutput,
-    ...(value.requiresPullRequest !== undefined ? { requiresPullRequest: value.requiresPullRequest as boolean } : {}),
+    ...(authorizedWork.includes("modify_repository") && authorizedWork.includes("manage_pull_request")
+      ? { requiresPullRequest: true }
+      : value.requiresPullRequest !== undefined ? { requiresPullRequest: value.requiresPullRequest as boolean } : {}),
   };
 }
 

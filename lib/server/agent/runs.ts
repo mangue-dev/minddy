@@ -109,6 +109,14 @@ function numoWorkerEventId(run: AgentRun): string {
 export async function deliverAgentDelegationResult(
   run: AgentRun,
 ): Promise<"queued" | "duplicate" | "ignored"> {
+  if (!TERMINAL_RUN_STATUSES.has(run.status)) return "ignored";
+  // A deferred terminal notification must not wake Numo after this session resumed.
+  const { data: current, error: currentError } = await getServiceClient().from("agent_runs")
+    .select("status,started_at,rest_claimed_at").eq("id", run.id).maybeSingle();
+  if (currentError) throw new Error("Unable to verify delegated worker completion");
+  if (!current || current.status !== run.status
+    || (current.started_at ?? null) !== (run.started_at ?? null)
+    || (current.rest_claimed_at ?? null) !== (run.rest_claimed_at ?? null)) return "ignored";
   const { finalizeAgentDelegationResult } = await import(
     "@/lib/server/agent/delegation"
   );
