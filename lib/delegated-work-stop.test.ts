@@ -26,6 +26,7 @@ vi.mock("./use-agent-runs", () => ({
 }));
 vi.mock("@/components/agent/agent-diff-sheet", () => ({ AgentDiffSheet: () => null }));
 vi.mock("@/components/model-logo", () => ({ ModelLogo: () => null }));
+vi.mock("@/components/mcp-agent-logo", () => ({ McpAgentLogo: () => null }));
 // Exercise the real buttons, tooltips, and responsive detail panel without
 // importing the package barrel's unrelated emoji data.
 vi.mock("mangue-ui", async () => ({

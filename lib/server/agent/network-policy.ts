@@ -301,6 +301,28 @@ export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): Network
   return { allow, subnets: { deny: [...AGENT_DENIED_EGRESS_SUBNETS] } };
 }
 
+/** Native CLIs authenticate themselves; the network layer supplies no model key. */
+export function buildNativeAgentNetworkPolicy(input: {
+  appOrigin: string;
+  forge?: AgentForgeCredential;
+}): NetworkPolicy {
+  const app = splitUrl(input.appOrigin, "app origin");
+  if (app.path !== "/") throw new Error("agent network policy: app origin must have no path");
+  const allow: Record<string, NetworkPolicyRule[]> = {
+    "*": [],
+    [app.host]: [{
+      match: { path: { startsWith: `${AGENT_VM_PATH_PREFIX}/` } },
+      forwardURL: input.appOrigin.replace(/\/+$/, ""),
+    }],
+  };
+  if (input.forge) {
+    if (!input.forge.token.trim()) throw new Error("agent network policy: missing forge token");
+    const forge = forgeRules(input.forge);
+    (allow[forge.host] ??= []).push(...forge.rules);
+  }
+  return { allow, subnets: { deny: [...AGENT_DENIED_EGRESS_SUBNETS] } };
+}
+
 /**
  * Replace the linked repository's authentication rule while preserving the
  * LLM and control-plane rules already installed on a running sandbox.

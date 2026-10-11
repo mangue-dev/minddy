@@ -153,6 +153,7 @@ export function settingsSectionHref(
  */
 export function useSettingsSections(): SettingsSection[] {
   const tAccount = useTranslations("Account");
+  const tNative = useTranslations("NativeAgentConnections");
   const tSecurity = useTranslations("AccountSecurity");
   const tData = useTranslations("AccountData");
   const tAnalytics = useTranslations("Analytics");
@@ -414,7 +415,7 @@ export function useSettingsSections(): SettingsSection[] {
         id: SETTINGS_SECTIONS.accountAgent,
         tab: "agent",
         icon: Bot,
-        title: tAccount("agentTab"),
+        title: tNative("title"),
         keywords: [
           "agent", "numo", "modèle", "modele", "model", "raisonnement",
           "reasoning", "défaut", "defaut", "default",
@@ -631,6 +632,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
     ];
   }, [
+    tNative,
     tAccount,
     tSecurity,
     tData,

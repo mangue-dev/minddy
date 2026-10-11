@@ -316,6 +316,8 @@ export interface AssistantPageContext {
   prBaseRef?: string;
   /** Canonical agent run id backing the PR — what read_pull_request resolves. */
   prRunId?: string;
+  /** Historical worker explicitly selected for continuation through Numo. */
+  codeWorkerRunId?: string;
   /** The saved kanban view currently selected on the board, when any. */
   viewId?: string;
   viewName?: string;
@@ -342,6 +344,7 @@ export type NumoIntentSource =
   | "feedback"
   | "page"
   | "scratchpad"
+  | "code_worker"
   | "pull_request"
   | "routine"
   | "bulk";

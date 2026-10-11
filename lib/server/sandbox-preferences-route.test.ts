@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   patch: null as Record<string, unknown> | null,
   error: null as null | { message: string },
   authenticated: true,
+  rpc: vi.fn(),
 }));
 
 vi.mock("@/lib/server/api-auth", () => ({
@@ -13,15 +14,11 @@ vi.mock("@/lib/server/api-auth", () => ({
     ok: true, user: { id: "owner-1" },
     supabase: { from: () => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: h.row, error: h.error }) }) }),
-      upsert: (patch: Record<string, unknown>) => {
-        h.patch = patch;
-        Object.assign(h.row,patch);
-        return { error: h.error };
-      },
     }) },
   } : { ok: false, response: new Response(null, { status: 401 }) },
 }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({
+  rpc: h.rpc,
   from: (table: string) => {
     if (table !== "agent_branch_prefix_scope") throw new Error("Unexpected table");
     return { select: () => ({ eq: () => ({ maybeSingle: async () =>
@@ -40,10 +37,20 @@ function request(body?: unknown) {
 }
 
 beforeEach(() => {
-  h.row = { default_model: "provider/model", branch_prefix: "work/", sandbox_region: "us", sandbox_size: "standard" };
+  h.row = { default_engine: "codex", default_model: "provider/model", branch_prefix: "work/", sandbox_region: "us", sandbox_size: "standard" };
   h.patch = null;
   h.error = null;
   h.authenticated = true;
+  h.rpc.mockReset();
+  h.rpc.mockImplementation((name: string, args: { p_user_id: string; p_values: Record<string, unknown> }) => {
+    expect(name).toBe("upsert_agent_preferences_partial");
+    expect(args.p_user_id).toBe("owner-1");
+    return { single: async () => {
+      h.patch = args.p_values;
+      Object.assign(h.row, args.p_values);
+      return { data: h.row, error: h.error };
+    } };
+  });
 });
 
 describe("account sandbox preferences API", () => {
@@ -53,9 +60,10 @@ describe("account sandbox preferences API", () => {
   });
   it("updates only the requested field for the authenticated account", async () => {
     const result = await PUT(request({ sandbox_size: "performance", user_id: "someone-else" }));
-    expect(h.patch).toEqual({ user_id: "owner-1", updated_at: expect.any(String), sandbox_size: "performance" });
+    expect(h.patch).toEqual({ sandbox_size: "performance" });
     expect(await result.json()).toMatchObject({
-      default_model: "provider/model", sandbox_region: "us", sandbox_size: "performance",
+      default_engine: "codex", default_model: "provider/model", branch_prefix: "work/",
+      sandbox_region: "us", sandbox_size: "performance",
     });
   });
   it("saves both supported preferences", async () => {

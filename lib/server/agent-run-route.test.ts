@@ -107,6 +107,22 @@ beforeEach(() => {
   });
 });
 
+describe("frozen worker identity", () => {
+  it.each(["codex", "claude_code", "opencode", "loop", null])("returns %s without exposing native credentials", async (engine) => {
+    getRun.mockResolvedValue({
+      id: RUN, project_id: "proj-1", created_by: "user-1", status: "completed",
+      agent_engine: engine, model: engine === "codex" ? "codex/default" : null,
+      native_connection_id: "private-connection", profile_ciphertext: "encrypted-private-profile",
+    });
+    const response = await get();
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.run.agent_engine).toBe(engine);
+    expect(JSON.stringify(payload)).not.toContain("private-connection");
+    expect(JSON.stringify(payload)).not.toContain("encrypted-private-profile");
+  });
+});
+
 /**
  * MIN-332 — the conversation belongs to who had it.
  *

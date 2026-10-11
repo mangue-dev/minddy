@@ -95,6 +95,7 @@ const persistenceStops = new Set<() => void>();
  * a repeat of this list.**
  */
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
+  ["native-agent-models"], // Subscription catalogs are bound to the current connection generation.
   ["project-icon"], // Authorized image bytes belong only to the current account's memory cache.
   ["app-tabs"], // Unbounded account collection; only local activation uses sessionStorage.
   ["me", "search-index"],

@@ -7,6 +7,8 @@ import { localHost } from "./local-host";
 import { opencodeSupervisorDeps } from "./opencode-host";
 import { prepareSandboxGithubCli } from "./github-cli";
 import { runOpencodeTurn } from "./supervisor";
+import { runNativeTurn } from "./native-supervisor";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
 import {
   isLocalJob,
   parseVmJob,
@@ -16,53 +18,9 @@ import {
 } from "./protocol";
 
 /**
- * HARNESS ENTRANCE (MIN-224) — the point the caster starts at
- * `detached: true` before returning hand.
- *
- * `node main.js <chemin du job>`, and that's it. The bundle is written at the start
- * of the round, next to its job; both live OUTSIDE the repository, so that the end of
- * round never takes them into a commit of the user's repository — and, in
- * current repository mode (MIN-358), so that they do not even appear in his
- * `git status` (cf. `HarnessLayout.harnessDir`).
- *
- * THE JOB PATH COMES FROM THE ARGUMENT, NOT FROM A CONSTANT (MIN-354), and that is
- * the only thing this process learns other than from the job itself: all the
- * remains — repository, tools releases, harness, opencode — is IN the job. The egg and
- * the chicken unravel there, and nowhere else.
- *
- * WHAT THIS FILE GUARANTEES, and this is its only real reason for being: **the trick
- * ALWAYS reports**. The function has given up, no one is waiting for it,
- * and a process that dies without speaking leaves a `running` * run that only the guard dog
- * will eventually recognize as dead — several minutes later, on the
- * last periodic checkpoint, with work lost in between. Hence the global
- * `try`, and the minimal report it returns when all else has failed.
- *
- * IN A MICROVM, the process holds NO secrets. The firewall places the key of the
- * model after exiting the VM, and the control plane proves the identity of the run
- * by an OIDC of the platform: `env | grep -i key` does not return anything here, as
- * measured in MIN-223. There is no
- * firewall, so this process holds TWO things:
- *
- * 1. **a local execution token** (`controlToken`), carried by the job and placed
- * on each of its calls to the control plane. It is readable by what the
- * round executes; what makes it tenable is not a stash, it's what it
- * DOES NOT OPEN — see `handleControlPlaneRequest` and
- * [local-exec-token.ts](../local-exec-token.ts) ;
- * 2. **the model key**, which is NOT in the job: it is requested at
- * start of the tour (`/llm-key`) and only lives in the memory of the LLM
- * proxy ([llm-proxy.ts](llm-proxy.ts)), therefore outside the environment of the server
- * opencode, which the model reads with a simple `env`. It is always mined at
- * hard ceiling: it is the ceiling, and it alone, which limits what a hostile model
- * can do with it.
- */
-
-/**
- * THERE IS ONLY ONE ENGINE (MIN-286) — opencode, and the job referral a
- * disappeared with the home loop.
- *
- * A job WITHOUT `opencodeInput` is a fault of the function, not a variant: on
- * raises rather than posting an empty round, and the `try` of `main` turns that into a
- * error report — that is, something that is visible.
+ * Read a one-shot job outside the checkout and always report turn completion.
+ * OpenCode API credentials stay in the network layer. Native profiles live only
+ * in the private controller area, which repository commands cannot access.
  */
 async function runOpencodeTurnHere(
   job: VmJob,
@@ -171,13 +129,12 @@ async function main(): Promise<void> {
     }
     raw = parsed as typeof raw;
     job = parseVmJob(raw);
-    report = await runOpencodeTurnHere(
-      job,
-      cp,
-      localHost(job.layout, isLocalJob(job) ? "host" : "sandbox"),
-    );
+    report = isNativeAgentEngine(job.engine)
+      ? await runNativeTurn(job, job.opencodeInput!, cp)
+      : await runOpencodeTurnHere(job, cp, localHost(job.layout, isLocalJob(job) ? "host" : "sandbox"));
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = isNativeAgentEngine(job?.engine) ? "Native worker could not complete its turn"
+      : err instanceof Error ? err.message : String(err);
     console.error("[agent-vm] turn failed", { code: "agent_vm_turn_failed", runId: job?.runId ?? null });
     await cp.emit("error", { message }).catch(() => {});
     /**

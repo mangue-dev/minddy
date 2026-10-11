@@ -300,6 +300,17 @@ describe("account import tenant isolation", () => {
     expect(database.writes.map((write) => write.table)).toEqual(["projects", "issues"]);
   });
 
+  it("imports Numo defaults for the receiving owner and exports only that account's preferences", async () => {
+    await importAccountTransfer(transfer({ numo_preferences: [{ user_id: SOURCE_USER, provider: "openrouter", model: "test/model" }] }), USER);
+    expect(database.writes.find((write) => write.table === "user_numo_preferences")?.rows)
+      .toEqual([expect.objectContaining({ user_id: USER, provider: "openrouter", model: "test/model" })]);
+    database.rows.user_numo_preferences = [
+      { user_id: USER, provider: "openrouter", model: "test/model" },
+      { user_id: OTHER_OWNER, provider: "anthropic", model: "private-model" },
+    ];
+    const exported = await buildAccountExport(USER);
+    expect(exported.numo_preferences).toEqual([expect.objectContaining({ provider: "openrouter", model: "test/model" })]);
+  });
   it("imports personal notes encrypted and exports their plaintext through the repository", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");

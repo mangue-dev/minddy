@@ -1,9 +1,10 @@
 # Agent ephemeral storage and historical copy retirement
 
-Server Agent jobs contain decrypted prompts and journal events. OpenCode also
+Server Agent jobs contain decrypted prompts and conversation context. OpenCode also
 writes SQLite, WAL, repository snapshots and logs. Tool commands can write output
 files. These bytes must not survive a stopped server sandbox. The encrypted
-`agent_run_journal` and checkpoint provide conversation recovery; the pushed
+`agent_run_journal` and checkpoint provide OpenCode conversation recovery; native
+workers use the encrypted checkpoint's bounded portable text history. The pushed
 work branch provides checkout recovery.
 
 ## New server runs
@@ -60,6 +61,72 @@ ledger and fences together with parents under quiescent writers; independent
 parent restoration must not silently reopen erasure. SQL and synthetic provider
 fixtures cover the current protocol, not a production provider rehearsal.
 
+## Private native account profiles
+
+MIN-676's disabled-by-default private preview is an explicit durable exception:
+allowlisted native authentication JSON is stored in the account-owned encrypted
+`native_agent_connections.profile_ciphertext`, not a sandbox snapshot or journal.
+The mandatory format-3 binding includes the owner, row ID, engine and column.
+The separately encrypted runtime descriptor pins the exact allocation and tracks
+whether the profile was imported and safely saved. It supports trusted lifecycle
+and cleanup operations; it is never returned to the native model.
+No credential contents are exposed in metadata reads, native output or client
+caches. The native CLI alone owns provider token refresh. A healthy turn exports and
+saves its profile and encrypted saved-state marker atomically under the
+revision/generation/lease/run/allocation fence before destruction. A lost commit
+response or failed destruction is reconciled using the current descriptor,
+without invalidating a confirmed profile. Initial login uses the same atomic
+profile/descriptor contract; its poll and expired-lease cleanup retry deletion
+without repeating provider authorization. An ambiguous imported profile is invalidated rather than reused. The next
+allocation restores the current encrypted profile through SDK file operations.
+The job and control-plane HTTP channel never carry that profile.
+
+The server vault and VM share one strict subscription-profile validator: corrupt,
+empty and API-only profiles are rejected. Renewal preserves the original Codex
+account ID or optional Claude account UUID when present. Native children share a
+shutdown promise; export waits for physical `close`, including after SIGKILL.
+Unconfirmed shutdown never authorizes export. Private file staging uses exclusive
+unique sibling files, fsync, atomic replacement and failed-staging cleanup; it
+cannot leave a fixed temporary filename blocking the next restore or export.
+
+Account settings select the native worker for new Numo code lineages under the
+private server allowlist; existing runs retain their frozen engine and connection
+generation. Protocol 4 carries only bounded portable history and private handoff
+paths. Repository bootstrap/refresh keeps forge secrets in trusted
+infrastructure, with an encrypted allocation-bound refresh-policy context and
+HTTP acknowledgements. No API inference credential is substituted.
+
+The trusted supervisor and native CLI own the private auth directory. Model-led
+repository commands use a separately kernel-isolated host denying that directory,
+`/proc` and `/sys`; native builtin shell, edits, images and subagents remain
+disabled. Each real allocation must pass the isolation probe before guarded
+tools execute. Application tests describe those boundaries; paid Claude hosted
+execution and public custody acceptance remain unvalidated until separately
+recorded live evidence exists.
+
+Subscription inference does not generate Minddy API-model usage. Minddy still
+reserves and meters hosted compute, independently of any unrelated BYOK key;
+Numo itself retains its configured API billing. Every resumed native turn uses a
+fresh physical allocation, the pushed branch and encrypted text checkpoint,
+without a retained sandbox or opaque native CLI session.
+
+Connection generations and exclusive leases prevent late writers from restoring
+a disconnected credential. Watchdog recovery claims the exact stale run before
+invalidating credentials or stopping an allocation. A fresh completion claim
+wins; an abandoned completion older than twenty minutes can be fenced and
+recovered. Late native completion stamps require their original rest timestamp
+and allocation with no recovery claim, including checkpoint-free retries.
+Stop-only descriptors survive failed cleanup;
+account erasure must stop those allocations before deleting Auth or key material.
+Do not restore an old credential/profile row independently of its tombstone,
+lease and account-erasure fences. Restore backups under quiescent writers and
+require a new provider connection when rotation or revocation is uncertain.
+The native vault uses the normal account data-key wrapping and offline root-key
+rotation procedures; retain old roots only as required for historical encrypted
+backups, never as a reason to replay retired authentication into a new sandbox.
+See [the private pilot contract](../../validation/min-676-private-native-prototype.md)
+for activation, expiry, compute accounting and unresolved creation reconciliation.
+
 ## Historical copies before migration or activation
 
 The code change does not erase snapshots, Docker volumes, logs, exports or
@@ -96,3 +163,13 @@ Vercel command output may be retained in provider telemetry outside the sandbox
 filesystem. The application cannot delete that telemetry through the Sandbox
 SDK; obtain its retention and deletion evidence before declaring historical
 copy closure.
+
+Native model discovery uses the same exclusive credential lease as execution.
+Its catalog stores only bounded model metadata tied to owner, connection and
+generation; it is service-written and has no public read policy. Catalog,
+encrypted refreshed profile and encrypted saved marker commit atomically.
+Discovery allocations are destroyed before lease release, including recovery
+from uncertain write responses. Permanent native authentication rejection
+suppresses stale auth export and requires reconnection; transient failures retain
+safe write-back. Neither model discovery nor selected model metadata grants API
+fallback or exposes native credentials to the repository model.

@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * • even validated, it NEVER raises the compute sandbox ceiling.
  */
 
+const quotaReads = vi.hoisted(() => ({ billing: vi.fn(), usage: vi.fn() }));
 const probeByokKey = vi.fn();
 const updated: unknown[] = [];
 let keyRow: Record<string, unknown> | null = null;
@@ -200,10 +201,10 @@ let usage = {
 };
 
 vi.mock("@/lib/server/billing-accounts", () => ({
-  getResolvedBilling: async () => ({ plan }),
+  getResolvedBilling: async (userId: string) => { quotaReads.billing(userId); return { plan }; },
 }));
 vi.mock("@/lib/server/usage", () => ({
-  getUserUsage: async () => usage,
+  getUserUsage: async (userId: string) => { quotaReads.usage(userId); return usage; },
 }));
 
 const { checkAgentQuota } = await import("./quota");
@@ -286,5 +287,71 @@ describe("checkAgentQuota — BYOK bypasses minddy usage", () => {
       mode: "platform",
       reason: "usage_budget_exceeded",
     });
+  });
+});
+
+
+describe("checkAgentQuota — native subscriptions retain Minddy compute admission", () => {
+  beforeEach(() => {
+    quotaReads.billing.mockClear();
+    quotaReads.usage.mockClear();
+    plan.allowAgents = true;
+    plan.includedUsageUsd = 10;
+    usage = {
+      usedUsd: 3,
+      byFeature: { sandbox_compute: 1, assistant: 2 },
+      period: {
+        start: "2026-08-01T00:00:00.000Z",
+        end: "2026-09-01T00:00:00.000Z",
+      },
+    };
+  });
+
+  it("uses the full account ledger and billing window without probing an API credential", async () => {
+    await expect(checkAgentQuota(USER, "agent", { subscription: true })).resolves.toMatchObject({
+      allowed: true, unlimited: false, mode: "subscription", spent: 3,
+      cap: 10, remaining: 7, periodStart: usage.period.start, resetsAt: usage.period.end,
+    });
+    expect(quotaReads.billing).toHaveBeenCalledExactlyOnceWith(USER);
+    expect(quotaReads.usage).toHaveBeenCalledExactlyOnceWith(USER);
+    expect(probeByokKey).not.toHaveBeenCalled();
+    expect(updated).toHaveLength(0);
+  });
+
+  it("does not let a validated BYOK key exempt subscription sandbox compute", async () => {
+    keyRow!.validated_at = "2026-08-01T00:00:00.000Z";
+    usage.usedUsd = 10;
+    await expect(checkAgentQuota(USER, "agent", { subscription: true })).resolves.toMatchObject({
+      allowed: false, unlimited: false, mode: "subscription", remaining: 0,
+      reason: "usage_budget_exceeded",
+    });
+    expect(quotaReads.usage).toHaveBeenCalledExactlyOnceWith(USER);
+  });
+
+  it("includes other Minddy features in the native worker budget", async () => {
+    usage.usedUsd = 11;
+    usage.byFeature = { assistant: 11, sandbox_compute: 0 };
+    await expect(checkAgentQuota(USER, "automations", { subscription: true })).resolves.toMatchObject({
+      allowed: false, mode: "subscription", spent: 11, remaining: 0,
+      reason: "usage_budget_exceeded",
+    });
+  });
+
+  it("still admits and caps compute when platform inference is disabled", async () => {
+    process.env.MINDDY_MANAGED_AI = "";
+    await expect(checkAgentQuota(USER, "agent", { subscription: true })).resolves.toMatchObject({
+      allowed: true, unlimited: false, mode: "subscription", cap: 10,
+    });
+    expect(probeByokKey).not.toHaveBeenCalled();
+  });
+
+  it("refuses a plan without agents before reading the usage ledger", async () => {
+    plan.allowAgents = false;
+    await expect(checkAgentQuota(USER, "agent", { subscription: true })).resolves.toMatchObject({
+      allowed: false, unlimited: false, mode: "subscription", reason: "agents_not_in_plan",
+    });
+    expect(quotaReads.billing).toHaveBeenCalledExactlyOnceWith(USER);
+    expect(quotaReads.usage).not.toHaveBeenCalled();
+    plan.allowAgents = true;
   });
 });

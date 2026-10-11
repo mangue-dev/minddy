@@ -15,6 +15,9 @@ import {
 import type { OpencodeDelivery } from "./opencode-delivery";
 import type { VmJob } from "./protocol";
 
+/** Preserve handler success for native MCP adapters without changing OpenCode output. */
+export const TOOL_SUCCESS_HEADER = "x-minddy-tool-success";
+
 /**
  * THE TOOLS BRIDGE (MIN-286, lot 2) — the local server that the 32 tools of
  * generated domain call, and which holds what a tool without memory cannot
@@ -424,6 +427,7 @@ export async function startToolBridge(
       res.writeHead(200, {
         "content-type": "application/json",
         [TOOL_ATTACHMENTS_HEADER]: String(outcome.images.length),
+        [TOOL_SUCCESS_HEADER]: String(outcome.success),
       });
       res.end(
         JSON.stringify({
@@ -443,6 +447,7 @@ export async function startToolBridge(
     }
 
     res.writeHead(200, {
+      [TOOL_SUCCESS_HEADER]: String(outcome.success),
       "content-type": outcome.followUp
         ? "text/plain; charset=utf-8"
         : "application/json",

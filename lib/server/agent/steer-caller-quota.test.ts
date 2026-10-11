@@ -11,6 +11,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const quotas = new Map<string, Record<string, unknown>>();
+const nativeHarness = vi.fn();
+const coldLaunch = vi.fn();
 const checkAgentQuota = vi.fn(async (userId: string) => {
   return (
     quotas.get(userId) ?? {
@@ -57,13 +59,17 @@ vi.mock("@/lib/server/agent/runs", () => ({
     return true;
   },
 }));
-vi.mock("@/lib/server/agent/launch", () => ({ kickAgentDrain: () => {} }));
+vi.mock("@/lib/server/agent/launch", () => ({ kickAgentDrain: () => {}, launchAgentRun: coldLaunch }));
+vi.mock("@/lib/server/agent/native-worker-selection", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/agent/native-worker-selection")>(), resolveWorkerHarness: nativeHarness,
+}));
 vi.mock("@/lib/server/agent/issue-status-sync", () => ({
   syncIssueStatusOnAgentStart: async () => {},
 }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
 
 const { POST } = await import("@/app/api/agent-runs/[runId]/steer/route");
+const { NativeWorkerUnavailableError } = await import("./native-worker-selection");
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
 const MEMBER = "22222222-2222-4222-8222-222222222222";
@@ -84,6 +90,8 @@ beforeEach(() => {
   stamped.length = 0;
   messages.length = 0;
   checkAgentQuota.mockClear();
+  nativeHarness.mockReset(); coldLaunch.mockReset();
+  nativeHarness.mockResolvedValue({ engine: "codex", nativeConnectionGeneration: 7 });
   run = {
     id: RUN_ID,
     status: "completed",
@@ -97,6 +105,30 @@ beforeEach(() => {
 });
 
 describe("POST /api/agent-runs/[runId]/steer", () => {
+  it("hands an owned reconnected conversation to Numo without launching or mutating a worker", async () => {
+    caller = OWNER;
+    Object.assign(run!, { agent_engine: "codex", key_mode: "subscription", native_connection_generation: 6 });
+    const res = await POST(request(), params);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "nativeContinuationRequiresNumo" });
+    expect(coldLaunch).not.toHaveBeenCalled();
+    expect(messages).toHaveLength(0); expect(stamped).toHaveLength(0);
+  });
+  it("refuses disconnected native access without re-queuing or changing payer", async () => {
+    caller = OWNER;
+    Object.assign(run!, { agent_engine: "codex", key_mode: "subscription", native_connection_generation: 6 });
+    nativeHarness.mockRejectedValue(new NativeWorkerUnavailableError("reconnect_required"));
+    const res = await POST(request(), params);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "nativeConnectionRequired" });
+    expect(coldLaunch).not.toHaveBeenCalled(); expect(messages).toHaveLength(0);
+  });
+  it("cannot rebind another user's native conversation", async () => {
+    Object.assign(run!, { agent_engine: "codex", key_mode: "subscription", native_connection_generation: 6 });
+    expect((await POST(request(), params)).status).toBe(404);
+    expect(nativeHarness).not.toHaveBeenCalled(); expect(coldLaunch).not.toHaveBeenCalled();
+    expect(messages).toHaveLength(0);
+  });
   it("keeps a delegated worker owned by its parent Numo conversation", async () => {
     run!.parent_numo_turn_id = "33333333-3333-4333-8333-333333333333";
 

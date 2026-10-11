@@ -272,7 +272,8 @@ export function IssueSidePanel({
   // requests, feedback board). The PR travels with it, served by the same route and
   // read on `pull_requests`: a ticket can carry one without any run.
   const { runs, pullRequest } = useIssueAgentRunsQuery(issue?.id ?? null);
-  const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
+  const workingAgentRun = runs.find((r) => isAgentRunWorking(r.status));
+  const agentWorking = workingAgentRun != null;
   const latestRun = runs[0] ?? null;
   // Only the latest run can reopen its conversation; newer runs supersede any
   // checkpoints retained by older runs.
@@ -887,6 +888,7 @@ export function IssueSidePanel({
                   or a PR to reread) — the rest is in the “⋯” menu. */}
               <IssueAgentChip
                 working={agentWorking}
+                engine={workingAgentRun?.agent_engine}
                 pr={pullRequest}
                 onOpenConversation={() => setChatOpen(true)}
                 onOpenPr={openPr}

@@ -1640,6 +1640,11 @@
         "nullable": true,
         "generated": false
       },
+      "native_connection_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
       "checkpoint_ciphertext": {
         "type": "text",
         "nullable": true,
@@ -1658,6 +1663,11 @@
       "delegation_attachments": {
         "type": "jsonb",
         "nullable": false,
+        "generated": false
+      },
+      "native_reasoning_effort": {
+        "type": "text",
+        "nullable": true,
         "generated": false
       },
       "pr_inline_comments_used": {
@@ -1717,6 +1727,11 @@
       },
       "launch_encryption_checked_at": {
         "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "native_connection_generation": {
+        "type": "bigint",
         "nullable": true,
         "generated": false
       },
@@ -8666,6 +8681,11 @@
         "nullable": true,
         "generated": false
       },
+      "default_engine": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
       "sandbox_region": {
         "type": "text",
         "nullable": false,
@@ -8679,6 +8699,11 @@
       "default_reasoning_level": {
         "type": "text",
         "nullable": true,
+        "generated": false
+      },
+      "native_model_preferences": {
+        "type": "jsonb",
+        "nullable": false,
         "generated": false
       },
       "branch_prefix_encryption_checked_at": {
@@ -12182,6 +12207,175 @@
       {
         "table": "pull_requests",
         "column": "pull_request_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "native_agent_connections": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "engine": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "status": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "lease_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "generation": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "lease_kind": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "updated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "worker_run_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "lease_expires_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "profile_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "runtime_ciphertext": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "worker_allocation_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "users",
+        "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "native_agent_model_catalogs": {
+    "columns": {
+      "engine": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "models": {
+        "type": "jsonb",
+        "nullable": false,
+        "generated": false
+      },
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "updated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "connection_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "connection_generation": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "user_id",
+      "engine"
+    ],
+    "foreignKeys": [
+      {
+        "table": "users",
+        "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "user_numo_preferences": {
+    "columns": {
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "provider": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "model": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "updated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "user_id",
+      "provider"
+    ],
+    "foreignKeys": [
+      {
+        "table": "users",
+        "column": "user_id",
         "targetColumn": "id"
       }
     ]

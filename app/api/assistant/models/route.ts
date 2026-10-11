@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 import { getAssistantModelsForUser } from "@/lib/server/agent/models-catalog";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 
+import { getNumoPreferences } from "@/lib/server/assistant/model-preferences";
+
 export const runtime = "nodejs";
 
 /** Model and reasoning catalog for Numo's conversation composer. */
@@ -14,5 +16,6 @@ export async function GET(request: NextRequest) {
     getAssistantModelsForUser(auth.user.id),
     getAssistantReasoningLevel(),
   ]);
-  return Response.json({ ...catalog, defaultReasoning });
+  const preferences = await getNumoPreferences(auth.user.id);
+  return Response.json({ ...catalog, defaultModel: preferences.default_model ?? preferences.application_model, defaultReasoning });
 }

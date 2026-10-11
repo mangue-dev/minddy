@@ -43,8 +43,10 @@ function sanitizeRun(run: AgentRun) {
     status: run.status,
     resumable: agentRunCanResume(run),
     model: run.model,
+    agent_engine: run.agent_engine,
     model_forced: run.model_forced,
     reasoning_level: run.reasoning_level,
+    native_reasoning_effort: run.native_reasoning_effort ?? null,
     key_mode: run.key_mode,
     triggered_by: run.triggered_by,
     // “Original” bubble of the conversation (the note, for a run notebook).

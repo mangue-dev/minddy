@@ -1,3 +1,9 @@
+import en from "@/messages/en.json";
+import fr from "@/messages/fr.json";
+import de from "@/messages/de.json";
+import es from "@/messages/es.json";
+import it from "@/messages/it.json";
+import ptBR from "@/messages/pt-BR.json";
 import type { Locale } from "@/i18n/config";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 
@@ -126,19 +132,26 @@ const COPY: Record<Locale, FooterCopy> = {
   },
 };
 
+const NATIVE_COPY = { en, fr, de, es, it, "pt-BR": ptBR };
+
 export function numoPullRequestFooter(input: {
   locale: Locale;
   model: string;
   environment: NumoPrEnvironment;
   reasoningLevel: ReasoningLevel;
+  nativeReasoningEffort?: string | null;
   issueIdentifier?: string | null;
 }): string {
   const copy = COPY[input.locale];
+  const nativeCopy = NATIVE_COPY[input.locale].NativeAgentModels;
+  const thinking = input.nativeReasoningEffort === undefined ? copy.reasoning[input.reasoningLevel]
+    : input.nativeReasoningEffort === null ? nativeCopy.automatic
+    : (nativeCopy as Record<string, string>)[`effort_${input.nativeReasoningEffort}`] ?? input.nativeReasoningEffort;
   return [
     `🤖 ${copy.generated}`,
     `${copy.model}: \`${input.model}\``,
     `${copy.environment}: ${copy.environments[input.environment]}`,
-    `${copy.thinking}: ${copy.reasoning[input.reasoningLevel]}`,
+    `${copy.thinking}: ${thinking}`,
     input.issueIdentifier ? copy.issue(input.issueIdentifier) : copy.notebook,
   ].join(" · ");
 }

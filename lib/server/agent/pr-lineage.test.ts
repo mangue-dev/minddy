@@ -44,6 +44,8 @@ const h = vi.hoisted(() => ({
   deliveredRun: null as Record<string, unknown> | null,
   projectAccess: true,
   issueSelections: [] as string[],
+  selectedEngine: "opencode",
+  nativeConnections: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -61,7 +63,8 @@ vi.mock("@/lib/supabase-service", () => ({
       query.maybeSingle = async () => ({
         data: table === "agent_runs"
           ? h.deliveredRun
-          : { id: ISSUE_ID, project_id: PROJECT_ID, title: "A ticket" },
+          : table === "user_agent_preferences" ? { default_engine: h.selectedEngine }
+            : { id: ISSUE_ID, project_id: PROJECT_ID, title: "A ticket" },
         error: null,
       });
       return query;
@@ -127,8 +130,10 @@ vi.mock("@/lib/server/git/repo-links", () => ({
 }));
 
 vi.mock("./quota", () => ({
-  checkAgentQuota: vi.fn(async () =>
-    h.quotaMode === "byok"
+  checkAgentQuota: vi.fn(async (_userId: string, _surface?: string, options?: { subscription?: boolean }) =>
+    options?.subscription
+      ? { allowed: true, mode: "subscription", cap: 5, periodStart: "2026-08-01T00:00:00.000Z" }
+      : h.quotaMode === "byok"
       ? { allowed: true, mode: "byok", cap: null, periodStart: null }
       : {
           allowed: true,
@@ -137,6 +142,11 @@ vi.mock("./quota", () => ({
           periodStart: "2026-08-01T00:00:00.000Z",
         },
   ),
+}));
+
+vi.mock("./native-prototype/model-catalog", () => ({ assertNativeModelPreference: async () => {} }));
+vi.mock("./native-agent-credentials", () => ({
+  listNativeConnections: vi.fn(async () => h.nativeConnections),
 }));
 
 vi.mock("./model", () => ({
@@ -164,6 +174,9 @@ vi.mock("@/lib/server/short-title", () => ({ generateShortTitle: vi.fn(async () 
 vi.mock("next/server", () => ({ after: vi.fn(() => {}) }));
 
 const { launchAgentRun } = await import("./launch");
+const { getUserByok, resolveAgentModel, resolveReasoningLevel } = await import("./model");
+const { ensureModelInPlan } = await import("./model-plan");
+const { checkAgentQuota } = await import("./quota");
 
 const lineage = (over: Record<string, unknown> = {}) => ({
   branchName: "minddy/agent/note-92275fe4",
@@ -175,9 +188,12 @@ const lineage = (over: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.stubEnv("AGENT_EXECUTION_BACKEND", "vercel");
   vi.stubEnv("VERCEL", "1");
   vi.stubEnv("MINDDY_DATA_ROOT_KEY", "ab".repeat(32));
+  vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE", "true");
+  vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE_USER_IDS", USER_ID);
   h.created = [];
   h.activeCalls = [];
   h.issueLineage = null;
@@ -192,6 +208,8 @@ beforeEach(() => {
   h.deliveredRun = null;
   h.projectAccess = true;
   h.issueSelections = [];
+  h.selectedEngine = "opencode";
+  h.nativeConnections = [];
   h.pr = {
     id: PR_ID,
     provider: "github",
@@ -504,6 +522,7 @@ describe("Numo-owned delegation lineage", () => {
 
   it("reuses an explicit previous worker conversation and branch lineage", async () => {
     h.continuedRun = {
+      agent_engine: "opencode",
       id: "previous-run",
       conversation_id: "code-conversation",
       created_by: USER_ID,
@@ -545,5 +564,109 @@ describe("Numo-owned delegation lineage", () => {
         },
       },
     });
+  });
+});
+
+/** Native admission must never resolve an API model or switch funding on refusal. */
+describe("native subscription worker admission", () => {
+  const connectionId = "66666666-6666-4666-8666-666666666666";
+  const connected = (engine: string) => ({ id: connectionId, engine, status: "connected",
+    generation: 7, revision: 9, busy: true, stopRequired: false });
+  const noApiCalls = () => {
+    expect(resolveAgentModel).not.toHaveBeenCalled();
+    expect(getUserByok).not.toHaveBeenCalled();
+    expect(ensureModelInPlan).not.toHaveBeenCalled();
+    expect(resolveReasoningLevel).not.toHaveBeenCalled();
+  };
+
+  it.each(([
+    "codex", "claude_code",
+  ] as const).flatMap((engine) => (["implement", "plan", "verify", "custom", "review"] as const)
+    .map((intent) => ({ engine, intent }))))("freezes $engine connection and subscription funding for $intent", async ({ engine, intent }) => {
+    h.selectedEngine = engine;
+    h.nativeConnections = [connected(engine)];
+    h.byok = { provider: "openrouter", apiKey: "must-not-be-used" };
+    const result = await launchAgentRun({ userId: USER_ID, triggeredBy: "chat", prompt: "Inspect the repository",
+      ...(intent === "review" ? { pullRequestId: PR_ID } : { projectId: PROJECT_ID, intent }),
+    });
+    expect(result.ok).toBe(true);
+    expect(h.created).toHaveLength(1);
+    expect(h.created[0]).toMatchObject({ intent, engine, keyMode: "subscription",
+      model: `${engine}/default`, nativeConnectionId: connectionId, nativeConnectionGeneration: 7,
+      managedBudget: { accountCapUsd: 5, periodStart: "2026-08-01T00:00:00.000Z" },
+    });
+    expect(checkAgentQuota).toHaveBeenCalledWith(USER_ID, "agent", { subscription: true });
+    expect(JSON.stringify(h.created)).not.toContain("must-not-be-used");
+    noApiCalls();
+  });
+
+  it.each(["automation", "routine"] as const)("keeps native worker selection on a %s trigger", async (triggeredBy) => {
+    h.selectedEngine = "codex";
+    h.nativeConnections = [connected("codex")];
+    const result = await launchAgentRun({ projectId: PROJECT_ID, userId: USER_ID, triggeredBy,
+      routineId: triggeredBy === "routine" ? "routine-id" : null, prompt: "Inspect" });
+    expect(result.ok).toBe(true);
+    expect(h.created[0]).toMatchObject({ engine: "codex", keyMode: "subscription", triggeredBy });
+    noApiCalls();
+  });
+
+  it.each(["missing", "disconnected", "cleanup", "disabled"])("fails closed on a %s native connection", async (kind) => {
+    h.selectedEngine = "claude_code";
+    h.nativeConnections = kind === "missing" ? [] : [{ ...connected("claude_code"),
+      status: kind === "disconnected" ? "disconnected" : "connected", stopRequired: kind === "cleanup" }];
+    if (kind === "disabled") vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE", "false");
+    const result = await launchAgentRun({ projectId: PROJECT_ID, userId: USER_ID,
+      triggeredBy: "chat", prompt: "Inspect" });
+    expect(result).toMatchObject({ ok: false,
+      error: kind === "disabled" ? "nativeAgentUnavailable" : "nativeConnectionRequired" });
+    expect(h.created).toEqual([]);
+    noApiCalls();
+  });
+
+  it("continues the frozen native engine after the account explicitly changes to OpenCode", async () => {
+    h.selectedEngine = "opencode";
+    h.nativeConnections = [connected("codex")];
+    h.continuedRun = { agent_engine: "codex", model: "codex/gpt-test-codex", native_reasoning_effort: "ultra", native_connection_id: connectionId, native_connection_generation: 7,
+      id: "previous-native", conversation_id: "native-conversation", created_by: USER_ID,
+      project_id: PROJECT_ID, repo_link_id: "link-1", repo_provider: "github", repo_external_id: "repo-1",
+      status: "completed", branch_name: "minddy/agent/native-work", base_branch: "main" };
+    const result = await launchAgentRun({ projectId: PROJECT_ID, userId: USER_ID,
+      triggeredBy: "chat", continueRunId: "previous-native", prompt: "Continue" });
+    expect(result.ok).toBe(true);
+    expect(h.created[0]).toMatchObject({ engine: "codex", keyMode: "subscription",
+      nativeConnectionId: connectionId, nativeConnectionGeneration: 7, model: "codex/gpt-test-codex", nativeReasoningEffort: "ultra", conversationId: "native-conversation" });
+    noApiCalls();
+  });
+
+  it("creates an explicit cold continuation after reconnecting without mutating the old worker", async () => {
+    h.nativeConnections = [connected("codex")];
+    h.continuedRun = { agent_engine: "codex", model: "codex/gpt-test-codex", native_reasoning_effort: "ultra", native_connection_id: connectionId, native_connection_generation: 6,
+      id: "previous-native", conversation_id: "native-conversation", created_by: USER_ID,
+      project_id: PROJECT_ID, repo_link_id: "link-1", repo_provider: "github", repo_external_id: "repo-1",
+      status: "completed", branch_name: "minddy/agent/native-work", base_branch: "main",
+      pr_number: 71, pr_url: `https://github.com/${REPO}/pull/71`, pr_state: "open",
+      checkpoint: { native: { engine: "codex", history: [{ role: "assistant", text: "Previous implementation context" }] } } };
+    const previous = structuredClone(h.continuedRun);
+    expect(await launchAgentRun({ projectId: PROJECT_ID, userId: USER_ID, triggeredBy: "chat",
+      continueRunId: "previous-native", prompt: "Continue" })).toMatchObject({ ok: true });
+    expect(h.created[0]).toMatchObject({ engine: "codex", nativeConnectionId: connectionId,
+      nativeConnectionGeneration: 7, conversationId: "native-conversation", continuedFromRunId: "previous-native",
+      model: "codex/gpt-test-codex", nativeReasoningEffort: "ultra", branchName: "minddy/agent/native-work",
+      baseBranch: "main", prNumber: 71 });
+    expect(h.created[0].prompt).toBe("Continue");
+    expect(h.continuedRun).toEqual(previous);
+    noApiCalls();
+  });
+  it.each(["different_owner", "different_repo", "running", "merged"])("refuses unsafe reconnect continuation: %s", async (kind) => {
+    h.nativeConnections = [connected("codex")];
+    h.continuedRun = { agent_engine: "codex", native_connection_id: connectionId, native_connection_generation: 6,
+      id: "previous-native", conversation_id: "native-conversation", created_by: kind === "different_owner" ? "other-owner" : USER_ID,
+      project_id: PROJECT_ID, repo_link_id: kind === "different_repo" ? "other-link" : "link-1",
+      repo_provider: "github", repo_external_id: "repo-1", status: kind === "running" ? "running" : "completed",
+      pr_state: kind === "merged" ? "merged" : "open" };
+    expect(await launchAgentRun({ projectId: PROJECT_ID, userId: USER_ID, triggeredBy: "chat",
+      continueRunId: "previous-native", prompt: "Continue" })).toMatchObject({ ok: false,
+      error: kind === "running" ? "alreadyRunning" : kind === "merged" ? "prNoBranch" : "continuationNotFound" });
+    expect(h.created).toEqual([]); noApiCalls();
   });
 });

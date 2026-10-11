@@ -14,6 +14,8 @@ import {
   type AgentRunStatus,
 } from "@/lib/server/agent/runs";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { resolveWorkerHarness, NativeWorkerUnavailableError } from "@/lib/server/agent/native-worker-selection";
 import { checkAgentQuota } from "@/lib/server/agent/quota";
 import { requestedRunReservationUsd } from "@/lib/server/agent/run-key";
 import { syncIssueStatusOnAgentStart } from "@/lib/server/agent/issue-status-sync";
@@ -161,7 +163,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
    * the owner's key, and it is his ceiling which decides what happens next
    * (checked on the recovery path, below).
    */
-  const callerQuota = await checkAgentQuota(auth.user.id);
+  const callerQuota = await checkAgentQuota(auth.user.id, "agent", { subscription: run.key_mode === "subscription" });
   if (!callerQuota.allowed) {
     return NextResponse.json(
       { error: "quotaExceeded", code: "quotaExceeded", quota: callerQuota },
@@ -202,6 +204,26 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           { error: "sandboxReaping", code: "sandboxReaping" },
           { status: 409, headers: { "Retry-After": "2" } },
         );
+      }
+    }
+    if (isNativeAgentEngine(run.agent_engine)) {
+      // Reconnected credentials require a new run owned by Numo's delegation.
+      // The historical adapter can only resume its existing generation.
+      if (run.created_by !== auth.user.id) {
+        return NextResponse.json({ error: "Run not found" }, { status: 404 });
+      }
+      try {
+        const harness = await resolveWorkerHarness(auth.user.id, run, { allowReconnectedContinuation: true });
+        if (harness.engine !== "opencode" && harness.nativeConnectionGeneration !== run.native_connection_generation) {
+          return NextResponse.json(
+            { error: "nativeContinuationRequiresNumo", code: "nativeContinuationRequiresNumo" },
+            { status: 409 },
+          );
+        }
+      } catch (error) {
+        if (!(error instanceof NativeWorkerUnavailableError)) throw error;
+        const code = error.code === "reconnect_required" ? "nativeConnectionRequired" : "nativeAgentUnavailable";
+        return NextResponse.json({ error: code, code }, { status: 409 });
       }
     }
     // The conversation has its workspace: another exchange quoting the same
@@ -246,7 +268,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
     const ownerQuota =
-      ownerId === auth.user.id ? null : await checkAgentQuota(ownerId);
+      ownerId === auth.user.id ? null : await checkAgentQuota(ownerId, "agent", { subscription: run.key_mode === "subscription" });
     const quota = !callerQuota.allowed
       ? callerQuota
       : (ownerQuota ?? callerQuota);
@@ -257,10 +279,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const managedResume = run.key_mode === "platform";
+    const managedResume = run.key_mode !== "byok";
     if (
       managedResume &&
-      (quota.mode !== "platform" ||
+      (quota.mode === "byok" ||
         quota.cap == null ||
         !quota.periodStart)
     ) {
@@ -405,14 +427,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         );
       }
       const ownerQuota =
-        ownerId === auth.user.id ? callerQuota : await checkAgentQuota(ownerId);
+        ownerId === auth.user.id ? callerQuota : await checkAgentQuota(ownerId, "agent", { subscription: run.key_mode === "subscription" });
       if (!ownerQuota.allowed) {
         return NextResponse.json(
           { error: "quotaExceeded", code: "quotaExceeded", quota: ownerQuota },
           { status: 402 },
         );
       }
-      const managedResume = now.key_mode === "platform";
+      const managedResume = now.key_mode !== "byok";
       const budgetCap = managedResume ? (ownerQuota.cap ?? null) : null;
       const usageSince = managedResume ? (ownerQuota.periodStart ?? null) : null;
       const requestedBudget =
@@ -424,7 +446,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           : null;
       const resumableQuota =
         !managedResume ||
-        (ownerQuota.mode === "platform" &&
+        (ownerQuota.mode !== "byok" &&
           budgetCap !== null &&
           usageSince !== null);
       if (!resumableQuota) {

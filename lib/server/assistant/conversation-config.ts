@@ -18,6 +18,8 @@ import { isLocalAgentProvider } from "@/lib/agent-providers";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import { conversationReasoningLevels } from "@/lib/conversation-settings";
 
+import { getNumoPreferences } from "./model-preferences";
+
 const MAX_MODEL_LENGTH = 300;
 
 export type NumoConversationConfigErrorCode =
@@ -93,16 +95,23 @@ export async function resolveNumoTurnConfiguration(input: {
 }): Promise<ResolvedNumoTurnConfiguration> {
   const persistedModel = normalizeModel(input.model);
   const persistedReasoningLevel = normalizeReasoning(input.reasoningLevel);
-  const hasExplicitModel = persistedModel !== null;
+  let hasExplicitModel = persistedModel !== null;
   const hasExplicitReasoning = persistedReasoningLevel !== null;
 
+  const account = !hasExplicitModel && !input.managedOnly ? await getNumoPreferences(input.userId) : null;
+  hasExplicitModel ||= account?.default_model != null;
   const runtime = await resolveAiRuntime({
     userId: input.userId,
     modelKey: "assistant_model",
     surface: "assistant",
-    modelOverride: persistedModel,
+    modelOverride: persistedModel ?? account?.default_model,
+    applicationModelDefault: true,
     ...(input.managedOnly ? { managedOnly: true } : {}),
   });
+
+  if (account?.default_model && account.provider !== runtime.provider) {
+    throw new NumoConversationConfigError("model_unavailable", "The Numo provider changed. Choose a model for the current provider.");
+  }
 
   // Inherited settings must use the same model capabilities as the picker.
   // Otherwise a generic default such as medium can be sent while the UI

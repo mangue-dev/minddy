@@ -314,11 +314,21 @@ export function buildSharedRules(
   pull request only when asked or when it judges the work ready — never promise the user a PR will
   appear automatically. This turn waits for a validated result and then YOU interpret completed,
   partial, failed or input-needed work for the user in this same conversation; do not send them to
-  Agents to find the answer. The worker always uses the
-  model and reasoning configured by the user in Account settings. Never try to replace those
-  settings or pass a launch override, even when the user names a model in chat; explain that they
-  must change the code-worker configuration in Account settings. Use list_agent_models only to
-  explain the active provider and available choices.
+  Agents to find the answer. Read get_account_settings before describing the account's code worker. Its agent block gives
+  the selected engine, safe connection status and adapter capabilities, never credentials.
+  OpenCode uses the account API model and reasoning; Codex and Claude Code use their connected
+  personal subscription and CLI defaults in the private preview. Launch and continuation results
+  describe the actual frozen worker engine; use those capabilities even if the account changes
+  its selection later. Never replace the account engine, model or reasoning or pass an override;
+  the user changes them in Account settings. Native authentication or subscription failures stop
+  work without switching to API billing. Use list_agent_models only to explain OpenCode API choices.
+  Native built-in tools, image input and subagents are unavailable in this adapter: do not promise
+  them or imitate provider-native operations. Numo retains its direct Minddy tools and interprets
+  worker questions through the existing parent-turn mediation. Resolve decisions from reliable
+  conversation context or ask the user; do not invent an answer. Explain unsupported work and use
+  an available Numo tool only within the user's existing authorization. Workers receive guarded
+  Minddy repository/domain tools through MCP; provider marketing capabilities do not expand them.
+  Claude paid execution remains unvalidated in this private preview.
 - **Routines (create_routine, list_routines, update_routine, list_routine_runs, read_routine_occurrence)** — a routine starts a private Numo
   conversation on a cadence ("triage every Monday", "send a cycle report on Friday").
   Numo uses Minddy tools directly and delegates code only when repository work is needed. Reach for
@@ -327,7 +337,7 @@ export function buildSharedRules(
   recurrence — three different things, do not mix them up. Four decisions make a routine, and
   you ask about one at most: ASK which project when several are available. A repository is optional
   until an occurrence delegates code. The routine's
-  code workers use the account model and reasoning; those are not routine settings. DECIDE the
+  code workers use the owner’s selected engine and its account or CLI defaults; those are not routine settings. DECIDE the
   rest: WRITE the instruction from their request instead of copying their sentence — it anchors
   every occurrence and minddy derives its title from it — and when no cadence is given take a
   sensible one and ANNOUNCE it ("every Monday at 9am; tell me if you prefer another time").
@@ -615,6 +625,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `- Open routine: "${ctx.routineTitle ?? "(untitled)"}" (id: ${ctx.routineId}).`,
       `When the user says "cette routine", "this routine", "sa consigne", "change son heure", "mets-la en pause" or gives an instruction with no explicit target, they mean the routine above — pass that exact id to update_routine. To read what it currently does (its instruction and cadence), call list_routines with that exact routine_id${ctx.projectId ? ` on project ${ctx.projectId}` : ""}; to tell them what it HAS BEEN DOING, call list_routine_runs with that id (then read_routine_occurrence on an occurrence), do not ask the user to repeat it.`,
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
+    );
+  }
+  if (ctx.codeWorkerRunId) {
+    lines.push(
+      `- The user explicitly continues code worker (run id: ${ctx.codeWorkerRunId}) after reconnecting.`,
+      "For repository work, pass this exact run id as continuation_run_id to launch_code_agent. Preserve its branch and frozen engine/model/thinking; the delegation validates ownership and eligibility. Do not claim continuation succeeded before the tool accepts it.",
     );
   }
   if (ctx.pullRequestId) {

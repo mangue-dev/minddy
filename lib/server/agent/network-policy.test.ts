@@ -11,6 +11,7 @@ import {
   agentSandboxName,
   agentVmUrl,
   buildAgentNetworkPolicy,
+  buildNativeAgentNetworkPolicy,
   resolveControlPlaneTenant,
   rotateAgentForgeCredential,
   runIdFromSandboxName,
@@ -367,5 +368,23 @@ describe("the placeholder", () => {
   it("is recognizable and is not a secret", () => {
     expect(AGENT_LLM_PLACEHOLDER_KEY).toBe("minddy-placeholder");
     expect(AGENT_LLM_PLACEHOLDER_KEY).not.toMatch(/^sk-/);
+  });
+});
+
+
+describe("native worker network funding", () => {
+  it("supplies only control-plane and scoped forge authority without an inference key", () => {
+    const native = buildNativeAgentNetworkPolicy({ appOrigin: ORIGIN,
+      forge: { provider: "github", repoFullName: "owner/repo", token: "fixture-forge-key" } });
+    if (typeof native === "string" || !native.allow || Array.isArray(native.allow)) throw new Error("object policy required");
+    expect(native.allow["*"]).toEqual([]);
+    expect(native.allow["www.minddy.app"]).toEqual([{ match: { path: { startsWith: `${AGENT_VM_PATH_PREFIX}/` } }, forwardURL: ORIGIN }]);
+    expect(native.allow["github.com"]).toHaveLength(3);
+    expect(JSON.stringify(native)).not.toContain("Bearer");
+    expect(JSON.stringify(native)).not.toContain("chat/completions");
+    expect(native.subnets?.deny).toEqual(AGENT_DENIED_EGRESS_SUBNETS);
+    const rotated = rotateAgentForgeCredential(native, { provider: "github", repoFullName: "owner/repo", token: "rotated-fixture" });
+    expect(JSON.stringify(rotated)).not.toContain("fixture-forge-key");
+    expect(JSON.stringify(rotated)).not.toContain("Bearer");
   });
 });

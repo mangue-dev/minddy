@@ -104,6 +104,7 @@ const NUMO_INTENT_SOURCES = new Set([
   "feedback",
   "page",
   "scratchpad",
+  "code_worker",
   "pull_request",
   "bulk",
 ]);
@@ -235,6 +236,11 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
         : undefined,
     prState: pick("prState"),
     prRunId: pick("prRunId"),
+    codeWorkerRunId:
+      typeof obj.codeWorkerRunId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(obj.codeWorkerRunId)
+        ? obj.codeWorkerRunId
+        : undefined,
     objectiveId: pick("objectiveId"),
     objectiveName: pick("objectiveName"),
     objectiveColor: pick("objectiveColor"),

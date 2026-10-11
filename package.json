@@ -4,9 +4,9 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {
-    "predev": "npm run build:agent-vm && npm run build:pages-md",
+    "predev": "npm run build:agent-vm && npm run build:native-agent-prototype && npm run build:pages-md",
     "dev": "NODE_OPTIONS=--max-http-header-size=32768 next dev",
-    "prebuild": "npm run build:agent-vm && npm run build:pages-md",
+    "prebuild": "npm run build:agent-vm && npm run build:native-agent-prototype && npm run build:pages-md",
     "build": "next build",
     "check:deployment-db": "node scripts/check-deployment-database.mjs",
     "build:agent-vm": "node scripts/build-agent-vm.mjs",
@@ -62,7 +62,8 @@
     "test:changelog": "node --test scripts/changelog.test.mjs && vitest run lib/changelog.test.ts lib/changelog-illustrations.test.ts lib/server/changelog.test.ts",
     "check:documentation": "node scripts/documentation-check.mjs",
     "check:documentation:release": "node scripts/documentation-check.mjs --release",
-    "test:documentation-check": "node --test scripts/documentation-check.test.mjs"
+    "test:documentation-check": "node --test scripts/documentation-check.test.mjs",
+    "build:native-agent-prototype": "node scripts/build-native-agent-prototype.mjs"
   },
   "overrides": {
     "@tiptap/extension-bubble-menu": "3.31.3",

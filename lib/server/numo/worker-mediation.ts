@@ -11,6 +11,8 @@ import {
 } from "@/lib/server/agent/runs";
 import { requestedRunReservationUsd } from "@/lib/server/agent/run-key";
 import { kickAgentDrain } from "@/lib/server/agent/launch";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { resolveWorkerHarness, NativeWorkerUnavailableError } from "@/lib/server/agent/native-worker-selection";
 import { getServiceClient } from "@/lib/supabase-service";
 import { shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
 import { encodeQueueMessage } from "@/lib/server/agent/run-queue-content";
@@ -34,25 +36,11 @@ export type WorkerMessageDisposition =
   | { action: "already"; turnId: string; runId: string }
   | { action: "refused"; reason: string };
 
-/** Cancel only pending input for an authorized, explicitly stopped worker. */
-export async function cancelStoppedWorkerInput(runId: string): Promise<void> {
-  const { error } = await getServiceClient().from("agent_run_input_requests")
-    .update({ status: "canceled" }).eq("run_id", runId).eq("status", "pending");
-  if (error) throw new Error("Unable to cancel stopped worker input");
-}
-
-/** Cancel pending questions only within an authorized, stopped parent turn. */
-export async function cancelStoppedTurnWorkerInputs(turnId: string): Promise<void> {
-  const { error } = await getServiceClient().from("agent_run_input_requests")
-    .update({ status: "canceled" }).eq("parent_numo_turn_id", turnId).eq("status", "pending");
-  if (error) throw new Error("Unable to cancel worker input requests");
-}
-
 function managedResumeBudget(run: AgentRun, quota: Awaited<ReturnType<typeof checkAgentQuota>>) {
-  if (run.key_mode !== "platform") {
+  if (run.key_mode === "byok") {
     return { usageSince: null, budgetCap: null, requestedBudget: null };
   }
-  if (quota.mode !== "platform" || quota.cap == null || !quota.periodStart) {
+  if (quota.mode === "byok" || quota.cap == null || !quota.periodStart) {
     return null;
   }
   return {
@@ -84,7 +72,7 @@ export async function answerNumoWorkerInput(input: {
     return { action: "refused", reason: "worker_input_mismatch" };
   }
 
-  const quota = await checkAgentQuota(input.userId);
+  const quota = await checkAgentQuota(input.userId, "agent", { subscription: run.key_mode === "subscription" });
   if (!quota.allowed) return { action: "refused", reason: "quota_exceeded" };
   const budget = managedResumeBudget(run, quota);
   if (!budget) return { action: "refused", reason: "quota_exceeded" };
@@ -273,11 +261,19 @@ export async function relaunchNumoWorkerRun(input: {
     return { ok: false, code: "superseded" };
   }
 
+  if (isNativeAgentEngine(run.agent_engine)) {
+    try { await resolveWorkerHarness(input.userId, run); }
+    catch (error) {
+      if (error instanceof NativeWorkerUnavailableError) return { ok: false, code: "native_reconnect_required" };
+      throw error;
+    }
+  }
+
   // The caller's agents right is checked at the turn level already; the resume
   // is a billable turn on the OWNER's key — same budget control as /steer.
   const ownerId = run.created_by;
   if (!ownerId) return { ok: false, code: "not_found" };
-  const quota = await checkAgentQuota(ownerId);
+  const quota = await checkAgentQuota(ownerId, "agent", { subscription: run.key_mode === "subscription" });
   if (!quota.allowed) return { ok: false, code: "quota_exceeded" };
   const budget = managedResumeBudget(run, quota);
   if (!budget) return { ok: false, code: "quota_exceeded" };

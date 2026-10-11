@@ -96,6 +96,14 @@ describe("resolveAiRuntime", () => {
     });
   });
 
+  it("lets Numo follow application defaults instead of legacy per-key model choices", async () => {
+    getUserByok.mockResolvedValue({ provider: "openrouter", apiKey: "user-key",
+      baseUrl: "https://openrouter.ai/api/v1", featureModels: { assistant_model: "legacy-choice" } });
+    expect(await resolveAiRuntime({ userId: "u1", modelKey: "assistant_model", applicationModelDefault: true }))
+      .toMatchObject({ model: "platform/chat", mode: "byok" });
+    expect(await resolveAiRuntime({ userId: "u1", modelKey: "assistant_model", applicationModelDefault: true, modelOverride: "conversation-choice" }))
+      .toMatchObject({ model: "conversation-choice", mode: "byok" });
+  });
   it("uses an explicit conversation model on a generic BYOK endpoint", async () => {
     getUserByok.mockResolvedValue({
       provider: "generic",

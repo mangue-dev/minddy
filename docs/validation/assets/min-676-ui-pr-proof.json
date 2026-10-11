@@ -1,0 +1,153 @@
+{
+  "date": "2026-10-10",
+  "entryPoint": "Minddy issue UI > Entrust to Numo > Implement issue",
+  "nativeEngine": "codex",
+  "nativeCliVersion": "0.162.1",
+  "database": "isolated local Docker Supabase",
+  "claudePaidExecution": "untested",
+  "httpControlPlane": {
+    "tunnel": "Cloudflare Quick Tunnel",
+    "bridge": "127.0.0.1:6464",
+    "backend": "127.0.0.1:6463",
+    "publicPaths": [
+      "/api/agent-vm/**"
+    ],
+    "unauthenticated": [
+      {
+        "path": "/settings",
+        "status": 404,
+        "body": {
+          "error": "off the control plane"
+        }
+      },
+      {
+        "path": "/api/auth/session",
+        "status": 404,
+        "body": {
+          "error": "off the control plane"
+        }
+      },
+      {
+        "path": "/rest/v1/issues",
+        "status": 404,
+        "body": {
+          "error": "off the control plane"
+        }
+      },
+      {
+        "path": "/api/agent-vm/heartbeat",
+        "status": 403,
+        "body": {
+          "error": "not a server agent caller"
+        }
+      }
+    ],
+    "signedSandboxProbe": {
+      "requests": 2,
+      "status": 404,
+      "body": {
+        "error": "unknown run"
+      },
+      "signatureVerified": true,
+      "tenantAdmitted": true,
+      "sandboxNamespaceAdmitted": true,
+      "allocationStopped": true,
+      "allocationDeleted": true,
+      "credentialsImported": false
+    }
+  },
+  "gitIsolation": {
+    "codexVersion": "0.162.1",
+    "kernelWrapper": "setpriv capability drop + Codex sandbox",
+    "authImported": false,
+    "fixture": "disposable Git repository outside worker checkout",
+    "before": {
+      "exitCode": 128,
+      "error": "git index.lock: Read-only file system"
+    },
+    "after": {
+      "explicitGitMetadataWrite": true,
+      "exitCode": 0,
+      "staged": true,
+      "committed": true,
+      "workingTreeClean": true
+    },
+    "allocationStopped": true,
+    "allocationDeleted": true
+  },
+  "pullRequestVerification": {
+    "repository": "mangue-dev/minddy-min676-codex-e2e",
+    "repositoryPrivate": true,
+    "pullRequest": "https://github.com/mangue-dev/minddy-min676-codex-e2e/pull/1",
+    "state": "OPEN",
+    "draft": false,
+    "mergeable": "MERGEABLE",
+    "baseSha": "d6780ab362d5038157571af580f23701ebab65f6",
+    "headSha": "803c745b75cce4dcbd96bd6a6f814f034a4c6372",
+    "branch": "numo/nat-1-7e39ac26",
+    "createdBy": "app/minddy-app",
+    "commitAuthor": "minddy-app[bot]",
+    "matchingDcoSignoff": true,
+    "changedFiles": [
+      "src/sum-inclusive.js"
+    ],
+    "additions": 4,
+    "deletions": 1,
+    "testFilesUnchanged": true,
+    "readmeUnchanged": true,
+    "packageManifestUnchanged": true,
+    "baselineTests": {
+      "passed": 1,
+      "failed": 4
+    },
+    "prHeadTests": {
+      "passed": 5,
+      "failed": 0
+    },
+    "independentOracleRangeChecks": 441,
+    "independentInvalidInputChecks": 16,
+    "diffCheckPassed": true,
+    "gitleaksCommitRangePassed": true,
+    "testCheckoutClean": true,
+    "reviewConclusion": "The minimal production-only change satisfies the requested inclusive and reversed range behavior without weakening tests or input validation."
+  },
+  "allocationDeletionChecks": [
+    {
+      "name": "agent-v2-a536a62e-d235-493d-82ca-9c982f8e4674-af810d009eb5",
+      "status": 404,
+      "deleted": true
+    },
+    {
+      "name": "agent-v2-7e39ac26-e353-45be-a78b-1ccba42dad3b-83d4b7f87243",
+      "status": 404,
+      "deleted": true
+    },
+    {
+      "name": "agent-v2-2d093a4f-ea7c-4ff7-9457-b935696cb147-a95914665c89",
+      "status": 404,
+      "deleted": true
+    }
+  ],
+  "connectionAfterCleanup": {
+    "status": "connected",
+    "generation": 2,
+    "revision": 103,
+    "encryptedProfilePresent": true,
+    "runtimeCleared": true,
+    "leaseCleared": true,
+    "workerBindingsCleared": true,
+    "newBrowserApprovalRequired": false
+  },
+  "successfulWorker": {
+    "status": "completed",
+    "minddyReadIssueSucceeded": true,
+    "minddyPlanUpdateSucceeded": true,
+    "minddyCreatePrSucceeded": true,
+    "finalSummaryPublished": true,
+    "nativeInferenceFunding": "subscription",
+    "sandboxComputeCostUsd": 0.007856,
+    "auxiliaryApiTitleCostUsd": 0.000183,
+    "usageNote": "Numo conversation and short-title enrichment use their existing API billing; native Codex inference uses the subscription."
+  },
+  "publicRollout": "disabled private owner allowlist"
+}

@@ -1,4 +1,9 @@
 import "server-only";
+import { isNativeAgentEngine } from "@/lib/agent-engines";
+import { assertNativeWorkerAuthority, renewNativeWorkerConnection, finalizeNativeWorkerConnection,
+  releaseNativeWorkerConnection } from "./native-worker-connections";
+import { getAgentSandboxByName } from "./sandbox";
+import type { NativeConnectionLease } from "./native-agent-credentials";
 
 import { MCP_CLIENT_TOOL_NAMES } from "@/lib/mcp-client-tools";
 import { executeAgentMcpTool } from "./mcp-client";
@@ -340,13 +345,13 @@ async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
       import("@/lib/server/ai-usage"),
     ]);
     const [quota, spent, platformSpent] = await Promise.all([
-      checkAgentQuota(run.created_by ?? ""),
+      checkAgentQuota(run.created_by ?? "", "agent", { subscription: run.key_mode === "subscription" }),
       spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
       spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id),
     ]);
     const runSpent = Math.max(run.cost_usd, spent ?? 0);
     const platformRunSpent = Math.max(
-      run.key_mode === "platform" ? run.cost_usd : 0,
+      run.key_mode !== "byok" ? run.cost_usd : 0,
       platformSpent ?? 0,
     );
     const account = quota.unlimited
@@ -564,6 +569,18 @@ export async function handleControlPlaneRequest(opts: {
   if (run.status !== "running") {
     return { status: 409, body: { error: "run is no longer running" } };
   }
+  const native = isNativeAgentEngine(run.agent_engine);
+  let nativeLease: NativeConnectionLease | undefined;
+  if (native) {
+    if (opts.local || opts.server || !opts.sandboxName || run.key_mode !== "subscription") {
+      return forbidden("native worker requires its hosted sandbox");
+    }
+    try { nativeLease = await assertNativeWorkerAuthority(runId, opts.sandboxName); }
+    catch { return { status: 409, body: { error: "native worker authority revoked" } }; }
+    if (["/usage", "/llm-key", "/journal"].includes(surface)) {
+      return forbidden("native subscription workers cannot use API inference surfaces");
+    }
+  }
 
   /**
    * Live output is privileged control-plane output too. It stays behind the
@@ -591,9 +608,10 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "POST" && surface === "/heartbeat") {
+    if (native) await renewNativeWorkerConnection(runId, opts.sandboxName!);
     const stamped = await stampRunResult(runId, {
       last_activity_at: new Date().toISOString(),
-    });
+    }, native ? { expected: { sandbox_reap_claim: null } } : undefined);
     if (stamped.failed) {
       return { status: 503, body: { error: "heartbeat failed — retry" } };
     }
@@ -673,7 +691,7 @@ export async function handleControlPlaneRequest(opts: {
       billTo: billToFor(run),
       model,
       ...(typeof body.provider === "string" ? { provider: body.provider } : {}),
-      keyMode: run.key_mode,
+      keyMode: run.key_mode === "byok" ? "byok" : "platform",
       generationId:
         typeof body.generationId === "string" ? body.generationId : null,
       promptTokens: claim.promptTokens,
@@ -695,6 +713,7 @@ export async function handleControlPlaneRequest(opts: {
     if (method === "GET") return ok({ checkpoint: run.checkpoint ?? null });
     if (method === "PUT") {
       const checkpoint = (body.checkpoint ?? null) as AgentCheckpoint | null;
+      if (native && !validNativeWorkerCheckpoint(checkpoint, run.agent_engine)) return bad("native checkpoint invalid");
       // The periodic backup also acts as a HEARTBEAT (MIN-224):
       // it is the only regular signal that a rook that lives in the VM produces, and
       // it is on this field that the watchdog decides to go and question the
@@ -702,7 +721,7 @@ export async function handleControlPlaneRequest(opts: {
       const stamped = await stampRunResult(runId, {
         checkpoint,
         last_activity_at: new Date().toISOString(),
-      });
+      }, native ? { expected: { sandbox_reap_claim: null } } : undefined);
       /**
        * A WRITE BREAK IS NOT A CONCLUDED RUN, and confusing them cost the
        * tower (MIN-286). The supervisor reads a 409 as "conversation does not exist
@@ -987,7 +1006,7 @@ export async function handleControlPlaneRequest(opts: {
     // has a hard ceiling. Reading it here rather than taking it on a journey is what
     // which means that a long tour does not rely on a six-hour remaining.
     const [quota, ledgerSpent, platformLedgerSpent] = await Promise.all([
-      checkAgentQuota(run.created_by ?? "").catch(() => null),
+      checkAgentQuota(run.created_by ?? "", "agent", { subscription: run.key_mode === "subscription" }).catch(() => null),
       spentForBudget(run.run_id ?? run.id, run.parent_numo_turn_id).catch(() => null),
       spentPlatformForBudget(run.run_id ?? run.id, run.parent_numo_turn_id).catch(() => null),
     ]);
@@ -1051,7 +1070,28 @@ export async function handleControlPlaneRequest(opts: {
       return { status: 409, body: { error: "run is no longer running" } };
     }
     const { landVmTurn } = await import("./vm-rest");
-    await landVmTurn(claimed, report);
+    if (native) {
+      // Import/export never crosses the VM HTTP channel. Read the stopped child's
+      // bounded profile through the authenticated Sandbox SDK before landing.
+      try {
+        if (!report.nativeAuthExportReady || report.costUsd !== 0 ||
+            (report.checkpoint && !validNativeWorkerCheckpoint(report.checkpoint, run.agent_engine))) {
+          throw new Error("native turn report invalid");
+        }
+        const sandbox = await getAgentSandboxByName(opts.sandboxName!);
+        if (!sandbox) throw new Error("native sandbox unavailable");
+        await finalizeNativeWorkerConnection(runId, sandbox);
+      } catch {
+        report.status = "error";
+        report.errorMessage = "Native subscription reconnection required";
+        report.costUsd = 0;
+        delete report.checkpoint;
+      }
+      try { await landVmTurn(claimed, report); }
+      finally { await releaseNativeWorkerConnection(runId, { stopped: true }, nativeLease); }
+    } else {
+      await landVmTurn(claimed, report);
+    }
     return ok();
   }
 
@@ -1560,4 +1600,18 @@ async function runPrefsFor(run: AgentRun) {
     numoDefaultStatus: DEFAULT_NUMO_STATUS,
     branchPrefix: DEFAULT_AGENT_BRANCH_PREFIX,
   };
+}
+
+/** Native memory contains only bounded conversation and normal delivery state. */
+export function validNativeWorkerCheckpoint(value: AgentCheckpoint | null, engine: string): boolean {
+  if (!value || typeof value !== "object" || value.opencode || (value.messages?.length ?? 0) > 0) return false;
+  if (Object.keys(value).some((key) => !["messages", "native", "usageSeq", "lastFilesSha",
+    "instructions", "prInlineComments", "editedPaths", "repoTouched", "providerRetries"].includes(key))) return false;
+  const memory = value.native;
+  if (!memory || memory.engine !== engine || !Array.isArray(memory.history) || memory.history.length > 512) return false;
+  if (Object.keys(memory).some((key) => !["engine", "history"].includes(key))) return false;
+  if (JSON.stringify(memory).length > 1_000_000) return false;
+  return memory.history.every((message) => message &&
+    ["user", "assistant"].includes(message.role) && typeof message.text === "string" &&
+    Object.keys(message).every((key) => ["role", "text"].includes(key)));
 }

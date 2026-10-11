@@ -1,0 +1,440 @@
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
+import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { nativeWorkerPaths } from "@/lib/native-agent-worker";
+import { layoutForRoot } from "../harness-layout";
+import { localHost } from "./local-host";
+import { nativeKernelArguments, nativeToolEnvironment, type IsolatedNativeHost } from "./native-isolation";
+import { createNativeRuntime, NativeAuthenticationRequired, nativeClaudeArguments, nativeCodexConfiguration, nativeReplayPrompt, type NativeRuntime, type NativeRuntimeInput } from "./native-runtime";
+import { boundedNativeHistory, runNativeTurn, writeNativeProfileExport } from "./native-supervisor";
+import { nativeWorkerTools, startNativeWorkerMcp } from "./native-worker-mcp";
+import { nativeBackgroundRunner } from "./native-background";
+import { makeOpencodeDelivery } from "./opencode-delivery";
+import { startToolBridge } from "./tool-bridge";
+import { importProfile, exportProfile, validateProfile } from "./native-prototype/profile";
+import type { ControlPlaneClient } from "./control-plane-client";
+import type { VmJob } from "./protocol";
+
+const roots: string[] = [];
+const disposers: Array<() => Promise<void>> = [];
+afterEach(async () => { await Promise.all(disposers.splice(0).map((close) => close())); await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); vi.restoreAllMocks(); });
+function cp(): ControlPlaneClient { return { emit: vi.fn(async () => {}), emitLive: vi.fn(), emitDiff: vi.fn(), recordUsage: vi.fn(async () => {}), heartbeat: async () => true, saveCheckpointQuietly: async () => true, appendJournal: async () => {}, pullSteering: async () => [], pushSteering: vi.fn(async () => {}), hasPendingMessages: async () => false, checkInterrupt: async () => false, clearInterrupt: async () => {}, budgetRemaining: async () => null, syncPlan: async () => {}, callTool: vi.fn(async () => ({ success: true, result: { title: "Owner issue" } })), repoAuthUrl: async () => null, llmKey: async () => null, reportTurn: async () => {} }; }
+async function setup(over: Partial<VmJob> = {}) {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "minddy-native-worker-test-"))); roots.push(root);
+  const layout = layoutForRoot(root, "/fixture/runtime");
+  await Promise.all([layout.repoDir, layout.toolOutputDir, layout.typecheckDir, layout.harnessDir].map((dir) => mkdir(dir, { recursive: true })));
+  const job = { protocolVersion: 4, engine: "codex", nativeAgent: { engine: "codex", ...nativeWorkerPaths(layout) }, layout, runId: "run", ledgerRunId: "run", projectId: "project", appOrigin: "https://minddy.invalid", model: "codex/default", anchor: "issue", interactive: true, chain: false, writesToRepo: true, authUrl: null, subagents: { models: false, favorites: [], maxParallel: 0, allowedIds: [], abovePlanIds: [], maxMultiplier: null }, webSearch: false, webSearchMax: 0, imageInput: false, prInlineComments: 0, editedPaths: [], repoTouched: false, instructions: { paths: [], bytes: 0 }, usageSeqStart: 0, filesFromSha: "", workBranch: "fixture", baseBranch: "main", commitRef: "MIN-676", committer: { name: "Fixture", email: "fixture@example.test" }, bootstrapMs: 0, locale: "en", feature: "agent_code", ...over } as VmJob;
+  const plain = localHost(layout);
+  const host: IsolatedNativeHost = { ...plain, processIsolation: "sandbox", verifyIsolation: vi.fn(async () => {}), startProcess: () => { throw new Error("Unused fixture operation"); }, close: vi.fn(async () => {}) };
+  await mkdir(job.nativeAgent!.privateRoot, { mode: 0o700, recursive: true });
+  const profile = { version: 1 as const, engine: "codex" as const, files: [{ path: "auth.json", content: JSON.stringify({ OPENAI_API_KEY: null, tokens: { access_token: "fixture-private-access-token", refresh_token: "fixture-private-refresh-token" } }) }] };
+  await writeFile(nativeWorkerPaths(layout).profileImportPath, JSON.stringify(profile), { mode: 0o600 });
+  return { job, host, profile, cp: cp() };
+}
+async function invoke(url: string, token: string, method: string, params = {}) {
+  const response = await fetch(url, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+  return { status: response.status, value: await response.json() as { result?: { content: { text: string }[]; isError?: boolean; tools?: { name: string }[] }; error?: unknown } };
+}
+const runtimeInput = (root: string): NativeRuntimeInput => ({ cwd: root, privateRoot: join(root, "private"), profileRoot: join(root, "private", "profiles"), anchor: "Trusted Minddy anchor", prompt: "fixture", history: [], mcpUrl: "http://127.0.0.1:1/mcp", mcpToken: "fixture-private-mcp-token", toolNames: ["read_issue"] });
+
+describe("native worker boundary", () => {
+  it("denies native profiles and process introspection for every repository subprocess", async () => {
+    const { job } = await setup();
+    const args = nativeKernelArguments(job, "node", ["fixture.js"]);
+    expect(args.join(" ")).toContain(`${JSON.stringify(job.nativeAgent!.privateRoot)}="deny"`);
+    expect(args.join(" ")).toContain('"/proc"="deny"'); expect(args.join(" ")).toContain('"/sys"="deny"');
+    expect(args.join(" ")).toContain(`${JSON.stringify(job.layout.repoDir)}="write"`);
+    expect(args.join(" ")).toContain(`${JSON.stringify(join(job.layout.repoDir, ".git"))}="write"`);
+    expect(nativeKernelArguments({ ...job, writesToRepo: false }, "node", []).join(" ")).toContain(`${JSON.stringify(job.layout.repoDir)}="read"`);
+    expect(nativeKernelArguments({ ...job, writesToRepo: false }, "node", []).join(" ")).not.toContain(`${JSON.stringify(join(job.layout.repoDir, ".git"))}="write"`);
+    expect(nativeToolEnvironment("/home", "/tmp")).not.toHaveProperty("CODEX_HOME");
+    expect(() => nativeToolEnvironment("/home", "/tmp", { ANTHROPIC_AUTH_TOKEN: "forbidden" })).toThrow();
+  });
+  it("pins native MCP approval and tools without enabling built-in shell or writes", () => {
+    const config = nativeCodexConfiguration(runtimeInput("/fixture"));
+    expect(config.features.shell_tool).toBe(false); expect(config.features.view_image).toBe(false);
+    expect(config.features.apps).toBe(false); expect(config.features.plugins).toBe(false); expect(config.features.hooks).toBe(false);
+    expect(config.mcp_servers.minddy.default_tools_approval_mode).toBe("approve");
+    expect(config.permissions.minddy_native_worker.filesystem["/fixture/private"]).toBe("deny");
+    const claude = nativeClaudeArguments(runtimeInput("/fixture"));
+    expect(claude).toContain("--restricted"); expect(claude).toContain("--strict-mcp-config"); expect(claude).toContain("--disable-slash-commands"); expect(claude).not.toContain("--bare");
+    expect(claude[claude.indexOf("--tools") + 1]).toBe(""); expect(claude).toContain("mcp__minddy__read_issue");
+  });
+  it("passes only native CLI model and effort overrides and omits automatic defaults", () => {
+    const input = { ...runtimeInput("/fixture"), model: "sonnet", reasoningEffort: "xhigh" };
+    const claude = nativeClaudeArguments(input);
+    expect(claude[claude.indexOf("--model") + 1]).toBe("sonnet");
+    expect(claude[claude.indexOf("--effort") + 1]).toBe("xhigh");
+    expect(nativeClaudeArguments(runtimeInput("/fixture"))).not.toContain("--model");
+    expect(nativeClaudeArguments(runtimeInput("/fixture"))).not.toContain("--effort");
+    expect(nativeCodexConfiguration({ ...input, model: "gpt-test-codex", reasoningEffort: "ultra" }).model_reasoning_effort).toBe("ultra");
+    expect(nativeCodexConfiguration(runtimeInput("/fixture"))).not.toHaveProperty("model_reasoning_effort");
+  });
+  it("bounds and redacts portable context instead of exposing opaque native sessions", () => {
+    const history = boundedNativeHistory(Array.from({ length: 100 }, () => ({ role: "user" as const, text: "secret".repeat(4000) })), (value) => value.replaceAll("secret", "[redacted]"));
+    expect(history.length).toBeLessThanOrEqual(24); expect(history.reduce((sum, entry) => sum + entry.text.length, 0)).toBeLessThanOrEqual(48_000); expect(JSON.stringify(history)).not.toContain("secret");
+    expect(nativeReplayPrompt("new request", history)).toContain("fresh native CLI session");
+  });
+  it("round-trips only optional Claude account metadata alongside required native authentication", async () => {
+    const { job } = await setup();
+    const profile = { version: 1 as const, engine: "claude_code" as const, files: [{ path: ".credentials.json", content: JSON.stringify({ claudeAiOauth: { accessToken: "fixture-access", refreshToken: "fixture-refresh" } }) }, { path: ".claude.json", content: JSON.stringify({ oauthAccount: { accountUuid: "fixture" } }) }] };
+    await importProfile(job.nativeAgent!.profileRoot, profile); expect(await exportProfile(job.nativeAgent!.profileRoot, "claude_code")).toEqual(profile);
+    expect(() => validateProfile({ ...profile, files: [profile.files[1]] })).toThrow();
+    expect(() => validateProfile({ ...profile, files: [profile.files[0], profile.files[0]] })).toThrow();
+  });
+  it("keeps background work in the isolated process wrapper and reads only new bounded output", async () => {
+    const { host } = await setup(); let output = "first"; let exitCode: number | null = null;
+    const stop = vi.fn(async () => { exitCode = 130; });
+    host.startProcess = vi.fn(() => ({ pid: 42, get output() { return output; }, get outputBytes() { return Buffer.byteLength(output); }, get exitCode() { return exitCode; }, done: Promise.resolve({ stdout: "", stderr: "", exitCode: 0 }), stop }));
+    const runner = nativeBackgroundRunner(host);
+    const started = await runner.start({ jobId: "job-1", invocation: { executable: "node", args: ["server.js"], env: {} }, workdir: "." });
+    expect(started.pid).toBe(42); expect(host.startProcess).toHaveBeenCalledWith("node", ["server.js"], expect.objectContaining({ cwd: host.layout.repoDir }));
+    expect((await runner.read({ jobId: "job-1", pid: 42, offset: 0 })).chunk).toBe("first"); output += " second";
+    expect((await runner.read({ jobId: "job-1", pid: 42, offset: 5 })).chunk).toBe(" second");
+    await runner.stop({ jobId: "job-1", pid: 42 }); expect(stop).toHaveBeenCalled(); expect((await runner.read({ jobId: "job-1", pid: 42, offset: 12 })).running).toBe(false);
+    await expect(runner.read({ jobId: "job-1", pid: 99, offset: 0 })).rejects.toThrow();
+    await expect(runner.start({ jobId: "escape", invocation: { executable: "node", args: [], env: {} }, workdir: "../escape" })).rejects.toThrow();
+  });
+});
+
+describe("native worker MCP", () => {
+  async function server(over: Partial<VmJob> = {}) {
+    const context = await setup(over);
+    const delivery = makeOpencodeDelivery({ host: context.host, emit: context.cp.emit, filesFromSha: "", remainingMs: () => 60_000 });
+    const bridge = await startToolBridge({ job: context.job, cp: context.cp, authorizationToken: "bridge-token", delivery });
+    const mcp = await startNativeWorkerMcp({ ...context, bridge, bridgeToken: "bridge-token", token: "mcp-token", delivery, signal: new AbortController().signal, redact: (text) => text.replaceAll("fixture-private-access-token", "[redacted]") });
+    disposers.push(mcp.close, bridge.close);
+    return { ...context, mcp };
+  }
+  it("authenticates MCP discovery and forwards actual Minddy tools through the canonical bridge", async () => {
+    const { mcp, cp } = await server();
+    expect((await invoke(mcp.url, "wrong", "tools/list")).status).toBe(401);
+    expect((await invoke(mcp.url, "mcp-token", "tools/list")).value.result?.tools?.some((tool) => tool.name === "read_issue")).toBe(true);
+    const result = await invoke(mcp.url, "mcp-token", "tools/call", { name: "read_issue", arguments: { identifier: "MIN-676" } });
+    expect(result.value.result?.isError).not.toBe(true); expect(cp.callTool).toHaveBeenCalledWith("read_issue", expect.objectContaining({ args: { identifier: "MIN-676" } }));
+    expect(cp.emit).toHaveBeenCalledWith("tool_result", expect.objectContaining({ name: "read_issue", success: true }));
+    vi.mocked(cp.callTool).mockResolvedValueOnce({ success: false, result: { ok: false, note: "Explicit handler refusal without an error property" } });
+    const refused = await invoke(mcp.url, "mcp-token", "tools/call", { name: "read_issue", arguments: { identifier: "MIN-676" } });
+    expect(refused.value.result?.isError).toBe(true); expect(cp.emit).toHaveBeenLastCalledWith("tool_result", expect.objectContaining({ name: "read_issue", success: false }));
+  });
+  it("uses guarded real edits and commands while refusing escape paths, git metadata and credential files", async () => {
+    const { mcp, job, cp } = await server();
+    const call = async (name: string, args: Record<string, unknown>) => (await invoke(mcp.url, "mcp-token", "tools/call", { name, arguments: args })).value.result;
+    expect((await call("write_file", { path: "fixture.txt", content: "before" }))?.isError).not.toBe(true);
+    expect((await call("edit_file", { path: "fixture.txt", old_string: "before", new_string: "after" }))?.isError).not.toBe(true);
+    expect(await readFile(join(job.layout.repoDir, "fixture.txt"), "utf8")).toBe("after");
+    expect((await call("run_command", { command: "node -e 'process.stdout.write(\"fixture-private-access-token\")'" }))?.content[0].text).toContain("[redacted]");
+    const failedCommand = await call("run_command", { command: "node -e 'process.stderr.write(\"Build failed\"); process.exit(7)'" });
+    expect(failedCommand?.isError).toBe(true); expect(failedCommand?.content[0].text).toContain("Build failed");
+    expect(cp.emit).toHaveBeenLastCalledWith("tool_result", expect.objectContaining({ name: "run_command", success: false, exit_code: 7 }));
+    for (const path of ["../escape", ".git/config", ".env", job.nativeAgent!.privateRoot]) expect((await call("read_file", { path }))?.isError).toBe(true);
+    await symlink(job.nativeAgent!.privateRoot, join(job.layout.repoDir, "private-link")); expect((await call("read_file", { path: "private-link/auth.json" }))?.isError).toBe(true);
+    expect((await call("run_command", { command: "git push origin HEAD" }))?.isError).toBe(true);
+  });
+  it("exposes commands but refuses repository writes on review workers", async () => {
+    const { mcp, job } = await server({ writesToRepo: false });
+    const names = nativeWorkerTools(job).map((tool) => tool.name);
+    expect(names).toContain("run_command"); expect(names).not.toContain("write_file"); expect(names).not.toContain("list_projects");
+    expect(nativeWorkerTools({ ...job, interactive: false }).map((tool) => tool.name)).not.toContain("ask_user");
+    expect((await invoke(mcp.url, "mcp-token", "tools/call", { name: "write_file", arguments: { path: "bad", content: "bad" } })).value.result?.isError).toBe(true);
+  });
+});
+
+describe("native supervisor lifecycle", () => {
+  async function claudeContext() {
+    const context = await setup();
+    context.job.engine = "claude_code"; context.job.model = "claude_code/default";
+    context.job.nativeAgent!.engine = "claude_code";
+    const profile = { version: 1, engine: "claude_code", files: [{ path: ".credentials.json",
+      content: JSON.stringify({ claudeAiOauth: { accessToken: "fixture-claude-access", refreshToken: "fixture-claude-refresh" } }) }] };
+    await writeFile(nativeWorkerPaths(context.job.layout).profileImportPath, JSON.stringify(profile), { mode: 0o600 });
+    return context;
+  }
+  it("runs a simulated Claude stream through real guarded MCP and exports only after shutdown", async () => {
+    const context = await claudeContext();
+    const runtime = createNativeRuntime("claude_code", { spawn: (_engine, args, env, cwd) => {
+      expect(env).not.toHaveProperty("ANTHROPIC_API_KEY");
+      const server = JSON.parse(args[args.indexOf("--mcp-config") + 1]).mcpServers.minddy;
+      const tools = args.slice(args.indexOf("--allowedTools") + 1, args.indexOf("--append-system-prompt"));
+      const script = `
+        const {createInterface}=require('node:readline');
+        const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');
+        createInterface({input:process.stdin}).once('line',async()=>{
+          send({type:'system',subtype:'init',tools:${JSON.stringify(tools)},mcp_servers:[{name:'minddy',status:'connected'}]});
+          const response=await fetch(${JSON.stringify(server.url)},{method:'POST',headers:{Authorization:process.env.MINDDY_NATIVE_MCP_AUTHORIZATION,'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'read_issue',arguments:{identifier:'MIN-676'}}})});
+          const value=await response.json();
+          send({type:'result',subtype:'success',is_error:value.result?.isError===true || !response.ok,result:'Simulated Claude MCP completed'});
+        });`;
+      return spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" });
+    } });
+    const report = await runNativeTurn(context.job, { prompt: "Inspect the fixture", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("completed"); expect(report.nativeAuthExportReady).toBe(true);
+    expect(context.cp.callTool).toHaveBeenCalledWith("read_issue", expect.objectContaining({ args: { identifier: "MIN-676" } }));
+    expect(JSON.parse(await readFile(context.job.nativeAgent!.profileExportPath, "utf8")).engine).toBe("claude_code");
+    expect(report.checkpoint?.native?.engine).toBe("claude_code"); expect(context.host.close).toHaveBeenCalled();
+  });
+  it.each(["assistant", "result"])("does not save rejected Claude authentication from a %s frame", async (frame) => {
+    const context = await claudeContext();
+    const event = frame === "assistant" ? { type: "assistant", error: "authentication_failed", message: { content: [{ type: "text", text: "private provider transcript" }] } }
+      : { type: "result", subtype: "error_during_execution", is_error: true, api_error_status: 401, errors: ["private provider transcript"] };
+    const script = `require('node:readline').createInterface({input:process.stdin}).once('line',()=>process.stdout.write(${JSON.stringify(JSON.stringify(event) + "\n")}));`;
+    const runtime = createNativeRuntime("claude_code", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    const report = await runNativeTurn(context.job, { prompt: "Inspect", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(false);
+    await expect(readFile(context.job.nativeAgent!.profileExportPath)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(JSON.stringify(vi.mocked(context.cp.emit).mock.calls)).not.toContain("private provider transcript");
+  });
+  it.each(["account_missing", "unauthorized"] as const)("retires reusable authentication after permanent native rejection: %s", async (reason) => {
+    const context = await setup();
+    // The stale export must also be removed if an earlier attempt left one.
+    await writeFile(context.job.nativeAgent!.profileExportPath, JSON.stringify(context.profile), { mode: 0o600 });
+    const runtime: NativeRuntime = {
+      start: async () => { if (reason === "account_missing") throw new NativeAuthenticationRequired(); },
+      async *events() { yield { type: "failed", code: "providerUnavailable", nativeCode: "unauthorized" }; },
+      steer: async () => {}, interrupt: async () => {}, close: vi.fn(async () => {}),
+    };
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(false);
+    expect(runtime.close).toHaveBeenCalled(); expect(context.host.close).toHaveBeenCalled();
+    await expect(readFile(context.job.nativeAgent!.profileExportPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+  it.each(["rateLimitExceeded", "httpConnectionFailed"])("preserves reusable authentication after a transient native error: %s", async (nativeCode) => {
+    const context = await setup();
+    const runtime: NativeRuntime = { start: async () => {}, async *events() { yield { type: "failed", code: "providerUnavailable", nativeCode }; },
+      steer: async () => {}, interrupt: async () => {}, close: async () => {} };
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(true);
+    expect(JSON.parse(await readFile(context.job.nativeAgent!.profileExportPath, "utf8"))).toEqual(context.profile);
+  });
+  it("does not publish a success summary when the final repository publication fails", async () => {
+    const context = await setup();
+    expect((await context.host.exec("git init")).exitCode).toBe(0);
+    expect((await context.host.exec("git -c user.name=Fixture -c user.email=fixture@example.test commit --allow-empty -m 'Initial fixture'")).exitCode).toBe(0);
+    let writeResult: Awaited<ReturnType<typeof invoke>> | undefined;
+    const runtime: NativeRuntime = {
+      start: async (input) => {
+        const result = await invoke(input.mcpUrl, input.mcpToken, "tools/call", { name: "write_file", arguments: { path: "result.txt", content: "Implementation ready" } });
+        writeResult = result;
+      },
+      async *events() { yield { type: "completed", reply: "Implementation complete" }; },
+      steer: async () => {}, interrupt: async () => {}, close: async () => {},
+    };
+    const report = await runNativeTurn(context.job, { prompt: "Implement the fixture", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => "/fixture/bin" });
+    expect(writeResult).toMatchObject({ value: { result: { content: [{ text: '{"written":"result.txt"}' }] } } });
+    expect(report.pushError).toBe("Native repository publication failed safely");
+    expect(report.pushed).toBeNull();
+    expect(report.nativeAuthExportReady).toBe(true);
+    expect(context.cp.emit).not.toHaveBeenCalledWith("summary", expect.anything());
+  });
+  it("imports auth after the kernel gate, uses real MCP, masks secrets and exports only after child shutdown", async () => {
+    const context = await setup(); const order: string[] = [];
+    context.host.verifyIsolation = async () => { order.push("kernel"); };
+    const runtime: NativeRuntime = { start: async (input) => { order.push("start"); expect(await readFile(join(input.profileRoot, "codex", "auth.json"), "utf8")).toContain("fixture-private-access-token"); await invoke(input.mcpUrl, input.mcpToken, "tools/call", { name: "read_issue", arguments: { identifier: "MIN-676" } }); }, async *events() { yield { type: "completed", reply: "fixture-private-access-token completed" }; }, steer: async () => {}, interrupt: async () => {}, close: async () => { order.push("closed"); } };
+    const report = await runNativeTurn(context.job, { prompt: "Read the issue", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => { order.push("install"); return "/fixture/bin"; } });
+    expect(order).toEqual(["install", "kernel", "start", "closed"]); expect(report.status).toBe("completed"); expect(report.nativeAuthExportReady).toBe(true); expect(report.reply).toBe("[redacted] completed"); expect(JSON.stringify(report)).not.toContain("fixture-private-access-token");
+    expect(JSON.parse(await readFile(context.job.nativeAgent!.profileExportPath, "utf8"))).toEqual(context.profile);
+    await expect(readFile(nativeWorkerPaths(context.job.layout).profileImportPath)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(context.cp.recordUsage).not.toHaveBeenCalled(); expect(report.costUsd).toBe(0); expect(report.checkpoint?.native?.history).toHaveLength(2);
+  });
+  it("cleans its bridge and host without exporting when physical child shutdown is unconfirmed", async () => {
+    const context = await setup();
+    const runtime: NativeRuntime = { start: async () => {}, async *events() { yield { type: "completed", reply: "done" }; },
+      steer: async () => {}, interrupt: async () => {}, close: async () => { throw new Error("Native stop unconfirmed"); } };
+    const pathBefore = process.env.PATH;
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp,
+      { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(false);
+    expect(context.host.close).toHaveBeenCalled(); expect(process.env.PATH).toBe(pathBefore);
+    expect(context.cp.emit).not.toHaveBeenCalledWith("summary", expect.anything());
+    await expect(readFile(context.job.nativeAgent!.profileExportPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+  it("allows a profile export retry after an interrupted replacement", async () => {
+    const context = await setup(); const native = context.job.nativeAgent!;
+    await importProfile(native.profileRoot, context.profile);
+    await mkdir(native.profileExportPath);
+    await expect(writeNativeProfileExport(native.profileRoot, "codex", native.profileExportPath)).rejects.toThrow();
+    await rm(native.profileExportPath, { recursive: true });
+    await writeNativeProfileExport(native.profileRoot, "codex", native.profileExportPath);
+    expect(JSON.parse(await readFile(native.profileExportPath, "utf8"))).toEqual(context.profile);
+  });
+  it("does not import auth or start native inference when kernel isolation fails", async () => {
+    const context = await setup(); context.host.verifyIsolation = async () => { throw new Error("failed"); };
+    const runtime = { start: vi.fn(), close: vi.fn(async () => {}) } as unknown as NativeRuntime;
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(runtime.start).not.toHaveBeenCalled(); expect(report.status).toBe("error"); expect(report.nativeAuthExportReady).toBe(false);
+    expect(await readFile(nativeWorkerPaths(context.job.layout).profileImportPath, "utf8")).toContain("fixture-private-access-token");
+  });
+  it("exports auth without a paid model turn when the hosted compute cap is exhausted", async () => {
+    const context = await setup({ budgetUsd: 0 });
+    const runtime = { start: vi.fn(), close: vi.fn(async () => {}) } as unknown as NativeRuntime;
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(runtime.start).not.toHaveBeenCalled(); expect(report.status).toBe("budget_exhausted"); expect(report.nativeAuthExportReady).toBe(true);
+  });
+  it("terminates a silent native child at the wall deadline and retains portable auth/context", async () => {
+    const context = await setup(); let wake: (() => void) | undefined; let closed = false;
+    const runtime: NativeRuntime = { start: async () => {}, async *events() { yield { type: "status", phase: "running" }; while (!closed) await new Promise<void>((resolve) => { wake = resolve; }); }, steer: async () => {}, interrupt: vi.fn(async () => {}), close: async () => { closed = true; wake?.(); } };
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => "/fixture", turnDeadlineMs: 30 });
+    expect(runtime.interrupt).toHaveBeenCalled(); expect(report.errorCode).toBe("turnTooLong"); expect(report.nativeAuthExportReady).toBe(true); expect(report.checkpoint?.native?.history).toHaveLength(1);
+  });
+  it("mediates a required question through Numo and pauses without claiming completion", async () => {
+    const context = await setup(); let wake: (() => void) | undefined; let closed = false;
+    const runtime: NativeRuntime = { start: async (input) => { const result = await invoke(input.mcpUrl, input.mcpToken, "tools/call", { name: "ask_user", arguments: { questions: [{ question: "Which repository behavior should change?", options: [{ label: "Blue", description: "fixture-private-access-token" }] }] } }); expect(result.value.result?.isError).not.toBe(true); }, async *events() { yield { type: "status", phase: "running" }; while (!closed) await new Promise<void>((resolve) => { wake = resolve; }); }, steer: async () => {}, interrupt: async () => {}, close: async () => { closed = true; wake?.(); } };
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => "/fixture" });
+    expect(report.status).toBe("interrupted"); expect(report.askedUser).toBe(true); expect(report.nativeAuthExportReady).toBe(true); expect(context.cp.emit).toHaveBeenCalledWith("question", expect.objectContaining({ questions: expect.any(Array) }));
+    const history = report.checkpoint!.native!.history;
+    expect(history.map((message) => message.role)).toEqual(["user", "assistant"]);
+    const resumedPrompt = nativeReplayPrompt("Blue", history);
+    expect(resumedPrompt).toContain("Which repository behavior should change?"); expect(resumedPrompt).toContain("Blue"); expect(resumedPrompt).not.toContain("fixture-private-access-token");
+  });
+  it("preserves only unposted steering after a later native delivery fails", async () => {
+    const context = await setup(); let closed = false; let wake: (() => void) | undefined;
+    const messages = [{ id: "first", text: "Accepted steering" }, { id: "second", text: "Unposted steering" }];
+    context.cp.pullSteering = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce(messages);
+    context.cp.hasPendingMessages = async () => true;
+    const runtime: NativeRuntime = { start: async () => {}, async *events() { yield { type: "status", phase: "running" }; while (!closed) await new Promise<void>((resolve) => { wake = resolve; }); }, steer: vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Native transport stopped")), interrupt: async () => {}, close: async () => { closed = true; wake?.(); } };
+    const report = await runNativeTurn(context.job, { prompt: "fixture", anchorInstructions: "anchor" }, context.cp, { host: context.host, runtime, installCli: async () => "/fixture", lifecycleBeatMs: 1 });
+    expect(report.status).toBe("error"); expect(context.cp.pushSteering).toHaveBeenCalledWith([messages[1]]);
+    expect(report.checkpoint?.native?.history.map((message) => message.text)).toEqual(["fixture", "Accepted steering"]);
+  });
+});
+
+describe("native CLI protocol", () => {
+  it.each(["missing_init", "error_subtype", "missing_error_flag"])("refuses an unverified Claude success: %s", async (kind) => {
+    const { job } = await setup();
+    const events = kind === "missing_init" ? [] : [{ type: "system", subtype: "init", tools: ["mcp__minddy__read_issue"], mcp_servers: [{ name: "minddy", status: "connected" }] }];
+    const result = { type: "result", subtype: kind === "error_subtype" ? "error_during_execution" : "success", ...(kind === "missing_error_flag" ? {} : { is_error: false }), result: "Unverified reply" };
+    const script = `require('node:readline').createInterface({input:process.stdin}).once('line',()=>{for(const event of ${JSON.stringify([...events, result])})process.stdout.write(JSON.stringify(event)+'\\n')});`;
+    const runtime = createNativeRuntime("claude_code", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
+    for await (const event of runtime.events()) if (event.type === "failed" || event.type === "completed") { expect(event.type).toBe("failed"); break; }
+  });
+  function stoppedChildFixture() {
+    const child = Object.assign(new EventEmitter(), {
+      stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough(),
+      pid: undefined, exitCode: null, signalCode: null, kill: vi.fn(() => true),
+    });
+    child.stdin.on("data", (chunk: Buffer) => {
+      const request = JSON.parse(chunk.toString());
+      if (request.id === undefined) return;
+      const result = request.method === "account/read" ? { account: { type: "chatgpt" } }
+        : request.method === "thread/start" ? { thread: { id: "thread" } }
+        : request.method === "mcpServerStatus/list" ? { data: [{ name: "minddy", tools: { read_issue: {} } }] } : {};
+      queueMicrotask(() => child.stdout.write(`${JSON.stringify({ id: request.id, result })}\n`));
+    });
+    return child;
+  }
+  it("makes concurrent close calls wait for physical shutdown before authorizing credential export", async () => {
+    const { job } = await setup(); const child = stoppedChildFixture();
+    const runtime = createNativeRuntime("codex", { spawn: () => child as unknown as ChildProcessWithoutNullStreams });
+    await runtime.start(runtimeInput(job.layout.repoDir));
+    let authorized = false;
+    const first = runtime.close(); const second = runtime.close().then(() => { authorized = true; });
+    await Promise.resolve(); expect(authorized).toBe(false); expect(child.kill).toHaveBeenCalledExactlyOnceWith("SIGTERM");
+    child.emit("close", 0, null);
+    await Promise.all([first, second]); expect(authorized).toBe(true);
+  });
+  it("fences repeated close calls when SIGKILL has not produced a confirmed close", async () => {
+    const { job } = await setup(); const child = stoppedChildFixture();
+    const runtime = createNativeRuntime("codex", { spawn: () => child as unknown as ChildProcessWithoutNullStreams });
+    await runtime.start(runtimeInput(job.layout.repoDir));
+    vi.useFakeTimers();
+    try {
+      const first = runtime.close(); const failed = expect(first).rejects.toThrow("stop unconfirmed");
+      await vi.advanceTimersByTimeAsync(1500); expect(child.kill).toHaveBeenLastCalledWith("SIGKILL");
+      await vi.advanceTimersByTimeAsync(3500); await failed;
+      await expect(runtime.close()).rejects.toThrow("stop unconfirmed");
+    } finally { vi.useRealTimers(); }
+  });
+  it("ends a waiting event iterator when shutdown fails while retaining the export fence", async () => {
+    const { job } = await setup(); const child = stoppedChildFixture();
+    const runtime = createNativeRuntime("codex", { spawn: () => child as unknown as ChildProcessWithoutNullStreams });
+    await runtime.start(runtimeInput(job.layout.repoDir));
+    const events = runtime.events()[Symbol.asyncIterator]();
+    expect((await events.next()).value).toEqual({ type: "status", phase: "starting" });
+    const waiting = events.next(); vi.useFakeTimers();
+    try {
+      const closing = runtime.close(); const failed = expect(closing).rejects.toThrow("stop unconfirmed");
+      await vi.advanceTimersByTimeAsync(5000); await failed;
+      expect((await waiting).done).toBe(true);
+      await expect(runtime.close()).rejects.toThrow("stop unconfirmed");
+    } finally { vi.useRealTimers(); }
+  });
+  const fixture = `const {createInterface}=require('node:readline');const send=x=>process.stdout.write(JSON.stringify(x)+'\\n');createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(r.id===undefined)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='thread/start')result={thread:{id:'thread'}};if(r.method==='mcpServerStatus/list')result={data:[{name:'minddy',tools:{read_issue:{name:'read_issue'}}}]};if(r.method==='turn/start'){result={turn:{id:'turn'}};setTimeout(()=>{send({method:'item/agentMessage/delta',params:{delta:'Native reply'}});send({method:'turn/completed',params:{turn:{status:'completed'}}})},40)}send({id:r.id,result})});`;
+  it.each(["success", "terminal"])("waits through retryable Codex errors until %s", async (outcome) => {
+    const { job } = await setup();
+    const notification = "send({method:'error',params:{willRetry:true,error:{codexErrorInfo:'serverOverloaded',message:'private provider transcript'}}});";
+    const terminal = outcome === "success" ? "send({method:'turn/completed',params:{turn:{status:'completed'}}})"
+      : "send({method:'turn/completed',params:{turn:{status:'failed',error:{codexErrorInfo:'serverOverloaded'}}}})";
+    const script = fixture.replace("send({method:'item/agentMessage/delta'", notification + "send({method:'item/agentMessage/delta'")
+      .replace("send({method:'turn/completed',params:{turn:{status:'completed'}}})", terminal);
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
+    const events = [];
+    for await (const event of runtime.events()) { events.push(event); if (event.type === "failed" || event.type === "completed") break; }
+    expect(events).toContainEqual({ type: "status", phase: "retrying" });
+    expect(events.at(-1)).toMatchObject(outcome === "success" ? { type: "completed", reply: "Native reply" } : { type: "failed", nativeCode: "serverOverloaded" });
+    expect(JSON.stringify(events)).not.toContain("private provider transcript");
+  });
+  it("preserves terminal unauthorized Codex notifications for vault invalidation", async () => {
+    const { job } = await setup();
+    const script = fixture.replace("send({method:'item/agentMessage/delta'", "send({method:'error',params:{willRetry:false,error:{codexErrorInfo:'unauthorized'}}});send({method:'item/agentMessage/delta'");
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
+    for await (const event of runtime.events()) if (event.type === "failed") { expect(event.nativeCode).toBe("unauthorized"); break; }
+  });
+  it("reports permanent authentication loss without starting a native thread", async () => {
+    const { job } = await setup(); let calledThread = false;
+    const child = stoppedChildFixture();
+    child.stdin.removeAllListeners("data");
+    child.stdin.on("data", (chunk: Buffer) => {
+      const request = JSON.parse(chunk.toString()); if (request.id === undefined) return;
+      calledThread ||= request.method === "thread/start";
+      queueMicrotask(() => child.stdout.write(`${JSON.stringify({ id: request.id, result: request.method === "account/read" ? { account: null } : {} })}\n`));
+    });
+    const runtime = createNativeRuntime("codex", { spawn: () => child as unknown as ChildProcessWithoutNullStreams });
+    await expect(runtime.start(runtimeInput(job.layout.repoDir))).rejects.toBeInstanceOf(NativeAuthenticationRequired);
+    expect(calledThread).toBe(false);
+    const closing = runtime.close(); child.emit("close", 0, null); await closing;
+  });
+  it("negotiates native auth/thread/MCP and receives completion without provider transcripts", async () => {
+    const { job } = await setup(); let args: string[] = [];
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, cli, env, cwd) => { args = cli; expect(env).not.toHaveProperty("ANTHROPIC_API_KEY"); return spawn(process.execPath, ["-e", fixture], { env, cwd, detached: true, stdio: "pipe" }); } });
+    disposers.push(runtime.close); await runtime.start(runtimeInput(job.layout.repoDir));
+    const events = []; for await (const event of runtime.events()) { events.push(event); if (event.type === "completed") break; }
+    expect(args).toContain("project_doc_max_bytes=0"); expect(events).toContainEqual({ type: "completed", reply: "Native reply" });
+  });
+  it("sends frozen Codex model/effort to thread start and rejects a changed model", async () => {
+    const { job } = await setup();
+    const selected = { ...runtimeInput(job.layout.repoDir), model: "gpt-test-codex", reasoningEffort: "ultra" };
+    const script = fixture.replace("if(r.method==='thread/start')result={thread:{id:'thread'}};",
+      "if(r.method==='thread/start'){if(r.params.model!=='gpt-test-codex'||r.params.config.model_reasoning_effort!=='ultra'){send({id:r.id,error:{code:-1}});return;}result={thread:{id:'thread'},model:'gpt-test-codex'}};");
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(runtime.close); await runtime.start(selected);
+    for await (const event of runtime.events()) if (event.type === "completed") break;
+    const changed = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath,
+      ["-e", script.replace("model:'gpt-test-codex'", "model:'different'")], { env, cwd, detached: true, stdio: "pipe" }) });
+    disposers.push(changed.close);
+    await expect(changed.start(selected)).rejects.toThrow("changed the frozen model");
+  });
+  it("refuses a native MCP catalogue that differs from the allowed tool manifest", async () => {
+    const { job } = await setup();
+    const runtime = createNativeRuntime("codex", { spawn: (_engine, _args, env, cwd) => spawn(process.execPath, ["-e", fixture], { env, cwd, detached: true, stdio: "pipe" }) }); disposers.push(runtime.close);
+    await expect(runtime.start({ ...runtimeInput(job.layout.repoDir), toolNames: ["write_file"] })).rejects.toThrow("catalogue");
+  });
+  it("uses an empty trusted Claude cwd and rejects an unexpected built-in shell catalogue", async () => {
+    const { job } = await setup(); let nativeCwd = "";
+    const script = `const {createInterface}=require('node:readline');createInterface({input:process.stdin}).once('line',()=>process.stdout.write(JSON.stringify({type:'system',subtype:'init',tools:['Bash'],mcp_servers:[{name:'minddy',status:'connected'}]})+'\\n'));`;
+    const runtime = createNativeRuntime("claude_code", { spawn: (_engine, _args, env, cwd) => { nativeCwd = cwd; return spawn(process.execPath, ["-e", script], { env, cwd, detached: true, stdio: "pipe" }); } }); disposers.push(runtime.close);
+    const input = runtimeInput(job.layout.repoDir); await runtime.start(input);
+    for await (const event of runtime.events()) if (event.type === "failed") { expect(event.nativeCode).toBe("nativeMcpUnavailable"); break; }
+    expect(nativeCwd).toBe(join(input.privateRoot, "cli-cwd")); expect(nativeCwd).not.toBe(input.cwd);
+  });
+});

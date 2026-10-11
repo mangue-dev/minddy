@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,16 +18,21 @@ import {
   SettingsGroup,
   SettingsRow,
 } from "@/components/settings/settings-ui";
+import { ProviderLogo } from "@/components/model-logo";
+import { numoPreferencesQueryKey, saveNumoPreferencesApi, useNumoPreferencesQuery } from "@/lib/use-numo-preferences-query";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { AccountSandboxSection } from "./account-sandbox-section";
+import { NativeAgentConnections } from "./native-agent-connections";
+import { NativeAgentModelPreferences } from "./native-agent-model-preferences";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import {
   assignAiCapabilityApi,
   saveAgentPreferencesApi,
+  saveAgentEnginePreferenceApi,
   updateAiKeyPreferencesApi,
 } from "@/lib/agent-keys-api";
-import type { AiKey } from "@/lib/agent-keys-api";
+import type { AiKey, AccountAgentEngine } from "@/lib/agent-keys-api";
 import {
   agentModelsQueryKey,
   useAgentModelsQuery,
@@ -49,16 +55,7 @@ import {
 } from "@/lib/model-catalog-capability";
 import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
-/**
- * “Code agent” section of account settings (MIN-46): the provider and
- * key first, default model second, reasoning last.
- * Each provider has a border fault; OpenRouter BYOK takes over the default of
- * minddy quota (same endpoint).
- *
- * The first block lives in `ByokConnectPanel` since MIN-149: onboarding
- * proposes the same thing at the "key" stage, and two key forms would have
- * diverged at the first provider added.
- */
+/** General Minddy AI routing and separate code-worker execution settings. */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
@@ -69,10 +66,18 @@ export function AccountAiKeysSection() {
   );
 
   const {
+    defaultEngine,
+    nativeAgentsEnabled,
+    nativeModelPreferences,
     defaultModel,
     defaultReasoningLevel,
     loading: prefLoading,
   } = useAgentPreferencesQuery();
+  const usesOpenCode = defaultEngine === "opencode";
+  const usesCodeKey = Boolean(textKey?.enabled_surfaces.includes("agent"));
+  const codeProviderLabel = usesCodeKey && textKey
+    ? getAgentProvider(textKey.provider)?.label ?? textKey.provider
+    : t("aiProviderMinddy");
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const reasoningLevels = useReasoningLevelsFor(
     defaultModel || providerDefaultModel,
@@ -104,61 +109,109 @@ export function AccountAiKeysSection() {
     }
   };
 
+  const onEngineChange = async (engine: AccountAgentEngine) => {
+    await saveAgentEnginePreferenceApi(engine);
+    await queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey });
+  };
+
+  const onCodeFundingChange = async (value: string) => {
+    if (!textKey || (value !== "minddy" && value !== textKey.id)) return;
+    try {
+      const surfaces = textKey.enabled_surfaces.filter((surface) => surface !== "agent");
+      await updateAiKeyPreferencesApi({
+        key_id: textKey.id,
+        enabled_surfaces: value === "minddy" ? surfaces : [...surfaces, "agent"],
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey }),
+      ]);
+      toast.success(t("agentModelSavedToast"));
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
   return (
     <>
-      {/* Provider credentials come first. */}
-      {/* `ByokConnectPanel` is an assistant shared with onboarding: only its
-          surrounding card changes, not its contents. */}
-      <SettingsGroup
-        anchor={SETTINGS_SECTIONS.accountAiProvider}
-        title={t("aiProviderTitle")}
-        variant="block"
-      >
-        <ByokConnectPanel />
-      </SettingsGroup>
-
-      {keys.length > 0 ? <ByokCapabilityAssignments keys={keys} /> : null}
-
-      {keys.filter((key) => key.assigned_capabilities.length > 0).map((key) => (
-        <ByokSurfacePreferences
-          key={key.id}
-          aiKey={key}
-          showAgentPreferences={key.id === textKey?.id}
-          defaultModel={defaultModel}
-          defaultReasoningLevel={defaultReasoningLevel}
-          preferenceLoading={prefLoading}
-          providerDefaultModel={providerDefaultModel}
-          reasoningLevels={reasoningLevels}
-          onModelChange={onModelChange}
-          onReasoningChange={onReasoningChange}
-        />
-      ))}
-
-      {/* Without BYOK, agent preferences keep their card. As soon as a
-          key exists, they live in the Agent Numo row of the table above. */}
-      {!keysLoading && !textKey ? (
-        <SettingsGroup
-          anchor={SETTINGS_SECTIONS.accountAgent}
-          title={t("agentTab")}
-        >
-          <AgentPreferenceRows
-            loading={prefLoading}
-            loadingLabel={tc("loading")}
-            defaultModel={defaultModel}
-            defaultReasoningLevel={defaultReasoningLevel}
-            providerDefaultModel={providerDefaultModel}
-            reasoningLevels={reasoningLevels}
-            onModelChange={onModelChange}
-            onReasoningChange={onReasoningChange}
-          />
+      <section aria-labelledby="minddy-ai-title" className="space-y-5">
+        <header className="space-y-1">
+          <h2 id="minddy-ai-title" className="text-base font-semibold">{t("aiGeneralTitle")}</h2>
+          <p className="text-sm text-muted-foreground">{t("aiGeneralDescription")}</p>
+        </header>
+        <SettingsGroup anchor={SETTINGS_SECTIONS.accountAiProvider}
+          title={t("aiProviderTitle")} variant="block">
+          <ByokCapabilityAssignments keys={keys} capabilities={["text"]} />
+          <NumoModelPreference />
+          <ByokConnectPanel mode="settings" />
         </SettingsGroup>
-      ) : null}
-      <AccountSandboxSection />
+        {keys.length > 0 ? <SettingsGroup title={t("byokRoutingTitle")}><ByokCapabilityAssignments keys={keys} capabilities={MODEL_CATALOG_CAPABILITIES.filter((capability) => capability !== "text")} /></SettingsGroup> : null}
+        {keys.filter((key) => key.assigned_capabilities.length > 0).map((key) => (
+          <ByokSurfacePreferences key={key.id} aiKey={key}
+            providerDefaultModel={providerDefaultModel} />
+        ))}
+      </section>
+
+      <NativeAgentConnections defaultEngine={defaultEngine}
+        nativeAgentsEnabled={nativeAgentsEnabled} preferenceLoading={prefLoading}
+        onEngineChange={onEngineChange} openCodeProviderLabel={codeProviderLabel}>
+        {usesOpenCode && <>
+          <SettingsRow label={t("codeAgentFundingTitle")} hint={t("codeAgentFundingHint")}
+            control={textKey ? <Select value={usesCodeKey ? textKey.id : "minddy"}
+              disabled={keysLoading} onValueChange={(value) => void onCodeFundingChange(value)}>
+              <SelectTrigger className="w-56" aria-label={t("codeAgentFundingTitle")}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minddy">{t("aiProviderMinddy")}</SelectItem>
+                <SelectItem value={textKey.id}>{getAgentProvider(textKey.provider)?.label ?? textKey.provider}</SelectItem>
+              </SelectContent>
+            </Select> : <span className="text-sm">{t("aiProviderMinddy")}</span>} />
+          <AgentPreferenceRows loading={prefLoading} loadingLabel={tc("loading")}
+            defaultModel={defaultModel} defaultReasoningLevel={defaultReasoningLevel}
+            providerDefaultModel={providerDefaultModel} reasoningLevels={reasoningLevels}
+            onModelChange={onModelChange} onReasoningChange={onReasoningChange} />
+        </>}
+        {!usesOpenCode && <NativeAgentModelPreferences key={defaultEngine}
+          engine={defaultEngine} enabled={nativeAgentsEnabled} loading={prefLoading}
+          preference={nativeModelPreferences[defaultEngine]} />}
+        <AccountSandboxSection embedded />
+      </NativeAgentConnections>
     </>
   );
 }
 
-function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
+export function NumoModelPreference() {
+  const t = useTranslations("Account");
+  const ta = useTranslations("Agent");
+  const queryClient = useQueryClient();
+  const preferences = useNumoPreferencesQuery();
+  const [saving, setSaving] = useState(false);
+  const save = async (value: string) => {
+    if (!preferences.data || saving) return;
+    setSaving(true);
+    try {
+      await saveNumoPreferencesApi({ provider: preferences.data.provider, default_model: value || null });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+      ]);
+      toast.success(t("agentModelSavedToast"));
+    } catch {
+      toast.error(t("numoModelSaveError"));
+    } finally { setSaving(false); }
+  };
+  return <SettingsRow label={t("numoDefaultModel")} hint={t("numoDefaultModelHint")}
+    control={<ModelCombobox scope="assistant" value={preferences.data?.default_model ?? ""}
+      onChange={(value) => void save(value)} disabled={preferences.isPending || saving || !preferences.data}
+      defaultLabel={t("numoApplicationDefault")} defaultModelId={preferences.data?.application_model}
+      placeholder={ta("modelSearchPlaceholder")} emptyLabel={ta("modelSearchEmpty")}
+      loadingLabel={ta("modelSearchLoading")} freeTextLabel={(model) => ta("modelUseCustom", { model })}
+      ariaLabel={t("numoDefaultModel")} />}>
+    {preferences.error && <p role="alert" className="py-2 text-sm text-destructive">{t("numoModelLoadError")}</p>}
+  </SettingsRow>;
+}
+
+function ByokCapabilityAssignments({ keys, capabilities }: { keys: AiKey[]; capabilities: readonly ModelCatalogCapability[] }) {
   const t = useTranslations("Account");
   const queryClient = useQueryClient();
   const assignedKey = (capability: ModelCatalogCapability) =>
@@ -176,6 +229,7 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
         queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
         queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
         queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey }),
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
       ]);
       toast.success(t("agentModelSavedToast"));
     } catch (error) {
@@ -184,18 +238,18 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
   };
 
   return (
-    <SettingsGroup title={t("byokRoutingTitle")}>
-      {MODEL_CATALOG_CAPABILITIES.map((capability) => (
+    <div>
+      {capabilities.map((capability) => (
         <SettingsRow
           key={capability}
-          label={t(`byokCapability_${capability}`)}
+          label={capability === "text" ? t("aiProviderTitle") : t(`byokCapability_${capability}`)}
           hint={t("byokRoutingHint")}
           control={
             <Select
               value={assignedKey(capability)?.id ?? "minddy"}
               onValueChange={(value) => void saveAssignment(capability, value)}
             >
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="w-72 max-w-full" aria-label={capability === "text" ? t("aiProviderTitle") : t(`byokCapability_${capability}`)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -206,7 +260,7 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
                   )
                   .map((key) => (
                     <SelectItem key={key.id} value={key.id}>
-                      {getAgentProvider(key.provider)?.label ?? key.provider}
+                      <span className="inline-flex items-center gap-2"><ProviderLogo provider={key.provider} size={16} />{getAgentProvider(key.provider)?.label ?? key.provider}</span>
                     </SelectItem>
                   ))}
               </SelectContent>
@@ -214,7 +268,7 @@ function ByokCapabilityAssignments({ keys }: { keys: AiKey[] }) {
           }
         />
       ))}
-    </SettingsGroup>
+    </div>
   );
 }
 
@@ -228,33 +282,18 @@ function capabilitiesForSurface(
 /** Areas covered by the key and explicit model of each type of call. */
 function ByokSurfacePreferences({
   aiKey: key,
-  showAgentPreferences,
-  defaultModel,
-  defaultReasoningLevel,
-  preferenceLoading,
   providerDefaultModel,
-  reasoningLevels,
-  onModelChange,
-  onReasoningChange,
 }: {
   aiKey: AiKey;
-  showAgentPreferences: boolean;
-  defaultModel: string | null;
-  defaultReasoningLevel: ReasoningLevel;
-  preferenceLoading: boolean;
   providerDefaultModel: string | null;
-  reasoningLevels: ReasoningLevel[];
-  onModelChange: (value: string) => Promise<void>;
-  onReasoningChange: (value: ReasoningLevel) => Promise<void>;
 }) {
   const t = useTranslations("Account");
   const tAgent = useTranslations("Agent");
   const tAdmin = useTranslations("Admin");
-  const tc = useTranslations("Common");
   const queryClient = useQueryClient();
   const visibleSurfaces = AI_SURFACE_DEFINITIONS.filter(
     (surface) =>
-      !isLocalAgentProvider(key.provider) || surface.id === "agent",
+      surface.id !== "agent" && !isLocalAgentProvider(key.provider),
   )
     .map((surface) => ({
       surface,
@@ -274,7 +313,9 @@ function ByokSurfacePreferences({
         key_id: key.id,
         enabled_surfaces: next,
       });
-      await queryClient.invalidateQueries({ queryKey: aiKeysQueryKey });
+      await Promise.all([queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey })]);
       toast.success(t("agentModelSavedToast"));
     } catch (err) {
       toast.error((err as Error).message);
@@ -287,16 +328,18 @@ function ByokSurfacePreferences({
         key_id: key.id,
         feature_models: { ...key.feature_models, [modelKey]: model },
       });
-      await queryClient.invalidateQueries({ queryKey: aiKeysQueryKey });
+      await Promise.all([queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
+        queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey })]);
       toast.success(t("agentModelSavedToast"));
     } catch (err) {
       toast.error((err as Error).message);
     }
   };
 
+  if (!visibleSurfaces.length) return null;
   return (
     <SettingsGroup
-      anchor={showAgentPreferences ? SETTINGS_SECTIONS.accountAgent : undefined}
       title={`${t("byokSurfacesTitle")} · ${getAgentProvider(key.provider)?.label ?? key.provider}`}
     >
       {visibleSurfaces.map(({ surface, assignedCapabilities }) => {
@@ -310,7 +353,7 @@ function ByokSurfacePreferences({
               label={t(`byokSurface_${surface.id}`)}
               hint={
                 enabled
-                  ? t("byokSurfaceUsesKeyFor", {
+                    ? t("byokSurfaceUsesKeyFor", {
                       capabilities: assignedCapabilities
                         .map((capability) => t(`byokCapability_${capability}`))
                         .join(", "),
@@ -326,25 +369,11 @@ function ByokSurfacePreferences({
                 />
               }
             />
-            {surface.id === "agent" && showAgentPreferences ? (
-              <div className="mb-3 ml-4 border-l border-border/70 pl-4">
-                <AgentPreferenceRows
-                  loading={preferenceLoading}
-                  loadingLabel={tc("loading")}
-                  defaultModel={defaultModel}
-                  defaultReasoningLevel={defaultReasoningLevel}
-                  providerDefaultModel={providerDefaultModel}
-                  reasoningLevels={reasoningLevels}
-                  onModelChange={onModelChange}
-                  onReasoningChange={onReasoningChange}
-                />
-              </div>
-            ) : null}
             {enabled && surface.modelKeys.length > 0 ? (
               <div className="mb-3 ml-4 border-l border-border/70 pl-4">
                 {surface.modelKeys
                   .filter((modelKey) =>
-                    key.assigned_capabilities.includes(
+                    modelKey !== "assistant_model" && key.assigned_capabilities.includes(
                       modelCatalogCapabilityForKey(modelKey),
                     ),
                   )

@@ -29,3 +29,11 @@ describe("numoPullRequestFooter", () => {
     );
   });
 });
+
+
+it("records native thinking independently from the API reasoning compatibility value", () => {
+  expect(numoPullRequestFooter({ locale: "en", model: "codex/gpt-test-codex", environment: "cloud", reasoningLevel: "medium", nativeReasoningEffort: "ultra" }))
+    .toContain("Thinking: Ultra");
+  expect(numoPullRequestFooter({ locale: "en", model: "codex/default", environment: "cloud", reasoningLevel: "medium", nativeReasoningEffort: null }))
+    .toContain("Thinking: Automatic");
+});

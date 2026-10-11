@@ -2484,3 +2484,19 @@ transaction, so the existing merge RPC can repoint the group later. Its function
 and trigger were introspected after testing the actual merge RPC. A discarded
 review conditionally releases its own timestamped lease; this additional server
 metadata access was included in the consumer review.
+
+## Personal Numo model preferences
+
+`user_numo_preferences` stores bounded provider/model routing identifiers and an
+update timestamp, not credentials or conversation content. The encryption policy
+classifies these as clear operational configuration. Its `(user_id, provider)`
+key separates account owners and model namespaces; authenticated RLS checks the
+owner on reads and writes. Account deletion cascades from `auth.users`. Account
+transfer copies these identifiers only and rebinds them to the importing owner.
+The authenticated settings API validates models against the effective provider
+catalog and managed plan; generic endpoints may use their own model namespace.
+Missing storage fails explicitly. A cleared preference follows the application
+model, explicit conversation choices take precedence, and admitted turns retain
+their frozen configuration. Apply migration `20270109200040` before enabling the
+updated application. This change was exercised only against the local Docker
+pilot; no remote database migration or production activation is claimed.

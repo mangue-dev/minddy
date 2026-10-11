@@ -167,6 +167,7 @@ export interface AccountExport {
   readme: Record<string, string>;
   account: Row;
   preferences: Row | null;
+  numo_preferences?: Row[];
   owned_projects: Row[];
   memberships: Row[];
   issues: Row[];
@@ -240,6 +241,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
 
   const [
     preferences,
+    numoPreferences,
     memberships,
     ownedIssues,
     myIssues,
@@ -267,6 +269,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     modelKeys,
   ] = await Promise.all([
     service.from("user_agent_preferences").select("*").eq("user_id", userId).maybeSingle(),
+    service.from("user_numo_preferences").select("provider,model,updated_at").eq("user_id", userId),
     Promise.resolve(membershipsResult),
     ownedIds.length
       ? issueStore(service).select(ISSUE_COLUMNS).in("project_id", ownedIds)
@@ -609,6 +612,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       user_metadata: user.user_metadata ?? {},
     },
     preferences: exportedPreferences,
+    numo_preferences: list("user_numo_preferences", numoPreferences),
     owned_projects: exportedProjects,
     memberships: list("project_members", memberships),
     issues: [...issuesById.values()],

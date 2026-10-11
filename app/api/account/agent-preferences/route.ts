@@ -6,6 +6,10 @@ import { isReasoningLevel } from "@/lib/agent-reasoning";
 import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { getUserByok } from "@/lib/server/agent/model";
 import { DEFAULT_AGENT_PROVIDER } from "@/lib/agent-providers";
+import { isNativeModelPreference, normalizeNativeModelPreferences } from "@/lib/native-agent-models";
+import { assertNativeModelPreference } from "@/lib/server/agent/native-prototype/model-catalog";
+import { isLiveAgentEngine } from "@/lib/agent-engines";
+import { nativePrototypeEnabledFor } from "@/lib/server/agent/native-prototype/access";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import {
   DEFAULT_AGENT_BRANCH_PREFIX,
@@ -39,11 +43,13 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await auth.supabase
     .from("user_agent_preferences")
-    .select("default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size")
+    .select("default_engine, default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size, native_model_preferences")
     .eq("user_id", auth.user.id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: "Could not load agent preferences" }, { status: 500 });
   const row = data as {
+    native_model_preferences?: unknown;
+    default_engine?: string | null;
     default_model: string | null;
     default_reasoning_level: string | null;
     branch_prefix: string | null;
@@ -52,6 +58,9 @@ export async function GET(request: NextRequest) {
   } | null;
   return NextResponse.json({
     ...resolveSandboxPreferences(row),
+    native_model_preferences: normalizeNativeModelPreferences(row?.native_model_preferences),
+    default_engine: row?.default_engine ?? "opencode",
+    native_agents_enabled: nativePrototypeEnabledFor(auth.user.id),
     default_model: row?.default_model ?? null,
     default_reasoning_level: isReasoningLevel(row?.default_reasoning_level)
       ? row.default_reasoning_level
@@ -66,6 +75,8 @@ export async function PUT(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   type PrefsBody = {
+    native_model_preferences?: unknown;
+    default_engine?: unknown;
     default_model?: string | null;
     default_reasoning_level?: string | null;
     branch_prefix?: string | null;
@@ -86,6 +97,29 @@ export async function PUT(request: NextRequest) {
     user_id: auth.user.id,
     updated_at: new Date().toISOString(),
   };
+
+  if ("default_engine" in body) {
+    if (!isLiveAgentEngine(body.default_engine)) return NextResponse.json({ errorCode: "profile_invalid" }, { status: 400 });
+    if (body.default_engine !== "opencode") {
+      if (!nativePrototypeEnabledFor(auth.user.id)) return NextResponse.json({ errorCode: "private_prototype_unavailable" }, { status: 403 });
+      // Selecting the desired harness precedes its account connection. Worker
+      // admission still requires usable credentials and never falls back to API.
+    }
+    patch.default_engine = body.default_engine;
+  }
+
+  if ("native_model_preferences" in body) {
+    if (!nativePrototypeEnabledFor(auth.user.id)) return NextResponse.json({ errorCode: "private_prototype_unavailable" }, { status: 403 });
+    const values = body.native_model_preferences;
+    if (!values || typeof values !== "object" || Array.isArray(values) || Object.keys(values).length === 0 || Object.keys(values).some((key) => key !== "codex" && key !== "claude_code")) return NextResponse.json({ errorCode: "profile_invalid" }, { status: 400 });
+    for (const [engine, preference] of Object.entries(values)) {
+      const harness = engine as "codex" | "claude_code";
+      if (!isNativeModelPreference(harness, preference)) return NextResponse.json({ errorCode: "profile_invalid" }, { status: 400 });
+      try { await assertNativeModelPreference(auth.user.id, harness, preference); }
+      catch { return NextResponse.json({ errorCode: "profile_invalid" }, { status: 400 }); }
+    }
+    patch.native_model_preferences = values;
+  }
 
   if ("default_model" in body) {
     const model = body.default_model;
@@ -148,6 +182,8 @@ export async function PUT(request: NextRequest) {
   }
 
   let row: {
+    native_model_preferences?: unknown;
+    default_engine?: string | null;
     default_model: string | null;
     default_reasoning_level: string | null;
     branch_prefix: string | null;
@@ -162,6 +198,9 @@ export async function PUT(request: NextRequest) {
   }
   return NextResponse.json({
     ...resolveSandboxPreferences(row),
+    native_model_preferences: normalizeNativeModelPreferences(row.native_model_preferences),
+    default_engine: row.default_engine ?? "opencode",
+    native_agents_enabled: nativePrototypeEnabledFor(auth.user.id),
     default_model: row.default_model ?? null,
     default_reasoning_level: isReasoningLevel(row.default_reasoning_level)
       ? row.default_reasoning_level

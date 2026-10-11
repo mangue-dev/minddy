@@ -27,6 +27,8 @@ import {
   toast,
 } from "mangue-ui";
 
+import { SettingsRow } from "./settings-ui";
+import { numoPreferencesQueryKey } from "@/lib/use-numo-preferences-query";
 import { ProviderLogo } from "@/components/model-logo";
 import {
   AGENT_PROVIDERS,
@@ -45,19 +47,23 @@ const MINDDY_CLOUD_PROVIDER = "minddy";
 export function ByokConnectPanel({
   className,
   onConnected,
+  mode = "onboarding",
 }: {
   className?: string;
   onConnected?: () => void;
+  mode?: "onboarding" | "settings";
 }) {
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
   const { capabilities } = useRuntimeConfig();
   const managedAiAvailable = capabilities.managedAi?.configured === true;
+  const showManagedChoice = managedAiAvailable && mode === "onboarding";
+  const [adding, setAdding] = useState(mode === "onboarding");
   const { keys, loading } = useAiKeysQuery();
   const [editing, setEditing] = useState<AiKey | null>(null);
   const [provider, setProvider] = useState(() =>
-    managedAiAvailable
+    showManagedChoice
       ? MINDDY_CLOUD_PROVIDER
       : (AGENT_PROVIDERS.find((entry) => !isLocalAgentProvider(entry.id))?.id ?? ""),
   );
@@ -86,16 +92,16 @@ export function ByokConnectPanel({
   useEffect(() => {
     if (
       editing ||
-      (managedAiAvailable && provider === MINDDY_CLOUD_PROVIDER) ||
+      (showManagedChoice && provider === MINDDY_CLOUD_PROVIDER) ||
       (provider && availableProviders.some((entry) => entry.id === provider))
     )
       return;
     setProvider(
-      managedAiAvailable
+      showManagedChoice
         ? MINDDY_CLOUD_PROVIDER
         : (availableProviders[0]?.id ?? ""),
     );
-  }, [availableProviders, editing, managedAiAvailable, provider]);
+  }, [availableProviders, editing, showManagedChoice, provider]);
 
   const selectedDef = getAgentProvider(provider);
   const localProvider = !!selectedDef && isLocalAgentProvider(selectedDef.id);
@@ -104,19 +110,22 @@ export function ByokConnectPanel({
       queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
       queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
       queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey }),
+      queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
     ]);
   const resetForm = () => {
     setEditing(null);
+    setAdding(mode === "onboarding");
     setKeyDraft("");
     setBaseUrlDraft("");
     setProvider(
-      managedAiAvailable
+      showManagedChoice
         ? MINDDY_CLOUD_PROVIDER
         : (availableProviders[0]?.id ?? ""),
     );
   };
   const beginEdit = (key: AiKey) => {
     setEditing(key);
+    setAdding(true);
     setProvider(key.provider);
     setKeyDraft("");
     setBaseUrlDraft(key.base_url ?? "");
@@ -220,6 +229,16 @@ export function ByokConnectPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {mode === "settings" && <>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
+          <div>
+            <h3 className="text-sm font-medium">{t("aiConnectedProviders")}</h3>
+            <p className="text-xs text-muted-foreground">{t("aiMultipleProvidersHint")}</p>
+          </div>
+          {!adding && <Button size="sm" variant="outline" disabled={availableProviders.length === 0}
+            onClick={() => setAdding(true)}>{t("aiAddProvider")}</Button>}
+        </div>
+      </>}
       {keys.map((key) => {
         const definition = getAgentProvider(key.provider);
         return (
@@ -260,19 +279,21 @@ export function ByokConnectPanel({
         );
       })}
 
-      <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
+      {adding && <div className="flex flex-col gap-3 rounded-lg border border-border/70 p-3">
+        <SettingsRow label={editing ? tc("edit") : t(mode === "settings" ? "aiAddProvider" : "aiProviderTitle")}
+          control={
           <Select
             value={provider}
             onValueChange={selectProvider}
             disabled={!!editing}
           >
-            <SelectTrigger className="w-full bg-card hover:bg-muted">
+            <SelectTrigger className="w-72 max-w-full" aria-label={t(mode === "settings" ? "aiAddProvider" : "aiProviderTitle")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>{t("aiProviderCloudGroup")}</SelectLabel>
-                {managedAiAvailable && !editing ? (
+                {showManagedChoice && !editing ? (
                   <SelectItem value={MINDDY_CLOUD_PROVIDER}>
                     {t("aiProviderMinddy")}
                   </SelectItem>
@@ -303,7 +324,7 @@ export function ByokConnectPanel({
                 </>
               ) : null}
             </SelectContent>
-          </Select>
+          </Select>} />
           {provider === MINDDY_CLOUD_PROVIDER ? (
             <p className="text-xs text-muted-foreground">
               {t("aiProviderMinddyHint")}
@@ -355,7 +376,7 @@ export function ByokConnectPanel({
             </a>
           ) : null}
           <div className="flex justify-end gap-2">
-            {editing ? (
+            {mode === "settings" || editing ? (
               <Button type="button" variant="outline" onClick={resetForm}>
                 {tc("cancel")}
               </Button>
@@ -371,7 +392,7 @@ export function ByokConnectPanel({
               </Button>
             ) : null}
           </div>
-        </div>
+        </div>}
       {keys.some((key) => !key.validated_at) ? (
         <p className="text-xs text-amber-600 dark:text-amber-500">
           {t("aiKeyUnconfirmed")}

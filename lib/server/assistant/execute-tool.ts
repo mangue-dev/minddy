@@ -3,6 +3,7 @@ import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
 import { abortableReadClient } from "./abortable-read-client";
+import { workerHarnessContext } from "./worker-harness-context";
 import { randomUUID } from "node:crypto";
 import { DatabaseOperationError, failureDiagnostics } from "@/lib/server/failure-diagnostics";
 import { categoryStore } from "@/lib/server/category-store";
@@ -382,7 +383,11 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
     case "noModelForProvider":
       return "No code-worker model is configured for the active provider. Ask the user to choose one in Account settings; Numo cannot substitute or change it.";
     case "workerConfigurationManagedInSettings":
-      return "Code-worker model and reasoning can only be changed by the user in Account settings.";
+      return "Code-agent engine, model and reasoning can only be changed by the user in Account settings.";
+    case "nativeConnectionRequired":
+      return "The selected native code agent needs its personal account connection. Ask the user to connect or reconnect it in Account settings → AI, or explicitly select OpenCode. Do not switch harness, provider or payer automatically.";
+    case "nativeAgentUnavailable":
+      return "The selected native code agent is unavailable or its connection is in use. Explain the refusal and check account AI settings. Do not switch harness, provider or payer automatically.";
     case "continuationNotFound":
       return "The requested worker continuation is not available in this repository or does not belong to this account.";
     case "prNotFound":
@@ -2017,9 +2022,9 @@ export async function executeTool(
       }
 
       case "launch_code_agent": {
-        if ("model" in args || "reasoning_level" in args) {
+        if ("engine" in args || "default_engine" in args || "model" in args || "reasoning_level" in args) {
           return toolError(
-            "Code-worker model and reasoning are controlled in Account settings and cannot be overridden by Numo.",
+            "Code-agent engine, model and reasoning are controlled in Account settings and cannot be overridden by Numo.",
           );
         }
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
@@ -2208,6 +2213,7 @@ export async function executeTool(
                 status: relaunch.run.status,
                 model: relaunch.run.model,
                 reasoning_level: relaunch.run.reasoning_level,
+                ...workerHarnessContext(relaunch.run),
                 parent_turn_id: ctx.turnId,
                 contract_version: 1,
               },
@@ -2273,6 +2279,7 @@ export async function executeTool(
             status: result.run.status,
             model: result.run.model,
             reasoning_level: result.run.reasoning_level,
+            ...workerHarnessContext(result.run),
             ...(durableDelegation
               ? {
                   parent_turn_id: ctx.turnId,
