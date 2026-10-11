@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
+    "revision": 6,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (it translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [],
   "aliases": [],
@@ -55,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/scheduled-routines-workflow.png",
-      "alt": "Schede degli attivatori, scelta dell’evento, gruppi E/O annidati e ritardo di avvio separato.",
+      "alt": "Modalità Programmato ed Evento, un gruppo di condizioni, icone dell’app e pulsanti informativi discreti.",
       "caption": "Dimostrazione locale dell’editor effettivo degli attivatori. Nessuna routine è stata salvata o eseguita.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-11",
+      "capturedAt": "2026-10-12",
       "viewport": [
         788,
-        1257
+        910
       ],
       "theme": "light",
       "padding": 24,
@@ -79,25 +79,26 @@
 
 Solo il proprietario del progetto può creare, modificare o attivare una routine. Apri Routine, scegli un progetto di cui sei proprietario e scrivi le istruzioni per Numo. Menziona ticket, pagine o obiettivi pertinenti. Ogni esecuzione ha una conversazione Numo privata, una cronologia, gli strumenti Minddy e una delega di codice facoltativa. I worker usano le impostazioni del proprietario; il repository serve solo per lavorare sul codice.
 
-Scegli un attivatore:
+Scegli **Programmato** o **Evento**. Gli arrivi in un database sono un’opzione dell’elenco degli eventi.
 
-- **Pianificazione:** frequenza giornaliera, settimanale o mensile, ora e il tuo fuso orario. Controlla l’anteprima della prima esecuzione.
-- **Evento:** creazione di ticket, ingresso in uno stato specifico, assegnazione, commento su un ticket seguito o ricezione di feedback. Seleziona stato, persona o ticket quando richiesto. L’attivatore di stato comprende i ticket creati direttamente in quello stato. L’assegnazione richiede un cambio effettivo della persona assegnata.
-- **Voce di database:** scegli un database di pagine del progetto. Creazione, duplicazione, importazione di database o spostamento nel database contano come arrivo. Ripristinare una voce non crea un nuovo arrivo.
+- **Programmato:** frequenza giornaliera, settimanale o mensile, ora e il tuo fuso orario. Controlla l’anteprima della prima esecuzione.
+- **Evento:** creazione di ticket, ingresso in uno stato specifico, assegnazione, commento su un ticket seguito, ricezione di feedback o una nuova voce di database. Seleziona stato, persona o ticket quando richiesto. L’attivatore di stato comprende i ticket creati direttamente in quello stato. L’assegnazione richiede un cambio effettivo della persona assegnata.
 
-Per un attivatore di evento o database, seleziona la sua scheda e configura **Quando accade questo**. Le **Condizioni** sono facoltative: senza filtri, ogni evento corrispondente può avviare la routine. Imposta il ritardo separatamente in **Momento di avvio**. Le condizioni numerate e i gruppi rientrati mostrano quali regole appartengono allo stesso gruppo. Usa le frecce e Invio nei selettori; gli elenchi lunghi includono un campo di ricerca.
+Per un arrivo in un database, scegli **Nuova voce nel database** nell’elenco degli eventi, poi un database di pagine del progetto. Creazione, duplicazione, importazione di database o spostamento nel database contano come arrivo. Ripristinare una voce non crea un nuovo arrivo.
+
+Le **Condizioni** sono facoltative: senza filtri, ogni evento corrispondente può avviare la routine. Imposta il ritardo separatamente in **Momento di avvio**. I piccoli pulsanti informativi spiegano l’attesa e il ritardo. I selettori usano gli stessi indicatori di stato, priorità, categoria e persona di Minddy. Usa le frecce e Invio; gli elenchi lunghi includono la ricerca.
 
 Se necessario, imposta un’attesa dopo l’evento da 0 a 120 minuti. Conserva il fuso orario nel contesto di Numo. Le routine di evento e database attendono arrivi futuri senza una prossima data pianificata. L’elaborazione automatica richiede lo scheduler dell’istanza; l’avvio manuale resta disponibile.
 
 ## Costruire condizioni che possono attendere {#conditions}
 
-Usa **Aggiungi condizione** e **Aggiungi gruppo** per combinare **Tutte le condizioni** (E) e **Una qualsiasi condizione** (O). Scegli stato, persona assegnata, categoria, priorità o impegno; per un database, una proprietà tipizzata. Seleziona operatore compatibile e valore. Persone, categorie e database devono appartenere al progetto. Le condizioni sono limitate a sei livelli annidati e 64 nodi, senza espressioni eseguibili.
+Usa **Aggiungi condizione** per creare un solo gruppo di massimo 16 condizioni. Scegli **Tutte le condizioni** (E) o **Qualsiasi condizione** (O) per l’intero gruppo. Seleziona stato, persona assegnata, categoria, priorità o impegno; per un database, la sua proprietà tipizzata. Scegli un operatore compatibile e un valore. Persone, categorie e database devono appartenere al progetto. Non è possibile aggiungere gruppi annidati. Le regole annidate salvate mantengono la propria logica; se non possono essere mostrate come un singolo gruppo equivalente, **Sostituisci condizioni** le elimina per creare un gruppo nuovo.
 
-Esempio: ingresso in Triage E categoria Backend E (una persona è assegnata O la priorità è Alta). Un ticket senza categoria rimane in attesa. Aggiungere Backend in seguito può avviare l’esecuzione. Un’attesa già consumata non può avviare una seconda esecuzione. Uscire dallo stato specificato la annulla; rientrarvi ne crea una nuova. Anche una riassegnazione sostituisce l’attesa precedente.
+Esempio: ingresso in Triage, con tutte le condizioni che richiedono la categoria Backend e la priorità Alta. Un ticket che arriva senza categoria resta in attesa. Aggiungere Backend in seguito può avviare l’esecuzione. Un’attesa già consumata non può avviare una seconda esecuzione. Uscire dallo stato specificato la annulla; rientrarvi ne crea una nuova. Anche una riassegnazione sostituisce l’attesa precedente.
 
 Una voce senza la proprietà richiesta attende una modifica che soddisfi il filtro. Eliminare una proprietà referenziata o cambiarne il tipo mostra un errore di filtro: correggi le condizioni prima di proseguire. L’attesa si applica anche quando il filtro diventa vero più tardi. La ricezione di feedback include contenuti privati e in revisione; Numo non li pubblica e non aggira la moderazione.
 
-![Schede degli attivatori, scelta dell’evento, gruppi E/O annidati e ritardo di avvio separato.](/documentation/it/scheduled-routines-workflow.png)
+![Modalità Programmato ed Evento, un gruppo di condizioni, icone dell’app e pulsanti informativi discreti.](/documentation/it/scheduled-routines-workflow.png)
 
 ## Gestire e verificare le esecuzioni {#runs}
 

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
+    "revision": 6,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (es translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [],
   "aliases": [],
@@ -55,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/es/scheduled-routines-workflow.png",
-      "alt": "Tarjetas de desencadenantes, selección del evento, grupos Y/O anidados y retraso de inicio separado.",
+      "alt": "Modos Programado y Evento, un grupo de condiciones, iconos de la aplicación y botones de información discretos.",
       "caption": "Demostración local del editor real de desencadenantes. No se guardó ni ejecutó ninguna rutina.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-11",
+      "capturedAt": "2026-10-12",
       "viewport": [
         788,
-        1277
+        910
       ],
       "theme": "light",
       "padding": 24,
@@ -79,25 +79,26 @@
 
 Solo el propietario del proyecto puede crear, modificar o activar una rutina. Abre Rutinas, elige un proyecto propio y redacta las instrucciones para Numo. Menciona las incidencias, páginas u objetivos relevantes. Cada ejecución tiene una conversación privada de Numo, historial, herramientas Minddy y delegación de código opcional. Los workers usan los valores del propietario; solo hace falta un repositorio para trabajar en su código.
 
-Elige un desencadenante:
+Elige **Programado** o **Evento**. Las llegadas a una base son una opción de la lista de eventos.
 
-- **Horario:** frecuencia diaria, semanal o mensual, hora y tu zona horaria. Comprueba la vista previa del primer inicio.
-- **Evento:** creación de incidencia, entrada en un estado objetivo, asignación, comentario en una incidencia seguida o recepción de feedback. Elige el estado, persona o incidencia que se solicite. El evento de estado incluye incidencias creadas directamente en ese estado. Una asignación requiere un cambio real de persona asignada.
-- **Entrada de base:** elige una base de páginas del proyecto. La creación, duplicación, importación de una base o traslado hacia esa base cuentan como llegada. Restaurar una entrada no genera una nueva llegada.
+- **Programado:** frecuencia diaria, semanal o mensual, hora y tu zona horaria. Comprueba la vista previa del primer inicio.
+- **Evento:** creación de incidencia, entrada en un estado objetivo, asignación, comentario en una incidencia seguida, recepción de feedback o una nueva entrada en una base. Elige el estado, persona o incidencia que se solicite. El evento de estado incluye incidencias creadas directamente en ese estado. Una asignación requiere un cambio real de persona asignada.
 
-Para un desencadenante de evento o de base, selecciona su tarjeta y configura **Cuando ocurre esto**. Las **Condiciones** son opcionales: sin filtros, cada evento coincidente puede iniciar la rutina. Define el retraso por separado en **Momento de inicio**. Las condiciones numeradas y los grupos con sangría muestran qué reglas van juntas. Usa las flechas y Entrar en los selectores; las listas largas incluyen un campo de búsqueda.
+Para una llegada a una base, elige **Nueva entrada en una base de datos** en la lista de eventos y después una base de páginas del proyecto. La creación, duplicación, importación de una base o traslado hacia esa base cuentan como llegada. Restaurar una entrada no genera una nueva llegada.
+
+Las **Condiciones** son opcionales: sin filtros, cada evento coincidente puede iniciar la rutina. Define el retraso por separado en **Momento de inicio**. Los pequeños botones de información explican la espera y el retraso. Los selectores usan los mismos indicadores de estado, prioridad, categoría y persona que Minddy. Usa las flechas y Entrar; las listas largas incluyen una búsqueda.
 
 Si hace falta, configura una espera tras el evento de 0 a 120 minutos. Tu zona horaria sigue formando parte del contexto de Numo. Las rutinas de evento y base esperan futuras llegadas sin fecha planificada. El procesamiento automático necesita el scheduler de la instancia; el inicio manual sigue disponible.
 
 ## Crear condiciones que pueden esperar {#conditions}
 
-Usa **Añadir condición** y **Añadir grupo** para combinar **Todas las condiciones** (Y) y **Cualquier condición** (O). Selecciona estado, persona asignada, categoría, prioridad o esfuerzo; en una base, su propiedad tipada. Elige un operador compatible y un valor. Personas, categorías y bases deben pertenecer al proyecto. Las condiciones se limitan a seis niveles anidados y 64 nodos, sin expresiones ejecutables.
+Usa **Añadir condición** para crear un solo grupo de hasta 16 condiciones. Elige **Todas las condiciones** (Y) o **Cualquier condición** (O) para todo el grupo. Selecciona estado, persona asignada, categoría, prioridad o esfuerzo; para una base, su propiedad tipada. Elige un operador compatible y un valor. Las personas, categorías y bases deben pertenecer al proyecto. No se pueden añadir grupos anidados. Las reglas anidadas guardadas conservan su lógica; si no pueden mostrarse como un solo grupo equivalente, **Reemplazar condiciones** las borra para crear un grupo nuevo.
 
-Ejemplo: entrada en Triaje Y categoría Backend Y (hay una persona asignada O la prioridad es Alta). Una incidencia sin categoría queda esperando. Añadir Backend después puede iniciar la ejecución. Una espera ya consumida no puede iniciar otra ejecución. Salir del estado objetivo la cancela; volver a entrar crea una nueva. Una reasignación también sustituye la espera anterior.
+Ejemplo: entrada en Triage, con todas las condiciones exigiendo la categoría Backend y la prioridad Alta. Una incidencia que llega sin categoría sigue esperando. Añadir Backend después puede iniciar la ejecución. Una espera ya consumida no puede iniciar otra ejecución. Salir del estado objetivo la cancela; volver a entrar crea una nueva. Una reasignación también sustituye la espera anterior.
 
 Una entrada sin su propiedad obligatoria espera hasta que una edición cumpla el filtro. Eliminar una propiedad referenciada o cambiar su tipo muestra un error de filtro: corrige las condiciones antes de continuar. La espera configurada se respeta aunque el filtro se cumpla más tarde. La recepción de feedback incluye contenido privado y pendiente; Numo no lo publica ni evita su moderación.
 
-![Tarjetas de desencadenantes, selección del evento, grupos Y/O anidados y retraso de inicio separado.](/documentation/es/scheduled-routines-workflow.png)
+![Modos Programado y Evento, un grupo de condiciones, iconos de la aplicación y botones de información discretos.](/documentation/es/scheduled-routines-workflow.png)
 
 ## Gestionar y comprobar ejecuciones {#runs}
 

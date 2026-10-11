@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root (MIN-677 source review, isolated PostgreSQL regressions and trigger editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
+    "revision": 6,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
     "language": "agent:/root (pt-BR translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-12"
   },
   "related": [],
   "aliases": [],
@@ -55,14 +55,14 @@
       "id": "scheduled-routines-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/scheduled-routines-workflow.png",
-      "alt": "Cartões de gatilhos, seleção do evento, grupos E/OU aninhados e atraso de início separado.",
+      "alt": "Modos Agendado e Evento, um grupo de condições, ícones do aplicativo e botões de informação discretos.",
       "caption": "Demonstração local do editor real de gatilhos. Nenhuma rotina foi salva ou executada.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
-      "capturedAt": "2026-10-11",
+      "capturedAt": "2026-10-12",
       "viewport": [
         788,
-        1277
+        910
       ],
       "theme": "light",
       "padding": 24,
@@ -79,25 +79,26 @@
 
 Somente o proprietário do projeto pode criar, editar ou ativar uma rotina. Abra Rotinas, escolha um projeto seu e escreva as instruções para Numo. Mencione tickets, páginas ou objetivos relevantes. Cada execução tem uma conversa privada com Numo, histórico, ferramentas Minddy e delegação de código opcional. Os workers usam as configurações do proprietário; um repositório só é necessário para trabalhar no código.
 
-Escolha um gatilho:
+Escolha **Agendado** ou **Evento**. As chegadas a um banco são uma opção da lista de eventos.
 
-- **Agenda:** frequência diária, semanal ou mensal, horário e seu fuso. Confira a prévia da primeira execução.
-- **Evento:** criação de ticket, entrada em um status específico, atribuição, comentário em um ticket acompanhado ou recebimento de feedback. Selecione status, pessoa ou ticket quando solicitado. O gatilho de status inclui tickets criados diretamente nesse status. Uma atribuição exige uma mudança real da pessoa responsável.
-- **Entrada de banco:** escolha um banco de páginas do projeto. Criação, duplicação, importação de banco ou movimentação para esse banco contam como chegada. Restaurar uma entrada não gera outra chegada.
+- **Agendado:** frequência diária, semanal ou mensal, horário e seu fuso. Confira a prévia da primeira execução.
+- **Evento:** criação de ticket, entrada em um status específico, atribuição, comentário em um ticket acompanhado, recebimento de feedback ou uma nova entrada em um banco. Selecione status, pessoa ou ticket quando solicitado. O gatilho de status inclui tickets criados diretamente nesse status. Uma atribuição exige uma mudança real da pessoa responsável.
 
-Para um gatilho de evento ou de base, selecione seu cartão e configure **Quando isso acontece**. As **Condições** são opcionais: sem filtros, cada evento correspondente pode iniciar a rotina. Defina o atraso separadamente em **Momento de início**. As condições numeradas e os grupos recuados mostram quais regras pertencem ao mesmo grupo. Use as setas e Enter nos seletores; as listas longas incluem um campo de busca.
+Para uma chegada a um banco, escolha **Nova entrada no banco de dados** na lista de eventos e depois um banco de páginas do projeto. Criação, duplicação, importação de banco ou movimentação para esse banco contam como chegada. Restaurar uma entrada não gera outra chegada.
+
+As **Condições** são opcionais: sem filtros, cada evento correspondente pode iniciar a rotina. Defina o atraso separadamente em **Momento de início**. Os pequenos botões de informação explicam a espera e o atraso. Os seletores usam os mesmos indicadores de status, prioridade, categoria e pessoa do Minddy. Use as setas e Enter; as listas longas incluem uma busca.
 
 Se necessário, defina uma espera após o evento de 0 a 120 minutos. Mantenha seu fuso no contexto de Numo. Rotinas de evento e banco aguardam chegadas futuras sem próxima data agendada. O processamento automático precisa do scheduler da instância; a execução manual continua disponível.
 
 ## Criar condições que podem aguardar {#conditions}
 
-Use **Adicionar condição** e **Adicionar grupo** para combinar **Todas as condições** (E) e **Qualquer condição** (OU). Escolha status, responsável, categoria, prioridade ou esforço; para um banco, sua propriedade tipada. Selecione um operador compatível e um valor. Pessoas, categorias e bancos precisam pertencer ao projeto. As condições têm limite de seis níveis aninhados e 64 nós, sem expressões executáveis.
+Use **Adicionar condição** para criar um único grupo de até 16 condições. Escolha **Todas as condições** (E) ou **Qualquer condição** (OU) para todo o grupo. Selecione status, pessoa responsável, categoria, prioridade ou esforço; para um banco, sua propriedade tipada. Escolha um operador compatível e um valor. Pessoas, categorias e bancos devem pertencer ao projeto. Não é possível adicionar grupos aninhados. As regras aninhadas salvas mantêm sua lógica; se não puderem ser exibidas como um único grupo equivalente, **Substituir condições** as apaga para criar um grupo novo.
 
-Exemplo: entrada em Triagem E categoria Backend E (há uma pessoa responsável OU a prioridade é Alta). Um ticket sem categoria permanece aguardando. Adicionar Backend depois pode iniciar a execução. Uma espera consumida não pode iniciar outra execução. Sair do status escolhido cancela a espera; entrar novamente cria outra. Uma reatribuição também substitui a espera anterior.
+Exemplo: entrada em Triage, com todas as condições exigindo a categoria Backend e a prioridade Alta. Um ticket que chega sem categoria fica aguardando. Adicionar Backend depois pode iniciar a execução. Uma espera consumida não pode iniciar outra execução. Sair do status escolhido cancela a espera; entrar novamente cria outra. Uma reatribuição também substitui a espera anterior.
 
 Uma entrada sem a propriedade exigida aguarda uma edição que satisfaça o filtro. Remover uma propriedade referenciada ou mudar seu tipo mostra um erro de filtro: corrija as condições antes de continuar. A espera configurada também é respeitada quando o filtro é satisfeito mais tarde. O recebimento de feedback inclui conteúdo privado e pendente; Numo não o publica nem contorna a moderação.
 
-![Cartões de gatilhos, seleção do evento, grupos E/OU aninhados e atraso de início separado.](/documentation/pt-BR/scheduled-routines-workflow.png)
+![Modos Agendado e Evento, um grupo de condições, ícones do aplicativo e botões de informação discretos.](/documentation/pt-BR/scheduled-routines-workflow.png)
 
 ## Gerenciar e verificar execuções {#runs}
 

@@ -111,3 +111,38 @@ The four relevant Vitest suites passed all 20 tests. Typecheck, lint,
 `check:documentation`, `check:documentation:release`, `check:knowledge`,
 `check:owned-english` and whitespace checks passed. Backend behavior and the
 previous broader validation results above retain their prior evidence.
+
+
+## Single-group trigger editor follow-up
+
+On 2026-10-12, agent:/root reviewed the simplified creation/editing controls.
+The editor now offers Scheduled or Event, with page database arrivals inside
+the event list. The renamed scheduled label was reviewed against all six runtime catalogs. Event target fields retain the
+existing persisted trigger contracts and launch delay.
+
+Conditions have one AND/OR group with up to 16 rules. Nested groups cannot be
+added. Equivalent saved groups are presented flat; mixed logic or groups beyond
+the editor limit remain unchanged until the owner explicitly replaces them.
+Status and priority indicators, member avatars, category/option color markers
+and database property icons reuse the application's components. Explanations
+use the settings information popovers with contextual accessible labels.
+
+Workflow N06, article `scheduled-routines` and figure
+`scheduled-routines-workflow` are revision 6 across en, fr, de, es, it and pt-BR.
+Agent:/root reviewed all six complete changed translations, control labels,
+examples, captions, alt text and actual light-mode figures. The English mobile
+PR capture was renewed. Unchanged behavior retains the prior validation above.
+
+Actual local-fixture Playwright checks passed for the unified event selection,
+no nested-group insertion, equivalent/explicit legacy handling, condition and
+status icons, information popovers, keyboard selection, removal focus, searchable
+people, multiple values, numeric empty/decimal values, boolean false and schedule
+field visibility. English database and French condition layouts were checked at
+390 pixels without horizontal overflow or clipped group rules. External requests
+were blocked and no routine was saved or executed. Exact dimensions and results
+are recorded in `min-677-editor-captures.json`.
+
+Three relevant Vitest suites passed all 18 tests. Typecheck, lint,
+`check:documentation`, `check:documentation:release`, `check:knowledge`,
+`check:owned-english` and whitespace checks passed. This follow-up changes the
+editor only; the previous backend validation remains applicable.
