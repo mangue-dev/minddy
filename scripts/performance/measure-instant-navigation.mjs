@@ -7,6 +7,7 @@ import { chromium, _electron, request } from "playwright";
 import { createServerClient } from "@supabase/ssr";
 import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
 import { EMAIL, MARKER, assertScope, id } from "./seed.mjs";
+import { measureDeepNavigation } from "./measure-deep-navigation.mjs";
 
 // Real authorized reads against the existing encrypted fixture. No reseeding,
 // personal profile, content mutation, generated API response or paid workflow.
@@ -43,6 +44,8 @@ async function api(url, method = "GET", data) {
 }
 const project = fixture.projects[0];
 const secondary = process.argv.includes("--secondary");
+const deep = process.argv.includes("--deep");
+assert.ok(!(deep && secondary), "Choose one journey workload");
 const tabs = secondary ? [
   { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: 600 },
   { id: id("min683-tab-home"), custom_name: "MIN-683 home", href: "/home", home: true },
@@ -50,7 +53,7 @@ const tabs = secondary ? [
 ] : [
   { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: 600 },
   { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: 100 },
-  { id: id("min683-tab-page"), custom_name: "MIN-683 Page", href: `/projects/${project}/pages/${fixture.firstPage}` },
+  { id: id("min683-tab-page"), custom_name: "MIN-683 Page", href: `/projects/${project}/pages/${deep ? id("page-0-10") : fixture.firstPage}` },
 ];
 const tabFields = ({ id, user_id, href, custom_name, pinned, position }) => ({ id, user_id, href, custom_name, pinned, position });
 async function listTabs() {
@@ -65,11 +68,19 @@ async function removeTab(spec) {
   assert.equal(found.custom_name, spec.custom_name, "Refusing to remove an unrecognized tab");
   await api(`/api/me/app-tabs/${spec.id}`, "DELETE", { revision: found.revision });
 }
-const results = { label, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
-  build: (await readFile(".next/BUILD_ID", "utf8")).trim(), timestamp: new Date().toISOString(),
-  runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: secondary ? "secondary" : "primary",
+const productRoot = process.env.MINDDY_PERF_BUILD_ROOT ?? process.cwd();
+const productBuild = (await readFile(path.join(productRoot, ".next/BUILD_ID"), "utf8")).trim();
+const productSha = process.env.MINDDY_PERF_BUILD_ROOT
+  ? JSON.parse(await readFile(path.join(productRoot, ".next/min683-product.json"), "utf8"))
+  : { sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), build: productBuild };
+assert.equal(productSha.build, productBuild, "Product manifest must match the measured production build");
+assert.match(productSha.sha, /^[a-f0-9]{40}$/);
+const results = { label, sha: productSha.sha,
+  build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}) }, timestamp: new Date().toISOString(),
+  runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
 let browser, context, page, userData, preserved, failure, changedIssue;
+const preservedPages = [];
 const created = [];
 const pendingNetwork = new Set();
 try {
@@ -77,6 +88,18 @@ try {
   const original = await api(`/api/projects/${project}/pages/${fixture.firstPage}`);
   assertScope("pages", original, fixture.userId);
   assert.equal(original.content.content.length, 80);
+  if (deep) {
+    assert.equal(fixture.pageBlockWorkload?.stableBlockIds, true, "Normalize the deep-navigation fixture first");
+    for (const [project, document] of [[0, 10], [0, 11], [1, 0], [1, 1]]) {
+      const href = `/api/projects/${id(`project-${project}`)}/pages/${id(`page-${project}-${document}`)}`;
+      const value = await api(href);
+      assertScope("pages", value, fixture.userId);
+      assert.equal(value.content.content.length, 80);
+      assert.equal(new Set(value.content.content.map((block) => block.attrs?.blockId)).size, 80);
+      assert.ok(value.content.content.every((block) => typeof block.attrs?.blockId === "string"));
+      preservedPages.push({ href, content: value.content, version: value.version });
+    }
+  }
   preserved = (await listTabs()).filter((tab) => !tabs.some((spec) => spec.id === tab.id)).map(tabFields);
   for (const spec of tabs) {
     await removeTab(spec);
@@ -132,7 +155,7 @@ try {
     const root = document.querySelector('[data-app-view-active="true"]');
     if (location.pathname !== href || !document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`)) return false;
     return cards ? root?.getClientRects().length > 0 && !root.inert && root.querySelectorAll("[data-issue-id]").length === cards
-      : [...document.querySelectorAll(".page-editor .tiptap")].some((node) => node.getClientRects().length && node.querySelectorAll("[data-id]").length >= 80);
+      : [...document.querySelectorAll(".page-editor .tiptap")].some((node) => node.getClientRects().length && node.querySelectorAll(":scope > h2").length === 8 && node.querySelectorAll(":scope > p").length === 72);
   }, { cards: spec.cards, href: spec.href, tab: spec.id }, { polling: "raf" });
   const frames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const start = Date.now();
@@ -157,9 +180,10 @@ try {
       const checkComplete = new Function("args", `return (${complete})(args)`);
       const onDown = (event) => {
         if (!event.isTrusted) return;
-        const sample = window.__instant.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, domMs: null, paintMs: null, completeMs: null, boardSkeletonFrames: 0 };
+        const sample = window.__instant.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, domMs: null, paintMs: null, completeMs: null, boardSkeletonFrames: 0, loadingFrames: 0 };
         const observe = () => {
           if ([...document.querySelectorAll('[data-board-loading-skeleton]')].some((node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden")) sample.boardSkeletonFrames++;
+          if ([...document.querySelectorAll('[data-slot="skeleton"], [role="status"][aria-label="Loading"], [data-board-loading-skeleton], [data-testid="pr-sidebar-loading"], [data-testid="pr-detail-loading-content"]')].some((node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden")) sample.loadingFrames++;
           if (!check(args)) { requestAnimationFrame(observe); return; }
           sample.domMs = performance.now() - sample.start;
           requestAnimationFrame(() => requestAnimationFrame(() => { sample.paintMs = performance.now() - sample.start; }));
@@ -202,28 +226,54 @@ try {
   // Ten seconds of normal idle usage is the preparation opportunity. Record
   // it identically in both variants; startup is already measured above.
   await page.waitForTimeout(10000);
-  await tab(tabs[1], secondary ? "unvisited-home" : "unvisited-project");
-  await tab(tabs[2], secondary ? "unvisited-pr-list" : "unvisited-page");
-  await tab(tabs[0], "return-board-first");
-  for (let index = 0; index < repeats; index++) {
-    if (secondary) {
-      await tab(tabs[1], "board-to-home");
-      await tab(tabs[2], "home-to-pr-list");
-      await tab(tabs[0], "pr-list-to-board");
+  if (deep) {
+    await tab(tabs[1], "initial-project-tab");
+    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results });
+  } else {
+    await tab(tabs[1], secondary ? "unvisited-home" : "unvisited-project");
+    await tab(tabs[2], secondary ? "unvisited-pr-list" : "unvisited-page");
+    await tab(tabs[0], "return-board-first");
+    for (let index = 0; index < repeats; index++) {
+      if (secondary) {
+        await tab(tabs[1], "board-to-home");
+        await tab(tabs[2], "home-to-pr-list");
+        await tab(tabs[0], "pr-list-to-board");
+        await page.waitForTimeout(350);
+        continue;
+      }
+      await clickMeasured("issue-open", page.locator(`[data-app-view-active="true"] [data-issue-id="${fixture.firstIssue}"]`),
+        () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task")), null,
+        () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task") && node.querySelector('[data-query-read-phase="fresh"] [data-comment-id]')?.getClientRects().length));
+      await page.keyboard.press("Escape");
+      await page.locator('[role="dialog"]').first().waitFor({ state: "hidden" });
+      await tab(tabs[1], "board-to-project");
+      await tab(tabs[2], "project-to-page");
+      await tab(tabs[0], "page-to-board");
       await page.waitForTimeout(350);
-      continue;
     }
-    await clickMeasured("issue-open", page.locator(`[data-app-view-active="true"] [data-issue-id="${fixture.firstIssue}"]`),
-      () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task")), null,
-      () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task") && node.querySelector('[data-query-read-phase="fresh"] [data-comment-id]')?.getClientRects().length));
-    await page.keyboard.press("Escape");
-    await page.locator('[role="dialog"]').first().waitFor({ state: "hidden" });
-    await tab(tabs[1], "board-to-project");
-    await tab(tabs[2], "project-to-page");
-    await tab(tabs[0], "page-to-board");
-    await page.waitForTimeout(350);
   }
-  if (process.argv.includes("--verify")) {
+  if (process.argv.includes("--verify") && secondary) {
+    await tab(tabs[1], "verification-home");
+    const composer = page.locator('[data-retained-home-view] [contenteditable][aria-placeholder*="Numo"]');
+    await composer.fill("MIN-683 unsent fixture draft");
+    await composer.evaluate((node) => { window.__instant.homeComposer = node; });
+    await tab(tabs[0], "verification-away-from-home");
+    assert.equal(await composer.evaluate((node) => !!node.closest('[inert][aria-hidden="true"]')), true);
+    await tab(tabs[1], "verification-return-home");
+    assert.equal(await composer.evaluate((node) => node === window.__instant.homeComposer), true);
+    assert.equal(await composer.textContent(), "MIN-683 unsent fixture draft");
+    await page.setViewportSize({ width: 600, height: results.viewport.height });
+    await page.waitForFunction(() => innerWidth === 600);
+    await page.waitForTimeout(500);
+    assert.equal(await composer.evaluate((node) => node === window.__instant.homeComposer), true);
+    await page.setViewportSize({ width: results.viewport.width, height: results.viewport.height });
+    await page.waitForFunction((width) => innerWidth === width, results.viewport.width);
+    await page.waitForTimeout(500);
+    assert.equal(await composer.evaluate((node) => node === window.__instant.homeComposer), true);
+    assert.equal(await composer.textContent(), "MIN-683 unsent fixture draft");
+    await composer.fill("");
+    results.verification = { homeDraftPreserved: true, homeResponsiveDomPreserved: true, hiddenHomeInert: true, fixtureDraftCleared: true };
+  } else if (process.argv.includes("--verify")) {
     const active = () => page.locator('[data-app-view-active="true"]');
     const original = await api(`/api/issues/${fixture.firstIssue}`);
     assertScope("issues", original, fixture.userId);
@@ -257,12 +307,35 @@ try {
   failure = error;
   results.status = "failed";
   results.failure = String(error.message);
+  if (page && deep) results.failureProbe = await page.evaluate(() => ({
+    path: location.pathname,
+    activeTab: document.querySelector('[data-app-tab-id][aria-selected="true"]')?.getAttribute("data-app-tab-id"),
+    editors: [...document.querySelectorAll(".page-editor .tiptap")].map((node) => ({
+      visible: !!node.getClientRects().length,
+      blocks: node.children.length,
+      headings: node.querySelectorAll(":scope > h2").length,
+      paragraphs: node.querySelectorAll(":scope > p").length,
+      tags: [...node.children].reduce((counts, child) => ({ ...counts, [child.tagName]: (counts[child.tagName] ?? 0) + 1 }), {}),
+      firstBlockIds: [...node.querySelectorAll("[data-block-id]")].slice(0, 3).map((block) => block.getAttribute("data-block-id")),
+    })),
+    fixtureTitles: [...document.querySelectorAll("textarea, h1")].map((node) => node.value ?? node.textContent).filter((title) => /^Performance guide \d+\.\d+$/.test(title)),
+  })).catch(() => null);
   if (page) await page.screenshot({ path: path.join(output, `${label}-failure.png`) }).catch(() => {});
 } finally {
   let closed = !browser;
   try { await browser?.close(); closed = true; }
   catch (error) { results.cleanup.push({ applicationClosed: false }); failure ??= error; }
   if (userData && closed) await rm(userData, { recursive: true, force: true });
+  if (preservedPages.length) {
+    try {
+      for (const original of preservedPages) {
+        const current = await api(original.href);
+        assert.deepEqual(current.content, original.content, "Read-only navigation changed a document");
+        assert.equal(current.version, original.version, "Read-only navigation saved a document");
+      }
+      results.cleanup.push({ fixturePagesUnchanged: true });
+    } catch (error) { results.cleanup.push({ fixturePagesUnchanged: false }); failure ??= error; }
+  }
   if (changedIssue) {
     try {
       await api(`/api/issues/${fixture.firstIssue}`, "PATCH", { title: changedIssue.title });
