@@ -31,7 +31,7 @@ import {
   cn,
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
-import { dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
+import { DATE_ONLY, dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
 import {
   RECURRENCE_CADENCES,
   occurrencesBetween,
@@ -71,6 +71,7 @@ export function DateTimePicker({
   value,
   onChange,
   dateOnly = false,
+  preserveDateOnly = false,
   variant = "field",
   placeholder,
   className,
@@ -87,6 +88,8 @@ export function DateTimePicker({
 }: {
   /** Store a calendar date without a time or timezone. */
   dateOnly?: boolean;
+  /** Keep untimed values as calendar dates and explicitly timed midnight as a timestamp. */
+  preserveDateOnly?: boolean;
   value: string | null;
   onChange: (v: string | null) => void;
   variant?: Variant;
@@ -202,7 +205,9 @@ export function DateTimePicker({
 
   // Time is opt-in: a date is stored at midnight (date-only) until the user
   // switches the toggle on. Sync the toggle when the value gains/loses a time.
-  const valueHasTime = selected ? dueDateHasTime(selected) : false;
+  const valueHasTime = selected
+    ? preserveDateOnly ? !DATE_ONLY.test(value ?? "") : dueDateHasTime(selected)
+    : false;
   const [timeEnabled, setTimeEnabled] = React.useState(valueHasTime);
   React.useEffect(() => {
     setTimeEnabled(valueHasTime);
@@ -211,7 +216,10 @@ export function DateTimePicker({
   const label = selected
     ? format.dateTime(
         selected,
-        dueDateFormat(selected, { compact: variant === "chip" }),
+        {
+          ...dueDateFormat(selected, { compact: variant === "chip" }),
+          ...(preserveDateOnly && valueHasTime ? { hour: "2-digit", minute: "2-digit" } as const : {}),
+        },
       )
     : null;
   const placeholderText = placeholder ?? t("placeholder");
@@ -272,9 +280,11 @@ export function DateTimePicker({
   // fixed: choosing last Monday as weekly means “every Monday”,
   // so next Monday. The server applies the same rule — do it here too
   // prevents the card from displaying the past due date for a second before resetting.
-  const commit = (d: Date) => {
+  const commit = (d: Date, withTime = timeEnabled) => {
     const resolved = isRecurring && recurrence ? startDueDate(d, recurrence) : d;
-    onChange(dateOnly ? `${resolved.getFullYear()}-${pad(resolved.getMonth() + 1)}-${pad(resolved.getDate())}` : resolved.toISOString());
+    onChange(dateOnly || (preserveDateOnly && !withTime)
+      ? `${resolved.getFullYear()}-${pad(resolved.getMonth() + 1)}-${pad(resolved.getDate())}`
+      : resolved.toISOString());
   };
 
   const handleDaySelect = (day: Date | undefined) => {
@@ -294,11 +304,12 @@ export function DateTimePicker({
   };
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!/^\d{2}:\d{2}$/.test(e.target.value)) return;
     const [h, m] = e.target.value.split(":").map(Number);
     if (Number.isNaN(h) || Number.isNaN(m)) return;
     const next = new Date(selected ?? new Date());
     next.setHours(h, m, 0, 0);
-    commit(next);
+    commit(next, true);
   };
 
   const toggleTime = (enabled: boolean) => {
@@ -306,7 +317,7 @@ export function DateTimePicker({
     if (!selected) return;
     const next = new Date(selected);
     next.setHours(enabled ? DEFAULT_HOUR : 0, 0, 0, 0);
-    commit(next);
+    commit(next, enabled);
   };
 
   const clear = () => {

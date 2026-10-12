@@ -878,7 +878,7 @@
       "functionReferences": []
     },
     "validate_page_database()": {
-      "sha256": "3d3076ddc7a05e9e59c4285b8c4af34f8e7300f7d55e3ed41d411953ec7e76c9",
+      "sha256": "2692728129cadadaf048ced7747116096796009868dc11a77b5a716ec6070197",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""
@@ -4867,7 +4867,7 @@
       "functionReferences": []
     },
     "convert_database_cell(jsonb,text,jsonb)": {
-      "sha256": "68cdfd87fd0fef26d63bd32d17cdf11fa3f84eb6ac016f1ce69345c79b4ab4e7",
+      "sha256": "a8df1118194b8cd8cb0738a4f8677c48b6800e1e19ca85fee7e2ffe10ae9ef81",
       "securityDefiner": false,
       "configuration": [
         "search_path=\"\""

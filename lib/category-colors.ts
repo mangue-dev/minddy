@@ -17,16 +17,9 @@ export const CATEGORY_COLORS = [
 
 export const DEFAULT_CATEGORY_COLOR = CATEGORY_COLORS[9];
 
-/**
- * Color of a category created on the fly from a picker (MIN — quick addition
- *): drawn at random FROM THOSE THAT THE PROJECT IS NOT YET USING.
- * Quick addition does not require a color, and a gray by default would make the
- * labels indistinguishable; as long as there is a choice, two neighboring categories
- * therefore never come out of the same tablet. Palette exhausted: au
- * random in the entire palette (we recolor in the settings).
- */
+/** Choose an unused palette color at random; reuse colors once the palette is exhausted. */
 export function pickFreeCategoryColor(used: Iterable<string>): string {
-  const taken = new Set(used);
+  const taken = new Set(Array.from(used, (color) => color.toLowerCase()));
   const free = CATEGORY_COLORS.filter((color) => !taken.has(color));
   const pool: readonly string[] = free.length > 0 ? free : CATEGORY_COLORS;
   return pool[Math.floor(Math.random() * pool.length)];

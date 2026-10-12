@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -46,14 +46,19 @@
       "lib/database-import/types.ts",
       "lib/database-import/archive.ts",
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/database-date-options-2026-10-12.md",
+      "components/pages/page-database-properties.tsx",
+      "components/date-time-picker.tsx",
+      "lib/page-databases.ts",
+      "scripts/page-database-date-times.integration.test.mjs"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 11,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence)",
+    "language": "agent:/root (en changed-passage and figure parity self-review)",
+    "date": "2026-10-12"
   },
   "related": [
     "pages"
@@ -77,7 +82,7 @@
       "src": "/documentation/en/database-setup-cards.png",
       "alt": "Component preview of the new-database cards for Numo setup and importing an existing database.",
       "caption": "New-database suggestions, shown with demonstration data. Choose Numo setup or import, or dismiss the cards to continue manually.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -94,7 +99,7 @@
       "src": "/documentation/en/database-property-types.png",
       "alt": "Database property type picker with text, number, selections, dates, people and checkbox.",
       "caption": "Choose a column type that matches the values to store.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +115,7 @@
       "src": "/documentation/en/database-entry.png",
       "alt": "Demonstration entry with a text description, duration 2.5, a checked checkbox and an empty selection.",
       "caption": "Open an entry to read its complete text and edit typed values.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,7 +131,7 @@
       "src": "/documentation/en/database-conversion-warning.png",
       "alt": "Conversion warning: changing Text to Number clears one incompatible cell, with Cancel and confirmation buttons.",
       "caption": "Review the real incompatible-cell count before confirming a type change. Cancel preserves the current values.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,13 +147,47 @@
       "src": "/documentation/en/database-import-review.png",
       "alt": "Import review for a local CSV: two entry pages and two property columns, with the Import database button.",
       "caption": "Review the parsed entries and column count before importing into the empty database.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
         744,
         511
       ],
+      "theme": "light",
+      "padding": 24
+    },
+    {
+      "id": "database-options-preview",
+      "kind": "screenshot",
+      "src": "/documentation/en/database-options.png",
+      "alt": "Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.",
+      "caption": "Edit option names, colors and order together. The trash button removes an option from the draft; Save applies the changes. Shown with demonstration data.",
+      "revision": 11,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        560,
+        448
+      ],
+      "deviceScaleFactor": 2,
+      "theme": "light",
+      "padding": 24
+    },
+    {
+      "id": "database-date-time-preview",
+      "kind": "screenshot",
+      "src": "/documentation/en/database-date-time.png",
+      "alt": "Component preview of the date picker with October 12, 2026 selected, Add a time enabled and Time set to 14:30.",
+      "caption": "Turn on Add a time to enter an hour. This component preview uses demonstration data and the device time zone.",
+      "revision": 11,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        324,
+        444
+      ],
+      "deviceScaleFactor": 2,
       "theme": "light",
       "padding": 24
     }
@@ -193,6 +232,16 @@ In the option editor, add an option below the existing rows, even when the list 
 Click a table cell or the property above an entry's page body. Enter saves, Escape cancels, and Shift+Enter inserts a text line. Leaving the editor saves. An invalid number keeps the editor open until fixed; a failed save reverts the value and reports an error.
 
 Use a Select cell for one option or Multi-select for several. Search existing options or create a new option from the menu. Open Edit options to rename or recolor options, then save together or cancel. Date, People and Checkbox use their matching controls; Created at stays read-only.
+
+New options receive a random palette color that is not yet used in the column, whether you create them from a cell or in the options dialog. Once all ten colors are used, colors can repeat. You can still choose a color manually.
+
+In Edit options, use the up and down buttons beside a row to reorder options. Use its trash button to remove an option. Save applies names, colors, order and deletions together. Deleting an option removes it from every entry that uses it, including entries in the trash; other selected options remain. Cancel discards the draft changes.
+
+Choose a day in Date. To include a time, turn on Add a time and fill Time. The value saves as you edit, and the picker stays open. Timed values appear in your device’s time zone, including midnight. Turning off Add a time keeps the displayed day as a date without a time. Date filters match the displayed calendar day.
+
+![Component preview of Edit options with localized status options, up and down buttons, trash buttons and the deletion explanation.](/documentation/en/database-options.png)
+
+![Component preview of the date picker with October 12, 2026 selected, Add a time enabled and Time set to 14:30.](/documentation/en/database-date-time.png)
 
 ### Open, select and insert entries {#entry-actions}
 

@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -46,14 +46,19 @@
       "lib/database-import/types.ts",
       "lib/database-import/archive.ts",
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/database-date-options-2026-10-12.md",
+      "components/pages/page-database-properties.tsx",
+      "components/date-time-picker.tsx",
+      "lib/page-databases.ts",
+      "scripts/page-database-date-times.integration.test.mjs"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (pt-BR changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 11,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence)",
+    "language": "agent:/root (pt-BR changed-passage and figure parity self-review)",
+    "date": "2026-10-12"
   },
   "related": [
     "pages"
@@ -77,7 +82,7 @@
       "src": "/documentation/pt-BR/database-setup-cards.png",
       "alt": "Prévia do componente com cartões para configurar uma nova base de dados com Numo ou importar uma existente.",
       "caption": "Sugestões para uma nova base com dados de demonstração. Escolha Numo ou importação, ou feche os cartões para continuar manualmente.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -94,7 +99,7 @@
       "src": "/documentation/pt-BR/database-property-types.png",
       "alt": "Seletor de tipo de coluna com texto, número, seleções, datas, pessoas e caixa de seleção.",
       "caption": "Escolha um tipo adequado aos valores que serão armazenados.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +115,7 @@
       "src": "/documentation/pt-BR/database-entry.png",
       "alt": "Registro de demonstração com descrição, duração 2.5, caixa marcada e seleção vazia.",
       "caption": "Abra um registro para ler o texto completo e editar os valores conforme o tipo.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,7 +131,7 @@
       "src": "/documentation/pt-BR/database-conversion-warning.png",
       "alt": "Aviso de conversão: mudar de Texto para Número limpa uma célula incompatível, com botões para cancelar ou confirmar.",
       "caption": "Confira o número real de células incompatíveis antes de confirmar. Cancelar preserva os valores atuais.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,13 +147,47 @@
       "src": "/documentation/pt-BR/database-import-review.png",
       "alt": "Revisão de um CSV local: duas páginas de registros e duas colunas, com o botão Importar banco de dados.",
       "caption": "Confira os registros analisados e o número de colunas antes de importar para o banco vazio.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
         744,
         511
       ],
+      "theme": "light",
+      "padding": 24
+    },
+    {
+      "id": "database-options-preview",
+      "kind": "screenshot",
+      "src": "/documentation/pt-BR/database-options.png",
+      "alt": "Prévia do componente Editar opções com status em português, setas para cima e para baixo, lixeiras e a explicação da exclusão.",
+      "caption": "Edite nomes, cores e ordem das opções em conjunto. A lixeira remove uma opção do rascunho; Salvar aplica as alterações. São exibidos dados de demonstração.",
+      "revision": 11,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        560,
+        448
+      ],
+      "deviceScaleFactor": 2,
+      "theme": "light",
+      "padding": 24
+    },
+    {
+      "id": "database-date-time-preview",
+      "kind": "screenshot",
+      "src": "/documentation/pt-BR/database-date-time.png",
+      "alt": "Prévia do seletor de data com 12 de outubro de 2026 selecionado, Adicione um horário ativado e Hora definida como 14:30.",
+      "caption": "Ative Adicione um horário para inserir um horário. Esta prévia do componente usa dados de demonstração e o fuso horário do dispositivo.",
+      "revision": 11,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        324,
+        444
+      ],
+      "deviceScaleFactor": 2,
       "theme": "light",
       "padding": 24
     }
@@ -193,6 +232,16 @@ No editor de opções, adicione uma opção abaixo das linhas existentes, mesmo 
 Clique em uma célula da tabela ou na propriedade acima do corpo de uma entrada. Enter salva, Escape cancela e Shift+Enter insere uma linha de texto. Sair do editor salva. Um número inválido mantém o editor aberto até ser corrigido; uma falha de salvamento reverte o valor e mostra um erro.
 
 Use uma célula de Seleção para uma opção ou Seleção múltipla para várias. Pesquise opções existentes ou crie uma nova pelo menu. Abra “Editar opções” para mudar nomes ou cores, depois salve em conjunto ou cancele. Data, Pessoas e Caixa de seleção usam seus controles correspondentes; Data de criação continua somente leitura.
+
+As novas opções recebem uma cor aleatória da paleta que ainda não é usada na coluna, tanto ao criá-las em uma célula quanto no diálogo de opções. Depois que as dez cores forem usadas, elas poderão se repetir. Você ainda pode escolher a cor manualmente.
+
+Em “Editar opções”, use as setas para cima e para baixo ao lado de uma linha para reordenar as opções. Use a lixeira da linha para excluir uma opção. Salvar aplica nomes, cores, ordem e exclusões em conjunto. Uma opção excluída é removida de todas as entradas que a usam, inclusive as da lixeira; as outras opções selecionadas são mantidas. Cancelar descarta as alterações do rascunho.
+
+Escolha um dia em Data. Para incluir um horário, ative Adicione um horário e preencha Hora. O valor é salvo durante a edição e o seletor permanece aberto. Valores com horário são exibidos no fuso horário do dispositivo, inclusive à meia-noite. Ao desativar Adicione um horário, o dia exibido é mantido como data sem horário. Os filtros de data correspondem ao dia exibido.
+
+![Prévia do componente Editar opções com status em português, setas para cima e para baixo, lixeiras e a explicação da exclusão.](/documentation/pt-BR/database-options.png)
+
+![Prévia do seletor de data com 12 de outubro de 2026 selecionado, Adicione um horário ativado e Hora definida como 14:30.](/documentation/pt-BR/database-date-time.png)
 
 ### Abrir, selecionar e inserir entradas {#entry-actions}
 

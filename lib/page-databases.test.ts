@@ -8,6 +8,7 @@ import {
   parseDatabaseNumber,
   isDatabaseValue,
   compareDatabaseValues,
+  databaseDateMatches,
 } from "./page-databases";
 
 const property = {
@@ -42,11 +43,36 @@ describe("database property validation", () => {
       "2026-02-29",
       "2026-04-31",
       "2026-13-01",
-      "2026-01-01T12:00:00Z",
+      "2026-01-01T12:00:00",
+      "2026-02-29T12:00:00Z",
+      "2026-04-31T00:00:00.000Z",
+      "2026-01-01T24:00:00Z",
+      "2026-01-01T12:60:00Z",
+      "2026-01-01T12:00:60Z",
+      "2026-01-01T12:00:00+16:00",
+      "2026-01-01T12:00:00Z\n",
+      "0000-01-01",
       "today",
     ]) {
       expect(isDatabaseValue("date", date)).toBe(false);
     }
+  });
+  it("accepts optional times with an explicit timezone, including midnight", () => {
+    for (const value of ["2028-02-29T12:30:00Z", "2026-10-12T00:00:00.000Z",
+      "2026-10-12T14:30:00+02:00", "2026-10-12T01:30:00-07:00"])
+      expect(isDatabaseValue("date", value)).toBe(true);
+    expect(compareDatabaseValues("2026-10-12T14:30:00+02:00", "2026-10-12T13:00:00Z",
+      new Map(), { ...property, type: "date" })).toBeLessThan(0);
+  });
+  it("sorts untimed dates at local midnight and filters timestamps by the displayed day", () => {
+    const midnight = new Date(2026, 9, 12, 0, 0).toISOString();
+    const late = new Date(2026, 9, 12, 23, 30).toISOString();
+    expect(compareDatabaseValues("2026-10-12", midnight, new Map(), { ...property, type: "date" })).toBe(0);
+    expect(databaseDateMatches(midnight, "2026-10-12")).toBe(true);
+    expect(databaseDateMatches(late, "2026-10-12")).toBe(true);
+    expect(databaseDateMatches(late, "2026-10-13")).toBe(false);
+    expect(databaseDateMatches("2026-10-12", "2026-10-12")).toBe(true);
+    expect(databaseDateMatches(null, "2026-10-12")).toBe(false);
   });
   it("distinguishes single assignment, people lists, and checkboxes", () => {
     expect(isDatabaseValue("people", [property.id])).toBe(true);

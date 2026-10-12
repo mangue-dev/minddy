@@ -1,3 +1,5 @@
+import { parseDueDate } from "./due-date";
+
 /** Basic page database properties. Property IDs survive renames and reordering. */
 export const DATABASE_PROPERTY_TYPES = [
   "text",
@@ -98,12 +100,16 @@ export function isDatabaseValue(
     case "text":
       return typeof value === "string" && value.length <= 2000;
     case "date": {
-      if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+      if (typeof value !== "string" || value !== value.trim() ||
+          !/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:0\d|1[0-5]):[0-5]\d))?$/.test(value))
         return false;
-      const date = new Date(`${value}T00:00:00.000Z`);
+      const calendar = value.slice(0, 10);
+      const date = new Date(`${calendar}T00:00:00.000Z`);
       return (
+        date.getUTCFullYear() > 0 &&
         Number.isFinite(date.getTime()) &&
-        date.toISOString().slice(0, 10) === value
+        date.toISOString().slice(0, 10) === calendar &&
+        (value.length === 10 || Number.isFinite(Date.parse(value)))
       );
     }
     case "people":
@@ -140,11 +146,23 @@ export function compareDatabaseValues(
   property?: DatabaseProperty,
 ): number {
   if (typeof a === "number" && typeof b === "number") return a - b;
+  if (property?.type === "date" && typeof a === "string" && typeof b === "string" &&
+      isDatabaseValue("date", a) && isDatabaseValue("date", b))
+    return parseDueDate(a)!.getTime() - parseDueDate(b)!.getTime();
   return databaseValueText(a, names, property).localeCompare(
     databaseValueText(b, names, property),
     undefined,
     { numeric: true, sensitivity: "base" },
   );
+}
+
+/** Match the calendar day shown by the date editor, including timestamps near midnight. */
+export function databaseDateMatches(value: DatabaseValue | undefined, day: string): boolean {
+  if (typeof value !== "string") return false;
+  const date = parseDueDate(value);
+  if (!date) return false;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` === day;
 }
 
 /** Metadata is derived from the entry, never stored as an editable value. */

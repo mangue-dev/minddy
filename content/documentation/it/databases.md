@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -46,14 +46,19 @@
       "lib/database-import/types.ts",
       "lib/database-import/archive.ts",
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/database-date-options-2026-10-12.md",
+      "components/pages/page-database-properties.tsx",
+      "components/date-time-picker.tsx",
+      "lib/page-databases.ts",
+      "scripts/page-database-date-times.integration.test.mjs"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (it changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 11,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence)",
+    "language": "agent:/root (it changed-passage and figure parity self-review)",
+    "date": "2026-10-12"
   },
   "related": [
     "pages"
@@ -77,7 +82,7 @@
       "src": "/documentation/it/database-setup-cards.png",
       "alt": "Anteprima del componente con le schede per configurare una nuova banca dati con Numo o importarne una esistente.",
       "caption": "Suggerimenti per una nuova banca dati con dati dimostrativi. Scegli Numo o l’importazione, oppure chiudi le schede per continuare manualmente.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -94,7 +99,7 @@
       "src": "/documentation/it/database-property-types.png",
       "alt": "Selettore del tipo di colonna con testo, numero, selezioni, date, persone e casella di controllo.",
       "caption": "Scegli un tipo adatto ai valori da conservare.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -110,7 +115,7 @@
       "src": "/documentation/it/database-entry.png",
       "alt": "Voce dimostrativa con descrizione, durata 2.5, casella selezionata e selezione vuota.",
       "caption": "Apri una voce per leggere il testo completo e modificare i valori in base al tipo.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,7 +131,7 @@
       "src": "/documentation/it/database-conversion-warning.png",
       "alt": "Avviso di conversione: il passaggio da Testo a Numero svuota una cella incompatibile, con pulsanti per annullare o confermare.",
       "caption": "Controlla il numero effettivo di celle incompatibili prima di confermare. Annulla conserva i valori attuali.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,13 +147,47 @@
       "src": "/documentation/it/database-import-review.png",
       "alt": "Verifica di un CSV locale: due pagine di voci e due colonne, con il pulsante Importa database.",
       "caption": "Controlla le voci analizzate e il numero di colonne prima di importare nel database vuoto.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
         744,
         511
       ],
+      "theme": "light",
+      "padding": 24
+    },
+    {
+      "id": "database-options-preview",
+      "kind": "screenshot",
+      "src": "/documentation/it/database-options.png",
+      "alt": "Anteprima del componente Modifica opzioni con stati in italiano, frecce verso l’alto e il basso, cestini e la spiegazione dell’eliminazione.",
+      "caption": "Modifica insieme nomi, colori e ordine delle opzioni. Il cestino rimuove un’opzione dalla bozza; Salva applica le modifiche. Sono mostrati dati dimostrativi.",
+      "revision": 11,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        560,
+        448
+      ],
+      "deviceScaleFactor": 2,
+      "theme": "light",
+      "padding": 24
+    },
+    {
+      "id": "database-date-time-preview",
+      "kind": "screenshot",
+      "src": "/documentation/it/database-date-time.png",
+      "alt": "Anteprima del selettore di data con il 12 ottobre 2026 selezionato, Aggiungere un’ora attivo e Tempo impostato su 14:30.",
+      "caption": "Attiva Aggiungere un’ora per inserire un’ora. Questa anteprima del componente usa dati dimostrativi e il fuso orario del dispositivo.",
+      "revision": 11,
+      "reviewed": true,
+      "capturedAt": "2026-10-12",
+      "viewport": [
+        324,
+        444
+      ],
+      "deviceScaleFactor": 2,
       "theme": "light",
       "padding": 24
     }
@@ -193,6 +232,16 @@ Nell’editor delle opzioni, aggiungi un’opzione sotto le righe esistenti, anc
 Fai clic su una cella della tabella o sulla proprietà sopra il corpo di una voce. Enter salva, Escape annulla e Shift+Enter inserisce una riga di testo. Uscire dall’editor salva. Un numero non valido mantiene l’editor aperto finché non viene corretto; un salvataggio non riuscito ripristina il valore e segnala un errore.
 
 Usa una cella Selezione per un’opzione o Selezione multipla per diverse opzioni. Cerca quelle esistenti o creane una dal menu. Apri «Modifica opzioni» per rinominare o cambiare colori, poi salva tutto insieme o annulla. Data, Persone e Casella di controllo usano i controlli corrispondenti; Data di creazione resta in sola lettura.
+
+Le nuove opzioni ricevono un colore casuale della tavolozza che non è ancora usato nella colonna, sia quando le crei da una cella sia nella finestra delle opzioni. Una volta usati tutti e dieci i colori, possono ripetersi. Puoi comunque scegliere un colore manualmente.
+
+In «Modifica opzioni», usa le frecce verso l’alto e il basso accanto a una riga per riordinare le opzioni. Usa il cestino della riga per eliminare un’opzione. Salva applica insieme nomi, colori, ordine ed eliminazioni. Un’opzione eliminata viene rimossa da tutte le voci che la usano, comprese quelle nel cestino; le altre opzioni selezionate vengono mantenute. Annulla scarta le modifiche della bozza.
+
+Scegli un giorno in Data. Per includere un’ora, attiva Aggiungere un’ora e compila Tempo. Il valore viene salvato durante la modifica e il selettore rimane aperto. I valori con un’ora vengono visualizzati nel fuso orario del dispositivo, compresa la mezzanotte. Disattivando Aggiungere un’ora, il giorno visualizzato viene mantenuto come data senza ora. I filtri di data corrispondono al giorno visualizzato.
+
+![Anteprima del componente Modifica opzioni con stati in italiano, frecce verso l’alto e il basso, cestini e la spiegazione dell’eliminazione.](/documentation/it/database-options.png)
+
+![Anteprima del selettore di data con il 12 ottobre 2026 selezionato, Aggiungere un’ora attivo e Tempo impostato su 14:30.](/documentation/it/database-date-time.png)
 
 ### Aprire, selezionare e inserire voci {#entry-actions}
 

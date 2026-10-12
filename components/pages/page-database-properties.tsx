@@ -122,7 +122,7 @@ export function DatabasePropertyCell({
   if (property.type === "date")
     return (
       <DateTimePicker
-        dateOnly
+        preserveDateOnly
         className={table ? `${TABLE_CELL_TRIGGER} mr-0` : undefined}
         variant="value"
         value={typeof value === "string" ? value : null}
@@ -130,7 +130,7 @@ export function DatabasePropertyCell({
         ariaLabel={label}
         open={open}
         onOpenChange={changeOpen}
-        onChange={(next) => void save(next)}
+        onChange={(next) => void save(next, false)}
       />
     );
   if (property.type === "people") {
