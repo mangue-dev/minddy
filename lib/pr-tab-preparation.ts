@@ -2,10 +2,9 @@ import type { QueryClient } from "@tanstack/react-query";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
-import { appTabPreparationQuery, prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { appTabPreparationQueries, appTabPreparationQuery, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 
-/** The existing account preparation owner ranks all common destinations.
- * One primary read per navigation, with active-work cancellation and no polling. */
+/** Prepare a bounded working set after foreground reads, without idle polling. */
 export function createPrTabPreparation(
   client: QueryClient,
   schedule: (work: () => void) => () => void = (work) => {
@@ -19,7 +18,9 @@ export function createPrTabPreparation(
 ) {
   const visits: string[] = [];
   let available: readonly string[] = [];
-  let active = "", budget = false, disposed = false;
+  let active = "", budget = 0, disposed = false;
+  const attempted = new Set<string>();
+  const destinations = new Set<string>();
   let cancel: (() => void) | undefined;
   let preparing: readonly unknown[] | undefined;
 
@@ -28,25 +29,42 @@ export function createPrTabPreparation(
     if (disposed || !budget || client.isFetching() > 0) return;
     const counts = new Map<string, number>();
     visits.forEach((href) => counts.set(href, (counts.get(href) ?? 0) + 1));
-    const candidates = [...new Set(visits)].filter((href) => href !== active && available.includes(href) && appTabPreparationQuery(client, href))
-      .sort((a, b) => (counts.get(b)! * 32 + visits.lastIndexOf(b)) - (counts.get(a)! * 32 + visits.lastIndexOf(a)));
+    // Visit frequency wins, but open boards/documents must not stay cold just
+    // because the user has not clicked them yet. Unvisited PR details retain
+    // explicit-intent preparation, avoiding speculative live-forge downloads.
+    const candidates = [...new Set([...visits, ...available])].filter((href) => href !== active && available.includes(href) && appTabPreparationQuery(client, href) &&
+      (counts.has(href) || !appTabRoute(href).prId))
+      .sort((a, b) => ((counts.get(b) ?? 0) * 32 + visits.lastIndexOf(b)) - ((counts.get(a) ?? 0) * 32 + visits.lastIndexOf(a)));
     for (const href of candidates) {
-      const options = appTabPreparationQuery(client, href)!;
-      const state = client.getQueryState(options.queryKey);
-      if (state?.data !== undefined && !state.isInvalidated) continue;
-      const route = appTabRoute(href);
-      if (route.pageId) preparePageNavigation(route.pageId);
-      // The final consumer owns the data and its reconciliation rules. Only
-      // one missing/invalidated primary read consumes this navigation budget.
-      const pending = route.prId ? prefetchPullRequestDetail(client, route.prId)
-        : client.prefetchQuery<unknown>({ ...options, retry: false });
-      if (!pending) return;
+      if (!destinations.has(href) && destinations.size >= 3) continue;
+      destinations.add(href);
       void prepareAppTabSurface(href)?.catch(() => {});
-      budget = false; preparing = options.queryKey;
-      const key = preparing;
-      void pending.finally(() => { if (preparing === key) preparing = undefined; });
-      break;
+      const route = appTabRoute(href);
+      for (const options of appTabPreparationQueries(client, href)) {
+        if (budget <= 0) return;
+        const identity = JSON.stringify(options.queryKey);
+        if (attempted.has(identity)) continue;
+        const state = client.getQueryState(options.queryKey);
+        if (state?.data !== undefined && !state.isInvalidated && state.status !== "error") continue;
+        attempted.add(identity);
+        budget = route.prId ? 0 : budget - 1;
+        // Set ownership before the cache emits the start of the request.
+        preparing = options.queryKey;
+        const key = preparing;
+        const startedAt = Date.now();
+        const pending = route.prId ? prefetchPullRequestDetail(client, route.prId)
+          : client.prefetchQuery<unknown>({ ...options, retry: false });
+        if (!pending) { preparing = undefined; continue; }
+        void pending.finally(() => {
+          if (preparing === key) preparing = undefined;
+          const state = client.getQueryState(options.queryKey);
+          if (!disposed && route.pageId && state?.status === "success" && !state.isInvalidated && state.dataUpdatedAt >= startedAt && options.queryKey[0] === "page") preparePageNavigation(route.pageId);
+          if (!disposed && budget && !cancel && client.isFetching() === 0) cancel = schedule(prepare);
+        });
+        return;
+      }
     }
+    budget = 0;
   };
   const stop = client.getQueryCache().subscribe(() => {
     if (disposed) return;
@@ -55,6 +73,7 @@ export function createPrTabPreparation(
     if (preparing && client.isFetching() > 1) {
       const key = preparing;
       if (client.getQueryCache().find({ queryKey: key, exact: true })?.getObserversCount() === 0) {
+        preparing = undefined;
         void client.cancelQueries({ queryKey: key, exact: true });
       }
     }
@@ -70,7 +89,9 @@ export function createPrTabPreparation(
         if (JSON.stringify(target) !== JSON.stringify(preparing)) void client.cancelQueries({ queryKey: preparing, exact: true });
       }
       visits.push(href); if (visits.length > 32) visits.shift();
-      budget = true;
+      // At most three destinations and twelve sequential reads per navigation.
+      // Complete a board's prerequisites without flooding startup transport.
+      attempted.clear(); destinations.clear(); budget = 12;
       cancel = schedule(prepare);
     },
     dispose() {

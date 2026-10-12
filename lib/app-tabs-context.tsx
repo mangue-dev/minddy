@@ -137,7 +137,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       const state = session.getSnapshot();
       const active = state.tabs.find((tab) => tab.id === state.activeId);
       if (!active) return;
-      const identity = `${active.id}:${active.href}`;
+      const identity = JSON.stringify([active.id, active.href, state.tabs.map((tab) => tab.href)]);
       if (identity === previous) return;
       previous = identity;
       preparation.visit(active.href, state.tabs.map((tab) => tab.href));

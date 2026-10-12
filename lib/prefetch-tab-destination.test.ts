@@ -45,7 +45,7 @@ describe("tab destination prefetch", () => {
     await vi.waitFor(() => expect(requested()).toEqual(["/api/routines", "/api/agent/models"]));
   });
 
-  it("maps project destinations to the five board reads", async () => {
+  it("maps project destinations to every retained board prerequisite", async () => {
     prefetchAppTabDestination(client, "/projects/p1?view=7", new Set());
     await vi.waitFor(() => expect(requested()).toEqual([
       "/api/projects/p1/issues",
@@ -53,6 +53,8 @@ describe("tab destination prefetch", () => {
       "/api/projects/p1/members",
       "/api/projects/p1/objectives",
       "/api/projects/p1/issue-relations",
+      "/api/projects/p1/integrations",
+      "/api/projects/p1/views",
     ]));
   });
 

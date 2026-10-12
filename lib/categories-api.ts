@@ -21,8 +21,8 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchCategoriesApi(projectId: string): Promise<Category[]> {
-  return parseJson<Category[]>(await fetchClientRead(`/api/projects/${projectId}/categories`));
+export async function fetchCategoriesApi(projectId: string, signal?: AbortSignal): Promise<Category[]> {
+  return parseJson<Category[]>(await fetchClientRead(`/api/projects/${projectId}/categories`, { signal }));
 }
 
 export async function createCategoryApi(

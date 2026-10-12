@@ -3,11 +3,11 @@ import { feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-
 import { fetchPagesApi, fetchPageApi } from "./pages-api";
 import { pagesKey, pageKey } from "./use-pages-query";
 import { issuesQueryFn } from "./issues-api";
-import type { QueryClient } from "@tanstack/react-query";
+import type { FetchQueryOptions, QueryClient } from "@tanstack/react-query";
 
 import { appTabRoute } from "./app-tab-location";
 import { prefetchPageNavigation } from "./use-pages-query";
-import { prefetchProjectQueries } from "./use-prefetch-project";
+import { prefetchProjectQueries, projectPreparationQueries } from "./use-prefetch-project";
 import { routinesQueryKey } from "./use-routines-query";
 import { fetchRoutinesApi } from "./routines-api";
 import { agentModelsQueryKey, fetchAgentModels } from "./use-agent-models-query";
@@ -144,6 +144,22 @@ export function appTabPreparationQuery(client: QueryClient, href: string) {
   if (route.projectId && ["tickets", "triage"].includes(route.section)) return { queryKey: ["issues", route.projectId] as const, queryFn: issuesQueryFn(route.projectId) };
   if (route.section === "all") return { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn };
   return null;
+}
+
+/** Complete prerequisites owned by the same consumers as foreground navigation. */
+export function appTabPreparationQueries(client: QueryClient, href: string): FetchQueryOptions<unknown>[] {
+  const route = appTabRoute(href);
+  if (route.projectId && ["tickets", "triage"].includes(route.section)) return projectPreparationQueries(client, route.projectId);
+  const primary = appTabPreparationQuery(client, href);
+  if (!primary) return [];
+  const options: FetchQueryOptions<unknown>[] = [{ queryKey: primary.queryKey, queryFn: primary.queryFn }];
+  if (route.projectId && route.section === "pages" && route.pageId) {
+    options.push({ queryKey: pagesKey(route.projectId), queryFn: ({ signal }) => fetchPagesApi(route.projectId!, signal) });
+  }
+  if (route.section === "all") {
+    options.push({ queryKey: ["views", "global"], queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal) });
+  }
+  return options;
 }
 
 /** Only public prepared code and existing query data permit a local mount.

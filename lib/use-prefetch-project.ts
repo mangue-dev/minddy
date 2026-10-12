@@ -1,54 +1,54 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient, type FetchQueryOptions } from "@tanstack/react-query";
 import { issuesQueryFn } from "./issues-api";
 import { fetchCategoriesApi } from "./categories-api";
 import { fetchMembersApi } from "./members-api";
 import { objectivesQueryFn } from "./objectives-api";
 import { fetchIssueRelationsApi } from "./issue-relations-api";
+import { fetchIntegrationsApi } from "./integrations-api";
+import { fetchViewsApi } from "./views-api";
 
-/**
- * Preheats the five board reads of one project (MIN-89).
- *
- * `prefetchQuery` respects `staleTime`: a fresh cache does not cause NONE
- * query, so hovering over ten cards in a row does not trigger ten bursts.
- * A safeguard per project also avoids asking the question again each
- * entry/exit of the cursor on the same card.
- */
-export function prefetchProjectQueries(queryClient: QueryClient, projectId: string): void {
-  if (!projectId) return;
-
-  // The five readings that app/(app)/projects/[id]/page.tsx shows. The views
-  // and integrations are left aside: they are light and do not
-  // do not block the first rendering of the board.
-  void queryClient.prefetchQuery({
+/** The retained board boundary needs all seven reads, including saved filters. */
+export function projectPreparationQueries(queryClient: QueryClient, projectId: string): FetchQueryOptions<unknown>[] {
+  return [{
     queryKey: ["issues", projectId],
     queryFn: issuesQueryFn(projectId),
-  });
-  void queryClient.prefetchQuery({
+  }, {
     queryKey: ["categories", projectId],
-    queryFn: () => fetchCategoriesApi(projectId),
-  });
-  void queryClient.prefetchQuery({
+    queryFn: ({ signal }) => fetchCategoriesApi(projectId, signal),
+  }, {
     queryKey: ["members", projectId],
-    queryFn: () => fetchMembersApi(projectId),
-  });
-  void queryClient.prefetchQuery({
+    queryFn: ({ signal }) => fetchMembersApi(projectId, signal),
+  }, {
     queryKey: ["objectives", projectId],
     queryFn: objectivesQueryFn(projectId),
-  });
-  void queryClient.prefetchQuery({
+  }, {
     queryKey: ["issue-relations", projectId],
-    queryFn: () => fetchIssueRelationsApi(projectId, queryClient),
-  });
+    queryFn: ({ signal }) => fetchIssueRelationsApi(projectId, queryClient, signal),
+  }, {
+    queryKey: ["integrations", projectId],
+    queryFn: ({ signal }) => fetchIntegrationsApi(projectId, signal),
+  }, {
+    queryKey: ["views", projectId],
+    queryFn: ({ signal }) => fetchViewsApi({ kind: "project", projectId }, signal),
+  }];
+}
+
+/** Warm the existing account queries on intent; fresh reads are deduplicated. */
+export function prefetchProjectQueries(queryClient: QueryClient, projectId: string): void {
+  if (!projectId) return;
+  for (const options of projectPreparationQueries(queryClient, projectId)) {
+    void queryClient.prefetchQuery(options);
+  }
 }
 
 /**
  * Preheats the caches of a project board for browsing intent (MIN-89).
  *
  * Opening a project follows: loading the route chunk, mounting, THEN
- * five fan requests. Trigger them on hover (or keyboard focus)
+ * prerequisite requests. Trigger them on hover (or keyboard focus)
  * covers this delay with the time it takes the user to click — on arrival,
  * the board is most often already populated.
  */
