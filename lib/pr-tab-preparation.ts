@@ -4,6 +4,19 @@ import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
 import { appTabPreparationQueries, appTabPreparationQuery, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 import { navigationPreparationPriority } from "./navigation-preparation-priority";
+import { allPullRequestsQueryOptions } from "./use-agent-runs";
+import { prActivityPreparationQueries } from "./pr-activity-query";
+
+/** Recent visible detail activities precede optional lists for old pinned PRs. */
+function missingRecentActivity(client: QueryClient): boolean {
+  const list = client.getQueryData<{ pullRequests: { prId: string; pr_state: string }[] }>(allPullRequestsQueryOptions().queryKey);
+  const recent = [...new Set((list?.pullRequests ?? []).filter((pr) => ["open", "draft"].includes(pr.pr_state)).map((pr) => pr.prId))].slice(0, 5);
+  return recent.some((id) => client.getQueryState<{ pr: unknown }>(["pull-request", id])?.data?.pr &&
+    prActivityPreparationQueries(id).some((options) => {
+      const state = client.getQueryState(options.queryKey);
+      return state?.status !== "error" && (state?.data === undefined || state.isInvalidated);
+    }));
+}
 
 /** Prepare a bounded working set after foreground reads, without idle polling. */
 export function createPrTabPreparation(
@@ -53,6 +66,9 @@ export function createPrTabPreparation(
             return state?.data === undefined || state.isInvalidated || state.status === "error";
           }));
         if (!missingNavigation) priority.release();
+        // Cache completion events resume this pass after the bounded activity
+        // owner, without starting another timer or abandoning deferred lists.
+        if (!missingNavigation && missingRecentActivity(client)) return;
         if (prDestination && prDestination !== href) continue;
         prDestination = href;
       }

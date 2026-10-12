@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { createPrActivityPreparation } from "./pr-activity-preparation";
 import { navigationPreparationPending } from "./navigation-preparation-priority";
+import { allPullRequestsQueryOptions } from "./use-agent-runs";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(async () => {}), isAppTabSurfaceReady: () => true }));
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
@@ -81,5 +82,21 @@ it("prepares Pages ahead of old PR tabs without reserving optional PR metadata p
     expect(navigationPreparationPending(view.client)).toBe(false);
     view.navigation.visit("/home", ["/home", ...oldPrTabs]);
     expect(navigationPreparationPending(view.client)).toBe(false);
+  } finally { view.close(); }
+});
+
+it("resumes optional pinned lists after recent activity settles instead of starving it", async () => {
+  const view = setup();
+  try {
+    view.client.setQueryData(allPullRequestsQueryOptions().queryKey, { pullRequests: [{ prId: "pr", pr_state: "draft" }] });
+    view.activity.update(["pr"]);
+    view.navigation.visit("/home", ["/home", "/pull-requests?pr=pr", "/projects/project/pages/page"]);
+    await view.flush(view.tabs); await view.flush(view.tabs); await view.flush(view.tabs);
+    expect(navigationPreparationPending(view.client)).toBe(false);
+    expect(view.fetch.mock.calls.some(([url]) => String(url).startsWith("/api/pull-requests?"))).toBe(false);
+    await view.flush(view.auxiliary);
+    expect(view.fetch.mock.calls.filter(([url]) => String(url).includes("/api/pull-requests/pr/")).length).toBe(3);
+    await view.flush(view.tabs);
+    expect(view.fetch.mock.calls.some(([url]) => String(url).startsWith("/api/pull-requests?"))).toBe(true);
   } finally { view.close(); }
 });
