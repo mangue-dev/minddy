@@ -1,6 +1,8 @@
 "use client";
 
 import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { createPrActivityPreparation } from "./pr-activity-preparation";
 import { useAllPullRequestsQuery } from "./use-agent-runs";
 import { pullRequestAccountRetryAt, pullRequestQueryOptions } from "./pull-request-query";
 import { usePrLive } from "./use-pr-live";
@@ -19,6 +21,12 @@ export function PrBackgroundSync() {
   const ids = [...new Set(pullRequests
     .filter((pr) => pr.pr_state === "open" || pr.pr_state === "draft")
     .map((pr) => pr.prId))].slice(0, PR_BACKGROUND_LIMIT);
+  const identity = ids.join("|");
+  useEffect(() => {
+    const preparation = createPrActivityPreparation(client);
+    preparation.update(identity ? identity.split("|") : []);
+    return () => preparation.dispose();
+  }, [client, identity]);
   useQueries({ queries: ids.map((prId) => ({
     ...pullRequestQueryOptions(prId),
     staleTime: 60_000,

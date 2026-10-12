@@ -985,12 +985,12 @@ export async function fetchOpenPullRequestCountApi(): Promise<{ count: number }>
  * did not know how to give it” as much as “nothing happened”. The thread then makes
  * his messages, as before.
  */
-export async function fetchPullRequestCommentsApi(prId: string): Promise<{
+export async function fetchPullRequestCommentsApi(prId: string, signal?: AbortSignal): Promise<{
   comments: PullRequestComment[];
   timeline: PrTimelineEvent[];
   reactions: ReviewCommentReaction[];
 }> {
-  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/comments`));
+  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/comments`, { signal }));
 }
 
 /**
@@ -1039,8 +1039,9 @@ export interface PullRequestCommit {
  */
 export async function fetchPullRequestCommitsApi(
   prId: string,
+  signal?: AbortSignal,
 ): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
-  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/commits`));
+  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/commits`, { signal }));
 }
 
 /** An account of the forge, as the commentary composer suggests. */
@@ -1154,12 +1155,12 @@ export interface PullRequestReviewComment {
  * exist — the forge was unable to tell the state, and the UI then does not offer
  * “Resolve” button rather than announcing “open” blindly.
  */
-export async function fetchPrReviewCommentsApi(endpoint: PrEndpoint): Promise<{
+export async function fetchPrReviewCommentsApi(endpoint: PrEndpoint, signal?: AbortSignal): Promise<{
   comments: PullRequestReviewComment[];
   threads: ReviewThreadState[];
   reactions: ReviewCommentReaction[];
 }> {
-  return parseJson(await fetchClientRead(`${endpoint}/review-comments`));
+  return parseJson(await fetchClientRead(`${endpoint}/review-comments`, { signal }));
 }
 
 /**

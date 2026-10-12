@@ -3,6 +3,7 @@
 import { COMPLETED_PULL_REQUESTS_PAGE } from "./pull-request-sections";
 import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
 import { cachedPullRequestListForPin } from "./pull-request-list-cache";
+import { prCommentsQueryOptions, prCommitsQueryOptions, prReviewCommentsQueryOptions } from "./pr-activity-query";
 
 import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
@@ -17,15 +18,11 @@ import {
   fetchOpenPullRequestCountApi,
   fetchPullRequestReadinessBatchApi,
   fetchPrCommitDiffApi,
-  fetchPullRequestCommentsApi,
-  fetchPullRequestCommitsApi,
-  fetchPrReviewCommentsApi,
   isAgentRunWorking,
   type AgentSessionListItem,
   type PrEndpoint,
   type PullRequestStateFilter,
 } from "./agent-api";
-import { applyPendingPrReactions, commentReactionsKey } from "./optimistic/pr-reaction-writes";
 import { getDesktopBridge } from "./desktop/bridge";
 import {
   parseAgentLocalDiff,
@@ -518,17 +515,8 @@ export function useAgentSessionsQuery() {
 export function usePrCommentsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
-    queryKey: ["pr-comments", prId],
-    retry: pullRequestReadRetry,
-    queryFn: async ({ client }) => {
-      assertPullRequestReadBudget(client);
-      const startedAt = Date.now();
-      const data = await fetchPullRequestCommentsApi(prId as string);
-      return applyPendingPrReactions(client, ["pr-comments", prId as string], data, startedAt);
-    },
+    ...prCommentsQueryOptions(prId),
     enabled,
-    refetchOnMount: "always",
-    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return {
     comments: data?.comments ?? [],
@@ -553,12 +541,8 @@ export function usePrCommentsQuery(prId: string | null) {
 export function usePrCommitsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
-    queryKey: ["pr-commits", prId],
-    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchPullRequestCommitsApi(prId as string); },
-    retry: pullRequestReadRetry,
+    ...prCommitsQueryOptions(prId),
     enabled,
-    refetchOnMount: "always",
-    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return {
     commits: data?.commits ?? [],
@@ -592,16 +576,8 @@ export function usePrCommitDiffQuery(prId: string, sha: string | null) {
 export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
   const enabled = !!endpoint;
   const { data, isPending, refetch } = useQuery({
-    queryKey: ["pr-review-comments", endpoint],
-    retry: pullRequestReadRetry,
-    queryFn: async ({ client }) => {
-      assertPullRequestReadBudget(client);
-      const startedAt = Date.now();
-      const data = await fetchPrReviewCommentsApi(endpoint as PrEndpoint);
-      return applyPendingPrReactions(client, commentReactionsKey(endpoint as PrEndpoint, "review"), data, startedAt);
-    },
+    ...prReviewCommentsQueryOptions(endpoint),
     enabled,
-    refetchOnMount: "always",
   });
   // `threads` (MIN-139) travels with the comments: it's the same query, so
   // the same refresh — resolving a thread and replying in it cannot
