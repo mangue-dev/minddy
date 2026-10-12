@@ -28,6 +28,21 @@ export function summarizeNavigationRuns(runs) {
       for (const pr of run.workload.forge.prs) for (const kind of ["detail", "comments", "commits", "review-comments"]) {
         assert.ok(run.forgeReadProof?.some((read) => read.number === pr.number && read.kind === kind && read.verified), "Verify successful real forge content");
       }
+      if (run.protocol === "min683-forge-v3-all-subviews") {
+        assert.equal(run.verification?.allFiveSubviewIdentitiesVerified, true);
+        for (const pr of run.workload.forge.prs) {
+          assert.ok(run.forgeReadProof.some((read) => read.number === pr.number && read.source === "visible-commits-popover" && read.verified), "Verify the visible current commits for every PR");
+          for (const name of ["pr-activity-to-files", "pr-open-commits", "pr-change-file", "pr-files-to-activity"]) {
+            assert.ok(run.measurements.some((sample) => sample.name === name && sample.destinationNumber === pr.number), "Verify every PR subview identity");
+          }
+          for (const proof of run.forgeReadProof.filter((read) => read.number === pr.number && read.source === "visible-commits-popover")) {
+            assert.equal(proof.kind, "commits");
+            assert.equal(proof.commits, 2);
+            assert.match(proof.headSha ?? "", /^[a-f0-9]{40}$/);
+            assert.ok(run.forgeReadProof.some((read) => read.number === pr.number && read.kind === "detail" && read.verified && read.headSha === proof.headSha), "Visible commits must match the current detail head");
+          }
+        }
+      }
     }
   }
   const names = [...new Set(runs.flatMap((run) => run.measurements.map((sample) => sample.name)))];

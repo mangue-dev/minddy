@@ -63,3 +63,21 @@ test("connected board workloads also require unchanged repository connections", 
   assert.throws(() => summarizeNavigationRuns([{ ...board, cleanup: [...board.cleanup, { connectedBoardUnchanged: false }] }]));
   assert.equal(summarizeNavigationRuns([{ ...board, cleanup: [...board.cleanup, { connectedBoardUnchanged: true }] }]).cleanupVerified, true);
 });
+
+test("all-subview proof requires every destination and visible commits matching its successful detail", () => {
+  const prs = [1, 2, 3, 4, 5].map((number) => ({ number }));
+  const heads = prs.map(({ number }) => String(number).repeat(40));
+  const forge = { ...run([]), scenario: "forge", protocol: "min683-forge-v3-all-subviews",
+    workload: { forge: { prs } }, verification: { allFiveSubviewIdentitiesVerified: true },
+    cleanup: [{ preexistingTabsPreserved: true }, { repositoryConnectionUnchanged: true }],
+    measurements: prs.flatMap(({ number }) => ["pr-activity-to-files", "pr-open-commits", "pr-change-file", "pr-files-to-activity"].map((name) => ({ name, destinationNumber: number, paintMs: 20 }))),
+    forgeReadProof: prs.flatMap(({ number }, index) => [
+      ...["detail", "comments", "review-comments"].map((kind) => ({ number, kind, verified: true, ...(kind === "detail" ? { headSha: heads[index] } : {}) })),
+      { number, kind: "commits", verified: true, commits: 2, headSha: heads[index], source: "visible-commits-popover" },
+    ]),
+  };
+  assert.equal(summarizeNavigationRuns([forge]).cleanupVerified, true);
+  assert.throws(() => summarizeNavigationRuns([{ ...forge, measurements: forge.measurements.slice(1) }]));
+  assert.throws(() => summarizeNavigationRuns([{ ...forge, forgeReadProof: forge.forgeReadProof.map((proof) => proof.source ? { ...proof, headSha: "f".repeat(40) } : proof) }]));
+  assert.throws(() => summarizeNavigationRuns([{ ...forge, forgeReadProof: forge.forgeReadProof.map((proof) => proof.source ? { ...proof, commits: 0 } : proof) }]));
+});

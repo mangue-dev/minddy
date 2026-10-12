@@ -33,10 +33,10 @@ export async function loadForgeWorkload(api) {
 }
 
 /** Selection identity, real description/activity, and genuine detail subview clicks. */
-export async function measureForgeNavigation({ page, tabs, workload, repeats, clickMeasured, results }) {
-  results.protocol = "min683-forge-v2-complete-loading";
+export async function measureForgeNavigation({ page, tabs, workload, repeats, clickMeasured, results, allSubviews = false }) {
+  results.protocol = allSubviews ? "min683-forge-v3-all-subviews" : "min683-forge-v2-complete-loading";
   const tab = tabs[1].id;
-  await page.evaluate(({ tab, homeTab, files }) => { window.__instant.forge = { tab, homeTab, files }; }, { tab, homeTab: tabs[0].id, files: workload.files });
+  await page.evaluate(({ tab, homeTab, files, allSubviews }) => { window.__instant.forge = { tab, homeTab, files, allSubviews }; }, { tab, homeTab: tabs[0].id, files: workload.files, allSubviews });
   const detailReady = ({ pr }) => {
     const selected = document.querySelector(`[data-navigation-href="/pull-requests?pr=${pr.prId}"][aria-current="true"]`);
     const description = [...document.querySelectorAll('[data-testid="pr-description"]')].find((node) =>
@@ -47,6 +47,7 @@ export async function measureForgeNavigation({ page, tabs, workload, repeats, cl
   };
   const activityReady = (args) => {
     if (!window.__instant.forge.detailReady(args)) return false;
+    if (window.__instant.forge.allSubviews && !["comments", "review-comments"].every((kind) => window.__instant.forgeReads?.[`${args.pr.number}:${kind}`])) return false;
     const visible = (node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden";
     if ([...document.querySelectorAll('[data-testid="pr-activity-skeleton"]')].some(visible)) return false;
     return [...document.querySelectorAll('[data-testid="pr-activity-timeline"], p')].some((node) =>
@@ -69,11 +70,21 @@ export async function measureForgeNavigation({ page, tabs, workload, repeats, cl
   await clickMeasured("first-real-pr", page.locator(`[data-app-tab-id="${tab}"]`), detailReady,
     { pr: workload.prs[0] }, activityReady);
   async function subviews(pr) {
+    const start = results.measurements.length;
     await clickMeasured("pr-activity-to-files", page.getByRole("tab", { name: /^Changes/ }), filesReady, null);
     await clickMeasured("pr-open-commits", page.getByTestId("pr-commits-trigger"), () => {
       const popover = document.querySelector('[data-testid="pr-commits-popover"]');
       return !!popover?.getClientRects().length && popover.querySelectorAll('li[role="button"]').length === 2;
     }, null);
+    if (allSubviews) {
+      const head = results.forgeReadProof?.find((read) => read.number === pr.number && read.kind === "detail" && read.verified)?.headSha;
+      assert.match(head ?? "", /^[a-f0-9]{40}$/);
+      const popover = page.getByTestId("pr-commits-popover");
+      const rows = popover.locator('li[role="button"]');
+      assert.equal(await rows.count(), 2);
+      assert.ok((await rows.allTextContents()).some((text) => text.includes(head.slice(0, 7))), "The visible commits must include the current PR head");
+      (results.forgeReadProof ??= []).push({ number: pr.number, kind: "commits", verified: true, commits: 2, headSha: head, source: "visible-commits-popover" });
+    }
     await page.keyboard.press("Escape");
     await page.getByTestId("pr-commits-popover").waitFor({ state: "hidden" });
     await page.getByTestId("pr-file-tree-trigger").click();
@@ -86,9 +97,11 @@ export async function measureForgeNavigation({ page, tabs, workload, repeats, cl
     }, null);
     await clickMeasured("pr-files-to-activity", page.getByRole("tab", { name: /^Description and activity/ }), activityReady,
       { pr });
+    for (const sample of results.measurements.slice(start)) sample.destinationNumber = pr.number;
   }
   // Published selections can consume their address. Determine identity from
   // the selected sidebar row instead of relying on a remaining URL parameter.
+  if (allSubviews) await subviews(workload.prs[0]);
   for (let round = 0; round < repeats; round++) {
     for (const [index, pr] of workload.prs.entries()) {
       if (round === 0 && index === 0) continue;
@@ -96,18 +109,19 @@ export async function measureForgeNavigation({ page, tabs, workload, repeats, cl
         page.locator(`[data-navigation-href="/pull-requests?pr=${pr.prId}"]:visible`), detailReady,
         { pr }, activityReady);
       results.measurements.at(-1).destinationNumber = pr.number;
+      if (allSubviews) await subviews(pr);
     }
     const selected = await page.locator('[data-navigation-href][aria-current="true"]').getAttribute("data-navigation-href");
     const pr = workload.prs.find((pr) => selected?.includes(pr.prId));
     assert.ok(pr);
     // Keep the selected identity available across address consumption.
     await page.evaluate((pr) => { window.__instant.forge.current = pr; }, pr);
-    await subviews(pr);
+    if (!allSubviews) await subviews(pr);
     await clickMeasured("real-pr-to-home", page.locator(`[data-app-tab-id="${tabs[0].id}"]`), () =>
       !!document.querySelector(`[data-app-tab-id="${window.__instant.forge.homeTab}"][aria-selected="true"]`) &&
       [...document.querySelectorAll('[contenteditable][aria-placeholder*="Numo"]')].some((node) => node.getClientRects().length), null);
     await clickMeasured("return-real-pr", page.locator(`[data-app-tab-id="${tab}"]`), detailReady, { pr }, activityReady);
     await page.waitForTimeout(350);
   }
-  results.verification = { sameTabPreserved: true, fiveRealPrIdentitiesVerified: true, filePatchesAndTwoCommitsVerified: true };
+  results.verification = { sameTabPreserved: true, fiveRealPrIdentitiesVerified: true, filePatchesAndTwoCommitsVerified: true, ...(allSubviews ? { allFiveSubviewIdentitiesVerified: true } : {}) };
 }

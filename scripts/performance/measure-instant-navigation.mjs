@@ -89,7 +89,7 @@ const results = { label, sha: productSha.sha,
   build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}), ...(connected ? { forge: forgeWorkload } : {}), ...(connectedBoard ? { connectedBoard } : {}) }, timestamp: new Date().toISOString(),
   runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
-if (process.argv.includes("--trace-forge-stages")) results.diagnostic = true;
+if (["--trace-forge-stages", "--trace-query-preparation", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
 let browser, context, page, userData, preserved, failure, changedIssue;
 const preservedPages = [];
 const created = [];
@@ -112,6 +112,11 @@ try {
     }
   }
   preserved = (await listTabs()).filter((tab) => !tabs.some((spec) => spec.id === tab.id)).map(tabFields);
+  results.preexistingTabInventory = preserved.reduce((counts, tab) => {
+    const section = tab.href.split("?")[0].split("/")[1] || "home";
+    counts[section] = (counts[section] ?? 0) + 1;
+    return counts;
+  }, {});
   for (const spec of tabs) {
     await removeTab(spec);
     await api("/api/me/app-tabs", "POST", { id: spec.id });
@@ -179,6 +184,9 @@ try {
           (results.forgeReadProof ??= []).push({ number: pr.number, kind, verified,
             ...(kind === "detail" ? { files: data.files?.length, headSha: data.pr?.headSha } :
               kind === "commits" ? { commits: data.commits?.length } : { comments: data.comments?.length }) });
+          if (verified && process.argv.includes("--forge-all-subviews")) await page.evaluate(({ number, kind }) => {
+            (window.__instant.forgeReads ??= {})[`${number}:${kind}`] = true;
+          }, { number: pr.number, kind });
         }
       }
     })().catch(() => {}).finally(() => pendingNetwork.delete(task));
@@ -285,9 +293,47 @@ try {
   await frames();
   // Ten seconds of normal idle usage is the preparation opportunity. Record
   // it identically in both variants; startup is already measured above.
+  const preparationStart = await page.evaluate(() => performance.now());
+  if (process.argv.includes("--trace-query-preparation")) await page.evaluate(() => {
+    const node = document.querySelector("[data-app-tab-id]");
+    let fiber = node?.[Object.keys(node).find((key) => key.startsWith("__reactFiber$"))];
+    let client;
+    for (let depth = 0; fiber && depth < 100; depth++, fiber = fiber.return) {
+      if (typeof fiber.memoizedProps?.client?.getQueryCache === "function") { client = fiber.memoizedProps.client; break; }
+    }
+    if (!client) throw new Error("Diagnostic could not locate the mounted account query provider");
+    const trace = window.__instant.queryPreparation = { events: [] };
+    const describe = (query) => ({ name: String(query.queryKey[0]),
+      // Publish a scope digest and counts, never cache data or protected keys.
+      scope: [...query.queryHash].reduce((hash, char) => Math.imul(hash ^ char.charCodeAt(0), 16777619), 2166136261) >>> 0,
+      observers: query.getObserversCount(), active: query.isActive(), status: query.state.status, fetchStatus: query.state.fetchStatus });
+    trace.initial = client.getQueryCache().getAll().filter((query) => query.state.fetchStatus === "fetching").map(describe);
+    client.getQueryCache().subscribe((event) => {
+      if (trace.events.length < 1000 && event.query) trace.events.push({ time: performance.now(), event: event.type, ...describe(event.query) });
+    });
+    window.__instant.queryPreparationSnapshot = () => client.getQueryCache().getAll().filter((query) => query.state.fetchStatus === "fetching").map(describe);
+  });
+  if (results.diagnostic) await page.evaluate(() => {
+    const start = performance.now();
+    const windowState = window.__instant.preparationWindow = { visibility: document.visibilityState,
+      hasFocus: document.hasFocus(), visibilityChanges: [], idleCallbackMs: null };
+    document.addEventListener("visibilitychange", () => windowState.visibilityChanges.push({
+      ms: performance.now() - start, visibility: document.visibilityState }));
+    requestIdleCallback(() => { windowState.idleCallbackMs = performance.now() - start; });
+  });
   await page.waitForTimeout(10000);
+  results.preparationLongTasks = await page.evaluate((start) => window.__instant.longTasks.filter((entry) => entry.startTime >= start), preparationStart);
+  if (process.argv.includes("--trace-query-preparation")) results.queryPreparation = await page.evaluate(() => ({
+    ...window.__instant.queryPreparation, pending: window.__instant.queryPreparationSnapshot(),
+  }));
+  if (results.diagnostic) {
+    results.preparationWindow = await page.evaluate(() => ({ ...window.__instant.preparationWindow,
+      finalVisibility: document.visibilityState, finalHasFocus: document.hasFocus() }));
+    if (process.argv.includes("--electron")) results.nativeWindow = await browser.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows().map((window) => ({ visible: window.isVisible(), focused: window.isFocused(), minimized: window.isMinimized() })));
+  }
   if (forge) {
-    await measureForgeNavigation({ page, tabs, workload: forgeWorkload, repeats, clickMeasured, results });
+    await measureForgeNavigation({ page, tabs, workload: forgeWorkload, repeats, clickMeasured, results, allSubviews: process.argv.includes("--forge-all-subviews") });
     await Promise.allSettled(pendingNetwork);
     for (const pr of forgeWorkload.prs) for (const kind of ["detail", "comments", "commits", "review-comments"]) {
       assert.ok(results.forgeReadProof?.some((read) => read.number === pr.number && read.kind === kind && read.verified), "Verify real forge content, not an empty/error panel");
