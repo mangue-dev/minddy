@@ -39,8 +39,10 @@ const transientFailure = () => Object.assign(new Error("Failed to fetch"), { nam
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let mounted: boolean;
+let providers: string[];
 function Snapshot() {
-  const { user, session, loading } = useAuth();
+  const { user, session, loading, oauthProviders } = useAuth();
+  providers = oauthProviders;
   return <output>{JSON.stringify({ owner: user?.id ?? null, token: session?.access_token ?? null, loading })}</output>;
 }
 const snapshot = () => JSON.parse(host.textContent!);
@@ -71,6 +73,57 @@ afterEach(async () => {
 });
 
 describe("browser session recovery", () => {
+  it("rediscovers OAuth providers after an offline startup returns online", async () => {
+    const settings = vi.fn()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValue(Response.json({ external: { google: true, github: true } }));
+    vi.stubGlobal("fetch", settings);
+    await act(async () => root.render(<AuthProvider key="settings"><Snapshot /></AuthProvider>));
+    await emit("INITIAL_SESSION", savedSession());
+    expect(providers).toEqual([]);
+    await dispatch("online");
+    expect(providers).toEqual(["google", "github"]);
+    expect(settings).toHaveBeenCalledTimes(2);
+    await dispatch("focus");
+    await advance(16_000);
+    expect(settings).toHaveBeenCalledTimes(2);
+  });
+
+  it("bounds stalled provider discovery and ignores its late settings after retry succeeds", async () => {
+    let finish!: (value: Response) => void;
+    const settings = vi.fn()
+      .mockImplementationOnce(() => new Promise<Response>(done => { finish = done; }))
+      .mockResolvedValue(Response.json({ external: { github: true } }));
+    vi.stubGlobal("fetch", settings);
+    await act(async () => root.render(<AuthProvider key="settings"><Snapshot /></AuthProvider>));
+    await emit("INITIAL_SESSION", savedSession());
+    await dispatch("online");
+    await dispatch("focus");
+    expect(settings).toHaveBeenCalledTimes(1);
+    await advance(16_000);
+    expect(providers).toEqual(["github"]);
+    expect(settings).toHaveBeenCalledTimes(2);
+    expect(settings.mock.calls[0][1].signal.aborted).toBe(true);
+    await act(async () => finish(Response.json({ external: { google: true } })));
+    expect(providers).toEqual(["github"]);
+  });
+
+  it("retries unavailable provider settings and removes retries and wake listeners on unmount", async () => {
+    const settings = vi.fn(async () => Response.json({}, { status: 503 }));
+    vi.stubGlobal("fetch", settings);
+    await act(async () => root.render(<AuthProvider key="settings"><Snapshot /></AuthProvider>));
+    await emit("INITIAL_SESSION", savedSession());
+    await advance(8_000);
+    expect(settings).toHaveBeenCalledTimes(2);
+    await act(async () => root.unmount());
+    mounted = false;
+    await dispatch("online");
+    await dispatch("focus");
+    await advance(16_000);
+    expect(settings).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("keeps startup loading until a null initial event is confirmed by the session read", async () => {
     let finish!: (value: ReturnType<typeof result>) => void;
     h.getSession.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));

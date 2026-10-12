@@ -13,8 +13,6 @@ import {
   powerMonitor,
   pushNotifications,
   session,
-  shell,
-  systemPreferences,
   type WebContents,
 } from "electron";
 
@@ -124,6 +122,8 @@ import {
   startAutoUpdates,
 } from "./updater";
 import { trace } from "./trace";
+import { openDesktopExternal } from "./open-external";
+import { grantDesktopMicrophoneAccess } from "./microphone-access";
 
 /**
  * Minddy's shell (MIN-291) — §2 from docs/desktop-electron.md.
@@ -670,7 +670,7 @@ function guardNavigation(window: BrowserWindow): void {
     if (decision !== "allow") {
       event.preventDefault();
       // A third-party site goes to the browser; an unknown pattern isn't going anywhere.
-      if (decision === "external") void shell.openExternal(url);
+      if (decision === "external") void openDesktopExternal(url);
       return;
     }
     const disposition = routeDisposition(url);
@@ -680,7 +680,7 @@ function guardNavigation(window: BrowserWindow): void {
     // so at the entrance rather than launching a browser under the fingers of
     // someone who just clicked the logo.
     if (disposition === "home") goHome(window);
-    else void shell.openExternal(url);
+    else void openDesktopExternal(url);
   };
 
   window.webContents.on("will-navigate", (event, url) => guard(event, url));
@@ -706,7 +706,7 @@ function guardNavigation(window: BrowserWindow): void {
     if (!isMainFrame) return;
     const disposition = routeDisposition(url);
     if (disposition === "allow") return;
-    if (disposition === "external") void shell.openExternal(url);
+    if (disposition === "external") void openDesktopExternal(url);
     goHome(window);
   });
 
@@ -715,7 +715,7 @@ function guardNavigation(window: BrowserWindow): void {
     // Even a URL from us: we don't make a second window. A
     // internal `target="_blank"` goes to the browser like the rest — the app has a
     // window, and only one.
-    if (decision !== "block") void shell.openExternal(url);
+    if (decision !== "block") void openDesktopExternal(url);
     return { action: "deny" };
   });
 }
@@ -1031,12 +1031,12 @@ function registerIpc(): void {
     // `file://` or on a diagram registered by another app, it is
     // execution. Only what the guard agrees to let out comes out.
     if (navigationDecision(url, origin) === "block") return;
-    void shell.openExternal(url);
+    void openDesktopExternal(url);
   });
 
   ipcMain.on("minddy:windows-store:open", () => {
     if (process.platform !== "win32" || !process.windowsStore) return;
-    void shell.openExternal(WINDOWS_STORE_DEEP_LINK);
+    void openDesktopExternal(WINDOWS_STORE_DEEP_LINK);
   });
 
   ipcMain.on("minddy:windows-store-update-status-ready", (event) => {
@@ -1170,9 +1170,9 @@ function registerIpc(): void {
     // No URL from the remote page passes through this channel: the main
     // process constructs the system destination itself and targets this app.
     if (notificationCapabilities.settings === "macos") {
-      void shell.openExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
+      void openDesktopExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
     } else if (notificationCapabilities.settings === "windows") {
-      void shell.openExternal("ms-settings:notifications");
+      void openDesktopExternal("ms-settings:notifications");
     }
   });
 
@@ -1359,35 +1359,6 @@ const ALLOWED_PERMISSIONS = new Set([
 const MICROPHONE_SETTINGS_URL =
   "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone";
 
-/**
- * Access to the microphone, SYSTEM side — the half that Electron doesn't do.
- *
- * Saying yes to the page is not enough: on macOS, it's TCC who holds the microphone, and
- * it only decides once. Three states, three behaviors:
- *
- * - `not-determined` — no one has asked yet. `askForMediaAccess` opens the
- * system window; it will only open HERE, and only once in the life
- * of the installation. We return the answer.
- * - `granted` — it's already yes, nothing to ask.
- * - `denied` / `restricted` — it's no, and **the system will never ask for it again
- * ever**. Asking again does nothing at all: the only remaining path goes through
- * the Settings, so we open it rather than leaving a silent refusal.
- *
- * Outside of macOS, there is no additional layer: the answer on the page is authoritative.
- */
-async function grantMicrophoneAccess(): Promise<boolean> {
-  if (process.platform !== "darwin") return true;
-  const status = systemPreferences.getMediaAccessStatus("microphone");
-  if (status === "granted") return true;
-  if (status === "not-determined") {
-    return systemPreferences.askForMediaAccess("microphone");
-  }
-  // The window is NOT expected: the permission callback must start again
-  // immediately, otherwise the dictation button remains in “start” mode behind it.
-  void offerMicrophoneSettings();
-  return false;
-}
-
 /** Only one at a time: the dictation button clicks again. */
 let microphoneDialogOpen = false;
 
@@ -1411,7 +1382,7 @@ async function offerMicrophoneSettings(): Promise<void> {
     const { response } = mainWindow
       ? await dialog.showMessageBox(mainWindow, options)
       : await dialog.showMessageBox(options);
-    if (response === 0) await shell.openExternal(MICROPHONE_SETTINGS_URL);
+    if (response === 0) await openDesktopExternal(MICROPHONE_SETTINGS_URL);
   } finally {
     microphoneDialogOpen = false;
   }
@@ -1441,7 +1412,7 @@ function hardenSession(): void {
           callback(false);
           return;
         }
-        void grantMicrophoneAccess().then(callback);
+        void grantDesktopMicrophoneAccess(offerMicrophoneSettings).then(callback);
         return;
       }
       callback(ALLOWED_PERMISSIONS.has(permission));

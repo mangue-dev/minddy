@@ -84,6 +84,54 @@ afterEach(async () => {
 });
 
 describe("Realtime authorization recovery", () => {
+  it("ignores broadcasts and rekey events from retired channels after a reconnect", async () => {
+    await mount();
+    const retired = realtime.channel.mock.results[0].value;
+    await advance(400);
+    await act(async () => signalRealtimeRekey());
+    await advance(400);
+    const channelCount = realtime.channel.mock.calls.length;
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const broadcast = retired.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "INSERT")![2];
+    const rekey = retired.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "rekey")![2];
+    await act(async () => {
+      broadcast({ payload: { operation: "INSERT", table: "notifications", record: { id: "late" } } });
+      rekey();
+    });
+    await advance(400);
+    expect(realtime.channel).toHaveBeenCalledTimes(channelCount);
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it("ignores retired channel statuses so they cannot schedule another current-channel catch-up", async () => {
+    await mount();
+    const retired = realtime.channel.mock.results[0].value;
+    await advance(400);
+    await act(async () => signalRealtimeRekey());
+    await advance(400);
+    const current = realtime.channel.mock.results[2].value;
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    await act(async () => {
+      retired.subscribe.mock.calls[0][0]("CLOSED");
+      current.subscribe.mock.calls[0][0]("SUBSCRIBED");
+    });
+    await advance(400);
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it("ignores already queued native socket callbacks after the provider unmounts", async () => {
+    await mount();
+    const retired = realtime.channel.mock.results[0].value;
+    await advance(400);
+    await act(() => root.unmount());
+    mounted = false;
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const broadcast = retired.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "INSERT")![2];
+    await act(async () => broadcast({ payload: { operation: "INSERT", table: "notifications", record: { id: "late" } } }));
+    await advance(400);
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
   it.each(["authentication", "topic resolution"])(
     "retries a stalled %s and ignores its late completion", async (phase) => {
       let finish!: () => void;

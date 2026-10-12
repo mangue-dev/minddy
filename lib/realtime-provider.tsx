@@ -295,6 +295,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             });
             for (const event of BROADCAST_EVENTS) {
               next.on("broadcast", { event }, ({ payload }) => {
+                // Socket callbacks may already be queued when a channel is
+                // removed. Only the current connection may affect live caches.
+                if (cancelled || version !== connectVersion) return;
                 const change = payload as BroadcastChange;
                 // The line first (it's in the payload, that's what
                 // the user sees), the refresh then.
@@ -304,8 +307,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 }
               });
             }
-            next.on("broadcast", { event: "rekey" }, signalRealtimeRekey);
+            next.on("broadcast", { event: "rekey" }, () => {
+              if (!cancelled && version === connectVersion) signalRealtimeRekey();
+            });
             next.subscribe((status) => {
+              if (cancelled || version !== connectVersion) return;
               if (status === "SUBSCRIBED") {
                 const initialSubscription = !hasSubscribed;
                 hasSubscribed = true;

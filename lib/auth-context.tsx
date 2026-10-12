@@ -22,7 +22,7 @@ import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
 import { browserRuntimeConfig } from "./runtime-config-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
-import { isBackendUnavailableError } from "./backend-availability";
+import { HttpResponseError, isBackendUnavailableError } from "./backend-availability";
 import { withClientRequestDeadline } from "./client-request-deadline";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -141,17 +141,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { supabaseUrl, supabaseAnonKey } = browserRuntimeConfig();
     const controller = new AbortController();
+    let disposed = false;
+    let checking = false;
+    let resolved = false;
+    let retryTimer: number | undefined;
 
-    void fetch(`${supabaseUrl}/auth/v1/settings`, {
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-      },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const body: unknown = await response.json();
+    const checkProviders = async () => {
+      if (disposed || checking || resolved) return;
+      window.clearTimeout(retryTimer);
+      checking = true;
+      try {
+        const body: unknown = await withClientRequestDeadline(async (signal) => {
+          const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+            signal,
+          });
+          if (!response.ok) throw new HttpResponseError("Auth settings unavailable", response.status);
+          return response.json();
+        }, AUTH_INIT_TIMEOUT_MS, controller.signal);
+        if (disposed) return;
+        resolved = true;
         const external =
           typeof body === "object" && body !== null && "external" in body
             ? (body as { external?: unknown }).external
@@ -162,12 +174,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             (provider) => (external as Record<string, unknown>)[provider] === true,
           ),
         );
-      })
-      .catch(() => {
-        // A failed settings check must not expose buttons that cannot work.
-      });
+      } catch (error) {
+        // Keep provider buttons hidden until the server confirms availability,
+        // but allow an offline desktop startup to recover without a reload.
+        if (!disposed && isBackendUnavailableError(error)) {
+          retryTimer = window.setTimeout(() => { void checkProviders(); }, AUTH_INIT_TIMEOUT_MS);
+        }
+      } finally {
+        checking = false;
+      }
+    };
+    const resume = () => { void checkProviders(); };
+    const resumeVisible = () => {
+      if (document.visibilityState === "visible") resume();
+    };
+    resume();
+    window.addEventListener("online", resume);
+    window.addEventListener("focus", resume);
+    document.addEventListener("visibilitychange", resumeVisible);
 
-    return () => controller.abort();
+    return () => {
+      disposed = true;
+      controller.abort();
+      window.clearTimeout(retryTimer);
+      window.removeEventListener("online", resume);
+      window.removeEventListener("focus", resume);
+      document.removeEventListener("visibilitychange", resumeVisible);
+    };
   }, []);
 
   useEffect(() => {

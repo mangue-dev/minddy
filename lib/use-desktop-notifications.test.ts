@@ -107,6 +107,22 @@ afterEach(async () => {
 });
 
 describe("desktop notification lifecycle", () => {
+  it.each(["apns", "wns"] as const)("retains fresh notifications received while %s capabilities are pending", async (transport) => {
+    window.minddy = { ...window.minddy!, notificationCapabilities: { ...window.minddy!.notificationCapabilities!, backgroundTransport: transport } };
+    state.initialized = true;
+    state.rows = [notification("historical")];
+    await render();
+    state.rows = [notification("during-discovery"), ...state.rows];
+    await render();
+    expect(shell.showLocalNotification).not.toHaveBeenCalled();
+
+    state.capabilities = { web: false, apns: false, wns: false };
+    await render();
+    expect(shell.showLocalNotification).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "during-discovery" }));
+    await render();
+    expect(shell.showLocalNotification).toHaveBeenCalledTimes(1);
+  });
+
   it("silently seeds macOS local banners once the server confirms APNs is unavailable", async () => {
     window.minddy = { ...window.minddy!, notificationCapabilities: { ...window.minddy!.notificationCapabilities!, backgroundTransport: "apns" } };
     state.initialized = true;

@@ -1,8 +1,9 @@
-import { Menu, app, clipboard, dialog, shell, type BrowserWindow } from "electron";
+import { Menu, app, clipboard, dialog, type BrowserWindow } from "electron";
 
 import type { DesktopChannel } from "@/lib/desktop/channel";
 import { DESKTOP_STABLE_ORIGIN } from "@/lib/desktop/config";
 import { hideWindow } from "./hide-window";
+import { openDesktopExternal } from "./open-external";
 import { diagnosticReport } from "./run-log";
 import { checkForUpdatesManually } from "./updater";
 
@@ -185,7 +186,7 @@ export function buildAppMenu(
           // The SITE, not the active origin: this link leads to the showcase, which has no
           // no channel — and a preview of the landing interests no one.
           label: "minddy.app",
-          click: () => void shell.openExternal(DESKTOP_STABLE_ORIGIN),
+          click: () => void openDesktopExternal(DESKTOP_STABLE_ORIGIN),
         },
       ],
     },

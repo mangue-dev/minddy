@@ -23,6 +23,7 @@
 
 import { saveNativePushDeviceApi, savePushDeviceApi } from "@/lib/push-devices-api";
 import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
+import { withClientRequestDeadline } from "@/lib/client-request-deadline";
 import { browserRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { PushDevice } from "@/lib/types";
 
@@ -303,7 +304,12 @@ export async function refreshThisDeviceSubscription(
 export async function unsubscribeThisDevice(): Promise<string | null> {
   const bridge = nativePushBridge();
   if (bridge) {
-    const registration = await bridge.registerForPushNotifications();
+    // Reading the endpoint is best-effort. Revoked permissions or an unavailable
+    // native helper must not prevent persisting the user's explicit opt-out.
+    const registration = await withClientRequestDeadline(
+      () => bridge.registerForPushNotifications(),
+      8_000,
+    ).catch(() => null);
     await bridge.unregisterForPushNotifications?.();
     return registration?.endpoint ?? null;
   }

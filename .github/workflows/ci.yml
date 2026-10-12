@@ -89,6 +89,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Root regression tests import the shell source, including Electron's
+      # types. Keep its independent lockfile installed without downloading or
+      # running native binaries on the web validation runner.
+      - name: Install desktop test dependencies
+        run: npm --prefix desktop ci --ignore-scripts
+
       # The linter goes first: 2 s, and it catches a class of errors that
       # the typecheck does not see (unsafe optional chaining, dead variable,
       # invalid `fetch` options). `--deny-warnings` makes it a barrier —
@@ -109,7 +115,9 @@ jobs:
           pnpm run check:encryption-schema
 
       - name: Typecheck
-        run: pnpm run typecheck
+        run: |
+          pnpm run typecheck
+          npm --prefix desktop run typecheck
 
       # The root tsconfig excludes the Electron shell, which has its own build.
       # The bundle nevertheless resolves all its local imports: it therefore catches a
@@ -241,6 +249,9 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Install desktop test dependencies
+        run: npm --prefix desktop ci --ignore-scripts
 
       # Each shard builds its own projection artifact through globalSetup and
       # retains per-file isolation. Every discovered file runs on one shard.

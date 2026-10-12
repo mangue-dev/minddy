@@ -67,16 +67,17 @@ export function useDesktopNotifications(): void {
     if (!bridge || !userId || !initialized) return;
     const capabilities = bridge.notificationCapabilities;
     if (!capabilities?.localNativeBanners || !bridge.showLocalNotification) return;
+    if (seen.current === null) {
+      // The inbox snapshot defines history even while push discovery is pending.
+      // Later arrivals remain fresh until the selected transport is known.
+      seen.current = new Set(notifications.map((n) => n.id));
+      return;
+    }
     if (capabilities.backgroundTransport) {
       // Shell support does not imply that the selected server can send native
       // push. Wait for its capability response, then retain the local relay
       // when APNs or WNS credentials are intentionally absent on that instance.
       if (!pushCapabilities || pushCapabilities[capabilities.backgroundTransport]) return;
-    }
-
-    if (seen.current === null) {
-      seen.current = new Set(notifications.map((n) => n.id));
-      return;
     }
 
     const fresh: MyNotification[] = [];

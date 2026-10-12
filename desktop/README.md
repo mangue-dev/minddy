@@ -50,9 +50,14 @@ Ordinary terminal doesn't have the problem; in that of VS Code:
 env -u ELECTRON_RUN_AS_NODE npm --prefix desktop start
 ```
 
-`npm run typecheck` from here type-checks `src/` against `electron` ; the typecheck of
-deposit, **excludes this folder** (root tsconfig) — otherwise it would be necessary
-install Electron to compile the site.
+`npm run typecheck` from this folder checks the shell against Electron's types.
+The root configuration excludes this folder from discovery, but desktop
+regression tests import shell modules, so the root typecheck also needs the
+desktop dependencies. CI installs both lockfiles with
+`npm --prefix desktop ci --ignore-scripts` for the shell: its tests use native
+API mocks and do not need the Electron binary or dependency installation scripts.
+The validation job runs both the root and desktop typechecks. Local native
+probes require the regular desktop installation shown above.
 
 To work against a local server rather than production without changing the
 stored server choice:
@@ -79,6 +84,7 @@ npm --prefix desktop run build
 node scripts/desktop-startup.integration.mjs
 node scripts/desktop-renderer-hang.integration.mjs
 node scripts/desktop-notification-lifecycle.integration.mjs
+node scripts/desktop-native-failures.integration.mjs
 ```
 
 The native probes require a graphical desktop session and launch real Electron
@@ -93,6 +99,10 @@ the actual main process and server-picker preload against two local servers,
 using synthetic native banners. It checks delayed banner callbacks, replacement
 registrations, and server-switch routing without displaying OS notifications or
 contacting APNs/WNS.
+The native failure probe injects missing browser handlers and, on macOS, rejected
+microphone permission requests and Settings dialogs. It checks that the actual
+main-process callbacks settle without unhandled rejections and that a later
+browser launch still works, without opening a browser, Settings or microphone.
 
 ## Packaging downloader
 
