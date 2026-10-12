@@ -50,6 +50,8 @@ const secondary = process.argv.includes("--secondary");
 const deep = process.argv.includes("--deep");
 const forge = process.argv.includes("--forge");
 const windowingCompatible = process.argv.includes("--windowing-compatible");
+const verifyWindowingMutations = process.argv.includes("--verify-windowing-mutations");
+assert.ok(!verifyWindowingMutations || process.argv.includes("--verify-windowing"), "Mutation verification requires the explicit windowing diagnostic");
 assert.ok(!forge || !windowingCompatible, "Keep board and forge protocols separate");
 const connected = forge || process.argv.includes("--connected");
 assert.ok([deep, secondary, forge].filter(Boolean).length <= 1, "Choose one journey workload");
@@ -432,7 +434,7 @@ try {
     assert.ok(windowingCompatible && !secondary && !deep && !forge);
     const original = await api(`/api/issues/${fixture.firstIssue}`);
     assertScope("issues", original, fixture.userId);
-    await verifyBoardWindowing({ page, fixture, issueStatus: original.status, results });
+    await verifyBoardWindowing({ page, fixture, issueStatus: original.status, results, api, mutations: verifyWindowingMutations });
   }
   if (process.argv.includes("--verify") && secondary) {
     await tab(tabs[1], "verification-home");
@@ -521,8 +523,15 @@ try {
   }
   if (connectedBoard) {
     try {
-      assert.deepEqual(await loadConnectedBoardWorkload(api, fixture), connectedBoard, "Connected board workload changed");
-      results.cleanup.push({ connectedBoardUnchanged: true });
+      const current = await loadConnectedBoardWorkload(api, fixture);
+      if (verifyWindowingMutations) {
+        assert.equal(results.windowingMutationRestoration?.fieldsAndOtherIssuesUnchanged, true, "Mutation journal must verify exact field restoration and unchanged unrelated issues");
+        assert.equal(current.cards, connectedBoard.cards);
+        results.cleanup.push({ connectedBoardRestoredExceptJournaledTimestamps: true });
+      } else {
+        assert.deepEqual(current, connectedBoard, "Connected board workload changed");
+        results.cleanup.push({ connectedBoardUnchanged: true });
+      }
     } catch (error) { results.cleanup.push({ connectedBoardUnchanged: false }); failure ??= error; }
   }
   if (preservedPages.length) {
