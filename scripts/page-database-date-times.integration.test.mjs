@@ -32,7 +32,7 @@ test("database dates retain optional times through SQL validation and conversion
         property_values jsonb DEFAULT '{}', encryption_version integer DEFAULT 0
       );
     `);
-    query(readFileSync("supabase/migrations/20270109200043_page_database_date_times.sql", "utf8"));
+    query(readFileSync("supabase/migrations/20270109200044_page_database_date_times.sql", "utf8"));
     query(`
       CREATE TRIGGER page_database_guard BEFORE INSERT OR UPDATE ON public.pages
         FOR EACH ROW EXECUTE FUNCTION public.validate_page_database();

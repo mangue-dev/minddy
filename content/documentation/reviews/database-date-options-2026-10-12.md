@@ -22,7 +22,7 @@ warnings and import review. Their original capture evidence is retained.
   displayed calendar day. The import mapper consumes this same validator.
 - `lib/server/page-database-conversion-protected.ts` accepts these timestamps in
   text-to-date conversion. Created-at conversion retains its previous date-only behavior.
-- `20270109200043_page_database_date_times.sql` updates the legacy trigger and
+- `20270109200044_page_database_date_times.sql` updates the legacy trigger and
   conversion helper while preserving their encryption, type-change and lifecycle guards.
   Existing calendar values are not rewritten. This migration is included for the next
   authorized deployment and has not been applied to a production database.
@@ -77,3 +77,24 @@ batches. The Docker PostgreSQL test runs the actual migration in a disposable
 container with no network or account data. It checks valid and invalid dates,
 time preservation, offsets, midnight, clearing values, text conversion and the
 retained type-change guard. Final check results are recorded in the PR.
+
+## CI migration audit follow-up
+
+PR #412 initially reused the enriched-routines migration version and omitted its
+encryption migration manifest entry. The date migration now uses the unique
+version `20270109200044`; the integration test and this source reference follow
+that filename. Its SQL is unchanged.
+
+An isolated PostgreSQL 17 replay first reproduced the previously inventoried
+definitions of `validate_page_database()` and
+`convert_database_cell(jsonb,text,jsonb)`, then applied the date migration.
+Only their definition hashes changed in the SQL inventory. Security-definer
+flags, empty search paths, ACLs, relation references and encryption guards remain
+unchanged; no table, column, view, trigger or database access path is added.
+The migration manifest now pins the reviewed SQL. Reader procedures and figures
+remain accurate.
+
+Follow-up validation passed: the 20 schema guardrail and encryption-policy tests,
+the isolated date-migration integration test, `check:encryption-schema`,
+`check:owned-english`, `check:documentation`, `check:knowledge` and
+`git diff --check`.
