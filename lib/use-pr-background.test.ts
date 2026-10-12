@@ -47,7 +47,7 @@ it("maintains only five recent details and shares foreground/realtime reads", as
     expect(old?.getObserversCount()).toBe(0);
     expect(view.client.getQueryCache().find({ queryKey: ["pull-request", "new"], exact: true })?.getObserversCount()).toBe(1);
     const start = view.fetch.mock.calls.length;
-    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_600); });
     expect(view.fetch.mock.calls.slice(start).some(([url]) => String(url) === "/api/pull-requests/pr-4")).toBe(false);
     expect(view.fetch.mock.calls.slice(start).some(([url]) => String(url) === "/api/pull-requests/new")).toBe(true);
   } finally { await view.close(); }
