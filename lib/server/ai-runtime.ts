@@ -211,8 +211,8 @@ async function retryRejectedChatRequest(
  *
  * Profiles choose the documented contract. Only two 400s are
  * unambiguously repairable: an explicitly rejected ceiling alias, and the
- * couple GPT-5.6 function tools + reasoning explicitly refused by Chat
- * Completions. No other 400 is replayed.
+ * GPT-5.6 / GPT-6 Sol-Luna function tools + reasoning couple explicitly
+ * refused by Chat Completions. No other 400 is replayed.
  */
 export async function fetchAiChat(
   runtime: ResolvedAiRuntime,

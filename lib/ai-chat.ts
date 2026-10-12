@@ -42,9 +42,15 @@ function positiveInt(value: unknown): number | undefined {
   return Math.trunc(value);
 }
 
+/**
+ * Families whose thinking is adaptive by default and can be disabled with
+ * `thinking: {type: "disabled"}`. Includes Claude Haiku 5.5 (launched
+ * 2026-10-07): adaptive at effort `medium` by default, `disabled` accepted,
+ * manual budgets rejected upstream, so a fixed budget stays unexpressed below.
+ */
 function isAdaptiveClaude(model: string): boolean {
   return (
-    /^claude-(?:opus|sonnet|fable|mythos)-5(?:-|$)/i.test(model) ||
+    /^claude-(?:opus|sonnet|haiku|fable|mythos)-5(?:-|$)/i.test(model) ||
     /^claude-(?:opus|sonnet)-4-(?:[6-9]|\d{2,})(?:-|$)/i.test(model) ||
     /^claude-mythos-preview(?:-|$)/i.test(model)
   );
@@ -68,8 +74,19 @@ function isAlwaysThinkingClaude(model: string): boolean {
   );
 }
 
-function isGpt56(model: string): boolean {
-  return /^gpt-5\.6(?:-|$)/i.test(model);
+/**
+ * Families whose Chat Completions function calling only works with
+ * `reasoning_effort: "none"`: GPT-5.6, and GPT-6 Sol/Luna with their pro
+ * variants (OpenAI guide "Using GPT-6", 2026-09). GPT-6 Astra and GPT-6.1 Sol
+ * reject Chat Completions function calling entirely and are deliberately
+ * excluded: no effort value makes them usable, and `none` itself is a 400 on
+ * those models.
+ */
+function needsReasoningOffWithFunctionTools(model: string): boolean {
+  return (
+    /^gpt-5\.6(?:-|$)/i.test(model) ||
+    /^gpt-6-(?:sol|luna)(?:-|$)/i.test(model)
+  );
 }
 
 /**
@@ -150,10 +167,10 @@ function providerReasoningFields(
   maxOutputTokens: number | undefined,
   hasFunctionTools: boolean,
 ): Record<string, unknown> {
-  // GPT-5.6 knows how to call functions via Chat Completions, but not at the same time
-  // time than an effort of reasoning. Responses is the full path; so much
-  // that this transport remains Chat Completions, `none` is the documented contract.
-  if (provider === "openai" && hasFunctionTools && isGpt56(model)) {
+  // GPT-5.6 and GPT-6 Sol/Luna call functions via Chat Completions only
+  // without active reasoning effort. Responses is the full path; as long as
+  // this transport remains Chat Completions, `none` is the documented contract.
+  if (provider === "openai" && hasFunctionTools && needsReasoningOffWithFunctionTools(model)) {
     return { reasoning_effort: "none" };
   }
   if (provider === "openrouter" && reasoning?.enabled === false) {

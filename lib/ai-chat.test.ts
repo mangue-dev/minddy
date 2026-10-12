@@ -47,6 +47,30 @@ describe("translateAiChatRequest", () => {
     expect(withoutTools.reasoning_effort).toBe("high");
   });
 
+  it("applies the no-reasoning-with-tools contract to GPT-6 Sol and Luna", () => {
+    const tools = [{ type: "function", function: { name: "search" } }];
+    // OpenAI documents Chat Completions function calling for GPT-6 Sol and
+    // GPT-6 Luna (pro variants included) only with reasoning_effort "none".
+    for (const model of ["gpt-6-sol", "gpt-6-luna", "gpt-6-sol-pro", "gpt-6-luna-pro"]) {
+      expect(
+        translateAiChatRequest({ ...base, model, tools }, "openai").reasoning_effort,
+      ).toBe("none");
+    }
+    // Without tools the chosen effort survives.
+    expect(
+      translateAiChatRequest({ ...base, model: "gpt-6-sol" }, "openai").reasoning_effort,
+    ).toBe("high");
+    // GPT-6 Astra and GPT-6.1 Sol reject Chat Completions function calling
+    // entirely and also reject `none`; no effort value fixes them, so the
+    // adapter leaves their requests untouched.
+    expect(
+      translateAiChatRequest({ ...base, model: "gpt-6-astra", tools }, "openai").reasoning_effort,
+    ).toBe("high");
+    expect(
+      translateAiChatRequest({ ...base, model: "gpt-6.1-sol", tools }, "openai").reasoning_effort,
+    ).toBe("high");
+  });
+
   it("translates OpenRouter with its counting and reasoning extensions", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "openrouter");
     expect(body).toMatchObject({
@@ -137,6 +161,33 @@ describe("translateAiChatRequest", () => {
     }
   });
 
+  it("expresses Claude Haiku 5.5 reasoning without its rejected manual budget", () => {
+    // Haiku 5.5 (launched 2026-10-07) is adaptive by default: an effort
+    // without a fixed budget sends the documented adaptive form.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-haiku-5-5", reasoning: { effort: "medium" } },
+        "anthropic",
+      ),
+    ).toMatchObject({ thinking: { type: "adaptive" } });
+    // Unlike Opus 5.5 / Sonnet 5.5, Haiku 5.5 accepts `disabled` at its
+    // default effort, so "off" can actually turn thinking off.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-haiku-5-5", reasoning: { effort: "off" } },
+        "anthropic",
+      ),
+    ).toMatchObject({ thinking: { type: "disabled" } });
+    // Manual budgets are rejected upstream on 5.5 families: stay silent and
+    // let the default apply instead of sending a rejected budget.
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-haiku-5-5", reasoning: { effort: "high", maxTokens: 2048 } },
+        "anthropic",
+      ),
+    ).not.toHaveProperty("thinking");
+  });
+
   it("downgrades forced tool choice on Anthropic families that reject it", () => {
     const tools = [{ type: "function", function: { name: "write_tasks" } }];
     const forced = { type: "function", function: { name: "write_tasks" } };
@@ -161,10 +212,18 @@ describe("translateAiChatRequest", () => {
         ).tool_choice,
       ).toBe("auto");
     }
-    // Families that still accept forced tool use keep it untouched.
+    // Families that still accept forced tool use keep it untouched, including
+    // Claude Haiku 5.5 (the compat page's rejection list names only Opus 5.5,
+    // Sonnet 5.5, Fable 5.1 and Mythos 5.1).
     expect(
       translateAiChatRequest(
         { ...base, model: "claude-fable-5", tools, toolChoice: forced },
+        "anthropic",
+      ).tool_choice,
+    ).toEqual(forced);
+    expect(
+      translateAiChatRequest(
+        { ...base, model: "claude-haiku-5-5", tools, toolChoice: forced },
         "anthropic",
       ).tool_choice,
     ).toEqual(forced);

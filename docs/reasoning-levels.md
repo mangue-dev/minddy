@@ -1,6 +1,6 @@
 # Numo code-worker reasoning, provider by provider
 
-> **Date**: 2026-07-29, reviewed on 2026-10-05 · **Ticket**: MIN-122
+> **Date**: 2026-07-29, reviewed on 2026-10-12 · **Ticket**: MIN-122
 >
 > What the user chooses, what really goes on the thread, and what is
 > passes when the model in front does not want it.
@@ -74,10 +74,14 @@ on those families; non-forced choices remain unchanged. Earlier Fable 5 and
 Mythos 5 keep forced tool use. See the
 [Anthropic thinking reference](https://platform.claude.com/docs/en/build-with-claude/thinking).
 
-OpenAI GPT-5.6 exception: as soon as Chat Completions contains function tools,
-the adapter sends `reasoning_effort: "none"`, regardless of the level chosen.
-OpenAI rejects this combination with active effort and recommends Responses
-to maintain both reasoning, tools and multi-turn.
+OpenAI GPT-5.6 / GPT-6 Sol-Luna exception: as soon as Chat Completions
+contains function tools, the adapter sends `reasoning_effort: "none"`,
+regardless of the level chosen. OpenAI rejects this combination with active
+effort for GPT-5.6 and documents function calling in Chat Completions for
+GPT-6 Sol and GPT-6 Luna (pro variants included) only with `none`
+(see [Using GPT-6](https://developers.openai.com/api/docs/guides/latest-model)).
+GPT-6 Astra and GPT-6.1 Sol reject Chat Completions function calling entirely;
+the adapter leaves them untouched and their requests fail upstream.
 
 ### Smart Fill structured output
 
@@ -133,6 +137,13 @@ the family: adaptive for current models, manual only on
 4.5/4.6 families who accept it when a fixed budget is requested. The budget
 manual always remains at least at 1024 and strictly under the output ceiling.
 An unknown family receives no experimental fields.
+
+Claude Haiku 5.5 (launched 2026-10-07) joins the adaptive families: `off`
+sends `thinking: {type: "disabled"}`, which the model accepts at its default
+effort, and an effort without a fixed budget sends the documented
+`thinking: {type: "adaptive"}` form. Manual budgets stay unexpressed —
+Haiku 5.5 rejects them upstream — and forced tool choice remains accepted on
+this family, unlike Opus 5.5 and Sonnet 5.5.
 
 Gemini instead documents `reasoning_effort` and its translation to
 `thinking_level`/`thinking_budget`. You should not send the field directly
