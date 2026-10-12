@@ -3,6 +3,7 @@ import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
 import { appTabPreparationQueries, appTabPreparationQuery, prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { navigationPreparationPriority } from "./navigation-preparation-priority";
 
 /** Prepare a bounded working set after foreground reads, without idle polling. */
 export function createPrTabPreparation(
@@ -23,7 +24,9 @@ export function createPrTabPreparation(
   const attempted = new Set<string>();
   const destinations = new Set<string>();
   let cancel: (() => void) | undefined;
+  const cancelScheduled = () => { cancel?.(); cancel = undefined; };
   let preparing: readonly unknown[] | undefined;
+  const priority = navigationPreparationPriority(client);
 
   const prepare = () => {
     cancel = undefined;
@@ -41,7 +44,7 @@ export function createPrTabPreparation(
       void prepareAppTabSurface(href)?.catch(() => {});
       const route = appTabRoute(href);
       for (const options of appTabPreparationQueries(client, href)) {
-        if (budget <= 0) return;
+        if (budget <= 0) { priority.release(); return; }
         const identity = JSON.stringify(options.queryKey);
         if (attempted.has(identity)) continue;
         const state = client.getQueryState(options.queryKey);
@@ -62,12 +65,14 @@ export function createPrTabPreparation(
           if (preparing === key) preparing = undefined;
           const state = client.getQueryState(options.queryKey);
           if (!disposed && route.pageId && state?.status === "success" && !state.isInvalidated && state.dataUpdatedAt >= startedAt && options.queryKey[0] === "page") preparePageNavigation(route.pageId);
+          if (!disposed && budget === 0) priority.release();
           if (!disposed && budget && !cancel && client.isFetching() === 0) cancel = schedule(prepare);
         });
         return;
       }
     }
     budget = 0;
+    priority.release();
   };
   const stop = client.getQueryCache().subscribe(() => {
     if (disposed) return;
@@ -85,7 +90,7 @@ export function createPrTabPreparation(
   return {
     visit(href: string, hrefs: readonly string[]) {
       if (disposed) return;
-      cancel?.(); cancel = undefined;
+      cancelScheduled();
       active = href; available = hrefs;
       if (preparing && client.getQueryCache().find({ queryKey: preparing, exact: true })?.getObserversCount() === 0) {
         const target = appTabPreparationQuery(client, href)?.queryKey;
@@ -95,10 +100,13 @@ export function createPrTabPreparation(
       // At most three destinations and twelve sequential reads per navigation.
       // Complete a board's prerequisites without flooding startup transport.
       attempted.clear(); destinations.clear(); detailAttempted = false; budget = 12;
+      priority.acquire();
+      cancelScheduled();
       cancel = schedule(prepare);
     },
     dispose() {
       disposed = true; cancel?.(); stop();
+      priority.release();
       if (preparing) {
         const key = preparing;
         if (client.getQueryCache().find({ queryKey: key, exact: true })?.getObserversCount() === 0) {
