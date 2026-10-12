@@ -105,8 +105,17 @@ export class EncryptedRowCodec {
         throw new Error("Inconsistent row encryption version");
       }
       content = await this.store.decrypt(value, cryptoContext);
-      if (!content || typeof content !== "object" || Array.isArray(content) ||
-        Object.keys(content).length !== columns.length ||
+      if (!content || typeof content !== "object" || Array.isArray(content)) {
+        throw new Error("Invalid protected row content");
+      }
+      // Pre-trigger routines have exactly the former payload. Only schedules
+      // may supply the missing trigger; every other protected field stays required.
+      if (input.table === "agent_routines" && row.trigger_type === "schedule" &&
+        !Object.hasOwn(content, "trigger") && Object.keys(content).length === columns.length - 1 &&
+        columns.every(column => column === "trigger" || Object.hasOwn(content, column))) {
+        content = { ...content, trigger: { type: "schedule" } };
+      }
+      if (Object.keys(content).length !== columns.length ||
         columns.some((column) => !Object.hasOwn(content, column))) {
         throw new Error("Invalid protected row content");
       }
