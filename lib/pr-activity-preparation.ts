@@ -25,7 +25,7 @@ export function createPrActivityPreparation(
   const failedAt = new Map<string, number>();
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
   const otherTransport = () => client.getQueryCache().getAll().some((query) =>
-    query.state.fetchStatus === "fetching" && (!active.has(query.queryHash) || query.getObserversCount() > 0) && !navigationPreparationOwnsRead(client, query.queryKey));
+    query.state.fetchStatus === "fetching" && (!active.has(query.queryHash) || query.isActive()) && !navigationPreparationOwnsRead(client, query.queryKey));
   const navigationWaiting = () => navigationPreparationPending(client) && !navigationPreparationHasRead(client);
   const enqueue = (delay = IDLE_DELAY_MS) => {
     if (!disposed && !cancel && visible() && !navigationWaiting()) cancel = schedule(prepare, delay);

@@ -13,11 +13,11 @@ export function navigationPreparationPending(client: QueryClient): boolean {
   return !!priorities.get(client)?.owners.size;
 }
 
-/** Exact unobserved speculation may share transport; a foreground join cannot. */
+/** Exact inactive speculation may share transport; an enabled observer cannot. */
 export function navigationPreparationOwnsRead(client: QueryClient, key: readonly unknown[]): boolean {
   const state = priorities.get(client);
   return !!state && [...state.reads.values()].some((read) => hashKey(read) === hashKey(key)) &&
-    client.getQueryCache().find({ queryKey: key, exact: true })?.getObserversCount() === 0;
+    client.getQueryCache().find({ queryKey: key, exact: true })?.isActive() === false;
 }
 
 export function navigationPreparationHasRead(client: QueryClient): boolean {

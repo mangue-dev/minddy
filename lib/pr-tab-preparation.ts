@@ -51,7 +51,7 @@ export function createPrTabPreparation(
     const auxiliary = new Set(recentActivityQueries(client).map((options) => hashKey(options.queryKey)));
     return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" &&
       !(exceptOwn && preparing && query.queryHash === hashKey(preparing)) &&
-      !(auxiliary.has(query.queryHash) && query.getObserversCount() === 0));
+      !(auxiliary.has(query.queryHash) && !query.isActive()));
   };
 
   const prepare = () => {

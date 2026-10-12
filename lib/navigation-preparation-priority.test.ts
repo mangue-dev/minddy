@@ -112,11 +112,13 @@ it("does not wait for activity of a failed recent detail", async () => {
   } finally { view.close(); }
 });
 
-it("shares one speculative Page read with at most five activities and yields when its foreground joins", async () => {
+it.each([false, true])("shares one speculative Page read with five activities and yields to activation (disabled observer: %s)", async (disabledObserver) => {
   const view = setup();
   let finishPage!: () => void;
   const signals: AbortSignal[] = [];
   let stopObserver: (() => void) | undefined;
+  let observer: QueryObserver | undefined;
+  const pageKey: readonly unknown[] = ["page", "page"];
   try {
     const prs = ["pr", "second", "third"];
     view.client.setQueryData(allPullRequestsQueryOptions().queryKey, { pullRequests: prs.map((prId) => ({ prId, pr_state: "draft" })) });
@@ -131,6 +133,10 @@ it("shares one speculative Page read with at most five activities and yields whe
       return Promise.resolve(Response.json([]));
     });
     view.activity.update(prs);
+    if (disabledObserver) {
+      observer = new QueryObserver(view.client, { queryKey: pageKey, enabled: false });
+      stopObserver = observer.subscribe(() => {});
+    }
     view.navigation.visit("/home", ["/home", "/projects/project/pages/page"]);
     for (const task of Array.from(view.tabs)) { view.tabs.delete(task); task(); }
     await vi.waitFor(() => expect(finishPage).toBeDefined());
@@ -138,8 +144,11 @@ it("shares one speculative Page read with at most five activities and yields whe
     await vi.waitFor(() => expect(signals).toHaveLength(5));
     expect(view.client.isFetching()).toBe(6);
     expect(signals.every((signal) => !signal.aborted)).toBe(true);
-    const observer = new QueryObserver(view.client, { queryKey: ["page", "page"] });
-    stopObserver = observer.subscribe(() => {});
+    if (observer) observer.setOptions({ queryKey: pageKey, enabled: true });
+    else {
+      observer = new QueryObserver(view.client, { queryKey: pageKey });
+      stopObserver = observer.subscribe(() => {});
+    }
     await vi.waitFor(() => expect(signals.every((signal) => signal.aborted)).toBe(true));
     expect(view.client.getQueryState(["page", "page"])?.fetchStatus).toBe("fetching");
     finishPage();
