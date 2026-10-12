@@ -110,7 +110,7 @@ export function isPreparedPageData(
  * A prepared document remains a valid editing basis for this mounted surface.
  * The navigation TTL only decides whether a new surface may trust the cache;
  * expiring it must not unmount an editor during an unrelated menu interaction.
- * PageView is keyed by pageId, so each document gets its own initial decision.
+ * Each keyed document surface makes its own initial readiness decision.
  */
 export function usePageSurfaceReady(
   pageId: string,

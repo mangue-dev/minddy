@@ -329,8 +329,8 @@ function PageSurface({
     [mentionSources]
   );
 
-  // The editor reads its document only once. Cached bodies therefore refetch on
-  // every ordinary mount; the sole exception is the short window immediately
+  // A new document surface must validate cached data on an ordinary mount;
+  // the exception is the short window immediately
   // after an intent prefetch or optimistic creation. That response is already
   // the navigation's fresh read, so requesting it again would recreate the delay
   // the prefetch just removed.
@@ -927,16 +927,10 @@ function PageSurface({
     );
   }
 
-  // We are waiting for the response from THIS montage, and not just “one” piece of data.
-  //
-  // This is the counterpart of the model: tiptap never rereads its `content`, so
-  // the document on which the editor mounts is the one he will keep on the screen
-  // until dismantling. Paint the cover first – the reflex everywhere else
-  // in the app, and what rehydration does from the disk to
-  // reloading — put on the screen an expired body that the response arrived one
-  // moment later could no longer correct. Hence the wait: on a
-  // document, a skeleton moment is better than a previous version
-  // displayed with the aplomb of the maid.
+  // A new surface needs its own fresh read or explicit navigation preparation.
+  // A retained surface keeps its validated basis while background reads refresh
+  // it. Versioned autosave reconciles newer responses, and resumeEditor restores
+  // the merged screen when Activity recreates Tiptap's editor.
   if (isPending || !page || !readyForThisSurface) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
