@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import { createPrDiffRuntimePreparation } from "./pr-diff-runtime-preparation";
 
@@ -59,6 +59,25 @@ it("retires delayed public imports without mounting a pool in a departed account
   await view.flush();
   expect(view.ready).not.toHaveBeenCalled(); expect(view.tasks.size).toBe(0);
   view.client.clear();
+});
+
+it("shares an idle window with unobserved preparation but yields when a foreground observer joins", async () => {
+  const view = setup();
+  let finish!: (value: boolean) => void;
+  const options = { queryKey: ["pr-comments", "p0"], queryFn: () => new Promise<boolean>((resolve) => { finish = resolve; }) };
+  const request = view.client.fetchQuery(options);
+  let loaded!: (runtime: Runtime) => void;
+  view.load.mockImplementation(() => new Promise((resolve) => { loaded = resolve; }));
+  let unobserve: (() => void) | undefined;
+  try {
+    await view.flush(); expect(view.load).toHaveBeenCalledTimes(1);
+    const observer = new QueryObserver(view.client, options);
+    unobserve = observer.subscribe(() => {});
+    loaded(view.runtime as unknown as Runtime); await view.flush(); await view.flush();
+    expect(view.ready).not.toHaveBeenCalled();
+    finish(true); await request; await view.flush();
+    expect(view.ready).toHaveBeenCalledTimes(1);
+  } finally { unobserve?.(); view.stop(); view.client.clear(); }
 });
 
 it("does not loop on failed public imports", async () => {
