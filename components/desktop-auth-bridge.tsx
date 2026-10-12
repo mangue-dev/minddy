@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheckIcon as ShieldCheck } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useTranslations } from "next-intl";
@@ -51,11 +51,14 @@ export function DesktopAuthBridge() {
   const t = useTranslations("Auth");
   const { completeDesktopSignIn } = useAuth();
   const [exchanging, setExchanging] = useState(false);
+  const exchangeStarted = useRef(false);
   /** The email link waiting for a gesture. */
   const [pending, setPending] = useState<DesktopAuthLink | null>(null);
 
   const exchange = useCallback(
     (link: DesktopAuthLink) => {
+      if (exchangeStarted.current) return;
+      exchangeStarted.current = true;
       setPending(null);
       setExchanging(true);
       void (async () => {
@@ -63,7 +66,7 @@ export function DesktopAuthBridge() {
           const next = await completeDesktopSignIn(link);
           window.location.replace(next);
         } catch (err) {
-          console.error("[desktop] connexion par deep link échouée:", err);
+          console.error("[desktop] deep-link sign-in failed:", err);
           const code = link.kind === "error" ? link.error : "auth_callback_failed";
           const reason = link.kind === "error" ? link.reason : "exchange_failed";
           window.location.replace(
@@ -80,12 +83,13 @@ export function DesktopAuthBridge() {
     if (!bridge) return;
 
     return bridge.onAuthLink((link) => {
+      if (exchangeStarted.current) return;
       if (link.kind === "otp") {
         setPending(link);
         return;
       }
       if (link.kind === "code" && !consumeDesktopAuthTurn(link.turn)) {
-        console.warn("[desktop] deep link ignoré : aucun tour d'authentification en cours");
+        console.warn("[desktop] ignored deep link: no matching authentication turn");
         return;
       }
       exchange(link);

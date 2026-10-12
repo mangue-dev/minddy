@@ -50,6 +50,27 @@ it("ignores clean exits and cancels deferred work after quit, destruction or new
   expect(load).not.toHaveBeenCalled();
 });
 
+it("does not overwrite a local startup or server-unavailable document chosen after a crash", () => {
+  const { recovery, load, run } = setup();
+  recovery.navigationStarted("https://minddy.example.com/home", false);
+  recovery.rendererGone("crashed");
+  recovery.navigationStarted("data:text/html,new-local-document", false);
+  run();
+  expect(load).not.toHaveBeenCalled();
+});
+
+it("still reports a genuine failure after its own recovery document starts navigating", async () => {
+  const { recovery, load, failed, run } = setup();
+  load.mockImplementationOnce(async () => {
+    recovery.navigationStarted("data:text/html,recovery", false);
+    throw new Error("Local recovery load failed");
+  });
+  recovery.navigationStarted("https://minddy.example.com/home", false);
+  recovery.rendererGone("crashed"); run();
+  await Promise.resolve();
+  expect(failed).toHaveBeenCalledTimes(1);
+});
+
 it("reports failed local loads once without an unhandled rejection", async () => {
   const { recovery, load, failed, run } = setup();
   load.mockRejectedValueOnce(new Error("Renderer unavailable"));

@@ -5,8 +5,8 @@ import { getSupabase } from "./supabase";
 export const CLIENT_READ_TIMEOUT_MS = 30_000;
 
 /**
- * Renew browser cookies before protected reads. API handlers cannot persist
- * rotated cookies, and foreground requests can race the auth refresh ticker.
+ * Renew browser cookies before protected reads. Foreground requests can race
+ * the auth refresh ticker; preparing here lets concurrent reads share renewal.
  * The SDK shares concurrent renewals; getSession is not an authorization check.
  */
 export async function prepareClientSession(): Promise<string> {

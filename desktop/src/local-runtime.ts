@@ -5,13 +5,12 @@ import { app } from "electron";
 
 import {
   localRuntimeProcessSpec,
-  localRuntimeStartupState,
   localRuntimeStopSpec,
 } from "@/lib/desktop/local-runtime-platform";
+import { createLocalRuntimeLifecycle } from "@/lib/desktop/local-runtime-lifecycle";
 
 export const LOCAL_SELF_HOST_ORIGIN = "http://localhost:6463";
 const LOCAL_RUNTIME_FILE = "local-runtime.json";
-let runtime: ChildProcess | null = null;
 
 function runtimeFile(): string {
   return path.join(app.getPath("userData"), LOCAL_RUNTIME_FILE);
@@ -48,48 +47,23 @@ export function writeLocalRuntimeRoot(root: string): string {
   return normalized;
 }
 
-async function isHealthy(): Promise<boolean> {
+async function isHealthy(signal: AbortSignal): Promise<boolean> {
   try {
-    return (await fetch(`${LOCAL_SELF_HOST_ORIGIN}/api/health`)).ok;
+    return (await fetch(`${LOCAL_SELF_HOST_ORIGIN}/api/health`, {
+      signal: AbortSignal.any([signal, AbortSignal.timeout(5_000)]),
+    })).ok;
   } catch {
     return false;
   }
 }
 
 /** Starts Supabase and minddy together, then resolves when the app is ready. */
-export async function startLocalRuntime(root: string): Promise<void> {
-  const startupState = localRuntimeStartupState(
-    await isHealthy(),
-    runtime !== null && runtime.exitCode === null,
-  );
-  if (startupState === "ready") return;
-  if (startupState === "external") {
-    throw new Error(
-      "Local minddy is already running outside the desktop app. Stop it in its terminal with Ctrl+C, then try again.",
-    );
-  }
-  if (runtime && runtime.exitCode === null) return;
-  const validatedRoot = validateLocalRuntimeRoot(root);
-  const spec = localRuntimeProcessSpec(process.platform, process.env.SHELL);
-  runtime = spawn(spec.command, spec.args, {
-    cwd: validatedRoot,
-    stdio: "ignore",
-    windowsHide: spec.windowsHide,
-  });
-
-  const deadline = Date.now() + 10 * 60_000;
-  while (Date.now() < deadline) {
-    if (runtime.exitCode !== null) throw new Error(`The local launcher stopped with code ${runtime.exitCode}. Open Terminal and run pnpm self-host:local to see its output.`);
-    if (await isHealthy()) return;
-    await new Promise((resolve) => setTimeout(resolve, 750));
-  }
-  stopLocalRuntime();
-  throw new Error("minddy did not become ready within 10 minutes. Check Docker, then try again.");
+export function startLocalRuntime(root: string): Promise<void> {
+  return lifecycle.start(root);
 }
 
-/** Lets the launcher stop both the web process and its local Supabase backend. */
-export function stopLocalRuntime(): void {
-  if (runtime && runtime.exitCode === null) {
+function stopProcess(runtime: ChildProcess): void {
+  if (runtime.exitCode === null && runtime.signalCode === null) {
     const spec = runtime.pid ? localRuntimeStopSpec(process.platform, runtime.pid) : null;
     if (spec) {
       // `cmd.exe` is only the launcher. Terminate its complete process tree so
@@ -97,10 +71,24 @@ export function stopLocalRuntime(): void {
       spawn(spec.command, spec.args, {
         stdio: "ignore",
         windowsHide: spec.windowsHide,
-      });
+      }).on("error", () => { runtime.kill("SIGTERM"); });
     } else {
       runtime.kill("SIGTERM");
     }
   }
-  runtime = null;
+}
+
+const lifecycle = createLocalRuntimeLifecycle({
+  healthy: isHealthy,
+  spawn: (root: string) => {
+    const validatedRoot = validateLocalRuntimeRoot(root);
+    const spec = localRuntimeProcessSpec(process.platform, process.env.SHELL);
+    return spawn(spec.command, spec.args, { cwd: validatedRoot, stdio: "ignore", windowsHide: spec.windowsHide });
+  },
+  stop: stopProcess,
+});
+
+/** Lets the launcher stop both the web process and its local Supabase backend. */
+export function stopLocalRuntime(): void {
+  lifecycle.stop();
 }

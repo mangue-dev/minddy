@@ -85,6 +85,12 @@ const COQUILLE = {
     "validation live in @/lib/desktop/local-run-diff, and path layout lives in " +
     "@/lib/desktop/local-run-history and @/lib/server/agent/harness-layout",
   "menu.ts": "composes the native menu from Electron APIs",
+  "open-external.ts":
+    "contains native browser-launch failures; URL admission remains in @/lib/desktop/nav-guard, " +
+    "with rejected-launch regressions in @/lib/desktop/open-external.test",
+  "microphone-access.ts":
+    "settles macOS permission requests and Settings failures; request admission remains in " +
+    "@/lib/desktop/media-guard, with native callback regressions in @/lib/desktop/microphone-access.test",
   "updater.ts": "wires electron-updater; decisions live in @/lib/desktop/update-*",
   "hide-window.ts": "wires hideWindowStep from @/lib/desktop/hide-window",
   "channel-store.ts": "reads and writes the channel file; parsing lives in @/lib/desktop/channel",

@@ -65,8 +65,8 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   )}`;
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  // Provider being redirected — the page is going to Google/GitHub, so this
-  // state is never reset to null on success (only on error).
+  // Web sign-in stays busy until navigation. Desktop only waits for the system
+  // browser to open, so an abandoned provider attempt can be retried here.
   const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
   /**
    * The screen's work is done and the app is TAKING OVER: the session (or
@@ -171,8 +171,8 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     setOauthPending(provider);
     track("oauth_initiated", { provider, context: "login" });
     try {
-      // Success = the page navigates to the provider; we never come back here.
       await signInWithOAuth(provider, redirectTo);
+      if (inDesktopApp) setOauthPending(null);
     } catch (err) {
       track("login_failed", { method: provider, reason: errorReason(err) });
       setError(authErrorMessage(err, t));

@@ -135,6 +135,7 @@ const bridge: DesktopBridge = {
     ipcRenderer.send("minddy:auth-link-ready");
     return () => {
       ipcRenderer.removeListener("minddy:auth-link", listener);
+      ipcRenderer.send("minddy:auth-link-not-ready");
     };
   },
 

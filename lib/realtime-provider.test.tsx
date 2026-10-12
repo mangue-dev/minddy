@@ -84,6 +84,92 @@ afterEach(async () => {
 });
 
 describe("Realtime authorization recovery", () => {
+  it("ignores broadcasts and rekey events from retired channels after a reconnect", async () => {
+    await mount();
+    const retired = realtime.channel.mock.results[0].value;
+    await advance(400);
+    await act(async () => signalRealtimeRekey());
+    await advance(400);
+    const channelCount = realtime.channel.mock.calls.length;
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const broadcast = retired.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "INSERT")![2];
+    const rekey = retired.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "rekey")![2];
+    await act(async () => {
+      broadcast({ payload: { operation: "INSERT", table: "notifications", record: { id: "late" } } });
+      rekey();
+    });
+    await advance(400);
+    expect(realtime.channel).toHaveBeenCalledTimes(channelCount);
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it("ignores retired channel statuses so they cannot schedule another current-channel catch-up", async () => {
+    await mount();
+    const retired = realtime.channel.mock.results[0].value;
+    await advance(400);
+    await act(async () => signalRealtimeRekey());
+    await advance(400);
+    const current = realtime.channel.mock.results[2].value;
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    await act(async () => {
+      retired.subscribe.mock.calls[0][0]("CLOSED");
+      current.subscribe.mock.calls[0][0]("SUBSCRIBED");
+    });
+    await advance(400);
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it("ignores already queued native socket callbacks after the provider unmounts", async () => {
+    await mount();
+    const retired = realtime.channel.mock.results[0].value;
+    await advance(400);
+    await act(() => root.unmount());
+    mounted = false;
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const broadcast = retired.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "INSERT")![2];
+    await act(async () => broadcast({ payload: { operation: "INSERT", table: "notifications", record: { id: "late" } } }));
+    await advance(400);
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it.each(["authentication", "topic resolution"])(
+    "retries a stalled %s and ignores its late completion", async (phase) => {
+      let finish!: () => void;
+      if (phase === "authentication") {
+        realtime.setAuth.mockImplementationOnce(() => new Promise<void>((done) => { finish = done; }));
+      } else {
+        realtime.rpc.mockImplementationOnce(() => new Promise((done) => {
+          finish = () => done({ data: "user:user-1:v:obsolete", error: null });
+        }));
+      }
+      await mount();
+      expect(realtime.channel).not.toHaveBeenCalledWith("user:user-1:v:1", expect.anything());
+      // Bound the complete SDK operation, including its internal session lock,
+      // then give the normal first retry its one-second backoff.
+      await advance(9_000);
+      expect(realtime.channel).toHaveBeenCalledWith("user:user-1:v:1", { config: { private: true } });
+      const channels = realtime.channel.mock.calls.length;
+      const topics = requests("user:user-1");
+      await act(async () => finish());
+      expect(realtime.channel).toHaveBeenCalledTimes(channels);
+      expect(requests("user:user-1")).toBe(topics);
+      await advance(60_000);
+      expect(realtime.channel).toHaveBeenCalledTimes(channels);
+    },
+  );
+
+  it("cancels pending authorization deadlines when all scopes unmount", async () => {
+    realtime.setAuth.mockImplementationOnce(() => new Promise<void>(() => {}));
+    await mount();
+    await advance(400);
+    await act(() => root.unmount());
+    mounted = false;
+    client.clear();
+    expect(vi.getTimerCount()).toBe(0);
+    await advance(60_000);
+    expect(requests("user:user-1")).toBe(0);
+  });
+
   it("recovers active usage after a brief focus switch and leaves healthy and inactive reads alone", async () => {
     await mount();
     await advance(400);

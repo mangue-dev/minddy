@@ -22,39 +22,48 @@ afterEach(() => {
 });
 
 describe("consumeDesktopAuthTurn", () => {
-  it("accepte le nonce du tour en cours", () => {
+  it("accepts the nonce of the current turn", () => {
     const turn = beginDesktopAuthTurn();
     expect(consumeDesktopAuthTurn(turn)).toBe(true);
   });
 
-  it("refuse un lien qui n'en porte aucun", () => {
-    beginDesktopAuthTurn();
+  it("rejects a link without a nonce", () => {
+    const turn = beginDesktopAuthTurn();
     expect(consumeDesktopAuthTurn(undefined)).toBe(false);
+    expect(consumeDesktopAuthTurn(turn)).toBe(true);
   });
 
-  it("refuse un lien alors qu'aucun tour n'a été démarré", () => {
+  it("rejects a link when no turn was started", () => {
     expect(consumeDesktopAuthTurn("n0nce")).toBe(false);
   });
 
-  it("refuse un nonce qui n'est pas le nôtre", () => {
-    beginDesktopAuthTurn();
-    expect(consumeDesktopAuthTurn("un-autre")).toBe(false);
+  it("rejects an unrelated nonce", () => {
+    const turn = beginDesktopAuthTurn();
+    expect(consumeDesktopAuthTurn("unrelated")).toBe(false);
+    expect(consumeDesktopAuthTurn(turn)).toBe(true);
   });
 
-  it("ne vaut qu'une réponse : le second passage est refusé", () => {
+  it("accepts a nonce only once", () => {
     const turn = beginDesktopAuthTurn();
     expect(consumeDesktopAuthTurn(turn)).toBe(true);
     expect(consumeDesktopAuthTurn(turn)).toBe(false);
   });
 
-  it("refuse un tour abandonné depuis un quart d'heure", () => {
+  it("rejects a turn abandoned for more than fifteen minutes", () => {
     vi.useFakeTimers();
     const turn = beginDesktopAuthTurn();
     vi.advanceTimersByTime(16 * 60 * 1000);
     expect(consumeDesktopAuthTurn(turn)).toBe(false);
   });
 
-  it("tire un nonce différent à chaque tour", () => {
+  it("preserves a newer turn when an older OAuth callback arrives first", () => {
+    const oldTurn = beginDesktopAuthTurn();
+    const currentTurn = beginDesktopAuthTurn();
+    expect(consumeDesktopAuthTurn(oldTurn)).toBe(false);
+    expect(consumeDesktopAuthTurn(currentTurn)).toBe(true);
+  });
+
+  it("generates a different nonce for each turn", () => {
     const first = beginDesktopAuthTurn();
     clearDesktopAuthTurn();
     expect(beginDesktopAuthTurn()).not.toBe(first);

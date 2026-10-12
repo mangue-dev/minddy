@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@supabase/supabase-js";
 import messages from "@/messages/en.json";
 import { LoginForm } from "./login-form";
+import { SignupWizard } from "./signup-wizard";
 
 const state = vi.hoisted(() => ({
   user: null as User | null,
@@ -39,9 +40,20 @@ vi.mock("@/components/auth/auth-chrome", () => ({
   AuthColumn: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AuthSeparator: () => null,
   Field: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  OAuthButtons: () => null,
+  OAuthButtons: ({ disabled, onSelect }: { disabled: boolean; onSelect: (provider: "google") => void }) =>
+    <button type="button" data-oauth disabled={disabled} onClick={() => onSelect("google")}>Google</button>,
+  MailGlyph: () => null,
+  PasswordRules: () => null,
+  SignupLegalNotice: () => null,
   useInDesktopApp: () => state.desktop,
 }));
+vi.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }: { children: ReactNode }) => children,
+  motion: { div: ({ children }: { children: ReactNode }) => <div>{children}</div> },
+}));
+vi.mock("@/components/wizard/wizard-stepper", () => ({ WizardStepper: () => null }));
+vi.mock("@/components/user-avatar-picker", () => ({ UserAvatarPicker: () => null }));
+vi.mock("@/lib/use-my-avatar", () => ({ stageSignupAvatarFile: vi.fn() }));
 vi.mock("mangue-ui", () => ({
   Button: (props: ComponentProps<"button">) => <button {...props} />,
   Input: (props: ComponentProps<"input">) => <input {...props} />,
@@ -58,11 +70,11 @@ vi.mock("@/components/otp-input", () => ({
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 
-async function render() {
+async function render(screen = LoginForm) {
   await act(async () => {
     root.render(
       <NextIntlClientProvider locale="en" messages={messages}>
-        <LoginForm invite={null} />
+        {screen === LoginForm ? <LoginForm invite={null} /> : <SignupWizard invite={null} />}
       </NextIntlClientProvider>,
     );
   });
@@ -90,6 +102,34 @@ afterEach(async () => {
 });
 
 describe("desktop login routing", () => {
+  it.each([
+    { label: "login", screen: LoginForm, desktop: true },
+    { label: "signup", screen: SignupWizard, desktop: true },
+    { label: "web login", screen: LoginForm, desktop: false },
+    { label: "web signup", screen: SignupWizard, desktop: false },
+  ])("keeps $label OAuth busy only for the appropriate browser handoff", async ({ screen, desktop }) => {
+    state.desktop = desktop;
+    state.loading = false;
+    state.params = new URLSearchParams("mode=signin");
+    let openBrowser!: () => void;
+    state.signInWithOAuth.mockImplementationOnce(() => new Promise<void>((resolve) => { openBrowser = resolve; }));
+    await render(screen);
+    const oauth = host.querySelector<HTMLButtonElement>("[data-oauth]")!;
+    await act(() => oauth.click());
+    expect(oauth.disabled).toBe(true);
+    expect(state.signInWithOAuth).toHaveBeenCalledExactlyOnceWith("google", "/home");
+    await act(() => openBrowser());
+    // Desktop keeps the renderer open. Returning after abandoning the system
+    // browser must allow another provider or password attempt without reloading.
+    expect(oauth.disabled).toBe(!desktop);
+    if (desktop) {
+      await act(() => oauth.click());
+      expect(state.signInWithOAuth).toHaveBeenCalledTimes(2);
+    }
+    expect(state.router.replace).not.toHaveBeenCalled();
+    expect(state.router.push).not.toHaveBeenCalled();
+  });
+
   it("waits for session restoration before deciding whether signup is needed", async () => {
     await render();
     expect(state.router.replace).not.toHaveBeenCalled();

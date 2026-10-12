@@ -22,6 +22,8 @@ import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
 import { browserRuntimeConfig } from "./runtime-config-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
+import { HttpResponseError, isBackendUnavailableError } from "./backend-availability";
+import { withClientRequestDeadline } from "./client-request-deadline";
 import type { User, Session } from "@supabase/supabase-js";
 
 export type OAuthProvider = "google" | "github";
@@ -139,17 +141,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { supabaseUrl, supabaseAnonKey } = browserRuntimeConfig();
     const controller = new AbortController();
+    let disposed = false;
+    let checking = false;
+    let resolved = false;
+    let retryTimer: number | undefined;
 
-    void fetch(`${supabaseUrl}/auth/v1/settings`, {
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-      },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const body: unknown = await response.json();
+    const checkProviders = async () => {
+      if (disposed || checking || resolved) return;
+      window.clearTimeout(retryTimer);
+      checking = true;
+      try {
+        const body: unknown = await withClientRequestDeadline(async (signal) => {
+          const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            },
+            signal,
+          });
+          if (!response.ok) throw new HttpResponseError("Auth settings unavailable", response.status);
+          return response.json();
+        }, AUTH_INIT_TIMEOUT_MS, controller.signal);
+        if (disposed) return;
+        resolved = true;
         const external =
           typeof body === "object" && body !== null && "external" in body
             ? (body as { external?: unknown }).external
@@ -160,27 +174,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             (provider) => (external as Record<string, unknown>)[provider] === true,
           ),
         );
-      })
-      .catch(() => {
-        // A failed settings check must not expose buttons that cannot work.
-      });
+      } catch (error) {
+        // Keep provider buttons hidden until the server confirms availability,
+        // but allow an offline desktop startup to recover without a reload.
+        if (!disposed && isBackendUnavailableError(error)) {
+          retryTimer = window.setTimeout(() => { void checkProviders(); }, AUTH_INIT_TIMEOUT_MS);
+        }
+      } finally {
+        checking = false;
+      }
+    };
+    const resume = () => { void checkProviders(); };
+    const resumeVisible = () => {
+      if (document.visibilityState === "visible") resume();
+    };
+    resume();
+    window.addEventListener("online", resume);
+    window.addEventListener("focus", resume);
+    document.addEventListener("visibilitychange", resumeVisible);
 
-    return () => controller.abort();
+    return () => {
+      disposed = true;
+      controller.abort();
+      window.clearTimeout(retryTimer);
+      window.removeEventListener("online", resume);
+      window.removeEventListener("focus", resume);
+      document.removeEventListener("visibilitychange", resumeVisible);
+    };
   }, []);
 
   useEffect(() => {
     const supabase = getSupabase();
     let resolved = false;
+    let disposed = false;
+    let revision = 0;
+    let recovering = false;
+    let recoveryTimer: number | undefined;
     let snapshotOwner: string | null | undefined;
+    const recoveryController = new AbortController();
 
     const timeoutId = window.setTimeout(() => {
       if (resolved) return;
       setLoading(false);
+      void recoverSession();
     }, AUTH_INIT_TIMEOUT_MS);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, s) => {
+    const applySession = (event: string, s: Session | null) => {
       resolved = true;
       window.clearTimeout(timeoutId);
       const nextOwner = s?.user.id ?? null;
@@ -233,10 +272,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         track("user_signed_out", {});
         reset();
       }
+    };
+
+    // INITIAL_SESSION can be null after a temporary refresh failure even though
+    // Supabase retains the refresh token. Retry without requiring a new sign-in.
+    const recoverSession = async () => {
+      if (disposed || recovering) return;
+      window.clearTimeout(recoveryTimer);
+      recovering = true;
+      const startedAtRevision = revision;
+      try {
+        // SDK initialization and refresh retries can outlive a single network
+        // request. Bound the whole read so a stalled attempt cannot suppress
+        // every later foreground or network-return recovery.
+        const { data, error } = await withClientRequestDeadline(
+          () => supabase.auth.getSession(), AUTH_INIT_TIMEOUT_MS, recoveryController.signal,
+        );
+        if (disposed || revision !== startedAtRevision) return;
+        if (error) throw error;
+        applySession("INITIAL_SESSION", data.session);
+      } catch (error) {
+        if (!disposed && revision === startedAtRevision) {
+          if (isBackendUnavailableError(error)) {
+            recoveryTimer = window.setTimeout(() => { void recoverSession(); }, AUTH_INIT_TIMEOUT_MS);
+          } else {
+            resolved = true;
+            window.clearTimeout(timeoutId);
+            setLoading(false);
+          }
+        }
+      } finally {
+        recovering = false;
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, s) => {
+      window.clearTimeout(recoveryTimer);
+      if (event === "INITIAL_SESSION" && !s) {
+        // A null initial notification does not distinguish missing credentials
+        // from a temporary refresh failure. Let getSession confirm it before
+        // clearing an account already known by this provider or releasing the
+        // startup gate. Otherwise desktop login can redirect to signup before
+        // a retained session finishes restoring. The watchdog still bounds it.
+        // Leave the auth callback before calling Supabase again: callbacks may
+        // run while the SDK owns its session lock.
+        recoveryTimer = window.setTimeout(() => { void recoverSession(); }, 0);
+        return;
+      }
+      revision++;
+      applySession(event, s);
     });
+    const resumeSession = () => { void recoverSession(); };
+    const resumeVisibleSession = () => {
+      if (document.visibilityState === "visible") resumeSession();
+    };
+    window.addEventListener("online", resumeSession);
+    window.addEventListener("focus", resumeSession);
+    document.addEventListener("visibilitychange", resumeVisibleSession);
 
     return () => {
+      disposed = true;
+      recoveryController.abort();
       window.clearTimeout(timeoutId);
+      window.clearTimeout(recoveryTimer);
+      window.removeEventListener("online", resumeSession);
+      window.removeEventListener("focus", resumeSession);
+      document.removeEventListener("visibilitychange", resumeVisibleSession);
       subscription.unsubscribe();
     };
   }, [identify, reset, track]);

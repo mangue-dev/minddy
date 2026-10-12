@@ -7,7 +7,7 @@ import {
 } from "./local-models";
 
 describe("local model discovery", () => {
-  it("emploie l'API native /api/tags d'Ollama, même si le chat passe par /v1", () => {
+  it("uses Ollama's native /api/tags even when chat uses /v1", () => {
     expect(
       localModelDiscoveryUrl({ provider: "ollama", baseUrl: "http://127.0.0.1:11434/v1" }),
     ).toBe("http://127.0.0.1:11434/api/tags");
@@ -19,7 +19,7 @@ describe("local model discovery", () => {
     ).toBe("http://localhost:1234/v1/models");
   });
 
-  it("refuse d'utiliser le pont Electron comme un proxy réseau", () => {
+  it("refuses to use the Electron bridge as a network proxy", () => {
     expect(
       localModelDiscoveryUrl({ provider: "ollama", baseUrl: "http://192.168.1.10:11434" }),
     ).toBeNull();
@@ -28,7 +28,7 @@ describe("local model discovery", () => {
     ).toBeNull();
   });
 
-  it("lit et nettoie les deux formes de catalogue", () => {
+  it("reads and cleans both catalog formats", () => {
     expect(
       parseDiscoveredModels("ollama", {
         models: [{ name: "qwen3:8b" }, { model: "nomic-embed-text" }, { name: "qwen3:8b" }],
@@ -41,7 +41,7 @@ describe("local model discovery", () => {
     ).toEqual(["gpt-oss", "llama-3"]);
   });
 
-  it("n'envoie aucune clé et ne suit jamais une redirection", async () => {
+  it("sends no key and never follows a redirect", async () => {
     const fetchImpl = vi.fn(async () =>
       new Response(JSON.stringify({ models: [{ name: "qwen3:8b" }] }), { status: 200 }),
     ) as typeof fetch;
@@ -53,5 +53,38 @@ describe("local model discovery", () => {
       "http://127.0.0.1:11434/api/tags",
       expect.objectContaining({ redirect: "error", headers: { accept: "application/json" } }),
     );
+  });
+
+  it("cancels an oversized catalog before consuming its entire response", async () => {
+    const cancel = vi.fn();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(600_000));
+        controller.enqueue(new Uint8Array(600_000));
+        // A bad local endpoint can stream indefinitely, rather than finishing.
+      },
+      cancel,
+    });
+    const fetchImpl = vi.fn(async () => new Response(body)) as typeof fetch;
+    await expect(
+      discoverLocalModels({ provider: "ollama", baseUrl: "http://localhost:11434" }, fetchImpl),
+    ).resolves.toEqual({ ok: false, reason: "invalid_response" });
+    expect(cancel).toHaveBeenCalledOnce();
+  }, 4_000);
+
+  it("decodes model identifiers split across UTF-8 stream chunks", async () => {
+    const bytes = new TextEncoder().encode(JSON.stringify({ data: [{ id: "model-🦙" }] }));
+    const split = bytes.indexOf(0xf0) + 1;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, split));
+        controller.enqueue(bytes.slice(split));
+        controller.close();
+      },
+    });
+    const fetchImpl = vi.fn(async () => new Response(body)) as typeof fetch;
+    await expect(
+      discoverLocalModels({ provider: "local_openai", baseUrl: "http://localhost:1234/v1" }, fetchImpl),
+    ).resolves.toEqual({ ok: true, models: ["model-🦙"] });
   });
 });

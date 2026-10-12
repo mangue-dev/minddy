@@ -42,6 +42,7 @@ export function openServerPicker(options: ServerPickerOptions): void {
     },
   };
   picker = new BrowserWindow(windowOptions);
+  let localStartup: Promise<{ error?: string }> | null = null;
 
   ipcMain.handle("minddy:server-picker:save", (event, raw: unknown) => {
     if (!picker || event.sender !== picker.webContents) return { error: "This server window is no longer active." };
@@ -61,9 +62,18 @@ export function openServerPicker(options: ServerPickerOptions): void {
   });
   ipcMain.handle("minddy:server-picker:local", async (event) => {
     if (!picker || event.sender !== picker.webContents) return { error: "This server window is no longer active." };
-    const result = await options.onUseLocal();
-    if (!result.error) picker.close();
-    return result;
+    if (localStartup) return localStartup;
+    const requestedPicker = picker;
+    localStartup = (async () => {
+      try {
+        const result = await options.onUseLocal();
+        if (!result.error && picker === requestedPicker && !requestedPicker.isDestroyed()) requestedPicker.close();
+        return result;
+      } catch (error) {
+        return { error: error instanceof Error ? error.message : "Could not start local minddy." };
+      }
+    })().finally(() => { localStartup = null; });
+    return localStartup;
   });
 
   picker.once("ready-to-show", () => picker?.show());

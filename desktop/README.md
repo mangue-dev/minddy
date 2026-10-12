@@ -50,9 +50,14 @@ Ordinary terminal doesn't have the problem; in that of VS Code:
 env -u ELECTRON_RUN_AS_NODE npm --prefix desktop start
 ```
 
-`npm run typecheck` from here type-checks `src/` against `electron` ; the typecheck of
-deposit, **excludes this folder** (root tsconfig) — otherwise it would be necessary
-install Electron to compile the site.
+`npm run typecheck` from this folder checks the shell against Electron's types.
+The root configuration excludes this folder from discovery, but desktop
+regression tests import shell modules, so the root typecheck also needs the
+desktop dependencies. CI installs both lockfiles with
+`npm --prefix desktop ci --ignore-scripts` for the shell: its tests use native
+API mocks and do not need the Electron binary or dependency installation scripts.
+The validation job runs both the root and desktop typechecks. Local native
+probes require the regular desktop installation shown above.
 
 To work against a local server rather than production without changing the
 stored server choice:
@@ -67,6 +72,37 @@ Windows and Linux users press **Alt** first because the menu bar is hidden by
 default. Remote origins must use HTTPS, while HTTP is accepted only for loopback
 and private-network IP addresses. This flow works on macOS, Windows, and Linux,
 including **Run local minddy on this computer** for a local clone folder.
+
+## Verify startup and recovery
+
+Run the desktop and session regression tests from the repository root:
+
+```bash
+npm test -- lib/desktop components/desktop-auth-bridge.test.tsx lib/auth-context.test.tsx lib/client-session-renewal.test.ts lib/server/api-auth-cookie-refresh.test.ts lib/use-desktop-notifications.test.ts
+npm --prefix desktop run typecheck
+npm --prefix desktop run build
+node scripts/desktop-startup.integration.mjs
+node scripts/desktop-renderer-hang.integration.mjs
+node scripts/desktop-notification-lifecycle.integration.mjs
+node scripts/desktop-native-failures.integration.mjs
+```
+
+The native probes require a graphical desktop session and launch real Electron
+processes with disposable profiles and a local fixture server. The startup probe
+checks delayed authentication subscriptions, cookie persistence across complete
+app exits, and a rotated cookie on the next process's first request. It does not
+contact Supabase or authenticate a real account; the session regression tests
+exercise SDK refresh failures and API response cookies separately. The hang probe blocks a renderer and
+checks the native recovery prompt and local recovery document. Both probes remove
+their temporary profiles when they finish. The notification lifecycle probe runs
+the actual main process and server-picker preload against two local servers,
+using synthetic native banners. It checks delayed banner callbacks, replacement
+registrations, and server-switch routing without displaying OS notifications or
+contacting APNs/WNS.
+The native failure probe injects missing browser handlers and, on macOS, rejected
+microphone permission requests and Settings dialogs. It checks that the actual
+main-process callbacks settle without unhandled rejections and that a later
+browser launch still works, without opening a browser, Settings or microphone.
 
 ## Packaging downloader
 

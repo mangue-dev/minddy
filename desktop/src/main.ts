@@ -13,12 +13,12 @@ import {
   powerMonitor,
   pushNotifications,
   session,
-  shell,
-  systemPreferences,
   type WebContents,
 } from "electron";
 
-import { parseDesktopAuthLink, type DesktopAuthLink } from "@/lib/desktop/auth-link";
+import { parseDesktopAuthLink } from "@/lib/desktop/auth-link";
+import { createDesktopChannelSwitch } from "@/lib/desktop/channel-switch";
+import { createDesktopAuthLinkDelivery } from "@/lib/desktop/auth-link-delivery";
 import { discoverLocalModels } from "@/lib/desktop/local-models";
 import {
   desktopOriginForChannel,
@@ -68,6 +68,8 @@ import {
 import { createRendererRecovery, desktopRendererRecoveryHtml } from "@/lib/desktop/renderer-recovery";
 import { createWindowStallRecovery } from "@/lib/desktop/window-stall-recovery";
 import { loadLocalRecoveryDocument } from "@/lib/desktop/local-recovery-load";
+import { loadDesktopWindow } from "@/lib/desktop/window-load";
+import { createLocalStartupSelection } from "@/lib/desktop/local-startup-selection";
 import {
   carrySessionCookies,
   staleSessionCookies,
@@ -83,6 +85,7 @@ import {
 } from "@/lib/desktop/window-frame";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import {
+  disableNativePush,
   nativePushAllowed,
   pushInstallationId,
   setNativePushAllowed,
@@ -104,6 +107,7 @@ import {
   readLocalRuntimeRoot,
   startLocalRuntime,
   stopLocalRuntime,
+  validateLocalRuntimeRoot,
   writeLocalRuntimeRoot,
 } from "./local-runtime";
 import {
@@ -118,6 +122,8 @@ import {
   startAutoUpdates,
 } from "./updater";
 import { trace } from "./trace";
+import { openDesktopExternal } from "./open-external";
+import { grantDesktopMicrophoneAccess } from "./microphone-access";
 
 /**
  * Minddy's shell (MIN-291) — §2 from docs/desktop-electron.md.
@@ -132,10 +138,14 @@ import { trace } from "./trace";
  * deliberate — it lives in users and updates twice a year.
  */
 
-/** The auth link received before the page is ready to hear it. */
-let pendingAuthLink: DesktopAuthLink | null = null;
 let pendingOpenPath: string | null = null;
 let mainWindow: BrowserWindow | null = null;
+let localRuntimeGeneration = 0;
+const authLinkDelivery = createDesktopAuthLinkDelivery({
+  currentRenderer: () => mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()
+    ? mainWindow.webContents.id : null,
+  send: (link) => mainWindow?.webContents.send("minddy:auth-link", link),
+});
 const integratedFrames = new WeakMap<BrowserWindow, boolean>();
 const documentChrome = new Map<number, boolean>();
 const localNotifications = new DesktopLocalNotificationRegistry();
@@ -311,21 +321,29 @@ function openCurrentServerPicker(): void {
 function showLocalRuntimeStatus(message: string): void {
   if (!mainWindow) return;
   const html = `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="light dark"><title>Starting minddy</title><style>body{font:15px system-ui,sans-serif;display:grid;min-height:100vh;margin:0;place-items:center;background:Canvas;color:CanvasText}p{color:GrayText}</style><main><h1>Starting local minddy…</h1><p>${message}</p></main>`;
-  void mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  loadDesktopWindow(mainWindow, `data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 }
 
-async function useLocalMinddy(): Promise<{ error?: string }> {
+const useLocalMinddy = createLocalStartupSelection(selectLocalMinddy);
+
+async function selectLocalMinddy(): Promise<{ error?: string }> {
   if (!mainWindow) return { error: "The main window is unavailable." };
-  const selection = await dialog.showOpenDialog(mainWindow, {
-    title: "Choose the minddy folder",
-    properties: ["openDirectory"],
-    buttonLabel: "Use this folder",
-  });
-  if (selection.canceled || !selection.filePaths[0]) return { error: "Choose the minddy folder to continue." };
+  let generation = localRuntimeGeneration;
   try {
-    const root = writeLocalRuntimeRoot(selection.filePaths[0]);
+    const selection = await dialog.showOpenDialog(mainWindow, {
+      title: "Choose the minddy folder",
+      properties: ["openDirectory"],
+      buttonLabel: "Use this folder",
+    });
+    if (selection.canceled || !selection.filePaths[0]) return { error: "Choose the minddy folder to continue." };
+    if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
+    const root = validateLocalRuntimeRoot(selection.filePaths[0]);
+    generation = ++localRuntimeGeneration;
+    channelSwitch.cancel();
     showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
     await startLocalRuntime(root);
+    if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
+    writeLocalRuntimeRoot(root);
     writeDesktopServerOrigin(LOCAL_SELF_HOST_ORIGIN);
     applyServerOrigin(LOCAL_SELF_HOST_ORIGIN, "/signup");
     return {};
@@ -335,14 +353,18 @@ async function useLocalMinddy(): Promise<{ error?: string }> {
 }
 
 function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH): void {
+  channelSwitch.cancel();
+  localRuntimeGeneration++;
   if (next !== LOCAL_SELF_HOST_ORIGIN) stopLocalRuntime();
   customServerOrigin = next;
-  origin = next ?? desktopOriginForChannel(channel);
+  const nextOrigin = next ?? desktopOriginForChannel(channel);
+  if (nextOrigin !== origin) localNotifications.clear();
+  origin = nextOrigin;
   trace("server", { origin, custom: next !== null });
   applyAboutPanel();
   rebuildAppMenu();
   if (mainWindow) {
-    void mainWindow.loadURL(`${origin}${entryPath}`);
+    loadDesktopWindow(mainWindow, `${origin}${entryPath}`);
     mainWindow.show();
     mainWindow.focus();
   }
@@ -379,27 +401,32 @@ function useMinddyCloud(): void {
  * Hence the asynchronous function, and the only place in the file that waits something
  * before acting.
  */
-async function setChannel(next: DesktopChannel): Promise<void> {
-  if (customServerOrigin) return;
-  if (next === channel) return;
-  const from = origin;
-  const to = desktopOriginForChannel(next);
-  await carrySession(from, to);
+const channelSwitch = createDesktopChannelSwitch({
+  current: () => channel,
+  unavailable: () => customServerOrigin !== null || quitting || quittingForUpdate,
+  prepare: (next) => carrySession(origin, desktopOriginForChannel(next)),
+  apply: (next) => {
+    localRuntimeGeneration++;
+    stopLocalRuntime();
+    const to = desktopOriginForChannel(next);
+    writeDesktopChannel(next);
+    channel = next;
+    if (to !== origin) localNotifications.clear();
+    origin = to;
+    trace("setChannel", { channel: next, origin });
+    // Refresh both native surfaces that display the selected channel.
+    applyAboutPanel();
+    if (mainWindow) {
+      rebuildAppMenu();
+      goHome(mainWindow);
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  },
+});
 
-  writeDesktopChannel(next);
-  channel = next;
-  origin = to;
-  trace("setChannel", { channel: next, origin });
-  // The two native surfaces which NAME the channel are redone: without that, the check mark
-  // of the menu would remain on the one we just left and “About”
-  // would announce the old origin until the next launch.
-  applyAboutPanel();
-  if (mainWindow) {
-    rebuildAppMenu();
-    goHome(mainWindow);
-    mainWindow.show();
-    mainWindow.focus();
-  }
+async function setChannel(next: DesktopChannel): Promise<void> {
+  await channelSwitch.select(next);
 }
 
 /**
@@ -581,7 +608,7 @@ function receiveDeepLink(raw: string): void {
 
   const link = parseDesktopAuthLink(raw);
   if (!link) return;
-  pendingAuthLink = link;
+  authLinkDelivery.receive(link);
   const window = mainWindow;
   if (!window) return;
   window.show();
@@ -595,23 +622,21 @@ function flushOpenLink(): void {
   pendingOpenPath = null;
   mainWindow.show();
   mainWindow.focus();
-  void mainWindow.loadURL(`${origin}${next}`);
+  loadDesktopWindow(mainWindow, `${origin}${next}`);
 }
 
 function flushAuthLink(): void {
-  if (!pendingAuthLink || !mainWindow) return;
-  mainWindow.webContents.send("minddy:auth-link", pendingAuthLink);
-  pendingAuthLink = null;
+  authLinkDelivery.flush();
 }
 
 function goHome(window: BrowserWindow): void {
-  void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
+  loadDesktopWindow(window, `${origin}${DESKTOP_ENTRY_PATH}`);
 }
 
 function revealLocalNotificationTarget(target: string | null): void {
   if (!mainWindow) return;
   const url = desktopLocalNotificationUrl(origin, target);
-  if (url) void mainWindow.loadURL(url);
+  if (url) loadDesktopWindow(mainWindow, url);
   mainWindow.show();
   mainWindow.focus();
 }
@@ -645,7 +670,7 @@ function guardNavigation(window: BrowserWindow): void {
     if (decision !== "allow") {
       event.preventDefault();
       // A third-party site goes to the browser; an unknown pattern isn't going anywhere.
-      if (decision === "external") void shell.openExternal(url);
+      if (decision === "external") void openDesktopExternal(url);
       return;
     }
     const disposition = routeDisposition(url);
@@ -655,7 +680,7 @@ function guardNavigation(window: BrowserWindow): void {
     // so at the entrance rather than launching a browser under the fingers of
     // someone who just clicked the logo.
     if (disposition === "home") goHome(window);
-    else void shell.openExternal(url);
+    else void openDesktopExternal(url);
   };
 
   window.webContents.on("will-navigate", (event, url) => guard(event, url));
@@ -681,7 +706,7 @@ function guardNavigation(window: BrowserWindow): void {
     if (!isMainFrame) return;
     const disposition = routeDisposition(url);
     if (disposition === "allow") return;
-    if (disposition === "external") void shell.openExternal(url);
+    if (disposition === "external") void openDesktopExternal(url);
     goHome(window);
   });
 
@@ -690,7 +715,7 @@ function guardNavigation(window: BrowserWindow): void {
     // Even a URL from us: we don't make a second window. A
     // internal `target="_blank"` goes to the browser like the rest — the app has a
     // window, and only one.
-    if (decision !== "block") void shell.openExternal(url);
+    if (decision !== "block") void openDesktopExternal(url);
     return { action: "deny" };
   });
 }
@@ -804,6 +829,7 @@ function createWindow(
   });
   window.webContents.on("did-start-navigation", (details) => {
     if (details.isMainFrame) {
+      if (!details.isSameDocument) authLinkDelivery.notReady(window.webContents.id);
       rendererRecovery.navigationStarted(details.url, details.isSameDocument);
       stallRecovery.navigationStarted(details.url, details.isSameDocument);
     }
@@ -813,6 +839,7 @@ function createWindow(
   window.on("responsive", () => stallRecovery.responsive());
   window.on("closed", () => stallRecovery.stop());
   window.webContents.on("render-process-gone", (_event, details) => {
+    authLinkDelivery.notReady(window.webContents.id);
     stallRecovery.stop();
     if (details.reason !== "clean-exit" && !quitting && !quittingForUpdate) {
       // Never include document URLs, account data or page content in diagnostics.
@@ -842,7 +869,7 @@ function createWindow(
         desktopShellFontDataUrl(),
         process.platform,
       );
-      void window.loadURL(
+      loadDesktopWindow(window,
         `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
       );
     },
@@ -873,10 +900,13 @@ function createWindow(
     });
     mainWindow = replacement;
     window.destroy();
-    void replacement.loadURL(url);
+    loadDesktopWindow(replacement, url);
   });
   const webContentsId = window.webContents.id;
-  window.on("closed", () => documentChrome.delete(webContentsId));
+  window.on("closed", () => {
+    documentChrome.delete(webContentsId);
+    authLinkDelivery.notReady(webContentsId);
+  });
   // Keep native menu access independent of the renderer and remote server.
   // A bare Alt opens the full application menu when integrated caption controls
   // prevent the operating system from revealing the auto-hidden menu bar.
@@ -979,7 +1009,7 @@ function createWindow(
     powerMonitor.removeListener("unlock-screen", onUnlock);
   });
 
-  if (loadInitialOrigin) void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
+  if (loadInitialOrigin) loadDesktopWindow(window, `${origin}${DESKTOP_ENTRY_PATH}`);
   return window;
 }
 
@@ -1001,12 +1031,12 @@ function registerIpc(): void {
     // `file://` or on a diagram registered by another app, it is
     // execution. Only what the guard agrees to let out comes out.
     if (navigationDecision(url, origin) === "block") return;
-    void shell.openExternal(url);
+    void openDesktopExternal(url);
   });
 
   ipcMain.on("minddy:windows-store:open", () => {
     if (process.platform !== "win32" || !process.windowsStore) return;
-    void shell.openExternal(WINDOWS_STORE_DEEP_LINK);
+    void openDesktopExternal(WINDOWS_STORE_DEEP_LINK);
   });
 
   ipcMain.on("minddy:windows-store-update-status-ready", (event) => {
@@ -1016,7 +1046,8 @@ function registerIpc(): void {
     );
   });
 
-  ipcMain.on("minddy:auth-link-ready", () => flushAuthLink());
+  ipcMain.on("minddy:auth-link-ready", (event) => authLinkDelivery.ready(event.sender.id));
+  ipcMain.on("minddy:auth-link-not-ready", (event) => authLinkDelivery.notReady(event.sender.id));
 
   ipcMain.on("minddy:server-picker:open", () => openCurrentServerPicker());
 
@@ -1050,15 +1081,17 @@ function registerIpc(): void {
       body: payload.body,
     });
     if (!localNotifications.track(payload, notification)) return;
+    const notificationOrigin = origin;
     notification.on("click", () => {
-      localNotifications.dismiss(payload.id);
-      revealLocalNotificationTarget(payload.target);
+      if (!localNotifications.dismiss(payload.id, notification)) return;
+      revealLocalNotificationTarget(notificationOrigin === origin ? payload.target : null);
     });
     notification.on("show", () => setNativeNotificationsAvailable(true));
-    notification.on("close", () => localNotifications.forget(payload.id));
+    notification.on("close", () => localNotifications.forget(payload.id, notification));
     notification.on("failed", () => {
-      localNotifications.forget(payload.id);
-      setNativeNotificationsAvailable(false);
+      if (localNotifications.forget(payload.id, notification)) {
+        setNativeNotificationsAvailable(false);
+      }
     });
     notification.show();
   });
@@ -1125,13 +1158,11 @@ function registerIpc(): void {
 
   ipcMain.handle("minddy:push:unregister", async () => {
     if (process.platform === "darwin") {
-      pushNotifications.unregisterForAPNSNotifications();
       apnsRegistration = null;
-      await setNativePushAllowed(app.getPath("userData"), false);
+      await disableNativePush(app.getPath("userData"), () => pushNotifications.unregisterForAPNSNotifications());
     } else if (process.platform === "win32") {
       wnsRegistration = null;
-      await runWnsHelper(["unregister"]);
-      await setNativePushAllowed(app.getPath("userData"), false);
+      await disableNativePush(app.getPath("userData"), () => runWnsHelper(["unregister"]));
     }
   });
 
@@ -1139,9 +1170,9 @@ function registerIpc(): void {
     // No URL from the remote page passes through this channel: the main
     // process constructs the system destination itself and targets this app.
     if (notificationCapabilities.settings === "macos") {
-      void shell.openExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
+      void openDesktopExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
     } else if (notificationCapabilities.settings === "windows") {
-      void shell.openExternal("ms-settings:notifications");
+      void openDesktopExternal("ms-settings:notifications");
     }
   });
 
@@ -1328,35 +1359,6 @@ const ALLOWED_PERMISSIONS = new Set([
 const MICROPHONE_SETTINGS_URL =
   "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone";
 
-/**
- * Access to the microphone, SYSTEM side — the half that Electron doesn't do.
- *
- * Saying yes to the page is not enough: on macOS, it's TCC who holds the microphone, and
- * it only decides once. Three states, three behaviors:
- *
- * - `not-determined` — no one has asked yet. `askForMediaAccess` opens the
- * system window; it will only open HERE, and only once in the life
- * of the installation. We return the answer.
- * - `granted` — it's already yes, nothing to ask.
- * - `denied` / `restricted` — it's no, and **the system will never ask for it again
- * ever**. Asking again does nothing at all: the only remaining path goes through
- * the Settings, so we open it rather than leaving a silent refusal.
- *
- * Outside of macOS, there is no additional layer: the answer on the page is authoritative.
- */
-async function grantMicrophoneAccess(): Promise<boolean> {
-  if (process.platform !== "darwin") return true;
-  const status = systemPreferences.getMediaAccessStatus("microphone");
-  if (status === "granted") return true;
-  if (status === "not-determined") {
-    return systemPreferences.askForMediaAccess("microphone");
-  }
-  // The window is NOT expected: the permission callback must start again
-  // immediately, otherwise the dictation button remains in “start” mode behind it.
-  void offerMicrophoneSettings();
-  return false;
-}
-
 /** Only one at a time: the dictation button clicks again. */
 let microphoneDialogOpen = false;
 
@@ -1380,7 +1382,7 @@ async function offerMicrophoneSettings(): Promise<void> {
     const { response } = mainWindow
       ? await dialog.showMessageBox(mainWindow, options)
       : await dialog.showMessageBox(options);
-    if (response === 0) await shell.openExternal(MICROPHONE_SETTINGS_URL);
+    if (response === 0) await openDesktopExternal(MICROPHONE_SETTINGS_URL);
   } finally {
     microphoneDialogOpen = false;
   }
@@ -1410,7 +1412,7 @@ function hardenSession(): void {
           callback(false);
           return;
         }
-        void grantMicrophoneAccess().then(callback);
+        void grantDesktopMicrophoneAccess(offerMicrophoneSettings).then(callback);
         return;
       }
       callback(ALLOWED_PERMISSIONS.has(permission));
@@ -1471,6 +1473,7 @@ if (process.platform === "linux") {
 // packaged always ignores this variable, even if its environment carries it.
 if (!app.isPackaged && process.env.MINDDY_DESKTOP_TEST_USER_DATA?.trim()) {
   app.setPath("userData", process.env.MINDDY_DESKTOP_TEST_USER_DATA.trim());
+  app.setPath("sessionData", process.env.MINDDY_DESKTOP_TEST_USER_DATA.trim());
 }
 
 // Single instance: the deep link must reach the app ALREADY opened, not in
@@ -1555,15 +1558,21 @@ if (!app.requestSingleInstanceLock()) {
     const localRoot = localSelected ? readLocalRuntimeRoot() : null;
     mainWindow = createWindow(!localSelected, !backgroundLaunchRequested);
     if (localRoot) {
+      const generation = localRuntimeGeneration;
       showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
-      void startLocalRuntime(localRoot)
-        .then(() => mainWindow?.loadURL(`${LOCAL_SELF_HOST_ORIGIN}${DESKTOP_ENTRY_PATH}`))
+      void useLocalMinddy.run(() => startLocalRuntime(localRoot)
+        .then(async () => {
+          if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
+          await mainWindow?.loadURL(`${LOCAL_SELF_HOST_ORIGIN}${DESKTOP_ENTRY_PATH}`);
+          return {};
+        })
         .catch((error) => {
-          if (!mainWindow) return;
+          if (!mainWindow || generation !== localRuntimeGeneration || quitting || error?.name === "AbortError") return { error: "Local startup was canceled." };
           dialog.showErrorBox("Local minddy could not start", error instanceof Error ? error.message : String(error));
           rebuildAppMenu();
           openCurrentServerPicker();
-        });
+          return { error: error instanceof Error ? error.message : "Could not start local minddy." };
+        }));
     } else if (localSelected) {
       showLocalRuntimeStatus("Choose the installed minddy folder to start the local instance.");
       openCurrentServerPicker();
@@ -1582,7 +1591,8 @@ if (!app.requestSingleInstanceLock()) {
           title: content.title,
           body: content.body,
         });
-        notification.on("click", () => revealLocalNotificationTarget(content.url));
+        const notificationOrigin = origin;
+        notification.on("click", () => revealLocalNotificationTarget(notificationOrigin === origin ? content.url : null));
         notification.show();
       });
     }

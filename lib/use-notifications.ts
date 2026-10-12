@@ -123,6 +123,7 @@ export function useNotifications() {
   return {
     notifications,
     unreadCount,
+    initialized: data !== undefined,
     loading: enabled && isPending,
     markRead,
     markAllRead,

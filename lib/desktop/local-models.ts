@@ -87,8 +87,8 @@ export async function discoverLocalModels(
       signal: controller.signal,
     });
     if (!response.ok) return { ok: false, reason: "unavailable" };
-    const text = await response.text();
-    if (Buffer.byteLength(text, "utf8") > MAX_RESPONSE_BYTES) {
+    const text = await readBoundedCatalog(response);
+    if (text === null) {
       return { ok: false, reason: "invalid_response" };
     }
     let body: unknown;
@@ -102,6 +102,28 @@ export async function discoverLocalModels(
     return { ok: false, reason: "unavailable" };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+/** Enforce the byte limit while reading, before an endpoint can fill shell memory. */
+async function readBoundedCatalog(response: Response): Promise<string | null> {
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return Buffer.concat(chunks, bytes).toString("utf8");
+      bytes += value.byteLength;
+      if (bytes > MAX_RESPONSE_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
   }
 }
 

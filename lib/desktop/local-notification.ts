@@ -80,6 +80,11 @@ export class DesktopLocalNotificationRegistry {
     return this.#byId.size;
   }
 
+  /** Discard banners whose relative routes belong to the previous server. */
+  clear(): void {
+    for (const id of Array.from(this.#byId.keys())) this.dismiss(id);
+  }
+
   track(
     payload: DesktopLocalNotificationPayload,
     handle: DesktopLocalNotificationHandle
@@ -100,9 +105,9 @@ export class DesktopLocalNotificationRegistry {
     return true;
   }
 
-  dismiss(id: string): boolean {
+  dismiss(id: string, handle?: DesktopLocalNotificationHandle): boolean {
     const current = this.#byId.get(id);
-    if (!current) return false;
+    if (!current || (handle && current.handle !== handle)) return false;
     this.#byId.delete(id);
     if (this.#idByTarget.get(current.targetKey) === id) {
       this.#idByTarget.delete(current.targetKey);
@@ -111,12 +116,15 @@ export class DesktopLocalNotificationRegistry {
     return true;
   }
 
-  forget(id: string): void {
+  forget(id: string, handle?: DesktopLocalNotificationHandle): boolean {
     const current = this.#byId.get(id);
-    if (!current) return;
+    // Electron can deliver close/failure after a replacement banner has reused
+    // the same id. Only the owning native object may remove that registration.
+    if (!current || (handle && current.handle !== handle)) return false;
     this.#byId.delete(id);
     if (this.#idByTarget.get(current.targetKey) === id) {
       this.#idByTarget.delete(current.targetKey);
     }
+    return true;
   }
 }
