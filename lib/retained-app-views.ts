@@ -4,6 +4,33 @@ import { normalizeAppTabLocation } from "./app-tab-location";
 /** Maximum view count; the weighted budget also bounds large boards. */
 export const RETAINED_APP_VIEW_LIMIT = 6;
 export const RETAINED_APP_VIEW_BUDGET = 6;
+const SMALL_PAGE_NODES = new Set(["doc", "paragraph", "heading", "text", "hardBreak", "horizontalRule", "blockquote", "bulletList", "orderedList", "listItem", "taskList", "taskItem"]);
+
+/** Small documents need less retained DOM than a 200-card board unit.
+ * Inspect only bounded, already-owned query data; unknown and large documents
+ * keep the conservative Page weight. This does not certify read freshness. */
+export function retainedPageCost(page: { content: unknown; database_schema?: unknown } | undefined): number {
+  if (!page || page.database_schema != null || !page.content || typeof page.content !== "object" ||
+    !("type" in page.content) || page.content.type !== "doc") return 2;
+  const pending: unknown[] = [page.content];
+  let nodes = 0;
+  let characters = 0;
+  while (pending.length) {
+    if (++nodes > 200) return 2;
+    const node = pending.pop();
+    if (!node || typeof node !== "object" || !("type" in node) || typeof node.type !== "string" || !SMALL_PAGE_NODES.has(node.type)) return 2;
+    if ("text" in node) {
+      if (typeof node.text !== "string") return 2;
+      characters += node.text.length;
+      if (characters > 25_000) return 2;
+    }
+    if ("content" in node) {
+      if (!Array.isArray(node.content) || node.content.length + pending.length + nodes > 200) return 2;
+      pending.push(...node.content);
+    }
+  }
+  return 1;
+}
 export interface RetainedAppView {
   key: string;
   tabId: string | null;

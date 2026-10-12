@@ -89,7 +89,7 @@ const results = { label, sha: productSha.sha,
   build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}), ...(connected ? { forge: forgeWorkload } : {}), ...(connectedBoard ? { connectedBoard } : {}) }, timestamp: new Date().toISOString(),
   runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
-if (["--trace-forge-stages", "--trace-query-preparation", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
+if (["--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
 let browser, context, page, userData, preserved, failure, changedIssue;
 const preservedPages = [];
 const created = [];
@@ -194,6 +194,8 @@ try {
   });
   page.on("requestfailed", (req) => results.network.push({ path: new URL(req.url()).pathname, method: req.method(), failed: req.failure()?.errorText }));
   const cdp = await context.newCDPSession(page);
+  const traceLayout = process.argv.includes("--trace-retained-layout");
+  if (traceLayout) await cdp.send("Performance.enable");
   let profiled = false;
   const ready = (spec) => page.waitForFunction(({ cards, href, tab }) => {
     const root = document.querySelector('[data-app-view-active="true"]');
@@ -216,6 +218,7 @@ try {
   // Use the canonical tab UI, preserve all existing server tabs, and suppress
   // hover preparation by moving and pressing in one CDP input sequence.
   async function clickMeasured(name, locator, condition, args, complete = condition) {
+    const beforeMetrics = traceLayout ? await cdp.send("Performance.getMetrics") : null;
     await locator.scrollIntoViewIfNeeded();
     const box = await locator.boundingBox();
     assert.ok(box);
@@ -268,6 +271,32 @@ try {
           responseEndMs: entry.responseEnd - start, transferSize: entry.transferSize })), sample.start);
     }
     results.measurements.push({ name, ...sample, driverMs: Date.now() - driverStart });
+    if (traceLayout) {
+      const afterMetrics = await cdp.send("Performance.getMetrics");
+      const metrics = Object.fromEntries(afterMetrics.metrics.map(({ name, value }) => [name, value]));
+      const previous = Object.fromEntries(beforeMetrics.metrics.map(({ name, value }) => [name, value]));
+      const views = await page.evaluate(() => {
+        const ids = window.__instant.layoutIds ??= new WeakMap();
+        const identity = (node) => {
+          if (!ids.has(node)) ids.set(node, window.__instant.layoutNextId = (window.__instant.layoutNextId ?? 0) + 1);
+          return ids.get(node);
+        };
+        return [...document.querySelectorAll('[data-retained-app-view], [data-retained-home-view]')].map((node) => ({
+          identity: identity(node), active: node.dataset.appViewActive === "true", inert: node.inert,
+          displayed: !!node.getClientRects().length,
+          elements: node.querySelectorAll('*').length, cards: node.querySelectorAll('[data-issue-id]').length,
+          editors: [...node.querySelectorAll('.page-editor .tiptap')].map((editor) => ({ identity: identity(editor), blocks: editor.children.length })),
+          scroll: [...node.querySelectorAll('[data-board-column-scroller]')].map((scroller) => ({ top: scroller.scrollTop, height: scroller.clientHeight, contentHeight: scroller.scrollHeight })),
+        }));
+      });
+      (results.retainedLayout ??= []).push({ name, views,
+        dom: await cdp.send("Memory.getDOMCounters"), heapBytes: metrics.JSHeapUsedSize,
+        layoutCount: metrics.LayoutCount - previous.LayoutCount,
+        layoutMs: (metrics.LayoutDuration - previous.LayoutDuration) * 1000,
+        styleCount: metrics.RecalcStyleCount - previous.RecalcStyleCount,
+        styleMs: (metrics.RecalcStyleDuration - previous.RecalcStyleDuration) * 1000,
+      });
+    }
     if (profile) {
       const { profile: cpu } = await cdp.send("Profiler.stop");
       await writeFile(path.join(output, `${label}-page-to-board.cpuprofile`), JSON.stringify(cpu));
