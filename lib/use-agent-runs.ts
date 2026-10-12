@@ -341,6 +341,18 @@ export function allPullRequestsQueryKey(
   return ["pull-requests", "all", state, limit, pin?.pr ?? null, pin?.run ?? null] as const;
 }
 
+/** Shared authorized list read for foreground observers and idle preparation. */
+export function allPullRequestsQueryOptions(state: PullRequestStateFilter = "open", limit = PULL_REQUESTS_PAGE, pin?: PullRequestPin) {
+  return {
+    queryKey: allPullRequestsQueryKey(state, limit, pin),
+    queryFn: ({ client, signal }: { client: QueryClient; signal: AbortSignal }) => {
+      assertPullRequestReadBudget(client);
+      return fetchAllPullRequestsApi({ state, limit, pin }, signal);
+    },
+    retry: pullRequestReadRetry,
+  };
+}
+
 /**
  * Global list of PRs of linked repositories (Pull Requests page). Polling ~5 seconds
  * that a PR has an active run (Numo is reworking on it), otherwise a light
@@ -374,9 +386,7 @@ export function useAllPullRequestsQuery(
   pin?: PullRequestPin,
 ) {
   const { data, isPending, isFetching, isPlaceholderData, refetch } = useQuery({
-    queryKey: allPullRequestsQueryKey(state, limit, pin),
-    queryFn: ({ client }) => { assertPullRequestReadBudget(client); return fetchAllPullRequestsApi({ state, limit, pin }); },
-    retry: pullRequestReadRetry,
+    ...allPullRequestsQueryOptions(state, limit, pin),
     placeholderData: (previous) => previous,
     refetchOnMount: "always",
     refetchInterval: (query) => {

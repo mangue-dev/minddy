@@ -19,6 +19,7 @@ export function createPrTabPreparation(
   const visits: string[] = [];
   let available: readonly string[] = [];
   let active = "", budget = 0, disposed = false;
+  let detailAttempted = false;
   const attempted = new Set<string>();
   const destinations = new Set<string>();
   let cancel: (() => void) | undefined;
@@ -30,10 +31,9 @@ export function createPrTabPreparation(
     const counts = new Map<string, number>();
     visits.forEach((href) => counts.set(href, (counts.get(href) ?? 0) + 1));
     // Visit frequency wins, but open boards/documents must not stay cold just
-    // because the user has not clicked them yet. Unvisited PR details retain
-    // explicit-intent preparation, avoiding speculative live-forge downloads.
-    const candidates = [...new Set([...visits, ...available])].filter((href) => href !== active && available.includes(href) && appTabPreparationQuery(client, href) &&
-      (counts.has(href) || !appTabRoute(href).prId))
+    // because the user has not clicked them yet. At most one PR detail is
+    // prepared per pass, sharing foreground rate limits and cancellation.
+    const candidates = [...new Set([...visits, ...available])].filter((href) => href !== active && available.includes(href) && (appTabPreparationQuery(client, href) || appTabRoute(href).section === "home"))
       .sort((a, b) => ((counts.get(b) ?? 0) * 32 + visits.lastIndexOf(b)) - ((counts.get(a) ?? 0) * 32 + visits.lastIndexOf(a)));
     for (const href of candidates) {
       if (!destinations.has(href) && destinations.size >= 3) continue;
@@ -46,13 +46,16 @@ export function createPrTabPreparation(
         if (attempted.has(identity)) continue;
         const state = client.getQueryState(options.queryKey);
         if (state?.data !== undefined && !state.isInvalidated && state.status !== "error") continue;
+        const detail = options.queryKey[0] === "pull-request";
+        if (detail && detailAttempted) continue;
+        if (detail) detailAttempted = true;
         attempted.add(identity);
-        budget = route.prId ? 0 : budget - 1;
+        budget--;
         // Set ownership before the cache emits the start of the request.
         preparing = options.queryKey;
         const key = preparing;
         const startedAt = Date.now();
-        const pending = route.prId ? prefetchPullRequestDetail(client, route.prId)
+        const pending = detail ? prefetchPullRequestDetail(client, route.prId!)
           : client.prefetchQuery<unknown>({ ...options, retry: false });
         if (!pending) { preparing = undefined; continue; }
         void pending.finally(() => {
@@ -91,7 +94,7 @@ export function createPrTabPreparation(
       visits.push(href); if (visits.length > 32) visits.shift();
       // At most three destinations and twelve sequential reads per navigation.
       // Complete a board's prerequisites without flooding startup transport.
-      attempted.clear(); destinations.clear(); budget = 12;
+      attempted.clear(); destinations.clear(); detailAttempted = false; budget = 12;
       cancel = schedule(prepare);
     },
     dispose() {

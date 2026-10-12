@@ -7,7 +7,7 @@ export const RETAINED_APP_VIEW_BUDGET = 6;
 export interface RetainedAppView {
   key: string;
   tabId: string | null;
-  kind: "global-board" | "project-board" | "pages" | "pull-requests" | "feedback" | "triage";
+  kind: "home" | "global-board" | "project-board" | "pages" | "pull-requests" | "feedback" | "triage";
   route: AppTabRouteSnapshot;
   /** Published selection may outlive a consumed ?view= URL instruction. */
   href?: string;

@@ -21,9 +21,15 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchMyInvitationsApi(): Promise<MyInvitation[]> {
-  return parseJson<MyInvitation[]>(await fetchClientRead("/api/projects/invitations"));
+export async function fetchMyInvitationsApi(signal?: AbortSignal): Promise<MyInvitation[]> {
+  return parseJson<MyInvitation[]>(await fetchClientRead("/api/projects/invitations", { signal }));
 }
+
+/** Shared lightweight options, without importing the invitation UI or toast. */
+export const myInvitationsQueryOptions = {
+  queryKey: ["my-invitations"] as const,
+  queryFn: ({ signal }: { signal: AbortSignal }) => fetchMyInvitationsApi(signal),
+};
 
 export async function respondInvitationApi(
   invitationId: string,

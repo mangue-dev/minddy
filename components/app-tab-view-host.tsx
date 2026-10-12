@@ -26,6 +26,7 @@ const Pages = dynamic(() => appTabSurfaceLoaders.pages().then((module) => module
 const PullRequests = dynamic(appTabSurfaceLoaders["pull-requests"]);
 const Feedback = dynamic(() => appTabSurfaceLoaders.feedback().then((module) => module.FeedbackTeamPage));
 const Triage = dynamic(appTabSurfaceLoaders.triage);
+const Home = dynamic(appTabSurfaceLoaders.home);
 
 const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
   const activation = useRef<{ active: boolean; sequence: number } | null>(null);
@@ -79,13 +80,37 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
   const tabs = useOptionalAppTabs();
   const pathname = usePathname();
   const retained = !!tabs && !!retainedAppViewKind(pathname);
+  const home = pathname === "/home";
+  // One small Home working surface, shared across responsive layouts. Another
+  // Home tab starts its own draft; resizing does not reconstruct the composer.
+  const [homeState, setHomeState] = useState({ seen: home, id: home ? tabs?.activeId ?? null : null, generation: 0 });
+  let current = homeState;
+  const homeId = tabs?.session.getActiveHref()?.split(/[?#]/)[0] === "/home" ? tabs.activeId : current.id;
+  if (home && (!current.seen || (homeId && homeId !== current.id))) {
+    current = { seen: true, id: homeId,
+      generation: current.generation + (current.id && homeId && homeId !== current.id ? 1 : 0) };
+    setHomeState(current);
+  } else if (!home && current.seen && current.id && tabs && !tabs.tabs.some((tab) => tab.id === current.id)) {
+    current = { ...current, seen: false, id: null, generation: current.generation + 1 };
+    setHomeState(current);
+  }
+  const view: RetainedAppView = { key: "home", kind: "home", tabId: current.id, route: { pathname: "/home", search: "", projectId: null } };
   return <>
-    {tabs ? <DesktopTabViews /> : null}
-    {!retained && children}
+    {current.seen && <div key={current.generation} className="h-full min-h-0" data-retained-home-view data-app-view-active={home ? "true" : "false"}
+      inert={!home} aria-hidden={!home || undefined} style={{ display: home ? undefined : "none" }}>
+      <Activity mode={home ? "visible" : "hidden"}>
+        <RetainedBoardTitle view={view} />
+        <AppTabNavigationScope activeId={current.id}>
+          <AppTabRouteProvider route={view.route} active={home}><Home /></AppTabRouteProvider>
+        </AppTabNavigationScope>
+      </Activity>
+    </div>}
+    {tabs ? <DesktopTabViews homeWeight={current.seen ? 1 : 0} /> : null}
+    {!retained && !home && children}
   </>;
 }
 
-function DesktopTabViews() {
+function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
   const { tabs, activeId, session } = useAppTabs();
   const client = useQueryClient();
   const pathname = usePathname();
@@ -109,7 +134,7 @@ function DesktopTabViews() {
       const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
       const pressured = !!memory && memory.usedJSHeapSize > memory.jsHeapSizeLimit * 0.7;
       views = retainAppView(views, { pathname, search, projectId: pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? null }, tabId, new Set(tabs.map((tab) => tab.id)), {
-        budget: pressured ? 3 : 6, limit: 6, visits,
+        budget: Math.max(1, (pressured ? 3 : 6) - homeWeight), limit: 6 - homeWeight, visits,
         href: tabs.find((tab) => tab.id === tabId)?.href,
         cost: (view) => {
           if (view.kind === "pull-requests") {

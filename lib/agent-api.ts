@@ -958,7 +958,7 @@ export async function fetchAllPullRequestsApi(input: {
   limit: number;
   offset?: number;
   pin?: { pr?: string | null; run?: string | null };
-}): Promise<PullRequestListResponse> {
+}, signal?: AbortSignal): Promise<PullRequestListResponse> {
   const params = new URLSearchParams({
     state: input.state,
     limit: String(input.limit),
@@ -966,7 +966,7 @@ export async function fetchAllPullRequestsApi(input: {
   if (input.offset != null) params.set("offset", String(input.offset));
   if (input.pin?.pr) params.set("pr", input.pin.pr);
   if (input.pin?.run) params.set("run", input.pin.run);
-  return parseJson(await fetchClientRead(`/api/pull-requests?${params}`));
+  return parseJson(await fetchClientRead(`/api/pull-requests?${params}`, { signal }));
 }
 
 /** Lightweight open-PR count used by the persistent app shell. */

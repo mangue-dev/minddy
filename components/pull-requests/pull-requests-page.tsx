@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon, UserGroupIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { loadPullRequestDetailSurface } from "@/lib/app-tab-surfaces";
 import { useRouter } from "next/navigation";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { canConsumePrDeepLink } from "@/lib/pr-navigation";
@@ -79,7 +80,7 @@ import {
 } from "@/lib/sidebar-deep-link";
 
 const PrDetail = dynamic(
-  () => import("@/components/pull-requests/pr-detail").then((m) => m.PrDetail),
+  loadPullRequestDetailSurface,
   {
     ssr: false,
     loading: () => <PrDetailSkeleton />,

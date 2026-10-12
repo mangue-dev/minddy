@@ -13,15 +13,15 @@ import { fetchRoutinesApi } from "./routines-api";
 import { agentModelsQueryKey, fetchAgentModels } from "./use-agent-models-query";
 import {
   PULL_REQUESTS_PAGE,
-  allPullRequestsQueryKey,
+  allPullRequestsQueryOptions,
 } from "./use-agent-runs";
-import { fetchAllPullRequestsApi } from "./agent-api";
 import { pullRequestAccountRetryAt, pullRequestQueryOptions } from "./pull-request-query";
 import { globalBoardQueryFn } from "./global-board-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fetchViewsApi } from "./views-api";
 import { fetchStatsApi } from "./stats-api";
 import { statsTimeZone } from "./use-stats-query";
+import { myInvitationsQueryOptions } from "./invitations-api";
 
 const pullRequestWarmups = new WeakMap<QueryClient, Promise<void>>();
 
@@ -84,6 +84,10 @@ export function prefetchAppTabDestination(
   }
 
   switch (route.section) {
+    case "home": {
+      void queryClient.prefetchQuery(myInvitationsQueryOptions);
+      return;
+    }
     case "routines": {
       void queryClient.prefetchQuery({ queryKey: routinesQueryKey(), queryFn: fetchRoutinesApi });
       void queryClient.prefetchQuery({
@@ -103,10 +107,7 @@ export function prefetchAppTabDestination(
           attempted.delete(href);
         });
       }
-      void queryClient.prefetchQuery({
-        queryKey: allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, route.prId ? { pr: route.prId } : undefined),
-        queryFn: () => fetchAllPullRequestsApi({ state: "open", limit: PULL_REQUESTS_PAGE, pin: route.prId ? { pr: route.prId } : undefined }),
-      });
+      void queryClient.prefetchQuery(allPullRequestsQueryOptions("open", PULL_REQUESTS_PAGE, route.prId ? { pr: route.prId } : undefined));
       return;
     }
     case "all": {
@@ -135,7 +136,9 @@ export function prefetchAppTabDestination(
 /** A single primary query per ranked destination; no second cache or timer. */
 export function appTabPreparationQuery(client: QueryClient, href: string) {
   const route = appTabRoute(href);
+  if (route.section === "home") return myInvitationsQueryOptions;
   if (route.prId && route.section === "pull-requests") return pullRequestQueryOptions(route.prId);
+  if (route.section === "pull-requests") return allPullRequestsQueryOptions();
   if (route.projectId && route.section === "pages") {
     if (route.pageId) return { queryKey: pageKey(route.pageId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPageApi(route.projectId!, route.pageId!, signal) };
     return { queryKey: pagesKey(route.projectId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPagesApi(route.projectId!, signal) };
@@ -153,6 +156,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
   const primary = appTabPreparationQuery(client, href);
   if (!primary) return [];
   const options: FetchQueryOptions<unknown>[] = [{ queryKey: primary.queryKey, queryFn: primary.queryFn }];
+  if (route.prId && route.section === "pull-requests") options.push(allPullRequestsQueryOptions("open", PULL_REQUESTS_PAGE, { pr: route.prId }));
   if (route.projectId && route.section === "pages" && route.pageId) {
     options.push({ queryKey: pagesKey(route.projectId), queryFn: ({ signal }) => fetchPagesApi(route.projectId!, signal) });
   }
@@ -166,6 +170,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
  * The mounted consumer retains its ordinary authority/refetch contract. */
 export function isPreparedAppTabDestination(client: QueryClient, href: string): boolean {
   if (!isAppTabSurfaceReady(href)) return false;
+  if (appTabRoute(href).section === "home") return true;
   const options = appTabPreparationQuery(client, href);
   const state = options && client.getQueryState(options.queryKey);
   return !!state && state.data !== undefined && state.status !== "error" && !state.isInvalidated;

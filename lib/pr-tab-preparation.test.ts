@@ -59,15 +59,26 @@ describe("account-owned PR preparation", () => {
     prepared.preparation.dispose(); prepared.client.clear();
   });
 
-  it("bounds large open-tab collections and does not fetch unvisited live PR details", async () => {
+  it("bounds large open-tab collections and prepares at most one unvisited PR detail", async () => {
     const prepared = setup();
     prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
-    prepared.preparation.visit("/home", ["/home", "/pull-requests?pr=unvisited",
+    prepared.preparation.visit("/home", ["/home", "/pull-requests?pr=unvisited", "/pull-requests?pr=another",
       ...Array.from({ length: 20 }, (_, index) => `/projects/p${index}`)]);
     await drain(prepared);
-    expect(prepared.fetch).toHaveBeenCalledTimes(12);
-    expect(prepared.fetch.mock.calls.every(([url]) => String(url).startsWith("/api/projects/p"))).toBe(true);
+    expect(prepared.fetch).toHaveBeenCalledTimes(10);
+    const details = prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/"));
+    expect(details.map(([url]) => url)).toEqual(["/api/pull-requests/unvisited"]);
     expect(prepared.tasks.size).toBe(0);
+    prepared.preparation.dispose(); prepared.client.clear();
+  });
+
+  it("caps board-only speculation at twelve reads without continuing to later open destinations", async () => {
+    const prepared = setup();
+    prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+    prepared.preparation.visit("/home", ["/home", ...Array.from({ length: 20 }, (_, index) => `/projects/p${index}`)]);
+    await drain(prepared);
+    expect(prepared.fetch).toHaveBeenCalledTimes(12);
+    expect(prepared.fetch.mock.calls.every(([url]) => /^\/api\/projects\/p[01]\//.test(String(url)))).toBe(true);
     prepared.preparation.dispose(); prepared.client.clear();
   });
 
@@ -83,16 +94,20 @@ describe("account-owned PR preparation", () => {
     prepared.preparation.dispose(); prepared.client.clear();
   });
 
-  it("aborts an unobserved project prerequisite when its account retires", async () => {
+  it.each(["issues", "categories", "members", "objectives", "issue-relations", "integrations", "views"])("aborts an unobserved %s prerequisite when its account retires", async (resource) => {
     const prepared = setup();
     let signal!: AbortSignal;
-    prepared.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+    prepared.fetch.mockImplementation((url, init) => String(url).endsWith(`/${resource}`) ? new Promise((_resolve, reject) => {
       signal = init!.signal!;
       signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
-    }));
+    }) : Promise.resolve(fixtureResponse(String(url))));
     prepared.preparation.visit("/home", ["/home", "/projects/new"]);
-    prepared.flush();
-    await vi.waitFor(() => expect(signal).toBeDefined());
+    for (let index = 0; index < 7 && !signal; index++) {
+      prepared.flush();
+      await vi.waitFor(() => expect(prepared.fetch.mock.calls.length).toBeGreaterThan(index));
+      if (!signal) await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
+    }
+    expect(signal).toBeDefined();
     prepared.preparation.dispose();
     expect(signal.aborted).toBe(true);
     await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
@@ -109,10 +124,12 @@ describe("account-owned PR preparation", () => {
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch.mock.calls[0][0]).toBe("/api/pull-requests/late2");
-    flush(); expect(fetch).toHaveBeenCalledOnce(); expect(tasks.size).toBe(0);
+    await drain({ client, preparation, flush, fetch, tasks });
+    expect(fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/"))).toHaveLength(1);
+    expect(tasks.size).toBe(0);
     preparation.visit(hrefs[0], hrefs); flush();
-    await vi.waitFor(() => expect(client.isFetching()).toBe(0));
-    expect(fetch.mock.calls[1][0]).toBe("/api/pull-requests/late1");
+    await drain({ client, preparation, flush, fetch, tasks });
+    expect(fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/")).map(([url]) => url)).toEqual(["/api/pull-requests/late2", "/api/pull-requests/late1"]);
     preparation.dispose(); client.clear();
   });
 
@@ -164,5 +181,18 @@ describe("account-owned PR preparation", () => {
     expect(fetch).not.toHaveBeenCalled();
     await client.fetchQuery(pullRequestQueryOptions("other")).catch(() => {});
     expect(fetch).not.toHaveBeenCalled(); preparation.dispose(); client.clear();
+  });
+
+  it("cancels prepared PR lists on account retirement through the shared authorized read", async () => {
+    const { client, preparation, flush, fetch } = setup();
+    let signal!: AbortSignal;
+    fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+      signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
+    }));
+    preparation.visit("/home", ["/home", "/pull-requests"]); flush();
+    await vi.waitFor(() => expect(signal).toBeDefined());
+    preparation.dispose(); expect(signal.aborted).toBe(true);
+    await vi.waitFor(() => expect(client.isFetching()).toBe(0));
+    client.clear();
   });
 });

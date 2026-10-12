@@ -42,7 +42,12 @@ async function api(url, method = "GET", data) {
   return response.json();
 }
 const project = fixture.projects[0];
-const tabs = [
+const secondary = process.argv.includes("--secondary");
+const tabs = secondary ? [
+  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: 600 },
+  { id: id("min683-tab-home"), custom_name: "MIN-683 home", href: "/home", home: true },
+  { id: id("min683-tab-prs"), custom_name: "MIN-683 PRs", href: "/pull-requests", prs: true },
+] : [
   { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: 600 },
   { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: 100 },
   { id: id("min683-tab-page"), custom_name: "MIN-683 Page", href: `/projects/${project}/pages/${fixture.firstPage}` },
@@ -62,9 +67,9 @@ async function removeTab(spec) {
 }
 const results = { label, sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   build: (await readFile(".next/BUILD_ID", "utf8")).trim(), timestamp: new Date().toISOString(),
-  runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats,
+  runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
-let browser, context, page, userData, preserved, failure;
+let browser, context, page, userData, preserved, failure, changedIssue;
 const created = [];
 const pendingNetwork = new Set();
 try {
@@ -152,8 +157,9 @@ try {
       const checkComplete = new Function("args", `return (${complete})(args)`);
       const onDown = (event) => {
         if (!event.isTrusted) return;
-        const sample = window.__instant.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, domMs: null, paintMs: null, completeMs: null };
+        const sample = window.__instant.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, domMs: null, paintMs: null, completeMs: null, boardSkeletonFrames: 0 };
         const observe = () => {
+          if ([...document.querySelectorAll('[data-board-loading-skeleton]')].some((node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden")) sample.boardSkeletonFrames++;
           if (!check(args)) { requestAnimationFrame(observe); return; }
           sample.domMs = performance.now() - sample.start;
           requestAnimationFrame(() => requestAnimationFrame(() => { sample.paintMs = performance.now() - sample.start; }));
@@ -182,6 +188,8 @@ try {
   const tabReady = ({ spec }) => {
     const root = document.querySelector('[data-app-view-active="true"]');
     if (!document.querySelector(`[data-app-tab-id="${spec.id}"][aria-selected="true"]`) || location.pathname !== spec.href) return false;
+    if (spec.home) return [...document.querySelectorAll('[contenteditable][aria-placeholder]')].some((node) => node.getClientRects().length && node.getAttribute('aria-placeholder').includes("Numo")) && !![...document.querySelectorAll('h1')].find((node) => node.getClientRects().length);
+    if (spec.prs) return ![...document.querySelectorAll('[data-testid="pr-sidebar-loading"]')].some((node) => node.getClientRects().length) && [...document.querySelectorAll('h1, h2, [data-testid="pr-list-item"], p, span')].some((node) => node.getClientRects().length && /Performance change|No pull request|Nothing to review|Link a GitHub or GitLab repository|Select a pull request/i.test(node.textContent));
     return spec.cards ? !!root?.getClientRects().length && !root.inert && root.querySelectorAll("[data-issue-id]").length === spec.cards
       : [...document.querySelectorAll(".page-editor .tiptap")].some((node) => node.getClientRects().length && node.textContent.includes("Workflow 8"));
   };
@@ -194,10 +202,17 @@ try {
   // Ten seconds of normal idle usage is the preparation opportunity. Record
   // it identically in both variants; startup is already measured above.
   await page.waitForTimeout(10000);
-  await tab(tabs[1], "unvisited-project");
-  await tab(tabs[2], "unvisited-page");
+  await tab(tabs[1], secondary ? "unvisited-home" : "unvisited-project");
+  await tab(tabs[2], secondary ? "unvisited-pr-list" : "unvisited-page");
   await tab(tabs[0], "return-board-first");
   for (let index = 0; index < repeats; index++) {
+    if (secondary) {
+      await tab(tabs[1], "board-to-home");
+      await tab(tabs[2], "home-to-pr-list");
+      await tab(tabs[0], "pr-list-to-board");
+      await page.waitForTimeout(350);
+      continue;
+    }
     await clickMeasured("issue-open", page.locator(`[data-app-view-active="true"] [data-issue-id="${fixture.firstIssue}"]`),
       () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task")), null,
       () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task") && node.querySelector('[data-query-read-phase="fresh"] [data-comment-id]')?.getClientRects().length));
@@ -208,6 +223,34 @@ try {
     await tab(tabs[0], "page-to-board");
     await page.waitForTimeout(350);
   }
+  if (process.argv.includes("--verify")) {
+    const active = () => page.locator('[data-app-view-active="true"]');
+    const original = await api(`/api/issues/${fixture.firstIssue}`);
+    assertScope("issues", original, fixture.userId);
+    const column = active().locator(`[data-board-column-scroller][data-board-column-status="${original.status}"]`);
+    const scroll = await column.evaluate((node) => { node.scrollTop = 180; return node.scrollTop; });
+    assert.ok(scroll > 0);
+    await column.evaluate((node) => { window.__instant.column = node; });
+    await active().evaluate((node) => { window.__instant.board = node; });
+    await tab(tabs[1], "verification-project");
+    // The marked inert fixture is the only permitted mutation target. Set the
+    // restoration journal before transport, including ambiguous acknowledgements.
+    changedIssue = original;
+    const title = `${original.title} [MIN-683 hidden update]`;
+    await api(`/api/issues/${fixture.firstIssue}`, "PATCH", { title });
+    await tab(tabs[0], "verification-hidden-return");
+    await page.locator(`[data-app-view-active="true"] [data-issue-id="${fixture.firstIssue}"]`).getByText(title, { exact: true }).waitFor();
+    assert.equal(await column.evaluate((node) => node === window.__instant.column), true);
+    assert.equal(await active().evaluate((node) => node === window.__instant.board), true);
+    assert.ok(Math.abs(await column.evaluate((node) => node.scrollTop) - scroll) <= 1);
+    const states = await page.locator('[data-retained-app-view]').evaluateAll((nodes) => nodes.map((node) => ({ active: node.dataset.appViewActive === "true", inert: node.inert, visible: !!node.getClientRects().length })));
+    assert.equal(states.filter((node) => node.active).length, 1);
+    assert.ok(states.every((node) => node.inert !== node.active && node.visible === node.active));
+    await api(`/api/issues/${fixture.firstIssue}`, "PATCH", { title: original.title });
+    assert.equal((await api(`/api/issues/${fixture.firstIssue}`)).title, original.title);
+    changedIssue = undefined;
+    results.verification = { scrollPreserved: true, retainedDomPreserved: true, hiddenUpdateVisible: true, hiddenViewsInert: true, fixtureTitleRestored: true };
+  }
   await page.screenshot({ path: path.join(output, `${label}-board.png`) });
   results.status = "passed";
 } catch (error) {
@@ -216,19 +259,28 @@ try {
   results.failure = String(error.message);
   if (page) await page.screenshot({ path: path.join(output, `${label}-failure.png`) }).catch(() => {});
 } finally {
-  await browser?.close().catch(() => {});
-  if (userData) await rm(userData, { recursive: true, force: true });
+  let closed = !browser;
+  try { await browser?.close(); closed = true; }
+  catch (error) { results.cleanup.push({ applicationClosed: false }); failure ??= error; }
+  if (userData && closed) await rm(userData, { recursive: true, force: true });
+  if (changedIssue) {
+    try {
+      await api(`/api/issues/${fixture.firstIssue}`, "PATCH", { title: changedIssue.title });
+      assert.equal((await api(`/api/issues/${fixture.firstIssue}`)).title, changedIssue.title);
+      results.cleanup.push({ fixtureTitleRestored: true });
+    } catch (error) { results.cleanup.push({ fixtureTitleRestored: false }); failure ??= error; }
+  }
   for (const spec of created) {
     try { await removeTab(spec); results.cleanup.push({ tab: spec.custom_name, removed: true }); }
     catch (error) { results.cleanup.push({ tab: spec.custom_name, removed: false, error: String(error.message) }); failure ??= error; }
   }
   if (preserved) {
-    const remaining = (await listTabs()).map(tabFields);
-    try { assert.deepEqual(remaining, preserved); results.cleanup.push({ preexistingTabsPreserved: true }); }
+    try { const remaining = (await listTabs()).map(tabFields); assert.deepEqual(remaining, preserved); results.cleanup.push({ preexistingTabsPreserved: true }); }
     catch (error) { results.cleanup.push({ preexistingTabsPreserved: false }); failure ??= error; }
   }
   await Promise.allSettled(pendingNetwork);
   await apiClient.dispose();
+  if (failure) results.status = "failed";
   await writeFile(path.join(output, `${label}.json`), JSON.stringify(results, null, 2));
 }
 if (failure) throw failure;

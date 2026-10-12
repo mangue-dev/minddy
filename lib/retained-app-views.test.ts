@@ -73,7 +73,7 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
-  it("preserves ordinary route DOM and unfinished input across mobile and desktop layouts", async () => {
+  it("preserves Home DOM and unfinished input across mobile and desktop layouts", async () => {
     Object.assign(state, { path: "/home", activeHref: "/home" });
     const children = createElement("input", { defaultValue: "" });
     await render(children);
@@ -85,6 +85,24 @@ describe("bounded retained board views", () => {
       expect(container.querySelector("input")).toBe(input);
       expect(input.value).toBe("Unfinished home draft");
     }
+  });
+  it("keeps Home ready across navigation, suspends its hidden effects and starts a different Home tab without the old draft", async () => {
+    state.tabs = [{ id: "home" }, { id: "other-home" }, { id: "board" }];
+    Object.assign(state, { path: "/home", activeHref: "/home", activeId: "home" });
+    await render();
+    const input = container.querySelector('[data-retained-home-view] input') as HTMLInputElement;
+    input.value = "Unsent composer draft";
+    Object.assign(state, { path: "/all", activeHref: "/all", activeId: "board" });
+    await render();
+    expect(input.closest('[inert][aria-hidden="true"]')).not.toBeNull();
+    expect(liveEffects).toBe(1);
+    Object.assign(state, { path: "/home", activeHref: "/home", activeId: "home" });
+    await render();
+    expect(container.querySelector('[data-retained-home-view] input')).toBe(input);
+    expect(input.value).toBe("Unsent composer draft");
+    Object.assign(state, { activeId: "other-home" }); await render();
+    expect(container.querySelector('[data-retained-home-view] input')).not.toBe(input);
+    expect((container.querySelector('[data-retained-home-view] input') as HTMLInputElement).value).not.toBe("Unsent composer draft");
   });
   it("does not evict frequent boards for an unmounted large PR diff", async () => {
     state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
