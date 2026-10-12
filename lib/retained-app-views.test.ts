@@ -195,6 +195,33 @@ describe("bounded retained board views", () => {
     expect(container.querySelectorAll('[data-retained-app-view]').length).toBe(windowed ? 3 : 2);
     expect(container.querySelector('[data-retained-app-view="board:/all"]')).toBe(global);
   });
+  it.each([true, false])("charges each retained document without expanding the shared budget (%s)", async (smallIncoming) => {
+    const page = { database_schema: null, content: { type: "doc", content: [{ type: "paragraph" }] } };
+    for (const id of ["p-a", "p-b", "q-a"]) client.setQueryData(["page", id], page);
+    if (smallIncoming) client.setQueryData(["page", "q-b"], page);
+    client.setQueryData(["me", "board"], { issues: Array(636).fill({}) });
+    client.setQueryData(["issues", "p"], Array(100).fill({}));
+    await render();
+    const global = container.querySelector('[data-retained-app-view]')!;
+    const geometry = document.createElement("div"); geometry.dataset.boardWindowed = "";
+    const card = document.createElement("div"); card.dataset.issueId = "mounted";
+    geometry.append(card); global.append(geometry);
+    Object.assign(state, { activeId: "other", path: "/projects/p", activeHref: "/projects/p" });
+    await render();
+    for (const [project, tab] of [["p", "pages"], ["q", "fourth"]]) {
+      Object.assign(state, { activeId: tab, path: `/projects/${project}/pages/${project}-a`, activeHref: `/projects/${project}/pages/${project}-a` });
+      await render();
+      const pane = container.querySelector('[data-app-view-active="true"]')!;
+      const previous = document.createElement("div"); previous.dataset.retainedPageDocument = `${project}-a`;
+      pane.append(previous);
+      Object.assign(state, { path: `/projects/${project}/pages/${project}-b`, activeHref: `/projects/${project}/pages/${project}-b` });
+      await render();
+      const current = document.createElement("div"); current.dataset.retainedPageDocument = `${project}-b`;
+      container.querySelector('[data-app-view-active="true"]')!.append(current);
+    }
+    expect(container.querySelectorAll('[data-retained-app-view]').length).toBe(smallIncoming ? 4 : 3);
+    expect(container.querySelector('[data-retained-app-view="fourth:/projects/q/pages/q-a"]')).not.toBeNull();
+  });
   it("does not evict frequent boards for an unmounted large PR diff", async () => {
     state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
     client.setQueryData(["me", "board"], { issues: Array(600).fill({}) });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { Activity, act, createElement, useState } from "react";
+import { Activity, act, createElement, useEffect, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { Editor, JSONContent } from "@tiptap/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +23,41 @@ afterEach(async () => {
 });
 
 describe("page editor tab retention", () => {
+  it("adopts a remote document received while hidden before the next local write", async () => {
+    const editorRef = { current: null as Editor | null };
+    const document = { type: "doc", content: [{ type: "paragraph", attrs: { blockId: "original" },
+      content: [{ type: "text", text: "Original paragraph." }] }] };
+    let serverPage = { ...buildOptimisticPage("project", { id: "remote-page" }, []), content: document, version: 1 };
+    let setRemote!: (value: typeof serverPage) => void;
+    let autosave!: PageAutosave;
+    const onError = vi.fn();
+    function Surface() {
+      const [page, setPage] = useState(serverPage); setRemote = setPage;
+      autosave = usePageAutosave({ pageId: page.id, page, fresh: true, delayMs: 60_000, editorRef, onError,
+        save: async (_id, input) => { serverPage = { ...serverPage, ...input, content: (input.content ?? serverPage.content) as typeof document, version: serverPage.version + 1 }; return serverPage; } });
+      const { reconcileRemote } = autosave;
+      useEffect(() => reconcileRemote(page), [page, reconcileRemote]);
+      return createElement(PageEditor, { initialContent: page.content as JSONContent, editorRef,
+        onEditor: (editor) => { if (editor) autosave.resumeEditor(); },
+        onChange: (content) => autosave.schedule({ content }) });
+    }
+    root = createRoot(documentBody());
+    const render = async (mode: "visible" | "hidden") => {
+      await act(async () => root!.render(createElement(Activity, { mode, children: createElement(Surface) })));
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+    };
+    await render("visible"); await render("hidden");
+    serverPage = { ...serverPage, version: 2, content: { type: "doc", content: [document.content[0],
+      { type: "paragraph", attrs: { blockId: "remote" }, content: [{ type: "text", text: "Remote paragraph." }] }] } };
+    await act(async () => setRemote(serverPage));
+    await render("visible");
+    expect(editorRef.current!.getText()).toContain("Remote paragraph.");
+    await act(async () => editorRef.current!.commands.insertContentAt(editorRef.current!.state.doc.content.size - 1, " Local addition."));
+    await act(async () => { expect(await autosave.flushBeforeNavigation()).toBe(true); });
+    expect(JSON.stringify(serverPage.content)).toContain("Remote paragraph.");
+    expect(JSON.stringify(serverPage.content)).toContain("Local addition.");
+    expect(onError).not.toHaveBeenCalled();
+  });
   it("keeps saved text in the next write after leaving and returning to a new page", async () => {
     const editorRef = { current: null as Editor | null };
     let serverPage = buildOptimisticPage("project", { id: "new-page" }, []);
@@ -106,3 +141,7 @@ describe("page editor tab retention", () => {
     expect(editorRef.current!.getText()).toContain("A long document");
   });
 });
+
+function documentBody() {
+  return globalThis.document.body.appendChild(globalThis.document.createElement("div"));
+}

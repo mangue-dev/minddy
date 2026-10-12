@@ -7,10 +7,9 @@ import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 // An open PAGE (MIN-270): its header, its body, and what links them to the
 // base.
 //
-// This component is reassembled at each page change (`key={pageId}` at its
-// appellant). This is intentional: tiptap does not reread its `content` after editing,
-// and a page whose body changed under the editor would not be able to keep the
-// cursor nor the undo stack anyway.
+// Each document has its own keyed React surface. The project shell can retain
+// two small documents; Activity suspends their hidden effects and Tiptap
+// recreates its editor. Autosave rebinds the reconciled document to that editor.
 //
 // The BACKUP is VERSIONED (MIN-271): each body writing says on
 // which `version` it relies on, the server refuses if the page has moved, and the
@@ -439,7 +438,7 @@ function PageSurface({
     editorRef,
     onError: onSaveError,
   });
-  const { schedule, flush, takePending, reconcileRemote } = autosave;
+  const { schedule, flush, takePending, reconcileRemote, resumeEditor } = autosave;
 
   useEffect(() => {
     if (page && readyForThisSurface) reconcileRemote(page);
@@ -874,6 +873,10 @@ function PageSurface({
   // the container that scrolls (to know where we are, and to get there).
   const scrollRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const onEditor = useCallback((next: Editor | null) => {
+    if (next && !next.isDestroyed) resumeEditor();
+    setEditor(next);
+  }, [resumeEditor]);
 
   /* ── Comment on a passage (MIN-282) ───────────────────────────────────── */
   //
@@ -1084,7 +1087,7 @@ function PageSurface({
                 mentions={mentions}
                 mentionLinks={mentionSources.links}
                 editorRef={editorRef}
-                onEditor={setEditor}
+                onEditor={onEditor}
                 onSubpagesRemoved={onSubpagesRemoved}
                 onLeaveTop={focusTitleEnd}
                 onComment={onComment}

@@ -18,6 +18,8 @@ import { observeRetainedBoardData } from "@/lib/retained-board-data";
 import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
 import { useTranslations } from "next-intl";
 import { QueryReadBoundary } from "./query-read-boundary";
+import { retainPageDocuments, retainedPageDocumentCost } from "@/lib/retained-page-documents";
+import { isDraftPage } from "@/lib/pages-draft";
 
 const GlobalBoard = dynamic(() => appTabSurfaceLoaders["global-board"]().then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
 const ProjectBoard = dynamic(appTabSurfaceLoaders["project-board"], { loading: () => <BoardLoadingSkeleton /> });
@@ -152,7 +154,22 @@ function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
             const pr = new URLSearchParams(view.route.search).get("pr");
             return Math.max(1, Math.ceil((client.getQueryData<{ files: unknown[] }>(["pull-request", pr])?.files.length ?? 400) / 200));
           }
-          if (view.kind !== "global-board" && view.kind !== "project-board") return view.kind === "pages" ? 2 : 1;
+          if (view.kind === "pages") {
+            const root = document.querySelector(`[data-retained-app-view="${view.key}"]`);
+            const previous = [...root?.querySelectorAll<HTMLElement>('[data-retained-page-document]') ?? []]
+              .map((node) => node.dataset.retainedPageDocument!);
+            const selected = view.route.pathname.match(/^\/projects\/[^/]+\/pages\/([^/]+)$/)?.[1];
+            const active = selected && selected !== "trash" ? selected : null;
+            if (!previous.length && !active) return 2;
+            const eligible = new Set(previous.filter((id) => {
+              const state = client.getQueryState(["page", id]);
+              return state?.status === "success" && !isDraftPage(id) &&
+                retainedPageDocumentCost(state.data) === 1;
+            }));
+            return Math.max(1, retainPageDocuments(previous, active, eligible).reduce((sum, id) =>
+              sum + retainedPageDocumentCost(client.getQueryData(["page", id])), 0));
+          }
+          if (view.kind !== "global-board" && view.kind !== "project-board") return 1;
           const root = document.querySelector(`[data-retained-app-view="${view.key}"]`);
           if (root?.querySelector("[data-board-windowed]")) {
             // Charge only mounted card work; interaction pins still count.

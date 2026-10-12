@@ -74,6 +74,8 @@ export interface PageAutosave {
   dismiss: () => void;
   /** Reconciles a newer server document received through Realtime. */
   reconcileRemote: (page: Page) => void;
+  /** Restore the reconciled screen document when Activity recreates the editor. */
+  resumeEditor: () => void;
 }
 
 export function usePageAutosave({
@@ -177,6 +179,10 @@ export function usePageAutosave({
     },
     [editorRef]
   );
+
+  const resumeEditor = useCallback(() => {
+    if (seeded.current === pageId && screen.current) adopt(screen.current);
+  }, [pageId, adopt]);
 
   const write = useCallback(async () => {
     if (inFlight.current) return inFlightDone.current;
@@ -370,6 +376,7 @@ export function usePageAutosave({
       restore,
       dismiss,
       reconcileRemote,
+      resumeEditor,
     }),
     [
       state,
@@ -382,6 +389,7 @@ export function usePageAutosave({
       restore,
       dismiss,
       reconcileRemote,
+      resumeEditor,
     ]
   );
 }
