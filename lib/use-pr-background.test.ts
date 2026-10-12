@@ -65,3 +65,16 @@ it("respects account Retry-After before any new background network request", asy
     expect(view.fetch.mock.calls.length).toBeGreaterThan(count);
   } finally { await view.close(); }
 });
+
+it("keeps the existing live observers when one recent PR enters the cohort", async () => {
+  const view = await setup();
+  const removed: string[] = [];
+  const stop = view.client.getQueryCache().subscribe((event) => {
+    if (event.type === "observerRemoved" && event.query.queryKey[0] === "pull-request") removed.push(String(event.query.queryKey[1]));
+  });
+  try {
+    view.setIds(["new", "pr-0", "pr-1", "pr-2", "pr-3"]);
+    await act(async () => { await view.client.invalidateQueries({ queryKey: allPullRequestsQueryKey() }); await vi.advanceTimersByTimeAsync(10); });
+    expect(removed).toEqual(["pr-4"]);
+  } finally { stop(); await view.close(); }
+});
