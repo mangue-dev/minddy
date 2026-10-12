@@ -8,6 +8,7 @@ import { createServerClient } from "@supabase/ssr";
 import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
 import { EMAIL, MARKER, assertScope, id } from "./seed.mjs";
 import { measureDeepNavigation } from "./measure-deep-navigation.mjs";
+import { boardReady, revealBoardIssue } from "./board-readiness.mjs";
 import { forgeLinkFingerprint, loadConnectedBoardWorkload, loadForgeWorkload, measureForgeNavigation } from "./measure-forge-navigation.mjs";
 
 // Real authorized reads against the existing encrypted fixture. No reseeding,
@@ -47,6 +48,8 @@ const project = fixture.projects[0];
 const secondary = process.argv.includes("--secondary");
 const deep = process.argv.includes("--deep");
 const forge = process.argv.includes("--forge");
+const windowingCompatible = process.argv.includes("--windowing-compatible");
+assert.ok(!forge || !windowingCompatible, "Keep board and forge protocols separate");
 const connected = forge || process.argv.includes("--connected");
 assert.ok([deep, secondary, forge].filter(Boolean).length <= 1, "Choose one journey workload");
 const forgeWorkload = connected ? await loadForgeWorkload(api) : null;
@@ -89,6 +92,7 @@ const results = { label, sha: productSha.sha,
   build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}), ...(connected ? { forge: forgeWorkload } : {}), ...(connectedBoard ? { connectedBoard } : {}) }, timestamp: new Date().toISOString(),
   runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
+if (windowingCompatible) results.protocol = secondary ? "min683-secondary-v2-visible-source-counts" : "min683-board-v2-visible-source-counts";
 if (["--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--diagnostic-card-containment", "--diagnostic-fixed-card-containment", "--diagnostic-stable-card-containment", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
 let browser, context, page, userData, preserved, failure, changedIssue;
 const preservedPages = [];
@@ -143,16 +147,19 @@ try {
   }
   await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
-  const installProbe = () => {
+  const installProbe = ({ readiness, windowingCompatible }) => {
     localStorage.setItem("cookie_consent", "declined");
     window.__instant = { longTasks: [], sample: null };
+    window.__instant.windowingCompatible = windowingCompatible;
+    window.__instant.boardReady = new Function(`return (${readiness})`)();
     try { new PerformanceObserver((list) => window.__instant.longTasks.push(...list.getEntries().map(({ startTime, duration }) => ({ startTime, duration })))).observe({ type: "longtask", buffered: true }); } catch { /* Unsupported entries are omitted. */ }
   };
-  await context.addInitScript(installProbe);
+  const probeOptions = { readiness: boardReady.toString(), windowingCompatible };
+  await context.addInitScript(installProbe, probeOptions);
   page = process.argv.includes("--electron") ? await browser.firstWindow() : await context.newPage();
   // Electron can create its initial window before context instrumentation.
   // Register directly on that window before the measured navigation as well.
-  await page.addInitScript(installProbe);
+  await page.addInitScript(installProbe, probeOptions);
   page.setDefaultTimeout(45000);
   page.on("pageerror", (error) => results.errors.push(error.message));
   page.on("requestfinished", (req) => {
@@ -200,7 +207,7 @@ try {
   const ready = (spec) => page.waitForFunction(({ cards, href, tab }) => {
     const root = document.querySelector('[data-app-view-active="true"]');
     if (location.pathname !== href || !document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`)) return false;
-    return cards ? root?.getClientRects().length > 0 && !root.inert && root.querySelectorAll("[data-issue-id]").length === cards
+    return cards ? (window.__instant.windowingCompatible ? window.__instant.boardReady(cards) : root?.getClientRects().length > 0 && !root.inert && root.querySelectorAll("[data-issue-id]").length === cards)
       : [...document.querySelectorAll(".page-editor .tiptap")].some((node) => node.getClientRects().length && node.querySelectorAll(":scope > h2").length === 8 && node.querySelectorAll(":scope > p").length === 72);
   }, { cards: spec.cards, href: spec.href, tab: spec.id }, { polling: "raf" });
   const frames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -210,7 +217,7 @@ try {
     if (forge) return [...document.querySelectorAll('[contenteditable][aria-placeholder*="Numo"]')].some((node) => node.getClientRects().length) &&
       [...document.querySelectorAll("h1")].some((node) => node.getClientRects().length);
     const root = document.querySelector('[data-app-view-active="true"]');
-    return root?.getClientRects().length && !root.inert && root.querySelectorAll('[data-issue-id]').length === cards;
+    return window.__instant.windowingCompatible ? window.__instant.boardReady(cards) : root?.getClientRects().length && !root.inert && root.querySelectorAll('[data-issue-id]').length === cards;
   }, { forge, cards: globalCards });
   await frames();
   results.measurements.push({ name: "startup", driverMs: Date.now() - start });
@@ -236,6 +243,7 @@ try {
   async function clickMeasured(name, locator, condition, args, complete = condition) {
     const beforeMetrics = traceLayout ? await cdp.send("Performance.getMetrics") : null;
     await locator.scrollIntoViewIfNeeded();
+    if (windowingCompatible && name === "issue-open") await frames();
     const box = await locator.boundingBox();
     assert.ok(box);
     const profile = process.argv.includes("--profile") && name === "page-to-board" && !profiled;
@@ -327,7 +335,7 @@ try {
     if (spec.prs) return ![...document.querySelectorAll('[data-testid="pr-sidebar-loading"]')].some((node) => node.getClientRects().length) && (spec.realPrIds
       ? spec.realPrIds.some((prId) => document.querySelector(`[data-navigation-href="/pull-requests?pr=${prId}"]`)?.getClientRects().length)
       : [...document.querySelectorAll('h1, h2, [data-testid="pr-list-item"], p, span')].some((node) => node.getClientRects().length && /Performance change|No pull request|Nothing to review|Link a GitHub or GitLab repository|Select a pull request/i.test(node.textContent)));
-    return spec.cards ? !!root?.getClientRects().length && !root.inert && root.querySelectorAll("[data-issue-id]").length === spec.cards
+    return spec.cards ? (window.__instant.windowingCompatible ? window.__instant.boardReady(spec.cards) : !!root?.getClientRects().length && !root.inert && root.querySelectorAll("[data-issue-id]").length === spec.cards)
       : [...document.querySelectorAll(".page-editor .tiptap")].some((node) => node.getClientRects().length && node.textContent.includes("Workflow 8"));
   };
   async function tab(spec, name) {
@@ -388,8 +396,14 @@ try {
     assert.ok(!results.network.some((entry) => entry.path.startsWith("/api/pull-requests/") && entry.method !== "GET"), "Read-only navigation submitted a forge write");
   } else if (deep) {
     await tab(tabs[1], "initial-project-tab");
-    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results });
+    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results, windowingCompatible });
   } else {
+    let issueStatus;
+    if (windowingCompatible && !secondary) {
+      const issue = await api(`/api/issues/${fixture.firstIssue}`);
+      assertScope("issues", issue, fixture.userId);
+      issueStatus = issue.status;
+    }
     await tab(tabs[1], secondary ? "unvisited-home" : "unvisited-project");
     await tab(tabs[2], secondary ? "unvisited-pr-list" : "unvisited-page");
     await tab(tabs[0], "return-board-first");
@@ -401,6 +415,7 @@ try {
         await page.waitForTimeout(350);
         continue;
       }
+      if (windowingCompatible) await revealBoardIssue(page, fixture.firstIssue, issueStatus);
       await clickMeasured("issue-open", page.locator(`[data-app-view-active="true"] [data-issue-id="${fixture.firstIssue}"]`),
         () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task")), null,
         () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task") && node.querySelector('[data-query-read-phase="fresh"] [data-comment-id]')?.getClientRects().length));

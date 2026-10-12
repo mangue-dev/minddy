@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import { id } from "./seed.mjs";
 
 /** Genuine sidebar/tree clicks, with destination identity and complete content. */
-export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results }) {
-  results.protocol = "min683-deep-v2-alternating-documents";
+export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results, windowingCompatible = false }) {
+  results.protocol = windowingCompatible ? "min683-deep-v3-visible-source-counts" : "min683-deep-v2-alternating-documents";
   const projects = fixture.projects.slice(0, 2);
   const sameTab = (tab) => !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`);
   const projectReady = ({ project, tab }) => {
     const root = document.querySelector('[data-app-view-active="true"]');
     const cards = root?.querySelectorAll("[data-issue-id]");
+    if (window.__instant.windowingCompatible) return location.pathname === `/projects/${project}` &&
+      !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`) &&
+      window.__instant.boardReady(100, `Performance task ${project === window.__instant.projects[0] ? 1 : 2}.`);
     return location.pathname === `/projects/${project}` &&
       !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`) &&
       !!root?.getClientRects().length && !root.inert && cards.length === 100 &&
