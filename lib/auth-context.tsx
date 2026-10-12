@@ -22,6 +22,7 @@ import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
 import { browserRuntimeConfig } from "./runtime-config-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
+import { isBackendUnavailableError } from "./backend-availability";
 import type { User, Session } from "@supabase/supabase-js";
 
 export type OAuthProvider = "google" | "github";
@@ -171,16 +172,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = getSupabase();
     let resolved = false;
+    let disposed = false;
+    let revision = 0;
+    let recovering = false;
+    let recoveryTimer: number | undefined;
     let snapshotOwner: string | null | undefined;
 
     const timeoutId = window.setTimeout(() => {
       if (resolved) return;
       setLoading(false);
+      void recoverSession();
     }, AUTH_INIT_TIMEOUT_MS);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, s) => {
+    const applySession = (event: string, s: Session | null) => {
       resolved = true;
       window.clearTimeout(timeoutId);
       const nextOwner = s?.user.id ?? null;
@@ -233,10 +237,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         track("user_signed_out", {});
         reset();
       }
+    };
+
+    // INITIAL_SESSION can be null after a temporary refresh failure even though
+    // Supabase retains the refresh token. Retry without requiring a new sign-in.
+    const recoverSession = async () => {
+      if (disposed || recovering) return;
+      window.clearTimeout(recoveryTimer);
+      recovering = true;
+      const startedAtRevision = revision;
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (disposed || revision !== startedAtRevision) return;
+        if (error) throw error;
+        applySession("INITIAL_SESSION", data.session);
+      } catch (error) {
+        if (!disposed && revision === startedAtRevision && isBackendUnavailableError(error)) {
+          recoveryTimer = window.setTimeout(() => { void recoverSession(); }, AUTH_INIT_TIMEOUT_MS);
+        }
+      } finally {
+        recovering = false;
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, s) => {
+      window.clearTimeout(recoveryTimer);
+      if (event === "INITIAL_SESSION" && !s) {
+        resolved = true;
+        window.clearTimeout(timeoutId);
+        setLoading(false);
+        // A null initial notification does not distinguish missing credentials
+        // from a temporary refresh failure. Let getSession confirm it before
+        // clearing an account already known by this provider.
+        // Leave the auth callback before calling Supabase again: callbacks may
+        // run while the SDK owns its session lock.
+        recoveryTimer = window.setTimeout(() => { void recoverSession(); }, 0);
+        return;
+      }
+      revision++;
+      applySession(event, s);
     });
+    const resumeSession = () => { void recoverSession(); };
+    const resumeVisibleSession = () => {
+      if (document.visibilityState === "visible") resumeSession();
+    };
+    window.addEventListener("online", resumeSession);
+    window.addEventListener("focus", resumeSession);
+    document.addEventListener("visibilitychange", resumeVisibleSession);
 
     return () => {
+      disposed = true;
       window.clearTimeout(timeoutId);
+      window.clearTimeout(recoveryTimer);
+      window.removeEventListener("online", resumeSession);
+      window.removeEventListener("focus", resumeSession);
+      document.removeEventListener("visibilitychange", resumeVisibleSession);
       subscription.unsubscribe();
     };
   }, [identify, reset, track]);

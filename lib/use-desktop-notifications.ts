@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
+import { useAuth } from "./auth-context";
 import { getDesktopBridge } from "./desktop/bridge";
 import { notificationActor, notificationTitle } from "./notification-line";
 import { notificationLineKey, notificationTargetPath } from "./notification-target";
@@ -26,7 +27,9 @@ import type { MyNotification } from "./types";
  * first list is not news: it is a state.
  */
 export function useDesktopNotifications(): void {
-  const { notifications, unreadCount } = useNotifications();
+  const { notifications, unreadCount, initialized } = useNotifications();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { capabilities: pushCapabilities } = usePushDevicesQuery();
   const t = useTranslations("Inbox");
   const tIssue = useTranslations("Issue");
@@ -37,18 +40,31 @@ export function useDesktopNotifications(): void {
   /** Banner ids sent to the main process and still associated with unread rows. */
   const shown = useRef(new Set<string>());
 
+  // A different account starts with a silent inbox snapshot. Banners from the
+  // previous account must not survive sign-out or a session change.
+  useEffect(() => {
+    seen.current = null;
+    return () => {
+      const bridge = getDesktopBridge();
+      for (const id of shown.current) bridge?.dismissLocalNotification?.(id);
+      shown.current.clear();
+      bridge?.setBadgeCount(0);
+    };
+  }, [userId]);
+
   // The dock counter: the exact number of unread numbers, the same one that
   // carries the sidebar. `0` removes the token.
   useEffect(() => {
     const bridge = getDesktopBridge();
     if (bridge?.notificationCapabilities?.badge === "dock") {
-      bridge.setBadgeCount(unreadCount);
+      bridge.setBadgeCount(userId ? unreadCount : 0);
     }
-  }, [unreadCount]);
+  }, [unreadCount, userId]);
 
   useEffect(() => {
     const bridge = getDesktopBridge();
-    if (!bridge) return;
+    // Pending and failed initial requests are not empty inbox snapshots.
+    if (!bridge || !userId || !initialized) return;
     const capabilities = bridge.notificationCapabilities;
     if (!capabilities?.localNativeBanners || !bridge.showLocalNotification) return;
     // Packaged macOS receives this same event through APNs. When the app is
@@ -111,5 +127,5 @@ export function useDesktopNotifications(): void {
     // The register follows the list rather than growing indefinitely: one line
     // deleted leaves it, and it won't come back.
     seen.current = new Set(byId.keys());
-  }, [notifications, pushCapabilities, t, tIssue, tTimeline]);
+  }, [notifications, initialized, userId, pushCapabilities, t, tIssue, tTimeline]);
 }

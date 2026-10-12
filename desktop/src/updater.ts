@@ -86,7 +86,9 @@ function publish(event: DesktopUpdateEvent): void {
 }
 
 function sendStatus(target?: Electron.WebContents): void {
-  (target ?? ownerWindow()?.webContents)?.send("minddy:update-status", status);
+  const window = ownerWindow();
+  const contents = target ?? (window && !window.isDestroyed() ? window.webContents : null);
+  if (contents && !contents.isDestroyed()) contents.send("minddy:update-status", status);
 }
 
 /** Replay, TARGETED at the subscriber who requests it — same reason as macOS buttons. */
@@ -181,6 +183,7 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
 
 /** The version already proposed, so as not to repropose it every round. */
 let promptedVersion: string | null = null;
+let installPrompt: Promise<void> | null = null;
 
 /**
  * "minddy 0.9.5 is ready" — the proposal, and the restart if accepted.
@@ -198,14 +201,28 @@ let promptedVersion: string | null = null;
  * Nothing to do with the refusal: `autoInstallOnAppQuit` remains true, the update is
  * already on the disk, it will land on the next ⌘Q.
  */
-async function promptInstall(version: string): Promise<void> {
-  const copy = updatePromptCopy(version);
-  const window = ownerWindow();
-  const { response } = await (window && window.isVisible()
-    ? dialog.showMessageBox(window, copy)
-    : dialog.showMessageBox(copy));
-  if (updatePromptChoice(response) !== "install") return;
-  setImmediate(() => autoUpdater.quitAndInstall());
+function promptInstall(version: string): Promise<void> {
+  // The automatic download event, sidebar and menu can request the same modal
+  // together. Share one response so the app cannot stack prompts or relaunch twice.
+  if (installPrompt) return installPrompt;
+  installPrompt = (async () => {
+    try {
+      const copy = updatePromptCopy(version);
+      const window = ownerWindow();
+      const { response } = await (window && !window.isDestroyed() && window.isVisible()
+        ? dialog.showMessageBox(window, copy)
+        : dialog.showMessageBox(copy));
+      if (updatePromptChoice(response) !== "install") return;
+      setImmediate(() => autoUpdater.quitAndInstall());
+    } catch (error) {
+      // A closing window can reject its native sheet. Keep the ready update and
+      // allow a later explicit request, rather than leaking a rejected promise.
+      console.error("[updater] install_prompt_failed", error);
+    }
+  })().finally(() => {
+    installPrompt = null;
+  });
+  return installPrompt;
 }
 
 /**
@@ -251,9 +268,8 @@ export async function checkForUpdatesManually(): Promise<void> {
     }
 
     const result = await autoUpdater.checkForUpdates();
-    // `updateInfo.version` is always specified; this is the comparison with the
-    // version courante qui dit s'il se passe quelque chose. `downloadPromise`
-    // only exists when an update has actually been retained.
+    // `updateInfo.version` names the release; `downloadPromise` only exists
+    // when the updater has selected an update for download.
     if (result?.downloadPromise) {
       await dialog.showMessageBox({
         type: "info",

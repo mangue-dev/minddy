@@ -81,7 +81,12 @@ app.whenReady().then(async () => {
     await writeFile(path.join(temporary, "probe.cjs"), harness);
     const env = Object.fromEntries(["PATH", "HOME", "TMPDIR", "LANG", "DISPLAY", "XAUTHORITY"].filter(key => process.env[key]).map(key => [key, process.env[key]]));
     child = spawn(requireDesktop("electron"), [`--user-data-dir=${userData}`, temporary], {
-      cwd: desktop, env: { ...env, MINDDY_DESKTOP_TEST_USER_DATA: userData, MINDDY_DESKTOP_ORIGIN: origin }, stdio: ["ignore", "ignore", "pipe"],
+      cwd: desktop, env: {
+        ...env, MINDDY_DESKTOP_TEST_USER_DATA: userData, MINDDY_DESKTOP_ORIGIN: origin,
+        XDG_CONFIG_HOME: path.join(temporary, "config"),
+        XDG_CACHE_HOME: path.join(temporary, "cache"),
+        XDG_STATE_HOME: path.join(temporary, "state"),
+      }, stdio: ["ignore", "ignore", "pipe"],
     });
     let diagnostics = "";
     child.stderr.on("data", chunk => { diagnostics = (diagnostics + chunk).slice(-4000); });

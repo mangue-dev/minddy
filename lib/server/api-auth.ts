@@ -3,6 +3,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
@@ -23,9 +24,10 @@ export { createCookieSink, type CookieSink };
 
 /**
  * Anon Supabase client bound to the request cookies (RLS-enforced). Route
- * handlers act *as the user*, so RLS does the tenant isolation — no service
- * client needed for project CRUD. `setAll` is a no-op: handlers don't refresh
- * cookies (the middleware / auth callback own that).
+ * handlers act as the user, so RLS enforces tenant isolation. API routes bypass
+ * the page proxy and can renew an expired session themselves, especially on a
+ * first mutation after desktop resume. Next merges mutable route-handler
+ * cookies into the final response, including redirects and error responses.
  */
 export function createSupabaseFromRequest(request: NextRequest): SupabaseClient {
   return createServerClient(
@@ -38,7 +40,13 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
         getAll() {
           return request.cookies.getAll();
         },
-        setAll() {},
+        async setAll(cookiesToSet) {
+          const cookieStore = await cookies();
+          for (const { name, value, options } of cookiesToSet) {
+            request.cookies.set(name, value);
+            cookieStore.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS });
+          }
+        },
       },
     }
   );
@@ -51,11 +59,11 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
  * discards the replacement leaves the browser holding the consumed token, so
  * the next refresh fails with `refresh_token_not_found`.
  *
- * Protected app routes do not need this adapter because `proxy.ts` refreshes
- * their cookies first. Public routes that inspect an optional session, such as
- * `/feedback`, must use this constructor and pass the response through
- * `applyCookies`. The shared cookie carrier lives in `lib/session-cookies.ts`
- * because the proxy cannot import this `server-only` module.
+ * This explicit sink is useful outside a mutable route-handler cookie context.
+ * Public routes that inspect an optional session, such as `/feedback`, use this
+ * constructor and pass the response through `applyCookies`. The shared cookie
+ * carrier lives in `lib/session-cookies.ts` because the proxy cannot import this
+ * server-only module.
  */
 export function createSupabaseWithCookieSink(
   request: NextRequest

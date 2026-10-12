@@ -68,6 +68,27 @@ default. Remote origins must use HTTPS, while HTTP is accepted only for loopback
 and private-network IP addresses. This flow works on macOS, Windows, and Linux,
 including **Run local minddy on this computer** for a local clone folder.
 
+## Verify startup and recovery
+
+Run the desktop and session regression tests from the repository root:
+
+```bash
+npm test -- lib/desktop lib/auth-context.test.tsx lib/client-session-renewal.test.ts lib/server/api-auth-cookie-refresh.test.ts lib/use-desktop-notifications.test.ts
+npm --prefix desktop run typecheck
+npm --prefix desktop run build
+node scripts/desktop-startup.integration.mjs
+node scripts/desktop-renderer-hang.integration.mjs
+```
+
+The native probes require a graphical desktop session and launch real Electron
+processes with disposable profiles and a local fixture server. The startup probe
+checks delayed authentication subscriptions, cookie persistence across complete
+app exits, and a rotated cookie on the next process's first request. It does not
+contact Supabase or authenticate a real account; the session regression tests
+exercise SDK refresh failures and API response cookies separately. The hang probe blocks a renderer and
+checks the native recovery prompt and local recovery document. Both probes remove
+their temporary profiles when they finish.
+
 ## Packaging downloader
 
 `package.json` pins `app-builder-lib`'s `@electron/get` dependency to 5.1.0.

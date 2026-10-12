@@ -61,8 +61,9 @@ export function openServerPicker(options: ServerPickerOptions): void {
   });
   ipcMain.handle("minddy:server-picker:local", async (event) => {
     if (!picker || event.sender !== picker.webContents) return { error: "This server window is no longer active." };
+    const requestedPicker = picker;
     const result = await options.onUseLocal();
-    if (!result.error) picker.close();
+    if (!result.error && picker === requestedPicker && !requestedPicker.isDestroyed()) requestedPicker.close();
     return result;
   });
 
