@@ -13,6 +13,11 @@ export const appTabSurfaceLoaders = {
   triage: () => import("@/app/(app)/projects/[id]/triage/page"),
 };
 export const loadPullRequestDetailSurface = () => import("@/components/pull-requests/pr-detail").then((module) => module.PrDetail);
+type PullRequestDetailSurface = Awaited<ReturnType<typeof loadPullRequestDetailSurface>>;
+let preparedPrDetail: PullRequestDetailSurface | undefined;
+export function preparedPullRequestDetailSurface(): PullRequestDetailSurface | undefined {
+  return preparedPrDetail;
+}
 const surfaceKind = (href: string) => href.split(/[?#]/)[0] === "/home" ? "home" : retainedAppViewKind(href.split(/[?#]/)[0]);
 const ready = new Set<RetainedAppView["kind"]>();
 const pending = new Map<RetainedAppView["kind"], Promise<unknown>>();
@@ -26,9 +31,10 @@ export function prepareAppTabSurface(href: string): Promise<unknown> | undefined
   let operation = pending.get(kind);
   if (!operation) {
     operation = Promise.all([appTabSurfaceLoaders[kind](), ...(kind === "pull-requests" ? [loadPullRequestDetailSurface()] : [])])
-      .then(([module]) => {
+      .then(([module, detail]) => {
         if (kind === "global-board") preparedBoards.set(kind, (module as Awaited<ReturnType<typeof appTabSurfaceLoaders["global-board"]>>).GlobalBoard);
         if (kind === "project-board") preparedBoards.set(kind, (module as Awaited<ReturnType<typeof appTabSurfaceLoaders["project-board"]>>).default);
+        if (kind === "pull-requests") preparedPrDetail = detail as PullRequestDetailSurface;
         ready.add(kind); return module;
       });
     pending.set(kind, operation);

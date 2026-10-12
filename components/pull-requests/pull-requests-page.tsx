@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon, UserGroupIcon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { loadPullRequestDetailSurface } from "@/lib/app-tab-surfaces";
+import { loadPullRequestDetailSurface, preparedPullRequestDetailSurface } from "@/lib/app-tab-surfaces";
 import { useRouter } from "next/navigation";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { canConsumePrDeepLink } from "@/lib/pr-navigation";
@@ -376,6 +376,8 @@ export function PullRequestsPage({ browse }: { browse?: SidebarBrowseTarget } = 
 }
 
 function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
+  // Keep the mounted renderer stable when public code finishes preparing later.
+  const [DetailSurface] = useState(() => preparedPullRequestDetailSurface() ?? PrDetail);
   const t = useTranslations("PullRequests");
   const tProjects = useTranslations("Projects");
   const tCommon = useTranslations("Common");
@@ -833,7 +835,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {selected ? (
-          <PrDetail
+          <DetailSurface
             key={selected.prId}
             item={selected}
             onRefetchList={() => void refetch()}
