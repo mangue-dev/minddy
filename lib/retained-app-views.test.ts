@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
 import { isRetainedDestination, retainAppView, retainedAppViewKind } from "./retained-app-views";
 import { useAppTabRoute } from "./app-tab-route-context";
+import * as surfaces from "./app-tab-surfaces";
 
 const state = vi.hoisted(() => ({
   path: "/all", search: "", activeId: "board", activeHref: "/all", mobile: false,
@@ -44,6 +45,9 @@ function Board() {
     createPortal(createElement("span", { "data-board-portal": route.pathname }, draft), document.body),
   );
 }
+function PreparedBoard() {
+  return createElement("div", { "data-prepared-board": true }, createElement(Board));
+}
 let root: Root;
 let container: HTMLDivElement;
 let client: QueryClient;
@@ -70,9 +74,33 @@ afterEach(async () => {
   client.clear();
   container.remove();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("bounded retained board views", () => {
+  it("mounts prepared board code directly and preserves that renderer and draft across later renders", async () => {
+    const prepared = vi.spyOn(surfaces, "preparedBoardSurface").mockReturnValue(PreparedBoard);
+    client.setQueryData(["projects"], []);
+    await render();
+    const input = container.querySelector('[data-prepared-board] input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    input.value = "Prepared board draft";
+    prepared.mockReturnValue(undefined);
+    state.search = "view=changed"; await render();
+    expect(container.querySelector('[data-prepared-board] input')).toBe(input);
+    expect(input.value).toBe("Prepared board draft");
+  });
+  it("does not replace an existing dynamic renderer when preparation finishes later", async () => {
+    const prepared = vi.spyOn(surfaces, "preparedBoardSurface").mockReturnValue(undefined);
+    await render();
+    const input = container.querySelector("input") as HTMLInputElement;
+    input.value = "Existing board draft";
+    prepared.mockReturnValue(PreparedBoard);
+    state.search = "view=changed"; await render();
+    expect(container.querySelector("[data-prepared-board]")).toBeNull();
+    expect(container.querySelector("input")).toBe(input);
+    expect(input.value).toBe("Existing board draft");
+  });
   it("recognizes a published PR selection without reconstructing the already mounted view", async () => {
     state.tabs = [{ id: "pr", href: "/pull-requests" }];
     Object.assign(state, { path: "/pull-requests", activeHref: "/pull-requests", activeId: "pr" });

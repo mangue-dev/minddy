@@ -3,7 +3,7 @@
 import { Activity, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
-import { appTabSurfaceLoaders } from "@/lib/app-tab-surfaces";
+import { appTabSurfaceLoaders, preparedBoardSurface } from "@/lib/app-tab-surfaces";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AppTabNavigationScope, useAppTabs, useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
@@ -29,6 +29,9 @@ const Triage = dynamic(appTabSurfaceLoaders.triage);
 const Home = dynamic(appTabSurfaceLoaders.home);
 
 const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
+  // Prepared public code can render synchronously. Fix the renderer at mount:
+  // upgrading a mounted dynamic wrapper would discard its DOM and local state.
+  const [BoardSurface] = useState(() => preparedBoardSurface(view.kind) ?? (view.kind === "global-board" ? GlobalBoard : ProjectBoard));
   const activation = useRef<{ active: boolean; sequence: number } | null>(null);
   if (!activation.current || (active && !activation.current.active)) {
     activation.current = { active, sequence: nextReadActivationSequence() };
@@ -65,7 +68,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
     }>
     <AppTabNavigationScope activeId={view.tabId}>
       <AppTabRouteProvider route={view.route} active={active} activationSequence={activation.current.sequence}>
-        {view.kind === "global-board" ? <GlobalBoard /> : view.kind === "project-board" ? <ProjectBoard />
+        {isBoard ? <BoardSurface />
           : view.kind === "pages" ? <Pages /> : view.kind === "pull-requests" ? <PullRequests />
           : view.kind === "feedback" ? <Feedback /> : <Triage />}
       </AppTabRouteProvider>
