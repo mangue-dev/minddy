@@ -36,7 +36,7 @@ async function drain(prepared: ReturnType<typeof setup>) {
 }
 
 describe("account-owned PR activity preparation", () => {
-  it("prepares only five successful details with at most three reads, without refetching fresh data", async () => {
+  it("prepares only five successful details with at most five reads, without refetching fresh data", async () => {
     const prepared = setup();
     let concurrent = 0, maximum = 0;
     const respond = prepared.fetch.getMockImplementation()!;
@@ -47,7 +47,7 @@ describe("account-owned PR activity preparation", () => {
     });
     await drain(prepared);
     expect(prepared.fetch).toHaveBeenCalledTimes(15);
-    expect(maximum).toBe(3);
+    expect(maximum).toBe(5);
     expect(prepared.fetch.mock.calls.some(([url]) => String(url).includes("outside"))).toBe(false);
     expect(prepared.client.getQueryData(["pr-commits", "p4"])).toEqual({ commits: [], truncated: false });
     prepared.preparation.update(["p0", "p1", "p2", "p3", "p4"]);
@@ -66,7 +66,7 @@ describe("account-owned PR activity preparation", () => {
       signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
     }));
     prepared.flush();
-    await vi.waitFor(() => expect(signals).toHaveLength(3));
+    await vi.waitFor(() => expect(signals).toHaveLength(5));
     const observer = new QueryObserver(prepared.client, prCommentsQueryOptions("p0"));
     const stop = observer.subscribe(() => {});
     let finish!: (value: string) => void;
@@ -102,7 +102,7 @@ describe("account-owned PR activity preparation", () => {
       const signal = init!.signal as AbortSignal; signals.push(signal);
       signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
     }));
-    prepared.flush(); await vi.waitFor(() => expect(signals).toHaveLength(3));
+    prepared.flush(); await vi.waitFor(() => expect(signals).toHaveLength(5));
     prepared.preparation.dispose();
     expect(signals.every((signal) => signal.aborted)).toBe(true);
     prepared.client.setQueryData(["pull-request", "new"], { pr: {} });

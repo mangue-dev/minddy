@@ -2,8 +2,9 @@ import { hashKey, type QueryClient } from "@tanstack/react-query";
 import { prActivityPreparationQueries } from "./pr-activity-query";
 import { pullRequestAccountRetryAt } from "./pull-request-query";
 
-const FRESH_MS = 60_000;
-const CONCURRENCY = 3;
+const FRESH_MS = 5 * 60_000;
+const CONCURRENCY = 5;
+const IDLE_DELAY_MS = 50;
 
 /** Account-owned, bounded reads after transport settles; no foreground observer. */
 export function createPrActivityPreparation(
@@ -24,7 +25,7 @@ export function createPrActivityPreparation(
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
   const otherTransport = () => client.getQueryCache().getAll().some((query) =>
     query.state.fetchStatus === "fetching" && !active.has(query.queryHash));
-  const enqueue = (delay = 300) => {
+  const enqueue = (delay = IDLE_DELAY_MS) => {
     if (!disposed && !cancel && visible()) cancel = schedule(prepare, delay);
   };
   const cancelUnobserved = () => {
@@ -40,7 +41,7 @@ export function createPrActivityPreparation(
     if (disposed || !visible() || otherTransport()) return;
     const now = Date.now();
     const retryAt = pullRequestAccountRetryAt(client);
-    if (retryAt > now) { enqueue(retryAt - now + 300); return; }
+    if (retryAt > now) { enqueue(retryAt - now + IDLE_DELAY_MS); return; }
     let nextDelay = FRESH_MS;
     for (const prId of ids) {
       // An unavailable detail must not cause three additional failing requests.
@@ -65,7 +66,7 @@ export function createPrActivityPreparation(
         });
       }
     }
-    if (!active.size && ids.length) enqueue(Math.max(300, nextDelay));
+    if (!active.size && ids.length) enqueue(Math.max(IDLE_DELAY_MS, nextDelay));
   };
   const changed = () => {
     if (disposed) return;
