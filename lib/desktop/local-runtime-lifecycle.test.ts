@@ -4,7 +4,7 @@ import { createLocalRuntimeLifecycle } from "./local-runtime-lifecycle";
 
 afterEach(() => vi.useRealTimers());
 function setup() {
-  const process = Object.assign(new EventEmitter(), { exitCode: null as number | null });
+  const process = Object.assign(new EventEmitter(), { exitCode: null as number | null, signalCode: null as string | null });
   const healthy = vi.fn(async (_signal: AbortSignal): Promise<boolean> => false);
   const spawn = vi.fn(() => process);
   const stop = vi.fn();
@@ -91,4 +91,72 @@ it("refuses externally owned servers and cleans up startup health timeouts", asy
   await vi.advanceTimersByTimeAsync(100);
   await pending;
   expect(slow.stop).toHaveBeenCalledExactlyOnceWith(slow.process);
+});
+
+it("reports signal termination during a health check without waiting for the startup timeout", async () => {
+  const { lifecycle, healthy, process, stop } = setup();
+  let resolve!: (value: boolean) => void;
+  healthy.mockResolvedValueOnce(false).mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+  const pending = expect(lifecycle.start("/clone")).rejects.toThrow("stopped with signal SIGTERM");
+  await Promise.resolve();
+  process.signalCode = "SIGTERM";
+  resolve(true);
+  await pending;
+  expect(stop).toHaveBeenCalledExactlyOnceWith(process);
+});
+
+it("spawns a replacement when a previously ready launcher has exited by signal", async () => {
+  const { lifecycle, healthy, process, spawn } = setup();
+  healthy.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await lifecycle.start("/clone");
+  process.signalCode = "SIGKILL";
+  const replacement = Object.assign(new EventEmitter(), { exitCode: null, signalCode: null });
+  spawn.mockReturnValueOnce(replacement);
+  healthy.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await expect(lifecycle.start("/clone")).resolves.toBeUndefined();
+  expect(spawn).toHaveBeenCalledTimes(2);
+});
+
+it("rejects a different folder while startup is pending instead of sharing the wrong runtime", async () => {
+  const { lifecycle, healthy, spawn } = setup();
+  let resolve!: (value: boolean) => void;
+  healthy.mockImplementationOnce(() => new Promise(done => { resolve = done; })).mockResolvedValueOnce(true);
+  const first = lifecycle.start("/clone-a");
+  await expect(lifecycle.start("/clone-b")).rejects.toThrow("already starting from another folder");
+  resolve(false);
+  await first;
+  expect(spawn).toHaveBeenCalledExactlyOnceWith("/clone-a");
+});
+
+it("waits for the previous launcher and port to stop before starting a different folder", async () => {
+  vi.useFakeTimers();
+  const { lifecycle, healthy, process, spawn, stop } = setup();
+  healthy.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await lifecycle.start("/clone-a");
+  const replacement = Object.assign(new EventEmitter(), { exitCode: null, signalCode: null });
+  spawn.mockReturnValueOnce(replacement);
+  // The old server remains healthy briefly after it receives the stop request.
+  healthy.mockResolvedValueOnce(true).mockResolvedValue(false);
+  const next = lifecycle.start("/clone-b");
+  await Promise.resolve();
+  expect(stop).toHaveBeenCalledExactlyOnceWith(process);
+  expect(spawn).toHaveBeenCalledTimes(1);
+  process.signalCode = "SIGTERM";
+  healthy.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await vi.advanceTimersByTimeAsync(10);
+  await next;
+  expect(spawn).toHaveBeenLastCalledWith("/clone-b");
+});
+
+it("does not start another folder while the stopped launcher's port remains occupied", async () => {
+  vi.useFakeTimers();
+  const { lifecycle, healthy, process, spawn } = setup();
+  healthy.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await lifecycle.start("/clone-a");
+  healthy.mockResolvedValue(true);
+  const next = expect(lifecycle.start("/clone-b")).rejects.toThrow("previous local minddy launcher did not stop");
+  process.signalCode = "SIGTERM";
+  await vi.advanceTimersByTimeAsync(30_000);
+  await next;
+  expect(spawn).toHaveBeenCalledTimes(1);
 });

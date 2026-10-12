@@ -27,6 +27,7 @@ export function createRendererRecovery(options: RendererRecoveryOptions) {
   let lastUrl = "";
   let attempted = false;
   let navigation = 0;
+  let episode = 0;
   let failureReported = false;
   const failed = () => {
     if (!failureReported && !options.unavailable()) {
@@ -36,11 +37,12 @@ export function createRendererRecovery(options: RendererRecoveryOptions) {
   };
   return {
     navigationStarted(url: string, sameDocument: boolean) {
+      if (!sameDocument) navigation++;
       try {
         if (new URL(url).origin !== new URL(options.origin()).origin) return;
         lastUrl = url;
         if (sameDocument) return;
-        navigation++;
+        episode++;
         attempted = false;
         failureReported = false;
       } catch { /* Local documents are not remote retry destinations. */ }
@@ -48,6 +50,7 @@ export function createRendererRecovery(options: RendererRecoveryOptions) {
     rendererGone(reason: string) {
       if (reason === "clean-exit" || options.unavailable()) return;
       const at = navigation;
+      const crashEpisode = episode;
       // Loading synchronously inside render-process-gone can crash Electron's
       // main process. Also let a newer navigation or quit cancel this work.
       options.defer(() => {
@@ -57,7 +60,9 @@ export function createRendererRecovery(options: RendererRecoveryOptions) {
         try {
           void options.load(options.origin(), lastUrl).catch((error) => {
             if (error?.name === "AbortError") return;
-            if (at === navigation) failed();
+            // Our own local document starts a new navigation. Only a newer
+            // remote episode or an explicit superseding load makes this stale.
+            if (crashEpisode === episode) failed();
           });
         } catch { failed(); }
       });

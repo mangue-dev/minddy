@@ -175,7 +175,11 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
   // a `void` left a `UnhandledPromiseRejectionWarning` for each
   // offline verification, and Node reserves the right to make them fatal. Measure
   // in the packaged app, not inferred.
-  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  const check = () => autoUpdater.checkForUpdates().then((result) => {
+    // The check resolves before its download. Observe that separate rejection;
+    // the updater's error event publishes the state but does not consume it.
+    void result?.downloadPromise?.catch(() => {});
+  }).catch(() => {});
 
   void check();
   setInterval(check, CHECK_INTERVAL_MS);
@@ -184,6 +188,7 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
 /** The version already proposed, so as not to repropose it every round. */
 let promptedVersion: string | null = null;
 let installPrompt: Promise<void> | null = null;
+let installScheduled = false;
 
 /**
  * "minddy 0.9.5 is ready" — the proposal, and the restart if accepted.
@@ -205,6 +210,7 @@ function promptInstall(version: string): Promise<void> {
   // The automatic download event, sidebar and menu can request the same modal
   // together. Share one response so the app cannot stack prompts or relaunch twice.
   if (installPrompt) return installPrompt;
+  if (installScheduled) return Promise.resolve();
   installPrompt = (async () => {
     try {
       const copy = updatePromptCopy(version);
@@ -213,6 +219,7 @@ function promptInstall(version: string): Promise<void> {
         ? dialog.showMessageBox(window, copy)
         : dialog.showMessageBox(copy));
       if (updatePromptChoice(response) !== "install") return;
+      installScheduled = true;
       setImmediate(() => autoUpdater.quitAndInstall());
     } catch (error) {
       // A closing window can reject its native sheet. Keep the ready update and
@@ -271,6 +278,7 @@ export async function checkForUpdatesManually(): Promise<void> {
     // `updateInfo.version` names the release; `downloadPromise` only exists
     // when the updater has selected an update for download.
     if (result?.downloadPromise) {
+      void result.downloadPromise.catch(() => {});
       await dialog.showMessageBox({
         type: "info",
         message: `minddy ${result.updateInfo.version} is downloading.`,

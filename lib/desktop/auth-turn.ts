@@ -61,15 +61,19 @@ export function beginDesktopAuthTurn(): string {
 }
 
 /**
- * Does this link respond to the turn the app is waiting for? Consumes the turn in all
- * cases where there was one: a nonce is only worth one response.
+ * Consume only the matching, unexpired turn. An unrelated or delayed callback
+ * must not cancel the authentication request the app is still waiting for.
  */
 export function consumeDesktopAuthTurn(turn: string | undefined): boolean {
   const stored = read();
+  if (!stored) return false;
+  if (!Number.isFinite(stored.startedAt) || Date.now() - stored.startedAt > TURN_TTL_MS) {
+    clearDesktopAuthTurn();
+    return false;
+  }
+  if (!turn || stored.nonce !== turn) return false;
   clearDesktopAuthTurn();
-  if (!stored || !turn) return false;
-  if (Date.now() - stored.startedAt > TURN_TTL_MS) return false;
-  return stored.nonce === turn;
+  return true;
 }
 
 export function clearDesktopAuthTurn(): void {

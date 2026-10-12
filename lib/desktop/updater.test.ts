@@ -89,4 +89,42 @@ describe("desktop updater installation lifecycle", () => {
       expect.objectContaining({ message: "minddy 0.11.2 is ready to install." }),
     );
   });
+
+  it("does not reopen an accepted install prompt before the scheduled restart runs", async () => {
+    mocks.showMessageBox.mockResolvedValue({ response: 0 });
+    updater.emit("update-downloaded", { version: "0.11.2" });
+    await shell.checkForUpdatesManually();
+    expect(mocks.quitAndInstall).not.toHaveBeenCalled();
+    await shell.checkForUpdatesManually();
+    shell.requestInstall();
+    expect(mocks.showMessageBox).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles a later download rejection from an automatic check", async () => {
+    let reject!: (error: Error) => void;
+    const downloadPromise = new Promise<void>((_resolve, fail) => { reject = fail; });
+    const catchDownload = vi.spyOn(downloadPromise, "catch");
+    mocks.checkForUpdates.mockResolvedValueOnce({ downloadPromise });
+    await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
+    expect(catchDownload).toHaveBeenCalledTimes(1);
+    reject(new Error("Download interrupted"));
+    await Promise.resolve();
+    expect(mocks.showMessageBox).not.toHaveBeenCalled();
+  });
+
+  it("handles a later download rejection after a manual check reports progress", async () => {
+    let reject!: (error: Error) => void;
+    const downloadPromise = new Promise<void>((_resolve, fail) => { reject = fail; });
+    const catchDownload = vi.spyOn(downloadPromise, "catch");
+    mocks.checkForUpdates.mockResolvedValueOnce({ downloadPromise, updateInfo: { version: "0.11.2" } });
+    mocks.showMessageBox.mockResolvedValue({ response: 0 });
+    await shell.checkForUpdatesManually();
+    expect(catchDownload).toHaveBeenCalledTimes(1);
+    expect(mocks.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({ message: "minddy 0.11.2 is downloading." }));
+    reject(new Error("Download interrupted"));
+    await Promise.resolve();
+    expect(mocks.showMessageBox).toHaveBeenCalledTimes(1);
+  });
 });

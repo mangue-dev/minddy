@@ -71,6 +71,22 @@ afterEach(async () => {
 });
 
 describe("browser session recovery", () => {
+  it("keeps startup loading until a null initial event is confirmed by the session read", async () => {
+    let finish!: (value: ReturnType<typeof result>) => void;
+    h.getSession.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await emit("INITIAL_SESSION", null);
+    await advance(0);
+    expect(snapshot().loading).toBe(true);
+    await act(async () => { finish(result(savedSession())); });
+    expect(snapshot()).toEqual({ owner: "owner", token: "token-owner", loading: false });
+  });
+
+  it("lets confirmed missing credentials leave the startup loading state", async () => {
+    await emit("INITIAL_SESSION", null);
+    await advance(0);
+    expect(snapshot()).toEqual({ owner: null, token: null, loading: false });
+  });
+
   it("recovers an expired cookie with the actual SDK after an offline desktop startup", async () => {
     const cookies = new Map<string, string>();
     const token = (expiresAt: number) => [
@@ -147,6 +163,33 @@ describe("browser session recovery", () => {
     await advance(8_000);
     expect(snapshot().owner).toBe("owner");
     expect(snapshot().loading).toBe(false);
+  });
+
+  it("releases a stalled session read so network return can recover and ignores its late result", async () => {
+    let finish!: (value: ReturnType<typeof result>) => void;
+    h.getSession.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await emit("INITIAL_SESSION", null);
+    await advance(0);
+    await advance(8_000);
+    h.getSession.mockResolvedValueOnce(result(savedSession()));
+    await dispatch("online");
+    expect(h.getSession).toHaveBeenCalledTimes(2);
+    expect(snapshot().owner).toBe("owner");
+    await act(async () => { finish(result(null)); });
+    expect(snapshot().owner).toBe("owner");
+    expect(h.clearCache).not.toHaveBeenCalled();
+    await advance(16_000);
+    expect(h.getSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancels the recovery deadline when unmounting during a stalled session read", async () => {
+    h.getSession.mockImplementationOnce(() => new Promise(() => {}));
+    await emit("INITIAL_SESSION", null);
+    await advance(0);
+    await act(async () => { root.unmount(); }); mounted = false;
+    expect(vi.getTimerCount()).toBe(0);
+    await advance(16_000);
+    expect(h.getSession).toHaveBeenCalledTimes(1);
   });
 
   it.each(["SIGNED_OUT", "SIGNED_IN"] as const)("ignores a late session read after %s", async event => {

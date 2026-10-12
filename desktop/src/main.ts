@@ -19,6 +19,7 @@ import {
 } from "electron";
 
 import { parseDesktopAuthLink } from "@/lib/desktop/auth-link";
+import { createDesktopChannelSwitch } from "@/lib/desktop/channel-switch";
 import { createDesktopAuthLinkDelivery } from "@/lib/desktop/auth-link-delivery";
 import { discoverLocalModels } from "@/lib/desktop/local-models";
 import {
@@ -69,6 +70,8 @@ import {
 import { createRendererRecovery, desktopRendererRecoveryHtml } from "@/lib/desktop/renderer-recovery";
 import { createWindowStallRecovery } from "@/lib/desktop/window-stall-recovery";
 import { loadLocalRecoveryDocument } from "@/lib/desktop/local-recovery-load";
+import { loadDesktopWindow } from "@/lib/desktop/window-load";
+import { createLocalStartupSelection } from "@/lib/desktop/local-startup-selection";
 import {
   carrySessionCookies,
   staleSessionCookies,
@@ -105,6 +108,7 @@ import {
   readLocalRuntimeRoot,
   startLocalRuntime,
   stopLocalRuntime,
+  validateLocalRuntimeRoot,
   writeLocalRuntimeRoot,
 } from "./local-runtime";
 import {
@@ -316,25 +320,29 @@ function openCurrentServerPicker(): void {
 function showLocalRuntimeStatus(message: string): void {
   if (!mainWindow) return;
   const html = `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="light dark"><title>Starting minddy</title><style>body{font:15px system-ui,sans-serif;display:grid;min-height:100vh;margin:0;place-items:center;background:Canvas;color:CanvasText}p{color:GrayText}</style><main><h1>Starting local minddy…</h1><p>${message}</p></main>`;
-  void mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  loadDesktopWindow(mainWindow, `data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 }
 
-async function useLocalMinddy(): Promise<{ error?: string }> {
+const useLocalMinddy = createLocalStartupSelection(selectLocalMinddy);
+
+async function selectLocalMinddy(): Promise<{ error?: string }> {
   if (!mainWindow) return { error: "The main window is unavailable." };
   let generation = localRuntimeGeneration;
-  const selection = await dialog.showOpenDialog(mainWindow, {
-    title: "Choose the minddy folder",
-    properties: ["openDirectory"],
-    buttonLabel: "Use this folder",
-  });
-  if (selection.canceled || !selection.filePaths[0]) return { error: "Choose the minddy folder to continue." };
-  if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
-  generation = ++localRuntimeGeneration;
   try {
-    const root = writeLocalRuntimeRoot(selection.filePaths[0]);
+    const selection = await dialog.showOpenDialog(mainWindow, {
+      title: "Choose the minddy folder",
+      properties: ["openDirectory"],
+      buttonLabel: "Use this folder",
+    });
+    if (selection.canceled || !selection.filePaths[0]) return { error: "Choose the minddy folder to continue." };
+    if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
+    const root = validateLocalRuntimeRoot(selection.filePaths[0]);
+    generation = ++localRuntimeGeneration;
+    channelSwitch.cancel();
     showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
     await startLocalRuntime(root);
     if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
+    writeLocalRuntimeRoot(root);
     writeDesktopServerOrigin(LOCAL_SELF_HOST_ORIGIN);
     applyServerOrigin(LOCAL_SELF_HOST_ORIGIN, "/signup");
     return {};
@@ -344,6 +352,7 @@ async function useLocalMinddy(): Promise<{ error?: string }> {
 }
 
 function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH): void {
+  channelSwitch.cancel();
   localRuntimeGeneration++;
   if (next !== LOCAL_SELF_HOST_ORIGIN) stopLocalRuntime();
   customServerOrigin = next;
@@ -352,7 +361,7 @@ function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH):
   applyAboutPanel();
   rebuildAppMenu();
   if (mainWindow) {
-    void mainWindow.loadURL(`${origin}${entryPath}`);
+    loadDesktopWindow(mainWindow, `${origin}${entryPath}`);
     mainWindow.show();
     mainWindow.focus();
   }
@@ -389,27 +398,31 @@ function useMinddyCloud(): void {
  * Hence the asynchronous function, and the only place in the file that waits something
  * before acting.
  */
-async function setChannel(next: DesktopChannel): Promise<void> {
-  if (customServerOrigin) return;
-  if (next === channel) return;
-  const from = origin;
-  const to = desktopOriginForChannel(next);
-  await carrySession(from, to);
+const channelSwitch = createDesktopChannelSwitch({
+  current: () => channel,
+  unavailable: () => customServerOrigin !== null || quitting || quittingForUpdate,
+  prepare: (next) => carrySession(origin, desktopOriginForChannel(next)),
+  apply: (next) => {
+    localRuntimeGeneration++;
+    stopLocalRuntime();
+    const to = desktopOriginForChannel(next);
+    writeDesktopChannel(next);
+    channel = next;
+    origin = to;
+    trace("setChannel", { channel: next, origin });
+    // Refresh both native surfaces that display the selected channel.
+    applyAboutPanel();
+    if (mainWindow) {
+      rebuildAppMenu();
+      goHome(mainWindow);
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  },
+});
 
-  writeDesktopChannel(next);
-  channel = next;
-  origin = to;
-  trace("setChannel", { channel: next, origin });
-  // The two native surfaces which NAME the channel are redone: without that, the check mark
-  // of the menu would remain on the one we just left and “About”
-  // would announce the old origin until the next launch.
-  applyAboutPanel();
-  if (mainWindow) {
-    rebuildAppMenu();
-    goHome(mainWindow);
-    mainWindow.show();
-    mainWindow.focus();
-  }
+async function setChannel(next: DesktopChannel): Promise<void> {
+  await channelSwitch.select(next);
 }
 
 /**
@@ -605,7 +618,7 @@ function flushOpenLink(): void {
   pendingOpenPath = null;
   mainWindow.show();
   mainWindow.focus();
-  void mainWindow.loadURL(`${origin}${next}`);
+  loadDesktopWindow(mainWindow, `${origin}${next}`);
 }
 
 function flushAuthLink(): void {
@@ -613,13 +626,13 @@ function flushAuthLink(): void {
 }
 
 function goHome(window: BrowserWindow): void {
-  void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
+  loadDesktopWindow(window, `${origin}${DESKTOP_ENTRY_PATH}`);
 }
 
 function revealLocalNotificationTarget(target: string | null): void {
   if (!mainWindow) return;
   const url = desktopLocalNotificationUrl(origin, target);
-  if (url) void mainWindow.loadURL(url);
+  if (url) loadDesktopWindow(mainWindow, url);
   mainWindow.show();
   mainWindow.focus();
 }
@@ -852,7 +865,7 @@ function createWindow(
         desktopShellFontDataUrl(),
         process.platform,
       );
-      void window.loadURL(
+      loadDesktopWindow(window,
         `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
       );
     },
@@ -883,7 +896,7 @@ function createWindow(
     });
     mainWindow = replacement;
     window.destroy();
-    void replacement.loadURL(url);
+    loadDesktopWindow(replacement, url);
   });
   const webContentsId = window.webContents.id;
   window.on("closed", () => {
@@ -992,7 +1005,7 @@ function createWindow(
     powerMonitor.removeListener("unlock-screen", onUnlock);
   });
 
-  if (loadInitialOrigin) void window.loadURL(`${origin}${DESKTOP_ENTRY_PATH}`);
+  if (loadInitialOrigin) loadDesktopWindow(window, `${origin}${DESKTOP_ENTRY_PATH}`);
   return window;
 }
 
@@ -1572,17 +1585,19 @@ if (!app.requestSingleInstanceLock()) {
     if (localRoot) {
       const generation = localRuntimeGeneration;
       showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
-      void startLocalRuntime(localRoot)
-        .then(() => {
-          if (generation !== localRuntimeGeneration || quitting) return;
-          return mainWindow?.loadURL(`${LOCAL_SELF_HOST_ORIGIN}${DESKTOP_ENTRY_PATH}`);
+      void useLocalMinddy.run(() => startLocalRuntime(localRoot)
+        .then(async () => {
+          if (generation !== localRuntimeGeneration || quitting) return { error: "Local startup was canceled." };
+          await mainWindow?.loadURL(`${LOCAL_SELF_HOST_ORIGIN}${DESKTOP_ENTRY_PATH}`);
+          return {};
         })
         .catch((error) => {
-          if (!mainWindow || generation !== localRuntimeGeneration || quitting || error?.name === "AbortError") return;
+          if (!mainWindow || generation !== localRuntimeGeneration || quitting || error?.name === "AbortError") return { error: "Local startup was canceled." };
           dialog.showErrorBox("Local minddy could not start", error instanceof Error ? error.message : String(error));
           rebuildAppMenu();
           openCurrentServerPicker();
-        });
+          return { error: error instanceof Error ? error.message : "Could not start local minddy." };
+        }));
     } else if (localSelected) {
       showLocalRuntimeStatus("Choose the installed minddy folder to start the local instance.");
       openCurrentServerPicker();

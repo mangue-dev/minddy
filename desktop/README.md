@@ -73,7 +73,7 @@ including **Run local minddy on this computer** for a local clone folder.
 Run the desktop and session regression tests from the repository root:
 
 ```bash
-npm test -- lib/desktop lib/auth-context.test.tsx lib/client-session-renewal.test.ts lib/server/api-auth-cookie-refresh.test.ts lib/use-desktop-notifications.test.ts
+npm test -- lib/desktop components/desktop-auth-bridge.test.tsx lib/auth-context.test.tsx lib/client-session-renewal.test.ts lib/server/api-auth-cookie-refresh.test.ts lib/use-desktop-notifications.test.ts
 npm --prefix desktop run typecheck
 npm --prefix desktop run build
 node scripts/desktop-startup.integration.mjs

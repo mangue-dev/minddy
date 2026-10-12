@@ -23,6 +23,7 @@ import { useAnalytics } from "./use-analytics";
 import { browserRuntimeConfig } from "./runtime-config-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
 import { isBackendUnavailableError } from "./backend-availability";
+import { withClientRequestDeadline } from "./client-request-deadline";
 import type { User, Session } from "@supabase/supabase-js";
 
 export type OAuthProvider = "google" | "github";
@@ -177,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let recovering = false;
     let recoveryTimer: number | undefined;
     let snapshotOwner: string | null | undefined;
+    const recoveryController = new AbortController();
 
     const timeoutId = window.setTimeout(() => {
       if (resolved) return;
@@ -247,13 +249,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       recovering = true;
       const startedAtRevision = revision;
       try {
-        const { data, error } = await supabase.auth.getSession();
+        // SDK initialization and refresh retries can outlive a single network
+        // request. Bound the whole read so a stalled attempt cannot suppress
+        // every later foreground or network-return recovery.
+        const { data, error } = await withClientRequestDeadline(
+          () => supabase.auth.getSession(), AUTH_INIT_TIMEOUT_MS, recoveryController.signal,
+        );
         if (disposed || revision !== startedAtRevision) return;
         if (error) throw error;
         applySession("INITIAL_SESSION", data.session);
       } catch (error) {
-        if (!disposed && revision === startedAtRevision && isBackendUnavailableError(error)) {
-          recoveryTimer = window.setTimeout(() => { void recoverSession(); }, AUTH_INIT_TIMEOUT_MS);
+        if (!disposed && revision === startedAtRevision) {
+          if (isBackendUnavailableError(error)) {
+            recoveryTimer = window.setTimeout(() => { void recoverSession(); }, AUTH_INIT_TIMEOUT_MS);
+          } else {
+            resolved = true;
+            window.clearTimeout(timeoutId);
+            setLoading(false);
+          }
         }
       } finally {
         recovering = false;
@@ -265,12 +278,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, s) => {
       window.clearTimeout(recoveryTimer);
       if (event === "INITIAL_SESSION" && !s) {
-        resolved = true;
-        window.clearTimeout(timeoutId);
-        setLoading(false);
         // A null initial notification does not distinguish missing credentials
         // from a temporary refresh failure. Let getSession confirm it before
-        // clearing an account already known by this provider.
+        // clearing an account already known by this provider or releasing the
+        // startup gate. Otherwise desktop login can redirect to signup before
+        // a retained session finishes restoring. The watchdog still bounds it.
         // Leave the auth callback before calling Supabase again: callbacks may
         // run while the SDK owns its session lock.
         recoveryTimer = window.setTimeout(() => { void recoverSession(); }, 0);
@@ -289,6 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       disposed = true;
+      recoveryController.abort();
       window.clearTimeout(timeoutId);
       window.clearTimeout(recoveryTimer);
       window.removeEventListener("online", resumeSession);

@@ -63,7 +63,7 @@ export function startLocalRuntime(root: string): Promise<void> {
 }
 
 function stopProcess(runtime: ChildProcess): void {
-  if (runtime.exitCode === null) {
+  if (runtime.exitCode === null && runtime.signalCode === null) {
     const spec = runtime.pid ? localRuntimeStopSpec(process.platform, runtime.pid) : null;
     if (spec) {
       // `cmd.exe` is only the launcher. Terminate its complete process tree so
