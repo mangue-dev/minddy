@@ -10,7 +10,7 @@ import { useAppTabRoute } from "./app-tab-route-context";
 
 const state = vi.hoisted(() => ({
   path: "/all", search: "", activeId: "board", activeHref: "/all", mobile: false,
-  tabs: [{ id: "board" }, { id: "pages" }, { id: "other" }, { id: "fourth" }],
+  tabs: [{ id: "board" }, { id: "pages" }, { id: "other" }, { id: "fourth" }] as { id: string; href?: string }[],
 }));
 vi.mock("next/navigation", () => ({
   usePathname: () => state.path,
@@ -73,6 +73,20 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("recognizes a published PR selection without reconstructing the already mounted view", async () => {
+    state.tabs = [{ id: "pr", href: "/pull-requests" }];
+    Object.assign(state, { path: "/pull-requests", activeHref: "/pull-requests", activeId: "pr" });
+    await render();
+    const input = container.querySelector("input");
+    state.tabs = [{ id: "pr", href: "/pull-requests?pr=selected" }];
+    state.activeHref = "/pull-requests?pr=selected";
+    await render();
+    const session = state as typeof state & { isRetainedDestination: (tab: string, href: string) => boolean };
+    expect(session.isRetainedDestination("pr", "/pull-requests?pr=selected")).toBe(true);
+    expect(session.isRetainedDestination("pr", "/pull-requests?pr=another")).toBe(false);
+    expect(container.querySelector("input")).toBe(input);
+    expect(mounts).toBe(1);
+  });
   it("preserves Home DOM and unfinished input across mobile and desktop layouts", async () => {
     Object.assign(state, { path: "/home", activeHref: "/home" });
     const children = createElement("input", { defaultValue: "" });

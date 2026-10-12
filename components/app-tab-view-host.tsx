@@ -115,9 +115,10 @@ function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
   const client = useQueryClient();
   const pathname = usePathname();
   const search = useSearchParams().toString();
-  const [state, setState] = useState<{ location: string; tabId: string | null; tabIds: string; views: RetainedAppView[]; visits: string[] }>({ location: "", tabId: null, tabIds: "", views: [], visits: [] });
+  const [state, setState] = useState<{ location: string; tabId: string | null; tabIds: string; hrefs: string; views: RetainedAppView[]; visits: string[] }>({ location: "", tabId: null, tabIds: "", hrefs: "", views: [], visits: [] });
   const location = `${pathname}?${search}`;
   const tabIds = tabs.map((tab) => tab.id).join(",");
+  const hrefs = JSON.stringify(tabs.map((tab) => [tab.id, tab.href]));
   const expectedLocation = normalizeAppTabLocation(session.getActiveHref());
   // Activation precedes a cold router commit. Never assign the outgoing board's
   // state to the incoming tab during that gap.
@@ -126,7 +127,7 @@ function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
   useColdBoardPrefetch(pathname === "/all" && !pendingActivation);
   let views = state.views;
   let visits = state.visits;
-  if (state.location !== location || state.tabId !== tabId || state.tabIds !== tabIds) {
+  if (state.location !== location || state.tabId !== tabId || state.tabIds !== tabIds || state.hrefs !== hrefs) {
     // Closing the outgoing tab must not tear down and recreate its board during
     // the short interval before the replacement route commits.
     if (!pendingActivation) {
@@ -154,7 +155,7 @@ function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
         },
       });
     }
-    setState({ location, tabId, tabIds, views, visits });
+    setState({ location, tabId, tabIds, hrefs, views, visits });
   }
   useLayoutEffect(() => {
     const qualifies = (id: string | null, href: string) => isRetainedDestination(views, id, href);

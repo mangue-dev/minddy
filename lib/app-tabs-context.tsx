@@ -160,7 +160,10 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
     // itself respects staleTime, so a fresh cache costs nothing anyway.
     const attempted = new Set<string>();
     session.prefetch = (href) => {
-      router.prefetch(href);
+      // A local surface already owns this route. Preparing its server entry
+      // again can reconstruct an unused tree while the user activates it.
+      const retained = session.getSnapshot().tabs.some((tab) => tab.href === href && session.isRetainedDestination(tab.id, href));
+      if (!retained && !isPreparedAppTabDestination(client, href)) router.prefetch(href);
       prefetchAppTabDestination(client, href, attempted);
     };
     session.navigate = (href) => {
