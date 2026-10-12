@@ -185,6 +185,7 @@
     "parentIssueNotFound": "Parent issue not found.",
     "nestingLimitedToOneLevel": "A sub-issue can't have sub-issues.",
     "duplicateIssueNotFound": "The issue this one duplicates isn't in this project.",
+    "duplicateRequiresTarget": "A duplicate needs the issue it duplicates (duplicate_of_id); a new issue cannot be created as a duplicate.",
     "notAProjectMember": "That person isn't a member of this project.",
     "invalidRequest": "Invalid request.",
     "invitationNotFound": "This invitation is no longer valid.",

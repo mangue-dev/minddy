@@ -277,6 +277,28 @@ describe("updateIssueFields — références sortantes bornées au projet", () =
     expect(updateLog).toEqual([]);
   });
 
+  it("refuses a duplicate status with no duplicate target", async () => {
+    const result = await patch({ status: "duplicate" });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      errorKey: "duplicateRequiresTarget",
+    });
+    expect(updateLog).toEqual([]);
+  });
+
+  it("refuses a duplicate status whose target is explicitly cleared", async () => {
+    const result = await patch({ status: "duplicate", duplicate_of_id: null });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      errorKey: "duplicateRequiresTarget",
+    });
+    expect(updateLog).toEqual([]);
+  });
+
   it("refuse d'assigner quelqu'un qui n'est pas membre du projet", async () => {
     const result = await patch({ assignee_id: STRANGER });
 
@@ -324,6 +346,21 @@ describe("updateIssueFields — références sortantes bornées au projet", () =
 });
 
 describe("createIssueForProject — l'objectif à la création aussi", () => {
+  it("refuses creating an issue as a duplicate (no creation surface can pass a target)", async () => {
+    const result = await createIssueForProject({
+      projectId: MINE,
+      actorId: ME,
+      input: { title: "Un ticket", status: "duplicate" },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 400,
+      errorKey: "duplicateRequiresTarget",
+    });
+    expect(insertLog.filter((i) => i.table === "issues")).toEqual([]);
+  });
+
   it("refuse un objectif d'un autre projet, sans créer le ticket", async () => {
     const result = await createIssueForProject({
       projectId: MINE,

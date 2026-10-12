@@ -185,6 +185,7 @@
     "parentIssueNotFound": "No se ha encontrado la incidencia principal.",
     "nestingLimitedToOneLevel": "Una subincidencia no puede tener subincidencias.",
     "duplicateIssueNotFound": "La incidencia que esta duplica no pertenece a este proyecto.",
+    "duplicateRequiresTarget": "Un duplicado necesita la incidencia que duplica (duplicate_of_id); una incidencia nueva no puede crearse como duplicado.",
     "notAProjectMember": "Esa persona no es miembro de este proyecto.",
     "invalidRequest": "Solicitud inválida.",
     "invitationNotFound": "Esta invitación ya no es válida.",

@@ -185,6 +185,7 @@
     "parentIssueNotFound": "Übergeordnetes Problem nicht gefunden.",
     "nestingLimitedToOneLevel": "Ein untergeordnetes Problem kann keine untergeordneten Probleme haben.",
     "duplicateIssueNotFound": "Das von diesem duplizierte Problem ist nicht in diesem Projekt.",
+    "duplicateRequiresTarget": "Ein Duplikat braucht das Problem, das es dupliziert (duplicate_of_id); ein neues Problem kann nicht als Duplikat erstellt werden.",
     "notAProjectMember": "Diese Person ist kein Mitglied dieses Projekts.",
     "invalidRequest": "Ungültige Anfrage.",
     "invitationNotFound": "Diese Einladung ist nicht mehr gültig.",

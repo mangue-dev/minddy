@@ -149,7 +149,7 @@ const CREATE_ISSUE_FIELD_PROPERTIES = {
     type: "string",
     enum: [...ISSUE_STATUSES],
     description:
-      "Landing status. LEAVE IT OUT by default: minddy files new issues in the user's chosen Numo landing status — an account setting, not your call. Pass one ONLY when the user explicitly asked for that status at creation ('crée-la directement en done'); 'duplicate' additionally requires duplicate_of_id.",
+      "Landing status. LEAVE IT OUT by default: minddy files new issues in the user's chosen Numo landing status — an account setting, not your call. Pass one ONLY when the user explicitly asked for that status at creation ('crée-la directement en done'). A new issue cannot be created as a duplicate — that status is set on an EXISTING issue instead, with update_issues and its duplicate_of_id field.",
   },
   smart_fill: {
     type: "boolean",
@@ -1335,7 +1335,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           auto_assign_enabled: {
             type: "boolean",
             description:
-              "Assign a newly created issue to whoever created it, for everyone on this project.",
+              "Auto-assignment preference stored on the project (the creation wizard sets it). It currently has NO effect on its own: issues created in this project are auto-assigned to their creator only through each user's account-level auto_assign_created preference. Flip it only when the user asks, and say what it does today.",
           },
           smart_assign_enabled: {
             type: "boolean",
@@ -1488,7 +1488,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_integration_webhook",
       description:
-        "Tune an integration's outgoing webhook — the signed JSON minddy POSTs to the user's app whenever a followed issue event happens, which is how their app learns a human triaged what it pushed. OWNER ONLY, and 'issues' keys ONLY — a 'feedback' key creates no issue, so it has no webhook and this is refused on one. This is the answer to 'how do I know when the status changes' — never suggest polling. WHERE it delivers is not yours to set: the destination is a permanent outbound channel for everything happening on the project, so the user chooses it themselves in Settings → Integrations. Send back the webhook_url already in place to change the events or the scope, or null to turn the webhook off (its event/scope config is kept). The result carries the full receiver contract (headers, HMAC verification, payload, delivery guarantees) — relay it, none of it is guessable, starting with the HMAC key, which is not the API key. Get the id and the current URL via list_integrations.",
+        "Tune an integration's outgoing webhook — the signed JSON minddy POSTs to the user's app whenever a followed issue event happens, which is how their app learns a human triaged what it pushed. OWNER ONLY, and 'issues' keys ONLY for delivery — a 'feedback' key creates no issue, so no webhook can be ENABLED on one (disabling one left over from an earlier setup stays possible). This is the answer to 'how do I know when the status changes' — never suggest polling. WHERE it delivers is not yours to set: the destination is a permanent outbound channel for everything happening on the project, so the user chooses it themselves in Settings → Integrations. Send back the webhook_url already in place to change the events or the scope, or null to turn the webhook off (its event/scope config is kept). The result carries the full receiver contract (headers, HMAC verification, payload, delivery guarantees) — relay it, none of it is guessable, starting with the HMAC key, which is not the API key. Get the id and the current URL via list_integrations.",
       parameters: {
         type: "object",
         properties: {
@@ -1679,7 +1679,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           notif_page: {
             type: "boolean",
             description:
-              "Inbox: notify on wiki-page activity — the user is mentioned in a page, or the agent writes in one on their behalf.",
+              "Inbox: notify on wiki-page activity — the user is mentioned in a page, someone comments on a page they wrote or on a thread they took part in, or the agent writes in one on their behalf.",
           },
           analytics_consent: {
             type: ["string", "null"],
@@ -1733,7 +1733,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "list_trash",
       description:
-        "List what the user can still recover: the issues, objectives, feedback posts, routines and projects deleted from their projects, newest first, with who deleted them and when. Deleted items stay here for a limited number of days (the result carries `retention_days`) and then go for good. Routines only show up for projects the user OWNS — nobody else can restore one. Call it to answer 'what did I delete?' and to get the ids restore_from_trash takes.",
+        "List what the user can still recover: the issues, objectives, feedback posts, wiki pages, routines and projects deleted from their projects, newest first, with who deleted them and when. Deleted items stay here for a limited number of days (the result carries `retention_days`) and then go for good. Routines only show up for projects the user OWNS — nobody else can restore one. Call it to answer 'what did I delete?' and to get the ids restore_from_trash takes.",
       parameters: {
         type: "object",
         properties: {
@@ -1755,7 +1755,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "move_to_trash",
       description:
-        "Move an issue, objective, feedback post, routine or project to the trash — the app's own delete. It is REVERSIBLE (restore_from_trash brings it back exactly as it was, comments, attachments, sub-issues, links and a routine's past runs included) but it takes the item out of every board and list, so confirm with ask_user first. Deleting is NOT the same as canceling: 'canceled' is a status that stays on the board and says the work was dropped, the trash says the item should not have existed. Do what the user actually asked for. A project and a routine can only be trashed by the project's OWNER; trashing a project leaves its issues attached, so restoring it brings everything back. A trashed routine stops running — to merely pause one, use update_routine with enabled: false. Nothing cascades and nothing is detached.",
+        "Move an issue, objective, feedback post, wiki page, routine or project to the trash — the app's own delete. It is REVERSIBLE (restore_from_trash brings it back exactly as it was, comments, attachments, sub-issues, links and a routine's past runs included) but it takes the item out of every board and list, so confirm with ask_user first. Deleting is NOT the same as canceling: 'canceled' is a status that stays on the board and says the work was dropped, the trash says the item should not have existed. Do what the user actually asked for. A project and a routine can only be trashed by the project's OWNER; trashing a project leaves its issues attached, so restoring it brings everything back. A trashed routine stops running — to merely pause one, use update_routine with enabled: false. Nothing cascades and nothing is detached.",
       parameters: {
         type: "object",
         properties: {
@@ -1779,7 +1779,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "restore_from_trash",
       description:
-        "Bring an item back from the trash, exactly as it was — a routine comes back with its cadence, its instruction, its next occurrence and its past runs. Get the type and id from list_trash. Restoring an issue, objective, feedback or routine whose PROJECT is itself in the trash fails — restore the project first.",
+        "Bring an item back from the trash, exactly as it was — a routine comes back with its cadence, its instruction, its next occurrence and its past runs, a page with its subpages. Get the type and id from list_trash. Restoring an issue, objective, feedback, page or routine whose PROJECT is itself in the trash fails — restore the project first.",
       parameters: {
         type: "object",
         properties: {
@@ -2036,7 +2036,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "set_scratchpad",
-      description: `Replace the ENTIRE task notebook markdown — it overwrites the whole doc, so call get_scratchpad FIRST and preserve everything you are not changing. Use it only for what the surgical tools cannot do: editing a task's text, removing lines, adding/renaming/reordering '##' sections, writing prose. To tick tasks off use update_scratchpad_tasks; to add tasks use add_scratchpad_tasks. Checkbox convention: '- [ ]' to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Max ${MAX_SCRATCHPAD_LENGTH} characters; an empty string clears the notebook (confirm with the user first — there is no undo and no history). ALWAYS pass expected_rev (the \`rev\` from your get_scratchpad): the write is rejected instead of clobbering the user's concurrent edits.`,
+      description: `Replace the ENTIRE task notebook markdown — it overwrites the whole doc, so call get_scratchpad FIRST and preserve everything you are not changing. Use it only for what the surgical tools cannot do: editing a task's text, removing lines, adding/renaming/reordering '##' sections, writing prose. To tick tasks off use update_scratchpad_tasks; to add tasks use add_scratchpad_tasks. Checkbox convention: '- [ ]' to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. Max ${MAX_SCRATCHPAD_LENGTH} characters; an empty string clears the notebook (confirm with the user first — there is no undo and no history). Pass expected_rev (the \`rev\` from your get_scratchpad): a stale value is rejected instead of clobbering the user's concurrent edits — omitting it overwrites unconditionally.`,
       parameters: {
         type: "object",
         properties: {
@@ -2387,14 +2387,15 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
    * carries the same guardrail prose as the code agent's
    * `set_pull_request_state`: irreversible, confirmed by the user, never
    * against a red CI or a conflict — the executor (`pull-request-writes.ts`)
-   * re-checks all three before calling the forge.
+   * re-checks draft and conflicts locally, and leaves required checks to the
+   * forge's branch protection.
    */
   {
     type: "function",
     function: {
       name: "merge_pull_request",
       description:
-        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks all three and refuses, but a refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so — merging is never a reason to delegate to launch_code_agent.",
+        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks the draft state and the conflicts and refuses; the forge enforces the branch's required checks, so with protection a red or running CI refuses the merge — but where no protection demands checks the forge would accept a red one, so check the CI summary yourself and never merge through one. A refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so — merging is never a reason to delegate to launch_code_agent.",
       parameters: {
         type: "object",
         properties: {

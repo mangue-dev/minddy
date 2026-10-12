@@ -61,6 +61,7 @@ export type CreateIssueResult =
         | "planTooLong"
         | "invalidRecurrence"
         | "recurrenceNeedsDueDate"
+        | "duplicateRequiresTarget"
         | "databaseError"
         | "resourceInvalid"
         | "issueLimitReached"
@@ -227,6 +228,12 @@ export async function createIssueForProject({
       return { ok: false, status: 400, errorKey: "planTooLong" };
     }
     row.plan = input.plan;
+  }
+  // A duplicate points at the issue it copies, and no creation surface can
+  // pass that target — so a created duplicate would be dangling. Refuse:
+  // callers mark an EXISTING issue duplicate through the update core instead.
+  if (input.status === "duplicate") {
+    return { ok: false, status: 400, errorKey: "duplicateRequiresTarget" };
   }
   if (isStatus(input.status)) {
     row.status = input.status;

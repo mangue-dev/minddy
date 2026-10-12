@@ -99,6 +99,7 @@ export type UpdateIssueResult =
         | "issueNotFound"
         | "objectiveNotFound"
         | "duplicateIssueNotFound"
+        | "duplicateRequiresTarget"
         | "notAProjectMember"
         | "ownerOnly"
         | "databaseError";
@@ -334,6 +335,12 @@ export async function updateIssueFields({
     if (!(await objectiveInProject(service, updates.objective_id, projectId))) {
       return { ok: false, status: 400, errorKey: "objectiveNotFound" };
     }
+  }
+  // 'duplicate' is a status WITH a target: the canonical issue it duplicates,
+  // the same rule triage_decision enforces. Accepting one without its target
+  // would leave a dangling duplicate that no surface can later resolve.
+  if (updates.status === "duplicate" && typeof updates.duplicate_of_id !== "string") {
+    return { ok: false, status: 400, errorKey: "duplicateRequiresTarget" };
   }
   if (typeof updates.duplicate_of_id === "string") {
     if (!(await issueInProject(service, updates.duplicate_of_id, projectId))) {

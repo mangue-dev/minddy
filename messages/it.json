@@ -185,6 +185,7 @@
     "parentIssueNotFound": "Ticket principale non trovato.",
     "nestingLimitedToOneLevel": "Un sotto-ticket non può avere altri sotto-ticket.",
     "duplicateIssueNotFound": "Il ticket duplicato da questo ticket non appartiene al progetto.",
+    "duplicateRequiresTarget": "Un duplicato ha bisogno del ticket che duplica (duplicate_of_id); un nuovo ticket non può essere creato come duplicato.",
     "notAProjectMember": "Quella persona non è un membro di questo progetto.",
     "invalidRequest": "Richiesta non valida.",
     "invitationNotFound": "Questo invito non è più valido.",
