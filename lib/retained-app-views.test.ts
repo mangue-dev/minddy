@@ -179,6 +179,22 @@ describe("bounded retained board views", () => {
     expect(container.querySelector('[data-retained-home-view] input')).not.toBe(input);
     expect((container.querySelector('[data-retained-home-view] input') as HTMLInputElement).value).not.toBe("Unsent composer draft");
   });
+  it.each([true, false])("charges actual mounted windows with conservative full-tree fallback (%s)", async (windowed) => {
+    client.setQueryData(["me", "board"], { issues: Array(636).fill({}) });
+    client.setQueryData(["issues", "p"], Array(100).fill({}));
+    await render();
+    const global = container.querySelector('[data-retained-app-view]')!;
+    const geometry = document.createElement("div");
+    if (windowed) geometry.dataset.boardWindowed = "";
+    const card = document.createElement("div"); card.dataset.issueId = "mounted"; geometry.append(card);
+    global.append(geometry);
+    Object.assign(state, { activeId: "other", path: "/projects/p", activeHref: "/projects/p" });
+    await render();
+    Object.assign(state, { activeId: "pages", path: "/projects/p/pages/a", activeHref: "/projects/p/pages/a" });
+    await render();
+    expect(container.querySelectorAll('[data-retained-app-view]').length).toBe(windowed ? 3 : 2);
+    expect(container.querySelector('[data-retained-app-view="board:/all"]')).toBe(global);
+  });
   it("does not evict frequent boards for an unmounted large PR diff", async () => {
     state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
     client.setQueryData(["me", "board"], { issues: Array(600).fill({}) });
