@@ -9,7 +9,7 @@ import { AppTabNavigationScope, useAppTabs, useOptionalAppTabs } from "@/lib/app
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { nextReadActivationSequence } from "@/lib/read-activation-sequence";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { isRetainedDestination, retainAppView, retainedAppViewKind, retainedPageCost, type RetainedAppView } from "@/lib/retained-app-views";
+import { isRetainedDestination, retainAppView, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
 import { RetainedBoardTitle } from "./retained-board-title";
 import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
@@ -31,7 +31,9 @@ const Home = dynamic(appTabSurfaceLoaders.home);
 const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
   // Prepared public code can render synchronously. Fix the renderer at mount:
   // upgrading a mounted dynamic wrapper would discard its DOM and local state.
-  const [BoardSurface] = useState(() => preparedBoardSurface(view.kind) ?? (view.kind === "global-board" ? GlobalBoard : ProjectBoard));
+  // Keep activation from replaying unchanged board props. Account query and
+  // route-context updates still reach their own subscribers below this memo.
+  const [BoardSurface] = useState(() => memo(preparedBoardSurface(view.kind) ?? (view.kind === "global-board" ? GlobalBoard : ProjectBoard)));
   const activation = useRef<{ active: boolean; sequence: number } | null>(null);
   if (!activation.current || (active && !activation.current.active)) {
     activation.current = { active, sequence: nextReadActivationSequence() };
@@ -150,11 +152,7 @@ function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
             const pr = new URLSearchParams(view.route.search).get("pr");
             return Math.max(1, Math.ceil((client.getQueryData<{ files: unknown[] }>(["pull-request", pr])?.files.length ?? 400) / 200));
           }
-          if (view.kind === "pages") {
-            const pageId = view.route.pathname.match(/^\/projects\/[^/]+\/pages\/([^/]+)$/)?.[1];
-            return retainedPageCost(pageId ? client.getQueryData<{ content: unknown; database_schema?: unknown }>(["page", pageId]) : undefined);
-          }
-          if (view.kind !== "global-board" && view.kind !== "project-board") return 1;
+          if (view.kind !== "global-board" && view.kind !== "project-board") return view.kind === "pages" ? 2 : 1;
           const data = view.kind === "global-board"
             ? client.getQueryData<{ issues: unknown[] }>(["me", "board"])?.issues
             : client.getQueryData<unknown[]>(["issues", view.route.projectId]);

@@ -89,7 +89,7 @@ const results = { label, sha: productSha.sha,
   build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}), ...(connected ? { forge: forgeWorkload } : {}), ...(connectedBoard ? { connectedBoard } : {}) }, timestamp: new Date().toISOString(),
   runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
-if (["--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
+if (["--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--diagnostic-card-containment", "--diagnostic-fixed-card-containment", "--diagnostic-stable-card-containment", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
 let browser, context, page, userData, preserved, failure, changedIssue;
 const preservedPages = [];
 const created = [];
@@ -215,6 +215,22 @@ try {
   await frames();
   results.measurements.push({ name: "startup", driverMs: Date.now() - start });
   results.viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, scale: devicePixelRatio }));
+  if (["--diagnostic-card-containment", "--diagnostic-fixed-card-containment", "--diagnostic-stable-card-containment"].some((flag) => process.argv.includes(flag))) {
+    results.cardContainmentExperiment = await page.evaluate(async ({ fixed, stable }) => {
+      const root = document.querySelector('[data-app-view-active="true"]');
+      const columns = [...root.querySelectorAll('[data-board-column-scroller]')];
+      const before = columns.map((node) => node.scrollHeight);
+      const cards = [...root.querySelectorAll('[data-issue-id]')].map((node) => ({ node, height: node.getBoundingClientRect().height }));
+      for (const { node, height } of cards) {
+        node.style.containIntrinsicBlockSize = `${fixed ? "" : "auto "}${height}px`;
+        node.style.contentVisibility = "auto";
+        if (stable) node.style.flexShrink = "0";
+      }
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return { intrinsic: fixed ? "fixed measured height" : "auto remembered height", shrinking: !stable, cards: cards.length, before, after: columns.map((node) => node.scrollHeight) };
+    }, { fixed: process.argv.includes("--diagnostic-fixed-card-containment") || process.argv.includes("--diagnostic-stable-card-containment"), stable: process.argv.includes("--diagnostic-stable-card-containment") });
+    assert.deepEqual(results.cardContainmentExperiment.after, results.cardContainmentExperiment.before, "Diagnostic containment must preserve the measured scroll ranges");
+  }
   // Use the canonical tab UI, preserve all existing server tabs, and suppress
   // hover preparation by moving and pressing in one CDP input sequence.
   async function clickMeasured(name, locator, condition, args, complete = condition) {

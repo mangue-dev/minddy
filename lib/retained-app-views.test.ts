@@ -2,10 +2,10 @@
 import { act, createElement, useEffect, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { createPortal } from "react-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppTabViewHost } from "@/components/app-tab-view-host";
-import { isRetainedDestination, retainAppView, retainedAppViewKind, retainedPageCost } from "./retained-app-views";
+import { isRetainedDestination, retainAppView, retainedAppViewKind } from "./retained-app-views";
 import { useAppTabRoute } from "./app-tab-route-context";
 import * as surfaces from "./app-tab-surfaces";
 
@@ -30,8 +30,10 @@ vi.mock("next/dynamic", () => ({ default: () => Board }));
 
 let liveEffects = 0;
 let mounts = 0;
+let renders = 0;
 let keyboardEvents = 0;
 function Board() {
+  renders++;
   const route = useAppTabRoute();
   const [draft] = useState(() => `draft-${++mounts}`);
   useEffect(() => {
@@ -61,7 +63,7 @@ beforeEach(() => {
     getActiveHref: () => state.activeHref,
     getSnapshot: () => ({ activeId: state.activeId }),
   });
-  liveEffects = mounts = keyboardEvents = 0;
+  liveEffects = mounts = keyboardEvents = renders = 0;
   client = new QueryClient();
   client.setQueryData(["me", "board"], { issues: [] });
   client.setQueryData(["views", "global"], []);
@@ -78,42 +80,36 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
-  it("keeps a small Page and project beside the large global board without restarting their state", async () => {
-    client.setQueryData(["me", "board"], { issues: Array.from({ length: 636 }, (_, id) => ({ id })) });
-    client.setQueryData(["issues", "project"], Array.from({ length: 100 }, (_, id) => ({ id })));
-    client.setQueryData(["page", "document"], { content: { type: "doc", content: Array.from({ length: 80 }, () => ({
-      type: "paragraph", content: [{ type: "text", text: "A prepared document block." }],
-    })) } });
+  it("reconnects a retained board without replaying its unchanged renderer", async () => {
+    vi.spyOn(surfaces, "preparedBoardSurface").mockReturnValue(Board);
     await render();
-    const board = container.querySelector('[data-board-path="/all"] input');
-    Object.assign(state, { path: "/projects/project", activeId: "other", activeHref: "/projects/project" });
+    const rendered = renders;
+    const input = container.querySelector("input");
+    Object.assign(state, { path: "/settings", activeId: "other", activeHref: "/settings" });
     await render();
-    const project = container.querySelector('[data-board-path="/projects/project"] input');
-    Object.assign(state, { path: "/projects/project/pages/document", activeId: "pages", activeHref: "/projects/project/pages/document" });
+    expect(liveEffects).toBe(0);
+    Object.assign(state, { path: "/all", activeId: "board", activeHref: "/all" });
     await render();
-    const page = container.querySelector('[data-board-path="/projects/project/pages/document"] input');
-    for (const [path, activeId] of [["/all", "board"], ["/projects/project", "other"], ["/projects/project/pages/document", "pages"]]) {
-      Object.assign(state, { path, activeId, activeHref: path });
-      await render();
-      expect(container.querySelectorAll('[data-retained-app-view]')).toHaveLength(3);
-      expect(liveEffects).toBe(1);
-      expect(container.querySelector('[data-board-path="/all"] input')).toBe(board);
-      expect(container.querySelector('[data-board-path="/projects/project"] input')).toBe(project);
-      expect(container.querySelector('[data-board-path="/projects/project/pages/document"] input')).toBe(page);
-    }
+    expect(container.querySelector("input")).toBe(input);
+    expect(liveEffects).toBe(1);
+    expect(renders).toBe(rendered);
   });
-  it("keeps the conservative Page cost when the cached document is unknown, oversized or a database", () => {
-    expect(retainedPageCost(undefined)).toBe(2);
-    expect(retainedPageCost({ content: "Legacy body" })).toBe(2);
-    expect(retainedPageCost({ content: { type: "doc", content: [null] } })).toBe(2);
-    expect(retainedPageCost({ content: { type: "doc", content: [{ type: "database" }] } })).toBe(2);
-    expect(retainedPageCost({ content: { type: "doc", content: [{ type: "text", text: "x".repeat(25_001) }] } })).toBe(2);
-    expect(retainedPageCost({ content: { type: "doc", content: Array.from({ length: 200 }, () => ({ type: "paragraph" })) } })).toBe(2);
-    expect(retainedPageCost({ content: { type: "doc", content: [] }, database_schema: { columns: [] } })).toBe(2);
-    expect(retainedPageCost({ content: { type: "doc", content: [] } })).toBe(1);
-    let nested: unknown = { type: "paragraph" };
-    for (let index = 0; index < 201; index++) nested = { type: "blockquote", content: [nested] };
-    expect(retainedPageCost({ content: { type: "doc", content: [nested] } })).toBe(2);
+  it("allows query and route updates through the retained renderer's memo boundary", async () => {
+    function ReactiveBoard() {
+      const { pathname, searchParams } = useAppTabRoute();
+      const { data } = useQuery({ queryKey: ["me", "board"], queryFn: async () => ({ issues: [] }), staleTime: Infinity });
+      return createElement("p", { "data-reactive-board": true }, `${pathname}?${searchParams}:${data?.issues.length}`);
+    }
+    vi.spyOn(surfaces, "preparedBoardSurface").mockReturnValue(ReactiveBoard);
+    await render();
+    await act(async () => { client.setQueryData(["me", "board"], { issues: [{ id: "new" }] }); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(container.querySelector('[data-reactive-board]')?.textContent).toBe("/all?:1");
+    Object.assign(state, { path: "/settings", activeId: "other", activeHref: "/settings" });
+    await render();
+    await act(async () => { client.setQueryData(["me", "board"], { issues: [{ id: "new" }, { id: "hidden" }] }); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    Object.assign(state, { path: "/all", search: "view=second", activeId: "board", activeHref: "/all?view=second" });
+    await render();
+    expect(container.querySelector('[data-reactive-board]')?.textContent).toBe("/all?view=second:2");
   });
   it("mounts prepared board code directly and preserves that renderer and draft across later renders", async () => {
     const prepared = vi.spyOn(surfaces, "preparedBoardSurface").mockReturnValue(PreparedBoard);
