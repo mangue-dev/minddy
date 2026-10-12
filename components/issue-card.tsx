@@ -963,7 +963,7 @@ const IssueCardContent = memo(function IssueCardContent({
       the case for other selected tickets, which fade with it. */
   dragging?: boolean;
   onSelect?: (issueId: string) => void;
-  /** A window keeps card-owned dialogs and drafts mounted until they close. */
+  /** A window retains card-owned dialogs, drafts and unfinished uploads. */
   onInteractionChange?: (issueId: string, open: boolean) => void;
 }) {
   const t = useTranslations("IssueUI");
@@ -1309,7 +1309,7 @@ const IssueCardContent = memo(function IssueCardContent({
       "shift+a": launchAgent,
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
-  const interactionOpen = !!(menuPosition || relationType || confirmDelete || customTarget || menuState);
+  const interactionOpen = !!(menuPosition || relationType || confirmDelete || customTarget || menuState || uploads.pending.length);
   useLayoutEffect(() => {
     onInteractionChange?.(issue.id, interactionOpen);
     // Activity disconnects effects while retaining dialog state and its owner.

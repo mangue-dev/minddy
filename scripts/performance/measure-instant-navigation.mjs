@@ -8,6 +8,7 @@ import { createServerClient } from "@supabase/ssr";
 import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
 import { EMAIL, MARKER, assertScope, id } from "./seed.mjs";
 import { measureDeepNavigation } from "./measure-deep-navigation.mjs";
+import { verifyBoardWindowing } from "./verify-board-windowing.mjs";
 import { boardReady, revealBoardIssue } from "./board-readiness.mjs";
 import { forgeLinkFingerprint, loadConnectedBoardWorkload, loadForgeWorkload, measureForgeNavigation } from "./measure-forge-navigation.mjs";
 
@@ -93,7 +94,7 @@ const results = { label, sha: productSha.sha,
   runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
 if (windowingCompatible) results.protocol = secondary ? "min683-secondary-v2-visible-source-counts" : "min683-board-v2-visible-source-counts";
-if (["--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--diagnostic-card-containment", "--diagnostic-fixed-card-containment", "--diagnostic-stable-card-containment", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
+if (["--verify-windowing", "--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--diagnostic-card-containment", "--diagnostic-fixed-card-containment", "--diagnostic-stable-card-containment", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
 let browser, context, page, userData, preserved, failure, changedIssue;
 const preservedPages = [];
 const created = [];
@@ -427,6 +428,12 @@ try {
       await page.waitForTimeout(350);
     }
   }
+  if (process.argv.includes("--verify-windowing")) {
+    assert.ok(windowingCompatible && !secondary && !deep && !forge);
+    const original = await api(`/api/issues/${fixture.firstIssue}`);
+    assertScope("issues", original, fixture.userId);
+    await verifyBoardWindowing({ page, fixture, issueStatus: original.status, results });
+  }
   if (process.argv.includes("--verify") && secondary) {
     await tab(tabs[1], "verification-home");
     const composer = page.locator('[data-retained-home-view] [contenteditable][aria-placeholder*="Numo"]');
@@ -453,7 +460,11 @@ try {
     const original = await api(`/api/issues/${fixture.firstIssue}`);
     assertScope("issues", original, fixture.userId);
     const column = active().locator(`[data-board-column-scroller][data-board-column-status="${original.status}"]`);
-    const scroll = await column.evaluate((node) => { node.scrollTop = 180; return node.scrollTop; });
+    if (windowingCompatible) await revealBoardIssue(page, fixture.firstIssue, original.status);
+    const scroll = await column.evaluate((node, windowingCompatible) => {
+      if (!windowingCompatible) node.scrollTop = 180;
+      return node.scrollTop;
+    }, windowingCompatible);
     assert.ok(scroll > 0);
     await column.evaluate((node) => { window.__instant.column = node; });
     await active().evaluate((node) => { window.__instant.board = node; });
