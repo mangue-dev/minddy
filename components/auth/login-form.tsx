@@ -44,6 +44,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const searchParams = useSearchParams();
   const {
     user,
+    loading: authLoading,
     oauthProviders,
     signInWithPassword,
     signInWithOAuth,
@@ -86,32 +87,18 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     authErrorMessages[searchParams.get("error") ?? ""] ?? null
   );
 
-  /**
-   * **In the desktop app, the entry is REGISTRATION** (MIN-292, MIN-300).
-   *
-   * Someone who just downloaded 120MB and dragged an icon into
-   * Most applications do not yet have an account. Gold the window
-   * opens on `/home`, and the proxy returns here for lack of session: without this
-   * detour, the first screen of the product would be a login form, and it
-   * You'll have to find the bottom link before you can begin.
-   *
-   * `?mode=signin` deactivates it, and that's what the "I already have a
-   * account” of the wizard: an explicit choice does not have to be undone by a default.
-   * A `?error=` deactivates it too — the screen then has something to SAY
-   * (“connection canceled”, “this link has expired”), and go elsewhere
-   * would win without anyone reading it.
-   *
-   * The test is done in an effect — `window.minddy` does not exist on the server side,
-   * and assuming this would cause the hydration to diverge.
-   */
+  // First-time desktop visitors start at signup (MIN-292, MIN-300). Wait for
+  // session restoration: an authenticated account may still need its second
+  // factor here. Sending it to signup would bounce through /home and back to
+  // /login indefinitely (MIN-681). Explicit sign-in and error URLs stay here.
   const modeParam = searchParams.get("mode");
   const errorParam = searchParams.get("error");
   const [redirectingToSignup, setRedirectingToSignup] = useState(false);
   useEffect(() => {
-    if (modeParam === "signin" || errorParam || !isDesktop()) return;
+    if (authLoading || user || modeParam === "signin" || errorParam || !isDesktop()) return;
     setRedirectingToSignup(true);
     router.replace(signUpHref);
-  }, [modeParam, errorParam, router, signUpHref]);
+  }, [authLoading, user, modeParam, errorParam, router, signUpHref]);
 
   // Only one connection attempt at a time (email OR provider).
   const busy = loading || oauthPending !== null;
@@ -211,7 +198,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             router.replace(redirectTo);
           }}
         />
-      ) : redirecting || mfaStep === "unknown" || redirectingToSignup ? (
+      ) : authLoading || redirecting || mfaStep === "unknown" || redirectingToSignup ? (
         /* Full-page takeover, no form left behind: the redirect owns the
            screen until the app lands on the other side. */
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
