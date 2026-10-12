@@ -56,6 +56,24 @@ describe("account transfer compatibility", () => {
     expect(result.document.issue_categories).toEqual([]);
   });
 
+  it("normalizes the collections added after v2 for legacy exports", () => {
+    const result = validateAccountTransfer(emptyDocument);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.saved_views).toEqual([]);
+    expect(result.document.agent_routines).toEqual([]);
+    expect(result.document.numo_preferences).toEqual([]);
+  });
+
+  it("rejects the retired v1 export format", () => {
+    expect(validateAccountTransfer({ ...emptyDocument, format_version: 1 })).toMatchObject({
+      ok: false,
+      error: "unsupportedVersion",
+      field: "format_version",
+    });
+  });
+
   it("accepts the explicit current transfer envelope", () => {
     const result = validateAccountTransfer({
       ...emptyDocument,
