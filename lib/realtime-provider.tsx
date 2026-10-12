@@ -16,6 +16,8 @@ import {
 } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
+import { BACKEND_REQUEST_TIMEOUT_MS } from "./backend-availability";
+import { withClientRequestDeadline } from "./client-request-deadline";
 import { useAuth } from "./auth-context";
 import { projectIdFromPath } from "./project-id-from-path";
 import { projectTopicIds } from "./realtime-topics";
@@ -264,6 +266,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       let authAttempts = 0;
       let connectVersion = 0;
       let accessDenied = false;
+      let authorization: AbortController | null = null;
 
       // Deterministically push the session token to the socket before joining:
       // supabase-js only re-sends it on SIGNED_IN/TOKEN_REFRESHED, never on
@@ -271,11 +274,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // private channels.
       const connect = () => {
         const version = ++connectVersion;
+        const controller = new AbortController();
+        authorization = controller;
         void (async () => {
           try {
-            await supabase.realtime.setAuth();
-            if (cancelled || version !== connectVersion) return;
-            const resolvedTopic = await resolveRealtimeTopic(supabase, topic);
+            // SDK session locks can stall before either operation reaches a
+            // network request. Bound the complete authorization attempt too.
+            const resolvedTopic = await withClientRequestDeadline(async (signal) => {
+              await supabase.realtime.setAuth();
+              signal.throwIfAborted();
+              const resolved = await resolveRealtimeTopic(supabase, topic);
+              signal.throwIfAborted();
+              return resolved;
+            }, BACKEND_REQUEST_TIMEOUT_MS, controller.signal);
             if (cancelled || version !== connectVersion) return;
             accessDenied = false;
             authAttempts = 0;
@@ -325,6 +336,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             authAttempts += 1;
             const delay = Math.min(1_000 * 2 ** (authAttempts - 1), 10_000);
             authRetry = setTimeout(connect, delay);
+          } finally {
+            if (authorization === controller) authorization = null;
           }
         })();
       };
@@ -334,6 +347,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         accessDenied = false;
         needsCatchUp = true;
         connectVersion += 1;
+        authorization?.abort();
         if (authRetry) {
           clearTimeout(authRetry);
           authRetry = null;
@@ -358,6 +372,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       return () => {
         cancelled = true;
         connectVersion += 1;
+        authorization?.abort();
         stopRekey();
         authSubscription.unsubscribe();
         if (authRetry) clearTimeout(authRetry);

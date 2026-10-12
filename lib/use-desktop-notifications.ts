@@ -67,13 +67,11 @@ export function useDesktopNotifications(): void {
     if (!bridge || !userId || !initialized) return;
     const capabilities = bridge.notificationCapabilities;
     if (!capabilities?.localNativeBanners || !bridge.showLocalNotification) return;
-    // Packaged macOS receives this same event through APNs. When the app is
-    // running, Electron delivers that push to the main process, which shows it.
-    if (capabilities.backgroundTransport === "apns") return;
-    if (capabilities.backgroundTransport === "wns") {
-      // Self-hosted servers may intentionally omit WNS credentials. Wait for
-      // the capability response, then retain the live local relay as fallback.
-      if (!pushCapabilities || pushCapabilities.wns) return;
+    if (capabilities.backgroundTransport) {
+      // Shell support does not imply that the selected server can send native
+      // push. Wait for its capability response, then retain the local relay
+      // when APNs or WNS credentials are intentionally absent on that instance.
+      if (!pushCapabilities || pushCapabilities[capabilities.backgroundTransport]) return;
     }
 
     if (seen.current === null) {

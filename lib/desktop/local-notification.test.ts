@@ -113,4 +113,37 @@ describe("DesktopLocalNotificationRegistry", () => {
     expect(handles[0].close).toHaveBeenCalledOnce();
     expect(registry.size).toBe(MAX_ACTIVE_DESKTOP_NOTIFICATIONS);
   });
+
+  it("ignores delayed close events from a dismissed banner with a reused id", () => {
+    const registry = new DesktopLocalNotificationRegistry();
+    const payload = { id: "1", title: "Title", body: "", target: "/inbox" };
+    const oldBanner = { close: vi.fn() };
+    const newBanner = { close: vi.fn() };
+    registry.track(payload, oldBanner);
+    registry.dismiss(payload.id);
+    registry.track(payload, newBanner);
+
+    expect(registry.dismiss(payload.id, oldBanner)).toBe(false);
+    registry.forget(payload.id, oldBanner);
+
+    expect(registry.size).toBe(1);
+    expect(registry.dismiss(payload.id)).toBe(true);
+    expect(newBanner.close).toHaveBeenCalledOnce();
+  });
+
+  it("closes every old-origin banner before switching desktop servers", () => {
+    const registry = new DesktopLocalNotificationRegistry();
+    const first = { close: vi.fn(() => registry.forget("1")) };
+    const second = { close: vi.fn() };
+    registry.track({ id: "1", title: "Title", body: "", target: "/inbox" }, first);
+    registry.track({ id: "2", title: "Title", body: "", target: "/projects/a" }, second);
+
+    registry.clear();
+
+    expect(registry.size).toBe(0);
+    expect(first.close).toHaveBeenCalledOnce();
+    expect(second.close).toHaveBeenCalledOnce();
+    expect(registry.dismiss("1", first)).toBe(false);
+    expect(registry.track({ id: "3", title: "New server", body: "", target: "/inbox" }, { close: vi.fn() })).toBe(true);
+  });
 });

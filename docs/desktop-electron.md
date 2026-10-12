@@ -375,8 +375,11 @@ When inserting an inbox line, the server always constructs a single
 wording. `sendPushToUser` then chooses VAPID for a browser or APNs
 for the macOS app. APNs displays the alert when no minddy process is running; if
 the app runs, `received-apns-notification` transforms it into a native banner and
-its click opens the transported route. The real-time relay is disabled on that
-platform so the same event cannot display twice. The macOS Dock badge remains
+its click opens the transported route. The real-time relay is disabled when the
+selected server advertises configured APNs support so the same event cannot
+display twice. Without that server configuration, packaged macOS retains local
+native banners while the process runs, including while its window is hidden.
+This fallback ends when the process quits. The macOS Dock badge remains
 powered by the real-time list: it represents an exact state, not an APNs event.
 
 The repository contains a dormant C++/WinRT helper around Windows App SDK
@@ -396,7 +399,8 @@ In that configured mode, the server sends cloud-sourced adaptive toast XML with 
 protocol activation. Windows displays it without an Electron process. Clicking
 it starts minddy or reaches the running single instance through the same argv
 deep-link path as authentication and other external opens. The real-time relay
-is disabled only when the package actually contains the WNS helper, preventing
+is disabled only when the package contains the WNS helper and the selected
+server advertises configured WNS support, preventing
 duplicate banners. The renderer unread count then uses the packaged Windows
 badge platform; it never calls the macOS Dock API.
 

@@ -87,6 +87,7 @@ import {
 } from "@/lib/desktop/window-frame";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import {
+  disableNativePush,
   nativePushAllowed,
   pushInstallationId,
   setNativePushAllowed,
@@ -356,7 +357,9 @@ function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH):
   localRuntimeGeneration++;
   if (next !== LOCAL_SELF_HOST_ORIGIN) stopLocalRuntime();
   customServerOrigin = next;
-  origin = next ?? desktopOriginForChannel(channel);
+  const nextOrigin = next ?? desktopOriginForChannel(channel);
+  if (nextOrigin !== origin) localNotifications.clear();
+  origin = nextOrigin;
   trace("server", { origin, custom: next !== null });
   applyAboutPanel();
   rebuildAppMenu();
@@ -408,6 +411,7 @@ const channelSwitch = createDesktopChannelSwitch({
     const to = desktopOriginForChannel(next);
     writeDesktopChannel(next);
     channel = next;
+    if (to !== origin) localNotifications.clear();
     origin = to;
     trace("setChannel", { channel: next, origin });
     // Refresh both native surfaces that display the selected channel.
@@ -1077,15 +1081,17 @@ function registerIpc(): void {
       body: payload.body,
     });
     if (!localNotifications.track(payload, notification)) return;
+    const notificationOrigin = origin;
     notification.on("click", () => {
-      localNotifications.dismiss(payload.id);
-      revealLocalNotificationTarget(payload.target);
+      if (!localNotifications.dismiss(payload.id, notification)) return;
+      revealLocalNotificationTarget(notificationOrigin === origin ? payload.target : null);
     });
     notification.on("show", () => setNativeNotificationsAvailable(true));
-    notification.on("close", () => localNotifications.forget(payload.id));
+    notification.on("close", () => localNotifications.forget(payload.id, notification));
     notification.on("failed", () => {
-      localNotifications.forget(payload.id);
-      setNativeNotificationsAvailable(false);
+      if (localNotifications.forget(payload.id, notification)) {
+        setNativeNotificationsAvailable(false);
+      }
     });
     notification.show();
   });
@@ -1152,13 +1158,11 @@ function registerIpc(): void {
 
   ipcMain.handle("minddy:push:unregister", async () => {
     if (process.platform === "darwin") {
-      pushNotifications.unregisterForAPNSNotifications();
       apnsRegistration = null;
-      await setNativePushAllowed(app.getPath("userData"), false);
+      await disableNativePush(app.getPath("userData"), () => pushNotifications.unregisterForAPNSNotifications());
     } else if (process.platform === "win32") {
       wnsRegistration = null;
-      await runWnsHelper(["unregister"]);
-      await setNativePushAllowed(app.getPath("userData"), false);
+      await disableNativePush(app.getPath("userData"), () => runWnsHelper(["unregister"]));
     }
   });
 
@@ -1616,7 +1620,8 @@ if (!app.requestSingleInstanceLock()) {
           title: content.title,
           body: content.body,
         });
-        notification.on("click", () => revealLocalNotificationTarget(content.url));
+        const notificationOrigin = origin;
+        notification.on("click", () => revealLocalNotificationTarget(notificationOrigin === origin ? content.url : null));
         notification.show();
       });
     }

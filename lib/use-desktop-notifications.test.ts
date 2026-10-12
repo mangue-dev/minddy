@@ -7,11 +7,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useDesktopNotifications } from "./use-desktop-notifications";
 import type { DesktopBridge } from "./desktop/bridge";
 import type { MyNotification } from "./types";
+import type { PushTransportCapabilities } from "./push-devices-api";
 
 const state = vi.hoisted(() => ({
   userId: "first-user" as string | null,
   initialized: false,
   rows: [] as MyNotification[],
+  capabilities: null as PushTransportCapabilities | null,
 }));
 const shell = vi.hoisted(() => ({
   showLocalNotification: vi.fn(),
@@ -30,7 +32,7 @@ vi.mock("./use-notifications", () => ({
   }),
 }));
 vi.mock("./use-push-devices-query", () => ({
-  usePushDevicesQuery: () => ({ capabilities: null }),
+  usePushDevicesQuery: () => ({ capabilities: state.capabilities }),
 }));
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
@@ -86,6 +88,7 @@ beforeEach(() => {
   state.userId = "first-user";
   state.initialized = false;
   state.rows = [];
+  state.capabilities = null;
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
     .IS_REACT_ACT_ENVIRONMENT = true;
   window.minddy = {
@@ -104,6 +107,30 @@ afterEach(async () => {
 });
 
 describe("desktop notification lifecycle", () => {
+  it("silently seeds macOS local banners once the server confirms APNs is unavailable", async () => {
+    window.minddy = { ...window.minddy!, notificationCapabilities: { ...window.minddy!.notificationCapabilities!, backgroundTransport: "apns" } };
+    state.initialized = true;
+    state.rows = [notification("old")];
+    await render();
+    expect(shell.showLocalNotification).not.toHaveBeenCalled();
+    state.capabilities = { web: false, apns: false, wns: false };
+    await render();
+    expect(shell.showLocalNotification).not.toHaveBeenCalled();
+    state.rows = [notification("new"), ...state.rows];
+    await render();
+    expect(shell.showLocalNotification).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "new" }));
+  });
+
+  it("does not duplicate macOS banners delivered by a configured APNs server", async () => {
+    window.minddy = { ...window.minddy!, notificationCapabilities: { ...window.minddy!.notificationCapabilities!, backgroundTransport: "apns" } };
+    state.initialized = true;
+    state.capabilities = { web: false, apns: true, wns: false };
+    await render();
+    state.rows = [notification("new")];
+    await render();
+    expect(shell.showLocalNotification).not.toHaveBeenCalled();
+  });
+
   it("waits for the initial inbox snapshot before relaying fresh notifications", async () => {
     await render();
     // A failed first request still has no data and must not seed an empty inbox.

@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-12",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-651 memory/stall recovery delta; prior evidence retained)",
+    "version": "0.11.1 candidate (MIN-682 native notification fallback delta; prior evidence retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -62,14 +62,17 @@
       "lib/desktop/window-stall-recovery.ts",
       "content/documentation/reviews/min-651-stall-recovery-2026-10-10.json",
       "lib/desktop/local-recovery-load.ts",
-      "scripts/desktop-renderer-hang.integration.mjs"
+      "scripts/desktop-renderer-hang.integration.mjs",
+      "lib/use-desktop-notifications.ts",
+      "lib/use-desktop-notifications.test.ts",
+      "content/documentation/reviews/min-682-native-notification-fallback-2026-10-12.json"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions)",
-    "date": "2026-10-10"
+    "revision": 9,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review)",
+    "date": "2026-10-12"
   },
   "related": [
     "issues"
@@ -94,7 +97,7 @@
       "src": "/documentation/pt-BR/web-and-mobile-workflow.png",
       "alt": "Painel móvel de uma tarefa com título, descrição, propriedades e campo de comentário.",
       "caption": "Em uma tela estreita, os detalhes da tarefa ocupam um painel adaptável. Use o botão de fechar para voltar ao projeto; Numo continua acessível pelo botão flutuante.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -111,7 +114,7 @@
       "src": "/documentation/pt-BR/install-the-pwa-workflow.png",
       "alt": "Guia ilustrado de instalação pelo Safari no minddy: Compartilhar, adicionar à Tela de Início e confirmar.",
       "caption": "O guia público ilustra as três etapas do Safari e a opção Abrir como App da Web que deve permanecer ativada. São ilustrações de instruções exibidas pelo minddy, não capturas de uma instalação do iOS concluída.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -128,7 +131,7 @@
       "src": "/documentation/pt-BR/desktop-app-workflow.png",
       "alt": "Configurações de desktop no aplicativo real de desenvolvimento Electron para macOS, versão 0.11.1, conectado ao servidor local com um perfil isolado.",
       "caption": "Configurações de desktop no aplicativo real de desenvolvimento Electron para macOS, versão 0.11.1, conectado ao servidor local com um perfil isolado. A captura não valida versões assinadas nem outros sistemas operacionais.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -144,7 +147,7 @@
       "src": "/documentation/pt-BR/devices-and-notifications-workflow.png",
       "alt": "Configurações push com permissão bloqueada no navegador e nenhum dispositivo registrado.",
       "caption": "Este navegador bloqueia notificações. Restaure a permissão do site antes de registrar este dispositivo.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -161,7 +164,7 @@
       "src": "/documentation/pt-BR/devices-and-notifications-registered.png",
       "alt": "Dispositivo de navegador registrado e ativo na conta, com a data real do último envio.",
       "caption": "A conta tem um dispositivo de navegador registrado e ativo. A lista mostra as datas de registro e do último envio. A exibição de um alerta continua dependendo da permissão do navegador e das configurações do sistema operacional.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +180,7 @@
       "src": "/documentation/pt-BR/desktop-renderer-recovery.png",
       "alt": "Página local de recuperação após uma falha forçada do processo de renderização, com os controles Reload window e Check server settings.",
       "caption": "Página de recuperação no aplicativo de desenvolvimento para macOS, com um perfil isolado e um servidor de demonstração. A interface nativa usa rótulos em inglês em todos os idiomas.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -267,6 +270,8 @@ Confira se o dispositivo aparece na lista e use o controle de teste corresponden
 ### Condições por plataforma {#platforms}
 
 O push web exige um navegador compatível e o serviço de push configurado na instância. Os banners nativos e a entrega em segundo plano variam conforme a plataforma. O pacote macOS assinado oferece suporte a APNs; o pacote Windows precisa do componente WNS opcional para o transporte em segundo plano. No Linux, a entrega utiliza a sessão em segundo plano do aplicativo distribuído, em vez de APNs ou WNS.
+
+Se o servidor selecionado não tiver APNs ou WNS configurado, o aplicativo desktop usa notificações nativas locais enquanto estiver aberto ou oculto. Essa alternativa não entrega notificações depois que você encerra o aplicativo.
 
 Confira a permissão de notificações no sistema, o estado de instalação no navegador e a explicação exibida caso o recurso não esteja configurado ou não seja compatível. Um teste bem-sucedido não garante a entrega sem conexão ou sob todas as restrições de segundo plano do sistema. Mantenha disponível o aplicativo ou o serviço em segundo plano configurado, conforme os requisitos da plataforma.
 

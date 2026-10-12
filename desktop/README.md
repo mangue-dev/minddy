@@ -78,6 +78,7 @@ npm --prefix desktop run typecheck
 npm --prefix desktop run build
 node scripts/desktop-startup.integration.mjs
 node scripts/desktop-renderer-hang.integration.mjs
+node scripts/desktop-notification-lifecycle.integration.mjs
 ```
 
 The native probes require a graphical desktop session and launch real Electron
@@ -87,7 +88,11 @@ app exits, and a rotated cookie on the next process's first request. It does not
 contact Supabase or authenticate a real account; the session regression tests
 exercise SDK refresh failures and API response cookies separately. The hang probe blocks a renderer and
 checks the native recovery prompt and local recovery document. Both probes remove
-their temporary profiles when they finish.
+their temporary profiles when they finish. The notification lifecycle probe runs
+the actual main process and server-picker preload against two local servers,
+using synthetic native banners. It checks delayed banner callbacks, replacement
+registrations, and server-switch routing without displaying OS notifications or
+contacting APNs/WNS.
 
 ## Packaging downloader
 

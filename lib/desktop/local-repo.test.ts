@@ -246,6 +246,26 @@ describe("parseGitDirPointer", () => {
 });
 
 describe("parseLocalRepoStore", () => {
+  it("retains Windows drive and network paths across store serialization", () => {
+    const store = {
+      drive: "C:\\Users\\Alice\\minddy",
+      forwardSlashes: "D:/Projects/minddy",
+      network: "\\\\server\\projects\\minddy",
+      extended: "\\\\?\\C:\\Projects\\minddy",
+    };
+    expect(parseLocalRepoStore(JSON.parse(serializeLocalRepoStore(store)))).toEqual(store);
+  });
+
+  it("rejects Windows paths that depend on the current directory or drive", () => {
+    expect(parseLocalRepoStore({
+      projects: {
+        driveRelative: "C:minddy",
+        currentDrive: "\\Projects\\minddy",
+        incompleteNetwork: "\\\\server",
+      },
+    })).toEqual({});
+  });
+
   it("relit ce qu'on a écrit", () => {
     const store = { "p-1": "/Users/x/dépôt" };
     expect(parseLocalRepoStore(JSON.parse(serializeLocalRepoStore(store)))).toEqual(store);
@@ -284,6 +304,17 @@ describe("withLocalRepo / withoutLocalRepo", () => {
 });
 
 describe("localRepoFolderName", () => {
+  it("displays the final folder for Windows drive and network attachments", () => {
+    expect(localRepoFolderName("C:\\Users\\Alice\\minddy\\")).toBe("minddy");
+    expect(localRepoFolderName("D:/Projects/minddy/")).toBe("minddy");
+    expect(localRepoFolderName("\\\\server\\projects\\minddy")).toBe("minddy");
+    expect(localRepoFolderName("\\\\?\\C:\\Projects\\minddy")).toBe("minddy");
+  });
+
+  it("preserves backslashes that are part of a POSIX folder name", () => {
+    expect(localRepoFolderName("/home/alice/project\\archive")).toBe("project\\archive");
+  });
+
   it("rend le dernier segment", () => {
     expect(localRepoFolderName("/Users/x/Projets/minddy")).toBe("minddy");
     expect(localRepoFolderName("/Users/x/Projets/minddy/")).toBe("minddy");

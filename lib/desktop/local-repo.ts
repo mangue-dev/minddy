@@ -185,6 +185,11 @@ export function parseGitDirPointer(text: string): string | null {
 /** What the settings file contains: one path per project. */
 export type LocalRepoStore = Record<string, string>;
 
+/** Recognize Windows paths without importing Node into renderer consumers. */
+function isWindowsAbsolutePath(path: string): boolean {
+  return /^[a-z]:[\\/]/i.test(path) || /^\\\\[^\\]+\\[^\\]+(?:\\|$)/.test(path);
+}
+
 /**
  * The store read from disk, reduced to what it has the right to be.
  *
@@ -201,7 +206,7 @@ export function parseLocalRepoStore(raw: unknown): LocalRepoStore {
   for (const [projectId, value] of Object.entries(projects as Record<string, unknown>)) {
     if (!projectId) continue;
     const path = typeof value === "string" ? value : null;
-    if (path && path.startsWith("/")) store[projectId] = path;
+    if (path && (path.startsWith("/") || isWindowsAbsolutePath(path))) store[projectId] = path;
   }
   return store;
 }
@@ -229,6 +234,7 @@ export function withoutLocalRepo(
 
 /** The last segment of a path — what the chip displays when there is no space. */
 export function localRepoFolderName(path: string): string {
-  const segments = path.replace(/\/+$/, "").split("/");
+  const normalized = isWindowsAbsolutePath(path) ? path.replace(/\\/g, "/") : path;
+  const segments = normalized.replace(/\/+$/, "").split("/");
   return segments[segments.length - 1] || path;
 }

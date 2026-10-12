@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-12",
+  "reviewer": "agent:/root",
+  "article": "applications",
+  "articleRevisions": {
+    "en": 9,
+    "fr": 9,
+    "de": 9,
+    "es": 9,
+    "it": 9,
+    "pt-BR": 9
+  },
+  "locales": [
+    "en",
+    "fr",
+    "de",
+    "es",
+    "it",
+    "pt-BR"
+  ],
+  "workflows": [
+    "A03"
+  ],
+  "changedSection": "platforms",
+  "audience": "Desktop users on a server without native push credentials.",
+  "outcome": "Understand that local native banners remain available while the desktop process runs, and stop after quitting.",
+  "method": "Source and regression-tested hook review, followed by six-locale agent language comparison. No signed APNs/WNS delivery or human reader acceptance claimed.",
+  "evidence": [
+    "lib/use-desktop-notifications.ts",
+    "lib/use-desktop-notifications.test.ts",
+    "lib/desktop/notification-capabilities.ts",
+    "app/api/account/push-subscriptions/route.ts"
+  ],
+  "regressions": [
+    "APNs-absent instance failed to show a new banner before the fix; passes after gating on server capabilities.",
+    "Pending capabilities silently wait; historical inbox snapshots seed without banners.",
+    "Configured APNs instance suppresses local relay to prevent duplicate banners."
+  ],
+  "retainedFigures": "All applications figures retain their images, labels, captions and capture dates. No visible control, permission flow or dialog changed; no new screenshot or diagram is needed for this transport condition. Figure metadata advances with the article revision while prior visual evidence remains applicable.",
+  "limits": [
+    "Native signed APNs/WNS network delivery was not exercised.",
+    "Existing unrelated procedural and visual evidence retained."
+  ],
+  "checks": [
+    "npm test -- lib/use-desktop-notifications.test.ts (6 tests passed; regression reproduced before fix)",
+    "npm run check:documentation (passed)",
+    "npm run check:documentation:release (passed; no publication performed)",
+    "npm run check:knowledge (passed)",
+    "npm run check:owned-english (passed)",
+    "git diff --check (passed)"
+  ],
+  "peerReviewer": "agent:/root/third_auth (source, conditions, six-locale retained-meaning and review-metadata comparison)"
+}

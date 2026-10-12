@@ -125,8 +125,8 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
   );
 
   const [loading, setLoading] = useState(false);
-  // Provider being redirected — the page is going to Google/GitHub, so this
-  // state is never reset to null on success (only on error).
+  // Web sign-in stays busy until navigation. Desktop only waits for the system
+  // browser to open, so an abandoned provider attempt can be retried here.
   const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** The address to which a confirmation link has just left. */
@@ -228,8 +228,8 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
     setOauthPending(provider);
     track("oauth_initiated", { provider, context: "signup" });
     try {
-      // Success = the page navigates to the provider; we never come back here.
       await signInWithOAuth(provider, redirectTo);
+      if (inDesktopApp) setOauthPending(null);
     } catch (err) {
       track("signup_failed", { reason: errorReason(err) });
       setError(authErrorMessage(err, t));
