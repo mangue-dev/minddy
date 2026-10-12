@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem, CommandSeparator } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps, PickerCreateRow } from "@/components/search-select";
-import { CATEGORY_COLORS } from "@/lib/category-colors";
+import { pickFreeCategoryColor } from "@/lib/category-colors";
 import { usePageDatabase } from "@/lib/use-page-database";
 import {
   MAX_DATABASE_OPTIONS,
@@ -158,7 +158,7 @@ export function DatabaseSelectCell({
             create={{
               labelFor: (name) => t("createOption", { name }),
               onCreate: async (name) => {
-                const option = { id: createUuid(), name, color: CATEGORY_COLORS[0] };
+                const option = { id: createUuid(), name, color: pickFreeCategoryColor(options.map((item) => item.color)) };
                 void saveSchema(database, (database.database_schema ?? []).map((p) =>
                   p.id === property.id ? { ...p, options: [...options, option] } : p));
                 choose(option.id);

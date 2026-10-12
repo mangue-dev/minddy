@@ -85,6 +85,18 @@ function forgeSmallExpandedSize(bytes: Uint8Array): Uint8Array {
 }
 
 describe("Notion database archives", () => {
+  it("imports timed dates without dropping offsets or changing date-only values", () => {
+    const prepared = readDatabaseArchive(strToU8(
+      "Name,Delivery\nFirst,2026-10-12T14:30:00+02:00\nSecond,2026-10-12\nThird,2026-10-12T00:00:00.000Z",
+    ), "dates.csv");
+    const source = prepared.sources[0];
+    expect(source.columns[1].type).toBe("date");
+    const pages = prepareImportPages(prepared, source, source.columns, new Map());
+    const property = pages[0].database_schema![0].id;
+    expect(pages.slice(1).map((page) => page.property_values[property])).toEqual([
+      "2026-10-12T14:30:00+02:00", "2026-10-12", "2026-10-12T00:00:00.000Z",
+    ]);
+  });
   it("imports CSV values, entry bodies, nested pages, and attachment paths together", () => {
     const bytes = zip({
       [db + ".csv"]:

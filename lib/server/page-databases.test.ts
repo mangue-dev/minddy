@@ -3,11 +3,18 @@ const h = vi.hoisted(() => ({
   getPage: vi.fn(),
   rpc: vi.fn(),
   event: vi.fn(),
+  query: {
+    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(), range: vi.fn(),
+  },
+  commitBatch: vi.fn(),
 }));
 vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage }));
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ rpc: h.rpc }),
+  getServiceClient: () => ({ rpc: h.rpc, from: () => h.query }),
 }));
+vi.mock("./page-content", () => ({ decodePage: async (row: unknown) => row }));
+vi.mock("./page-content-batch", () => ({ commitPageContentBatch: h.commitBatch }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: vi.fn() }));
 vi.mock("@/lib/server/page-activity", () => ({ recordPageEvent: h.event }));
 import { convertPageDatabase, updatePageDatabase } from "./page-databases";
@@ -33,6 +40,58 @@ beforeEach(() => {
     page: id === "db" ? database : entry,
   }));
   h.rpc.mockResolvedValue({ data: { status: "updated" }, error: null });
+  h.query.range.mockResolvedValue({ data: [], error: null });
+  h.commitBatch.mockResolvedValue("updated");
+});
+
+describe("protected database option edits", () => {
+  const ready = { id: "10000000-0000-4000-8000-000000000007", name: "Ready", color: "#22c55e" };
+  const later = { id: "10000000-0000-4000-8000-000000000008", name: "Later", color: "#3b82f6" };
+  const single = { id: "10000000-0000-4000-8000-000000000002", name: "Status", type: "select", options: [ready, later] };
+  const multi = { ...single, id: "10000000-0000-4000-8000-000000000003", name: "Tags", type: "multi_select" };
+  const protectedDatabase = { ...database, encryption_version: 1,
+    content_revision: 3, database_schema: [...schema, single, multi] };
+  const values = { [propertyId]: "2026-10-12T12:30:00.000Z", [single.id]: ready.id, [multi.id]: [ready.id, later.id] };
+  const children = [
+    { ...entry, encryption_version: 1, content_revision: 4, property_values: values },
+    { ...entry, id: "trash", encryption_version: 1, content_revision: 5,
+      deleted_at: "2026-10-11T12:00:00Z", property_values: values },
+  ];
+  beforeEach(() => {
+    h.getPage.mockImplementation(async (id: string) => ({ ok: true,
+      page: id === "db" ? protectedDatabase : children[0] }));
+    h.query.range.mockResolvedValue({ data: children, error: null });
+  });
+  it("persists option order without replacing existing assignments", async () => {
+    const next = protectedDatabase.database_schema.map((p) => "options" in p ? { ...p, options: [later, ready] } : p);
+    expect(await updatePageDatabase("project", "db", "actor", {
+      operation: "schema", schema: next, revision: 0,
+    })).toMatchObject({ ok: true });
+    const batch = h.commitBatch.mock.calls[0][0];
+    expect(batch.edits).toHaveLength(1);
+    expect(batch.edits[0].next.database_schema).toEqual(next);
+    expect(batch.expectedChildren).toEqual(["entry", "trash"]);
+    expect(h.rpc).not.toHaveBeenCalled();
+  });
+  it("atomically removes deleted options from live and trashed entries while keeping other selections and dates", async () => {
+    const next = protectedDatabase.database_schema.map((p) => "options" in p ? { ...p, options: [later] } : p);
+    expect(await updatePageDatabase("project", "db", "actor", {
+      operation: "schema", schema: next, revision: 0,
+    })).toMatchObject({ ok: true });
+    const batch = h.commitBatch.mock.calls[0][0];
+    expect(batch.edits).toHaveLength(3);
+    for (const edit of batch.edits.slice(1)) expect(edit.next.property_values).toEqual({
+      [propertyId]: values[propertyId], [multi.id]: [later.id],
+    });
+    expect(batch.expected).toEqual([protectedDatabase, ...children]);
+  });
+  it("keeps protected cell timestamps and exact preconditions intact", async () => {
+    expect(await updatePageDatabase("project", "entry", "actor", {
+      operation: "value", propertyId, value: "2026-10-12T00:00:00.000Z", expected: values[propertyId],
+    })).toMatchObject({ ok: true });
+    expect(h.commitBatch.mock.calls[0][0].edits[0].next.property_values[propertyId]).toBe("2026-10-12T00:00:00.000Z");
+    expect(h.rpc).not.toHaveBeenCalled();
+  });
 });
 
 describe("page database server boundary", () => {
@@ -119,6 +178,14 @@ describe("page database server boundary", () => {
       p_actor_id: "actor",
       p_input: { ...input, kind: "human", mcpKeyId: null },
     });
+  });
+  it("passes a timed date and its exact previous value through the guarded save", async () => {
+    const input = { operation: "value", propertyId,
+      value: "2026-10-12T14:30:00+02:00", expected: "2026-10-12" };
+    expect(await updatePageDatabase("project", "entry", "actor", input)).toMatchObject({ ok: true });
+    expect(h.rpc).toHaveBeenCalledWith("update_page_database_guarded", expect.objectContaining({
+      p_input: { ...input, kind: "human", mcpKeyId: null },
+    }));
   });
   it("reports stale cells and schema edits without retrying over them", async () => {
     h.rpc.mockResolvedValue({ data: { status: "conflict" }, error: null });

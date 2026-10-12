@@ -54,6 +54,7 @@ import { displayName } from "@/lib/display-name";
 import {
   MAX_DATABASE_PROPERTIES,
   compareDatabaseValues,
+  databaseDateMatches,
   databaseValueText,
   databasePropertyValue,
   type DatabaseProperty,
@@ -481,6 +482,8 @@ export function PageDatabaseView({
           value === "" ||
           (Array.isArray(value) && !value.length)
         );
+      if (filterProperty.type === "date")
+        return databaseDateMatches(value, filterValue);
       if (filterProperty.type === "people")
         return Array.isArray(value)
           ? value.includes(filterValue)

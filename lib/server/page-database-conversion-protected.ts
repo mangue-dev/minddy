@@ -10,6 +10,7 @@ import type { Page } from "@/lib/pages";
 import type { DatabaseProperty, DatabasePropertyType, DatabaseValue,
   DatabaseSelectOption } from "@/lib/page-databases";
 import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
+import { isDatabaseValue } from "@/lib/page-databases";
 
 type StoredPage = Page & { content_revision: number; encryption_version: number;
   database_revision: number };
@@ -80,10 +81,7 @@ function convertCell(source: DatabaseProperty,
   }
   if (target === "date") {
     const candidate = source.type === "created_at" ? label.slice(0, 10) : label;
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(candidate)
-      ? new Date(`${candidate}T00:00:00.000Z`) : null;
-    return date && Number.isFinite(date.getTime()) &&
-      date.toISOString().slice(0, 10) === candidate
+    return isDatabaseValue("date", candidate)
       ? { value: candidate, compatible: true }
       : { value: null, compatible: false };
   }

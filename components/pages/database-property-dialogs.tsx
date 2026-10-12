@@ -4,7 +4,8 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, Delete02Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { arrayMove } from "@dnd-kit/sortable";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useState } from "react";
@@ -26,7 +27,7 @@ import {
 } from "mangue-ui";
 import { FormDialog } from "@/components/form-dialog";
 import { SearchSelect, PICKER_FIELD_TRIGGER } from "@/components/search-select";
-import { CATEGORY_COLORS } from "@/lib/category-colors";
+import { CATEGORY_COLORS, pickFreeCategoryColor } from "@/lib/category-colors";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { usePageDatabase } from "@/lib/use-page-database";
 import {
@@ -90,7 +91,7 @@ export function DatabaseOptionsDialog({
           <div
             key={option.id}
             data-database-option-row
-            className="flex h-10 min-w-0 items-center gap-3"
+            className="flex min-h-11 min-w-0 items-center gap-1"
           >
             <Input
               aria-label={t("optionName")}
@@ -159,6 +160,30 @@ export function DatabaseOptionsDialog({
                 ))}
               </PopoverContent>
             </Popover>
+            <Button type="button" variant="ghost" size="icon"
+              className="size-9 shrink-0 app-mobile:size-11"
+              disabled={pending || index === 0}
+              aria-label={t("moveOptionUp", { name: option.name })}
+              onClick={() => setOptions((rows) => arrayMove(rows, index, index - 1))}>
+              <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
+            </Button>
+            <Button type="button" variant="ghost" size="icon"
+              className="size-9 shrink-0 app-mobile:size-11"
+              disabled={pending || index === options.length - 1}
+              aria-label={t("moveOptionDown", { name: option.name })}
+              onClick={() => setOptions((rows) => arrayMove(rows, index, index + 1))}>
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
+            </Button>
+            <Button type="button" variant="ghost" size="icon"
+              className="size-9 shrink-0 text-muted-foreground hover:text-destructive app-mobile:size-11"
+              disabled={pending}
+              aria-label={t("deleteOption", { name: option.name })}
+              onClick={() => {
+                setOptions((rows) => rows.filter((row) => row.id !== option.id));
+                if (palette === option.id) setPalette(null);
+              }}>
+              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+            </Button>
           </div>
         ))}
         {!options.length && (
@@ -167,11 +192,12 @@ export function DatabaseOptionsDialog({
           </p>
         )}
         <Button type="button" variant="ghost" disabled={pending || options.length >= MAX_DATABASE_OPTIONS}
-          onClick={() => setOptions((rows) => [...rows, { id: createUuid(), name: "", color: CATEGORY_COLORS[0] }])}>
+          onClick={() => setOptions((rows) => [...rows, { id: createUuid(), name: "", color: pickFreeCategoryColor(rows.map((row) => row.color)) }])}>
           <HugeiconsIcon icon={Add01Icon} className="size-4" />
           {t("addOption")}
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">{t("deleteOptionHint")}</p>
       {duplicate && (
         <p role="alert" className="text-sm text-destructive">
           {t("optionNamesUnique")}
