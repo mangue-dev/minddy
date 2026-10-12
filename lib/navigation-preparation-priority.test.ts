@@ -67,3 +67,19 @@ it("releases priority after failed prerequisites and when a navigation owner is 
     expect(view.fetch.mock.calls.some(([url]) => String(url).endsWith("/comments"))).toBe(true);
   } finally { view.close(); }
 });
+
+it("prepares Pages ahead of old PR tabs without reserving optional PR metadata priority", async () => {
+  const view = setup();
+  try {
+    const oldPrTabs = Array.from({ length: 45 }, (_, index) => `/pull-requests?pr=old-${index}`);
+    view.navigation.visit("/home", ["/home", ...oldPrTabs, "/projects/project/pages/page"]);
+    await view.flush(view.tabs); await view.flush(view.tabs);
+    expect(view.fetch.mock.calls.slice(0, 2).map(([url]) => url)).toEqual([
+      "/api/projects/project/pages/page", "/api/projects/project/pages",
+    ]);
+    await view.flush(view.tabs);
+    expect(navigationPreparationPending(view.client)).toBe(false);
+    view.navigation.visit("/home", ["/home", ...oldPrTabs]);
+    expect(navigationPreparationPending(view.client)).toBe(false);
+  } finally { view.close(); }
+});

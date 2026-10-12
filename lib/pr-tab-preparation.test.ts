@@ -59,15 +59,16 @@ describe("account-owned PR preparation", () => {
     prepared.preparation.dispose(); prepared.client.clear();
   });
 
-  it("bounds large open-tab collections and prepares at most one unvisited PR detail", async () => {
+  it("bounds large unvisited board working sets before optional PR reads", async () => {
     const prepared = setup();
     prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
     prepared.preparation.visit("/home", ["/home", "/pull-requests?pr=unvisited", "/pull-requests?pr=another",
       ...Array.from({ length: 20 }, (_, index) => `/projects/p${index}`)]);
     await drain(prepared);
-    expect(prepared.fetch).toHaveBeenCalledTimes(10);
+    expect(prepared.fetch).toHaveBeenCalledTimes(12);
     const details = prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/"));
-    expect(details.map(([url]) => url)).toEqual(["/api/pull-requests/unvisited"]);
+    expect(details).toHaveLength(0);
+    expect(prepared.fetch.mock.calls.every(([url]) => /^\/api\/projects\/p[01]\//.test(String(url)))).toBe(true);
     expect(prepared.tasks.size).toBe(0);
     prepared.preparation.dispose(); prepared.client.clear();
   });

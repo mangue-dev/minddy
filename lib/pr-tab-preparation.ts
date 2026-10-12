@@ -21,6 +21,7 @@ export function createPrTabPreparation(
   let available: readonly string[] = [];
   let active = "", budget = 0, disposed = false;
   let detailAttempted = false;
+  let prDestination: string | undefined;
   const attempted = new Set<string>();
   const destinations = new Set<string>();
   let cancel: (() => void) | undefined;
@@ -33,16 +34,31 @@ export function createPrTabPreparation(
     if (disposed || !budget || client.isFetching() > 0) return;
     const counts = new Map<string, number>();
     visits.forEach((href) => counts.set(href, (counts.get(href) ?? 0) + 1));
-    // Visit frequency wins, but open boards/documents must not stay cold just
-    // because the user has not clicked them yet. At most one PR detail is
-    // prepared per pass, sharing foreground rate limits and cancellation.
+    // Frequent visits win. Among unvisited destinations, boards/documents must
+    // not wait behind old PR tabs; prepare at most one entire PR destination.
     const candidates = [...new Set([...visits, ...available])].filter((href) => href !== active && available.includes(href) && (appTabPreparationQuery(client, href) || appTabRoute(href).section === "home"))
-      .sort((a, b) => ((counts.get(b) ?? 0) * 32 + visits.lastIndexOf(b)) - ((counts.get(a) ?? 0) * 32 + visits.lastIndexOf(a)));
+      .sort((a, b) => ((counts.get(b) ?? 0) * 32 + visits.lastIndexOf(b)) - ((counts.get(a) ?? 0) * 32 + visits.lastIndexOf(a)) ||
+        Number(appTabRoute(a).section === "pull-requests") - Number(appTabRoute(b).section === "pull-requests"));
     for (const href of candidates) {
+      const route = appTabRoute(href);
+      if (route.section === "pull-requests") {
+        const loaded = appTabPreparationQueries(client, href).every((options) => {
+          const state = client.getQueryState(options.queryKey);
+          return state?.data !== undefined && !state.isInvalidated && state.status !== "error";
+        });
+        if (loaded) { void prepareAppTabSurface(href)?.catch(() => {}); continue; }
+        const missingNavigation = candidates.some((target) => appTabRoute(target).section !== "pull-requests" &&
+          appTabPreparationQueries(client, target).some((options) => {
+            const state = client.getQueryState(options.queryKey);
+            return state?.data === undefined || state.isInvalidated || state.status === "error";
+          }));
+        if (!missingNavigation) priority.release();
+        if (prDestination && prDestination !== href) continue;
+        prDestination = href;
+      }
       if (!destinations.has(href) && destinations.size >= 3) continue;
       destinations.add(href);
       void prepareAppTabSurface(href)?.catch(() => {});
-      const route = appTabRoute(href);
       for (const options of appTabPreparationQueries(client, href)) {
         if (budget <= 0) { priority.release(); return; }
         const identity = JSON.stringify(options.queryKey);
@@ -99,8 +115,13 @@ export function createPrTabPreparation(
       visits.push(href); if (visits.length > 32) visits.shift();
       // At most three destinations and twelve sequential reads per navigation.
       // Complete a board's prerequisites without flooding startup transport.
-      attempted.clear(); destinations.clear(); detailAttempted = false; budget = 12;
-      priority.acquire();
+      attempted.clear(); destinations.clear(); detailAttempted = false; prDestination = undefined; budget = 12;
+      const missingNavigation = hrefs.some((target) => target !== href && appTabRoute(target).section !== "pull-requests" &&
+        appTabPreparationQueries(client, target).some((options) => {
+          const state = client.getQueryState(options.queryKey);
+          return state?.data === undefined || state.isInvalidated || state.status === "error";
+        }));
+      if (missingNavigation) priority.acquire(); else priority.release();
       cancelScheduled();
       cancel = schedule(prepare);
     },
