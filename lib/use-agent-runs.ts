@@ -2,8 +2,9 @@
 
 import { COMPLETED_PULL_REQUESTS_PAGE } from "./pull-request-sections";
 import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
+import { cachedPullRequestListForPin } from "./pull-request-list-cache";
 
-import { useInfiniteQuery, useQuery, type QueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
@@ -385,9 +386,10 @@ export function useAllPullRequestsQuery(
   limit: number = PULL_REQUESTS_PAGE,
   pin?: PullRequestPin,
 ) {
+  const client = useQueryClient();
   const { data, isPending, isFetching, isPlaceholderData, refetch } = useQuery({
     ...allPullRequestsQueryOptions(state, limit, pin),
-    placeholderData: (previous) => previous,
+    placeholderData: (previous) => previous ?? cachedPullRequestListForPin(client, state, limit, pin),
     refetchOnMount: "always",
     refetchInterval: (query) => {
       const prs = query.state.data?.pullRequests ?? [];

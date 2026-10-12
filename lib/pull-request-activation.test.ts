@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import { AppTabRouteProvider } from "./app-tab-route-context";
-import { usePullRequestQuery } from "./use-agent-runs";
+import { usePullRequestQuery, useAllPullRequestsQuery, allPullRequestsQueryKey } from "./use-agent-runs";
 import { pullRequestQueryOptions } from "./pull-request-query";
 import { nextReadActivationSequence } from "./read-activation-sequence";
 import { QueryReadBoundary } from "@/components/query-read-boundary";
@@ -12,6 +12,31 @@ import { QueryReadBoundary } from "@/components/query-read-boundary";
 vi.mock("./supabase", () => ({ getSupabase: () => ({
   auth: { getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }) },
 }) }));
+
+it("displays an already known pinned list while its authoritative request is pending", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(allPullRequestsQueryKey(), { pullRequests: [{ prId: "known", runIds: [] }], hasMore: false, repoCount: 1, anyPr: true });
+  let release!: (response: Response) => void;
+  const fetch = vi.fn(() => new Promise<Response>((resolve) => { release = resolve; }));
+  vi.stubGlobal("fetch", fetch);
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  function List() {
+    const query = useAllPullRequestsQuery("open", 100, { pr: "known" });
+    return createElement("span", null, `${query.loading}:${query.fetching}:${query.pullRequests.map((pr) => pr.prId).join(",")}`);
+  }
+  try {
+    await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(List))));
+    expect(container.textContent).toBe("false:true:known");
+    expect(fetch).toHaveBeenCalledOnce();
+    await act(async () => { release(Response.json({ pullRequests: [{ prId: "current" }], hasMore: false, repoCount: 1, anyPr: true })); });
+    await act(async () => { await vi.waitFor(() => expect(client.isFetching()).toBe(0)); await new Promise((resolve) => setTimeout(resolve, 10)); });
+    expect(container.textContent).toBe("false:false:current");
+  } finally {
+    await act(() => root.unmount()); client.clear(); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals();
+  }
+});
 
 it.each(["later millisecond", "same millisecond", "clock rollback"])("requires authority after a retained activation with %s even if hidden rendering was deferred", async (timing) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
