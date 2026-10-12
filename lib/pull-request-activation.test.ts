@@ -24,15 +24,50 @@ it("displays an already known pinned list while its authoritative request is pen
   const root = createRoot(container);
   function List() {
     const query = useAllPullRequestsQuery("open", 100, { pr: "known" });
-    return createElement("span", null, `${query.loading}:${query.fetching}:${query.pullRequests.map((pr) => pr.prId).join(",")}`);
+    return createElement("span", null, `${query.loading}:${query.fetching}:${query.loadingMore}:${query.pullRequests.map((pr) => pr.prId).join(",")}`);
   }
   try {
     await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(List))));
-    expect(container.textContent).toBe("false:true:known");
+    expect(container.textContent).toBe("false:true:false:known");
     expect(fetch).toHaveBeenCalledOnce();
     await act(async () => { release(Response.json({ pullRequests: [{ prId: "current" }], hasMore: false, repoCount: 1, anyPr: true })); });
     await act(async () => { await vi.waitFor(() => expect(client.isFetching()).toBe(0)); await new Promise((resolve) => setTimeout(resolve, 10)); });
-    expect(container.textContent).toBe("false:false:current");
+    expect(container.textContent).toBe("false:false:false:current");
+  } finally {
+    await act(() => root.unmount()); client.clear(); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals();
+  }
+});
+
+it("keeps pagination loading until the larger page settles, without treating a pin change as pagination", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const response = { pullRequests: [{ prId: "known", runIds: [] }], hasMore: true, repoCount: 1, anyPr: true };
+  client.setQueryData(allPullRequestsQueryKey(), response);
+  const pending: ((response: Response) => void)[] = [];
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => pending.push(resolve))));
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  function List({ limit, pin }: { limit: number; pin?: string }) {
+    const query = useAllPullRequestsQuery("open", limit, pin ? { pr: pin } : undefined);
+    return createElement("span", null, `${query.loading}:${query.fetching}:${query.loadingMore}`);
+  }
+  const render = (limit: number, pin?: string) => act(() => root.render(
+    createElement(QueryClientProvider, { client }, createElement(List, { limit, pin })),
+  ));
+  const settle = async () => {
+    await act(async () => { pending.shift()!(Response.json(response)); });
+    await act(async () => { await vi.waitFor(() => expect(client.isFetching()).toBe(0)); await new Promise((resolve) => setTimeout(resolve, 10)); });
+  };
+  try {
+    await render(100); await settle();
+    await render(200);
+    expect(container.textContent).toBe("false:true:true");
+    await settle();
+    expect(container.textContent).toBe("false:false:false");
+    await render(200, "known");
+    expect(container.textContent).toBe("false:true:false");
+    await settle();
+    expect(container.textContent).toBe("false:false:false");
   } finally {
     await act(() => root.unmount()); client.clear(); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals();
   }

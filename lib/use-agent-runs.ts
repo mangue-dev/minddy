@@ -387,6 +387,7 @@ export function useAllPullRequestsQuery(
   pin?: PullRequestPin,
 ) {
   const client = useQueryClient();
+  const settledPage = useRef({ state, limit });
   const { data, isPending, isFetching, isPlaceholderData, refetch } = useQuery({
     ...allPullRequestsQueryOptions(state, limit, pin),
     placeholderData: (previous) => previous ?? cachedPullRequestListForPin(client, state, limit, pin),
@@ -398,11 +399,12 @@ export function useAllPullRequestsQuery(
         : PULL_REQUEST_SETTLED_POLL_MS;
     },
   });
+  if (!isPending && !isPlaceholderData) settledPage.current = { state, limit };
   return {
     pullRequests: data?.pullRequests ?? [],
     hasMore: data?.hasMore ?? false,
     truncated: data?.truncated ?? false,
-    loadingMore: isFetching && isPlaceholderData,
+    loadingMore: isFetching && isPlaceholderData && state === settledPage.current.state && limit > settledPage.current.limit,
     repoCount: data?.repoCount ?? 0,
     anyPr: data?.anyPr ?? false,
     loading: isPending,
