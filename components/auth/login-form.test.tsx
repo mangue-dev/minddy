@@ -85,6 +85,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(() => root.unmount());
   host.remove();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -169,6 +170,33 @@ describe("desktop login routing", () => {
     await render();
 
     expect(state.router.replace).toHaveBeenCalledExactlyOnceWith("/signup?redirect=%2Fhome");
+  });
+
+  it.each([
+    { label: "web login", desktop: false, query: "" },
+    { label: "explicit desktop sign-in", desktop: true, query: "mode=signin" },
+    { label: "desktop OAuth error", desktop: true, query: "error=oauth_denied" },
+  ])("keeps $label available while session initialization is delayed", async ({ desktop, query }) => {
+    vi.useFakeTimers();
+    state.desktop = desktop;
+    state.params = new URLSearchParams(query);
+    await render();
+
+    expect(host.querySelector("#email")).not.toBeNull();
+    expect(host.querySelector("#password")).not.toBeNull();
+    expect(host.textContent).not.toContain(messages.Auth.redirecting);
+    expect(state.router.replace).not.toHaveBeenCalled();
+    if (query.includes("error=")) expect(host.textContent).toContain(messages.Auth.oauthDenied);
+
+    // No INITIAL_SESSION event arrives during the provider's timeout window.
+    await act(async () => { await vi.advanceTimersByTimeAsync(7_999); });
+    expect(host.querySelector("#email")).not.toBeNull();
+    expect(state.router.replace).not.toHaveBeenCalled();
+
+    state.loading = false;
+    await render();
+    expect(host.querySelector("#email")).not.toBeNull();
+    expect(state.router.replace).not.toHaveBeenCalled();
   });
 
   it.each(["mode=signin", "error=oauth_denied"])(

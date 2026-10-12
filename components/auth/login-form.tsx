@@ -17,7 +17,6 @@ import {
   type OAuthProvider,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
-import { isDesktop } from "@/lib/desktop/bridge";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { preserveAuthParams } from "@/lib/signup-wizard";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -93,12 +92,13 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   // /login indefinitely (MIN-681). Explicit sign-in and error URLs stay here.
   const modeParam = searchParams.get("mode");
   const errorParam = searchParams.get("error");
+  const shouldAutoSignup = inDesktopApp && !user && modeParam !== "signin" && !errorParam;
   const [redirectingToSignup, setRedirectingToSignup] = useState(false);
   useEffect(() => {
-    if (authLoading || user || modeParam === "signin" || errorParam || !isDesktop()) return;
+    if (authLoading || !shouldAutoSignup) return;
     setRedirectingToSignup(true);
     router.replace(signUpHref);
-  }, [authLoading, user, modeParam, errorParam, router, signUpHref]);
+  }, [authLoading, shouldAutoSignup, router, signUpHref]);
 
   // Only one connection attempt at a time (email OR provider).
   const busy = loading || oauthPending !== null;
@@ -198,7 +198,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             router.replace(redirectTo);
           }}
         />
-      ) : authLoading || redirecting || mfaStep === "unknown" || redirectingToSignup ? (
+      ) : (authLoading && shouldAutoSignup) || redirecting || mfaStep === "unknown" || redirectingToSignup ? (
         /* Full-page takeover, no form left behind: the redirect owns the
            screen until the app lands on the other side. */
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
