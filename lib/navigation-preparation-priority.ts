@@ -1,16 +1,27 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { hashKey, type QueryClient } from "@tanstack/react-query";
 
-type Priority = { owners: Set<object>; listeners: Set<() => void> };
+type Priority = { owners: Set<object>; reads: Map<object, readonly unknown[]>; listeners: Set<() => void> };
 const priorities = new WeakMap<QueryClient, Priority>();
 function priority(client: QueryClient) {
   let state = priorities.get(client);
-  if (!state) { state = { owners: new Set(), listeners: new Set() }; priorities.set(client, state); }
+  if (!state) { state = { owners: new Set(), reads: new Map(), listeners: new Set() }; priorities.set(client, state); }
   return state;
 }
 
 /** Open navigation prerequisites precede optional auxiliary preparation. */
 export function navigationPreparationPending(client: QueryClient): boolean {
   return !!priorities.get(client)?.owners.size;
+}
+
+/** Exact unobserved speculation may share transport; a foreground join cannot. */
+export function navigationPreparationOwnsRead(client: QueryClient, key: readonly unknown[]): boolean {
+  const state = priorities.get(client);
+  return !!state && [...state.reads.values()].some((read) => hashKey(read) === hashKey(key)) &&
+    client.getQueryCache().find({ queryKey: key, exact: true })?.getObserversCount() === 0;
+}
+
+export function navigationPreparationHasRead(client: QueryClient): boolean {
+  return [...(priorities.get(client)?.reads.values() ?? [])].some((key) => navigationPreparationOwnsRead(client, key));
 }
 
 export function subscribeNavigationPreparation(client: QueryClient, listener: () => void) {
@@ -25,6 +36,8 @@ export function navigationPreparationPriority(client: QueryClient) {
   const notify = () => { for (const listener of Array.from(state.listeners)) listener(); };
   return {
     acquire() { if (!state.owners.has(owner)) { state.owners.add(owner); notify(); } },
-    release() { if (state.owners.delete(owner)) notify(); },
+    startRead(key: readonly unknown[]) { if (state.owners.has(owner)) { state.reads.set(owner, key); notify(); } },
+    finishRead(key: readonly unknown[]) { if (state.reads.get(owner) === key) { state.reads.delete(owner); notify(); } },
+    release() { state.reads.delete(owner); if (state.owners.delete(owner)) notify(); },
   };
 }

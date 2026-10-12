@@ -1,7 +1,7 @@
 import { hashKey, type QueryClient } from "@tanstack/react-query";
 import { prActivityPreparationQueries } from "./pr-activity-query";
 import { pullRequestAccountRetryAt } from "./pull-request-query";
-import { navigationPreparationPending, subscribeNavigationPreparation } from "./navigation-preparation-priority";
+import { navigationPreparationHasRead, navigationPreparationOwnsRead, navigationPreparationPending, subscribeNavigationPreparation } from "./navigation-preparation-priority";
 
 const FRESH_MS = 5 * 60_000;
 const CONCURRENCY = 5;
@@ -25,9 +25,10 @@ export function createPrActivityPreparation(
   const failedAt = new Map<string, number>();
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
   const otherTransport = () => client.getQueryCache().getAll().some((query) =>
-    query.state.fetchStatus === "fetching" && !active.has(query.queryHash));
+    query.state.fetchStatus === "fetching" && (!active.has(query.queryHash) || query.getObserversCount() > 0) && !navigationPreparationOwnsRead(client, query.queryKey));
+  const navigationWaiting = () => navigationPreparationPending(client) && !navigationPreparationHasRead(client);
   const enqueue = (delay = IDLE_DELAY_MS) => {
-    if (!disposed && !cancel && visible() && !navigationPreparationPending(client)) cancel = schedule(prepare, delay);
+    if (!disposed && !cancel && visible() && !navigationWaiting()) cancel = schedule(prepare, delay);
   };
   const cancelUnobserved = () => {
     for (const [hash, key] of active) {
@@ -39,7 +40,7 @@ export function createPrActivityPreparation(
   };
   const prepare = () => {
     cancel = undefined;
-    if (disposed || !visible() || otherTransport() || navigationPreparationPending(client)) return;
+    if (disposed || !visible() || otherTransport() || navigationWaiting()) return;
     const now = Date.now();
     const retryAt = pullRequestAccountRetryAt(client);
     if (retryAt > now) { enqueue(retryAt - now + IDLE_DELAY_MS); return; }
@@ -72,7 +73,7 @@ export function createPrActivityPreparation(
   const changed = () => {
     if (disposed) return;
     cancel?.(); cancel = undefined;
-    if (!visible() || otherTransport() || navigationPreparationPending(client)) { cancelUnobserved(); return; }
+    if (!visible() || otherTransport()) { cancelUnobserved(); return; }
     enqueue();
   };
   const stop = client.getQueryCache().subscribe(changed);

@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { hashKey, type QueryClient } from "@tanstack/react-query";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
@@ -8,14 +8,20 @@ import { allPullRequestsQueryOptions } from "./use-agent-runs";
 import { prActivityPreparationQueries } from "./pr-activity-query";
 
 /** Recent visible detail activities precede optional lists for old pinned PRs. */
-function missingRecentActivity(client: QueryClient): boolean {
+function recentActivityQueries(client: QueryClient) {
   const list = client.getQueryData<{ pullRequests: { prId: string; pr_state: string }[] }>(allPullRequestsQueryOptions().queryKey);
   const recent = [...new Set((list?.pullRequests ?? []).filter((pr) => ["open", "draft"].includes(pr.pr_state)).map((pr) => pr.prId))].slice(0, 5);
-  return recent.some((id) => client.getQueryState<{ pr: unknown }>(["pull-request", id])?.data?.pr &&
-    prActivityPreparationQueries(id).some((options) => {
-      const state = client.getQueryState(options.queryKey);
-      return state?.status !== "error" && (state?.data === undefined || state.isInvalidated);
-    }));
+  return recent.flatMap((id) => {
+    const detail = client.getQueryState<{ pr: unknown }>(["pull-request", id]);
+    return detail?.status === "success" && detail.data?.pr ? prActivityPreparationQueries(id) : [];
+  });
+}
+
+function missingRecentActivity(client: QueryClient): boolean {
+  return recentActivityQueries(client).some((options) => {
+    const state = client.getQueryState(options.queryKey);
+    return state?.status !== "error" && (state?.data === undefined || state.isInvalidated);
+  });
 }
 
 /** Prepare a bounded working set after foreground reads, without idle polling. */
@@ -41,10 +47,16 @@ export function createPrTabPreparation(
   const cancelScheduled = () => { cancel?.(); cancel = undefined; };
   let preparing: readonly unknown[] | undefined;
   const priority = navigationPreparationPriority(client);
+  const otherTransport = (exceptOwn = false) => {
+    const auxiliary = new Set(recentActivityQueries(client).map((options) => hashKey(options.queryKey)));
+    return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" &&
+      !(exceptOwn && preparing && query.queryHash === hashKey(preparing)) &&
+      !(auxiliary.has(query.queryHash) && query.getObserversCount() === 0));
+  };
 
   const prepare = () => {
     cancel = undefined;
-    if (disposed || !budget || client.isFetching() > 0) return;
+    if (disposed || !budget || preparing || otherTransport()) return;
     const counts = new Map<string, number>();
     visits.forEach((href) => counts.set(href, (counts.get(href) ?? 0) + 1));
     // Frequent visits win. Among unvisited destinations, boards/documents must
@@ -89,16 +101,18 @@ export function createPrTabPreparation(
         // Set ownership before the cache emits the start of the request.
         preparing = options.queryKey;
         const key = preparing;
+        if (route.section !== "pull-requests") priority.startRead(key);
         const startedAt = Date.now();
         const pending = detail ? prefetchPullRequestDetail(client, route.prId!)
           : client.prefetchQuery<unknown>({ ...options, retry: false });
-        if (!pending) { preparing = undefined; continue; }
+        if (!pending) { preparing = undefined; priority.finishRead(key); continue; }
         void pending.finally(() => {
           if (preparing === key) preparing = undefined;
+          priority.finishRead(key);
           const state = client.getQueryState(options.queryKey);
           if (!disposed && route.pageId && state?.status === "success" && !state.isInvalidated && state.dataUpdatedAt >= startedAt && options.queryKey[0] === "page") preparePageNavigation(route.pageId);
           if (!disposed && budget === 0) priority.release();
-          if (!disposed && budget && !cancel && client.isFetching() === 0) cancel = schedule(prepare);
+          if (!disposed && budget && !cancel && !otherTransport()) cancel = schedule(prepare);
         });
         return;
       }
@@ -110,14 +124,14 @@ export function createPrTabPreparation(
     if (disposed) return;
     // Yield speculative transport to active work, but never cancel a detail
     // whose foreground observer has joined the normal query.
-    if (preparing && client.isFetching() > 1) {
+    if (preparing && otherTransport(true)) {
       const key = preparing;
       if (client.getQueryCache().find({ queryKey: key, exact: true })?.getObserversCount() === 0) {
         preparing = undefined;
         void client.cancelQueries({ queryKey: key, exact: true });
       }
     }
-    if (budget && !cancel && client.isFetching() === 0) cancel = schedule(prepare);
+    if (budget && !cancel && !otherTransport()) cancel = schedule(prepare);
   });
   return {
     visit(href: string, hrefs: readonly string[]) {
