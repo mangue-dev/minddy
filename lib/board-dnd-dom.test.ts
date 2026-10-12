@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { registerBoardRowHeights } from "./board-windowing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   captureBoardDragPreview,
@@ -34,6 +35,17 @@ describe("board drag overlay", () => {
   afterEach(() => {
     document.body.replaceChildren();
     vi.restoreAllMocks();
+  });
+
+  it("reserves the full bundle using column-owned offscreen geometry", () => {
+    const root = document.createElement("div"), column = document.createElement("div");
+    column.dataset.boardColumnScroller = ""; column.dataset.boardColumnStatus = "done";
+    column.style.rowGap = "8px"; root.append(column); document.body.append(root);
+    const dispose = registerBoardRowHeights(column, (id) => id === "first" ? 300 : id === "second" ? 120 : null);
+    try {
+      expect(measureBoardDropBundleHeight({ root, activeIds: ["first", "second"], status: "done" })).toBe(428);
+      expect(measureBoardDropBundleHeight({ root: document.createElement("div"), activeIds: ["first"], status: "done" })).toBeNull();
+    } finally { dispose(); }
   });
 
   it("captures a static card without duplicate interactive identity", () => {

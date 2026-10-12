@@ -153,6 +153,11 @@ function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
             return Math.max(1, Math.ceil((client.getQueryData<{ files: unknown[] }>(["pull-request", pr])?.files.length ?? 400) / 200));
           }
           if (view.kind !== "global-board" && view.kind !== "project-board") return view.kind === "pages" ? 2 : 1;
+          const root = document.querySelector(`[data-retained-app-view="${view.key}"]`);
+          if (root?.querySelector("[data-board-windowed]")) {
+            // Charge only mounted card work; interaction pins still count.
+            return Math.max(1, Math.ceil(root.querySelectorAll("[data-issue-id]").length / 200));
+          }
           const data = view.kind === "global-board"
             ? client.getQueryData<{ issues: unknown[] }>(["me", "board"])?.issues
             : client.getQueryData<unknown[]>(["issues", view.route.projectId]);

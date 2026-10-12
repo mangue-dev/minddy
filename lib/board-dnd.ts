@@ -30,6 +30,7 @@ import {
   type Modifier,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { boardRowHeight } from "@/lib/board-windowing";
 import { STATUSES } from "@/lib/issue-constants";
 
 const STATUS_IDS = new Set<string>(STATUSES.map((s) => s.value));
@@ -244,9 +245,11 @@ export function measureBoardDropBundleHeight({
     root?.querySelectorAll<HTMLElement>(COLUMN_SCROLLER_SELECTOR) ?? [],
   ).find((node) => node.dataset.boardColumnStatus === status);
   if (!column) return null;
+  const columns = Array.from(root?.querySelectorAll<HTMLElement>(COLUMN_SCROLLER_SELECTOR) ?? []);
   const heights = Array.from(
     activeIds,
-    (id) => findIssueNode(id, root)?.getBoundingClientRect().height,
+    (id) => findIssueNode(id, root)?.getBoundingClientRect().height ??
+      columns.map((source) => boardRowHeight(source, id)).find((height) => height != null),
   ).filter((height): height is number => height != null && height > 0);
   if (heights.length === 0) return null;
   const gap = Number.parseFloat(getComputedStyle(column).rowGap) || 0;
