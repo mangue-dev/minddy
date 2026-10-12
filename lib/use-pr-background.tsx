@@ -1,8 +1,9 @@
 "use client";
 
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPrActivityPreparation } from "./pr-activity-preparation";
+import { createPrDiffRuntimePreparation, type PreparedPrDiffRuntime } from "./pr-diff-runtime-preparation";
 import { useAllPullRequestsQuery } from "./use-agent-runs";
 import { pullRequestAccountRetryAt, pullRequestQueryOptions } from "./pull-request-query";
 import { usePrLive } from "./use-pr-live";
@@ -22,6 +23,8 @@ export function PrBackgroundSync() {
     .filter((pr) => pr.pr_state === "open" || pr.pr_state === "draft")
     .map((pr) => pr.prId))].slice(0, PR_BACKGROUND_LIMIT);
   const identity = ids.join("|");
+  const [diffRuntime, setDiffRuntime] = useState<PreparedPrDiffRuntime | null>(null);
+  useEffect(() => createPrDiffRuntimePreparation(client, identity ? identity.split("|") : [], setDiffRuntime), [client, identity]);
   useEffect(() => {
     const preparation = createPrActivityPreparation(client);
     preparation.update(identity ? identity.split("|") : []);
@@ -36,5 +39,9 @@ export function PrBackgroundSync() {
       return pause > 0 ? pause : 60_000;
     },
   })) });
-  return ids.map((prId) => <LiveDetail key={prId} prId={prId} />);
+  const DiffRuntime = diffRuntime?.Surface;
+  return <>
+    {ids.map((prId) => <LiveDetail key={prId} prId={prId} />)}
+    {ids.length > 0 && DiffRuntime && <DiffRuntime languages={diffRuntime.languages} />}
+  </>;
 }
