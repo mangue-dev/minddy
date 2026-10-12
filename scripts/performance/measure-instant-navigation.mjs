@@ -8,6 +8,7 @@ import { createServerClient } from "@supabase/ssr";
 import { loadEnv, requireEnv } from "../../captures/lib/env.mjs";
 import { EMAIL, MARKER, assertScope, id } from "./seed.mjs";
 import { measureDeepNavigation } from "./measure-deep-navigation.mjs";
+import { forgeLinkFingerprint, loadConnectedBoardWorkload, loadForgeWorkload, measureForgeNavigation } from "./measure-forge-navigation.mjs";
 
 // Real authorized reads against the existing encrypted fixture. No reseeding,
 // personal profile, content mutation, generated API response or paid workflow.
@@ -45,13 +46,22 @@ async function api(url, method = "GET", data) {
 const project = fixture.projects[0];
 const secondary = process.argv.includes("--secondary");
 const deep = process.argv.includes("--deep");
-assert.ok(!(deep && secondary), "Choose one journey workload");
-const tabs = secondary ? [
-  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: 600 },
+const forge = process.argv.includes("--forge");
+const connected = forge || process.argv.includes("--connected");
+assert.ok([deep, secondary, forge].filter(Boolean).length <= 1, "Choose one journey workload");
+const forgeWorkload = connected ? await loadForgeWorkload(api) : null;
+const connectedBoard = connected && !forge ? await loadConnectedBoardWorkload(api, fixture) : null;
+const globalCards = connectedBoard?.cards ?? 600;
+const tabs = forge ? [
+  { id: id("min683-forge-home"), custom_name: "MIN-683 forge Home", href: "/home", home: true },
+  { id: id("min683-forge-prs"), custom_name: "MIN-683 real PRs", href: `/pull-requests?pr=${forgeWorkload.prs[0].prId}` },
+] : secondary ? [
+  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: globalCards },
   { id: id("min683-tab-home"), custom_name: "MIN-683 home", href: "/home", home: true },
-  { id: id("min683-tab-prs"), custom_name: "MIN-683 PRs", href: "/pull-requests", prs: true },
+  { id: id("min683-tab-prs"), custom_name: "MIN-683 PRs", href: "/pull-requests", prs: true,
+    ...(forgeWorkload ? { realPrIds: forgeWorkload.prs.map((pr) => pr.prId) } : {}) },
 ] : [
-  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: 600 },
+  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: globalCards },
   { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: 100 },
   { id: id("min683-tab-page"), custom_name: "MIN-683 Page", href: `/projects/${project}/pages/${deep ? id("page-0-10") : fixture.firstPage}` },
 ];
@@ -76,9 +86,10 @@ const productSha = process.env.MINDDY_PERF_BUILD_ROOT
 assert.equal(productSha.build, productBuild, "Product manifest must match the measured production build");
 assert.match(productSha.sha, /^[a-f0-9]{40}$/);
 const results = { label, sha: productSha.sha,
-  build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}) }, timestamp: new Date().toISOString(),
-  runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: deep ? "deep" : secondary ? "secondary" : "primary",
+  build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}), ...(connected ? { forge: forgeWorkload } : {}), ...(connectedBoard ? { connectedBoard } : {}) }, timestamp: new Date().toISOString(),
+  runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
+if (process.argv.includes("--trace-forge-stages")) results.diagnostic = true;
 let browser, context, page, userData, preserved, failure, changedIssue;
 const preservedPages = [];
 const created = [];
@@ -144,7 +155,32 @@ try {
     const task = (async () => {
       const response = await req.response();
       const timing = req.timing();
-      results.network.push({ path: new URL(req.url()).pathname, method: req.method(), status: response?.status(), ...timing });
+      const entry = { path: new URL(req.url()).pathname, method: req.method(), status: response?.status(), ...timing };
+      if (connected && response?.status() >= 400 && entry.path.startsWith("/api/pull-requests/")) {
+        const retryAfter = await response.headerValue("retry-after");
+        if (retryAfter !== null && Number.isFinite(Number(retryAfter))) entry.retryAfterSeconds = Number(retryAfter);
+        const body = await response.json().catch(() => ({}));
+        // Persist only fixed classifications, never a forge error body or headers.
+        entry.primaryRateLimit = /API rate limit exceeded/i.test(String(body.error ?? ""));
+        entry.secondaryRateLimit = /secondary rate limit|abuse detection/i.test(String(body.error ?? ""));
+      }
+      results.network.push(entry);
+      if (forge && req.method() === "GET" && response?.status() === 200) {
+        const pathname = new URL(req.url()).pathname;
+        const pr = forgeWorkload.prs.find((pr) => pathname === `/api/pull-requests/${pr.prId}` ||
+          ["comments", "commits", "review-comments"].some((kind) => pathname === `/api/pull-requests/${pr.prId}/${kind}`));
+        if (pr) {
+          const data = await response.json();
+          const kind = pathname === `/api/pull-requests/${pr.prId}` ? "detail" : pathname.split("/").at(-1);
+          const verified = kind === "detail" ? data.pr?.title === pr.title && data.files?.length === 2 &&
+            forgeWorkload.files.every((path) => data.files.some((file) => file.filename === path && !!file.patch))
+            : kind === "commits" ? data.commits?.length === 2 : Array.isArray(data.comments) &&
+              (kind !== "comments" || Array.isArray(data.timeline));
+          (results.forgeReadProof ??= []).push({ number: pr.number, kind, verified,
+            ...(kind === "detail" ? { files: data.files?.length, headSha: data.pr?.headSha } :
+              kind === "commits" ? { commits: data.commits?.length } : { comments: data.comments?.length }) });
+        }
+      }
     })().catch(() => {}).finally(() => pendingNetwork.delete(task));
     pendingNetwork.add(task);
   });
@@ -159,11 +195,13 @@ try {
   }, { cards: spec.cards, href: spec.href, tab: spec.id }, { polling: "raf" });
   const frames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const start = Date.now();
-  await page.goto(`${base}/all`, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => {
+  await page.goto(`${base}${forge ? "/home" : "/all"}`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(({ forge, cards }) => {
+    if (forge) return [...document.querySelectorAll('[contenteditable][aria-placeholder*="Numo"]')].some((node) => node.getClientRects().length) &&
+      [...document.querySelectorAll("h1")].some((node) => node.getClientRects().length);
     const root = document.querySelector('[data-app-view-active="true"]');
-    return root?.getClientRects().length && !root.inert && root.querySelectorAll('[data-issue-id]').length === 600;
-  });
+    return root?.getClientRects().length && !root.inert && root.querySelectorAll('[data-issue-id]').length === cards;
+  }, { forge, cards: globalCards });
   await frames();
   results.measurements.push({ name: "startup", driverMs: Date.now() - start });
   results.viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, scale: devicePixelRatio }));
@@ -175,13 +213,23 @@ try {
     assert.ok(box);
     const profile = process.argv.includes("--profile") && name === "page-to-board" && !profiled;
     if (profile) { await cdp.send("Profiler.enable"); await cdp.send("Profiler.start"); }
-    await page.evaluate(({ condition, complete, args }) => {
+    await page.evaluate(({ condition, complete, args, traceFiles }) => {
       const check = new Function("args", `return (${condition})(args)`);
       const checkComplete = new Function("args", `return (${complete})(args)`);
       const onDown = (event) => {
         if (!event.isTrusted) return;
-        const sample = window.__instant.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, domMs: null, paintMs: null, completeMs: null, boardSkeletonFrames: 0, loadingFrames: 0 };
+        const sample = window.__instant.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, domMs: null, paintMs: null, completeMs: null, boardSkeletonFrames: 0, loadingFrames: 0, completeLoadingFrames: 0 };
+        if (traceFiles) sample.filesStages = { clickedChanges: event.target.closest('[role="tab"]')?.textContent.trim().startsWith("Changes") ?? false };
         const observe = () => {
+          if (traceFiles) {
+            const stages = sample.filesStages;
+            const visible = (node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden";
+            const selected = [...document.querySelectorAll('[role="tab"][aria-selected="true"]')].some((node) => visible(node) && node.textContent.trim().startsWith("Changes"));
+            if (selected && stages.selectedMs == null) stages.selectedMs = performance.now() - sample.start;
+            const diff = [...document.querySelectorAll('[data-testid="pr-diff-view"]')].find(visible);
+            if (diff && stages.diffMountedMs == null) stages.diffMountedMs = performance.now() - sample.start;
+            if (diff && stages.patchRenderedMs == null && [...diff.querySelectorAll("diffs-container")].some((node) => node.shadowRoot?.textContent.includes("Minddy pull request performance validation"))) stages.patchRenderedMs = performance.now() - sample.start;
+          }
           if ([...document.querySelectorAll('[data-board-loading-skeleton]')].some((node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden")) sample.boardSkeletonFrames++;
           if ([...document.querySelectorAll('[data-slot="skeleton"], [role="status"][aria-label="Loading"], [data-board-loading-skeleton], [data-testid="pr-sidebar-loading"], [data-testid="pr-detail-loading-content"]')].some((node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden")) sample.loadingFrames++;
           if (!check(args)) { requestAnimationFrame(observe); return; }
@@ -189,6 +237,7 @@ try {
           requestAnimationFrame(() => requestAnimationFrame(() => { sample.paintMs = performance.now() - sample.start; }));
         };
         const observeComplete = () => {
+          if ([...document.querySelectorAll('[data-slot="skeleton"], [role="status"][aria-label="Loading"], [data-testid="pr-activity-skeleton"], [data-testid="pr-files-skeleton"], [data-testid="pr-detail-loading-content"]')].some((node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden")) sample.completeLoadingFrames++;
           if (!checkComplete(args)) { requestAnimationFrame(observeComplete); return; }
           requestAnimationFrame(() => requestAnimationFrame(() => { sample.completeMs = performance.now() - sample.start; }));
         };
@@ -196,11 +245,20 @@ try {
         requestAnimationFrame(observeComplete);
       };
       document.addEventListener("pointerdown", onDown, { capture: true, once: true });
-    }, { condition: condition.toString(), complete: complete.toString(), args });
+    }, { condition: condition.toString(), complete: complete.toString(), args, traceFiles: results.diagnostic && name === "pr-activity-to-files" });
     const driverStart = Date.now();
     await page.mouse.click(box.x + box.width / 2, box.y + Math.min(box.height / 2, 25));
     await page.waitForFunction(() => window.__instant.sample?.paintMs != null && window.__instant.sample?.completeMs != null, null, { polling: "raf" });
     const sample = await page.evaluate(() => ({ ...window.__instant.sample, longTasks: window.__instant.longTasks.filter((entry) => entry.startTime >= window.__instant.sample.start) }));
+    if (results.diagnostic && name === "pr-activity-to-files") {
+      sample.staticResources = await page.evaluate((start) => performance.getEntriesByType("resource")
+        .filter((entry) => new URL(entry.name).origin === location.origin &&
+          new URL(entry.name).pathname.startsWith("/_next/static/") && entry.startTime >= start)
+        .map((entry) => ({ path: new URL(entry.name).pathname, initiatorType: entry.initiatorType,
+          startMs: entry.startTime - start, fetchStartMs: entry.fetchStart - start,
+          requestStartMs: entry.requestStart - start, responseStartMs: entry.responseStart - start,
+          responseEndMs: entry.responseEnd - start, transferSize: entry.transferSize })), sample.start);
+    }
     results.measurements.push({ name, ...sample, driverMs: Date.now() - driverStart });
     if (profile) {
       const { profile: cpu } = await cdp.send("Profiler.stop");
@@ -213,7 +271,9 @@ try {
     const root = document.querySelector('[data-app-view-active="true"]');
     if (!document.querySelector(`[data-app-tab-id="${spec.id}"][aria-selected="true"]`) || location.pathname !== spec.href) return false;
     if (spec.home) return [...document.querySelectorAll('[contenteditable][aria-placeholder]')].some((node) => node.getClientRects().length && node.getAttribute('aria-placeholder').includes("Numo")) && !![...document.querySelectorAll('h1')].find((node) => node.getClientRects().length);
-    if (spec.prs) return ![...document.querySelectorAll('[data-testid="pr-sidebar-loading"]')].some((node) => node.getClientRects().length) && [...document.querySelectorAll('h1, h2, [data-testid="pr-list-item"], p, span')].some((node) => node.getClientRects().length && /Performance change|No pull request|Nothing to review|Link a GitHub or GitLab repository|Select a pull request/i.test(node.textContent));
+    if (spec.prs) return ![...document.querySelectorAll('[data-testid="pr-sidebar-loading"]')].some((node) => node.getClientRects().length) && (spec.realPrIds
+      ? spec.realPrIds.some((prId) => document.querySelector(`[data-navigation-href="/pull-requests?pr=${prId}"]`)?.getClientRects().length)
+      : [...document.querySelectorAll('h1, h2, [data-testid="pr-list-item"], p, span')].some((node) => node.getClientRects().length && /Performance change|No pull request|Nothing to review|Link a GitHub or GitLab repository|Select a pull request/i.test(node.textContent)));
     return spec.cards ? !!root?.getClientRects().length && !root.inert && root.querySelectorAll("[data-issue-id]").length === spec.cards
       : [...document.querySelectorAll(".page-editor .tiptap")].some((node) => node.getClientRects().length && node.textContent.includes("Workflow 8"));
   };
@@ -221,12 +281,21 @@ try {
     await clickMeasured(name, page.locator(`[data-app-tab-id="${spec.id}"]`), tabReady, { spec });
   }
   await tab(tabs[0], "initial-board-tab");
-  await ready(tabs[0]);
+  if (!forge) await ready(tabs[0]);
   await frames();
   // Ten seconds of normal idle usage is the preparation opportunity. Record
   // it identically in both variants; startup is already measured above.
   await page.waitForTimeout(10000);
-  if (deep) {
+  if (forge) {
+    await measureForgeNavigation({ page, tabs, workload: forgeWorkload, repeats, clickMeasured, results });
+    await Promise.allSettled(pendingNetwork);
+    for (const pr of forgeWorkload.prs) for (const kind of ["detail", "comments", "commits", "review-comments"]) {
+      assert.ok(results.forgeReadProof?.some((read) => read.number === pr.number && read.kind === kind && read.verified), "Verify real forge content, not an empty/error panel");
+    }
+    assert.ok(!results.forgeReadProof?.some((read) => !read.verified), "Unexpected successful forge content");
+    assert.equal(results.errors.length, 0, "Renderer errors in the real PR workload");
+    assert.ok(!results.network.some((entry) => entry.path.startsWith("/api/pull-requests/") && entry.method !== "GET"), "Read-only navigation submitted a forge write");
+  } else if (deep) {
     await tab(tabs[1], "initial-project-tab");
     await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results });
   } else {
@@ -301,7 +370,7 @@ try {
     changedIssue = undefined;
     results.verification = { scrollPreserved: true, retainedDomPreserved: true, hiddenUpdateVisible: true, hiddenViewsInert: true, fixtureTitleRestored: true };
   }
-  await page.screenshot({ path: path.join(output, `${label}-board.png`) });
+  if (!forge) await page.screenshot({ path: path.join(output, `${label}-board.png`) });
   results.status = "passed";
 } catch (error) {
   failure = error;
@@ -326,6 +395,19 @@ try {
   try { await browser?.close(); closed = true; }
   catch (error) { results.cleanup.push({ applicationClosed: false }); failure ??= error; }
   if (userData && closed) await rm(userData, { recursive: true, force: true });
+  if (forgeWorkload) {
+    try {
+      const { link } = await api(`/api/projects/${forgeWorkload.project}/git-link`);
+      assert.equal(forgeLinkFingerprint(link), forgeWorkload.linkFingerprint, "Repository connection changed");
+      results.cleanup.push({ repositoryConnectionUnchanged: true });
+    } catch (error) { results.cleanup.push({ repositoryConnectionUnchanged: false }); failure ??= error; }
+  }
+  if (connectedBoard) {
+    try {
+      assert.deepEqual(await loadConnectedBoardWorkload(api, fixture), connectedBoard, "Connected board workload changed");
+      results.cleanup.push({ connectedBoardUnchanged: true });
+    } catch (error) { results.cleanup.push({ connectedBoardUnchanged: false }); failure ??= error; }
+  }
   if (preservedPages.length) {
     try {
       for (const original of preservedPages) {

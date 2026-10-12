@@ -8,6 +8,7 @@ export function summarizeNavigationRuns(runs) {
   const reference = runs[0];
   for (const run of runs) {
     assert.equal(run.status, "passed", `Incomplete run: ${run.label}`);
+    assert.ok(!run.diagnostic, "Keep instrumented diagnostics separate from ordinary latency runs");
     assert.equal(run.build, reference.build, "Do not aggregate different product builds");
     assert.equal(run.runtime, reference.runtime, "Do not aggregate different runtimes");
     assert.deepEqual(run.workload ?? null, reference.workload ?? null, "Do not aggregate different fixture contents");
@@ -17,8 +18,17 @@ export function summarizeNavigationRuns(runs) {
     assert.deepEqual(run.viewport, reference.viewport, "Do not aggregate different viewports");
     assert.equal(run.errors.length, 0, `Renderer errors in ${run.label}`);
     assert.ok(run.cleanup.some((check) => check.preexistingTabsPreserved === true), "Verify preexisting tabs");
-    assert.ok(run.cleanup.every((check) => check.removed !== false && check.fixtureTitleRestored !== false && check.fixturePagesUnchanged !== false && check.applicationClosed !== false), "Cleanup failed");
+    assert.ok(run.cleanup.every((check) => check.removed !== false && check.fixtureTitleRestored !== false && check.fixturePagesUnchanged !== false && check.applicationClosed !== false && check.repositoryConnectionUnchanged !== false && check.connectedBoardUnchanged !== false), "Cleanup failed");
     if (run.scenario === "deep") assert.ok(run.cleanup.some((check) => check.fixturePagesUnchanged === true), "Verify document integrity");
+    if (run.workload?.forge) assert.ok(run.cleanup.some((check) => check.repositoryConnectionUnchanged === true), "Verify repository connection integrity");
+    if (run.workload?.connectedBoard) assert.ok(run.cleanup.some((check) => check.connectedBoardUnchanged === true), "Verify connected board integrity");
+    if (run.scenario === "forge") {
+      assert.equal(run.workload?.forge?.prs?.length, 5, "Verify the real PR cohort");
+      assert.ok(!run.forgeReadProof?.some((read) => !read.verified), "Unexpected successful forge content");
+      for (const pr of run.workload.forge.prs) for (const kind of ["detail", "comments", "commits", "review-comments"]) {
+        assert.ok(run.forgeReadProof?.some((read) => read.number === pr.number && read.kind === kind && read.verified), "Verify successful real forge content");
+      }
+    }
   }
   const names = [...new Set(runs.flatMap((run) => run.measurements.map((sample) => sample.name)))];
   const skeletonSamples = runs.flatMap((run) => run.measurements).filter((row) => Number.isFinite(row.boardSkeletonFrames));
@@ -35,9 +45,13 @@ export function summarizeNavigationRuns(runs) {
         min: ordered[0], max: ordered.at(-1), samples }]];
     }));
     const loading = rows.filter((row) => Number.isFinite(row.loadingFrames));
+    const completeLoading = rows.filter((row) => Number.isFinite(row.completeLoadingFrames));
     return [name, { ...metrics, loadingObservations: { observedSamples: loading.length,
       samplesWithLoading: loading.length ? loading.filter((row) => row.loadingFrames > 0).length : null,
-      visibleFrames: loading.length ? loading.reduce((sum, row) => sum + row.loadingFrames, 0) : null } }];
+      visibleFrames: loading.length ? loading.reduce((sum, row) => sum + row.loadingFrames, 0) : null },
+      completeLoadingObservations: { observedSamples: completeLoading.length,
+        samplesWithLoading: completeLoading.length ? completeLoading.filter((row) => row.completeLoadingFrames > 0).length : null,
+        visibleFrames: completeLoading.length ? completeLoading.reduce((sum, row) => sum + row.completeLoadingFrames, 0) : null } }];
   }));
   return { sha: reference.sha, build: reference.build, runtime: reference.runtime,
     workload: reference.workload ?? null,

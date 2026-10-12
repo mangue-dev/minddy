@@ -15,7 +15,7 @@ test("tail percentile uses all observations and remains absent for small cold se
 });
 
 test("incomplete runs, mixed builds and missing cleanup proof cannot become success evidence", () => {
-  for (const patch of [{ status: "failed" }, { build: "other" }, { workload: { categories: "different" } }, { scenario: "secondary" }, { protocol: "different" }, { errors: ["renderer error"] }, { cleanup: [] }]) {
+  for (const patch of [{ status: "failed" }, { diagnostic: true }, { build: "other" }, { workload: { categories: "different" } }, { scenario: "secondary" }, { protocol: "different" }, { errors: ["renderer error"] }, { cleanup: [] }]) {
     assert.throws(() => summarizeNavigationRuns([run([1]), { ...run([2]), ...patch }]));
   }
 });
@@ -36,4 +36,30 @@ test("missing skeleton instrumentation cannot become evidence of zero visible sk
   assert.equal(summary.visibleBoardSkeletonFrames, 0);
   assert.equal(summary.boardSkeletonObservedSamples, 1);
   assert.equal(summary.journeys.board.loadingObservations.visibleFrames, 0);
+});
+
+test("forge latency requires successful content and an unchanged repository connection", () => {
+  const forge = { ...run([1]), scenario: "forge", workload: { forge: { prs: [1, 2, 3, 4, 5].map((number) => ({ number })) } },
+    cleanup: [{ preexistingTabsPreserved: true }, { repositoryConnectionUnchanged: true }],
+    forgeReadProof: [1, 2, 3, 4, 5].flatMap((number) => ["detail", "comments", "commits", "review-comments"].map((kind) => ({ number, kind, verified: true }))) };
+  assert.equal(summarizeNavigationRuns([forge]).cleanupVerified, true);
+  assert.throws(() => summarizeNavigationRuns([{ ...forge, forgeReadProof: forge.forgeReadProof.slice(1) }]));
+  assert.throws(() => summarizeNavigationRuns([{ ...forge, forgeReadProof: [...forge.forgeReadProof, { number: 1, kind: "detail", verified: false }] }]));
+  assert.throws(() => summarizeNavigationRuns([{ ...forge, cleanup: [{ preexistingTabsPreserved: true }] }]));
+  assert.throws(() => summarizeNavigationRuns([{ ...forge, cleanup: [...forge.cleanup, { repositoryConnectionUnchanged: false }] }]));
+  const partial = run([1]); partial.measurements[0].loadingFrames = 0; partial.measurements[0].completeLoadingFrames = 80;
+  const measured = summarizeNavigationRuns([partial]).journeys.board;
+  assert.equal(measured.loadingObservations.visibleFrames, 0);
+  assert.equal(measured.completeLoadingObservations.visibleFrames, 80);
+});
+
+test("connected board workloads also require unchanged repository connections", () => {
+  const connected = { ...run([1]), workload: { forge: { repoCount: 7 } } };
+  assert.throws(() => summarizeNavigationRuns([connected]));
+  const linked = { ...connected, cleanup: [...connected.cleanup, { repositoryConnectionUnchanged: true }] };
+  assert.equal(summarizeNavigationRuns([linked]).cleanupVerified, true);
+  const board = { ...linked, workload: { ...linked.workload, connectedBoard: { cards: 636 } } };
+  assert.throws(() => summarizeNavigationRuns([board]));
+  assert.throws(() => summarizeNavigationRuns([{ ...board, cleanup: [...board.cleanup, { connectedBoardUnchanged: false }] }]));
+  assert.equal(summarizeNavigationRuns([{ ...board, cleanup: [...board.cleanup, { connectedBoardUnchanged: true }] }]).cleanupVerified, true);
 });
