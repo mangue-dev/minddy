@@ -67,6 +67,17 @@ export function useDesktopNotifications(): void {
     if (!bridge || !userId || !initialized) return;
     const capabilities = bridge.notificationCapabilities;
     if (!capabilities?.localNativeBanners || !bridge.showLocalNotification) return;
+
+    // Existing local banners must follow read/deleted rows even if discovery is
+    // pending or the server now delivers new notifications through native push.
+    const byId = new Map(notifications.map((n) => [n.id, n]));
+    for (const id of shown.current) {
+      const row = byId.get(id);
+      if (row && !row.read_at) continue;
+      bridge.dismissLocalNotification?.(id);
+      shown.current.delete(id);
+    }
+
     if (seen.current === null) {
       // The inbox snapshot defines history even while push discovery is pending.
       // Later arrivals remain fresh until the selected transport is known.
@@ -77,7 +88,13 @@ export function useDesktopNotifications(): void {
       // Shell support does not imply that the selected server can send native
       // push. Wait for its capability response, then retain the local relay
       // when APNs or WNS credentials are intentionally absent on that instance.
-      if (!pushCapabilities || pushCapabilities[capabilities.backgroundTransport]) return;
+      if (!pushCapabilities) return;
+      if (pushCapabilities[capabilities.backgroundTransport]) {
+        // These arrivals belong to the active native transport. If credentials
+        // are later removed, only subsequent arrivals should use local banners.
+        seen.current = new Set(byId.keys());
+        return;
+      }
     }
 
     const fresh: MyNotification[] = [];
@@ -110,17 +127,6 @@ export function useDesktopNotifications(): void {
         target,
       });
       shown.current.add(n.id);
-    }
-
-    // Read elsewhere (another device, the inbox page, one click): the banner
-    // has nothing more to announce. A system notification does not clear completely
-    // alone — this is the same observation as lib/push/dismiss.ts on the web side.
-    const byId = new Map(notifications.map((n) => [n.id, n]));
-    for (const id of shown.current) {
-      const row = byId.get(id);
-      if (row && !row.read_at) continue;
-      bridge.dismissLocalNotification?.(id);
-      shown.current.delete(id);
     }
 
     // The register follows the list rather than growing indefinitely: one line

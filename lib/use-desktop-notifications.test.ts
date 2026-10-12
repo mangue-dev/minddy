@@ -107,6 +107,36 @@ afterEach(async () => {
 });
 
 describe("desktop notification lifecycle", () => {
+  it.each(["apns", "wns"] as const)("does not replay notifications after %s is disabled on the server", async (transport) => {
+    window.minddy = { ...window.minddy!, notificationCapabilities: { ...window.minddy!.notificationCapabilities!, backgroundTransport: transport } };
+    state.initialized = true;
+    state.capabilities = { web: false, apns: transport === "apns", wns: transport === "wns" };
+    await render();
+    state.rows = [notification("native-delivery")];
+    await render();
+    state.capabilities = { web: false, apns: false, wns: false };
+    await render();
+    expect(shell.showLocalNotification).not.toHaveBeenCalled();
+
+    state.rows = [notification("new-local"), ...state.rows];
+    await render();
+    expect(shell.showLocalNotification).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "new-local" }));
+  });
+
+  it.each([true, null])("dismisses read local banners even when APNs availability becomes %s", async (available) => {
+    window.minddy = { ...window.minddy!, notificationCapabilities: { ...window.minddy!.notificationCapabilities!, backgroundTransport: "apns" } };
+    state.initialized = true;
+    state.capabilities = { web: false, apns: false, wns: false };
+    await render();
+    state.rows = [notification("local-banner")];
+    await render();
+    expect(shell.showLocalNotification).toHaveBeenCalledOnce();
+    state.capabilities = available === null ? null : { web: false, apns: available, wns: false };
+    state.rows = [{ ...notification("local-banner"), read_at: "2026-10-12T10:00:00Z" }];
+    await render();
+    expect(shell.dismissLocalNotification).toHaveBeenCalledExactlyOnceWith("local-banner");
+  });
+
   it.each(["apns", "wns"] as const)("retains fresh notifications received while %s capabilities are pending", async (transport) => {
     window.minddy = { ...window.minddy!, notificationCapabilities: { ...window.minddy!.notificationCapabilities!, backgroundTransport: transport } };
     state.initialized = true;
