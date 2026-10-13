@@ -100,7 +100,8 @@ export function createPageNavigationPreparation(client: QueryClient) {
     const item = eligibleDestinations().find((target) => Math.max(dueAt(target, explicitIds.has(target.pageId)), failures.get(target.pageId) ?? 0) <= Date.now());
     if (!item) { schedule(); return; }
     reading = item;
-    attempts.set(item.pageId, Date.now());
+    const attemptedAt = Date.now();
+    attempts.set(item.pageId, attemptedAt);
     const key = pageKey(item.pageId);
     priority.acquire(); priority.startRead(key);
     void client.fetchQuery({ queryKey: key, queryFn: ({ signal }) => fetchPageNavigationData(client, item.projectId, item.pageId, signal), staleTime: 0, retry: false }).then(() => {
@@ -108,7 +109,11 @@ export function createPageNavigationPreparation(client: QueryClient) {
       if (!disposed && reading === item && state?.status === "success" && !state.isInvalidated) preparePageNavigation(item.pageId);
       failures.delete(item.pageId);
     }, (error: unknown) => {
-      if (isCancelledError(error)) return;
+      if (isCancelledError(error)) {
+        // An interrupted unknown body has not consumed its accepted-read slot.
+        if (!client.getQueryData(key) && attempts.get(item.pageId) === attemptedAt) attempts.delete(item.pageId);
+        return;
+      }
       const terminal = error instanceof PageApiError && [401, 403, 404, 429].includes(error.status);
       failures.set(item.pageId, terminal ? Infinity : Date.now() + 30_000);
     }).finally(() => {

@@ -112,7 +112,7 @@ it("stops renewal for validated retained surfaces and never repeats a large adja
   } finally { view.close(); }
 });
 
-it("yields an unobserved read to foreground work without granting a navigation lease", async () => {
+it("yields an unknown read to foreground work and resumes without granting a canceled lease", async () => {
   const view = setup(); let signal!: AbortSignal;
   view.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
     signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
@@ -124,7 +124,14 @@ it("yields an unobserved read to foreground work without granting a navigation l
     expect(signal.aborted).toBe(true);
     expect(isPreparedPageData("b", view.client.getQueryState(pageKey("b"))?.dataUpdatedAt ?? 0)).toBe(false);
     await vi.advanceTimersByTimeAsync(9000); expect(view.fetch).toHaveBeenCalledOnce();
+    document.body.innerHTML = '<div data-page-surface-id="a"></div>';
+    view.fetch.mockImplementation(async () => Response.json({ ...body("b"), content: { type: "doc", content: [{ type: "image" }] } }));
     release(); await pending;
+    await vi.advanceTimersByTimeAsync(100);
+    expect(view.fetch).toHaveBeenCalledTimes(2);
+    expect(view.client.getQueryData<Page>(pageKey("b"))?.id).toBe("b");
+    expect(isPreparedPageData("b", view.client.getQueryState(pageKey("b"))!.dataUpdatedAt)).toBe(true);
+    await vi.advanceTimersByTimeAsync(30_000); expect(view.fetch).toHaveBeenCalledTimes(2);
   } finally { view.close(); }
 });
 
