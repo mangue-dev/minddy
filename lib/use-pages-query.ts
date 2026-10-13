@@ -19,7 +19,7 @@ import { createUuid } from "@/lib/create-uuid";
 // exactly where he was.
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type Query, type QueryClient } from "@tanstack/react-query";
 
 import {
   createPageApi,
@@ -70,6 +70,11 @@ export const pageKey = (pageId: string) => ["page", pageId] as const;
 export const PAGE_NAVIGATION_FRESH_MS = 10_000;
 
 const preparedPages = new Map<string, number>();
+type PageReadReceipt = { sequence: number; projectId: string; pageId: string; version: number; signal?: AbortSignal };
+type PageReadState = { sequence: number; pending?: { sequence: number; signal?: AbortSignal }; accepted?: PageReadReceipt };
+// Query identity isolates accounts and retires this metadata with cache eviction.
+// No document payload or device-persisted authority is retained here.
+const pageReads = new WeakMap<Query, PageReadState>();
 
 export function isRecentPageData(
   updatedAt: number,
@@ -85,40 +90,54 @@ export function preparePageNavigation(pageId: string, now = Date.now()): void {
 
 /** A late authorized GET must not replace a newer accepted write in this cache. */
 export async function fetchPageNavigationData(client: QueryClient, projectId: string, pageId: string, signal?: AbortSignal): Promise<Page> {
-  const incoming = await fetchPageApi(projectId, pageId, signal);
-  if (incoming.id !== pageId || incoming.project_id !== projectId) throw new Error("Page response does not match its requested scope");
-  const current = client.getQueryData<Page>(pageKey(pageId));
-  return current?.id === pageId && current.project_id === projectId && current.version > incoming.version
-    ? current : incoming;
+  const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
+  const read: PageReadState | undefined = query ? pageReads.get(query) ?? { sequence: 0 } : undefined;
+  const sequence = read ? ++read.sequence : 0;
+  if (query && read) { read.pending = { sequence, signal }; pageReads.set(query, read); }
+  try {
+    const incoming = await fetchPageApi(projectId, pageId, signal);
+    signal?.throwIfAborted();
+    if (incoming.id !== pageId || incoming.project_id !== projectId) throw new Error("Page response does not match its requested scope");
+    const current = client.getQueryData<Page>(pageKey(pageId));
+    const page = current?.id === pageId && current.project_id === projectId && current.version > incoming.version
+      ? current : incoming;
+    if (query && read && read.sequence === sequence && client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
+      read.accepted = { sequence, projectId, pageId, version: page.version, signal };
+    }
+    return page;
+  } finally {
+    if (read?.pending?.sequence === sequence) read.pending = undefined;
+  }
 }
 
 /** A canceled refetch can resolve with cached data without an accepted GET. */
 export class PageWriteBasisError extends Error {}
 
-/** Keep actual read receipts local to one document surface's write authority. */
+/** A surface can join another owner's actual read, but cannot reuse its old receipt. */
 export function createPageSurfaceRead(client: QueryClient, projectId: string, pageId: string) {
-  let generation = 0;
-  let accepted: { generation: number; version: number } | undefined;
-  const queryFn = async ({ signal }: { signal: AbortSignal }) => {
-    const current = ++generation;
-    accepted = undefined;
-    const page = await fetchPageNavigationData(client, projectId, pageId, signal);
-    signal.throwIfAborted();
-    if (current === generation) accepted = { generation: current, version: page.version };
-    return page;
+  const floor = () => {
+    const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
+    const read = query && pageReads.get(query);
+    const joining = !!read?.pending && read.pending.sequence === read.sequence && !read.pending.signal?.aborted &&
+      query?.state.fetchStatus === "fetching";
+    return { query, sequence: read ? Math.max(0, read.sequence - Number(joining)) : 0 };
   };
-  const hasAccepted = (page: Page | undefined) => !!accepted && !!page && page.id === pageId &&
-    page.project_id === projectId && page.version > 0 && accepted.version === page.version;
-  const receipt = () => accepted;
+  const mounted = floor();
+  const hasReceipt = (page: Page | undefined, since: ReturnType<typeof floor>) => {
+    const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
+    const accepted = query && pageReads.get(query)?.accepted;
+    return !!accepted && !!page && page.id === pageId && page.project_id === projectId && page.version > 0 &&
+      accepted.projectId === projectId && accepted.pageId === pageId && accepted.version === page.version &&
+      !accepted.signal?.aborted && accepted.sequence > (query === since.query ? since.sequence : 0);
+  };
+  const queryFn = ({ signal }: { signal: AbortSignal }) => fetchPageNavigationData(client, projectId, pageId, signal);
   return {
     queryFn,
-    hasAccepted,
+    hasAccepted: (page: Page | undefined) => hasReceipt(page, mounted),
     async acquire() {
-      const previous = accepted?.generation ?? 0;
-      accepted = undefined;
+      const required = floor();
       const page = await client.fetchQuery({ queryKey: pageKey(pageId), queryFn, staleTime: 0, retry: false });
-      const actual = receipt();
-      if (!hasAccepted(page) || !actual || actual.generation <= previous) {
+      if (!hasReceipt(page, required)) {
         throw new PageWriteBasisError("No fresh, non-aborted Page read was accepted");
       }
       return page;

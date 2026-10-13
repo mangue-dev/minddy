@@ -9,7 +9,7 @@ import { usePageAutosave, type PageAutosave } from "./use-page-autosave";
 import { buildOptimisticPage } from "@/lib/optimistic-page";
 import { PageApiError, PageConflictError, type UpdatePageInput } from "@/lib/pages-api";
 import { fetchPageApi } from "@/lib/pages-api";
-import { createPageSurfaceRead } from "@/lib/use-pages-query";
+import { createPageSurfaceRead, fetchPageNavigationData, pageKey, PageWriteBasisError } from "@/lib/use-pages-query";
 import type { Page } from "@/lib/pages";
 import type { PageDocJSON } from "@/lib/pages-merge";
 
@@ -48,11 +48,12 @@ function page(version = 5, content = doc()): Page {
   return { ...buildOptimisticPage("project", { id: "cached-page" }, []), version, content };
 }
 
-async function mount({ cached = page(), read, save, editor = false }: {
+async function mount({ cached = page(), read, save, editor = false, preparation = false }: {
   cached?: Page;
   read: () => Promise<Page>;
   save: (id: string, patch: UpdatePageInput) => Promise<Page>;
   editor?: boolean;
+  preparation?: boolean;
 }) {
   let autosave!: PageAutosave;
   const onError = vi.fn();
@@ -60,9 +61,16 @@ async function mount({ cached = page(), read, save, editor = false }: {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   clients.push(client);
   vi.mocked(fetchPageApi).mockImplementation(read);
+  client.setQueryData(pageKey(cached.id), cached, { updatedAt: Date.now() - 60_000 });
+  if (preparation) {
+    // The ordinary preparator starts before the surface exists, so its queryFn
+    // is the shared authorized reader rather than the new surface's wrapper.
+    void client.fetchQuery({ queryKey: pageKey(cached.id),
+      queryFn: ({ signal }) => fetchPageNavigationData(client, cached.project_id, cached.id, signal),
+      staleTime: 0, retry: false }).catch(() => {});
+  }
   const reader = createPageSurfaceRead(client, cached.project_id, cached.id);
   const options = { queryKey: ["page", cached.id], queryFn: reader.queryFn, staleTime: 0, retry: false };
-  client.setQueryData(options.queryKey, cached, { updatedAt: Date.now() - 60_000 });
   function Surface() {
     const query = useQuery({ ...options, refetchOnMount: "always" });
     autosave = usePageAutosave({ pageId: cached.id, page: query.data,
@@ -150,12 +158,31 @@ describe("cached Page display and fresh write authority", () => {
     expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Local text", "Remote text"), title: "Local title", version: 6 });
   });
 
-  it.each([5, 6])("does not trust canceled cached resolution and waits for an actual read (version %s)", async (version) => {
+  it("shares a preparator's already running actual GET without a second validation read", async () => {
+    const reading = deferred<Page>();
+    const read = vi.fn(() => reading.promise);
+    const save = vi.fn(async (_id: string, input: UpdatePageInput) => page(7, input.content as PageDocJSON));
+    const h = await mount({ read, save, preparation: true, editor: true });
+    let departure!: Promise<boolean>;
+    await act(async () => {
+      h.editorRef.current!.commands.setContent(doc("Local during prepared read") as JSONContent);
+      departure = h.autosave.flushBeforeNavigation();
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(save).not.toHaveBeenCalled();
+    await act(async () => { reading.resolve(page(6, doc("Original local", "Prepared remote"))); expect(await departure).toBe(true); });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Local during prepared read", "Prepared remote"), version: 6 });
+  });
+
+  it.each([{ version: 5, preparation: false }, { version: 6, preparation: false },
+    { version: 5, preparation: true }, { version: 6, preparation: true }])(
+    "does not trust canceled cached resolution (version $version, preparation $preparation)", async ({ version, preparation }) => {
     const canceled = deferred<Page>();
     const accepted = deferred<Page>();
     const read = vi.fn().mockImplementationOnce(() => canceled.promise).mockImplementationOnce(() => accepted.promise);
     const save = vi.fn(async (_id: string, patch: UpdatePageInput) => page(version + 1, patch.content as PageDocJSON));
-    const h = await mount({ read, save });
+    const h = await mount({ read, save, preparation });
     let departure!: Promise<boolean>;
     await act(async () => {
       h.autosave.schedule({ content: doc("Typed before canceled validation") });
@@ -177,6 +204,44 @@ describe("cached Page display and fresh write authority", () => {
     expect(save).not.toHaveBeenCalled();
     await act(async () => { accepted.resolve(page(version)); expect(await departure).toBe(true); });
     expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed before canceled validation"), version });
+  });
+
+  it("does not carry read receipts across manual cache changes, eviction or another account client", async () => {
+    const first = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const other = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(first, other);
+    first.setQueryData(pageKey("cached-page"), page(5));
+    other.setQueryData(pageKey("cached-page"), page(5));
+    const reader = createPageSurfaceRead(first, "project", "cached-page");
+    const otherReader = createPageSurfaceRead(other, "project", "cached-page");
+    expect(reader.hasAccepted(page(5))).toBe(false);
+    vi.mocked(fetchPageApi).mockResolvedValue(page(5));
+    await reader.acquire();
+    expect(reader.hasAccepted(page(5))).toBe(true);
+    expect(otherReader.hasAccepted(page(5))).toBe(false);
+    first.setQueryData(pageKey("cached-page"), page(6));
+    expect(reader.hasAccepted(page(6))).toBe(false);
+    first.removeQueries({ queryKey: pageKey("cached-page"), exact: true });
+    first.setQueryData(pageKey("cached-page"), page(5));
+    expect(reader.hasAccepted(page(5))).toBe(false);
+    await reader.acquire();
+    expect(reader.hasAccepted(page(5))).toBe(true);
+  });
+
+  it("does not reuse an earlier receipt when another fetching query only returns cached data", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    client.setQueryData(pageKey("cached-page"), page(5));
+    vi.mocked(fetchPageApi).mockResolvedValue(page(5));
+    await createPageSurfaceRead(client, "project", "cached-page").acquire();
+    const cached = deferred<Page>();
+    const withoutGet = client.fetchQuery({ queryKey: pageKey("cached-page"), queryFn: () => cached.promise, staleTime: 0 });
+    const surface = createPageSurfaceRead(client, "project", "cached-page");
+    const acquisition = surface.acquire();
+    cached.resolve(page(5));
+    await withoutGet;
+    await expect(acquisition).rejects.toBeInstanceOf(PageWriteBasisError);
+    expect(surface.hasAccepted(page(5))).toBe(false);
   });
 
   it("keeps conflicting local text recoverable while saving independent edits", async () => {
