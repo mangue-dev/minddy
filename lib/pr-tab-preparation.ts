@@ -1,4 +1,4 @@
-import { hashKey, onlineManager, type QueryClient } from "@tanstack/react-query";
+import { hashKey, onlineManager, type Query, type QueryClient } from "@tanstack/react-query";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
@@ -8,6 +8,21 @@ import { allPullRequestsQueryOptions } from "./use-agent-runs";
 import { prActivityPreparationQueries } from "./pr-activity-query";
 import { createPageNavigationPreparation } from "./page-navigation-preparation";
 import { adjacentProjectDestination } from "./project-navigation-working-set";
+
+const PASSIVE_SHELL_READS = new Set([
+  ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
+  ["me", "branch-cleanup-targets"], ["pull-requests", "open-count"],
+].map(hashKey));
+
+/** Only established shell summaries may reconcile alongside one scoped preparation read. */
+export function isPassiveShellMaintenanceRead(query: Pick<Query, "queryKey" | "queryHash" | "state">): boolean {
+  if (query.state.status !== "success" || query.state.data === undefined) return false;
+  if (PASSIVE_SHELL_READS.has(query.queryHash)) return true;
+  // This exact producer belongs to tab labels, with no route or editing authority.
+  const key = query.queryKey;
+  return key.length === 3 && key[0] === "app-tab-metadata" && typeof key[1] === "string" && key[1].length > 0 &&
+    Array.isArray(key[2]) && key[2].every((href) => typeof href === "string");
+}
 
 /** Recent visible detail activities precede optional lists for old pinned PRs. */
 function recentActivityQueries(client: QueryClient) {
@@ -59,7 +74,7 @@ export function createPrTabPreparation(
   };
   const otherTransport = () => {
     const auxiliary = new Set(recentActivityQueries(client).map((options) => hashKey(options.queryKey)));
-    return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" && !isCachedTabReconciliation(query) &&
+    return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" && !isCachedTabReconciliation(query) && !isPassiveShellMaintenanceRead(query) &&
       query.queryHash !== (preparing ? hashKey(preparing.key) : undefined) &&
       !(auxiliary.has(query.queryHash) && !query.isActive()));
   };

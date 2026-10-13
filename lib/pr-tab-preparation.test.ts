@@ -1,6 +1,6 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPrTabPreparation } from "./pr-tab-preparation";
+import { createPrTabPreparation, isPassiveShellMaintenanceRead } from "./pr-tab-preparation";
 import { pullRequestQueryOptions } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
@@ -43,6 +43,87 @@ const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
 
 describe("account-owned PR preparation", () => {
+  it("admits only exact healthy cached passive summaries and metadata, without granting freshness", () => {
+    const prepared = setup();
+    try {
+      const keys = [["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
+        ["me", "branch-cleanup-targets"], ["pull-requests", "open-count"], ["app-tab-metadata", "owner", ["/projects/p/pages/a"]]];
+      for (const key of keys) {
+        prepared.client.setQueryData(key, []);
+        const query = prepared.client.getQueryCache().find({ queryKey: key, exact: true })!;
+        expect(isPassiveShellMaintenanceRead(query)).toBe(true);
+        query.setState({ isInvalidated: true });
+        expect(isPassiveShellMaintenanceRead(query)).toBe(true);
+        expect(query.state.isInvalidated).toBe(true);
+        query.setState({ status: "error", error: new Error("Unavailable") });
+        expect(isPassiveShellMaintenanceRead(query)).toBe(false);
+      }
+      for (const key of [["me", "summary", "detail"], ["me", "search-index"], ["billing", "usage"], ["notifications"],
+        ["agent-sessions", "all"], ["project-drafts"], ["projects"], ["page", "body"], ["pull-request", "id"],
+        ["app-tab-metadata", "owner"], ["app-tab-metadata", "owner", { locations: [] }]]) {
+        prepared.client.setQueryData(key, []);
+        expect(isPassiveShellMaintenanceRead(prepared.client.getQueryCache().find({ queryKey: key, exact: true })!)).toBe(false);
+      }
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("drains one scoped lane during healthy shell maintenance without canceling either authorized read", async () => {
+    const prepared = setup(); let release!: () => void; let scoped = 0, maximum = 0;
+    prepared.client.setQueryData(["me", "summary"], { counts: { total: 1 } });
+    const maintenance = prepared.client.fetchQuery({ queryKey: ["me", "summary"], queryFn: () => new Promise((resolve) => { release = () => resolve({ counts: { total: 2 } }); }) });
+    prepared.fetch.mockImplementation(async (url) => {
+      maximum = Math.max(maximum, ++scoped); await Promise.resolve(); scoped--; return fixtureResponse(String(url));
+    });
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]);
+      for (let index = 0; index < 7; index++) {
+        prepared.flush();
+        await vi.waitFor(() => expect(prepared.fetch.mock.calls.length).toBe(index + 1));
+        await vi.waitFor(() => expect(prepared.client.getQueryState(appTabPreparationQueries(prepared.client, "/projects/new")[index].queryKey)?.fetchStatus).toBe("idle"));
+      }
+      expect(maximum).toBe(1); expect(prepared.client.getQueryState(["me", "summary"])?.fetchStatus).toBe("fetching");
+      expect(prepared.client.getQueryData(["me", "summary"])).toEqual({ counts: { total: 1 } });
+      release(); await maintenance; await drain(prepared);
+      expect(prepared.client.getQueryData(["me", "summary"])).toEqual({ counts: { total: 2 } });
+    } finally { release?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it.each(["missing", "failed"])("keeps %s shell summaries ahead of speculation", async (condition) => {
+    const prepared = setup(); let release!: () => void;
+    if (condition === "failed") {
+      prepared.client.setQueryData(["me", "summary"], { counts: { total: 1 } });
+      await prepared.client.fetchQuery({ queryKey: ["me", "summary"], queryFn: () => { throw new Error("Unavailable"); } }).catch(() => {});
+    }
+    const required = prepared.client.fetchQuery({ queryKey: ["me", "summary"], queryFn: () => new Promise((resolve) => { release = () => resolve({ counts: { total: 2 } }); }) });
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+      expect(prepared.fetch).not.toHaveBeenCalled();
+      release(); await required;
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url))); await drain(prepared);
+      expect(prepared.fetch).toHaveBeenCalledTimes(7);
+    } finally { release?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("preserves a scoped read through passive maintenance churn but yields to explicit search and unknown foreground reads", async () => {
+    const prepared = setup(); let signal!: AbortSignal; let finish!: () => void;
+    prepared.fetch.mockImplementationOnce((_url, init) => new Promise((resolve, reject) => {
+      signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
+      finish = () => resolve(fixtureResponse("/api/projects/new/issues"));
+    }));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(signal).toBeDefined());
+      prepared.client.setQueryData(["me", "triage-counts"], { counts: {} });
+      for (let index = 0; index < 3; index++) await prepared.client.fetchQuery({ queryKey: ["me", "triage-counts"], queryFn: async () => ({ counts: {} }) });
+      expect(signal.aborted).toBe(false);
+      await prepared.client.fetchQuery({ queryKey: ["me", "search-index"], queryFn: async () => ({ issues: [] }) });
+      expect(signal.aborted).toBe(true);
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url))); await drain(prepared);
+      expect(prepared.client.getQueryState(["issues", "new"])?.status).toBe("success");
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/issues"))).toHaveLength(2);
+    } finally { finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
   it("prepares every unique prerequisite in the representative ten-tab set without activation", async () => {
     const prepared = setup();
     prepared.fetch.mockImplementation(async (url) => {
