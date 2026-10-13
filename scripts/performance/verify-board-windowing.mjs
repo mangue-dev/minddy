@@ -3,7 +3,7 @@ import { revealBoardIssue } from "./board-readiness.mjs";
 import { assertScope, id } from "./seed.mjs";
 
 /** Actual product interactions; no replacement data or latency aggregation. */
-export async function verifyBoardWindowing({ page, fixture, issueStatus, results, api, mutations = false }) {
+export async function verifyBoardWindowing({ page, fixture, issueStatus, results, api, cdp, touch = false, mutations = false }) {
   const root = page.locator('[data-app-view-active="true"]');
   const column = root.locator(`[data-board-column-status="${issueStatus}"]`);
   const card = () => root.locator(`[data-issue-id="${fixture.firstIssue}"]`);
@@ -87,6 +87,31 @@ export async function verifyBoardWindowing({ page, fixture, issueStatus, results
   results.windowingVerification = { ...source, offscreenIssueRevealed: true, fieldPopoverPinned: true,
     unsentDialogDraftPinned: true, dragSourcePinned: true, distantDropTargetRevealed: true,
     cancelledDrag: true, responsiveScroll: true, keyboardWindowTraversal: true };
+  if (touch) {
+    assert.ok(cdp, "Touch verification requires the actual Chromium input session");
+    await column.evaluate((node) => { node.scrollTop = 0; }); await frames();
+    const view = await column.boundingBox(); assert.ok(view);
+    await page.evaluate(() => {
+      window.__instant.touchEvents = 0;
+      window.__instant.onTouch = () => { window.__instant.touchEvents++; };
+      document.addEventListener("touchstart", window.__instant.onTouch, { passive: true });
+    });
+    try {
+      await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+      await cdp.send("Input.synthesizeScrollGesture", { x: view.x + view.width / 2,
+        y: view.y + Math.min(view.height / 2, 300), yDistance: -420,
+        speed: 1500, preventFling: true, gestureSourceType: "touch" });
+      await frames();
+      const scroll = await column.evaluate((node) => node.scrollTop);
+      const events = await page.evaluate(() => window.__instant.touchEvents);
+      assert.ok(scroll > 200 && events > 0, "A genuine browser touch gesture must scroll the windowed column");
+      assert.equal(await root.locator('[data-board-drop-indicator]').count(), 0, "Touch scrolling must not start mouse-only dragging");
+      results.windowingVerification.touchGestureScroll = { scrollTop: scroll, touchEvents: events, simulated: true };
+    } finally {
+      await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+      await page.evaluate(() => document.removeEventListener("touchstart", window.__instant.onTouch));
+    }
+  }
   if (mutations) await verifyLanding({ page, root, fixture, api, results });
 }
 

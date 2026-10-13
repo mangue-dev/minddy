@@ -51,6 +51,8 @@ const deep = process.argv.includes("--deep");
 const forge = process.argv.includes("--forge");
 const windowingCompatible = process.argv.includes("--windowing-compatible");
 const verifyWindowingMutations = process.argv.includes("--verify-windowing-mutations");
+for (const flag of ["--verify-windowing-project", "--verify-windowing-touch"])
+  assert.ok(!process.argv.includes(flag) || process.argv.includes("--verify-windowing"), "Input verification requires the windowing diagnostic");
 assert.ok(!verifyWindowingMutations || process.argv.includes("--verify-windowing"), "Mutation verification requires the explicit windowing diagnostic");
 assert.ok(!forge || !windowingCompatible, "Keep board and forge protocols separate");
 const connected = forge || process.argv.includes("--connected");
@@ -96,7 +98,7 @@ const results = { label, sha: productSha.sha,
   runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
 if (windowingCompatible) results.protocol = secondary ? "min683-secondary-v2-visible-source-counts" : "min683-board-v2-visible-source-counts";
-if (["--verify-windowing", "--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--diagnostic-card-containment", "--diagnostic-fixed-card-containment", "--diagnostic-stable-card-containment", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
+if (["--verify-windowing", "--profile-project-switch", "--trace-forge-stages", "--trace-query-preparation", "--trace-retained-layout", "--diagnostic-card-containment", "--diagnostic-fixed-card-containment", "--diagnostic-stable-card-containment", "--profile"].some((flag) => process.argv.includes(flag))) results.diagnostic = true;
 let browser, context, page, userData, preserved, failure, changedIssue;
 const preservedPages = [];
 const created = [];
@@ -249,7 +251,8 @@ try {
     if (windowingCompatible && name === "issue-open") await frames();
     const box = await locator.boundingBox();
     assert.ok(box);
-    const profile = process.argv.includes("--profile") && name === "page-to-board" && !profiled;
+    const profile = !profiled && ((process.argv.includes("--profile") && name === "page-to-board") ||
+      (process.argv.includes("--profile-project-switch") && name === "project-switch"));
     if (profile) { await cdp.send("Profiler.enable"); await cdp.send("Profiler.start"); }
     await page.evaluate(({ condition, complete, args, traceFiles }) => {
       const check = new Function("args", `return (${condition})(args)`);
@@ -326,7 +329,7 @@ try {
     }
     if (profile) {
       const { profile: cpu } = await cdp.send("Profiler.stop");
-      await writeFile(path.join(output, `${label}-page-to-board.cpuprofile`), JSON.stringify(cpu));
+      await writeFile(path.join(output, `${label}-${name}.cpuprofile`), JSON.stringify(cpu));
       profiled = true;
     }
     console.log(name, Math.round(sample.domMs), Math.round(sample.paintMs));
@@ -432,9 +435,23 @@ try {
   }
   if (process.argv.includes("--verify-windowing")) {
     assert.ok(windowingCompatible && !secondary && !deep && !forge);
-    const original = await api(`/api/issues/${fixture.firstIssue}`);
+    const project = process.argv.includes("--verify-windowing-project");
+    const target = project ? { ...fixture, firstIssue: id("issue-0-95") } : fixture;
+    if (project) await tab(tabs[1], "verification-project-window");
+    const original = await api(`/api/issues/${target.firstIssue}`);
     assertScope("issues", original, fixture.userId);
-    await verifyBoardWindowing({ page, fixture, issueStatus: original.status, results, api, mutations: verifyWindowingMutations });
+    await verifyBoardWindowing({ page, fixture: target, issueStatus: original.status, results, api, cdp,
+      touch: process.argv.includes("--verify-windowing-touch"), mutations: verifyWindowingMutations });
+    if (project) {
+      const root = page.locator('[data-app-view-active="true"]');
+      const allowed = new Set(Array.from({ length: 100 }, (_, index) => id(`issue-0-${index}`)));
+      const shown = await root.locator('[data-issue-id]').evaluateAll((nodes) => nodes.map((node) => node.dataset.issueId));
+      assert.ok(shown.length && shown.every((id) => allowed.has(id)), "Publish only the isolated synthetic project surface");
+      await root.locator('[data-board-column-scroller]').evaluateAll((nodes) => nodes.forEach((node) => { node.scrollTop = 0; }));
+      await frames();
+      await root.screenshot({ path: path.join(output, `${label}-project-board.png`) });
+      results.windowingVerification.projectSourceCards = 100;
+    }
   }
   if (process.argv.includes("--verify") && secondary) {
     await tab(tabs[1], "verification-home");
