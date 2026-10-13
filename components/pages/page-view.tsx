@@ -338,7 +338,7 @@ function PageSurface({
     dataUpdatedAt,
     isPending,
     isFetchedAfterMount,
-    error,
+    error: queryError,
   } = useQuery({
     queryKey: pageKey(pageId),
     queryFn: surfaceRead.queryFn,
@@ -348,6 +348,16 @@ function PageSurface({
   });
   const page = cachedPage?.id === pageId && cachedPage.project_id === projectId && cachedPage.version > 0
     ? cachedPage : undefined;
+  // Optimistic setQueryData clears Query.error without validating access. Keep
+  // read failures visible until an actual accepted response repairs this surface.
+  const lastReadError = useRef<unknown>(undefined);
+  const hadReadError = useRef(false);
+  surfaceRead.observeFailure(queryError);
+  const observedError = queryError ?? surfaceRead.failure();
+  if (observedError) lastReadError.current = observedError;
+  else if (surfaceRead.hasAccepted(page)) lastReadError.current = undefined;
+  const error = observedError ?? lastReadError.current;
+  if (error) hadReadError.current = true;
   const readyForThisSurface = usePageSurfaceReady(
     pageId,
     dataUpdatedAt,
@@ -434,7 +444,7 @@ function PageSurface({
     page,
     // Cached display captures a local draft; only a validated base authorizes
     // its merged, versioned write. A flush joins the ordinary mounted read.
-    fresh: readyForThisSurface && !error,
+    fresh: readyForThisSurface && !error && (!hadReadError.current || surfaceRead.hasAccepted(page)),
     acquireFresh: surfaceRead.acquire,
     readError: error,
     delayMs: SAVE_DELAY_MS,

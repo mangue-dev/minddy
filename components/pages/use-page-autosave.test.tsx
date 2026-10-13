@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement } from "react";
+import { act, createElement, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { Editor, JSONContent } from "@tiptap/react";
@@ -9,7 +9,8 @@ import { usePageAutosave, type PageAutosave } from "./use-page-autosave";
 import { buildOptimisticPage } from "@/lib/optimistic-page";
 import { PageApiError, PageConflictError, type UpdatePageInput } from "@/lib/pages-api";
 import { fetchPageApi } from "@/lib/pages-api";
-import { createPageSurfaceRead, fetchPageNavigationData, pageKey, PageWriteBasisError } from "@/lib/use-pages-query";
+import { createPageSurfaceRead, fetchPageNavigationData, pageKey, PageWriteBasisError,
+  preparePageNavigation, usePageSurfaceReady } from "@/lib/use-pages-query";
 import type { Page } from "@/lib/pages";
 import type { PageDocJSON } from "@/lib/pages-merge";
 
@@ -48,20 +49,23 @@ function page(version = 5, content = doc()): Page {
   return { ...buildOptimisticPage("project", { id: "cached-page" }, []), version, content };
 }
 
-async function mount({ cached = page(), read, save, editor = false, preparation = false }: {
+async function mount({ cached = page(), read, save, editor = false, preparation = false, prepared = false }: {
   cached?: Page;
   read: () => Promise<Page>;
   save: (id: string, patch: UpdatePageInput) => Promise<Page>;
   editor?: boolean;
   preparation?: boolean;
+  prepared?: boolean;
 }) {
   let autosave!: PageAutosave;
+  let preparedSurfaceReady = false;
   const onError = vi.fn();
   const editorRef = { current: null as Editor | null };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   clients.push(client);
   vi.mocked(fetchPageApi).mockImplementation(read);
-  client.setQueryData(pageKey(cached.id), cached, { updatedAt: Date.now() - 60_000 });
+  client.setQueryData(pageKey(cached.id), cached, { updatedAt: Date.now() - (prepared ? 0 : 60_000) });
+  if (prepared) preparePageNavigation(cached.id);
   if (preparation) {
     // The ordinary preparator starts before the surface exists, so its queryFn
     // is the shared authorized reader rather than the new surface's wrapper.
@@ -73,11 +77,21 @@ async function mount({ cached = page(), read, save, editor = false, preparation 
   const options = { queryKey: ["page", cached.id], queryFn: reader.queryFn, staleTime: 0, retry: false };
   function Surface() {
     const query = useQuery({ ...options, refetchOnMount: "always" });
+    const lastReadError = useRef<unknown>(undefined);
+    const hadReadError = useRef(false);
+    reader.observeFailure(query.error);
+    const observedError = query.error ?? reader.failure();
+    if (observedError) lastReadError.current = observedError;
+    else if (reader.hasAccepted(query.data)) lastReadError.current = undefined;
+    const error = observedError ?? lastReadError.current;
+    if (error) hadReadError.current = true;
+    preparedSurfaceReady = usePageSurfaceReady(cached.id, query.dataUpdatedAt,
+      query.isFetchedAfterMount && reader.hasAccepted(query.data));
     autosave = usePageAutosave({ pageId: cached.id, page: query.data,
-      fresh: query.isFetchedAfterMount && !query.error && reader.hasAccepted(query.data), readError: query.error,
+      fresh: preparedSurfaceReady && !error && (!hadReadError.current || reader.hasAccepted(query.data)), readError: error,
       acquireFresh: reader.acquire, delayMs: 60_000, editorRef, save, onError });
     // Use the real editor so remote adoption cannot erase live typing.
-    if (query.error) return createElement("p", { "data-read-error": true }, query.error.message);
+    if (error) return createElement("p", { "data-read-error": true }, error instanceof Error ? error.message : "Unable to read Page");
     return editor ? createElement(PageEditor, { initialContent: query.data?.content as JSONContent,
       editorRef, onEditor: (value) => { if (value) autosave.resumeEditor(); },
       onChange: (content) => autosave.schedule({ content }) }) : null;
@@ -85,7 +99,7 @@ async function mount({ cached = page(), read, save, editor = false, preparation 
   root = createRoot(document.body.appendChild(document.createElement("div")));
   await act(async () => root!.render(createElement(QueryClientProvider, { client, children: createElement(Surface) })));
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
-  return { get autosave() { return autosave; }, client, editorRef, onError };
+  return { get autosave() { return autosave; }, get preparedSurfaceReady() { return preparedSurfaceReady; }, client, editorRef, onError, reader };
 }
 
 describe("cached Page display and fresh write authority", () => {
@@ -242,6 +256,51 @@ describe("cached Page display and fresh write authority", () => {
     await withoutGet;
     await expect(acquisition).rejects.toBeInstanceOf(PageWriteBasisError);
     expect(surface.hasAccepted(page(5))).toBe(false);
+  });
+
+  it.each(["shared", "raw"])("keeps a prepared Page denied after an optimistic cache reset (%s GET)", async (owner) => {
+    const read = vi.fn().mockResolvedValue(page(5));
+    const save = vi.fn(async (_id: string, patch: UpdatePageInput) => page(6, patch.content as PageDocJSON));
+    const h = await mount({ read, save, editor: true, prepared: true });
+    expect(h.preparedSurfaceReady).toBe(true);
+    expect(h.reader.hasAccepted(page(5))).toBe(true);
+    await act(async () => h.editorRef.current!.commands.setContent(doc("Local before denial") as JSONContent));
+    const denied = new PageApiError("Page access denied", 403);
+    read.mockRejectedValue(denied);
+    await act(async () => {
+      await expect(h.client.fetchQuery({ queryKey: pageKey("cached-page"),
+        queryFn: owner === "shared" ? h.reader.queryFn : () => fetchPageApi("project", "cached-page"),
+        staleTime: 0, retry: false })).rejects.toBe(denied);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    expect(h.reader.hasAccepted(page(5))).toBe(false);
+    expect(h.reader.failure()).toBe(denied);
+    expect(document.querySelector("[data-read-error]")?.textContent).toBe("Page access denied");
+    expect(document.querySelector(".tiptap")).toBeNull();
+    await act(async () => {
+      h.client.setQueryData(pageKey("cached-page"), page(5));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    expect(h.client.getQueryState(pageKey("cached-page"))?.error).toBeNull();
+    // The old prepared-on-mount shortcut remains true, but cannot clear denial.
+    expect(h.preparedSurfaceReady).toBe(true);
+    expect(h.reader.hasAccepted(page(5))).toBe(false);
+    expect(h.reader.failure()).toBe(denied);
+    expect(document.querySelector("[data-read-error]")?.textContent).toBe("Page access denied");
+    expect(document.querySelector(".tiptap")).toBeNull();
+    expect(h.autosave.takePending()).toBeNull();
+    await act(async () => { expect(await h.autosave.flushBeforeNavigation()).toBe(false); });
+    expect(save).not.toHaveBeenCalled();
+    expect(h.autosave.hasUnsavedChanges()).toBe(true);
+    read.mockResolvedValue(page(5));
+    await act(async () => {
+      expect(await h.autosave.flushBeforeNavigation()).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    expect(h.reader.failure()).toBeUndefined();
+    expect(document.querySelector("[data-read-error]")).toBeNull();
+    expect(h.editorRef.current!.getText()).toContain("Local before denial");
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Local before denial"), version: 5 });
   });
 
   it("keeps conflicting local text recoverable while saving independent edits", async () => {

@@ -19,7 +19,7 @@ import { createUuid } from "@/lib/create-uuid";
 // exactly where he was.
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useQueryClient, type Query, type QueryClient } from "@tanstack/react-query";
+import { isCancelledError, useQuery, useQueryClient, type Query, type QueryClient } from "@tanstack/react-query";
 
 import {
   createPageApi,
@@ -71,7 +71,7 @@ export const PAGE_NAVIGATION_FRESH_MS = 10_000;
 
 const preparedPages = new Map<string, number>();
 type PageReadReceipt = { sequence: number; projectId: string; pageId: string; version: number; signal?: AbortSignal };
-type PageReadState = { sequence: number; pending?: { sequence: number; signal?: AbortSignal }; accepted?: PageReadReceipt };
+type PageReadState = { sequence: number; pending?: { sequence: number; signal?: AbortSignal }; accepted?: PageReadReceipt; failure?: unknown };
 // Query identity isolates accounts and retires this metadata with cache eviction.
 // No document payload or device-persisted authority is retained here.
 const pageReads = new WeakMap<Query, PageReadState>();
@@ -103,8 +103,13 @@ export async function fetchPageNavigationData(client: QueryClient, projectId: st
       ? current : incoming;
     if (query && read && read.sequence === sequence && client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
       read.accepted = { sequence, projectId, pageId, version: page.version, signal };
+      read.failure = undefined;
     }
     return page;
+  } catch (error) {
+    if (query && read && read.sequence === sequence && !signal?.aborted &&
+        client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) read.failure = error;
+    throw error;
   } finally {
     if (read?.pending?.sequence === sequence) read.pending = undefined;
   }
@@ -125,15 +130,30 @@ export function createPageSurfaceRead(client: QueryClient, projectId: string, pa
   const mounted = floor();
   const hasReceipt = (page: Page | undefined, since: ReturnType<typeof floor>) => {
     const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
-    const accepted = query && pageReads.get(query)?.accepted;
+    const read = query && pageReads.get(query);
+    const accepted = read?.accepted;
     return !!accepted && !!page && page.id === pageId && page.project_id === projectId && page.version > 0 &&
       accepted.projectId === projectId && accepted.pageId === pageId && accepted.version === page.version &&
-      !accepted.signal?.aborted && accepted.sequence > (query === since.query ? since.sequence : 0);
+      accepted.sequence === read?.sequence && !read.failure && !accepted.signal?.aborted &&
+      accepted.sequence > (query === since.query ? since.sequence : 0);
   };
   const queryFn = ({ signal }: { signal: AbortSignal }) => fetchPageNavigationData(client, projectId, pageId, signal);
   return {
     queryFn,
     hasAccepted: (page: Page | undefined) => hasReceipt(page, mounted),
+    observeFailure: (error: unknown) => {
+      // Existing read-only consumers can share this query with a raw GET.
+      // Their observed failures must also invalidate a previously accepted basis.
+      if (!error || isCancelledError(error)) return;
+      const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
+      if (!query) return;
+      const read: PageReadState = pageReads.get(query) ?? { sequence: 0 };
+      if (!read.failure) { read.failure = error; pageReads.set(query, read); }
+    },
+    failure: () => {
+      const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
+      return query && pageReads.get(query)?.failure;
+    },
     async acquire() {
       const required = floor();
       const page = await client.fetchQuery({ queryKey: pageKey(pageId), queryFn, staleTime: 0, retry: false });
