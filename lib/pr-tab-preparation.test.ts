@@ -1,10 +1,11 @@
-import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPrTabPreparation, isPassiveShellMaintenanceRead } from "./pr-tab-preparation";
+import { createPrTabPreparation, isPassiveShellMaintenanceRead, SCOPED_PREPARATION_CONCURRENCY } from "./pr-tab-preparation";
 import { pullRequestQueryOptions } from "./pull-request-query";
 import { ApiError } from "./agent-api";
+import { navigationPreparationPending } from "./navigation-preparation-priority";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
-import { appTabPreparationQueries } from "./prefetch-tab-destination";
+import { appTabPreparationQueries, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn() }));
 
@@ -43,6 +44,185 @@ const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
 
 describe("account-owned PR preparation", () => {
+  it("saturates two normal slots and refills only the slot whose shared query settles", async () => {
+    const prepared = setup();
+    const reads = new Map<string, { signal: AbortSignal; finish: () => void }>();
+    prepared.fetch.mockImplementation((url, init) => new Promise((resolve, reject) => {
+      const path = String(url), signal = init!.signal!;
+      reads.set(path, { signal, finish: () => resolve(fixtureResponse(path)) });
+      signal.addEventListener("abort", () => reject(new Error("Speculation yielded")), { once: true });
+    }));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(reads.size).toBe(2));
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      reads.get("/api/projects/new/categories")!.finish();
+      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); prepared.flush();
+      await vi.waitFor(() => expect(reads.size).toBe(3));
+      expect(prepared.client.isFetching()).toBe(2);
+      expect(reads.get("/api/projects/new/issues")!.signal.aborted).toBe(false);
+      expect([...reads.keys()]).toEqual(["/api/projects/new/issues", "/api/projects/new/categories", "/api/projects/new/members"]);
+      prepared.preparation.dispose();
+      expect(reads.get("/api/projects/new/issues")!.signal.aborted).toBe(true);
+      expect(reads.get("/api/projects/new/members")!.signal.aborted).toBe(true);
+      await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
+      expect(prepared.tasks.size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("preserves a joined foreground slot, cancels its sibling and blocks refills until foreground settles", async () => {
+    const prepared = setup();
+    const reads = new Map<string, { signal: AbortSignal; finish: () => void }>();
+    prepared.fetch.mockImplementation((url, init) => new Promise((resolve, reject) => {
+      const path = String(url), signal = init!.signal!;
+      reads.set(path, { signal, finish: () => resolve(fixtureResponse(path)) });
+      signal.addEventListener("abort", () => reject(new Error("Speculation yielded")), { once: true });
+    }));
+    let stop = () => {};
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(reads.size).toBe(2));
+      const observer = new QueryObserver(prepared.client, { queryKey: ["issues", "new"] });
+      stop = observer.subscribe(() => {});
+      expect(reads.get("/api/projects/new/issues")!.signal.aborted).toBe(false);
+      expect(reads.get("/api/projects/new/categories")!.signal.aborted).toBe(true);
+      await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(1));
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+      reads.get("/api/projects/new/issues")!.finish();
+      await vi.waitFor(() => expect(observer.getCurrentResult().status).toBe("success"));
+      await drain(prepared);
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/issues"))).toHaveLength(1);
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/categories"))).toHaveLength(2);
+      expect(navigationPreparationPending(prepared.client)).toBe(false);
+    } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("cancels both unobserved slots for unknown foreground and resumes their exact prerequisites", async () => {
+    const prepared = setup(); const signals: AbortSignal[] = [];
+    prepared.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+      const signal = init!.signal!; signals.push(signal);
+      signal.addEventListener("abort", () => reject(new Error("Speculation yielded")), { once: true });
+    }));
+    let finish!: () => void;
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(signals).toHaveLength(2));
+      const foreground = prepared.client.fetchQuery({ queryKey: ["explicit-overlay"], queryFn: () => new Promise((resolve) => { finish = () => resolve("ready"); }) });
+      expect(signals.every((signal) => signal.aborted)).toBe(true);
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(1));
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+      finish(); await foreground; await drain(prepared);
+      expect(prepared.fetch).toHaveBeenCalledTimes(9);
+      expect(prepared.client.getQueryState(["issues", "new"])?.status).toBe("success");
+      expect(prepared.client.getQueryState(["categories", "new"])?.status).toBe("success");
+    } finally { finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("retries a shared normal read canceled when its joining observer leaves", async () => {
+    const prepared = setup(); let signal!: AbortSignal;
+    prepared.fetch.mockImplementation((url, init) => String(url).endsWith("/new/issues")
+      ? new Promise((_resolve, reject) => {
+        signal = init!.signal!;
+        signal.addEventListener("abort", () => reject(new Error("Foreground left")), { once: true });
+      }) : Promise.resolve(fixtureResponse(String(url))));
+    let stop = () => {};
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(signal).toBeDefined());
+      const observer = new QueryObserver(prepared.client, { queryKey: ["issues", "new"] });
+      stop = observer.subscribe(() => {});
+      expect(signal.aborted).toBe(false);
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+      stop();
+      expect(signal.aborted).toBe(true);
+      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); await drain(prepared);
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/issues"))).toHaveLength(2);
+      expect(prepared.client.getQueryState(["issues", "new"])?.status).toBe("success");
+    } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("holds navigation priority through the last normal read and keeps optional neighbors behind it", async () => {
+    const prepared = setup(); let finish!: () => void;
+    prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
+    for (const options of appTabPreparationQueries(prepared.client, "/projects/new")) {
+      if (options.queryKey[0] !== "views") prepared.client.setQueryData(options.queryKey, []);
+    }
+    prepared.fetch.mockImplementation((url) => String(url).endsWith("/new/views")
+      ? new Promise((resolve) => { finish = () => resolve(fixtureResponse(String(url))); })
+      : Promise.resolve(fixtureResponse(String(url))));
+    try {
+      prepared.preparation.visit("/all", ["/all", "/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(finish).toBeDefined());
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(1);
+      expect(navigationPreparationPending(prepared.client)).toBe(true);
+      finish(); await drain(prepared);
+      expect(navigationPreparationPending(prepared.client)).toBe(false);
+      expect(prepared.fetch.mock.calls.slice(1).every(([url]) => String(url).startsWith("/api/projects/neighbor/"))).toBe(true);
+      expect(prepared.fetch).toHaveBeenCalledTimes(8);
+    } finally { finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it.each(["hidden", "offline"])("yields both slots while %s and resumes only after the account can prepare again", async (condition) => {
+    const surface = new EventTarget() as EventTarget & { visibilityState: string; querySelectorAll: () => [] };
+    surface.visibilityState = "visible"; surface.querySelectorAll = () => [];
+    vi.stubGlobal("document", surface);
+    const prepared = setup(); const signals: AbortSignal[] = [];
+    prepared.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+      const signal = init!.signal!; signals.push(signal);
+      signal.addEventListener("abort", () => reject(new Error("Speculation yielded")), { once: true });
+    }));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(signals).toHaveLength(2));
+      if (condition === "hidden") { surface.visibilityState = "hidden"; surface.dispatchEvent(new Event("visibilitychange")); }
+      else onlineManager.setOnline(false);
+      expect(signals.every((signal) => signal.aborted)).toBe(true);
+      await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+      if (condition === "hidden") { surface.visibilityState = "visible"; surface.dispatchEvent(new Event("visibilitychange")); }
+      else onlineManager.setOnline(true);
+      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1));
+      await drain(prepared);
+      expect(prepared.fetch).toHaveBeenCalledTimes(9);
+      expect(prepared.tasks.size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); onlineManager.setOnline(true); }
+  });
+
+  it("serializes forge reads while a normal slot progresses without allowing a third request", async () => {
+    const prepared = setup(); let finishForge!: () => void;
+    let forgeActive = 0, maximumForge = 0, active = 0, maximum = 0;
+    prepared.fetch.mockImplementation(async (url) => {
+      const path = String(url); maximum = Math.max(maximum, ++active);
+      if (path.startsWith("/api/pull-requests/")) {
+        maximumForge = Math.max(maximumForge, ++forgeActive);
+        if (path.endsWith("/one")) await new Promise<void>((resolve) => { finishForge = resolve; });
+        forgeActive--; active--; return Response.json({ pr: { headSha: "head" } });
+      }
+      await Promise.resolve(); active--; return fixtureResponse(path);
+    });
+    try {
+      // Earlier visits deliberately rank the explicit PR above the board.
+      const tabs = ["/home", "/pull-requests?pr=one", "/pull-requests?pr=two", "/projects/new"];
+      prepared.preparation.visit(tabs[1], tabs); prepared.preparation.visit(tabs[0], tabs); prepared.flush();
+      await vi.waitFor(() => expect(finishForge).toBeDefined());
+      for (let step = 0; step < 8; step++) {
+        await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(1)); prepared.flush();
+      }
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/"))).toHaveLength(1);
+      expect(prepared.client.getQueryState(["views", "new"])?.status).toBe("success");
+      expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
+      finishForge(); await drain(prepared);
+      expect(maximumForge).toBe(1);
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/")).map(([url]) => url)).toEqual([
+        "/api/pull-requests/one", "/api/pull-requests/two",
+      ]);
+    } finally { finishForge?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
   it("admits only exact healthy cached passive summaries and metadata, without granting freshness", () => {
     const prepared = setup();
     try {
@@ -67,7 +247,7 @@ describe("account-owned PR preparation", () => {
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
-  it("drains one scoped lane during healthy shell maintenance without canceling either authorized read", async () => {
+  it("drains at most two scoped reads during healthy shell maintenance without canceling authorized reads", async () => {
     const prepared = setup(); let release!: () => void; let scoped = 0, maximum = 0;
     prepared.client.setQueryData(["me", "summary"], { counts: { total: 1 } });
     const maintenance = prepared.client.fetchQuery({ queryKey: ["me", "summary"], queryFn: () => new Promise((resolve) => { release = () => resolve({ counts: { total: 2 } }); }) });
@@ -76,12 +256,13 @@ describe("account-owned PR preparation", () => {
     });
     try {
       prepared.preparation.visit("/home", ["/home", "/projects/new"]);
-      for (let index = 0; index < 7; index++) {
+      for (let index = 0; index < 4; index++) {
         prepared.flush();
-        await vi.waitFor(() => expect(prepared.fetch.mock.calls.length).toBe(index + 1));
-        await vi.waitFor(() => expect(prepared.client.getQueryState(appTabPreparationQueries(prepared.client, "/projects/new")[index].queryKey)?.fetchStatus).toBe("idle"));
+        const completed = Math.min((index + 1) * 2, 7);
+        await vi.waitFor(() => expect(prepared.fetch.mock.calls.length).toBe(completed));
+        await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(1));
       }
-      expect(maximum).toBe(1); expect(prepared.client.getQueryState(["me", "summary"])?.fetchStatus).toBe("fetching");
+      expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY); expect(prepared.client.getQueryState(["me", "summary"])?.fetchStatus).toBe("fetching");
       expect(prepared.client.getQueryData(["me", "summary"])).toEqual({ counts: { total: 1 } });
       release(); await maintenance; await drain(prepared);
       expect(prepared.client.getQueryData(["me", "summary"])).toEqual({ counts: { total: 2 } });
@@ -169,7 +350,7 @@ describe("account-owned PR preparation", () => {
       await vi.waitFor(() => expect(signal).toBeDefined());
       const pending = prepared.client.fetchQuery({ queryKey: ["foreground"], queryFn: () => new Promise((resolve) => { finish = () => resolve("ready"); }) });
       expect(signal.aborted).toBe(true); prepared.flush();
-      expect(prepared.fetch).toHaveBeenCalledTimes(1);
+      expect(prepared.fetch).toHaveBeenCalledTimes(SCOPED_PREPARATION_CONCURRENCY);
       prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
       finish(); await pending; await drain(prepared);
       expect(prepared.client.getQueryState(["page", "page"])?.status).toBe("success");
@@ -253,7 +434,7 @@ describe("account-owned PR preparation", () => {
       expect(signal.aborted).toBe(true);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
-  it("warms all seven neighboring project prerequisites alongside an open board and Page without parallel transport", async () => {
+  it("warms all seven neighboring project prerequisites alongside an open board and Page within two normal read slots", async () => {
     const prepared = setup(); let concurrent = 0, maximum = 0;
     prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
     prepared.fetch.mockImplementation(async (url) => {
@@ -270,7 +451,7 @@ describe("account-owned PR preparation", () => {
         "/api/projects/neighbor/issues", "/api/projects/neighbor/categories", "/api/projects/neighbor/members",
         "/api/projects/neighbor/objectives", "/api/projects/neighbor/issue-relations", "/api/projects/neighbor/integrations", "/api/projects/neighbor/views",
       ]);
-      expect(maximum).toBe(1);
+      expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
       expect(appTabPreparationQueries(prepared.client, "/projects/neighbor").every((options) => prepared.client.getQueryState(options.queryKey)?.status === "success")).toBe(true);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
@@ -312,7 +493,9 @@ describe("account-owned PR preparation", () => {
   it("preserves a foreground observer joining a neighboring read through account retirement", async () => {
     const prepared = setup(); let signal!: AbortSignal, finish!: () => void;
     prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
-    prepared.fetch.mockImplementation((_url, init) => new Promise((resolve) => { signal = init!.signal!; finish = () => resolve(Response.json([])); }));
+    prepared.fetch.mockImplementation((url, init) => String(url).endsWith("/neighbor/issues")
+      ? new Promise((resolve) => { signal = init!.signal!; finish = () => resolve(Response.json([])); })
+      : Promise.resolve(fixtureResponse(String(url))));
     let stop = () => {};
     try {
       prepared.preparation.visit("/projects/new", ["/projects/new"]); prepared.flush();
@@ -323,7 +506,7 @@ describe("account-owned PR preparation", () => {
     } finally { stop(); finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
-  it("warms every prerequisite of never-visited open project and Page tabs sequentially", async () => {
+  it("warms every prerequisite of never-visited open project and Page tabs within two scoped read slots", async () => {
     const prepared = setup();
     let concurrent = 0, maximum = 0;
     prepared.fetch.mockImplementation(async (url) => {
@@ -338,7 +521,7 @@ describe("account-owned PR preparation", () => {
       "/api/projects/new/objectives", "/api/projects/new/issue-relations", "/api/projects/new/integrations",
       "/api/projects/new/views", "/api/projects/new/pages/page", "/api/projects/new/pages",
     ]);
-    expect(maximum).toBe(1);
+    expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
     expect(prepared.client.getQueryData(["views", "new"])).toEqual([]);
     prepared.flush(); expect(prepared.tasks.size).toBe(0);
     prepared.preparation.dispose(); prepared.client.clear();
@@ -393,7 +576,7 @@ describe("account-owned PR preparation", () => {
     for (let index = 0; index < 7 && !signal; index++) {
       prepared.flush();
       await vi.waitFor(() => expect(prepared.fetch.mock.calls.length).toBeGreaterThan(index));
-      if (!signal) await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
+      await vi.waitFor(() => { if (!signal) expect(prepared.client.isFetching()).toBe(0); });
     }
     expect(signal).toBeDefined();
     prepared.preparation.dispose();
@@ -410,7 +593,7 @@ describe("account-owned PR preparation", () => {
     for (const index of [9, 0, 11, 3, 9, 1, 11, 11, 9, 11, 8, 0]) preparation.visit(hrefs[index], hrefs);
     flush();
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
-    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/"))).toHaveLength(1);
     expect(fetch.mock.calls[0][0]).toBe("/api/pull-requests/late2");
     await drain({ client, preparation, flush, fetch, tasks });
     expect(fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/")).map(([url]) => url)).toEqual([
@@ -463,14 +646,67 @@ describe("account-owned PR preparation", () => {
   });
 
   it("honors an account Retry-After across different PRs without retrying idle work", async () => {
-    const { client, preparation, flush, fetch } = setup();
+    const { client, preparation, flush, fetch, tasks } = setup();
     const error = new ApiError("Limited"); error.status = 429; error.retryAt = Date.now() + 60_000;
     await client.fetchQuery({ queryKey: ["pull-request", "limited"], queryFn: async () => { throw error; } }).catch(() => {});
     const hrefs = ["/home", "/pull-requests?pr=late"];
     preparation.visit(hrefs[1], hrefs); preparation.visit(hrefs[0], hrefs); flush();
     expect(fetch).not.toHaveBeenCalled();
     await client.fetchQuery(pullRequestQueryOptions("other")).catch(() => {});
+    // A real completion may wake the parked identity once; Retry-After keeps
+    // it parked again without scheduling an idle retry loop or another request.
+    await new Promise((resolve) => setTimeout(resolve, 0)); flush();
+    for (let step = 0; step < 3; step++) flush();
+    expect(tasks.size).toBe(0);
     expect(fetch).not.toHaveBeenCalled(); preparation.dispose(); client.clear();
+  });
+
+  it("parks a displayed PR while an external helper settles and resumes it without another visit", async () => {
+    const prepared = setup(); let finish!: () => void;
+    let active = 0, maximum = 0;
+    prepared.fetch.mockImplementation(async (url) => {
+      const path = String(url); maximum = Math.max(maximum, ++active);
+      if (path.endsWith("/external")) await new Promise<void>((resolve) => { finish = resolve; });
+      active--; return Response.json({ pr: { headSha: "head" } });
+    });
+    const external = prefetchPullRequestDetail(prepared.client, "external")!;
+    // Exercise the real cache event ordering: the helper is still held while
+    // its query emits success, even though the transport is no longer fetching.
+    const stop = prepared.client.getQueryCache().subscribe((event) => {
+      if (event.type === "updated" && event.query.queryKey[1] === "external" && event.action.type === "success") prepared.flush();
+    });
+    try {
+      prepared.preparation.visit("/home", ["/home", "/pull-requests?pr=listed"]); prepared.flush();
+      await vi.waitFor(() => expect(finish).toBeDefined());
+      expect(prepared.fetch).toHaveBeenCalledTimes(1);
+      finish(); await external;
+      expect(prepared.client.getQueryData(["pull-request", "listed"])).toBeUndefined();
+      expect(prepared.tasks.size).toBe(0);
+      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); await drain(prepared);
+      expect(prepared.client.getQueryState(["pull-request", "listed"])?.status).toBe("success");
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/")).map(([url]) => url)).toEqual([
+        "/api/pull-requests/external", "/api/pull-requests/listed",
+      ]);
+      expect(maximum).toBe(1);
+      expect(prepared.tasks.size).toBe(0);
+    } finally { stop(); finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("resumes a listed PR after a cached external hover releases its helper without transport events", async () => {
+    const prepared = setup();
+    prepared.client.setQueryData(["pull-request", "external"], { pr: { headSha: "head" } });
+    const external = prefetchPullRequestDetail(prepared.client, "external")!;
+    try {
+      prepared.preparation.visit("/home", ["/home", "/pull-requests?pr=listed"]); prepared.flush();
+      expect(prepared.fetch).not.toHaveBeenCalled(); expect(prepared.tasks.size).toBe(0);
+      await external;
+      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); await drain(prepared);
+      expect(prepared.client.getQueryState(["pull-request", "listed"])?.status).toBe("success");
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests/")).map(([url]) => url)).toEqual([
+        "/api/pull-requests/listed",
+      ]);
+      expect(prepared.tasks.size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
   it("cancels prepared PR lists on account retirement through the shared authorized read", async () => {

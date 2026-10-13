@@ -1,6 +1,6 @@
 import { hashKey, type Query, type QueryClient } from "@tanstack/react-query";
 
-type Priority = { owners: Set<object>; reads: Map<object, readonly unknown[]>; listeners: Set<() => void> };
+type Priority = { owners: Set<object>; reads: Map<object, Map<string, readonly unknown[]>>; listeners: Set<() => void> };
 const priorities = new WeakMap<QueryClient, Priority>();
 
 /** A displayed tab list's reconciliation does not block the active view's data. */
@@ -21,12 +21,12 @@ export function navigationPreparationPending(client: QueryClient): boolean {
 /** Exact inactive speculation may share transport; an enabled observer cannot. */
 export function navigationPreparationOwnsRead(client: QueryClient, key: readonly unknown[]): boolean {
   const state = priorities.get(client);
-  return !!state && [...state.reads.values()].some((read) => hashKey(read) === hashKey(key)) &&
+  return !!state && [...state.reads.values()].some((reads) => reads.has(hashKey(key))) &&
     client.getQueryCache().find({ queryKey: key, exact: true })?.isActive() === false;
 }
 
 export function navigationPreparationHasRead(client: QueryClient): boolean {
-  return [...(priorities.get(client)?.reads.values() ?? [])].some((key) => navigationPreparationOwnsRead(client, key));
+  return [...(priorities.get(client)?.reads.values() ?? [])].some((reads) => [...reads.values()].some((key) => navigationPreparationOwnsRead(client, key)));
 }
 
 export function subscribeNavigationPreparation(client: QueryClient, listener: () => void) {
@@ -41,8 +41,20 @@ export function navigationPreparationPriority(client: QueryClient) {
   const notify = () => { for (const listener of Array.from(state.listeners)) listener(); };
   return {
     acquire() { if (!state.owners.has(owner)) { state.owners.add(owner); notify(); } },
-    startRead(key: readonly unknown[]) { if (state.owners.has(owner)) { state.reads.set(owner, key); notify(); } },
-    finishRead(key: readonly unknown[]) { if (state.reads.get(owner) === key) { state.reads.delete(owner); notify(); } },
+    startRead(key: readonly unknown[]) {
+      if (!state.owners.has(owner)) return;
+      let reads = state.reads.get(owner);
+      if (!reads) { reads = new Map(); state.reads.set(owner, reads); }
+      reads.set(hashKey(key), key); notify();
+    },
+    finishRead(key: readonly unknown[]) {
+      const reads = state.reads.get(owner);
+      const identity = hashKey(key);
+      if (reads?.get(identity) !== key) return;
+      reads.delete(identity);
+      if (!reads.size) state.reads.delete(owner);
+      notify();
+    },
     release() { state.reads.delete(owner); if (state.owners.delete(owner)) notify(); },
   };
 }

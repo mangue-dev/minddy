@@ -2,7 +2,7 @@ import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { createPrActivityPreparation } from "./pr-activity-preparation";
-import { navigationPreparationPending } from "./navigation-preparation-priority";
+import { navigationPreparationHasRead, navigationPreparationOwnsRead, navigationPreparationPending, navigationPreparationPriority } from "./navigation-preparation-priority";
 import { allPullRequestsQueryOptions } from "./use-agent-runs";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(async () => {}), isAppTabSurfaceReady: () => true }));
@@ -10,6 +10,30 @@ vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
 } }) }));
 afterEach(() => vi.unstubAllGlobals());
+
+it("tracks both exact reads of an owner and preserves a replacement against late completion", () => {
+  const client = new QueryClient();
+  const owner = navigationPreparationPriority(client);
+  const first = ["issues", "project"], second = ["categories", "project"];
+  const replacement = ["issues", "project"];
+  for (const key of [first, second]) client.setQueryData(key, []);
+  owner.acquire(); owner.startRead(first); owner.startRead(second);
+  expect(navigationPreparationOwnsRead(client, first)).toBe(true);
+  expect(navigationPreparationOwnsRead(client, second)).toBe(true);
+  owner.startRead(replacement); owner.finishRead(first);
+  expect(navigationPreparationOwnsRead(client, replacement)).toBe(true);
+  owner.finishRead(second);
+  expect(navigationPreparationHasRead(client)).toBe(true);
+  const observer = new QueryObserver(client, { queryKey: replacement, enabled: false });
+  const stop = observer.subscribe(() => {});
+  expect(navigationPreparationOwnsRead(client, replacement)).toBe(true);
+  observer.setOptions({ queryKey: replacement, enabled: true, staleTime: Infinity });
+  expect(navigationPreparationOwnsRead(client, replacement)).toBe(false);
+  owner.release();
+  expect(navigationPreparationPending(client)).toBe(false);
+  expect(navigationPreparationHasRead(client)).toBe(false);
+  stop(); client.clear();
+});
 
 function setup() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
