@@ -198,29 +198,23 @@ it("yields an unknown read to foreground work and resumes without granting a can
   } finally { view.close(); }
 });
 
-it("resumes an expired known-body renewal after foreground cancellation without postponing it eight seconds", async () => {
-  const view = setup(); let signal!: AbortSignal, finish!: () => void;
-  view.fetch.mockImplementation((url, init) => String(url).endsWith("/b")
-    ? Promise.resolve(Response.json({ ...body("b"), content: { type: "doc", content: [{ type: "image" }] } }))
-    : new Promise((_resolve, reject) => {
-      signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
-    }));
+it("does not grant a lease when a canceled known-body refetch resolves with its cached value", async () => {
+  const view = setup(["canceled-known"]); let signal!: AbortSignal;
+  view.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+    signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
+  }));
   try {
     await vi.advanceTimersByTimeAsync(8500); expect(signal.aborted).toBe(false);
-    const foreground = view.client.fetchQuery({ queryKey: ["foreground"], queryFn: () => new Promise((resolve) => { finish = () => resolve("ready"); }) });
-    expect(signal.aborted).toBe(true);
-    await vi.advanceTimersByTimeAsync(3000);
-    expect(view.fetch).toHaveBeenCalledTimes(2);
-    expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(false);
-    view.fetch.mockResolvedValue(Response.json(body("a", 2)));
-    finish(); await foreground; await vi.advanceTimersByTimeAsync(100);
-    expect(view.fetch).toHaveBeenCalledTimes(3);
-    expect(view.client.getQueryData<Page>(pageKey("a"))?.version).toBe(2);
-    expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(true);
-  } finally { finish?.(); view.close(); }
+    await view.client.cancelQueries({ queryKey: pageKey("canceled-known"), exact: true });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(view.client.getQueryData<Page>(pageKey("canceled-known"))?.version).toBe(1);
+    expect(isPreparedPageData("canceled-known", view.client.getQueryState(pageKey("canceled-known"))!.dataUpdatedAt)).toBe(false);
+    await vi.advanceTimersByTimeAsync(4000); expect(view.fetch).toHaveBeenCalledOnce();
+  } finally { view.close(); }
 });
 
-it.each(["app-tabs", "app-tab-metadata"])("keeps a Page read through cached %s reconciliation but blocks on its initial read", async (kind) => {
+it("keeps a Page read through cached tab reconciliation but blocks on initial and failed reads", async () => {
+  const kind = "app-tabs";
   const view = setup(); let signal!: AbortSignal, completePage!: () => void;
   view.fetch.mockImplementation((_url, init) => new Promise((resolve) => {
     signal = init!.signal!; completePage = () => resolve(Response.json(body("b")));

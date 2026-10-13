@@ -122,7 +122,7 @@ export function createPageNavigationPreparation(client: QueryClient) {
     }, staleTime: 0, retry: false }).then(() => {
       // TanStack may resolve a canceled refetch with its previous cached data.
       if (!completedRead || readSignal?.aborted) {
-        if (attempts.get(item.pageId) === attemptedAt) attempts.delete(item.pageId);
+        if (!client.getQueryData(key) && attempts.get(item.pageId) === attemptedAt) attempts.delete(item.pageId);
         return;
       }
       const state = client.getQueryState(key);
@@ -130,8 +130,8 @@ export function createPageNavigationPreparation(client: QueryClient) {
       failures.delete(item.pageId);
     }, (error: unknown) => {
       if (isCancelledError(error)) {
-        // An interrupted read grants neither a preparation lease nor a retry delay.
-        if (attempts.get(item.pageId) === attemptedAt) attempts.delete(item.pageId);
+        // Unknown interrupted bodies can resume; known reads retain their request bound.
+        if (!client.getQueryData(key) && attempts.get(item.pageId) === attemptedAt) attempts.delete(item.pageId);
         return;
       }
       const terminal = error instanceof PageApiError && [401, 403, 404, 429].includes(error.status);
