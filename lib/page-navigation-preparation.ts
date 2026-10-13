@@ -4,6 +4,8 @@ import { isCachedTabReconciliation, navigationPreparationHasRead, navigationPrep
 import { PageApiError, type PageSummary } from "./pages-api";
 import { byPosition, type Page } from "./pages";
 import { isDraftPage } from "./pages-draft";
+import { readLastPage } from "./pages-last-open";
+import { adjacentProjectDestination } from "./project-navigation-working-set";
 import { retainedPageDocumentCost } from "./retained-page-documents";
 import { fetchPageNavigationData, pageKey, pagesKey, preparePageNavigation } from "./use-pages-query";
 
@@ -14,7 +16,7 @@ type Destination = { projectId: string; pageId: string };
 /** Renew short preparation leases for three nearby documents, using the account's normal cache. */
 export function createPageNavigationPreparation(client: QueryClient) {
   let disposed = false, available: readonly string[] = [], recent: string[] = [];
-  let intent = "", dirty = true, queued = false, timerAt = 0;
+  let active = "", intent = "", dirty = true, queued = false, timerAt = 0;
   let workingSet: Destination[] = [];
   let explicitIds = new Set<string | null>();
   const bodyCosts = new WeakMap<object, 1 | 2>();
@@ -58,6 +60,16 @@ export function createPageNavigationPreparation(client: QueryClient) {
       if (siblings?.some((page) => page.id === first.pageId) && next && !isDraftPage(next.id) && !explicit.some((item) => item.pageId === next.id)) {
         explicit.splice(1, 0, { projectId: first.projectId, pageId: next.id });
       }
+    }
+    const neighbor = adjacentProjectDestination(client, active, [active], available);
+    const neighborProject = neighbor && appTabRoute(neighbor).projectId;
+    const treeState = neighborProject && client.getQueryState<PageSummary[]>(pagesKey(neighborProject));
+    if (neighborProject && treeState && treeState.status === "success" && !treeState.isInvalidated && Array.isArray(treeState.data)) {
+      const tree = treeState.data.filter((page) => page.project_id === neighborProject && !isDraftPage(page.id) && page.database_schema === null);
+      const remembered = readLastPage(neighborProject);
+      const entry = tree.find((page) => page.id === remembered) ?? tree.filter((page) => page.parent_id === null).sort(byPosition)[0];
+      // Keep the same capacity: the neighbor's entry replaces an unrelated old document.
+      if (entry && !explicit.some((item) => item.pageId === entry.id)) explicit.splice(2, 0, { projectId: neighborProject, pageId: entry.id });
     }
     return workingSet = explicit.slice(0, 3);
   };
@@ -129,7 +141,7 @@ export function createPageNavigationPreparation(client: QueryClient) {
     requestSchedule();
   };
   const stopCache = client.getQueryCache().subscribe((event) => {
-    const relevant = ["page", "pages"].includes(String(event.query.queryKey[0]));
+    const relevant = ["page", "pages", "projects"].includes(String(event.query.queryKey[0]));
     if (event.type === "updated") {
       if (relevant) dirty = true;
       if (event.action.type === "success" && !event.action.manual && event.query.queryKey[0] === "page") failures.delete(String(event.query.queryKey[1]));
@@ -145,7 +157,7 @@ export function createPageNavigationPreparation(client: QueryClient) {
   return {
     visit(href: string, hrefs: readonly string[]) {
       if (disposed) return;
-      available = hrefs; dirty = true;
+      active = href; available = hrefs; dirty = true;
       if (intent && !available.includes(intent)) intent = "";
       if (appTabRoute(href).section === "pages") { recent = recent.filter((item) => item !== href).concat(href).slice(-3); }
       const retained = new Set(destinations().map((item) => item.pageId));

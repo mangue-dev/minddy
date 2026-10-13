@@ -7,6 +7,7 @@ import { fetchPageNavigationData, isPreparedPageData, pageKey, pagesKey } from "
 import { forgetDraftPage, markDraftPage } from "./pages-draft";
 import type { Page } from "./pages";
 import { navigationPreparationPriority } from "./navigation-preparation-priority";
+import { forgetLastPage, rememberLastPage } from "./pages-last-open";
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
@@ -28,6 +29,63 @@ function setup(ids = ["a"]) {
   preparation.visit("/home", ["/home", ...ids.map(href)]);
   return { client, fetch, preparation, close: () => { preparation.dispose(); client.clear(); } };
 }
+
+function prepareNeighbor(view: ReturnType<typeof setup>, entries = [body("n", 1, "next"), body("o", 1, "next")]) {
+  view.client.setQueryData(["projects"], [{ id: "project" }, { id: "next" }]);
+  view.client.setQueryData(pagesKey("next"), entries);
+  view.fetch.mockImplementation(async (url) => {
+    const parts = String(url).split("/");
+    return Response.json(body(parts.at(-1)!, 1, parts[3]));
+  });
+  view.preparation.visit("/projects/project", ["/projects/project", href("a"), href("c"), href("e")]);
+  view.preparation.prioritize(href("a"));
+}
+
+it("prepares an authorized neighboring entry instead of an unrelated third document with bounded sequential reads", async () => {
+  const view = setup(["a", "c", "e"]); let concurrent = 0, maximum = 0;
+  try {
+    prepareNeighbor(view);
+    view.fetch.mockImplementation((url) => new Promise((resolve) => {
+      maximum = Math.max(maximum, ++concurrent);
+      setTimeout(() => {
+        concurrent--;
+        const parts = String(url).split("/");
+        resolve(Response.json(body(parts.at(-1)!, 1, parts[3])));
+      }, 25);
+    }));
+    await vi.advanceTimersByTimeAsync(17_000);
+    expect(new Set(view.fetch.mock.calls.map(([url]) => String(url).split("/").at(-1)))).toEqual(new Set(["a", "b", "n"]));
+    expect(maximum).toBe(1);
+    expect(isPreparedPageData("n", view.client.getQueryState(pageKey("n"))!.dataUpdatedAt)).toBe(true);
+    view.client.invalidateQueries({ queryKey: ["projects"], refetchType: "none" });
+    const reads = view.fetch.mock.calls.filter(([url]) => String(url).includes("/next/")).length;
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(view.fetch.mock.calls.filter(([url]) => String(url).includes("/next/")).length).toBe(reads);
+  } finally { view.close(); }
+});
+
+it.each(["o", "foreign"])("validates remembered neighboring document %s against the authorized tree", async (remembered) => {
+  const view = setup();
+  try {
+    rememberLastPage("next", remembered); prepareNeighbor(view);
+    await vi.advanceTimersByTimeAsync(500);
+    const expected = remembered === "o" ? "o" : "n";
+    expect(view.fetch.mock.calls.filter(([url]) => String(url).includes("/next/")).map(([url]) => url)).toEqual([`/api/projects/next/pages/${expected}`]);
+  } finally { forgetLastPage("next"); view.close(); }
+});
+
+it.each(["project-invalidated", "tree-invalidated", "foreign-row", "draft", "database"])("excludes neighboring entry with %s", async (reason) => {
+  const view = setup();
+  try {
+    prepareNeighbor(view, [body("n", 1, reason === "foreign-row" ? "foreign" : "next")]);
+    if (reason === "project-invalidated") view.client.invalidateQueries({ queryKey: ["projects"], refetchType: "none" });
+    if (reason === "tree-invalidated") view.client.invalidateQueries({ queryKey: pagesKey("next"), refetchType: "none" });
+    if (reason === "draft") markDraftPage("n");
+    if (reason === "database") view.client.setQueryData(pagesKey("next"), [{ ...body("n", 1, "next"), database_schema: {} }]);
+    await vi.advanceTimersByTimeAsync(17_000);
+    expect(view.fetch.mock.calls.some(([url]) => String(url).includes("/next/"))).toBe(false);
+  } finally { forgetDraftPage("n"); view.close(); }
+});
 
 it("prepares only one adjacent body and renews a bounded small-document working set before expiry", async () => {
   const view = setup(["a", "c", "e", "g"]);
