@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { pullRequestQueryOptions } from "./pull-request-query";
 import { ApiError } from "./agent-api";
+import { appTabPreparationQueries } from "./prefetch-tab-destination";
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
@@ -38,6 +39,74 @@ const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
 
 describe("account-owned PR preparation", () => {
+  it("warms all seven neighboring project prerequisites alongside an open board and Page without parallel transport", async () => {
+    const prepared = setup(); let concurrent = 0, maximum = 0;
+    prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
+    prepared.fetch.mockImplementation(async (url) => {
+      maximum = Math.max(maximum, ++concurrent);
+      await Promise.resolve(); concurrent--;
+      return fixtureResponse(String(url));
+    });
+    try {
+      prepared.preparation.visit("/all", ["/all", "/projects/new", "/projects/new/pages/page"]);
+      await drain(prepared);
+      const calls = prepared.fetch.mock.calls.map(([url]) => String(url));
+      expect(calls).toHaveLength(16);
+      expect(calls.filter((url) => url.startsWith("/api/projects/neighbor/"))).toEqual([
+        "/api/projects/neighbor/issues", "/api/projects/neighbor/categories", "/api/projects/neighbor/members",
+        "/api/projects/neighbor/objectives", "/api/projects/neighbor/issue-relations", "/api/projects/neighbor/integrations", "/api/projects/neighbor/views",
+      ]);
+      expect(maximum).toBe(1);
+      expect(appTabPreparationQueries(prepared.client, "/projects/neighbor").every((options) => prepared.client.getQueryState(options.queryKey)?.status === "success")).toBe(true);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("does not spend missing-destination slots on three already prepared boards", async () => {
+    const prepared = setup(); prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+    const ready = ["/projects/a", "/projects/b", "/projects/c"];
+    for (const href of ready) for (const options of appTabPreparationQueries(prepared.client, href)) prepared.client.setQueryData(options.queryKey, []);
+    try {
+      prepared.preparation.visit("/home", ["/home", ...ready, "/projects/new/pages/page"]);
+      await drain(prepared);
+      expect(prepared.fetch.mock.calls.map(([url]) => url)).toEqual(["/api/projects/new/pages/page", "/api/projects/new/pages"]);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("backs off canceled neighboring reads across repeated navigation opportunities", async () => {
+    const prepared = setup(); let clock = 10_000_000;
+    const time = vi.spyOn(Date, "now").mockImplementation(() => clock);
+    prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
+    let signal!: AbortSignal;
+    prepared.fetch.mockImplementation((url, init) => String(url).endsWith("/neighbor/issues") ? new Promise((_resolve, reject) => {
+      signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
+    }) : Promise.resolve(fixtureResponse(String(url))));
+    try {
+      prepared.preparation.visit("/projects/new", ["/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(signal).toBeDefined());
+      await prepared.client.fetchQuery({ queryKey: ["foreground"], queryFn: async () => "ready" });
+      expect(signal.aborted).toBe(true); await drain(prepared);
+      prepared.preparation.visit("/projects/new", ["/projects/new"]); await drain(prepared);
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/neighbor/issues"))).toHaveLength(1);
+      clock += 30_001; prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+      prepared.preparation.visit("/projects/new", ["/projects/new"]); await drain(prepared);
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/neighbor/issues"))).toHaveLength(2);
+    } finally { time.mockRestore(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("preserves a foreground observer joining a neighboring read through account retirement", async () => {
+    const prepared = setup(); let signal!: AbortSignal, finish!: () => void;
+    prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
+    prepared.fetch.mockImplementation((_url, init) => new Promise((resolve) => { signal = init!.signal!; finish = () => resolve(Response.json([])); }));
+    let stop = () => {};
+    try {
+      prepared.preparation.visit("/projects/new", ["/projects/new"]); prepared.flush();
+      await vi.waitFor(() => expect(signal).toBeDefined());
+      const observer = new QueryObserver(prepared.client, { queryKey: ["issues", "neighbor"] }); stop = observer.subscribe(() => {});
+      prepared.preparation.dispose(); expect(signal.aborted).toBe(false);
+      finish(); await vi.waitFor(() => expect(observer.getCurrentResult().status).toBe("success"));
+    } finally { stop(); finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
   it("warms every prerequisite of never-visited open project and Page tabs sequentially", async () => {
     const prepared = setup();
     let concurrent = 0, maximum = 0;

@@ -7,6 +7,7 @@ import { navigationPreparationPriority } from "./navigation-preparation-priority
 import { allPullRequestsQueryOptions } from "./use-agent-runs";
 import { prActivityPreparationQueries } from "./pr-activity-query";
 import { createPageNavigationPreparation } from "./page-navigation-preparation";
+import { adjacentProjectDestination } from "./project-navigation-working-set";
 
 /** Recent visible detail activities precede optional lists for old pinned PRs. */
 function recentActivityQueries(client: QueryClient) {
@@ -32,7 +33,7 @@ export function createPrTabPreparation(
     const timer = setTimeout(() => {
       if (typeof requestIdleCallback === "function") idle = requestIdleCallback(work);
       else work();
-    }, 300);
+    }, 50);
     let idle: number | undefined;
     return () => { clearTimeout(timer); if (idle !== undefined) cancelIdleCallback(idle); };
   },
@@ -40,7 +41,9 @@ export function createPrTabPreparation(
   const pagePreparation = createPageNavigationPreparation(client);
   const visits: string[] = [];
   let available: readonly string[] = [];
-  let active = "", budget = 0, disposed = false;
+  let active = "", budget = 0, neighborBudget = 0, disposed = false;
+  let neighborConsidered = false;
+  const neighborAttempts = new Map<string, number>();
   let detailAttempted = false;
   let prDestination: string | undefined;
   const attempted = new Set<string>();
@@ -58,24 +61,33 @@ export function createPrTabPreparation(
 
   const prepare = () => {
     cancel = undefined;
-    if (disposed || !budget || preparing || otherTransport()) return;
+    if (disposed || (!budget && !neighborBudget) || preparing || otherTransport()) return;
     const counts = new Map<string, number>();
     visits.forEach((href) => counts.set(href, (counts.get(href) ?? 0) + 1));
     // Frequent visits win. Among unvisited destinations, boards/documents must
     // not wait behind old PR tabs; prepare at most one entire PR destination.
-    const candidates = [...new Set([...visits, ...available])].filter((href) => href !== active && available.includes(href) && (appTabPreparationQuery(client, href) || appTabRoute(href).section === "home"))
+    const neighbor = adjacentProjectDestination(client, active, visits, available);
+    if (neighbor && !neighborConsidered) { neighborBudget = 7; neighborConsidered = true; }
+    const openCandidates = [...new Set([...visits, ...available])].filter((href) => href !== active && href !== neighbor && available.includes(href) && (appTabPreparationQuery(client, href) || appTabRoute(href).section === "home"))
       .sort((a, b) => ((counts.get(b) ?? 0) * 32 + visits.lastIndexOf(b)) - ((counts.get(a) ?? 0) * 32 + visits.lastIndexOf(a)) ||
         Number(appTabRoute(a).section === "pull-requests") - Number(appTabRoute(b).section === "pull-requests"));
+    const candidates = [...openCandidates];
+    if (neighbor) {
+      const optionalPr = candidates.findIndex((href) => appTabRoute(href).section === "pull-requests" && !counts.get(href));
+      candidates.splice(optionalPr < 0 ? candidates.length : optionalPr, 0, neighbor);
+    }
     const firstPage = candidates.find((href) => appTabRoute(href).pageId);
     if (firstPage) pagePreparation.prioritize(firstPage);
     for (const href of candidates) {
       const route = appTabRoute(href);
+      const neighboring = href === neighbor;
+      const optionsForDestination = appTabPreparationQueries(client, href);
+      void prepareAppTabSurface(href)?.catch(() => {});
+      if (optionsForDestination.every((options) => {
+        const state = client.getQueryState(options.queryKey);
+        return state?.data !== undefined && !state.isInvalidated && state.status !== "error";
+      })) continue;
       if (route.section === "pull-requests") {
-        const loaded = appTabPreparationQueries(client, href).every((options) => {
-          const state = client.getQueryState(options.queryKey);
-          return state?.data !== undefined && !state.isInvalidated && state.status !== "error";
-        });
-        if (loaded) { void prepareAppTabSurface(href)?.catch(() => {}); continue; }
         const missingNavigation = candidates.some((target) => appTabRoute(target).section !== "pull-requests" &&
           appTabPreparationQueries(client, target).some((options) => {
             const state = client.getQueryState(options.queryKey);
@@ -88,20 +100,23 @@ export function createPrTabPreparation(
         if (prDestination && prDestination !== href) continue;
         prDestination = href;
       }
-      if (!destinations.has(href) && destinations.size >= 3) continue;
-      destinations.add(href);
-      void prepareAppTabSurface(href)?.catch(() => {});
-      for (const options of appTabPreparationQueries(client, href)) {
-        if (budget <= 0) { priority.release(); return; }
+      if (!neighboring && !destinations.has(href) && destinations.size >= 3) continue;
+      if (!neighboring) destinations.add(href);
+      for (const options of optionsForDestination) {
+        if ((neighboring ? neighborBudget : budget) <= 0) break;
         const identity = JSON.stringify(options.queryKey);
         if (attempted.has(identity)) continue;
         const state = client.getQueryState(options.queryKey);
         if (state?.data !== undefined && !state.isInvalidated && state.status !== "error") continue;
+        if (neighboring && Date.now() - (neighborAttempts.get(identity) ?? -Infinity) < 30_000) continue;
         const detail = options.queryKey[0] === "pull-request";
         if (detail && detailAttempted) continue;
         if (detail) detailAttempted = true;
         attempted.add(identity);
-        budget--;
+        if (neighboring) {
+          neighborBudget--; neighborAttempts.set(identity, Date.now());
+          if (neighborAttempts.size > 64) neighborAttempts.delete(neighborAttempts.keys().next().value!);
+        } else budget--;
         // Set ownership before the cache emits the start of the request.
         preparing = options.queryKey;
         const key = preparing;
@@ -116,13 +131,13 @@ export function createPrTabPreparation(
         void pending.finally(() => {
           if (preparing === key) preparing = undefined;
           priority.finishRead(key);
-          if (!disposed && budget === 0) priority.release();
-          if (!disposed && budget && !cancel && !otherTransport()) cancel = schedule(prepare);
+          if (!disposed && budget === 0 && neighborBudget === 0) priority.release();
+          if (!disposed && (budget || neighborBudget) && !cancel && !otherTransport()) cancel = schedule(prepare);
         });
         return;
       }
     }
-    budget = 0;
+    budget = 0; neighborBudget = 0;
     priority.release();
   };
   const stop = client.getQueryCache().subscribe(() => {
@@ -136,7 +151,7 @@ export function createPrTabPreparation(
         void client.cancelQueries({ queryKey: key, exact: true });
       }
     }
-    if (budget && !cancel && !otherTransport()) cancel = schedule(prepare);
+    if ((budget || neighborBudget) && !cancel && !otherTransport()) cancel = schedule(prepare);
   });
   return {
     visit(href: string, hrefs: readonly string[]) {
@@ -148,10 +163,12 @@ export function createPrTabPreparation(
         if (JSON.stringify(target) !== JSON.stringify(preparing)) void client.cancelQueries({ queryKey: preparing, exact: true });
       }
       visits.push(href); if (visits.length > 32) visits.shift();
-      // At most three destinations and twelve sequential reads per navigation.
-      // Complete a board's prerequisites without flooding startup transport.
+      // Three open destinations/twelve reads plus one authorized neighboring
+      // project's seven normal reads. Every request still uses the shared slot.
       attempted.clear(); destinations.clear(); detailAttempted = false; prDestination = undefined; budget = 12;
-      const missingNavigation = hrefs.some((target) => target !== href && appTabRoute(target).section !== "pull-requests" &&
+      const neighbor = adjacentProjectDestination(client, active, visits, available);
+      neighborBudget = neighbor ? 7 : 0; neighborConsidered = !!neighbor;
+      const missingNavigation = [...hrefs, ...(neighbor ? [neighbor] : [])].some((target) => target !== href && appTabRoute(target).section !== "pull-requests" &&
         appTabPreparationQueries(client, target).some((options) => {
           const state = client.getQueryState(options.queryKey);
           return state?.data === undefined || state.isInvalidated || state.status === "error";
@@ -163,6 +180,7 @@ export function createPrTabPreparation(
     },
     dispose() {
       disposed = true; cancel?.(); stop();
+      neighborAttempts.clear();
       pagePreparation.dispose();
       priority.release();
       if (preparing) {

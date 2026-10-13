@@ -26,6 +26,39 @@ function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner
 }
 
 describe("application tab sessions", () => {
+  it("navigates a prepared project in the active tab and persists only after route observation", async () => {
+    const board = { ...createHomeTab("owner"), href: "/projects/first" };
+    const other = { ...createHomeTab("owner", undefined, 1), href: "/home" };
+    const { session, transport, navigate, rows } = setup([board, other]);
+    try {
+      await session.initialize(board.href);
+      expect(session.navigateInCurrentTab("/projects/second")).toBe(true);
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith("/projects/second"));
+      expect(session.getSnapshot().activeId).toBe(board.id);
+      expect(session.getActiveHref()).toBe("/projects/second");
+      expect(transport.patch).not.toHaveBeenCalled();
+      session.observe("/projects/second", null); session.onPageHide();
+      await vi.waitFor(() => expect(rows().find((tab) => tab.id === board.id)?.href).toBe("/projects/second"));
+      expect(rows().find((tab) => tab.id === other.id)).toEqual(other);
+      expect(transport.create).not.toHaveBeenCalled();
+    } finally { session.dispose(); }
+  });
+
+  it("does not leave an unsaved Page when a prepared navigation guard fails", async () => {
+    const { session, navigate } = setup();
+    try {
+      await session.initialize("/home");
+      let finish!: (saved: boolean) => void;
+      session.registerDeparture(() => new Promise((resolve) => { finish = resolve; }));
+      expect(session.navigateInCurrentTab("/projects/second")).toBe(true);
+      await vi.waitFor(() => expect(finish).toBeDefined());
+      expect(navigate).not.toHaveBeenCalled(); finish(false);
+      await vi.waitFor(() => expect(session.getSnapshot().error).toBe("save_failed"));
+      expect(session.getActiveHref()).toBe("/home");
+      expect(navigate).not.toHaveBeenCalled();
+      expect(session.navigateInCurrentTab("https://example.com")).toBe(false);
+    } finally { session.dispose(); }
+  });
   it.each([true, false])("keeps Home when entering desktop with an existing Home row: %s", async (hasHome) => {
     const board = { ...createHomeTab("owner"), href: "/all" };
     const home = createHomeTab("owner", undefined, 1);

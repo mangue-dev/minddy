@@ -365,6 +365,20 @@ export class AppTabsSession {
     void this.activate(tab.id);
     return true;
   };
+  /** Prepared same-tab navigation still saves editors and lets route observation persist the location. */
+  navigateInCurrentTab = (href: string): boolean => {
+    if (this.disposed || !this.snapshot.activeId || this.snapshot.recovering || !normalizeAppTabLocation(href)) return false;
+    void this.run(async () => {
+      if (!(await this.saveEditors())) return;
+      void this.flushLocation();
+      this.setTarget(href);
+      this.activeHref = href;
+      this.observedHref = null;
+      this.emit({});
+      this.navigate(href);
+    });
+    return true;
+  };
   create = (href: string = "/home") => {
     if (this.disposed) return Promise.resolve();
     const destination = normalizeAppTabLocation(href) ?? "/home";

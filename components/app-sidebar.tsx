@@ -63,6 +63,9 @@ import { useSecondarySidebar, sidebarPanelForRoute } from "@/lib/secondary-sideb
 import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { usePrefetchPages } from "@/lib/use-pages-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useOptionalAppTabSession } from "@/lib/app-tab-session-context";
+import { isPreparedAppTabDestination } from "@/lib/prefetch-tab-destination";
 import { SidebarPanelTransition } from "@/components/sidebar-panel-transition";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
@@ -385,6 +388,8 @@ export function ProjectContextRow({
   const tNav = useTranslations("Nav");
   const pathname = usePathname();
   const prefetchProject = usePrefetchProject();
+  const queryClient = useQueryClient();
+  const session = useOptionalAppTabSession();
   const homeActions = useNavigationContextActions(homeItem.href);
   const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
@@ -486,6 +491,11 @@ export function ProjectContextRow({
                 aria-current={current ? "page" : undefined}
                 onMouseEnter={() => prefetchProject(project.id)}
                 onFocus={() => prefetchProject(project.id)}
+                onNavigate={(event) => {
+                  if (!session || !(isPreparedAppTabDestination(queryClient, href) ||
+                    session.isRetainedDestination(session.getSnapshot().activeId, href))) return;
+                  if (session.reuseDestination(href) || session.navigateInCurrentTab(href)) event.preventDefault();
+                }}
               >
                 <ProjectOrb
                   seed={projectOrbSeed(project)}
