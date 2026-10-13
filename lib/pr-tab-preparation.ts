@@ -66,6 +66,8 @@ export function createPrTabPreparation(
     const candidates = [...new Set([...visits, ...available])].filter((href) => href !== active && available.includes(href) && (appTabPreparationQuery(client, href) || appTabRoute(href).section === "home"))
       .sort((a, b) => ((counts.get(b) ?? 0) * 32 + visits.lastIndexOf(b)) - ((counts.get(a) ?? 0) * 32 + visits.lastIndexOf(a)) ||
         Number(appTabRoute(a).section === "pull-requests") - Number(appTabRoute(b).section === "pull-requests"));
+    const firstPage = candidates.find((href) => appTabRoute(href).pageId);
+    if (firstPage) pagePreparation.prioritize(firstPage);
     for (const href of candidates) {
       const route = appTabRoute(href);
       if (route.section === "pull-requests") {

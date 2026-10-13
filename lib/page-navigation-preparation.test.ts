@@ -44,6 +44,50 @@ it("prepares only one adjacent body and renews a bounded small-document working 
   } finally { view.close(); }
 });
 
+it("keeps the ranked prepared destination ready despite older open Page tabs", async () => {
+  const view = setup(["a", "c"]);
+  try {
+    view.preparation.visit("/home", ["/home", href("c"), href("a"), href("unknown-old-tab")]);
+    view.preparation.prioritize(href("c"));
+    await vi.advanceTimersByTimeAsync(25_000);
+    const reads = view.fetch.mock.calls.map(([url]) => String(url).split("/").at(-1));
+    expect(reads).toContain("c");
+    expect(reads).toContain("d");
+    expect(reads).not.toContain("b");
+    expect(reads).not.toContain("unknown-old-tab");
+    expect(isPreparedPageData("c", view.client.getQueryState(pageKey("c"))!.dataUpdatedAt)).toBe(true);
+    expect(new Set(reads).size).toBeLessThanOrEqual(3);
+  } finally { view.close(); }
+});
+
+it("does not postpone a due renewal after unrelated cache notifications", async () => {
+  const view = setup();
+  try {
+    document.body.innerHTML = '<div data-page-surface-id="b"></div>';
+    for (let index = 0; index < 100; index++) {
+      view.client.setQueryData(["unrelated", "local-state"], index);
+      await vi.advanceTimersByTimeAsync(100);
+    }
+    expect(view.fetch.mock.calls.some(([url]) => String(url).endsWith("/a"))).toBe(true);
+    expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(true);
+  } finally { view.close(); }
+});
+
+it("does not scan document DOM for unrelated observer and local cache notifications", async () => {
+  const view = setup();
+  const scans = vi.spyOn(document, "querySelectorAll");
+  try {
+    scans.mockClear();
+    for (let index = 0; index < 100; index++) {
+      view.client.setQueryData(["unrelated", index], index);
+      const observer = new QueryObserver(view.client, { queryKey: ["unrelated", index], enabled: false });
+      const stop = observer.subscribe(() => {}); stop();
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(scans.mock.calls.filter(([selector]) => selector === "[data-page-surface-id]").length).toBeLessThan(20);
+  } finally { scans.mockRestore(); view.close(); }
+});
+
 it("stops renewal for validated retained surfaces and never repeats a large adjacent body", async () => {
   const view = setup();
   view.fetch.mockImplementation(async (url) => Response.json({ ...body(String(url).split("/").at(-1)!), content: { type: "doc", content: [{ type: "image" }] } }));
