@@ -8,8 +8,8 @@ import type { FetchQueryOptions, QueryClient } from "@tanstack/react-query";
 import { appTabRoute } from "./app-tab-location";
 import { prefetchPageNavigation } from "./use-pages-query";
 import { prefetchProjectQueries, projectPreparationQueries } from "./use-prefetch-project";
-import { routinesQueryKey } from "./use-routines-query";
-import { fetchRoutinesApi } from "./routines-api";
+import { routinesQueryKey, routineRunsQueryKey } from "./use-routines-query";
+import { fetchRoutinesApi, fetchRoutineRunsApi } from "./routines-api";
 import { agentModelsQueryKey, fetchAgentModels } from "./use-agent-models-query";
 import {
   PULL_REQUESTS_PAGE,
@@ -22,6 +22,7 @@ import { fetchViewsApi } from "./views-api";
 import { fetchStatsApi } from "./stats-api";
 import { statsTimeZone } from "./use-stats-query";
 import { myInvitationsQueryOptions } from "./invitations-api";
+import { retainedAppViewKind } from "./retained-app-views";
 
 const pullRequestWarmups = new WeakMap<QueryClient, Promise<void>>();
 
@@ -75,6 +76,10 @@ export function prefetchAppTabDestination(
   }
   if (route.projectId && route.section === "feedback") {
     void queryClient.prefetchQuery(feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href)));
+    return;
+  }
+  if (route.projectId && route.section === "objectives") {
+    for (const options of appTabPreparationQueries(queryClient, href)) void queryClient.prefetchQuery(options);
     return;
   }
   if (route.projectId && route.section !== "tickets" && route.section !== "triage") return;
@@ -137,6 +142,8 @@ export function prefetchAppTabDestination(
 export function appTabPreparationQuery(client: QueryClient, href: string) {
   const route = appTabRoute(href);
   if (route.section === "home") return myInvitationsQueryOptions;
+  if (route.section === "routines") return { queryKey: routinesQueryKey(), queryFn: fetchRoutinesApi };
+  if (route.projectId && route.section === "objectives") return projectPreparationQueries(client, route.projectId).find((option) => option.queryKey[0] === "objectives")!;
   if (route.prId && route.section === "pull-requests") return pullRequestQueryOptions(route.prId);
   if (route.section === "pull-requests") return allPullRequestsQueryOptions();
   if (route.projectId && route.section === "pages") {
@@ -153,12 +160,25 @@ export function appTabPreparationQuery(client: QueryClient, href: string) {
 export function appTabPreparationQueries(client: QueryClient, href: string): FetchQueryOptions<unknown>[] {
   const route = appTabRoute(href);
   if (route.projectId && ["tickets", "triage"].includes(route.section)) return projectPreparationQueries(client, route.projectId);
+  if (route.projectId && route.section === "objectives") {
+    return projectPreparationQueries(client, route.projectId).filter((option) => ["objectives", "issues", "members"].includes(String(option.queryKey[0])));
+  }
+  if (route.projectId && route.section === "feedback") {
+    return [feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href)),
+      ...projectPreparationQueries(client, route.projectId).filter((option) => ["issues", "issue-relations", "members", "categories", "objectives"].includes(String(option.queryKey[0])))];
+  }
+  if (route.section === "routines") {
+    return [{ queryKey: routinesQueryKey(), queryFn: fetchRoutinesApi },
+      { queryKey: agentModelsQueryKey, queryFn: () => fetchAgentModels("user", "text") },
+      ...(route.routineId ? [{ queryKey: routineRunsQueryKey(route.routineId), queryFn: () => fetchRoutineRunsApi(route.routineId!) }] : [])];
+  }
   const primary = appTabPreparationQuery(client, href);
   if (!primary) return [];
   const options: FetchQueryOptions<unknown>[] = [{ queryKey: primary.queryKey, queryFn: primary.queryFn }];
   if (route.prId && route.section === "pull-requests") options.push(allPullRequestsQueryOptions("open", PULL_REQUESTS_PAGE, { pr: route.prId }));
   if (route.projectId && route.section === "pages" && route.pageId) {
-    options.push({ queryKey: pagesKey(route.projectId), queryFn: ({ signal }) => fetchPagesApi(route.projectId!, signal) });
+    options.push({ queryKey: pagesKey(route.projectId), queryFn: ({ signal }) => fetchPagesApi(route.projectId!, signal) },
+      ...projectPreparationQueries(client, route.projectId).filter((option) => ["issues", "members", "objectives"].includes(String(option.queryKey[0]))));
   }
   if (route.section === "all") {
     options.push({ queryKey: ["views", "global"], queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal) });
@@ -171,7 +191,11 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
 export function isPreparedAppTabDestination(client: QueryClient, href: string): boolean {
   if (!isAppTabSurfaceReady(href)) return false;
   if (appTabRoute(href).section === "home") return true;
-  const options = appTabPreparationQuery(client, href);
-  const state = options && client.getQueryState(options.queryKey);
-  return !!state && state.data !== undefined && state.status !== "error" && !state.isInvalidated;
+  // Code-only warming cannot bypass the router for surfaces the host cannot render.
+  if (!retainedAppViewKind(href.split(/[?#]/)[0])) return false;
+  const options = appTabPreparationQueries(client, href);
+  return options.length > 0 && options.every((option) => {
+    const state = client.getQueryState(option.queryKey);
+    return !!state && state.data !== undefined && state.status !== "error" && !state.isInvalidated;
+  });
 }

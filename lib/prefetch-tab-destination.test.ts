@@ -1,8 +1,10 @@
 import { feedbackQueryOptions } from "./feedback-query";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { prefetchAppTabDestination } from "./prefetch-tab-destination";
+import { prefetchAppTabDestination, appTabPreparationQueries, isPreparedAppTabDestination } from "./prefetch-tab-destination";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+
+vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
@@ -27,6 +29,32 @@ afterEach(() => {
 const requested = () => fetchMock.mock.calls.map(([url]) => String(url).split("?")[0]);
 
 describe("tab destination prefetch", () => {
+  it("includes complete routines, objective and feedback prerequisites through shared consumer keys", () => {
+    expect(appTabPreparationQueries(client, "/projects/p/pages/document").map((option) => option.queryKey)).toEqual([
+      ["page", "document"], ["pages", "p"], ["issues", "p"], ["members", "p"], ["objectives", "p"],
+    ]);
+    expect(appTabPreparationQueries(client, "/routines?routine=one").map((option) => option.queryKey)).toEqual([
+      ["routines"], ["agent-models"], ["routines", "one", "runs"],
+    ]);
+    expect(appTabPreparationQueries(client, "/projects/p/objectives").map((option) => option.queryKey)).toEqual([
+      ["issues", "p"], ["members", "p"], ["objectives", "p"],
+    ]);
+    expect(appTabPreparationQueries(client, "/projects/p/feedback").map((option) => option.queryKey)).toEqual([
+      feedbackQueryOptions("p").queryKey, ["issues", "p"], ["categories", "p"], ["members", "p"], ["objectives", "p"], ["issue-relations", "p"],
+    ]);
+  });
+
+  it("requires complete prerequisites for local navigation and keeps code-only surfaces on the router", () => {
+    client.setQueryData(["issues", "p"], []);
+    expect(isPreparedAppTabDestination(client, "/projects/p")).toBe(false);
+    for (const options of appTabPreparationQueries(client, "/projects/p")) client.setQueryData(options.queryKey, []);
+    expect(isPreparedAppTabDestination(client, "/projects/p")).toBe(true);
+    for (const href of ["/routines", "/projects/p/objectives"]) {
+      for (const options of appTabPreparationQueries(client, href)) client.setQueryData(options.queryKey, []);
+      expect(isPreparedAppTabDestination(client, href)).toBe(false);
+    }
+  });
+
   it("prepares Pages and Feedback through their actual consumer keys without board reads", async () => {
     fetchMock.mockImplementation(async () => response({ posts: [], board_enabled: false }));
     prefetchAppTabDestination(client, "/projects/p/pages", new Set());

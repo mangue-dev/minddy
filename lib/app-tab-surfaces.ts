@@ -18,9 +18,21 @@ let preparedPrDetail: PullRequestDetailSurface | undefined;
 export function preparedPullRequestDetailSurface(): PullRequestDetailSurface | undefined {
   return preparedPrDetail;
 }
-const surfaceKind = (href: string) => href.split(/[?#]/)[0] === "/home" ? "home" : retainedAppViewKind(href.split(/[?#]/)[0]);
-const ready = new Set<RetainedAppView["kind"]>();
-const pending = new Map<RetainedAppView["kind"], Promise<unknown>>();
+// These routes still require a normal router commit; only their public code is warmed.
+export const codeOnlyAppTabSurfaceLoaders = {
+  routines: () => import("@/app/(app)/routines/page"),
+  objectives: () => import("@/app/(app)/projects/[id]/objectives/page"),
+};
+type SurfaceKind = RetainedAppView["kind"] | keyof typeof codeOnlyAppTabSurfaceLoaders;
+const surfaceKind = (href: string): SurfaceKind | null => {
+  const pathname = href.split(/[?#]/)[0];
+  if (pathname === "/home") return "home";
+  if (pathname === "/routines") return "routines";
+  if (/^\/projects\/[^/]+\/objectives$/.test(pathname)) return "objectives";
+  return retainedAppViewKind(pathname);
+};
+const ready = new Set<SurfaceKind>();
+const pending = new Map<SurfaceKind, Promise<unknown>>();
 const preparedBoards = new Map<"global-board" | "project-board", ComponentType>();
 export function preparedBoardSurface(kind: RetainedAppView["kind"]): ComponentType | undefined {
   return kind === "global-board" || kind === "project-board" ? preparedBoards.get(kind) : undefined;
@@ -30,7 +42,7 @@ export function prepareAppTabSurface(href: string): Promise<unknown> | undefined
   if (!kind) return;
   let operation = pending.get(kind);
   if (!operation) {
-    operation = Promise.all([appTabSurfaceLoaders[kind](), ...(kind === "pull-requests" ? [loadPullRequestDetailSurface()] : [])])
+    operation = Promise.all([(kind === "routines" || kind === "objectives" ? codeOnlyAppTabSurfaceLoaders[kind]() : appTabSurfaceLoaders[kind]()), ...(kind === "pull-requests" ? [loadPullRequestDetailSurface()] : [])])
       .then(([module, detail]) => {
         if (kind === "global-board") preparedBoards.set(kind, (module as Awaited<ReturnType<typeof appTabSurfaceLoaders["global-board"]>>).GlobalBoard);
         if (kind === "project-board") preparedBoards.set(kind, (module as Awaited<ReturnType<typeof appTabSurfaceLoaders["project-board"]>>).default);
