@@ -1,5 +1,5 @@
 /** Small columns keep natural flow; large ones retain only their visible rows. */
-export const BOARD_WINDOW_THRESHOLD = 40;
+export const BOARD_WINDOW_THRESHOLD = 16;
 export const BOARD_WINDOW_OVERSCAN = 5;
 export const BOARD_ROW_GAP = 8;
 export const BOARD_ROW_ESTIMATE = 220;

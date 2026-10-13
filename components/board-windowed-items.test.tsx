@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BoardWindowedItems } from "./board-windowed-items";
 import { boardRowHeight } from "@/lib/board-windowing";
+import type { BoardLandingPreview } from "./board-drop-indicator";
 
 const drag = vi.hoisted(() => ({ active: null as { id: string } | null }));
 vi.mock("@dnd-kit/core", () => ({ useDndContext: () => drag }));
@@ -33,7 +34,8 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function(this: HTMLElement) {
     if (this.dataset.boardColumnScroller !== undefined) return 500;
     if (this.style.height === "0px") return 0;
-    return (this.dataset.boardRowId === "0" ? 900 : 100) + (Number.parseFloat(this.style.paddingBottom) || 0);
+    const placeholder = this.querySelector<HTMLElement>(":scope > [data-board-drop-placeholder]");
+    return (placeholder ? Number.parseFloat(placeholder.style.height) : this.dataset.boardRowId === "0" ? 900 : 100) + (Number.parseFloat(this.style.paddingBottom) || 0);
   });
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(320);
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) {
@@ -70,8 +72,8 @@ async function setup(count = 100) {
   column.tabIndex = -1; column.append(host); document.body.append(column);
   const root = createRoot(host), scrollerRef = { current: column };
   const issues = Array.from({ length: count }, (_, id) => ({ id: String(id) }));
-  const render = (active = true, items = issues) => root.render(<Activity mode={active ? "visible" : "hidden"}>
-    <BoardWindowedItems issues={items} status="todo" scrollerRef={scrollerRef}
+  const render = (active = true, items = issues, landingPreview?: BoardLandingPreview) => root.render(<Activity mode={active ? "visible" : "hidden"}>
+    <BoardWindowedItems issues={items} status="todo" scrollerRef={scrollerRef} landingPreview={landingPreview}
       renderIssue={(issue, changed) => <Card id={issue.id} onInteractionChange={changed} />} />
   </Activity>);
   await act(() => render());
@@ -82,6 +84,44 @@ async function setup(count = 100) {
 }
 
 describe("measured board windows", () => {
+  it("windows ordinary project columns and preserves an open draft across the natural-flow boundary", async () => {
+    const board = await setup(20);
+    try {
+      expect(board.host.querySelector("[data-board-windowed]")).not.toBeNull();
+      expect(board.host.querySelectorAll("article").length).toBeLessThan(20);
+      const card = board.host.querySelector('[data-issue-id="0"]')!;
+      await act(() => (card.querySelector("button") as HTMLElement).click());
+      const input = card.querySelector("input")!; input.value = "Unsent project draft";
+      await act(() => board.render(true, board.issues.slice(0, 16)));
+      expect(board.host.querySelector("[data-board-windowed]")).toBeNull();
+      expect(board.host.querySelectorAll("article")).toHaveLength(16);
+      expect(board.host.querySelector('[data-issue-id="0"] input')).toBe(input);
+      await act(() => board.render()); await act(() => GeometryObserver.resize());
+      expect(board.host.querySelector("[data-board-windowed]")).not.toBeNull();
+      expect(board.host.querySelector('[data-issue-id="0"] input')).toBe(input);
+      expect(input.value).toBe("Unsent project draft");
+      expect(boardRowHeight(board.column, "0")).toBe(900);
+    } finally { await board.close(); }
+  });
+  it("reserves one complete landing bundle and pins distant zero-volume source rows", async () => {
+    const board = await setup(20);
+    try {
+      const landing: BoardLandingPreview = { status: "todo", count: 2, beforeIssueId: "1", activeIds: new Set(["0", "19"]), height: 420 };
+      await act(() => board.render(true, board.issues, landing));
+      await act(() => GeometryObserver.resize());
+      expect(board.host.querySelectorAll("[data-board-drop-placeholder]")).toHaveLength(1);
+      expect((board.host.querySelector("[data-board-drop-placeholder]") as HTMLElement).style.height).toBe("420px");
+      for (const id of landing.activeIds) {
+        const row = board.host.querySelector<HTMLElement>(`[data-board-row-id="${id}"]`)!;
+        expect(row.style.height).toBe("0px"); expect(row.style.position).toBe("absolute");
+      }
+      await board.scroll(1800);
+      expect(board.host.querySelectorAll("[data-board-drop-placeholder]")).toHaveLength(1);
+      expect(board.host.querySelector('[data-board-row-id="0"]')).not.toBeNull();
+      await act(() => board.render());
+      expect(board.host.querySelector("[data-board-drop-placeholder]")).toBeNull();
+    } finally { await board.close(); }
+  });
   it("measures oversized rows and preserves an open dialog draft outside the visible range", async () => {
     const board = await setup();
     try {
