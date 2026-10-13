@@ -186,4 +186,36 @@ describe("complete authenticated global board issues", () => {
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "databaseError" });
   });
+
+  it.each([1000, 250])("returns all 1206 canonical issue rows from the resume route under cap %i", async (cap) => {
+    const f = fixture(sources(1206), { cap }); state.client = f.client;
+    const { GET } = await import("@/app/api/me/issues/route");
+    const response = await GET(new Request("https://example.test/api/me/issues") as never);
+    expect(response.status).toBe(200);
+    const result = await response.json();
+    expect(result).toHaveLength(1206);
+    expect(new Set(result.map((row: Row) => row.id))).toEqual(new Set(sources(1206).map((row) => row.id)));
+    expect(result[0]).toMatchObject({ category_ids: ["category"] });
+    expect(result[0]).not.toHaveProperty("issue_categories");
+    expect(f.issueCalls()).toHaveLength(Math.ceil(1206 / cap));
+  });
+
+  it("returns a localized failure from the resume route when a later batch fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    state.client = fixture(sources(1206), { failAt: 2 }).client;
+    const { GET } = await import("@/app/api/me/issues/route");
+    const response = await GET(new Request("https://example.test/api/me/issues") as never);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "databaseError" });
+  });
+
+  it("does not return earlier resume rows when a later protected issue is corrupt", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const encrypted = await encodeIssue(issue(2));
+    state.client = fixture([issue(1), { ...encrypted, id: id(2), encrypted_content: "Broken protected content" }], { cap: 1 }).client;
+    const { GET } = await import("@/app/api/me/issues/route");
+    const response = await GET(new Request("https://example.test/api/me/issues") as never);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "databaseError" });
+  });
 });
