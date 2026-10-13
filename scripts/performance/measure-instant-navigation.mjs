@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { chromium, _electron, request } from "playwright";
 import { createServerClient } from "@supabase/ssr";
@@ -11,6 +12,7 @@ import { measureDeepNavigation } from "./measure-deep-navigation.mjs";
 import { verifyBoardWindowing } from "./verify-board-windowing.mjs";
 import { boardReady, revealBoardIssue } from "./board-readiness.mjs";
 import { forgeLinkFingerprint, loadConnectedBoardWorkload, loadForgeWorkload, measureForgeNavigation } from "./measure-forge-navigation.mjs";
+import { stableManifestPath } from "./stable-restored-tabs.mjs";
 
 // Real authorized reads against the existing encrypted fixture. No reseeding,
 // personal profile, content mutation, generated API response or paid workflow.
@@ -60,7 +62,7 @@ assert.ok([deep, secondary, forge].filter(Boolean).length <= 1, "Choose one jour
 const forgeWorkload = connected ? await loadForgeWorkload(api) : null;
 const connectedBoard = connected && !forge ? await loadConnectedBoardWorkload(api, fixture) : null;
 const globalCards = connectedBoard?.cards ?? 600;
-const tabs = forge ? [
+let tabs = forge ? [
   { id: id("min683-forge-home"), custom_name: "MIN-683 forge Home", href: "/home", home: true },
   { id: id("min683-forge-prs"), custom_name: "MIN-683 real PRs", href: `/pull-requests?pr=${forgeWorkload.prs[0].prId}` },
 ] : secondary ? [
@@ -73,6 +75,18 @@ const tabs = forge ? [
   { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: 100 },
   { id: id("min683-tab-page"), custom_name: "MIN-683 Page", href: `/projects/${project}/pages/${deep ? id("page-0-10") : fixture.firstPage}` },
 ];
+// Once established, the account's stable selection is reused by every matrix.
+// These runners never add temporary tabs to that selection.
+const stable = existsSync(stableManifestPath) ? JSON.parse(await readFile(stableManifestPath, "utf8")) : null;
+if (stable) {
+  assert.equal(stable.userId, fixture.userId);
+  assert.equal(stable.email, EMAIL);
+  tabs = tabs.map((spec) => {
+    const destination = stable.specs.find((tab) => tab.kind === (spec.home ? "home" : spec.cards ? spec.href === "/all" ? "all" : "board" : spec.prs || spec.href.startsWith("/pull-requests") ? "pr" : "page"));
+    assert.ok(destination, `Missing stable destination for ${spec.href}`);
+    return { ...spec, ...(destination.kind === "page" ? { href: destination.href } : {}), id: destination.id, custom_name: destination.custom_name };
+  });
+}
 const tabFields = ({ id, user_id, href, custom_name, pinned, position }) => ({ id, user_id, href, custom_name, pinned, position });
 async function listTabs() {
   const values = await api("/api/me/app-tabs");
@@ -120,16 +134,23 @@ try {
       preservedPages.push({ href, content: value.content, version: value.version });
     }
   }
-  preserved = (await listTabs()).filter((tab) => !tabs.some((spec) => spec.id === tab.id)).map(tabFields);
+  const initialTabs = await listTabs();
+  if (stable) {
+    assert.equal(initialTabs.length, stable.specs.length, "The stable fixture must not accumulate tabs");
+    assert.ok(initialTabs.every((tab) => stable.specs.some((spec) => spec.id === tab.id && spec.custom_name === tab.custom_name)));
+  }
+  preserved = initialTabs.filter((tab) => stable || !tabs.some((spec) => spec.id === tab.id)).map(tabFields);
   results.preexistingTabInventory = preserved.reduce((counts, tab) => {
     const section = tab.href.split("?")[0].split("/")[1] || "home";
     counts[section] = (counts[section] ?? 0) + 1;
     return counts;
   }, {});
   for (const spec of tabs) {
-    await removeTab(spec);
-    await api("/api/me/app-tabs", "POST", { id: spec.id });
-    created.push(spec);
+    if (!stable) {
+      await removeTab(spec);
+      await api("/api/me/app-tabs", "POST", { id: spec.id });
+      created.push(spec);
+    }
     const tab = (await listTabs()).find((tab) => tab.id === spec.id);
     await api(`/api/me/app-tabs/${spec.id}`, "PATCH", { revision: tab.revision, patch: { href: spec.href, custom_name: spec.custom_name, pinned: true } });
   }
@@ -573,6 +594,18 @@ try {
     catch (error) { results.cleanup.push({ tab: spec.custom_name, removed: false, error: String(error.message) }); failure ??= error; }
   }
   if (preserved) {
+    if (stable) {
+      try {
+        for (const original of preserved) {
+          const current = (await listTabs()).find((tab) => tab.id === original.id);
+          assert.ok(current, "A stable tab was removed");
+          assert.equal(current.user_id, fixture.userId);
+          if (current.href !== original.href || current.custom_name !== original.custom_name || current.pinned !== original.pinned || current.position !== original.position)
+            await api(`/api/me/app-tabs/${original.id}`, "PATCH", { revision: current.revision,
+              patch: { href: original.href, custom_name: original.custom_name, pinned: original.pinned, position: original.position } });
+        }
+      } catch (error) { results.cleanup.push({ stableTabDestinationsRestored: false }); failure ??= error; }
+    }
     try { const remaining = (await listTabs()).map(tabFields); assert.deepEqual(remaining, preserved); results.cleanup.push({ preexistingTabsPreserved: true }); }
     catch (error) { results.cleanup.push({ preexistingTabsPreserved: false }); failure ??= error; }
   }
