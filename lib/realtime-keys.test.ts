@@ -132,6 +132,12 @@ describe("keysForProjectEvent — pages", () => {
       )
     ).toBe(true);
   });
+
+  it("catches up document bodies after a missed broadcast without treating the tree as their contents", () => {
+    expect(projectScopeKeys(PROJECT)).toContainEqual(["pages", PROJECT]);
+    expect(projectScopeKeys(PROJECT)).toContainEqual(["page"]);
+    expect(projectScopeKeys(PROJECT)).not.toContainEqual(["page", PROJECT]);
+  });
 });
 
 /* ── The safeguard: no distributed table must remain silent ─────────────

@@ -560,6 +560,9 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   // window remained open on the Pages tab during a shutdown does not ask again
   // NOTHING about herself. It is this catch-up that puts the tree back into phase.
   ["pages", projectId],
+  // A newer tree cannot restore a missed document body. Page IDs are account
+  // query keys, so catch-up refetches active bodies and invalidates inactive ones.
+  ["page"],
   // The activity of a page (MIN-278), prefixed like ticket events:
   // a panel left open during an outage must make up for the gestures it
   // n'a pas vus passer.
