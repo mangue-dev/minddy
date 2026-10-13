@@ -206,7 +206,15 @@ export class AppTabsSession {
       const remembered = restoredTab && (!explicit || restoredHref === normalized || reloaded || loadWins)
         ? restoredTab
         : null;
-      const matched = explicit ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? null : null;
+      const exact = explicit ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? null : null;
+      // A refresh can precede sealing the active-window snapshot. Surfaces
+      // publish richer selections than their bare URL, so a unique server row
+      // is enough to recover identity without creating another tab. Explicit
+      // selections, ambiguous rows and account-switch entry keep their rules.
+      const richer = explicit && !keepCurrentRoute && !normalized.includes("?") && !normalized.includes("#")
+        ? this.snapshot.tabs.filter((tab) => reopensRemembered(normalized, tab.href)) : [];
+      const recovered = !remembered && !exact && richer.length === 1 ? richer[0] : null;
+      const matched = exact ?? recovered;
       if (explicit && !remembered && !matched && (keepCurrentRoute || normalized !== "/home")) {
         // No row displays the load address: give it its own row. The document
         // is already there, so nothing navigates — the row joins the account
@@ -227,7 +235,9 @@ export class AppTabsSession {
       const chosen = (remembered ?? matched) ?? this.snapshot.tabs[0];
       if (!chosen || this.disposed) return;
       const destination = explicit
-        ? reloaded
+        ? recovered
+          ? recovered.href
+          : reloaded
           ? loadWins ? normalized : restoredHref ?? normalized
           : normalized
         : restoredTab && restoredTab.id === chosen.id
@@ -237,7 +247,7 @@ export class AppTabsSession {
       this.activeHref = destination;
       this.observedHref = destination;
       this.remember(chosen.id, destination);
-      if (destination !== href && (!explicit || reloaded)) { this.setTarget(destination); this.navigate(destination); }
+      if (destination !== href && (!explicit || reloaded || recovered)) { this.setTarget(destination); this.navigate(destination); }
       else if (destination !== chosen.href) { this.locations.set(chosen.id, destination); await this.flushLocation(); }
     });
   }

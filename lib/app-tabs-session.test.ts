@@ -26,6 +26,43 @@ function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner
 }
 
 describe("application tab sessions", () => {
+  it("recovers a unique published view when refresh precedes the active-window snapshot", async () => {
+    const board = { ...createHomeTab("owner"), href: "/all?view=saved" };
+    const home = createHomeTab("owner", undefined, 1);
+    const { session, transport, navigate, rows } = setup([board, home]);
+    try {
+      await session.initialize("/all");
+      expect(session.getSnapshot().activeId).toBe(board.id);
+      expect(session.getActiveHref()).toBe(board.href);
+      expect(navigate).toHaveBeenCalledWith(board.href);
+      expect(transport.create).not.toHaveBeenCalled();
+      expect(transport.patch).not.toHaveBeenCalled();
+      expect(rows()).toEqual([board, home]);
+    } finally { session.dispose(); }
+  });
+
+  it.each(["/all?view=other", "/all?objective=other"])("preserves an explicit selection instead of recovering a published view: %s", async (href) => {
+    const board = { ...createHomeTab("owner"), href: "/all?view=saved" };
+    const { session, transport, rows } = setup([board]);
+    try {
+      await session.initialize(href);
+      await vi.waitFor(() => expect(transport.create).toHaveBeenCalledOnce());
+      expect(session.getActiveHref()).toBe(href);
+      expect(rows().find((tab) => tab.id === board.id)).toEqual(board);
+    } finally { session.dispose(); }
+  });
+
+  it("does not guess between two published views without remembered identity", async () => {
+    const boards = ["first", "second"].map((view, index) => ({ ...createHomeTab("owner", undefined, index), href: `/all?view=${view}` }));
+    const { session, transport, rows } = setup(boards);
+    try {
+      await session.initialize("/all");
+      await vi.waitFor(() => expect(transport.create).toHaveBeenCalledOnce());
+      expect(session.getActiveHref()).toBe("/all");
+      expect(rows().filter((tab) => boards.some((board) => board.id === tab.id))).toEqual(boards);
+    } finally { session.dispose(); }
+  });
+
   it("navigates a prepared project in the active tab and persists only after route observation", async () => {
     const board = { ...createHomeTab("owner"), href: "/projects/first" };
     const other = { ...createHomeTab("owner", undefined, 1), href: "/home" };
