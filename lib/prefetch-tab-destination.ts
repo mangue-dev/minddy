@@ -191,7 +191,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
 export function isPreparedAppTabDestination(client: QueryClient, href: string): boolean {
   if (!isAppTabSurfaceReady(href)) return false;
   if (appTabRoute(href).section === "home") return true;
-  // Code-only warming cannot bypass the router for surfaces the host cannot render.
+  // Only surfaces owned by the bounded host may bypass a server route commit.
   if (!retainedAppViewKind(href.split(/[?#]/)[0])) return false;
   const options = appTabPreparationQueries(client, href);
   return options.length > 0 && options.every((option) => {

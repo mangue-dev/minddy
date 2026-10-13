@@ -4,17 +4,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 afterEach(() => vi.resetModules());
 
 describe("public tab surface preparation", () => {
-  it("warms routines and objectives without adding retained route kinds", async () => {
+  it("prepares the complete retained routines and objectives route components", async () => {
     const surfaces = await import("./app-tab-surfaces");
     const { retainedAppViewKind } = await import("./retained-app-views");
-    const routines = vi.spyOn(surfaces.codeOnlyAppTabSurfaceLoaders, "routines").mockResolvedValue({} as never);
-    const objectives = vi.spyOn(surfaces.codeOnlyAppTabSurfaceLoaders, "objectives").mockResolvedValue({} as never);
+    const routines = vi.spyOn(surfaces.appTabSurfaceLoaders, "routines").mockResolvedValue({ default: () => null } as never);
+    const objectives = vi.spyOn(surfaces.appTabSurfaceLoaders, "objectives").mockResolvedValue({ default: () => null } as never);
     await Promise.all([surfaces.prepareAppTabSurface("/routines"), surfaces.prepareAppTabSurface("/projects/p/objectives")]);
     expect(routines).toHaveBeenCalledOnce(); expect(objectives).toHaveBeenCalledOnce();
     expect(surfaces.isAppTabSurfaceReady("/routines")).toBe(true);
     expect(surfaces.isAppTabSurfaceReady("/projects/p/objectives")).toBe(true);
-    expect(retainedAppViewKind("/routines")).toBeNull();
-    expect(retainedAppViewKind("/projects/p/objectives")).toBeNull();
+    expect(retainedAppViewKind("/routines")).toBe("routines");
+    expect(surfaces.preparedCollectionSurface("routines")).toBe((await surfaces.appTabSurfaceLoaders.routines()).default);
+    expect(retainedAppViewKind("/projects/p/objectives")).toBe("objectives");
+    expect(surfaces.preparedCollectionSurface("objectives")).toBe((await surfaces.appTabSurfaceLoaders.objectives()).default);
   });
 
   it("shares the same public bundle across tabs and retries a rejected import", async () => {

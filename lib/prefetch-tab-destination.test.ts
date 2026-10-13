@@ -44,14 +44,14 @@ describe("tab destination prefetch", () => {
     ]);
   });
 
-  it("requires complete prerequisites for local navigation and keeps code-only surfaces on the router", () => {
+  it("requires every shared prerequisite before allowing retained local navigation", () => {
     client.setQueryData(["issues", "p"], []);
     expect(isPreparedAppTabDestination(client, "/projects/p")).toBe(false);
     for (const options of appTabPreparationQueries(client, "/projects/p")) client.setQueryData(options.queryKey, []);
     expect(isPreparedAppTabDestination(client, "/projects/p")).toBe(true);
     for (const href of ["/routines", "/projects/p/objectives"]) {
       for (const options of appTabPreparationQueries(client, href)) client.setQueryData(options.queryKey, []);
-      expect(isPreparedAppTabDestination(client, href)).toBe(false);
+      expect(isPreparedAppTabDestination(client, href)).toBe(true);
     }
   });
 

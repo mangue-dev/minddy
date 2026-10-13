@@ -80,6 +80,36 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it.each(["/routines", "/projects/p/objectives"])("mounts the prepared route for %s and preserves its draft while hidden", async (path) => {
+    const prepared = vi.spyOn(surfaces, "preparedCollectionSurface").mockReturnValue(PreparedBoard);
+    state.tabs = [{ id: "collection", href: path }, { id: "other", href: "/settings" }];
+    Object.assign(state, { path, activeId: "collection", activeHref: path });
+    await render();
+    const input = container.querySelector('[data-prepared-board] input') as HTMLInputElement;
+    expect(input).not.toBeNull(); input.value = "Unsent collection draft";
+    prepared.mockReturnValue(undefined);
+    Object.assign(state, { path: "/settings", activeId: "other", activeHref: "/settings" }); await render();
+    expect(liveEffects).toBe(0);
+    Object.assign(state, { path, activeId: "collection", activeHref: path }); await render();
+    expect(container.querySelector('[data-prepared-board] input')).toBe(input);
+    expect(input.value).toBe("Unsent collection draft"); expect(liveEffects).toBe(1);
+  });
+
+  it("isolates routine selections and objective project scopes without expanding the shared host budget", async () => {
+    state.tabs = Array.from({ length: 8 }, (_, index) => ({ id: `collection-${index}` }));
+    const routes = ["/routines", "/projects/p/objectives", "/projects/q/objectives", "/projects/p/feedback", "/projects/p/triage", "/projects/p/pages/a", "/projects/r/objectives", "/routines"];
+    for (let index = 0; index < routes.length; index++) {
+      Object.assign(state, { path: routes[index], search: index === 0 ? "routine=first" : index === 7 ? "routine=second" : "", activeId: `collection-${index}` });
+      state.activeHref = state.path + (state.search ? `?${state.search}` : ""); await render();
+      expect(container.querySelector('[data-app-view-active="true"] [data-board-path]')?.getAttribute("data-board-path")).toBe(routes[index]);
+      expect(container.querySelectorAll('[data-retained-app-view]').length).toBeLessThanOrEqual(6);
+      expect(liveEffects).toBe(1);
+    }
+    expect(container.querySelector('[data-app-view-active="true"] [data-board-search]')?.getAttribute("data-board-search")).toBe("routine=second");
+    state.tabs = [{ id: "collection-7" }]; await render();
+    expect(container.querySelectorAll('[data-retained-app-view]')).toHaveLength(1);
+  });
+
   it("reconnects a retained board without replaying its unchanged renderer", async () => {
     vi.spyOn(surfaces, "preparedBoardSurface").mockReturnValue(Board);
     await render();

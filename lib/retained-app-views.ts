@@ -7,7 +7,7 @@ export const RETAINED_APP_VIEW_BUDGET = 6;
 export interface RetainedAppView {
   key: string;
   tabId: string | null;
-  kind: "home" | "global-board" | "project-board" | "pages" | "pull-requests" | "feedback" | "triage";
+  kind: "home" | "global-board" | "project-board" | "pages" | "pull-requests" | "feedback" | "triage" | "routines" | "objectives";
   route: AppTabRouteSnapshot;
   /** Published selection may outlive a consumed ?view= URL instruction. */
   href?: string;
@@ -25,7 +25,8 @@ export function retainedAppViewKind(pathname: string): RetainedAppView["kind"] |
   if (pathname === "/all") return "global-board";
   if (/^\/projects\/[^/]+$/.test(pathname)) return "project-board";
   if (pathname === "/pull-requests") return "pull-requests";
-  const section = pathname.match(/^\/projects\/[^/]+\/(pages(?:\/[^/]+)?|feedback|triage)$/)?.[1]?.split("/")[0];
+  if (pathname === "/routines") return "routines";
+  const section = pathname.match(/^\/projects\/[^/]+\/(pages(?:\/[^/]+)?|feedback|triage|objectives)$/)?.[1]?.split("/")[0];
   return (section as RetainedAppView["kind"] | undefined) ?? null;
 }
 

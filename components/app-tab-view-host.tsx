@@ -3,7 +3,7 @@
 import { Activity, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
-import { appTabSurfaceLoaders, preparedBoardSurface } from "@/lib/app-tab-surfaces";
+import { appTabSurfaceLoaders, preparedBoardSurface, preparedCollectionSurface } from "@/lib/app-tab-surfaces";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AppTabNavigationScope, useAppTabs, useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
@@ -29,6 +29,8 @@ const PullRequests = dynamic(appTabSurfaceLoaders["pull-requests"]);
 const Feedback = dynamic(() => appTabSurfaceLoaders.feedback().then((module) => module.FeedbackTeamPage));
 const Triage = dynamic(appTabSurfaceLoaders.triage);
 const Home = dynamic(appTabSurfaceLoaders.home);
+const Routines = dynamic(appTabSurfaceLoaders.routines);
+const Objectives = dynamic(appTabSurfaceLoaders.objectives);
 
 const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
   // Prepared public code can render synchronously. Fix the renderer at mount:
@@ -36,6 +38,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   // Keep activation from replaying unchanged board props. Account query and
   // route-context updates still reach their own subscribers below this memo.
   const [BoardSurface] = useState(() => memo(preparedBoardSurface(view.kind) ?? (view.kind === "global-board" ? GlobalBoard : ProjectBoard)));
+  const [CollectionSurface] = useState(() => memo(preparedCollectionSurface(view.kind) ?? (view.kind === "routines" ? Routines : Objectives)));
   const activation = useRef<{ active: boolean; sequence: number } | null>(null);
   if (!activation.current || (active && !activation.current.active)) {
     activation.current = { active, sequence: nextReadActivationSequence() };
@@ -74,7 +77,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
       <AppTabRouteProvider route={view.route} active={active} activationSequence={activation.current.sequence}>
         {isBoard ? <BoardSurface />
           : view.kind === "pages" ? <Pages /> : view.kind === "pull-requests" ? <PullRequests />
-          : view.kind === "feedback" ? <Feedback /> : <Triage />}
+          : view.kind === "feedback" ? <Feedback /> : view.kind === "triage" ? <Triage /> : <CollectionSurface />}
       </AppTabRouteProvider>
     </AppTabNavigationScope>
     </QueryReadBoundary>
