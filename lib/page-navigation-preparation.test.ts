@@ -198,26 +198,56 @@ it("yields an unknown read to foreground work and resumes without granting a can
   } finally { view.close(); }
 });
 
-it("keeps a Page read through cached tab reconciliation but blocks on an initial tab list", async () => {
+it("resumes an expired known-body renewal after foreground cancellation without postponing it eight seconds", async () => {
+  const view = setup(); let signal!: AbortSignal, finish!: () => void;
+  view.fetch.mockImplementation((url, init) => String(url).endsWith("/b")
+    ? Promise.resolve(Response.json({ ...body("b"), content: { type: "doc", content: [{ type: "image" }] } }))
+    : new Promise((_resolve, reject) => {
+      signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
+    }));
+  try {
+    await vi.advanceTimersByTimeAsync(8500); expect(signal.aborted).toBe(false);
+    const foreground = view.client.fetchQuery({ queryKey: ["foreground"], queryFn: () => new Promise((resolve) => { finish = () => resolve("ready"); }) });
+    expect(signal.aborted).toBe(true);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(view.fetch).toHaveBeenCalledTimes(2);
+    expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(false);
+    view.fetch.mockResolvedValue(Response.json(body("a", 2)));
+    finish(); await foreground; await vi.advanceTimersByTimeAsync(100);
+    expect(view.fetch).toHaveBeenCalledTimes(3);
+    expect(view.client.getQueryData<Page>(pageKey("a"))?.version).toBe(2);
+    expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(true);
+  } finally { finish?.(); view.close(); }
+});
+
+it.each(["app-tabs", "app-tab-metadata"])("keeps a Page read through cached %s reconciliation but blocks on its initial read", async (kind) => {
   const view = setup(); let signal!: AbortSignal, completePage!: () => void;
   view.fetch.mockImplementation((_url, init) => new Promise((resolve) => {
     signal = init!.signal!; completePage = () => resolve(Response.json(body("b")));
   }));
   let completeTabs!: () => void;
   try {
-    view.client.setQueryData(["app-tabs", "owner"], []);
+    view.client.setQueryData([kind, "owner"], []);
     await vi.advanceTimersByTimeAsync(500); expect(signal.aborted).toBe(false);
-    const tabs = view.client.fetchQuery({ queryKey: ["app-tabs", "owner"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }), staleTime: 0 });
+    const tabs = view.client.fetchQuery({ queryKey: [kind, "owner"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }), staleTime: 0 });
     expect(signal.aborted).toBe(false);
     completePage(); await vi.advanceTimersByTimeAsync(1);
     expect(view.client.getQueryState(pageKey("b"))?.status).toBe("success");
     completeTabs(); await tabs;
     view.preparation.dispose();
     const next = createPageNavigationPreparation(view.client);
-    const initial = view.client.fetchQuery({ queryKey: ["app-tabs", "new-window"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }) });
+    const initial = view.client.fetchQuery({ queryKey: [kind, "new-window"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }) });
     next.visit("/home", ["/home", href("a")]);
     await vi.advanceTimersByTimeAsync(20_000); expect(view.fetch).toHaveBeenCalledOnce();
     next.dispose(); completeTabs(); await initial;
+    const failedKey = [kind, "failed-window"];
+    view.client.setQueryData(failedKey, []);
+    await expect(view.client.fetchQuery({ queryKey: failedKey, queryFn: () => Promise.reject(new Error("Unavailable")) })).rejects.toThrow("Unavailable");
+    const recovery = view.client.fetchQuery({ queryKey: failedKey, queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }) });
+    const errorOwner = createPageNavigationPreparation(view.client);
+    errorOwner.visit("/home", ["/home", href("a")]);
+    await vi.advanceTimersByTimeAsync(1000); expect(view.fetch).toHaveBeenCalledOnce();
+    errorOwner.dispose(); completeTabs(); await recovery;
   } finally { completePage?.(); completeTabs?.(); view.close(); }
 });
 
