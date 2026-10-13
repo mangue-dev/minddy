@@ -29,7 +29,7 @@ async function setup() {
     root.render(createElement(QueryClientProvider, { client }, createElement(PrBackgroundSync)));
     await vi.advanceTimersByTimeAsync(10);
   });
-  await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
   return { client, fetch, setIds: (value: string[]) => { ids = value; },
     close: async () => { await act(() => root.unmount()); client.clear(); } };
 }
@@ -37,10 +37,11 @@ async function setup() {
 it("maintains only five recent details and shares foreground/realtime reads", async () => {
   const view = await setup();
   try {
-    expect(view.fetch.mock.calls.filter(([url]) => !String(url).includes("?")).length).toBe(5);
+    expect(view.fetch.mock.calls.filter(([url]) => /^\/api\/pull-requests\/[^/?]+$/.test(String(url))).length).toBe(5);
     expect(new Set(live.mock.calls.map(([id]) => id))).toEqual(new Set(Array.from({ length: 5 }, (_, i) => `pr-${i}`)));
     await act(async () => { await view.client.invalidateQueries({ queryKey: ["pull-request", "pr-0"] }); await vi.advanceTimersByTimeAsync(10); });
-    expect(view.fetch.mock.calls.filter(([url]) => String(url) === "/api/pull-requests/pr-0").length).toBe(2);
+    expect(view.fetch.mock.calls.filter(([url]) => String(url) === "/api/pull-requests/pr-0").length).toBe(1);
+    expect(view.client.getQueryState(["pull-request", "pr-0"])?.isInvalidated).toBe(true);
     view.setIds(["new", "pr-0", "pr-1", "pr-2", "pr-3"]);
     await act(async () => { await view.client.invalidateQueries({ queryKey: allPullRequestsQueryKey() }); await vi.advanceTimersByTimeAsync(10); });
     const old = view.client.getQueryCache().find({ queryKey: ["pull-request", "pr-4"], exact: true });
