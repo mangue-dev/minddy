@@ -3,7 +3,7 @@ import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
 import { appTabPreparationQueries, appTabPreparationQuery, prefetchPullRequestDetail } from "./prefetch-tab-destination";
-import { navigationPreparationPriority } from "./navigation-preparation-priority";
+import { isCachedTabReconciliation, navigationPreparationPriority } from "./navigation-preparation-priority";
 import { allPullRequestsQueryOptions } from "./use-agent-runs";
 import { prActivityPreparationQueries } from "./pr-activity-query";
 import { createPageNavigationPreparation } from "./page-navigation-preparation";
@@ -54,7 +54,7 @@ export function createPrTabPreparation(
   const priority = navigationPreparationPriority(client);
   const otherTransport = (exceptOwn = false) => {
     const auxiliary = new Set(recentActivityQueries(client).map((options) => hashKey(options.queryKey)));
-    return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" &&
+    return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" && !isCachedTabReconciliation(query) &&
       !(exceptOwn && preparing && query.queryHash === hashKey(preparing)) &&
       !(auxiliary.has(query.queryHash) && !query.isActive()));
   };
@@ -160,7 +160,12 @@ export function createPrTabPreparation(
       active = href; available = hrefs;
       if (preparing && client.getQueryCache().find({ queryKey: preparing, exact: true })?.getObserversCount() === 0) {
         const target = appTabPreparationQuery(client, href)?.queryKey;
-        if (JSON.stringify(target) !== JSON.stringify(preparing)) void client.cancelQueries({ queryKey: preparing, exact: true });
+        const options = appTabPreparationQueries(client, href);
+        const needsTransport = !options.length || options.some((option) => {
+          const state = client.getQueryState(option.queryKey);
+          return state?.data === undefined || state.isInvalidated || state.status === "error";
+        });
+        if (needsTransport && JSON.stringify(target) !== JSON.stringify(preparing)) void client.cancelQueries({ queryKey: preparing, exact: true });
       }
       visits.push(href); if (visits.length > 32) visits.shift();
       // Three open destinations/twelve reads plus one authorized neighboring

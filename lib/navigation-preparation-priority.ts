@@ -1,7 +1,12 @@
-import { hashKey, type QueryClient } from "@tanstack/react-query";
+import { hashKey, type Query, type QueryClient } from "@tanstack/react-query";
 
 type Priority = { owners: Set<object>; reads: Map<object, readonly unknown[]>; listeners: Set<() => void> };
 const priorities = new WeakMap<QueryClient, Priority>();
+
+/** A displayed tab list's reconciliation does not block the active view's data. */
+export function isCachedTabReconciliation(query: Pick<Query, "queryKey" | "state">): boolean {
+  return query.queryKey[0] === "app-tabs" && query.state.status === "success" && query.state.data !== undefined;
+}
 function priority(client: QueryClient) {
   let state = priorities.get(client);
   if (!state) { state = { owners: new Set(), reads: new Map(), listeners: new Set() }; priorities.set(client, state); }

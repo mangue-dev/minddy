@@ -128,6 +128,29 @@ it("yields an unobserved read to foreground work without granting a navigation l
   } finally { view.close(); }
 });
 
+it("keeps a Page read through cached tab reconciliation but blocks on an initial tab list", async () => {
+  const view = setup(); let signal!: AbortSignal, completePage!: () => void;
+  view.fetch.mockImplementation((_url, init) => new Promise((resolve) => {
+    signal = init!.signal!; completePage = () => resolve(Response.json(body("b")));
+  }));
+  let completeTabs!: () => void;
+  try {
+    view.client.setQueryData(["app-tabs", "owner"], []);
+    await vi.advanceTimersByTimeAsync(500); expect(signal.aborted).toBe(false);
+    const tabs = view.client.fetchQuery({ queryKey: ["app-tabs", "owner"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }), staleTime: 0 });
+    expect(signal.aborted).toBe(false);
+    completePage(); await vi.advanceTimersByTimeAsync(1);
+    expect(view.client.getQueryState(pageKey("b"))?.status).toBe("success");
+    completeTabs(); await tabs;
+    view.preparation.dispose();
+    const next = createPageNavigationPreparation(view.client);
+    const initial = view.client.fetchQuery({ queryKey: ["app-tabs", "new-window"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }) });
+    next.visit("/home", ["/home", href("a")]);
+    await vi.advanceTimersByTimeAsync(20_000); expect(view.fetch).toHaveBeenCalledOnce();
+    next.dispose(); completeTabs(); await initial;
+  } finally { completePage?.(); completeTabs?.(); view.close(); }
+});
+
 it("preserves a foreground observer joining the shared read when its account owner retires", async () => {
   const view = setup(); let signal!: AbortSignal, release!: () => void;
   view.fetch.mockImplementation((_url, init) => new Promise((resolve) => { signal = init!.signal!; release = () => resolve(Response.json(body("b"))); }));

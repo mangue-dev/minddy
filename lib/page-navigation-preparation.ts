@@ -1,6 +1,6 @@
 import { hashKey, isCancelledError, onlineManager, type QueryClient } from "@tanstack/react-query";
 import { appTabRoute } from "./app-tab-location";
-import { navigationPreparationHasRead, navigationPreparationPending, navigationPreparationPriority, subscribeNavigationPreparation } from "./navigation-preparation-priority";
+import { isCachedTabReconciliation, navigationPreparationHasRead, navigationPreparationPending, navigationPreparationPriority, subscribeNavigationPreparation } from "./navigation-preparation-priority";
 import { PageApiError, type PageSummary } from "./pages-api";
 import { byPosition, type Page } from "./pages";
 import { isDraftPage } from "./pages-draft";
@@ -61,7 +61,7 @@ export function createPageNavigationPreparation(client: QueryClient) {
     }
     return workingSet = explicit.slice(0, 3);
   };
-  const otherTransport = () => client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" &&
+  const otherTransport = () => client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" && !isCachedTabReconciliation(query) &&
     query.queryHash !== (reading ? hashKey(pageKey(reading.pageId)) : undefined));
   const clearTimer = () => { clearTimeout(timer); timer = undefined; timerAt = 0; };
   const yieldRead = () => {

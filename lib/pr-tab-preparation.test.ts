@@ -39,6 +39,21 @@ const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
 
 describe("account-owned PR preparation", () => {
+  it("retains Page preparation across a fully cached project activation and cancels for a cold destination", async () => {
+    const prepared = setup(); let signal!: AbortSignal;
+    for (const options of appTabPreparationQueries(prepared.client, "/projects/cached")) prepared.client.setQueryData(options.queryKey, []);
+    prepared.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+      signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
+    }));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new/pages/page", "/projects/cached"]); prepared.flush();
+      await vi.waitFor(() => expect(signal).toBeDefined());
+      prepared.preparation.visit("/projects/cached", ["/projects/cached", "/projects/new/pages/page"]);
+      expect(signal.aborted).toBe(false);
+      prepared.preparation.visit("/projects/cold", ["/projects/cold", "/projects/new/pages/page"]);
+      expect(signal.aborted).toBe(true);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
   it("warms all seven neighboring project prerequisites alongside an open board and Page without parallel transport", async () => {
     const prepared = setup(); let concurrent = 0, maximum = 0;
     prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
