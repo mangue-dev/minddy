@@ -198,6 +198,11 @@ export function createPrTabPreparation(
           }
           syncPriority(); continue;
         }
+        // Query.fetch may resolve prior data after a reverted cancellation.
+        // Observe the exact operation's cancellation before that cached result
+        // can mark a body prepared or consume its restored preparation attempt.
+        const operation = client.getQueryCache().find({ queryKey: read.key, exact: true })?.promise;
+        void operation?.catch((error: unknown) => { if (isCancelledError(error)) read.cancelled = true; });
         void pending.finally(() => {
           if (preparing.get(identity) === read) preparing.delete(identity);
           priority.finishRead(read.key);

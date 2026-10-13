@@ -6,6 +6,7 @@ import { ApiError } from "./agent-api";
 import { navigationPreparationPending } from "./navigation-preparation-priority";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { appTabPreparationQueries, prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { fetchPageNavigationData, isPreparedPageData, pageKey } from "./use-pages-query";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn() }));
 
@@ -141,6 +142,38 @@ describe("account-owned PR preparation", () => {
       await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); await drain(prepared);
       expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/issues"))).toHaveLength(2);
       expect(prepared.client.getQueryState(["issues", "new"])?.status).toBe("success");
+    } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("retries an invalidated cached Page after a joined observer leaves without certifying the reverted body", async () => {
+    const prepared = setup(); const id = "cached-cancel-page", key = pageKey(id);
+    const canonical = { id, project_id: "new", version: 1, content: { type: "doc", content: [] } };
+    let signal!: AbortSignal; let stop = () => {};
+    prepared.fetch.mockResolvedValueOnce(Response.json(canonical));
+    await prepared.client.fetchQuery({ queryKey: key,
+      queryFn: ({ signal: current }) => fetchPageNavigationData(prepared.client, "new", id, current) });
+    await prepared.client.invalidateQueries({ queryKey: key, exact: true, refetchType: "none" });
+    prepared.fetch.mockImplementation((url, init) => String(url).endsWith(`/pages/${id}`)
+      ? new Promise((_resolve, reject) => {
+        signal = init!.signal!;
+        signal.addEventListener("abort", () => reject(new Error("Foreground left")), { once: true });
+      }) : Promise.resolve(fixtureResponse(String(url))));
+    try {
+      prepared.preparation.visit("/home", ["/home", `/projects/new/pages/${id}`]); prepared.flush();
+      await vi.waitFor(() => expect(signal).toBeDefined());
+      const observer = new QueryObserver(prepared.client, { queryKey: key }); stop = observer.subscribe(() => {});
+      expect(signal.aborted).toBe(false); stop(); expect(signal.aborted).toBe(true);
+      await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
+      expect(prepared.client.getQueryData(key)).toEqual(canonical);
+      expect(prepared.client.getQueryState(key)?.isInvalidated).toBe(true);
+      expect(isPreparedPageData(id, prepared.client.getQueryState(key)!.dataUpdatedAt)).toBe(false);
+      prepared.fetch.mockImplementation(async (url) => String(url).endsWith(`/pages/${id}`)
+        ? Response.json({ ...canonical, version: 2 }) : fixtureResponse(String(url)));
+      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); await drain(prepared);
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith(`/pages/${id}`))).toHaveLength(3);
+      expect(prepared.client.getQueryData(key)).toEqual({ ...canonical, version: 2 });
+      expect(prepared.client.getQueryState(key)?.isInvalidated).toBe(false);
+      expect(isPreparedPageData(id, prepared.client.getQueryState(key)!.dataUpdatedAt)).toBe(true);
     } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
