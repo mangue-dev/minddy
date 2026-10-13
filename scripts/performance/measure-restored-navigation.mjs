@@ -9,7 +9,7 @@ import { openFixture, stableTabs, stableManifestPath, assertStableTabs } from ".
 import { loadConnectedBoardWorkload, loadForgeWorkload, forgeLinkFingerprint } from "./measure-forge-navigation.mjs";
 import { assertScope } from "./seed.mjs";
 import { boardReady } from "./board-readiness.mjs";
-import { restoredDestinationReady, restoredPreparationMetadata, restoredRequestInitiatorMetadata, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
+import { restoredDestinationReady, restoredPreparationMetadata, restoredRequestInitiatorMetadata, restoredFailureDiagnostics, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
 import { optionalSecondaryWorkload, secondaryReadiness, secondaryEvidence, secondaryJourneyIds } from "./secondary-navigation-workload.mjs";
 
 // Reuse the verified ten-tab fixture. No reseeding, content writes, paid work,
@@ -319,6 +319,8 @@ try {
     // Fixture text is allowed for diagnosis; never persist arbitrary shared data.
     delete sample.visibleContent;
     if (!error && sample.selectedTab !== spec.id) error = new Error("Pointer input did not activate the intended stable tab");
+    if (error) sample.failureDiagnostics = await page.evaluate(({ source, spec }) => new Function(`return (${source})`)()(spec),
+      { source: restoredFailureDiagnostics.toString(), spec }).catch((cause) => ({ probeError: cause.message }));
     result.measurements.push({ name, destination: spec.custom_name, kind: spec.kind, ...(spec.detailId ? { detailId: spec.detailId } : {}),
       ...(spec.prSubview ? { prSubview: spec.prSubview } : {}), ...sample,
       driverMs: performance.now() - driverStart, thread: metricDelta(before, await metrics()),

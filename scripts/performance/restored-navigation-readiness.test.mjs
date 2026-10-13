@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { JSDOM } from "jsdom";
-import { restoredDestinationReady, restoredPreparationMetadata, restoredRequestInitiatorMetadata, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
+import { restoredDestinationReady, restoredPreparationMetadata, restoredRequestInitiatorMetadata, restoredFailureDiagnostics, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
 
 let dom;
 const globals = ["window", "document", "location", "getComputedStyle", "innerWidth", "innerHeight"];
@@ -141,6 +141,32 @@ test("a windowed collection requires its complete real query source and publishe
   document.querySelector('input').placeholder = "Filter 120 issues…";
   query.state.status = "error";
   assert.equal(restoredDestinationReady(large), false);
+});
+test("timeout diagnostics split objective actions, displayed progress and canonical tasks without exposing prose", () => {
+  const entry = { id: "goal", title: "Synthetic goal", bodyText: "Private fixture paragraph", commentIds: ["comment"], taskCount: 15, doneCount: 0 };
+  const destination = { id: "tab", kind: "objectives", href: "/projects/project/objectives", projectId: "project", detailId: "goal", secondary: { details: [entry] } };
+  setup(`<button data-app-tab-id="tab" aria-selected="true"></button><button disabled>New objective</button>
+    <button data-navigation-href="/projects/project/objectives?open=goal" aria-current="true">Synthetic goal</button>
+    <textarea>Synthetic goal</textarea><div class="tiptap" contenteditable="true">Private fixture paragraph</div>
+    <div data-comment-id="comment" data-comment-state="confirmed">Private discussion text</div>
+    <header><span>0/14</span><a href="/projects/project?objective=goal">Linked issues</a></header>`, destination.href);
+  window.__restored.client = { getQueryState: () => ({ status: "success", data: Array.from({ length: 14 }, (_, index) => ({ id: `task-${index}`, status: "todo", objective_id: "goal" })) }) };
+  const value = restoredFailureDiagnostics(destination);
+  assert.equal(value.newObjectiveButtons[0].disabled, true);
+  assert.deepEqual(value.links[0].adjacentRatios, [{ text: "0/14", visible: true }]);
+  assert.equal(value.source.selectedTasks.length, 14); assert.equal(value.expected.taskCount, 15);
+  assert.equal(value.titleReady, true); assert.equal(value.editorReady, true); assert.equal(value.commentsReady, true);
+  assert.ok(!/Private fixture paragraph|Private discussion text/.test(JSON.stringify(value)));
+});
+test("timeout diagnostics retain exact board counts and obstructed hit tests separately", () => {
+  setup(`<button data-app-tab-id="tab" aria-selected="true"></button><button id="overlay">Overlay</button>
+    <div data-app-view-active="true" data-board-read-state="fresh"><section><header><span>1</span></header><div>
+    <div data-board-column-scroller data-board-column-status="todo"><div data-issue-id="issue"><span>Card content</span></div></div></div></section></div>`, "/projects/project");
+  document.elementFromPoint = () => document.getElementById("overlay");
+  const value = restoredFailureDiagnostics({ id: "tab", kind: "board", href: "/projects/project", projectId: "project", cards: 1 });
+  assert.equal(value.board.scrollers[0].count, 1);
+  assert.equal(value.board.scrollers[0].hits[0].tag, "BUTTON");
+  assert.equal(value.board.scrollers[0].hits[0].rootContains, false);
 });
 
 const pr = { id: "tab", kind: "pr", href: "/pull-requests?pr=pr", prId: "pr", title: "Fixture PR", canComment: false,

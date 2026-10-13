@@ -223,3 +223,60 @@ export function restoredRequestInitiatorMetadata(event, origin) {
     unresolvedAsyncParent: !!event.initiator?.stack?.parentId };
 }
 
+/** Timeout-only attribution; never export document bodies or comment prose. */
+export function restoredFailureDiagnostics(spec) {
+  const visible = (node) => !!node?.getClientRects().length && getComputedStyle(node).visibility !== "hidden" && !node.closest('[inert], [aria-hidden="true"]');
+  const rect = (node) => { const box = node.getBoundingClientRect(); return { left: box.left, top: box.top, right: box.right, bottom: box.bottom, width: box.width, height: box.height }; };
+  let client = window.__restored.client;
+  if (!client) {
+    let fiber = document.querySelector('[data-app-tab-id]');
+    fiber = fiber?.[Object.keys(fiber).find((key) => key.startsWith('__reactFiber$'))];
+    for (let depth = 0; fiber && depth < 100; depth++, fiber = fiber.return) {
+      if (typeof fiber.memoizedProps?.client?.getQueryCache === 'function') { client = fiber.memoizedProps.client; break; }
+    }
+  }
+  const active = [...document.querySelectorAll('[data-app-view-active="true"]')];
+  const root = active[0], view = root?.getBoundingClientRect();
+  const list = [...document.querySelectorAll('[data-navigation-href][aria-current="true"]')].filter(visible);
+  const selectedId = spec.detailId ?? list.find((node) => node.dataset.navigationHref.startsWith(`${spec.href}?`))?.dataset.navigationHref.split('=').at(-1);
+  const detail = spec.secondary?.details.find((entry) => entry.id === selectedId);
+  const issueState = spec.projectId && client?.getQueryState(['issues', spec.projectId]);
+  const issues = Array.isArray(issueState?.data) ? issueState.data : [];
+  const source = { status: issueState?.status ?? 'missing', invalidated: issueState?.isInvalidated ?? null,
+    fetchStatus: issueState?.fetchStatus ?? null, rows: issues.length,
+    kanbanRows: issues.filter((row) => !['triage', 'duplicate'].includes(row.status)).length,
+    selectedTasks: issues.filter((row) => row.objective_id === selectedId).map(({ id, status }) => ({ id, status })) };
+  const links = [...document.querySelectorAll('a[href]')].filter((node) => node.getAttribute('href').includes(`objective=${selectedId}`)).map((node) => {
+    const ancestors = []; let ancestor = node;
+    for (let index = 0; ancestor && index < 5; index++, ancestor = ancestor.parentElement) ancestors.push({ tag: ancestor.tagName,
+      inert: ancestor.inert, ariaHidden: ancestor.getAttribute('aria-hidden'), visibility: getComputedStyle(ancestor).visibility });
+    return { href: node.getAttribute('href'), visible: visible(node), rect: rect(node), parentTag: node.parentElement?.tagName,
+      adjacentRatios: [...node.parentElement.querySelectorAll('span')].map((span) => ({ text: span.textContent.trim(), visible: visible(span) }))
+        .filter((span) => /^\d+\/\d+$/.test(span.text)), ancestors };
+  });
+  const scrollers = [...root?.querySelectorAll('[data-board-column-scroller]') ?? []].map((node) => {
+    const box = node.getBoundingClientRect(), left = Math.max(box.left, view.left, 0), right = Math.min(box.right, view.right, innerWidth);
+    const header = node.parentElement?.parentElement?.firstElementChild;
+    const count = [...header?.children ?? []].find((child) => child.tagName === 'SPAN' && /^\d+$/.test(child.textContent.trim()));
+    return { status: node.dataset.boardColumnStatus, count: count ? Number(count.textContent.trim()) : null,
+      rect: rect(node), visible: visible(node), scrollTop: node.scrollTop, scrollHeight: node.scrollHeight,
+      clippedWidth: right - left, hits: [20, 48, 76].map((offset) => {
+        const x = (left + right) / 2, y = box.top + offset, hit = document.elementFromPoint(x, y), card = hit?.closest('[data-issue-id]');
+        return { x, y, tag: hit?.tagName, role: hit?.getAttribute('role'), testId: hit?.dataset.testid,
+          cardId: card?.dataset.issueId, rootContains: !!card && root.contains(card), hitIsCard: hit === card, inert: !!card?.closest('[inert]') };
+      }) };
+  });
+  const normalize = (value) => value.replace(/\s+/g, ' ').trim();
+  return { pathname: location.pathname, expectedTabId: spec.id, selectedTabId: document.querySelector('[data-app-tab-id][aria-selected="true"]')?.dataset.appTabId,
+    activeRoots: active.map((node) => ({ key: node.dataset.retainedAppView, visible: visible(node), inert: node.inert, boardReadState: node.dataset.boardReadState, rect: rect(node) })),
+    selectedRows: list.map((node) => node.dataset.navigationHref), selectedDetailId: selectedId ?? null, source,
+    newObjectiveButtons: [...document.querySelectorAll('button')].filter((node) => node.textContent.includes('New objective') || node.getAttribute('aria-label') === 'New objective')
+      .map((node) => ({ visible: visible(node), disabled: node.disabled, ariaDisabled: node.getAttribute('aria-disabled'), rect: rect(node) })),
+    links, ...(detail ? { expected: { title: detail.title, taskCount: detail.taskCount, doneCount: detail.doneCount },
+      titleReady: [...document.querySelectorAll('textarea')].some((node) => visible(node) && !node.disabled && !node.readOnly && node.value.trim() === detail.title),
+      editorReady: [...document.querySelectorAll('.tiptap[contenteditable="true"]')].some((node) => visible(node) && normalize(node.innerText ?? node.textContent).includes(detail.bodyText)),
+      commentsReady: detail.commentIds.every((id) => [...document.querySelectorAll('[data-comment-id]')].some((node) => visible(node) && node.dataset.commentId === id && node.dataset.commentState === 'confirmed')) } : {}),
+    board: { expectedCards: spec.cards ?? null, cards: root?.querySelectorAll('[data-issue-id]').length ?? 0, scrollers },
+    visibleLoadingCount: [...document.querySelectorAll(window.__restored.loadingSelector)].filter(visible).length };
+}
+
