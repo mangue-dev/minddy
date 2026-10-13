@@ -1,4 +1,4 @@
-import { issueStore } from "@/lib/server/issue-store";
+import { loadGlobalBoardIssues } from "@/lib/server/global-board-issues";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
@@ -7,7 +7,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { buildMembersByProject } from "@/lib/server/project-members";
-import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { mapIssueRow } from "@/lib/server/issue-mapper";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
 import type {
@@ -66,9 +66,7 @@ export async function GET(request: NextRequest) {
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
     await Promise.all([
-      issueStore(auth.supabase).select(ISSUE_SELECT)
-        .order("position", { ascending: true })
-        .order("number", { ascending: true }),
+      loadGlobalBoardIssues(auth.supabase, auth.user.id),
       auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
       categoryStore(auth.supabase, auth.user.id).select("*"),
       objectiveStore(auth.supabase).select("*"),

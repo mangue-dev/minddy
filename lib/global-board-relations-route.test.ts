@@ -29,6 +29,8 @@ vi.mock("./server/api-auth", () => ({
             return query;
           },
           order() { return query; },
+          limit() { return query; },
+          gt() { return query; },
           is() { return query; },
           then(resolve: (result: unknown) => unknown) {
             const rows = table === "issue_relations" ? state.relations : [];

@@ -1,0 +1,189 @@
+import { randomBytes } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EncryptedStore } from "./encryption/store";
+import { encodeIssue } from "./issue-store";
+import { loadGlobalBoardIssues } from "./global-board-issues";
+import { mapIssueRow } from "./issue-mapper";
+
+const state = vi.hoisted(() => ({ store: null as EncryptedStore | null, client: null as SupabaseClient | null }));
+vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => state.store }));
+vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
+vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
+vi.mock("./project-members", () => ({ buildMembersByProject: async () => ({ members: {} }) }));
+vi.mock("./cycles", () => ({ ensureCycles: vi.fn(), toCycleInfo: vi.fn(), todayInTz: vi.fn() }));
+vi.mock("@/lib/cycle-prefs", () => ({ resolveCyclePrefs: () => ({ enabled: false }) }));
+vi.mock("./api-auth", () => ({ getAuthedUser: async () => ({ ok: true,
+  user: { id: "actor", user_metadata: {} }, supabase: state.client }) }));
+
+type Row = Record<string, unknown> & { id: string };
+const id = (index: number) => `00000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`;
+const issue = (index: number): Row => ({ id: id(index), project_id: "allowed", number: index,
+  title: `Issue ${index}`, position: index % 7, deleted_at: null,
+  issue_categories: [{ category_id: "category" }] });
+const sources = (count: number) => Array.from({ length: count }, (_, index) => issue(index + 1));
+
+function fixture(rows: Row[], { cap = 1000, counts = true, failAt, batch, count }: {
+  cap?: number; counts?: boolean; failAt?: number;
+  batch?: (rows: Row[], call: number) => Row[];
+  count?: (remaining: number, call: number) => number | null | undefined;
+} = {}) {
+  const calls: Array<{ table: string; selection: string; count?: string; orders: string[]; limit?: number; after?: string }> = [];
+  let issueCalls = 0;
+  const client = { from(table: string) {
+    const call: (typeof calls)[number] = { table, selection: "", orders: [] };
+    const query = {
+      select(selection: string, options?: { count?: string }) { call.selection = selection; call.count = options?.count; return query; },
+      order(column: string) { call.orders.push(column); return query; },
+      limit(value: number) { call.limit = value; return query; },
+      gt(column: string, value: string) { expect(column).toBe("id"); call.after = value; return query; },
+      is() { return query; },
+      then(resolve: (result: unknown) => unknown, reject?: (error: unknown) => unknown) {
+        calls.push(call);
+        if (table !== "issues") return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+        const number = ++issueCalls;
+        // The authenticated client's RLS excludes deleted and foreign rows before
+        // projection/decryption; pagination must keep using this same client.
+        const visible = rows.filter((row) => row.project_id === "allowed" && row.deleted_at === null &&
+          (!call.after || row.id > call.after)).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+        const selected = visible.slice(0, Math.min(cap, call.limit ?? Infinity));
+        return Promise.resolve(failAt === number ? { data: null, error: { code: "57014", message: "Private SQL" }, status: 500 } : {
+          data: batch ? batch(selected, number) : selected,
+          error: null, count: count ? count(visible.length, number) : counts ? visible.length : null,
+        }).then(resolve, reject);
+      },
+    };
+    return query;
+  } } as unknown as SupabaseClient;
+  return { client, calls, issueCalls: () => calls.filter((call) => call.table === "issues") };
+}
+
+beforeEach(() => {
+  vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
+  vi.stubEnv("MINDDY_ISSUE_SOURCE_ENCRYPTION_ENABLED", "true");
+  vi.stubEnv("MINDDY_DATA_ROOT_KEY", "1".repeat(64));
+  const key = randomBytes(32);
+  state.store = new EncryptedStore({ current: async () => ({ version: 1, bytes: Buffer.from(key) }),
+    byVersion: async (_scope, version) => ({ version, bytes: Buffer.from(key) }) });
+});
+afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+
+describe("complete authenticated global board issues", () => {
+  it.each([1000, 250])("loads all 1206 rows under a server cap of %i with ordinary projections", async (cap) => {
+    const source = sources(1206).reverse();
+    const f = fixture(source, { cap });
+    const result = await loadGlobalBoardIssues(f.client, "actor");
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1206);
+    expect(new Set(result.data!.map((row) => row.id))).toEqual(new Set(source.map((row) => row.id)));
+    expect(result.data!.map(mapIssueRow).every((row) => row.category_ids[0] === "category")).toBe(true);
+    expect(f.issueCalls()).toHaveLength(Math.ceil(1206 / cap));
+    expect(f.issueCalls().every((call) => call.selection === "*,issue_categories(category_id)" &&
+      call.count === "exact" && call.limit === 1000 && call.orders.join() === "id")).toBe(true);
+    expect(f.issueCalls().map((call) => call.after)).toEqual(Array.from({ length: Math.ceil(1206 / cap) },
+      (_, index) => index ? id(index * cap) : undefined));
+  });
+
+  it.each([0, 500, 1000, 2000])("finishes an exact-count collection of %i rows without an extra empty request", async (size) => {
+    const f = fixture(sources(size));
+    const result = await loadGlobalBoardIssues(f.client, "actor");
+    expect(result.error).toBeNull(); expect(result.data).toHaveLength(size);
+    expect(f.issueCalls()).toHaveLength(Math.max(1, Math.ceil(size / 1000)));
+  });
+
+  it.each([1, 250, 1000])("does not confuse a short cap of %i with completion when counts are missing", async (cap) => {
+    const f = fixture(sources(1206), { cap, counts: false });
+    const result = await loadGlobalBoardIssues(f.client, "actor");
+    expect(result.error).toBeNull(); expect(result.data).toHaveLength(1206);
+    expect(f.issueCalls()).toHaveLength(Math.ceil(1206 / cap) + 1);
+  });
+
+  it("restores position and number order with nulls last and deterministic UUID ties", async () => {
+    const source = sources(6).map((row, index) => ({ ...row,
+      position: [2, 1, 1, null, 1, 1][index], number: [1, 3, 2, 1, 2, null][index] }));
+    const result = await loadGlobalBoardIssues(fixture(source.reverse(), { cap: 2 }).client, "actor");
+    expect(result.data?.map((row) => row.id)).toEqual([id(3), id(5), id(2), id(6), id(1), id(4)]);
+  });
+
+  it("keeps RLS filtering and decodes protected source fields on every batch", async () => {
+    const first = await encodeIssue({ ...issue(1), title: "Accepted private title", plan: "Accepted private plan" });
+    const second = await encodeIssue({ ...issue(2), title: "Second private title" });
+    const foreign = { ...await encodeIssue({ ...issue(3), project_id: "foreign", title: "Forbidden title" }), id: id(3), encrypted_content: "must never decode" };
+    const deleted = { ...await encodeIssue({ ...issue(4), title: "Deleted title" }), id: id(4), deleted_at: "2026-10-01", encrypted_content: "must never decode" };
+    const f = fixture([foreign, second as Row, deleted, first as Row], { cap: 1 });
+    const result = await loadGlobalBoardIssues(f.client, "actor");
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([expect.objectContaining({ id: id(1), title: "Accepted private title", plan: "Accepted private plan" }),
+      expect.objectContaining({ id: id(2), title: "Second private title" })]);
+    expect(JSON.stringify(result.data)).not.toMatch(/encrypted_content|encryption_version|Forbidden title|Deleted title/);
+    expect(f.calls.every((call) => call.table === "issues")).toBe(true);
+  });
+
+  it("returns no earlier rows when a later database page fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = await loadGlobalBoardIssues(fixture(sources(1206), { failAt: 2 }).client, "actor");
+    expect(result).toEqual({ data: null, error: { message: "Unable to load global board issues" } });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("Private SQL");
+  });
+
+  it("returns no earlier rows when a later protected body cannot be decoded", async () => {
+    const encrypted = await encodeIssue(issue(2));
+    const result = await loadGlobalBoardIssues(fixture([issue(1), { ...encrypted, id: id(2), encrypted_content: "Broken protected content" }], { cap: 1 }).client, "actor");
+    expect(result.data).toBeNull(); expect(result.error).toEqual({ message: "Unable to load global board issues" });
+  });
+
+  it.each([
+    { label: "duplicate IDs", batch: (rows: Row[]) => [rows[0], rows[0]] },
+    { label: "decreasing IDs", batch: (rows: Row[]) => [...rows].reverse() },
+    { label: "invalid UUID", batch: (rows: Row[]) => [{ ...rows[0], id: "invalid" }] },
+    { label: "missing order value", batch: (rows: Row[]) => [{ ...rows[0], position: undefined }] },
+    { label: "invalid order value", batch: (rows: Row[]) => [{ ...rows[0], number: NaN }] },
+  ])("rejects $label without publishing partial rows", async ({ batch }) => {
+    const result = await loadGlobalBoardIssues(fixture(sources(2), { batch }).client, "actor");
+    expect(result.data).toBeNull(); expect(result.error).not.toBeNull();
+  });
+
+  it("rejects an older page repeated after the cursor without looping", async () => {
+    const f = fixture(sources(3), { cap: 1, batch: (rows, call) => call === 2 ? [issue(1)] : rows });
+    const result = await loadGlobalBoardIssues(f.client, "actor");
+    expect(result.data).toBeNull(); expect(f.issueCalls()).toHaveLength(2);
+  });
+
+  it.each([-1, 0, 1.5, Infinity])("rejects an inconsistent remaining count %s", async (count) => {
+    const result = await loadGlobalBoardIssues(fixture(sources(2), { count: () => count }).client, "actor");
+    expect(result.data).toBeNull(); expect(result.error).not.toBeNull();
+  });
+
+  it("rejects an empty batch with a positive remaining count", async () => {
+    const f = fixture(sources(2), { batch: () => [], count: () => 2 });
+    const result = await loadGlobalBoardIssues(f.client, "actor");
+    expect(result.data).toBeNull(); expect(f.issueCalls()).toHaveLength(1);
+  });
+
+  it("supports an omitted count using the same empty-batch fallback", async () => {
+    const f = fixture(sources(2), { cap: 1, count: () => undefined });
+    expect((await loadGlobalBoardIssues(f.client, "actor")).data).toHaveLength(2);
+    expect(f.issueCalls()).toHaveLength(3);
+  });
+
+  it("returns the complete canonical issue shape from the global route", async () => {
+    const f = fixture(sources(1206), { cap: 250 }); state.client = f.client;
+    const { GET } = await import("@/app/api/me/board/route");
+    const response = await GET(new Request("https://example.test/api/me/board") as never);
+    expect(response.status).toBe(200);
+    const result = await response.json();
+    expect(result.issues).toHaveLength(1206);
+    expect(result.issues[0]).toMatchObject({ category_ids: ["category"] });
+    expect(result.issues[0]).not.toHaveProperty("issue_categories");
+    expect(f.issueCalls()).toHaveLength(5);
+  });
+
+  it("keeps the existing localized route failure instead of a successful partial board", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    state.client = fixture(sources(1206), { failAt: 2 }).client;
+    const { GET } = await import("@/app/api/me/board/route");
+    const response = await GET(new Request("https://example.test/api/me/board") as never);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "databaseError" });
+  });
+});
