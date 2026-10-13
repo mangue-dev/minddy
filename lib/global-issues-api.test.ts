@@ -1,13 +1,23 @@
 import { QueryClient } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { GLOBAL_BOARD_KEY, insertIssueEverywhere, issueWrites, patchIssueEverywhere, removeIssueEverywhere } from "./optimistic/issue-writes";
 import {
   mergeIssueSnapshot,
   reconcileGlobalIssueSnapshot,
   reconcileProjectIssuesInGlobalCache,
   shouldRefreshGlobalIssueSnapshot,
+  refreshGlobalIssueSnapshot,
+  GLOBAL_ISSUES_KEY,
 } from "./global-issues-api";
+import { globalBoardQueryFn } from "./global-board-api";
+import { objectiveProgress } from "./use-objectives-query";
 import type { GlobalBoardResponse, Issue } from "./types";
+
+vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
+  getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
+} }) }));
+
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); issueWrites.reset(); });
 
 const issue = (
   id: string,
@@ -89,6 +99,113 @@ describe("mergeIssueSnapshot", () => {
 });
 
 describe("Kanban cache reconciliation", () => {
+  it.each([1206, 1440])("retains all %i authorized snapshot rows and every late objective task through the real query owner", async (size) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const other = new QueryClient();
+    const project = Array.from({ length: 670 }, (_, index) => ({ ...issue(`project-${index}`, "p1", index >= 655 ? "done" : "todo", index),
+      objective_id: index >= 655 ? "last-goal" : null, resource_count: index % 4 }));
+    const neighbors = Array.from({ length: size - project.length }, (_, index) => issue(`neighbor-${index}`, "p2", "todo", index));
+    // The historical capped response lost the tail of this project after other projects' rows.
+    const complete = [...neighbors, ...project].map(({ resource_count: _count, ...row }) => row as Issue);
+    client.setQueryData(GLOBAL_BOARD_KEY, board([...neighbors, ...project]));
+    client.setQueryData(["issues", "p1"], project);
+    client.setQueryData(["issues", "p2"], neighbors);
+    const accountSentinel = [issue("other-account", "p1", "todo", 0)];
+    other.setQueryData(["issues", "p1"], accountSentinel);
+    const fetch = vi.fn(async (path: string) => {
+      expect(path).toBe("/api/me/issues"); return Response.json(complete);
+    }); vi.stubGlobal("fetch", fetch);
+    try {
+      const snapshot = await refreshGlobalIssueSnapshot(client);
+      expect(snapshot.issues).toHaveLength(size);
+      expect(client.getQueryState(GLOBAL_ISSUES_KEY)?.status).toBe("success");
+      const global = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+      const scoped = client.getQueryData<Issue[]>(["issues", "p1"])!;
+      expect(global).toHaveLength(size); expect(scoped).toHaveLength(670);
+      expect(new Set(global.map((row) => row.id))).toEqual(new Set(complete.map((row) => row.id)));
+      expect(new Set(scoped.map((row) => row.id))).toEqual(new Set(project.map((row) => row.id)));
+      expect(scoped.map((row) => row.resource_count)).toEqual(project.map((row) => row.resource_count));
+      expect(global.filter((row) => row.project_id === "p1").map((row) => row.resource_count)).toEqual(project.map((row) => row.resource_count));
+      expect(objectiveProgress("last-goal", scoped)).toEqual({ done: 15, total: 15, percent: 100 });
+      expect(scoped.filter((row) => row.objective_id === "last-goal").map((row) => row.id)).toEqual(project.slice(-15).map((row) => row.id));
+      expect(client.getQueryState(["issues", "p1"])?.isInvalidated).toBe(false);
+      expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(true);
+      expect(other.getQueryData(["issues", "p1"])).toBe(accountSentinel);
+      expect(fetch).toHaveBeenCalledTimes(1); expect(fetch.mock.calls[0]?.[0]).toBe("/api/me/issues");
+    } finally { client.clear(); other.clear(); }
+  });
+
+  it("keeps newer rows, concurrent insertions and pending edits while removing deleted and revoked slices", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const editable = { ...issue("edited", "p1", "todo", 1), resource_count: 3 };
+    const newer = issue("newer", "p1", "todo", 2);
+    const deleted = issue("deleted", "p1", "todo", 3);
+    const removing = issue("removing", "p1", "todo", 7);
+    const revoked = issue("revoked", "revoked-project", "todo", 4);
+    client.setQueryData(GLOBAL_BOARD_KEY, board([editable, newer, deleted, removing, revoked]));
+    client.setQueryData(["issues", "p1"], [editable, newer, deleted, removing]);
+    client.setQueryData(["issues", "revoked-project"], [revoked]);
+    let finish!: (response: Response) => void;
+    const fetch = vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })); vi.stubGlobal("fetch", fetch);
+    try {
+      const refresh = refreshGlobalIssueSnapshot(client);
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      const updatedAt = new Date(Date.now() + 1000).toISOString();
+      patchIssueEverywhere(client, "p1", "newer", { status: "done", updated_at: updatedAt });
+      const concurrent = { ...issue("concurrent", "p1", "in_progress", 5), updated_at: updatedAt };
+      insertIssueEverywhere(client, "p1", concurrent);
+      const pending = { ...issue("pending", "p1", "todo", 6), updated_at: updatedAt };
+      issueWrites.begin({ kind: "insert", row: pending }); insertIssueEverywhere(client, "p1", pending);
+      issueWrites.begin({ kind: "patch", id: editable.id, patch: { status: "in_review" } });
+      patchIssueEverywhere(client, "p1", editable.id, { status: "in_review" });
+      issueWrites.begin({ kind: "remove", id: removing.id }); removeIssueEverywhere(client, "p1", removing.id);
+      finish(Response.json([issue(editable.id, "p1", "todo", 1), newer, removing]));
+      await refresh;
+      const scoped = client.getQueryData<Issue[]>(["issues", "p1"])!;
+      expect(new Set(scoped.map((row) => row.id))).toEqual(new Set(["edited", "newer", "concurrent", "pending"]));
+      expect(scoped.find((row) => row.id === "edited")).toMatchObject({ status: "in_review", resource_count: 3 });
+      expect(scoped.find((row) => row.id === "newer")).toMatchObject({ status: "done", updated_at: updatedAt });
+      expect(scoped.find((row) => row.id === "concurrent")).toEqual(concurrent);
+      expect(scoped.find((row) => row.id === "pending")).toEqual(pending);
+      expect(client.getQueryData(["issues", "revoked-project"])).toEqual([]);
+      expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues).toEqual(scoped);
+      expect(client.getQueryData(["issues", "never-loaded"])).toBeUndefined();
+    } finally { client.clear(); }
+  });
+
+  it.each([403, 500])("does not reconcile or delete prior rows when the authoritative endpoint fails with %i", async (status) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const rows = [issue("retained", "p1", "todo", 1)], prior = board(rows);
+    client.setQueryData(GLOBAL_BOARD_KEY, prior); client.setQueryData(["issues", "p1"], rows);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "Read failed" }, { status })));
+    try {
+      await expect(refreshGlobalIssueSnapshot(client)).rejects.toThrow("Read failed");
+      expect(client.getQueryData(GLOBAL_BOARD_KEY)).toBe(prior);
+      expect(client.getQueryData(["issues", "p1"])).toBe(rows);
+      expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(false);
+      expect(client.getQueryState(GLOBAL_ISSUES_KEY)?.status).toBe("error");
+    } finally { client.clear(); }
+  });
+
+  it("does not let a later complete resume snapshot truncate an aggregate already in flight", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const rows = Array.from({ length: 1206 }, (_, index) => issue(`row-${index}`, index < 536 ? "p2" : "p1", "todo", index));
+    const refreshed = rows.map((row, index) => index === rows.length - 1 ? { ...row, status: "done" as const } : row);
+    client.setQueryData(GLOBAL_BOARD_KEY, board(rows)); client.setQueryData(["issues", "p1"], rows.slice(536));
+    let finish!: (response: Response) => void;
+    const fetch = vi.fn((path: string) => path === "/api/me/issues" ? Promise.resolve(Response.json(refreshed))
+      : new Promise<Response>((resolve) => { finish = resolve; })); vi.stubGlobal("fetch", fetch);
+    try {
+      const aggregate = client.fetchQuery({ queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: 0 });
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      await refreshGlobalIssueSnapshot(client);
+      finish(Response.json(board(rows)));
+      await aggregate;
+      expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues).toHaveLength(1206);
+      expect(client.getQueryData<Issue[]>(["issues", "p1"])).toHaveLength(670);
+      expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues.at(-1)?.status).toBe("done");
+    } finally { client.clear(); }
+  });
   it("propagates a project refetch into the inactive global cache", () => {
     const client = new QueryClient();
     client.setQueryData(
