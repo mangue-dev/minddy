@@ -20,7 +20,7 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { acceptPageRead, beginPageRead, capturePageReadFailure, finishPageRead, pageReadState } from "./page-read-receipts";
+import { acceptPageRead, acceptPageWrite, beginPageRead, capturePageReadFailure, finishPageRead, isAcceptedPageVersion, pageReadState } from "./page-read-receipts";
 
 import {
   createPageApi,
@@ -52,6 +52,7 @@ import type { PageDocJSON } from "./pages-merge";
 import { positionAtEnd } from "./pages";
 import { buildOptimisticPage } from "./optimistic-page";
 import {
+  isPageCreationPending,
   trackPageCreation,
   waitForPageCreation,
 } from "./page-creation-settlement";
@@ -93,7 +94,8 @@ export async function fetchPageNavigationData(client: QueryClient, projectId: st
     signal?.throwIfAborted();
     if (incoming.id !== pageId || incoming.project_id !== projectId) throw new Error("Page response does not match its requested scope");
     const current = client.getQueryData<Page>(pageKey(pageId));
-    const page = current?.id === pageId && current.project_id === projectId && current.version > incoming.version
+    const page = current?.id === pageId && current.project_id === projectId && current.version > incoming.version &&
+      isAcceptedPageVersion(query, { projectId, pageId, version: current.version })
       ? current : incoming;
     if (client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
       acceptPageRead(query, sequence, { projectId, pageId, version: page.version }, signal);
@@ -102,6 +104,30 @@ export async function fetchPageNavigationData(client: QueryClient, projectId: st
   } catch (error) {
     if (client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
       capturePageReadFailure(query, error, sequence, signal);
+    }
+    throw error;
+  } finally {
+    finishPageRead(query, sequence);
+  }
+}
+
+/** Certify the actual creation result, retaining its ordinary queued-POST owner. */
+export async function fetchPageCreationData(client: QueryClient, projectId: string, pageId: string,
+  create: () => Promise<Page>): Promise<Page> {
+  const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
+  const sequence = beginPageRead(query, undefined, "creation");
+  try {
+    const page = await create();
+    if (page.id !== pageId || page.project_id !== projectId || page.version <= 0) {
+      throw new Error("Page creation response does not match its requested scope");
+    }
+    if (client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
+      acceptPageRead(query, sequence, { projectId, pageId, version: page.version }, undefined, "creation");
+    }
+    return page;
+  } catch (error) {
+    if (client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
+      capturePageReadFailure(query, error, sequence);
     }
     throw error;
   } finally {
@@ -132,8 +158,21 @@ export function createPageSurfaceRead(client: QueryClient, projectId: string, pa
       accepted.sequence > (query === since.query ? since.sequence : 0);
   };
   const queryFn = ({ signal }: { signal: AbortSignal }) => fetchPageNavigationData(client, projectId, pageId, signal);
+  const canUsePrepared = (page: Page | undefined, updatedAt: number) => {
+    if (!page || page.id !== pageId || page.project_id !== projectId || page.version <= 0 ||
+        !isPreparedPageData(pageId, updatedAt)) return false;
+    const query = client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true });
+    // Pending creation owns the POST, and every write waits for its settlement.
+    // A recent cache timestamp or canceled GET alone supplies no write authority.
+    const read = pageReadState(query);
+    const creating = isPageCreationPending(pageId) && read?.pending?.source === "creation" &&
+      read.pending.sequence === read.sequence && query?.state.fetchStatus === "fetching";
+    return !read?.failure && (creating ||
+      hasReceipt(page, { query, sequence: 0 }));
+  };
   return {
     queryFn,
+    canUsePrepared,
     hasAccepted: (page: Page | undefined) => hasReceipt(page, mounted),
     observeFailure: (error: unknown) => {
       // Existing read-only consumers can share this query with a raw GET.
@@ -190,9 +229,10 @@ export function usePageSurfaceReady(
   dataUpdatedAt: number,
   isFetchedAfterMount: boolean,
   invalidated = false,
+  preparedAuthorized = false,
 ): boolean {
   const [preparedOnMount] = useState(() =>
-    !invalidated && isPreparedPageData(pageId, dataUpdatedAt),
+    !invalidated && preparedAuthorized,
   );
   return preparedOnMount || isFetchedAfterMount;
 }
@@ -373,7 +413,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
         optimistic.id,
         queryClient.fetchQuery({
           queryKey: pageKey(optimistic.id),
-          queryFn: async () => {
+          queryFn: () => fetchPageCreationData(queryClient, pid, optimistic.id, async () => {
             if (optimistic.parent_id)
               await waitForPageCreation(optimistic.parent_id);
             return createPageApi(
@@ -383,7 +423,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
               // budget. Rich JSON bodies may exceed that budget and stay regular.
               { keepalive: input.content === undefined },
             );
-          },
+          }),
           staleTime: 0,
           retry: false,
         }),
@@ -490,6 +530,8 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
                 }
               : page,
           );
+          acceptPageWrite(queryClient.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }),
+            { projectId: page.project_id, pageId: page.id, version: page.version });
           return page;
         } catch (error) {
           write?.settle();
@@ -575,7 +617,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
         void queryClient
           .fetchQuery({
             queryKey: pageKey(copy.id),
-            queryFn: () => settlement,
+            queryFn: () => fetchPageCreationData(queryClient, pid, copy.id, () => settlement),
             staleTime: 0,
             retry: false,
           })

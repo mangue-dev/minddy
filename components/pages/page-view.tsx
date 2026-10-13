@@ -55,9 +55,8 @@ import {
   markDraftPage,
   scheduleDraftDiscard,
 } from "@/lib/pages-draft";
-import { ancestorsOf, descendantIds } from "@/lib/pages";
+import { ancestorsOf, descendantIds, type Page } from "@/lib/pages";
 import {
-  isPreparedPageData,
   PAGE_NAVIGATION_FRESH_MS,
   pageKey,
   usePageSurfaceReady,
@@ -344,7 +343,7 @@ function PageSurface({
     queryFn: surfaceRead.queryFn,
     staleTime: PAGE_NAVIGATION_FRESH_MS,
     refetchOnMount: (query) =>
-      !query.state.isInvalidated && !surfaceRead.failure() && isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
+      !query.state.isInvalidated && surfaceRead.canUsePrepared(query.state.data as Page | undefined, query.state.dataUpdatedAt) ? false : "always",
   });
   const page = cachedPage?.id === pageId && cachedPage.project_id === projectId && cachedPage.version > 0
     ? cachedPage : undefined;
@@ -363,6 +362,7 @@ function PageSurface({
     dataUpdatedAt,
     isFetchedAfterMount && surfaceRead.hasAccepted(page),
     queryClient.getQueryState(pageKey(pageId))?.isInvalidated,
+    surfaceRead.canUsePrepared(page, dataUpdatedAt),
   );
 
   const warmPageActivity = useCallback(() => {

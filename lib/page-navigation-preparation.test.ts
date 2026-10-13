@@ -8,6 +8,7 @@ import { forgetDraftPage, markDraftPage } from "./pages-draft";
 import type { Page } from "./pages";
 import { navigationPreparationPriority } from "./navigation-preparation-priority";
 import { forgetLastPage, rememberLastPage } from "./pages-last-open";
+import { acceptPageWrite } from "./page-read-receipts";
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
@@ -270,7 +271,11 @@ it("rejects cross-project bodies and never replaces a newer accepted version wit
   try {
     const pending = fetchPageNavigationData(view.client, "project", "a");
     await vi.advanceTimersByTimeAsync(1);
-    view.client.setQueryData(pageKey("a"), body("a", 2)); release();
+    // This models a successful PATCH ingestion, rather than a manual version bump.
+    view.client.setQueryData(pageKey("a"), body("a", 2));
+    acceptPageWrite(view.client.getQueryCache().find({ queryKey: pageKey("a"), exact: true }),
+      { projectId: "project", pageId: "a", version: 2 });
+    release();
     expect((await pending).version).toBe(2);
     view.fetch.mockImplementation(async () => Response.json(body("a", 9, "another")));
     await expect(fetchPageNavigationData(view.client, "project", "a")).rejects.toThrow("scope");

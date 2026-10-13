@@ -12,15 +12,15 @@ it("keeps a validated document basis and draft after TTL expiry while suspending
   const updated = 10_000_000, now = vi.spyOn(Date, "now").mockReturnValue(updated);
   for (const id of ["a", "b"]) preparePageNavigation(id, updated);
   const owners = new Set<string>();
-  function Surface({ id }: { id: string }) {
-    const ready = usePageSurfaceReady(id, updated, false);
+  function Surface({ id, verifiedPrepared }: { id: string; verifiedPrepared: boolean }) {
+    const ready = usePageSurfaceReady(id, updated, false, false, verifiedPrepared);
     useEffect(() => { owners.add(id); return () => { owners.delete(id); }; }, [id]);
     return ready ? <input data-document={id} defaultValue="" /> : <span>Fresh read required</span>;
   }
   const container = document.body.appendChild(document.createElement("div")), root = createRoot(container);
   const render = (id: string, projectId = "p", eligible = new Set(["a", "b"])) => root.render(
     <RetainedPageDocuments projectId={projectId} pageId={id} eligible={eligible} home={null}
-      renderPage={(id) => <Surface id={id} />} />);
+      renderPage={(id) => <Surface id={id} verifiedPrepared={projectId === "p" && ["a", "b"].includes(id) && Date.now() - updated <= 10_000} />} />);
   try {
     await act(() => render("a"));
     const input = container.querySelector<HTMLInputElement>('input[data-document="a"]')!;
@@ -38,6 +38,21 @@ it("keeps a validated document basis and draft after TTL expiry while suspending
     await act(() => render("a", "other-project"));
     expect(container.querySelectorAll('[data-retained-page-document]')).toHaveLength(1);
     expect(container.querySelector('input[data-document="a"]')).toBeNull();
+    expect(container.textContent).toBe("Fresh read required");
+  } finally { await act(() => root.unmount()); container.remove(); }
+});
+
+it("does not grant a document basis from an intent marker without verified authority", async () => {
+  vi.stubGlobal("React", React); vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const updated = Date.now();
+  preparePageNavigation("marker-only", updated);
+  function Surface() {
+    const ready = usePageSurfaceReady("marker-only", updated, false);
+    return <span>{ready ? "Ready" : "Fresh read required"}</span>;
+  }
+  const container = document.body.appendChild(document.createElement("div")), root = createRoot(container);
+  try {
+    await act(() => root.render(<Surface />));
     expect(container.textContent).toBe("Fresh read required");
   } finally { await act(() => root.unmount()); container.remove(); }
 });

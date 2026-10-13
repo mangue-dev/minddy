@@ -9,11 +9,12 @@ import { usePageAutosave, type PageAutosave } from "./use-page-autosave";
 import { buildOptimisticPage } from "@/lib/optimistic-page";
 import { PageApiError, PageConflictError, type UpdatePageInput } from "@/lib/pages-api";
 import { fetchPageApi } from "@/lib/pages-api";
-import { createPageSurfaceRead, fetchPageNavigationData, pageKey, PageWriteBasisError,
+import { createPageSurfaceRead, fetchPageCreationData, fetchPageNavigationData, pageKey, PageWriteBasisError,
   preparePageNavigation, usePageSurfaceReady } from "@/lib/use-pages-query";
 import type { Page } from "@/lib/pages";
 import type { PageDocJSON } from "@/lib/pages-merge";
 import { observePageReadFailures } from "@/lib/page-read-receipts";
+import { trackPageCreation, waitForPageCreation } from "@/lib/page-creation-settlement";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("mangue-ui", () => ({ cn: (...args: unknown[]) => args.filter(Boolean).join(" ") }));
@@ -80,7 +81,8 @@ async function mount({ cached = page(), read, save, editor = false, preparation 
   const reader = createPageSurfaceRead(client, cached.project_id, cached.id);
   const options = { queryKey: ["page", cached.id], queryFn: reader.queryFn, staleTime: 0, retry: false };
   function Surface() {
-    const query = useQuery({ ...options, refetchOnMount: "always" });
+    const query = useQuery({ ...options, refetchOnMount: (state) =>
+      !state.state.isInvalidated && reader.canUsePrepared(state.state.data, state.state.dataUpdatedAt) ? false : "always" });
     const lastReadError = useRef<unknown>(undefined);
     const hadReadError = useRef(false);
     reader.observeFailure(query.error);
@@ -90,7 +92,8 @@ async function mount({ cached = page(), read, save, editor = false, preparation 
     const error = observedError ?? lastReadError.current;
     if (error) hadReadError.current = true;
     preparedSurfaceReady = usePageSurfaceReady(cached.id, query.dataUpdatedAt,
-      query.isFetchedAfterMount && reader.hasAccepted(query.data));
+      query.isFetchedAfterMount && reader.hasAccepted(query.data), !!client.getQueryState(pageKey(cached.id))?.isInvalidated,
+      reader.canUsePrepared(query.data, query.dataUpdatedAt));
     autosave = usePageAutosave({ pageId: cached.id, page: query.data,
       fresh: preparedSurfaceReady && !error && (!hadReadError.current || reader.hasAccepted(query.data)), readError: error,
       acquireFresh: reader.acquire, delayMs: 60_000, editorRef, save, onError });
@@ -107,6 +110,105 @@ async function mount({ cached = page(), read, save, editor = false, preparation 
 }
 
 describe("cached Page display and fresh write authority", () => {
+  it("never upgrades a manually bumped cache version into an authorized GET receipt", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    const canonical = page(5);
+    client.setQueryData(pageKey("cached-page"), canonical);
+    vi.mocked(fetchPageApi).mockResolvedValue(canonical);
+    await createPageSurfaceRead(client, "project", "cached-page").acquire();
+    const forged = page(999, doc("Unaccepted cache body"));
+    client.setQueryData(pageKey("cached-page"), forged);
+    preparePageNavigation("cached-page");
+    const reader = createPageSurfaceRead(client, "project", "cached-page");
+    expect(reader.canUsePrepared(forged, client.getQueryState(pageKey("cached-page"))!.dataUpdatedAt)).toBe(false);
+    expect(await reader.acquire()).toBe(canonical);
+    expect(client.getQueryData(pageKey("cached-page"))).toEqual(canonical);
+    expect(reader.hasAccepted(forged)).toBe(false);
+    expect(reader.hasAccepted(canonical)).toBe(true);
+  });
+
+  it("does not certify a recent prepared cache after its actual GET was canceled before mount", async () => {
+    const canceled = deferred<Page>();
+    const reading = deferred<Page>();
+    const read = vi.fn().mockResolvedValueOnce(page(5)).mockImplementationOnce(() => canceled.promise).mockImplementationOnce(() => reading.promise);
+    const save = vi.fn(async (_id: string, patch: UpdatePageInput) => page(7, patch.content as PageDocJSON));
+    const h = await mount({ read, save, editor: true, prepared: true, beforeMount: async (client) => {
+      await client.fetchQuery({ queryKey: pageKey("cached-page"),
+        queryFn: ({ signal }) => fetchPageNavigationData(client, "project", "cached-page", signal), staleTime: 0 });
+      const request = client.fetchQuery({ queryKey: pageKey("cached-page"),
+        queryFn: ({ signal }) => fetchPageNavigationData(client, "project", "cached-page", signal), staleTime: 0 });
+      await client.cancelQueries({ queryKey: pageKey("cached-page"), exact: true });
+      expect(await request).toMatchObject({ id: "cached-page", project_id: "project", version: 5, content: doc() });
+    } });
+    expect(read).toHaveBeenCalledTimes(3);
+    expect(h.preparedSurfaceReady).toBe(false);
+    expect(h.editorRef.current!.getText()).toContain("Original local");
+    await act(async () => h.editorRef.current!.commands.setContent(doc("Draft after canceled intent") as JSONContent));
+    let departure!: Promise<boolean>;
+    await act(async () => { departure = h.autosave.flushBeforeNavigation(); });
+    expect(save).not.toHaveBeenCalled();
+    expect(h.autosave.takePending()).toBeNull();
+    await act(async () => { reading.resolve(page(6, doc("Original local", "Remote before mount"))); expect(await departure).toBe(true); });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Draft after canceled intent", "Remote before mount"), version: 6 });
+    canceled.resolve(page(5));
+  });
+
+  it("reuses a current actual prepared GET without another mount read", async () => {
+    const read = vi.fn().mockResolvedValue(page(5));
+    const save = vi.fn(async (_id: string, patch: UpdatePageInput) => page(6, patch.content as PageDocJSON));
+    const h = await mount({ read, save, editor: true, prepared: true, beforeMount: async (client) => {
+      await client.fetchQuery({ queryKey: pageKey("cached-page"),
+        queryFn: ({ signal }) => fetchPageNavigationData(client, "project", "cached-page", signal), staleTime: 0 });
+    } });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(h.preparedSurfaceReady).toBe(true);
+    await act(async () => {
+      h.editorRef.current!.commands.setContent(doc("Immediately editable prepared body") as JSONContent);
+      expect(await h.autosave.flushBeforeNavigation()).toBe(true);
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Immediately editable prepared body"), version: 5 });
+  });
+
+  it("preserves a queued creation POST and accepts its scoped settlement", async () => {
+    const creation = deferred<Page>();
+    const read = vi.fn().mockResolvedValue(page(1));
+    const serverWrite = vi.fn(async (_id: string, patch: UpdatePageInput) => page(2, patch.content as PageDocJSON));
+    const save = async (id: string, patch: UpdatePageInput) => { await waitForPageCreation(id); return serverWrite(id, patch); };
+    let request!: Promise<Page>;
+    const h = await mount({ cached: page(1), read, save, editor: true, prepared: true, beforeMount: async (client) => {
+      request = trackPageCreation("cached-page", client.fetchQuery({ queryKey: pageKey("cached-page"),
+        queryFn: () => fetchPageCreationData(client, "project", "cached-page", () => creation.promise), staleTime: 0, retry: false }));
+    } });
+    expect(read).not.toHaveBeenCalled();
+    expect(h.preparedSurfaceReady).toBe(true);
+    await act(async () => h.editorRef.current!.commands.setContent(doc("Typed while POST is pending") as JSONContent));
+    let departure!: Promise<boolean>;
+    await act(async () => { departure = h.autosave.flushBeforeNavigation(); });
+    expect(serverWrite).not.toHaveBeenCalled();
+    await act(async () => { creation.resolve(page(1)); await request; expect(await departure).toBe(true); });
+    expect(serverWrite).toHaveBeenCalledWith("cached-page", { content: doc("Typed while POST is pending"), version: 1 });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("reuses an actual settled creation POST without a redundant GET", async () => {
+    const read = vi.fn().mockResolvedValue(page(1));
+    const save = vi.fn(async (_id: string, patch: UpdatePageInput) => page(2, patch.content as PageDocJSON));
+    const h = await mount({ cached: page(1), read, save, editor: true, prepared: true, beforeMount: async (client) => {
+      await trackPageCreation("cached-page", client.fetchQuery({ queryKey: pageKey("cached-page"),
+        queryFn: () => fetchPageCreationData(client, "project", "cached-page", async () => page(1)), staleTime: 0 }));
+    } });
+    expect(read).not.toHaveBeenCalled();
+    expect(h.preparedSurfaceReady).toBe(true);
+    await act(async () => {
+      h.editorRef.current!.commands.setContent(doc("Typed after POST settlement") as JSONContent);
+      expect(await h.autosave.flushBeforeNavigation()).toBe(true);
+    });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed after POST settlement"), version: 1 });
+    expect(read).not.toHaveBeenCalled();
+  });
+
   it("accepts immediate typing, joins mount validation and merges the latest draft before departure", async () => {
     const reading = deferred<Page>();
     const read = vi.fn(() => reading.promise);
@@ -265,9 +367,12 @@ describe("cached Page display and fresh write authority", () => {
   it.each(["shared", "raw"])("keeps a prepared Page denied after an optimistic cache reset (%s GET)", async (owner) => {
     const read = vi.fn().mockResolvedValue(page(5));
     const save = vi.fn(async (_id: string, patch: UpdatePageInput) => page(6, patch.content as PageDocJSON));
-    const h = await mount({ read, save, editor: true, prepared: true });
+    const h = await mount({ read, save, editor: true, prepared: true, beforeMount: async (client) => {
+      await client.fetchQuery({ queryKey: pageKey("cached-page"),
+        queryFn: ({ signal }) => fetchPageNavigationData(client, "project", "cached-page", signal), staleTime: 0 });
+    } });
     expect(h.preparedSurfaceReady).toBe(true);
-    expect(h.reader.hasAccepted(page(5))).toBe(true);
+    expect(h.reader.canUsePrepared(page(5), h.client.getQueryState(pageKey("cached-page"))!.dataUpdatedAt)).toBe(true);
     await act(async () => h.editorRef.current!.commands.setContent(doc("Local before denial") as JSONContent));
     const denied = new PageApiError("Page access denied", 403);
     read.mockRejectedValue(denied);
@@ -322,7 +427,7 @@ describe("cached Page display and fresh write authority", () => {
       } });
     expect(h.reader.failure()).toBe(denied);
     expect(h.reader.hasAccepted(page(5))).toBe(false);
-    expect(h.preparedSurfaceReady).toBe(true);
+    expect(h.preparedSurfaceReady).toBe(false);
     expect(document.querySelector("[data-read-error]")?.textContent).toBe("Page access denied");
     expect(document.querySelector(".tiptap")).toBeNull();
     expect(save).not.toHaveBeenCalled();
