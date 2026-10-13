@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, useRef } from "react";
+import { act, createElement, StrictMode, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/react";
@@ -12,6 +12,7 @@ import { createPageSurfaceRead, fetchPageNavigationData, pageKey, pagesKey, useP
 import { observePageReadFailures, pageReadState } from "@/lib/page-read-receipts";
 import type { Page } from "@/lib/pages";
 import type { PageDocJSON } from "@/lib/pages-merge";
+import { queuePageWrite } from "@/lib/optimistic-page-writes";
 
 vi.mock("@/lib/pages-api", async (original) => ({ ...await original<typeof import("@/lib/pages-api")>(),
   createPageApi: vi.fn(), duplicatePageApi: vi.fn(), fetchPageApi: vi.fn(), fetchPagesApi: vi.fn(), updatePageApi: vi.fn() }));
@@ -35,6 +36,102 @@ const body: PageDocJSON = { type: "doc", content: [{ type: "paragraph", attrs: {
   content: [{ type: "text", text: "Local draft before creation settles" }] }] };
 
 describe("normal Page creation write authority", () => {
+  it.each(["queue", "creation"])("does not dispatch a retired autosave after the %s wait", async (waiting) => {
+    const source = { ...buildOptimisticPage("project", { id: "source", title: "Original title" }, []), version: 5 };
+    const creation = deferred<Page>();
+    vi.mocked(createPageApi).mockImplementation(() => creation.promise);
+    vi.mocked(fetchPagesApi).mockResolvedValue([source]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(pagesKey("project"), [source]);
+    client.setQueryData(pageKey(source.id), source);
+    let pages!: UsePagesResult;
+    function Producer() { pages = usePagesQuery("project"); return null; }
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    const render = async (surface: () => null) => {
+      await act(async () => root!.render(createElement(QueryClientProvider, { client, children: createElement(surface) })));
+    };
+    await render(Producer);
+    let created: PageCreation | undefined;
+    if (waiting === "creation") await act(async () => { created = await pages.createPage(); });
+    const target = created ? { ...source, id: created.id, version: 1, title: "" } : source;
+    const previous = deferred<void>();
+    const queued = waiting === "queue" ? queuePageWrite(client, `page:project:${target.id}`, () => previous.promise) : undefined;
+    let autosave!: PageAutosave;
+    const save = vi.fn(pages.updatePage);
+    const onError = vi.fn();
+    function Surface() {
+      const editorRef = useRef<Editor | null>(null);
+      autosave = usePageAutosave({ pageId: target.id, page: target, fresh: true, delayMs: 60_000, save, onError, editorRef });
+      return null;
+    }
+    await render(Surface);
+    let departure!: Promise<boolean>;
+    await act(async () => {
+      autosave.schedule({ title: "Queued optimistic title", content: body });
+      departure = autosave.flushBeforeNavigation();
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(client.getQueryData<Page>(pageKey(target.id))?.title).toBe("Queued optimistic title");
+    expect(updatePageApi).not.toHaveBeenCalled();
+    await act(async () => autosave.schedule({ title: "Newest retained title" }));
+    await act(async () => root!.unmount()); root = undefined;
+    // A replacement account owns another client; releasing the former owner's
+    // queue or creation must not send its pending PATCH with the new session.
+    const replacement = new QueryClient(); clients.push(replacement);
+    replacement.setQueryData(pageKey(target.id), { ...target, title: "Replacement account data" });
+    await act(async () => {
+      if (created) { creation.resolve(target); await created.settled; }
+      else { previous.resolve(); await queued; }
+      expect(await departure).toBe(false);
+    });
+    expect(updatePageApi).not.toHaveBeenCalled();
+    expect(client.getQueryData<Page>(pageKey(target.id))?.title).toBe(target.title);
+    expect(replacement.getQueryData<Page>(pageKey(target.id))?.title).toBe("Replacement account data");
+    expect(autosave.hasUnsavedChanges()).toBe(true);
+    expect(autosave.takePending()).toBeNull();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("retires an already queued transport callback across StrictMode restart and retains the newest draft", async () => {
+    const source = { ...buildOptimisticPage("project", { id: "strict-source", title: "Original title" }, []), version: 5 };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(pagesKey("project"), [source]);
+    client.setQueryData(pageKey(source.id), source);
+    const previous = deferred<void>();
+    const queued = queuePageWrite(client, `page:project:${source.id}`, () => previous.promise);
+    vi.mocked(updatePageApi).mockImplementation(async (_project, _id, patch) => ({ ...source, ...patch, version: 6 }));
+    let autosave!: PageAutosave;
+    let oldDeparture!: Promise<boolean>;
+    function Surface() {
+      const pages = usePagesQuery("project");
+      const editorRef = useRef<Editor | null>(null);
+      autosave = usePageAutosave({ pageId: source.id, page: source, fresh: true, delayMs: 60_000,
+        save: pages.updatePage, onError: vi.fn(), editorRef });
+      const started = useRef(false);
+      useEffect(() => {
+        if (started.current) return;
+        started.current = true;
+        autosave.schedule({ title: "Old queued title", content: body });
+        oldDeparture = autosave.flushBeforeNavigation();
+        autosave.schedule({ title: "Newest retained title" });
+      }, []);
+      return null;
+    }
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => root!.render(createElement(StrictMode, {}, createElement(QueryClientProvider,
+      { client, children: createElement(Surface) }))));
+    await act(async () => { previous.resolve(); await queued; expect(await oldDeparture).toBe(false); });
+    expect(updatePageApi).not.toHaveBeenCalled();
+    expect(client.getQueryData<Page>(pageKey(source.id))?.title).toBe(source.title);
+    expect(autosave.hasUnsavedChanges()).toBe(true);
+    await act(async () => { expect(await autosave.flushBeforeNavigation()).toBe(true); });
+    expect(updatePageApi).toHaveBeenCalledExactlyOnceWith("project", source.id,
+      { content: body, title: "Newest retained title", version: 5 } satisfies UpdatePageInput);
+    expect(autosave.hasUnsavedChanges()).toBe(false);
+  });
+
   it("preserves a newer actual PATCH acceptance when an earlier GET arrives afterward", async () => {
     const source = { ...buildOptimisticPage("project", { id: "source" }, []), version: 5 };
     const reading = deferred<Page>();

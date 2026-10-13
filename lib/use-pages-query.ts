@@ -343,7 +343,7 @@ export interface UsePagesResult {
   previewPage: (pageId: string, patch: PagePreview) => void;
   /** Copies a page and its descendants. Returns the ROOT of the copy. */
   duplicatePage: (pageId: string) => Promise<PageCreation>;
-  updatePage: (pageId: string, input: UpdatePageInput) => Promise<Page>;
+  updatePage: (pageId: string, input: UpdatePageInput, canDispatch?: () => boolean) => Promise<Page>;
   trashPage: (pageId: string) => Promise<number>;
   /**
  * DESTROYS a page created then left without writing to it (lib/pages-draft.ts).
@@ -477,7 +477,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   );
 
   const updatePage = useCallback(
-    async (pageId: string, input: UpdatePageInput) => {
+    async (pageId: string, input: UpdatePageInput, canDispatch?: () => boolean) => {
       const pid = projectId as string;
       const cached =
         readPages(queryClient, pid)?.find((row) => row.id === pageId) ??
@@ -494,7 +494,11 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
         : null;
       return queuePageWrite(queryClient, `page:${pid}:${pageId}`, async () => {
         try {
+          // Queue and creation waits can outlive the editing surface or account.
+          // This callback is local authority and never enters the PATCH body.
+          if (canDispatch && !canDispatch()) throw new PageWriteBasisError("Page write owner retired before dispatch");
           await waitForPageCreation(pageId);
+          if (canDispatch && !canDispatch()) throw new PageWriteBasisError("Page write owner retired before dispatch");
           const page = await updatePageApi(pid, pageId, input);
           write?.settle(page);
           const { content: _body, ...summary } = page;

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, useRef } from "react";
+import { act, createElement, StrictMode, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { Editor, JSONContent } from "@tiptap/react";
@@ -150,7 +150,7 @@ describe("cached Page display and fresh write authority", () => {
     expect(save).not.toHaveBeenCalled();
     expect(h.autosave.takePending()).toBeNull();
     await act(async () => { reading.resolve(page(6, doc("Original local", "Remote before mount"))); expect(await departure).toBe(true); });
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Draft after canceled intent", "Remote before mount"), version: 6 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Draft after canceled intent", "Remote before mount"), version: 6 }, expect.any(Function));
     canceled.resolve(page(5));
   });
 
@@ -168,7 +168,7 @@ describe("cached Page display and fresh write authority", () => {
       expect(await h.autosave.flushBeforeNavigation()).toBe(true);
     });
     expect(read).toHaveBeenCalledTimes(1);
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Immediately editable prepared body"), version: 5 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Immediately editable prepared body"), version: 5 }, expect.any(Function));
   });
 
   it("preserves a queued creation POST and accepts its scoped settlement", async () => {
@@ -205,7 +205,7 @@ describe("cached Page display and fresh write authority", () => {
       h.editorRef.current!.commands.setContent(doc("Typed after POST settlement") as JSONContent);
       expect(await h.autosave.flushBeforeNavigation()).toBe(true);
     });
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed after POST settlement"), version: 1 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed after POST settlement"), version: 1 }, expect.any(Function));
     expect(read).not.toHaveBeenCalled();
   });
 
@@ -232,7 +232,7 @@ describe("cached Page display and fresh write authority", () => {
     await act(async () => { reading.resolve(page(6, doc("Original local", "Remote edit"))); await departure; });
     expect(departed).toBe(true);
     expect(save).toHaveBeenCalledTimes(1);
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed twice before validation", "Remote edit"), version: 6 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed twice before validation", "Remote edit"), version: 6 }, expect.any(Function));
     expect(h.editorRef.current!.getText()).toContain("Typed twice before validation");
     expect(h.editorRef.current!.getText()).toContain("Remote edit");
     expect(h.autosave.hasUnsavedChanges()).toBe(false);
@@ -258,7 +258,7 @@ describe("cached Page display and fresh write authority", () => {
     read.mockResolvedValue(page(6, doc("Original local", "Remote after retry")));
     save.mockImplementation(async (_id: string, input: UpdatePageInput) => page(7, input.content as PageDocJSON));
     await act(async () => { expect(await h.autosave.flushBeforeNavigation()).toBe(true); });
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Unsaved text", "Remote after retry"), version: 6 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Unsaved text", "Remote after retry"), version: 6 }, expect.any(Function));
   });
 
   it("retains a rebased draft on write failure and retries against the validated version", async () => {
@@ -275,7 +275,7 @@ describe("cached Page display and fresh write authority", () => {
     expect(h.autosave.state).toBe("error");
     save.mockImplementation(async (_id: string, input: UpdatePageInput) => page(7, input.content as PageDocJSON));
     await act(async () => { expect(await h.autosave.flushBeforeNavigation()).toBe(true); });
-    expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Local text", "Remote text"), title: "Local title", version: 6 });
+    expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Local text", "Remote text"), title: "Local title", version: 6 }, expect.any(Function));
   });
 
   it("shares a preparator's already running actual GET without a second validation read", async () => {
@@ -292,7 +292,7 @@ describe("cached Page display and fresh write authority", () => {
     expect(save).not.toHaveBeenCalled();
     await act(async () => { reading.resolve(page(6, doc("Original local", "Prepared remote"))); expect(await departure).toBe(true); });
     expect(read).toHaveBeenCalledTimes(1);
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Local during prepared read", "Prepared remote"), version: 6 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Local during prepared read", "Prepared remote"), version: 6 }, expect.any(Function));
   });
 
   it.each([{ version: 5, preparation: false }, { version: 6, preparation: false },
@@ -323,7 +323,7 @@ describe("cached Page display and fresh write authority", () => {
     expect(read).toHaveBeenCalledTimes(2);
     expect(save).not.toHaveBeenCalled();
     await act(async () => { accepted.resolve(page(version)); expect(await departure).toBe(true); });
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed before canceled validation"), version });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed before canceled validation"), version }, expect.any(Function));
   });
 
   it("does not carry read receipts across manual cache changes, eviction or another account client", async () => {
@@ -409,7 +409,7 @@ describe("cached Page display and fresh write authority", () => {
     expect(h.reader.failure()).toBeUndefined();
     expect(document.querySelector("[data-read-error]")).toBeNull();
     expect(h.editorRef.current!.getText()).toContain("Local before denial");
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Local before denial"), version: 5 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Local before denial"), version: 5 }, expect.any(Function));
   });
 
   it("keeps an unobserved raw denial after optimistic cache clearing and before the Page mounts", async () => {
@@ -439,7 +439,7 @@ describe("cached Page display and fresh write authority", () => {
       h.editorRef.current!.commands.setContent(doc("Typed after validation") as JSONContent);
       expect(await h.autosave.flushBeforeNavigation()).toBe(true);
     });
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed after validation"), version: 5 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed after validation"), version: 5 }, expect.any(Function));
   });
 
   it("keeps conflicting local text recoverable while saving independent edits", async () => {
@@ -451,7 +451,7 @@ describe("cached Page display and fresh write authority", () => {
     await act(async () => { reading.resolve(page(6, doc("Remote contested", "Original remote"))); expect(await departure).toBe(true); });
     expect(h.autosave.conflicts).toHaveLength(1);
     expect(JSON.stringify(h.autosave.conflicts[0])).toContain("Local contested");
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Remote contested", "Local independent"), version: 6 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Remote contested", "Local independent"), version: 6 }, expect.any(Function));
   });
 
   it("does not grant authority or move the accepted base backwards for an older response", async () => {
@@ -472,7 +472,7 @@ describe("cached Page display and fresh write authority", () => {
     acquireFresh.mockResolvedValue(page(6));
     save.mockImplementation(async (_id: string, input: UpdatePageInput) => page(7, input.content as PageDocJSON));
     await act(async () => { expect(await autosave.flushBeforeNavigation()).toBe(true); });
-    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Still local"), version: 6 });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Still local"), version: 6 }, expect.any(Function));
   });
 
   it("rejects a fresh response from another project without sending a write", async () => {
@@ -498,6 +498,114 @@ describe("cached Page display and fresh write authority", () => {
     expect(save).not.toHaveBeenCalled();
   });
 
+  it.each(["body", "title"])("keeps a queued %s draft after disposal while a ready-basis PATCH is in flight", async (kind) => {
+    const acknowledgement = deferred<Page>();
+    const save = vi.fn(() => acknowledgement.promise);
+    const h = await mount({ read: async () => page(5), save });
+    let departure!: Promise<boolean>;
+    await act(async () => {
+      h.autosave.schedule({ content: doc("Already submitted") });
+      departure = h.autosave.flushBeforeNavigation();
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    await act(async () => h.autosave.schedule(kind === "body" ? { content: doc("Still queued") } : { title: "Still queued title" }));
+    await act(async () => root!.unmount()); root = undefined;
+    await act(async () => { acknowledgement.resolve(page(6, doc("Already submitted"))); expect(await departure).toBe(false); });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(h.autosave.hasUnsavedChanges()).toBe(true);
+    expect(h.autosave.takePending()).toBeNull();
+    await act(async () => { expect(await h.autosave.flushBeforeNavigation()).toBe(false); });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(h.onError).not.toHaveBeenCalled();
+  });
+
+  it.each(["conflict", "transient"])("does not replay a retired ready-basis PATCH after a %s failure", async (kind) => {
+    const response = deferred<Page>();
+    const save = vi.fn(() => response.promise);
+    const h = await mount({ read: async () => page(5), save });
+    let departure!: Promise<boolean>;
+    await act(async () => {
+      h.autosave.schedule({ content: doc("Submitted local change") });
+      departure = h.autosave.flushBeforeNavigation();
+      h.autosave.schedule({ content: doc("Latest local draft") });
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    await act(async () => root!.unmount()); root = undefined;
+    await act(async () => {
+      response.reject(kind === "conflict" ? new PageConflictError("Conflict", page(6, doc("Original local", "Remote update"))) : new Error("Connection interrupted"));
+      expect(await departure).toBe(false);
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(h.autosave.hasUnsavedChanges()).toBe(true);
+    expect(h.autosave.takePending()).toBeNull();
+    expect(h.onError).not.toHaveBeenCalled();
+  });
+
+  it("does not requeue an accepted in-flight PATCH solely because its owner was disposed", async () => {
+    const response = deferred<Page>();
+    const save = vi.fn(() => response.promise);
+    const h = await mount({ read: async () => page(5), save });
+    let departure!: Promise<boolean>;
+    await act(async () => { h.autosave.schedule({ content: doc("Accepted once") }); departure = h.autosave.flushBeforeNavigation(); });
+    await act(async () => root!.unmount()); root = undefined;
+    await act(async () => { response.resolve(page(6, doc("Accepted once"))); expect(await departure).toBe(true); });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(h.autosave.hasUnsavedChanges()).toBe(false);
+    expect(h.onError).not.toHaveBeenCalled();
+  });
+
+  it("fences the previous write generation across StrictMode effect cleanup and restart", async () => {
+    const response = deferred<Page>();
+    const cached = page(5);
+    const save = vi.fn().mockImplementationOnce(() => response.promise)
+      .mockImplementation(async (_id: string, patch: UpdatePageInput) => page(7, patch.content as PageDocJSON));
+    const onError = vi.fn();
+    let autosave!: PageAutosave;
+    let oldDeparture!: Promise<boolean>;
+    function Surface() {
+      autosave = usePageAutosave({ pageId: cached.id, page: cached, fresh: true, delayMs: 60_000,
+        save, onError, editorRef: { current: null } });
+      const started = useRef(false);
+      useEffect(() => {
+        if (started.current) return;
+        started.current = true;
+        autosave.schedule({ content: doc("Submitted before effect restart") });
+        oldDeparture = autosave.flushBeforeNavigation();
+        autosave.schedule({ content: doc("Queued before effect restart") });
+      }, []);
+      return null;
+    }
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => root!.render(createElement(StrictMode, {}, createElement(Surface))));
+    expect(save).toHaveBeenCalledTimes(1);
+    await act(async () => { response.resolve(page(6, doc("Submitted before effect restart"))); expect(await oldDeparture).toBe(false); });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(autosave.hasUnsavedChanges()).toBe(true);
+    // The new owner can explicitly flush the retained latest draft using the
+    // already accepted acknowledgement, without replaying the acknowledged body.
+    await act(async () => { expect(await autosave.flushBeforeNavigation()).toBe(true); });
+    expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Queued before effect restart"), version: 6 }, expect.any(Function));
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("continues an active departure through queued edits before reporting readiness", async () => {
+    const response = deferred<Page>();
+    const save = vi.fn().mockImplementationOnce(() => response.promise)
+      .mockImplementation(async (_id: string, patch: UpdatePageInput) => page(7, patch.content as PageDocJSON));
+    const h = await mount({ read: async () => page(5), save });
+    let departure!: Promise<boolean>;
+    await act(async () => {
+      h.autosave.schedule({ content: doc("First active write") });
+      departure = h.autosave.flushBeforeNavigation();
+      h.autosave.schedule({ content: doc("Latest active write") });
+    });
+    await act(async () => { response.resolve(page(6, doc("First active write"))); expect(await departure).toBe(true); });
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Latest active write"), version: 6 }, expect.any(Function));
+    expect(h.autosave.hasUnsavedChanges()).toBe(false);
+  });
+
   it("keeps ordinary version-conflict recovery after fresh acquisition", async () => {
     const reading = deferred<Page>();
     const save = vi.fn().mockRejectedValueOnce(new PageConflictError("Conflict", page(7, doc("Original local", "Latest remote"))))
@@ -506,7 +614,7 @@ describe("cached Page display and fresh write authority", () => {
     let departure!: Promise<boolean>;
     await act(async () => { h.autosave.schedule({ content: doc("Local text") }); departure = h.autosave.flushBeforeNavigation(); });
     await act(async () => { reading.resolve(page(6)); expect(await departure).toBe(true); });
-    expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Local text", "Latest remote"), version: 7 });
+    expect(save).toHaveBeenLastCalledWith("cached-page", { content: doc("Local text", "Latest remote"), version: 7 }, expect.any(Function));
     expect(h.onError).not.toHaveBeenCalled();
   });
 });

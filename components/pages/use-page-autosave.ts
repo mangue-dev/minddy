@@ -112,7 +112,7 @@ export function usePageAutosave({
   delayMs: number;
   /** The writing itself — `usePagesQuery.updatePage`, which also patches
       the tree. It raises `PageConflictError` on a version refusal. */
-  save: (pageId: string, input: UpdatePageInput) => Promise<Page>;
+  save: (pageId: string, input: UpdatePageInput, canDispatch?: () => boolean) => Promise<Page>;
   editorRef: React.MutableRefObject<Editor | null>;
   onError: (error: unknown) => void;
 }): PageAutosave {
@@ -132,8 +132,8 @@ export function usePageAutosave({
   const seeded = useRef<string | null>(null);
   const scope = useRef<string | null>(null);
   const basisReady = useRef(false);
-  const acquisitionGeneration = useRef(0);
-  const acquisitionActive = useRef(true);
+  const surfaceGeneration = useRef(0);
+  const surfaceActive = useRef(true);
   const loaded = page?.id === pageId && page.version > 0;
   useEffect(() => {
     if (!loaded || !page || seeded.current === pageId) return;
@@ -160,6 +160,16 @@ export function usePageAutosave({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<PageBlockConflict[]>([]);
 
+  const armWrite = useCallback(() => {
+    if (!surfaceActive.current) return;
+    const generation = surfaceGeneration.current;
+    const scheduled = setTimeout(() => {
+      if (timer.current === scheduled) timer.current = null;
+      if (surfaceActive.current && generation === surfaceGeneration.current) void writeRef.current();
+    }, delayMs);
+    timer.current = scheduled;
+  }, [delayMs]);
+
   const takePending = useCallback((): UpdatePageInput | null => {
     if (timer.current) {
       clearTimeout(timer.current);
@@ -167,7 +177,7 @@ export function usePageAutosave({
     }
     // pagehide cannot await an authorized read or a merge. Keep this draft
     // queued and let the browser's unsaved-change guard protect departure.
-    if (!basisReady.current || base.current.version <= 0) return null;
+    if (!surfaceActive.current || !basisReady.current || base.current.version <= 0) return null;
     const patch = pending.current;
     pending.current = null;
     // A last chance entry is made on the version we have in hand:
@@ -222,7 +232,7 @@ export function usePageAutosave({
           version: remote.version,
         };
         if (!inFlight.current && !timer.current) {
-          timer.current = setTimeout(() => void writeRef.current(), delayMs);
+          armWrite();
         }
       } else if (pending.current?.content !== undefined) {
         const { content: _content, version: _version, ...rest } = pending.current;
@@ -231,7 +241,7 @@ export function usePageAutosave({
       setSaving(inFlight.current || pending.current !== null);
       if (!pending.current) setFailed(false);
     },
-    [pageId, adopt, delayMs]
+    [pageId, adopt, armWrite]
   );
 
   useEffect(() => {
@@ -240,7 +250,9 @@ export function usePageAutosave({
 
   const write = useCallback(async () => {
     if (inFlight.current) return inFlightDone.current;
-    if (!pending.current) return;
+    if (!surfaceActive.current || !pending.current) return;
+    const generation = surfaceGeneration.current;
+    const currentOwner = () => surfaceActive.current && generation === surfaceGeneration.current;
 
     inFlight.current = true;
     let finish!: () => void;
@@ -249,13 +261,13 @@ export function usePageAutosave({
     setFailed(false);
     try {
       if (!basisReady.current) {
-        if (!acquireFresh || !acquisitionActive.current) throw new FreshPageBasisError("A fresh page read is required before saving");
-        const generation = acquisitionGeneration.current;
+        if (!acquireFresh) throw new FreshPageBasisError("A fresh page read is required before saving");
         const remote = await acquireFresh();
-        if (!acquisitionActive.current || generation !== acquisitionGeneration.current) throw new FreshPageBasisError("Page surface was disposed before its fresh read completed");
+        if (!currentOwner()) return;
         reconcileRemote(remote);
         if (!basisReady.current) throw new FreshPageBasisError("Fresh page response does not match the accepted document");
       }
+      if (!currentOwner()) return;
       let patch = takePending();
       // A writing, its replays, then what was typed during — all
       // in ONE loop, so never two requests in flight.
@@ -264,8 +276,12 @@ export function usePageAutosave({
         let sent: UpdatePageInput | null = patch;
         while (sent) {
           const attempt: UpdatePageInput = sent;
+          if (!currentOwner()) {
+            pending.current = { ...attempt, ...pending.current };
+            return;
+          }
           try {
-            const saved = await save(pageId, attempt);
+            const saved = await save(pageId, attempt, currentOwner);
             if (attempt.content !== undefined) {
               // A Realtime refetch can arrive before this response. Never
               // move the local base backwards to the older acknowledgement.
@@ -276,28 +292,35 @@ export function usePageAutosave({
                 };
               }
             }
-            setSavedAt(saved.updated_at);
+            // A request already accepted by the server stays acknowledged, but
+            // its retired generation cannot send the next draft or a replay.
+            if (surfaceActive.current) setSavedAt(saved.updated_at);
             sent = null;
+            if (!currentOwner()) return;
           } catch (err) {
-            if (!(err instanceof PageConflictError) || replays >= MAX_REPLAYS) {
+            if (!currentOwner() || !(err instanceof PageConflictError) || replays >= MAX_REPLAYS) {
               // Keep failed edits queued for the next retry, with newer
               // pending fields taking precedence over this attempt.
               pending.current = { ...attempt, ...pending.current };
+              if (!currentOwner()) return;
               throw err;
             }
             replays += 1;
             sent = resolve(err, attempt);
           }
         }
+        if (!currentOwner()) return;
         patch = takePending();
       }
     } catch (err) {
-      setFailed(true);
-      if (acquisitionActive.current) onError(err instanceof FreshPageBasisError ? undefined : err);
+      if (currentOwner()) {
+        setFailed(true);
+        onError(err instanceof FreshPageBasisError ? undefined : err);
+      }
     } finally {
       inFlight.current = false;
       finish();
-      setSaving(false);
+      if (surfaceActive.current) setSaving(!currentOwner() && pending.current !== null);
     }
 
     /** The 409: merge, adopt, and say what we have not been able to merge. */
@@ -357,12 +380,12 @@ export function usePageAutosave({
         screen.current = patch.content as PageDocJSON;
       }
       pending.current = { ...pending.current, ...patch };
-      setFailed(false);
-      setSaving(true);
+      if (surfaceActive.current) { setFailed(false); setSaving(true); }
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => void writeRef.current(), delayMs);
+      timer.current = null;
+      armWrite();
     },
-    [delayMs]
+    [armWrite]
   );
 
   const restore = useCallback(
@@ -386,11 +409,12 @@ export function usePageAutosave({
   // after dismantling would write on a page that we no longer look at. The exit
   // page, it is written by the caller (`flush`) BEFORE disassembling.
   useEffect(() => {
-    acquisitionActive.current = true;
+    surfaceActive.current = true;
     return () => {
-      acquisitionActive.current = false;
-      acquisitionGeneration.current += 1;
+      surfaceActive.current = false;
+      surfaceGeneration.current += 1;
       if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
     };
   }, []);
 
