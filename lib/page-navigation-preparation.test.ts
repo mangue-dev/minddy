@@ -74,15 +74,20 @@ it("does not postpone a due renewal after unrelated cache notifications", async 
   } finally { view.close(); }
 });
 
-it("renews a due validated body behind an empty priority token while deferring unknown bodies", async () => {
-  const view = setup(); const navigation = navigationPreparationPriority(view.client); navigation.acquire();
+it("prepares one unknown neighbor behind an empty reservation only after the actual navigation read finishes", async () => {
+  const view = setup(); const navigation = navigationPreparationPriority(view.client); const key = ["foreground"];
+  let finish!: () => void;
+  const read = view.client.fetchQuery({ queryKey: key, queryFn: () => new Promise((resolve) => { finish = () => resolve("ready"); }) });
+  navigation.acquire(); navigation.startRead(key);
   try {
     await vi.advanceTimersByTimeAsync(7000); expect(view.fetch).not.toHaveBeenCalled();
+    finish(); await read; navigation.finishRead(key);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(view.fetch.mock.calls.map(([url]) => url)).toEqual(["/api/projects/project/pages/b"]);
     await vi.advanceTimersByTimeAsync(1500);
-    expect(view.fetch.mock.calls.map(([url]) => url)).toEqual(["/api/projects/project/pages/a"]);
+    expect(view.fetch.mock.calls.map(([url]) => url)).toEqual(["/api/projects/project/pages/b", "/api/projects/project/pages/a"]);
     expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(true);
-    navigation.release(); await vi.advanceTimersByTimeAsync(100);
-    expect(view.fetch.mock.calls.some(([url]) => String(url).endsWith("/b"))).toBe(true);
+    expect(isPreparedPageData("b", view.client.getQueryState(pageKey("b"))!.dataUpdatedAt)).toBe(true);
   } finally { navigation.release(); view.close(); }
 });
 

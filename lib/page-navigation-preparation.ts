@@ -1,6 +1,6 @@
 import { hashKey, isCancelledError, onlineManager, type QueryClient } from "@tanstack/react-query";
 import { appTabRoute } from "./app-tab-location";
-import { isCachedTabReconciliation, navigationPreparationHasRead, navigationPreparationPending, navigationPreparationPriority, subscribeNavigationPreparation } from "./navigation-preparation-priority";
+import { isCachedTabReconciliation, navigationPreparationHasRead, navigationPreparationPriority, subscribeNavigationPreparation } from "./navigation-preparation-priority";
 import { PageApiError, type PageSummary } from "./pages-api";
 import { byPosition, type Page } from "./pages";
 import { isDraftPage } from "./pages-draft";
@@ -82,12 +82,9 @@ export function createPageNavigationPreparation(client: QueryClient) {
     if (body.id !== item.pageId || body.project_id !== item.projectId || cost(body) !== 1) return Infinity;
     return Math.max(state?.dataUpdatedAt ?? 0, attempts.get(item.pageId) ?? 0) + REFRESH_MS;
   };
-  const eligibleDestinations = () => navigationPreparationPending(client)
-    ? destinations().filter((item) => client.getQueryData(pageKey(item.pageId)) !== undefined)
-    : destinations();
   const schedule = () => {
     if (disposed || reading || !visible() || !onlineManager.isOnline() || otherTransport() || navigationPreparationHasRead(client)) { clearTimer(); return; }
-    const items = eligibleDestinations();
+    const items = destinations();
     const due = Math.min(...items.map((item) => Math.max(dueAt(item, explicitIds.has(item.pageId)), failures.get(item.pageId) ?? 0)));
     if (!Number.isFinite(due)) { clearTimer(); return; }
     const next = Math.max(Date.now() + IDLE_MS, due);
@@ -97,7 +94,7 @@ export function createPageNavigationPreparation(client: QueryClient) {
   const refresh = () => {
     timer = undefined; timerAt = 0;
     if (disposed || reading || !visible() || !onlineManager.isOnline() || otherTransport() || navigationPreparationHasRead(client)) return;
-    const item = eligibleDestinations().find((target) => Math.max(dueAt(target, explicitIds.has(target.pageId)), failures.get(target.pageId) ?? 0) <= Date.now());
+    const item = destinations().find((target) => Math.max(dueAt(target, explicitIds.has(target.pageId)), failures.get(target.pageId) ?? 0) <= Date.now());
     if (!item) { schedule(); return; }
     reading = item;
     const attemptedAt = Date.now();
