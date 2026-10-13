@@ -53,6 +53,9 @@ export type PageSaveState = "saved" | "saving" | "error" | "conflict";
  */
 const MAX_REPLAYS = 3;
 
+/** Internal acquisition failures use the caller's localized save error. */
+class FreshPageBasisError extends Error {}
+
 export interface PageAutosave {
   state: PageSaveState;
   /** The timestamp of the last accepted write, for the tooltip. */
@@ -65,6 +68,8 @@ export interface PageAutosave {
   flush: () => Promise<void>;
   /** Wait for all writes and keep the current surface open if saving failed. */
   flushBeforeNavigation: () => Promise<boolean>;
+  /** Keep browser reload/close from silently discarding an unresolved draft. */
+  hasUnsavedChanges: () => boolean;
   /** Remove draft from queue — last chance writing
       (`pagehide`) must win itself, without going through a promise. */
   takePending: () => UpdatePageInput | null;
@@ -82,6 +87,8 @@ export function usePageAutosave({
   pageId,
   page,
   fresh,
+  acquireFresh,
+  readError,
   delayMs,
   save,
   editorRef,
@@ -98,6 +105,10 @@ export function usePageAutosave({
    * not the age. `isFetchedAfterMount`, at the caller's house.
    */
   fresh: boolean;
+  /** Ordinary authorized read, shared with the mounted Page query. */
+  acquireFresh?: () => Promise<Page>;
+  /** A failed mounted read cannot authorize a cached body for writing. */
+  readError?: unknown;
   delayMs: number;
   /** The writing itself — `usePagesQuery.updatePage`, which also patches
       the tree. It raises `PageConflictError` on a version refusal. */
@@ -115,29 +126,29 @@ export function usePageAutosave({
       on the body left in the request, which is one second late. */
   const screen = useRef<PageDocJSON | null>(null);
 
-  // The basis is laid ONCE per page, and ONLY after reading
-  // during this assembly (`fresh`). Both halves of this sentence correct
-  // each a 409 on a page where no one else writes:
-  //
-  // - once: a refetch that passes through here again would overwrite the version that
-  // the writes moved forward, and the next save would start again
-  // on an expired meter;
-  // - from a fresh reading: otherwise we stick to the FIRST data
-  // came, that is to say the cache — a snapshot of localStorage old
-  // several hours to recharge. The lock below then froze
-  // this outdated version for the entire session, and ALL saves
-  // left in 409 (silently resolved by the merger, but free).
+  // An accepted cached document seeds display and local draft capture once.
+  // It does not grant write authority. A fresh response is merged with this
+  // cached base and the current screen before any queued write can leave.
   const seeded = useRef<string | null>(null);
-  const loaded = fresh && page?.id === pageId;
+  const scope = useRef<string | null>(null);
+  const basisReady = useRef(false);
+  const acquisitionGeneration = useRef(0);
+  const acquisitionActive = useRef(true);
+  const loaded = page?.id === pageId && page.version > 0;
   useEffect(() => {
     if (!loaded || !page || seeded.current === pageId) return;
     seeded.current = pageId;
+    scope.current = page.project_id;
     base.current = {
       content: (page.content as PageDocJSON | null) ?? null,
       version: page.version,
     };
     screen.current = base.current.content;
-  }, [loaded, page, pageId]);
+    basisReady.current = fresh;
+  }, [loaded, page, pageId, fresh]);
+  useEffect(() => {
+    if (readError) basisReady.current = false;
+  }, [readError]);
 
   const pending = useRef<UpdatePageInput | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -154,11 +165,14 @@ export function usePageAutosave({
       clearTimeout(timer.current);
       timer.current = null;
     }
+    // pagehide cannot await an authorized read or a merge. Keep this draft
+    // queued and let the browser's unsaved-change guard protect departure.
+    if (!basisReady.current || base.current.version <= 0) return null;
     const patch = pending.current;
     pending.current = null;
     // A last chance entry is made on the version we have in hand:
     // without it, it would crush — with it, it is simply refused.
-    if (patch && patch.content !== undefined && patch.version === undefined) {
+    if (patch && patch.content !== undefined) {
       return { ...patch, version: base.current.version };
     }
     return patch;
@@ -184,10 +198,49 @@ export function usePageAutosave({
     if (seeded.current === pageId && screen.current) adopt(screen.current);
   }, [pageId, adopt]);
 
+  const reconcileRemote = useCallback(
+    (remote: Page) => {
+      if (remote.id !== pageId || remote.project_id !== scope.current || remote.version <= 0 ||
+          remote.version < base.current.version) return;
+      basisReady.current = true;
+      if (remote.version === base.current.version) return;
+
+      const theirs = (remote.content as PageDocJSON | null) ?? null;
+      const merged = mergeDocs(base.current.content, screen.current, theirs);
+      base.current = { content: theirs, version: remote.version };
+      adopt(merged.doc);
+      if (merged.conflicts.length > 0) {
+        setConflicts((current) => [...current, ...merged.conflicts]);
+      }
+      setSavedAt(remote.updated_at);
+
+      // Rebase queued local edits before taking the next versioned patch.
+      if (merged.changed) {
+        pending.current = {
+          ...pending.current,
+          content: merged.doc,
+          version: remote.version,
+        };
+        if (!inFlight.current && !timer.current) {
+          timer.current = setTimeout(() => void writeRef.current(), delayMs);
+        }
+      } else if (pending.current?.content !== undefined) {
+        const { content: _content, version: _version, ...rest } = pending.current;
+        pending.current = Object.keys(rest).length > 0 ? rest : null;
+      }
+      setSaving(inFlight.current || pending.current !== null);
+      if (!pending.current) setFailed(false);
+    },
+    [pageId, adopt, delayMs]
+  );
+
+  useEffect(() => {
+    if (fresh && loaded && page) reconcileRemote(page);
+  }, [fresh, loaded, page, reconcileRemote]);
+
   const write = useCallback(async () => {
     if (inFlight.current) return inFlightDone.current;
-    let patch = takePending();
-    if (!patch) return;
+    if (!pending.current) return;
 
     inFlight.current = true;
     let finish!: () => void;
@@ -195,6 +248,15 @@ export function usePageAutosave({
     setSaving(true);
     setFailed(false);
     try {
+      if (!basisReady.current) {
+        if (!acquireFresh || !acquisitionActive.current) throw new FreshPageBasisError("A fresh page read is required before saving");
+        const generation = acquisitionGeneration.current;
+        const remote = await acquireFresh();
+        if (!acquisitionActive.current || generation !== acquisitionGeneration.current) throw new FreshPageBasisError("Page surface was disposed before its fresh read completed");
+        reconcileRemote(remote);
+        if (!basisReady.current) throw new FreshPageBasisError("Fresh page response does not match the accepted document");
+      }
+      let patch = takePending();
       // A writing, its replays, then what was typed during — all
       // in ONE loop, so never two requests in flight.
       while (patch) {
@@ -231,7 +293,7 @@ export function usePageAutosave({
       }
     } catch (err) {
       setFailed(true);
-      onError(err);
+      if (acquisitionActive.current) onError(err instanceof FreshPageBasisError ? undefined : err);
     } finally {
       inFlight.current = false;
       finish();
@@ -263,7 +325,7 @@ export function usePageAutosave({
       }
       return { ...rest, content: merged.doc, version: err.page.version };
     }
-  }, [pageId, save, takePending, adopt, onError]);
+  }, [pageId, save, takePending, adopt, onError, acquireFresh, reconcileRemote]);
 
   const writeRef = useRef(write);
   writeRef.current = write;
@@ -277,6 +339,18 @@ export function usePageAutosave({
     return pending.current === null && !inFlight.current;
   }, []);
 
+  const hasUnsavedChanges = useCallback(() => pending.current !== null || inFlight.current, []);
+
+  useEffect(() => {
+    const protectDraft = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", protectDraft);
+    return () => window.removeEventListener("beforeunload", protectDraft);
+  }, [hasUnsavedChanges]);
+
   const schedule = useCallback(
     (patch: UpdatePageInput) => {
       if (patch.content !== undefined) {
@@ -289,44 +363,6 @@ export function usePageAutosave({
       timer.current = setTimeout(() => void writeRef.current(), delayMs);
     },
     [delayMs]
-  );
-
-  const reconcileRemote = useCallback(
-    (remote: Page) => {
-      if (remote.id !== pageId || remote.version <= base.current.version) return;
-
-      const theirs = (remote.content as PageDocJSON | null) ?? null;
-      const merged = mergeDocs(base.current.content, screen.current, theirs);
-      base.current = { content: theirs, version: remote.version };
-      adopt(merged.doc);
-      if (merged.conflicts.length > 0) {
-        setConflicts((current) => [...current, ...merged.conflicts]);
-      }
-      setSavedAt(remote.updated_at);
-
-      // Keep local changes queued on the freshly received version. A later
-      // autosave can then commit a non-conflicting merge without overwriting
-      // the remote document.
-      if (merged.changed) {
-        pending.current = {
-          ...pending.current,
-          content: merged.doc,
-          version: remote.version,
-        };
-        if (!inFlight.current && !timer.current) {
-          timer.current = setTimeout(() => void writeRef.current(), delayMs);
-        }
-      } else if (pending.current?.content !== undefined) {
-        // The remote document already contains the local body, or it won a
-        // conflict. Keep any queued title or icon change, but do not resend a
-        // stale body that would merely create another conflict.
-        const { content: _content, version: _version, ...rest } = pending.current;
-        pending.current = Object.keys(rest).length > 0 ? rest : null;
-      }
-      setSaving(inFlight.current || pending.current !== null);
-      if (!pending.current) setFailed(false);
-    },
-    [pageId, adopt, delayMs]
   );
 
   const restore = useCallback(
@@ -349,12 +385,14 @@ export function usePageAutosave({
   // The timer does not survive the component: a programmed write which leaves
   // after dismantling would write on a page that we no longer look at. The exit
   // page, it is written by the caller (`flush`) BEFORE disassembling.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    acquisitionActive.current = true;
+    return () => {
+      acquisitionActive.current = false;
+      acquisitionGeneration.current += 1;
       if (timer.current) clearTimeout(timer.current);
-    },
-    []
-  );
+    };
+  }, []);
 
   const state: PageSaveState = saving
     ? "saving"
@@ -372,6 +410,7 @@ export function usePageAutosave({
       schedule,
       flush,
       flushBeforeNavigation,
+      hasUnsavedChanges,
       takePending,
       restore,
       dismiss,
@@ -385,6 +424,7 @@ export function usePageAutosave({
       schedule,
       flush,
       flushBeforeNavigation,
+      hasUnsavedChanges,
       takePending,
       restore,
       dismiss,

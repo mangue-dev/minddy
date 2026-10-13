@@ -61,7 +61,8 @@ import {
   PAGE_NAVIGATION_FRESH_MS,
   pageKey,
   usePageSurfaceReady,
-  fetchPageNavigationData,
+  createPageSurfaceRead,
+  PageWriteBasisError,
   usePagesQuery,
 } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -329,28 +330,28 @@ function PageSurface({
     [mentionSources]
   );
 
-  // A new document surface must validate cached data on an ordinary mount;
-  // the exception is the short window immediately
-  // after an intent prefetch or optimistic creation. That response is already
-  // the navigation's fresh read, so requesting it again would recreate the delay
-  // the prefetch just removed.
+  // Display an accepted, scoped body immediately. Mount validation still
+  // acquires the fresh write basis unless explicit preparation supplied it.
+  const surfaceRead = useMemo(() => createPageSurfaceRead(queryClient, projectId, pageId), [queryClient, projectId, pageId]);
   const {
-    data: page,
+    data: cachedPage,
     dataUpdatedAt,
     isPending,
     isFetchedAfterMount,
     error,
   } = useQuery({
     queryKey: pageKey(pageId),
-    queryFn: ({ signal }) => fetchPageNavigationData(queryClient, projectId, pageId, signal),
+    queryFn: surfaceRead.queryFn,
     staleTime: PAGE_NAVIGATION_FRESH_MS,
     refetchOnMount: (query) =>
       !query.state.isInvalidated && isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
+  const page = cachedPage?.id === pageId && cachedPage.project_id === projectId && cachedPage.version > 0
+    ? cachedPage : undefined;
   const readyForThisSurface = usePageSurfaceReady(
     pageId,
     dataUpdatedAt,
-    isFetchedAfterMount,
+    isFetchedAfterMount && surfaceRead.hasAccepted(page),
     queryClient.getQueryState(pageKey(pageId))?.isInvalidated,
   );
 
@@ -424,26 +425,24 @@ function PageSurface({
   }, []);
   const onSaveError = useCallback(
     (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : t("saveFailed"));
+      toast.error(err instanceof Error && !(err instanceof PageWriteBasisError) ? err.message : t("saveFailed"));
     },
     [t]
   );
   const autosave = usePageAutosave({
     pageId,
     page,
-    // The `version` which serves as a safeguard is NOT caught in the cache: it
-    // only makes sense when it comes from the server, and from this montage.
-    fresh: readyForThisSurface,
+    // Cached display captures a local draft; only a validated base authorizes
+    // its merged, versioned write. A flush joins the ordinary mounted read.
+    fresh: readyForThisSurface && !error,
+    acquireFresh: surfaceRead.acquire,
+    readError: error,
     delayMs: SAVE_DELAY_MS,
     save: updatePage,
     editorRef,
     onError: onSaveError,
   });
-  const { schedule, flush, takePending, reconcileRemote, resumeEditor } = autosave;
-
-  useEffect(() => {
-    if (page && readyForThisSurface) reconcileRemote(page);
-  }, [page, readyForThisSurface, reconcileRemote]);
+  const { schedule, flush, takePending, resumeEditor } = autosave;
 
   /* ── Departure: write, or act as if nothing had happened ───────────────
      Leave the page WRITE what remained — otherwise, type then click immediately
@@ -928,11 +927,9 @@ function PageSurface({
     );
   }
 
-  // A new surface needs its own fresh read or explicit navigation preparation.
-  // A retained surface keeps its validated basis while background reads refresh
-  // it. Versioned autosave reconciles newer responses, and resumeEditor restores
-  // the merged screen when Activity recreates Tiptap's editor.
-  if (isPending || !page || !readyForThisSurface) {
+  // Network reconciliation does not hide an accepted body. Autosave separately
+  // waits for its fresh basis, preserving immediate typing in the local overlay.
+  if (isPending || !page) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <Spinner />

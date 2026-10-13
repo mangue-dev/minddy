@@ -92,6 +92,40 @@ export async function fetchPageNavigationData(client: QueryClient, projectId: st
     ? current : incoming;
 }
 
+/** A canceled refetch can resolve with cached data without an accepted GET. */
+export class PageWriteBasisError extends Error {}
+
+/** Keep actual read receipts local to one document surface's write authority. */
+export function createPageSurfaceRead(client: QueryClient, projectId: string, pageId: string) {
+  let generation = 0;
+  let accepted: { generation: number; version: number } | undefined;
+  const queryFn = async ({ signal }: { signal: AbortSignal }) => {
+    const current = ++generation;
+    accepted = undefined;
+    const page = await fetchPageNavigationData(client, projectId, pageId, signal);
+    signal.throwIfAborted();
+    if (current === generation) accepted = { generation: current, version: page.version };
+    return page;
+  };
+  const hasAccepted = (page: Page | undefined) => !!accepted && !!page && page.id === pageId &&
+    page.project_id === projectId && page.version > 0 && accepted.version === page.version;
+  const receipt = () => accepted;
+  return {
+    queryFn,
+    hasAccepted,
+    async acquire() {
+      const previous = accepted?.generation ?? 0;
+      accepted = undefined;
+      const page = await client.fetchQuery({ queryKey: pageKey(pageId), queryFn, staleTime: 0, retry: false });
+      const actual = receipt();
+      if (!hasAccepted(page) || !actual || actual.generation <= previous) {
+        throw new PageWriteBasisError("No fresh, non-aborted Page read was accepted");
+      }
+      return page;
+    },
+  };
+}
+
 /** The tree and tab strip share the same freshness-bounded document preparation. */
 export function prefetchPageNavigation(queryClient: QueryClient, projectId: string, pageId: string): void {
   preparePageNavigation(pageId);
