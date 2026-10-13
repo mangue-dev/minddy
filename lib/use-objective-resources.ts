@@ -3,21 +3,11 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteResourceApi } from "./comments-api";
-import type { Attachment, ResourceInput } from "./types";
+import { objectiveResourcesOptions } from "./secondary-view-queries";
+import type { ResourceInput } from "./types";
 
 const resourcesKey = (objectiveId: string) =>
   ["objective-resources", objectiveId] as const;
-
-async function fetchObjectiveResources(objectiveId: string): Promise<Attachment[]> {
-  const response = await fetch(`/api/objectives/${objectiveId}/resources`);
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(
-      (data as { error?: string } | null)?.error || "Request failed"
-    );
-  }
-  return (data ?? []) as Attachment[];
-}
 
 /** Register already-added resources on an existing objective. */
 export async function addObjectiveResourcesApi(
@@ -46,8 +36,7 @@ export function useObjectiveResources(objectiveId: string | null) {
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
-    queryKey: resourcesKey(objectiveId ?? ""),
-    queryFn: () => fetchObjectiveResources(objectiveId as string),
+    ...objectiveResourcesOptions(objectiveId ?? ""),
     enabled: !!objectiveId,
   });
 

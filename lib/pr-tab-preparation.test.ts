@@ -5,10 +5,13 @@ import { pullRequestQueryOptions } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 import { navigationPreparationPending } from "./navigation-preparation-priority";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
-import { appTabPreparationQueries, prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { appTabPreparationQueries, isPreparedAppTabDestination, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 import { fetchPageNavigationData, isPreparedPageData, pageKey } from "./use-pages-query";
+import { issuesQueryFn } from "./issues-api";
+import { issueWrites, mergeServerIssue, removeIssueEverywhere } from "./optimistic/issue-writes";
+import type { Issue } from "./types";
 
-vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn() }));
+vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
@@ -45,6 +48,167 @@ const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
 
 describe("account-owned PR preparation", () => {
+  it.each(["accepted", "rejected", "disposed"] as const)("waits for an actual selected insert's %s transition after an overlaid ordinary issues read", async (outcome) => {
+    const prepared = setup(), unrelated = setup();
+    // Selection fixtures omit unrelated issue fields; the real reader still applies its pending-write overlay.
+    const old = { id: "old", project_id: "new", status: "triage", created_at: "2026-01-01" } as Issue;
+    const pending = { ...old, id: "pending", created_at: "2026-01-02" };
+    const href = "/projects/new/triage";
+    const handle = issueWrites.begin({ kind: "insert", row: pending });
+    const paths: string[] = [];
+    const fetch = vi.fn<typeof globalThis.fetch>(async (url) => {
+      const path = String(url); paths.push(path);
+      return path.endsWith("/new/issues") ? Response.json([old]) : Response.json([]);
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      for (const option of appTabPreparationQueries(prepared.client, href)) if (option.queryKey[0] !== "issues") prepared.client.setQueryData(option.queryKey, []);
+      await prepared.client.fetchQuery({ queryKey: ["issues", "new"], queryFn: issuesQueryFn("new") });
+      expect(prepared.client.getQueryData<Issue[]>(["issues", "new"])?.map((issue) => issue.id)).toEqual(["old", "pending"]);
+      prepared.preparation.visit("/home", ["/home", href]); await drain(prepared);
+      unrelated.preparation.visit("/home", ["/home", "/projects/other/triage"]);
+      expect(paths).toEqual(["/api/projects/new/issues"]);
+      expect(isPreparedAppTabDestination(prepared.client, href)).toBe(false);
+      expect(prepared.tasks.size).toBe(0);
+      const unrelatedTasks = unrelated.tasks.size;
+      if (outcome === "disposed") prepared.preparation.dispose();
+      if (outcome === "rejected") {
+        issueWrites.fail(handle);
+        // The hook's rollback follows fail(), before the targeted wake's microtask.
+        removeIssueEverywhere(prepared.client, "new", pending.id);
+      } else {
+        mergeServerIssue(prepared.client, "new", pending);
+        issueWrites.settle(handle, pending);
+        issueWrites.settle(handle, pending);
+      }
+      await Promise.resolve(); await drain(prepared);
+      expect(unrelated.tasks.size).toBe(unrelatedTasks);
+      const selected = outcome === "rejected" ? "old" : "pending";
+      expect(paths).toEqual(outcome === "disposed" ? ["/api/projects/new/issues"] : [
+        "/api/projects/new/issues", `/api/issues/${selected}/comments`, `/api/issues/${selected}/events`,
+      ]);
+      if (outcome !== "disposed") expect(isPreparedAppTabDestination(prepared.client, href)).toBe(true);
+      expect(prepared.tasks.size).toBe(0);
+    } finally {
+      prepared.preparation.dispose(); unrelated.preparation.dispose();
+      prepared.client.clear(); unrelated.client.clear(); issueWrites.reset();
+    }
+  });
+
+  it("prepares pending patches and recently accepted creations without waiting for another transition", async () => {
+    const prepared = setup(), href = "/projects/new/triage";
+    const issue = { id: "existing", project_id: "new", status: "triage", created_at: "2026-01-01" } as Issue;
+    issueWrites.settle(issueWrites.begin({ kind: "insert", row: issue }), issue);
+    issueWrites.begin({ kind: "patch", id: issue.id, patch: { title: "Edited" } });
+    prepared.fetch.mockImplementation(async (url) => String(url).endsWith("/new/issues") ? Response.json([issue]) : Response.json([]));
+    try {
+      for (const option of appTabPreparationQueries(prepared.client, href)) if (option.queryKey[0] !== "issues") prepared.client.setQueryData(option.queryKey, []);
+      prepared.preparation.visit("/home", ["/home", href]); await drain(prepared);
+      expect(prepared.fetch.mock.calls.map(([url]) => String(url))).toEqual([
+        "/api/projects/new/issues", "/api/issues/existing/comments", "/api/issues/existing/events",
+      ]);
+      expect(isPreparedAppTabDestination(prepared.client, href)).toBe(true);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); issueWrites.reset(); }
+  });
+  it("discovers only one complete detail per populated listed secondary view after its ordinary list succeeds", async () => {
+    const prepared = setup(); let active = 0, maximum = 0;
+    const issues = Array.from({ length: 120 }, (_, index) => ({ id: `issue-${index}`, project_id: "new", status: "triage", created_at: new Date(index * 1000).toISOString() }));
+    const objectives = Array.from({ length: 120 }, (_, index) => ({ id: `goal-${index}`, project_id: "new", status: "planned" }));
+    const posts = Array.from({ length: 120 }, (_, index) => ({ id: `post-${index}`, project_id: "new", status: "open", vote_count: index,
+      created_at: new Date(index * 1000).toISOString(), review_state: "published", sensitivity: null, category_ids: [] }));
+    prepared.fetch.mockImplementation(async (url) => {
+      maximum = Math.max(maximum, ++active); await Promise.resolve(); active--;
+      const path = String(url);
+      if (path.endsWith("/new/issues")) return Response.json(issues);
+      if (path.endsWith("/new/objectives")) return Response.json(objectives);
+      if (path.startsWith("/api/projects/new/feedback?")) return Response.json({ posts, board_enabled: false });
+      if (path.endsWith("/feedback/post-119")) return Response.json({ post: posts[119] });
+      if (path.includes("?count=1")) return Response.json({ count: 0 });
+      return fixtureResponse(path);
+    });
+    const tabs = ["/home", "/projects/new/triage", "/projects/new/feedback", "/projects/new/objectives"];
+    try {
+      prepared.preparation.visit(tabs[0], tabs); await drain(prepared);
+      for (const href of tabs.slice(1)) {
+        expect(isPreparedAppTabDestination(prepared.client, href), href).toBe(true);
+        for (const options of appTabPreparationQueries(prepared.client, href)) expect(prepared.client.getQueryState(options.queryKey)?.status).toBe("success");
+      }
+      const paths = prepared.fetch.mock.calls.map(([url]) => String(url));
+      expect(paths.filter((path) => path.startsWith("/api/issues/"))).toEqual(["/api/issues/issue-119/comments", "/api/issues/issue-119/events"]);
+      expect(paths.filter((path) => path.startsWith("/api/objectives/"))).toEqual([
+        "/api/objectives/goal-0/comments", "/api/objectives/goal-0/events", "/api/objectives/goal-0/resources", "/api/objectives/goal-0/feedback?count=1",
+      ]);
+      expect(paths.filter((path) => /\/feedback\/post-/.test(path))).toEqual([
+        "/api/projects/new/feedback/post-119", "/api/projects/new/feedback/post-119/comments", "/api/projects/new/feedback/post-119/events",
+      ]);
+      expect(paths).toHaveLength(18); expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
+      expect(paths.some((path) => path.includes("/settings") || path.includes("/git-link"))).toBe(false);
+      expect(prepared.tasks.size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("replaces superseded selected work while preserving an old detail's joined foreground read", async () => {
+    const prepared = setup(); let finish!: () => void;
+    const signals = new Map<string, AbortSignal>();
+    for (const option of appTabPreparationQueries(prepared.client, "/projects/new/triage")) prepared.client.setQueryData(option.queryKey, []);
+    const old = { id: "old", project_id: "new", status: "triage", created_at: "2026-01-01" };
+    prepared.client.setQueryData(["issues", "new"], [old]);
+    prepared.fetch.mockImplementation((url, init) => new Promise((resolve, reject) => {
+      const path = String(url), signal = init!.signal!; signals.set(path, signal);
+      if (path.endsWith("/comments")) finish = () => resolve(Response.json([]));
+      signal.addEventListener("abort", () => reject(new Error("Superseded detail")), { once: true });
+    }));
+    let stop = () => {};
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new/triage"]); prepared.flush();
+      await vi.waitFor(() => expect(signals.size).toBe(2));
+      const observer = new QueryObserver(prepared.client, { queryKey: ["comments", "old"] }); stop = observer.subscribe(() => {});
+      await prepared.client.fetchQuery({ queryKey: ["issues", "new"], queryFn: async () => [{ ...old, id: "new" }], staleTime: 0 });
+      expect(signals.get("/api/issues/old/comments")!.aborted).toBe(false);
+      expect(signals.get("/api/issues/old/events")!.aborted).toBe(true);
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      prepared.fetch.mockImplementation(async () => Response.json([])); finish();
+      await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0)); await drain(prepared);
+      expect(prepared.fetch.mock.calls.map(([url]) => url)).toEqual([
+        "/api/issues/old/comments", "/api/issues/old/events", "/api/issues/new/comments", "/api/issues/new/events",
+      ]);
+      expect(prepared.tasks.size).toBe(0);
+    } finally { stop(); finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("does not discover speculative details from manual optimistic list notifications", async () => {
+    const prepared = setup();
+    for (const option of appTabPreparationQueries(prepared.client, "/projects/new/triage")) prepared.client.setQueryData(option.queryKey, []);
+    const old = { id: "old", project_id: "new", status: "triage", created_at: "2026-01-01" };
+    prepared.client.setQueryData(["issues", "new"], [old]); prepared.fetch.mockImplementation(async () => Response.json([]));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new/triage"]); await drain(prepared);
+      expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      prepared.client.setQueryData(["issues", "new"], [{ ...old, id: "pending", created_at: "2026-01-02" }, old]);
+      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
+      expect(isPreparedAppTabDestination(prepared.client, "/projects/new/triage")).toBe(false);
+      prepared.client.setQueryData(["issues", "new"], [old]);
+      expect(isPreparedAppTabDestination(prepared.client, "/projects/new/triage")).toBe(true);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("keeps a denied selected detail unprepared without retrying it on list reconciliation or focus", async () => {
+    const foreground = new EventTarget(); vi.stubGlobal("window", foreground);
+    const prepared = setup();
+    for (const option of appTabPreparationQueries(prepared.client, "/projects/new/triage")) prepared.client.setQueryData(option.queryKey, []);
+    const issue = { id: "denied", project_id: "new", status: "triage", created_at: "2026-01-01" };
+    prepared.client.setQueryData(["issues", "new"], [issue]);
+    prepared.fetch.mockImplementation(async (url) => String(url).endsWith("/comments")
+      ? Response.json({ error: "Forbidden" }, { status: 403 }) : Response.json([]));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new/triage"]); await drain(prepared);
+      expect(prepared.client.getQueryState(["comments", "denied"])?.status).toBe("error");
+      expect(isPreparedAppTabDestination(prepared.client, "/projects/new/triage")).toBe(false);
+      await prepared.client.fetchQuery({ queryKey: ["issues", "new"], queryFn: async () => [issue], staleTime: 0 });
+      for (let step = 0; step < 3; step++) { foreground.dispatchEvent(new Event("focus")); prepared.flush(); }
+      expect(prepared.fetch).toHaveBeenCalledTimes(2); expect(prepared.tasks.size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
   it("saturates two normal slots and refills only the slot whose shared query settles", async () => {
     const prepared = setup();
     const reads = new Map<string, { signal: AbortSignal; finish: () => void }>();

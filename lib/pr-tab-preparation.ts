@@ -2,7 +2,8 @@ import { hashKey, isCancelledError, onlineManager, type Query, type QueryClient 
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
-import { appTabPreparationQueries, prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { appTabPendingIssueSelection, appTabPreparationQueries, appTabSelectionSource, prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { issueWrites } from "./optimistic/issue-writes";
 import { isCachedTabReconciliation, navigationPreparationPriority } from "./navigation-preparation-priority";
 import { allPullRequestsQueryOptions } from "./use-agent-runs";
 import { prActivityPreparationQueries } from "./pr-activity-query";
@@ -85,11 +86,21 @@ export function createPrTabPreparation(
       !(auxiliary.has(query.queryHash) && !query.isActive()));
   };
   type PreparedQuery = { options: ReturnType<typeof appTabPreparationQueries>[number]; identity: string };
-  type Destination = { href: string; route: ReturnType<typeof appTabRoute>; queries: PreparedQuery[] };
+  type Destination = { href: string; route: ReturnType<typeof appTabRoute>; queries: PreparedQuery[]; pendingIssue: string | null };
   let listed: Destination[] = [], neighbor: Destination | undefined;
   const manifest = new Map<string, { query: PreparedQuery; neighboring: boolean }>();
+  const selectionSources = new Map<string, Set<Destination>>();
+  const pendingInsertSources = new Map<string, Set<string>>();
+  const indexPendingInsertSources = () => {
+    pendingInsertSources.clear();
+    for (const [source, destinations] of selectionSources) for (const item of destinations) {
+      if (!item.pendingIssue) continue;
+      const sources = pendingInsertSources.get(item.pendingIssue) ?? new Set<string>();
+      sources.add(source); pendingInsertSources.set(item.pendingIssue, sources);
+    }
+  };
   const pendingKeys = new Set<string>();
-  const destination = (href: string): Destination => ({ href, route: appTabRoute(href),
+  const destination = (href: string): Destination => ({ href, route: appTabRoute(href), pendingIssue: appTabPendingIssueSelection(client, href),
     queries: appTabPreparationQueries(client, href).map((options) => ({ options, identity: hashKey(options.queryKey) })) });
   const refreshPending = (identity?: string) => {
     const update = (key: string, entry: { query: PreparedQuery; neighboring: boolean }) => {
@@ -112,6 +123,14 @@ export function createPrTabPreparation(
   };
   const rebuildManifest = () => {
     listed = available.filter((href) => href !== active).map(destination).filter((item) => item.queries.length);
+    selectionSources.clear();
+    for (const item of listed) {
+      const source = appTabSelectionSource(item.href);
+      if (!source) continue;
+      const identity = hashKey(source), destinations = selectionSources.get(identity) ?? new Set<Destination>();
+      destinations.add(item); selectionSources.set(identity, destinations);
+    }
+    indexPendingInsertSources();
     neighbor = undefined; manifest.clear();
     for (const item of listed) for (const query of item.queries) manifest.set(query.identity, { query, neighboring: false });
     refreshNeighbor(); refreshPending();
@@ -144,6 +163,29 @@ export function createPrTabPreparation(
     void client.cancelQueries({ queryKey: read.key, exact: true });
   };
   const yieldReads = () => { for (const read of preparing.values()) yieldRead(read); };
+  const refreshSelectedDependencies = (identity: string) => {
+    const destinations = selectionSources.get(identity);
+    if (!destinations) return;
+    let changed = false;
+    for (const item of destinations) {
+      const next = destination(item.href), queries = next.queries;
+      item.pendingIssue = next.pendingIssue;
+      if (queries.length === item.queries.length && queries.every((query, index) => query.identity === item.queries[index].identity)) continue;
+      item.queries = queries; changed = true;
+    }
+    indexPendingInsertSources();
+    if (!changed) return;
+    const previous = [...manifest.keys()];
+    manifest.clear();
+    for (const item of listed) for (const query of item.queries) manifest.set(query.identity, { query, neighboring: false });
+    for (const query of neighbor?.queries ?? []) if (!manifest.has(query.identity)) manifest.set(query.identity, { query, neighboring: true });
+    for (const key of previous) if (!manifest.has(key)) {
+      attempted.delete(key); parkedForge.delete(key); deferredForge.delete(key);
+      const read = preparing.get(key);
+      if (read) yieldRead(read);
+    }
+    refreshPending(); syncPriority();
+  };
   const prepare = () => {
     cancel = undefined;
     if (disposed || preparing.size >= SCOPED_PREPARATION_CONCURRENCY || !visible() || !onlineManager.isOnline() || otherTransport()) return;
@@ -226,6 +268,17 @@ export function createPrTabPreparation(
     }
     enqueue();
   };
+  const stopInsertSettlement = issueWrites.subscribeInsertSettlement((id) => {
+    const sources = pendingInsertSources.get(id);
+    if (!sources) return;
+    // Creation failure removes its optimistic row immediately after fail().
+    // Resume this indexed selection only after that synchronous rollback.
+    queueMicrotask(() => {
+      if (disposed || !pendingInsertSources.has(id)) return;
+      for (const source of sources) refreshSelectedDependencies(source);
+      changed();
+    });
+  });
   const stop = client.getQueryCache().subscribe((event) => {
     if (disposed) return;
     // Completed working sets ignore unrelated data and observer churn. Only a
@@ -234,6 +287,7 @@ export function createPrTabPreparation(
     const relevant = manifest.has(identity);
     const projects = event.query.queryKey.length === 1 && event.query.queryKey[0] === "projects";
     if (event.type === "removed") {
+      refreshSelectedDependencies(identity);
       if (relevant) { attempted.delete(identity); refreshPending(identity); changed(); }
       return;
     }
@@ -243,6 +297,9 @@ export function createPrTabPreparation(
     }
     if (event.type !== "updated") return;
     const action = event.action;
+    // Only the ordinary source read discovers details. Optimistic/manual
+    // notifications and unrelated observer churn never scan secondary lists.
+    if (action.type === "error" || (action.type === "success" && !action.manual)) refreshSelectedDependencies(identity);
     if (event.query.queryKey[0] === "pull-request" && !preparing.has(identity) && pendingKeys.size && !forgeWake &&
         (action.type === "error" || (action.type === "success" && !action.manual))) {
       // Cache settlement precedes the helper's Promise.finally lock release.
@@ -297,11 +354,13 @@ export function createPrTabPreparation(
       enqueue();
     },
     dispose() {
-      disposed = true; cancelScheduled(); stop(); stopOnline();
+      disposed = true; cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
       clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", resume);
       if (typeof window !== "undefined") window.removeEventListener("focus", resume);
       neighborAttempts.clear();
+      selectionSources.clear();
+      pendingInsertSources.clear();
       pagePreparation.dispose();
       priority.release();
       yieldReads();

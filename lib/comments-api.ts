@@ -64,30 +64,32 @@ export async function addCommentApi(
   return saved;
 }
 
-export async function fetchObjectiveCommentsApi(objectiveId: string): Promise<Comment[]> {
-  return parseJson<Comment[]>(await fetchClientRead(`/api/objectives/${objectiveId}/comments`));
+export async function fetchObjectiveCommentsApi(objectiveId: string, signal?: AbortSignal): Promise<Comment[]> {
+  return parseJson<Comment[]>(await fetchClientRead(`/api/objectives/${objectiveId}/comments`, { signal }));
 }
 
-export async function fetchObjectiveEventsApi(objectiveId: string): Promise<IssueEvent[]> {
-  return parseJson<IssueEvent[]>(await fetchClientRead(`/api/objectives/${objectiveId}/events`));
+export async function fetchObjectiveEventsApi(objectiveId: string, signal?: AbortSignal): Promise<IssueEvent[]> {
+  return parseJson<IssueEvent[]>(await fetchClientRead(`/api/objectives/${objectiveId}/events`, { signal }));
 }
 
 export async function fetchFeedbackEventsApi(
   projectId: string,
-  postId: string
+  postId: string,
+  signal?: AbortSignal
 ): Promise<IssueEvent[]> {
   return parseJson<IssueEvent[]>(
-    await fetchClientRead(`/api/projects/${projectId}/feedback/${postId}/events`)
+    await fetchClientRead(`/api/projects/${projectId}/feedback/${postId}/events`, { signal })
   );
 }
 
 // ── Feedback internal comments (service-client routes, team-only) ──────────
 export async function fetchFeedbackCommentsApi(
   projectId: string,
-  postId: string
+  postId: string,
+  signal?: AbortSignal
 ): Promise<Comment[]> {
   return parseJson<Comment[]>(
-    await fetchClientRead(`/api/projects/${projectId}/feedback/${postId}/comments`)
+    await fetchClientRead(`/api/projects/${projectId}/feedback/${postId}/comments`, { signal })
   );
 }
 

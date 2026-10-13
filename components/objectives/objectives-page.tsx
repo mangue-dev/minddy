@@ -48,6 +48,7 @@ import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
+import { matchesObjectiveState, secondarySelectionId } from "@/lib/secondary-view-selection";
 import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 import {
   Tooltip,
@@ -72,13 +73,7 @@ const ObjectiveDialog = dynamic(
  */
 type ObjectiveStateFilter = "active" | ObjectiveStatus | "all";
 
-function matchesState(objective: Objective, filter: ObjectiveStateFilter) {
-  if (filter === "all") return true;
-  if (filter === "active") {
-    return objective.status === "planned" || objective.status === "in_progress";
-  }
-  return objective.status === filter;
-}
+const matchesState = matchesObjectiveState;
 
 /**
  * The title of the empty column when it is THIS state, and only this state, which empties it —
@@ -389,13 +384,8 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   // Keep a valid selection: the first objective by default, and the next
   // when the one that was open disappears (deletion, change of filter).
   useEffect(() => {
-    if (filtered.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !filtered.some((o) => o.id === selectedId)) {
-      setSelectedId(filtered[0].id);
-    }
+    const next = secondarySelectionId(filtered, null, selectedId);
+    if (next !== selectedId) setSelectedId(next);
   }, [filtered, selectedId]);
 
   // The New objective command opens the create dialog through ?new=1.
@@ -420,7 +410,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   // canceled objectives still widen it so the deep link always opens.
   useEffect(() => {
     if (!active || !openParam) return;
-    if (!objectives.some((o) => o.id === openParam)) return;
+    if (secondarySelectionId(objectives, openParam) !== openParam) return;
     if (
       deepLinkNeedsAllFilter(
         objectives,

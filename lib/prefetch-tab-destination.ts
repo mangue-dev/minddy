@@ -3,7 +3,7 @@ import { feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-
 import { fetchPagesApi } from "./pages-api";
 import { pagesKey, pageKey, fetchPageNavigationData } from "./use-pages-query";
 import { issuesQueryFn } from "./issues-api";
-import type { FetchQueryOptions, QueryClient } from "@tanstack/react-query";
+import type { FetchQueryOptions, QueryClient, QueryFunction, QueryKey } from "@tanstack/react-query";
 
 import { appTabRoute } from "./app-tab-location";
 import { prefetchPageNavigation } from "./use-pages-query";
@@ -23,6 +23,13 @@ import { fetchStatsApi } from "./stats-api";
 import { statsTimeZone } from "./use-stats-query";
 import { myInvitationsQueryOptions } from "./invitations-api";
 import { retainedAppViewKind } from "./retained-app-views";
+import { feedbackSelectionItems, matchesObjectiveState, secondarySelectionId, triageSelectionItems } from "./secondary-view-selection";
+import { issueWrites } from "./optimistic/issue-writes";
+import { feedbackCommentsOptions, feedbackDetailOptions, feedbackEventsOptions, objectiveCommentsOptions,
+  objectiveEventsOptions, objectiveFeedbackCountOptions, objectiveResourcesOptions } from "./secondary-view-queries";
+import { issueCommentsOptions, issueEventsOptions } from "./issue-timeline-queries";
+import type { Issue, Objective } from "./types";
+import type { TeamFeedbackListItem } from "./server/feedback/team-queries";
 
 const pullRequestWarmups = new WeakMap<QueryClient, Promise<void>>();
 
@@ -156,16 +163,81 @@ export function appTabPreparationQuery(client: QueryClient, href: string) {
   return null;
 }
 
-/** Complete prerequisites owned by the same consumers as foreground navigation. */
+/** Only ordinary successful scoped lists may discover one selected detail. */
+function selectionRows<T extends { id: string; project_id: string }>(client: QueryClient, key: readonly unknown[], projectId: string): T[] {
+  const state = client.getQueryState(key);
+  const data = state?.data;
+  return state?.status === "success" && !state.isInvalidated && Array.isArray(data)
+    ? data.filter((row): row is T => !!row && row.project_id === projectId && typeof row.id === "string") : [];
+}
+
+/** Fetch the consumer's exact reader without mounting its polling observer. */
+function preparationRead<T, Key extends QueryKey>(options: {
+  queryKey: Key; queryFn?: QueryFunction<T, Key> | symbol; staleTime?: unknown;
+}): FetchQueryOptions<unknown> {
+  return { queryKey: options.queryKey, staleTime: typeof options.staleTime === "number" ? options.staleTime : undefined,
+    queryFn: (context) => {
+      if (typeof options.queryFn !== "function") throw new Error("Selected detail requires its ordinary query reader");
+      return options.queryFn({ ...context, queryKey: options.queryKey });
+    } };
+}
+
+export function appTabSelectionSource(href: string): readonly unknown[] | null {
+  const route = appTabRoute(href);
+  if (!route.projectId) return null;
+  if (route.section === "triage") return ["issues", route.projectId];
+  if (route.section === "objectives") return ["objectives", route.projectId];
+  if (route.section === "feedback") return feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href)).queryKey;
+  return null;
+}
+
+function selectedTriageIssue(client: QueryClient, href: string): string | null {
+  const route = appTabRoute(href);
+  if (!route.projectId || route.section !== "triage") return null;
+  const rows = triageSelectionItems(selectionRows<Issue>(client, ["issues", route.projectId], route.projectId));
+  return secondarySelectionId(rows, new URL(href, "https://minddy.invalid").searchParams.get("issue"));
+}
+
+/** An optimistic creation remains selected, but its detail endpoints do not exist yet. */
+export function appTabPendingIssueSelection(client: QueryClient, href: string): string | null {
+  const id = selectedTriageIssue(client, href);
+  return id && issueWrites.hasUnsettledInsert(id) ? id : null;
+}
+
+/** Complete current prerequisites; selected details appear after their ordinary list succeeds. */
 export function appTabPreparationQueries(client: QueryClient, href: string): FetchQueryOptions<unknown>[] {
   const route = appTabRoute(href);
-  if (route.projectId && ["tickets", "triage"].includes(route.section)) return projectPreparationQueries(client, route.projectId);
+  const params = new URL(href, "https://minddy.invalid").searchParams;
+  const tree = route.projectId ? { queryKey: pagesKey(route.projectId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPagesApi(route.projectId!, signal) } : null;
+  if (route.projectId && ["tickets", "triage"].includes(route.section)) {
+    const queries = projectPreparationQueries(client, route.projectId);
+    if (route.section === "triage") {
+      queries.push(tree!);
+      const id = selectedTriageIssue(client, href);
+      if (id && !issueWrites.hasUnsettledInsert(id)) queries.push(preparationRead(issueCommentsOptions(client, id)), preparationRead(issueEventsOptions(id)));
+    }
+    return queries;
+  }
   if (route.projectId && route.section === "objectives") {
-    return projectPreparationQueries(client, route.projectId).filter((option) => ["objectives", "issues", "members"].includes(String(option.queryKey[0])));
+    const queries = [...projectPreparationQueries(client, route.projectId).filter((option) => ["objectives", "issues", "members", "issue-relations"].includes(String(option.queryKey[0]))), tree!];
+    const rows = selectionRows<Objective>(client, ["objectives", route.projectId], route.projectId);
+    const id = secondarySelectionId(rows.filter((row) => matchesObjectiveState(row, "active")), params.get("open"), null, rows);
+    if (id) queries.push(preparationRead(objectiveCommentsOptions(id)), preparationRead(objectiveEventsOptions(id)),
+      preparationRead(objectiveResourcesOptions(id)), preparationRead(objectiveFeedbackCountOptions(route.projectId, id)));
+    return queries;
   }
   if (route.projectId && route.section === "feedback") {
-    return [feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href)),
-      ...projectPreparationQueries(client, route.projectId).filter((option) => ["issues", "issue-relations", "members", "categories", "objectives"].includes(String(option.queryKey[0])))];
+    const filters = feedbackFiltersForDestination(href);
+    const list = feedbackQueryOptions(route.projectId, filters);
+    const queries: FetchQueryOptions<unknown>[] = [list,
+      ...projectPreparationQueries(client, route.projectId).filter((option) => ["issues", "issue-relations", "members", "categories", "objectives"].includes(String(option.queryKey[0]))), tree!];
+    const state = client.getQueryState<{ posts: TeamFeedbackListItem[] }>(list.queryKey);
+    const posts = state?.status === "success" && !state.isInvalidated && Array.isArray(state.data?.posts)
+      ? state.data.posts.filter((post) => post.project_id === route.projectId) : [];
+    const visible = feedbackSelectionItems(posts, { state: params.has("objective") ? "all" : "unresolved", properties: filters });
+    const id = secondarySelectionId(visible, params.get("post"), null, posts);
+    if (id) queries.push(preparationRead(feedbackDetailOptions(route.projectId, id)), preparationRead(feedbackCommentsOptions(route.projectId, id)), preparationRead(feedbackEventsOptions(route.projectId, id)));
+    return queries;
   }
   if (route.section === "routines") {
     return [{ queryKey: routinesQueryKey(), queryFn: fetchRoutinesApi },
@@ -190,6 +262,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
  * The mounted consumer retains its ordinary authority/refetch contract. */
 export function isPreparedAppTabDestination(client: QueryClient, href: string): boolean {
   if (!isAppTabSurfaceReady(href)) return false;
+  if (appTabPendingIssueSelection(client, href)) return false;
   if (appTabRoute(href).section === "home") return true;
   // Only surfaces owned by the bounded host may bypass a server route commit.
   if (!retainedAppViewKind(href.split(/[?#]/)[0])) return false;

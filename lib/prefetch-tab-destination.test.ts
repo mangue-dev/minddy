@@ -37,11 +37,35 @@ describe("tab destination prefetch", () => {
       ["routines"], ["agent-models"], ["routines", "one", "runs"],
     ]);
     expect(appTabPreparationQueries(client, "/projects/p/objectives").map((option) => option.queryKey)).toEqual([
-      ["issues", "p"], ["members", "p"], ["objectives", "p"],
+      ["issues", "p"], ["members", "p"], ["objectives", "p"], ["issue-relations", "p"], ["pages", "p"],
     ]);
     expect(appTabPreparationQueries(client, "/projects/p/feedback").map((option) => option.queryKey)).toEqual([
-      feedbackQueryOptions("p").queryKey, ["issues", "p"], ["categories", "p"], ["members", "p"], ["objectives", "p"], ["issue-relations", "p"],
+      feedbackQueryOptions("p").queryKey, ["issues", "p"], ["categories", "p"], ["members", "p"], ["objectives", "p"], ["issue-relations", "p"], ["pages", "p"],
     ]);
+  });
+
+  it("resolves explicit scoped detail destinations without preparing every row or a closed setup wizard", () => {
+    client.setQueryData(["issues", "p"], [
+      { id: "recent", project_id: "p", status: "triage", created_at: "2026-01-02" },
+      { id: "explicit", project_id: "p", status: "triage", created_at: "2026-01-01" },
+      { id: "foreign", project_id: "other", status: "triage", created_at: "2026-01-03" },
+    ]);
+    client.setQueryData(["objectives", "p"], [
+      { id: "first", project_id: "p", status: "planned" }, { id: "done", project_id: "p", status: "done" },
+    ]);
+    const posts = [{ id: "open", project_id: "p", status: "open", vote_count: 1, created_at: "2026-01-01", review_state: "published", sensitivity: null },
+      { id: "archive", project_id: "p", status: "shipped", vote_count: 20, created_at: "2026-01-02", review_state: "published", sensitivity: null }];
+    client.setQueryData(["feedback", "p"], { posts, board_enabled: false });
+    const keys = (href: string) => appTabPreparationQueries(client, href).map((option) => option.queryKey);
+    expect(keys("/projects/p/triage?issue=explicit")).toContainEqual(["comments", "explicit"]);
+    expect(keys("/projects/p/triage?issue=foreign")).toContainEqual(["comments", "recent"]);
+    expect(keys("/projects/p/objectives?open=done").slice(-4)).toEqual([
+      ["objective-comments", "done"], ["objective-events", "done"], ["objective-resources", "done"], ["objective-feedback", "p", "done", "count"],
+    ]);
+    expect(keys("/projects/p/feedback?post=archive").slice(-3)).toEqual([
+      ["feedback-detail", "p", "archive"], ["feedback-comments", "p", "archive"], ["feedback-events", "p", "archive"],
+    ]);
+    expect(keys("/projects/p/feedback?post=archive").some((key) => ["feedback-settings", "project-git-link"].includes(String(key[0])))).toBe(false);
   });
 
   it("requires every shared prerequisite before allowing retained local navigation", () => {

@@ -38,7 +38,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 // ChevronUp renders the post vote count.
 import { EmptyScene } from "@/components/empty-scene";
 import { AppContentHeader } from "@/components/app-content-header";
-import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard";
+import { DeferredFeedbackSetupWizard } from "@/components/feedback/deferred-feedback-setup-wizard";
+import { feedbackDetailOptions } from "@/lib/secondary-view-queries";
+import { feedbackNeedsHumanReview, feedbackSelectionItems, matchesFeedbackState, secondarySelectionId } from "@/lib/secondary-view-selection";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { FeedbackFilterMenu, type FeedbackStateFilter, type FeedbackSort } from "./feedback-filter-menu";
@@ -111,13 +113,11 @@ import {
   FEEDBACK_POST_STATUSES,
   FEEDBACK_OPEN_STATUSES,
   FEEDBACK_TO_ISSUE_STATUS,
-  isResolvedFeedbackStatus,
   type CommentVisibility,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type {
-  TeamFeedbackDetail,
   TeamFeedbackListItem,
 } from "@/lib/server/feedback/team-queries";
 import type { TeamFeedbackUserOption } from "@/app/api/projects/[id]/feedback/users/route";
@@ -172,11 +172,6 @@ const LIST_BADGE = "h-5 px-2 text-[10px] [&>svg]:size-3";
 
 // ── Column filters ────────────────────────── ──────────────────────────
 
-function matchesStateFilter(post: TeamFeedbackListItem, filter: FeedbackStateFilter) {
-  if (filter === "all") return true;
-  if (filter === "unresolved") return !isResolvedFeedbackStatus(post.status);
-  return post.status === filter;
-}
 
 
 // ── Shared bricks list / detail ──────────────────── ─────────────────────
@@ -307,9 +302,7 @@ function VisibilityBadge({
  * published but flagged as sensitive. This is the stuff of the “To see again” filter — without
  * him, a post that the automatic review was unable to resolve remains invisible.
  */
-function needsHumanReview(post: TeamFeedbackListItem): boolean {
-  return post.review_state !== "published" || post.sensitivity !== null;
-}
+const needsHumanReview = feedbackNeedsHumanReview;
 
 /** The automatic review has given up (3 failures): to be decided by hand (MIN-87). */
 function reviewGaveUp(post: {
@@ -655,34 +648,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
   }, [toReviewCount, onlyToReview]);
 
-  const visiblePosts = useMemo(() => {
-    const kept = posts.filter(
-      (p) => matchesStateFilter(p, state) && (!onlyToReview || needsHumanReview(p)) && matchesFeedbackFilters(p, properties)
-    );
-    /**
-     * The sort chosen is the sort obtained — NOTHING goes ahead.
-     *
-     * The list arrived already ordered by the server: decreasing votes, then
-     * date, and especially the resolved returns pushed down to the bottom. The latter
-     * rule predated the sort selector, where it was useful. From
-     * that we can ask for “the most popular”, she is lying: the most
-     * supported by the project, if delivered, is at the bottom of the list, and
-     * the most RECENT is displayed at the top. An order we asked for
-     * explicitly cannot be corrected by a heuristic.
-     */
-    const sorted = [...kept];
-    if (sort === "top") {
-      sorted.sort(
-        (a, b) =>
-          b.vote_count - a.vote_count ||
-          Date.parse(b.created_at) - Date.parse(a.created_at)
-      );
-    } else {
-      sorted.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
-      if (sort === "recent") sorted.reverse();
-    }
-    return sorted;
-  }, [posts, state, onlyToReview, sort, properties]);
+  const visiblePosts = useMemo(() => feedbackSelectionItems(posts, { state, sort, onlyToReview, properties }),
+    [posts, state, onlyToReview, sort, properties]);
 
   /**
    * What the column DISPLAYS. One notch BELOW `visiblePosts`, which carries the
@@ -806,13 +773,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   );
 
   useEffect(() => {
-    if (visiblePosts.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !visiblePosts.some((p) => p.id === selectedId)) {
-      setSelectedId(visiblePosts[0].id);
-    }
+    const next = secondarySelectionId(visiblePosts, null, selectedId);
+    if (next !== selectedId) setSelectedId(next);
   }, [visiblePosts, selectedId]);
 
   // Deep link from an Inbox notification: ?post=<id> selects that feedback and
@@ -830,14 +792,14 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // fell on the first return in the list.
   useEffect(() => {
     if (!postParam) return;
-    if (!posts.some((p) => p.id === postParam)) return;
+    if (secondarySelectionId(posts, postParam) !== postParam) return;
     let nextProperties = properties;
     if (
       deepLinkNeedsAllFilter(
         posts,
         (post) => post.id === postParam,
         (post) =>
-          matchesStateFilter(post, state) &&
+          matchesFeedbackState(post, state) &&
           (!onlyToReview || needsHumanReview(post)) && matchesFeedbackFilters(post, properties),
       )
     ) {
@@ -1097,7 +1059,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           from the list: refetch it when closing, otherwise the page continues to
           refuse to post feedback on a board that is now active. */}
       {isOwner && (
-        <FeedbackSetupWizard
+        <DeferredFeedbackSetupWizard
           projectId={projectId}
           isOwner={isOwner}
           open={setupOpen}
@@ -1220,11 +1182,8 @@ function FeedbackDetail({
     [addComment]
   );
 
-  const { data, isPending } = useQuery({
-    queryKey: ["feedback-detail", projectId, postId],
-    queryFn: () =>
-      api<{ post: TeamFeedbackDetail }>(`/api/projects/${projectId}/feedback/${postId}`),
-  });
+  const { data, isPending } = useQuery(feedbackDetailOptions(projectId, postId));
+
   const post = data?.post ?? null;
 
   // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
