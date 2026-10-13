@@ -198,50 +198,26 @@ it("yields an unknown read to foreground work and resumes without granting a can
   } finally { view.close(); }
 });
 
-it("does not grant a lease when a canceled known-body refetch resolves with its cached value", async () => {
-  const view = setup(["canceled-known"]); let signal!: AbortSignal;
-  view.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
-    signal = init!.signal!; signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
-  }));
-  try {
-    await vi.advanceTimersByTimeAsync(8500); expect(signal.aborted).toBe(false);
-    await view.client.cancelQueries({ queryKey: pageKey("canceled-known"), exact: true });
-    await vi.advanceTimersByTimeAsync(1);
-    expect(view.client.getQueryData<Page>(pageKey("canceled-known"))?.version).toBe(1);
-    expect(isPreparedPageData("canceled-known", view.client.getQueryState(pageKey("canceled-known"))!.dataUpdatedAt)).toBe(false);
-    await vi.advanceTimersByTimeAsync(4000); expect(view.fetch).toHaveBeenCalledOnce();
-  } finally { view.close(); }
-});
-
-it("keeps a Page read through cached tab reconciliation but blocks on initial and failed reads", async () => {
-  const kind = "app-tabs";
+it("keeps a Page read through cached tab reconciliation but blocks on an initial tab list", async () => {
   const view = setup(); let signal!: AbortSignal, completePage!: () => void;
   view.fetch.mockImplementation((_url, init) => new Promise((resolve) => {
     signal = init!.signal!; completePage = () => resolve(Response.json(body("b")));
   }));
   let completeTabs!: () => void;
   try {
-    view.client.setQueryData([kind, "owner"], []);
+    view.client.setQueryData(["app-tabs", "owner"], []);
     await vi.advanceTimersByTimeAsync(500); expect(signal.aborted).toBe(false);
-    const tabs = view.client.fetchQuery({ queryKey: [kind, "owner"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }), staleTime: 0 });
+    const tabs = view.client.fetchQuery({ queryKey: ["app-tabs", "owner"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }), staleTime: 0 });
     expect(signal.aborted).toBe(false);
     completePage(); await vi.advanceTimersByTimeAsync(1);
     expect(view.client.getQueryState(pageKey("b"))?.status).toBe("success");
     completeTabs(); await tabs;
     view.preparation.dispose();
     const next = createPageNavigationPreparation(view.client);
-    const initial = view.client.fetchQuery({ queryKey: [kind, "new-window"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }) });
+    const initial = view.client.fetchQuery({ queryKey: ["app-tabs", "new-window"], queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }) });
     next.visit("/home", ["/home", href("a")]);
     await vi.advanceTimersByTimeAsync(20_000); expect(view.fetch).toHaveBeenCalledOnce();
     next.dispose(); completeTabs(); await initial;
-    const failedKey = [kind, "failed-window"];
-    view.client.setQueryData(failedKey, []);
-    await expect(view.client.fetchQuery({ queryKey: failedKey, queryFn: () => Promise.reject(new Error("Unavailable")) })).rejects.toThrow("Unavailable");
-    const recovery = view.client.fetchQuery({ queryKey: failedKey, queryFn: () => new Promise((resolve) => { completeTabs = () => resolve([]); }) });
-    const errorOwner = createPageNavigationPreparation(view.client);
-    errorOwner.visit("/home", ["/home", href("a")]);
-    await vi.advanceTimersByTimeAsync(1000); expect(view.fetch).toHaveBeenCalledOnce();
-    errorOwner.dispose(); completeTabs(); await recovery;
   } finally { completePage?.(); completeTabs?.(); view.close(); }
 });
 

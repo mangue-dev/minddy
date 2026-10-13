@@ -112,25 +112,14 @@ export function createPageNavigationPreparation(client: QueryClient) {
     const attemptedAt = Date.now();
     attempts.set(item.pageId, attemptedAt);
     const key = pageKey(item.pageId);
-    let completedRead = false, readSignal: AbortSignal | undefined;
     priority.acquire(); priority.startRead(key);
-    void client.fetchQuery({ queryKey: key, queryFn: async ({ signal }) => {
-      readSignal = signal;
-      const value = await fetchPageNavigationData(client, item.projectId, item.pageId, signal);
-      completedRead = !signal.aborted;
-      return value;
-    }, staleTime: 0, retry: false }).then(() => {
-      // TanStack may resolve a canceled refetch with its previous cached data.
-      if (!completedRead || readSignal?.aborted) {
-        if (!client.getQueryData(key) && attempts.get(item.pageId) === attemptedAt) attempts.delete(item.pageId);
-        return;
-      }
+    void client.fetchQuery({ queryKey: key, queryFn: ({ signal }) => fetchPageNavigationData(client, item.projectId, item.pageId, signal), staleTime: 0, retry: false }).then(() => {
       const state = client.getQueryState(key);
       if (!disposed && reading === item && state?.status === "success" && !state.isInvalidated) preparePageNavigation(item.pageId);
       failures.delete(item.pageId);
     }, (error: unknown) => {
       if (isCancelledError(error)) {
-        // Unknown interrupted bodies can resume; known reads retain their request bound.
+        // An interrupted unknown body has not consumed its accepted-read slot.
         if (!client.getQueryData(key) && attempts.get(item.pageId) === attemptedAt) attempts.delete(item.pageId);
         return;
       }
