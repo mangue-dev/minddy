@@ -106,7 +106,7 @@ describe("page interface regressions", () => {
       "app/(app)/projects/[id]/pages/[pageId]/page.tsx"
     );
 
-    expect(shell).toContain("<PageView key={activePageId}");
+    expect(shell).toContain("<RetainedPageDocuments");
     expect(shell).toContain("onOpen={openPage}");
     expect(tree).toContain("event.preventDefault();");
     expect(tree).toContain("onOpen(page.id);");
