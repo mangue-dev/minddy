@@ -480,7 +480,7 @@ export function ProjectContextRow({
 
       {/* No label above the switcher list: the row itself names the project,
             the menu holds nothing but projects. */}
-      <DropdownMenuContent side="right" align="start" sideOffset={6} className="w-60 data-[state=closed]:pointer-events-none">
+      <DropdownMenuContent data-project-picker-menu side="right" align="start" sideOffset={6} className="w-60 data-[state=closed]:pointer-events-none">
         {projects.map((project) => {
           const href = projectTabHref(pathname, project.id);
           const current = project.id === currentProject.id;

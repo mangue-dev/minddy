@@ -6,6 +6,7 @@ import { createPageNavigationPreparation } from "./page-navigation-preparation";
 import { fetchPageNavigationData, isPreparedPageData, pageKey, pagesKey } from "./use-pages-query";
 import { forgetDraftPage, markDraftPage } from "./pages-draft";
 import type { Page } from "./pages";
+import { navigationPreparationPriority } from "./navigation-preparation-priority";
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
@@ -71,6 +72,18 @@ it("does not postpone a due renewal after unrelated cache notifications", async 
     expect(view.fetch.mock.calls.some(([url]) => String(url).endsWith("/a"))).toBe(true);
     expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(true);
   } finally { view.close(); }
+});
+
+it("renews a due validated body behind an empty priority token while deferring unknown bodies", async () => {
+  const view = setup(); const navigation = navigationPreparationPriority(view.client); navigation.acquire();
+  try {
+    await vi.advanceTimersByTimeAsync(7000); expect(view.fetch).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(view.fetch.mock.calls.map(([url]) => url)).toEqual(["/api/projects/project/pages/a"]);
+    expect(isPreparedPageData("a", view.client.getQueryState(pageKey("a"))!.dataUpdatedAt)).toBe(true);
+    navigation.release(); await vi.advanceTimersByTimeAsync(100);
+    expect(view.fetch.mock.calls.some(([url]) => String(url).endsWith("/b"))).toBe(true);
+  } finally { navigation.release(); view.close(); }
 });
 
 it("does not scan document DOM for unrelated observer and local cache notifications", async () => {

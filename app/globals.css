@@ -16,6 +16,11 @@
 @custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
 @custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
 
+/* The closed picker and its floating wrapper must both release board hit points. */
+[data-radix-popper-content-wrapper]:has(> [data-project-picker-menu][data-state="closed"]) {
+  pointer-events: none;
+}
+
 /* One hover cursor for the whole app (MIN-587): buttons and every other
    interactive element show the default arrow, never the pointer hand. The
    adapted cursor still wins where it carries meaning — text fields, drag
