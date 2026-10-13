@@ -38,6 +38,7 @@ const auth = createServerClient(requireEnv("MINDDY_PUBLIC_SUPABASE_URL"), requir
 });
 const signedIn = await auth.auth.signInWithPassword({ email: EMAIL, password: requireEnv("CAPTURES_DEMO_PASSWORD") });
 if (signedIn.error) throw new Error(`Fixture sign-in failed: ${signedIn.error.code}`);
+assert.equal(signedIn.data.user.email, EMAIL);
 assert.equal(signedIn.data.user.id, fixture.userId);
 assert.equal(signedIn.data.user.user_metadata.performance_fixture, MARKER);
 const apiClient = await request.newContext({ baseURL: base,
@@ -72,7 +73,7 @@ let tabs = forge ? [
     ...(forgeWorkload ? { realPrIds: forgeWorkload.prs.map((pr) => pr.prId) } : {}) },
 ] : [
   { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: globalCards },
-  { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: 100 },
+  { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: connectedBoard?.perProject[project]?.cards ?? 100 },
   { id: id("min683-tab-page"), custom_name: "MIN-683 Page", href: `/projects/${project}/pages/${deep ? id("page-0-10") : fixture.firstPage}` },
 ];
 // Once established, the account's stable selection is reused by every matrix.
@@ -423,7 +424,7 @@ try {
     assert.ok(!results.network.some((entry) => entry.path.startsWith("/api/pull-requests/") && entry.method !== "GET"), "Read-only navigation submitted a forge write");
   } else if (deep) {
     await tab(tabs[1], "initial-project-tab");
-    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results, windowingCompatible });
+    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results, windowingCompatible, connectedBoard });
   } else {
     let issueStatus;
     if (windowingCompatible && !secondary) {
@@ -465,13 +466,14 @@ try {
       touch: process.argv.includes("--verify-windowing-touch"), mutations: verifyWindowingMutations });
     if (project) {
       const root = page.locator('[data-app-view-active="true"]');
-      const allowed = new Set(Array.from({ length: 100 }, (_, index) => id(`issue-0-${index}`)));
+      const source = connectedBoard?.perProject[fixture.projects[0]];
+      const allowed = new Set(source?.cardIds ?? Array.from({ length: 100 }, (_, index) => id(`issue-0-${index}`)));
       const shown = await root.locator('[data-issue-id]').evaluateAll((nodes) => nodes.map((node) => node.dataset.issueId));
       assert.ok(shown.length && shown.every((id) => allowed.has(id)), "Publish only the isolated synthetic project surface");
       await root.locator('[data-board-column-scroller]').evaluateAll((nodes) => nodes.forEach((node) => { node.scrollTop = 0; }));
       await frames();
       await root.screenshot({ path: path.join(output, `${label}-project-board.png`) });
-      results.windowingVerification.projectSourceCards = 100;
+      results.windowingVerification.projectSourceCards = source?.cards ?? 100;
     }
   }
   if (process.argv.includes("--verify") && secondary) {

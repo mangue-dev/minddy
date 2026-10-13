@@ -1,6 +1,6 @@
 // Serialized into the actual browser. Verify complete collection counts and
 // populated, hit-testable rows without requiring offscreen cards in the DOM.
-export function boardReady(expectedCards, projectPrefix) {
+export function boardReady(expectedCards, projectPrefix, expectedIds) {
   const root = document.querySelector('[data-app-view-active="true"]');
   if (!root?.getClientRects().length || root.inert ||
     !["fresh", "refreshing"].includes(root.dataset.boardReadState)) return false;
@@ -13,7 +13,9 @@ export function boardReady(expectedCards, projectPrefix) {
   });
   if (counts.reduce((sum, count) => sum + count, 0) !== expectedCards) return false;
   const cards = [...root.querySelectorAll('[data-issue-id]')];
+  const allowed = expectedIds ? new Set(expectedIds) : null;
   if (!cards.length || cards.some((card) => !card.textContent.trim() ||
+    (allowed && !allowed.has(card.dataset.issueId)) ||
     (projectPrefix && !card.textContent.includes(projectPrefix)))) return false;
   const view = root.getBoundingClientRect();
   for (let index = 0; index < scrollers.length; index++) {

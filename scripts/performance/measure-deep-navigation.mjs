@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { id } from "./seed.mjs";
 
 /** Genuine sidebar/tree clicks, with destination identity and complete content. */
-export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results, windowingCompatible = false }) {
-  results.protocol = windowingCompatible ? "min683-deep-v3-visible-source-counts" : "min683-deep-v2-alternating-documents";
+export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results, windowingCompatible = false, connectedBoard }) {
+  results.protocol = windowingCompatible ? "min683-deep-v4-complete-fixture-source-counts" : "min683-deep-v2-alternating-documents";
   const projects = fixture.projects.slice(0, 2);
   const sameTab = (tab) => !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`);
   const projectReady = ({ project, tab }) => {
@@ -11,13 +11,14 @@ export async function measureDeepNavigation({ page, fixture, activeTab, pageTab,
     const cards = root?.querySelectorAll("[data-issue-id]");
     if (window.__instant.windowingCompatible) return location.pathname === `/projects/${project}` &&
       !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`) &&
-      window.__instant.boardReady(100, `Performance task ${project === window.__instant.projects[0] ? 1 : 2}.`);
+      window.__instant.boardReady(window.__instant.projectCounts[project].cards, undefined, window.__instant.projectCounts[project].cardIds);
     return location.pathname === `/projects/${project}` &&
       !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`) &&
-      !!root?.getClientRects().length && !root.inert && cards.length === 100 &&
-      [...cards].every((node) => node.textContent.includes(`Performance task ${project === window.__instant.projects[0] ? 1 : 2}.`));
+      !!root?.getClientRects().length && !root.inert && cards.length === window.__instant.projectCounts[project].cards &&
+      [...cards].every((node) => node.textContent.trim() && (!window.__instant.projectCounts[project].cardIds || window.__instant.projectCounts[project].cardIds.includes(node.dataset.issueId)));
   };
-  await page.evaluate((projects) => { window.__instant.projects = projects; }, projects);
+  await page.evaluate(({ projects, counts }) => { window.__instant.projects = projects; window.__instant.projectCounts = counts; },
+    { projects, counts: connectedBoard?.perProject ?? Object.fromEntries(projects.map((id) => [id, { cards: 100 }])) });
   const menuReady = () => [...document.querySelectorAll('[role="menu"]')].some((node) => node.getClientRects().length);
   async function switchProject(index, name, pages = false) {
     const current = projects.indexOf(new URL(page.url()).pathname.split("/")[2]);
@@ -97,5 +98,6 @@ export async function measureDeepNavigation({ page, fixture, activeTab, pageTab,
   }
   assert.equal(await page.evaluate(sameTab, activeTab), true);
   results.verification = { sameTabPreserved: true, projectCardIdentityVerified: true, pageIdentityAndBlockCountVerified: true,
-    expectedProjectCards: 100, expectedPageBlocks: 80, realForgeDetailMeasured: false };
+    expectedProjectCards: Object.fromEntries(projects.map((project) => [project, connectedBoard?.perProject[project]?.cards ?? 100])),
+    expectedPageBlocks: 80, realForgeDetailMeasured: false };
 }

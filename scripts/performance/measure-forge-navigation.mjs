@@ -1,18 +1,42 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { id } from "./seed.mjs";
+import { optionalSecondaryWorkload } from "./secondary-navigation-workload.mjs";
 
 const PROJECT = "a3dc2a22-68d1-403a-946a-a4bb519b00d5";
 const FILES = ["docs/minddy-pr-performance-validation.md", "docs/minddy-pr-performance-measurements.csv"];
 export const forgeLinkFingerprint = (link) => createHash("sha256").update(JSON.stringify(link)).digest("hex");
 
-export async function loadConnectedBoardWorkload(api, fixture) {
+export async function loadConnectedBoardWorkload(api, fixture, secondary) {
+  if (secondary === undefined) secondary = await optionalSecondaryWorkload(api, fixture);
   const board = await api("/api/me/board");
   const marked = board.issues.filter((issue) => fixture.projects.includes(issue.project_id));
-  assert.equal(marked.length, 600, "Preserve the marked synthetic board workload");
+  const originals = new Set(Array.from({ length: 6 }, (_, project) =>
+    Array.from({ length: 100 }, (_, issue) => id(`issue-${project}-${issue}`))).flat());
+  assert.equal(marked.filter((issue) => originals.has(issue.id)).length, 600, "Preserve all original synthetic issue identities");
+  const extraIds = new Set(secondary ? [...secondary.entities.triage, ...secondary.entities.tasks].map((issue) => issue.id) : []);
+  assert.ok(marked.every((issue) => originals.has(issue.id) || extraIds.has(issue.id)), "Refuse unrecognized synthetic issues");
+  assert.equal(marked.length, 600 + extraIds.size, "Verify the complete original and secondary fixture source");
+  assert.equal(new Set(marked.map((issue) => issue.id)).size, marked.length);
   assert.ok(board.issues.every((issue) => fixture.projects.includes(issue.project_id) || issue.project_id === PROJECT));
   // Digest protected content without publishing the shared project's text.
   const contentFingerprint = forgeLinkFingerprint([...board.issues].sort((a, b) => a.id.localeCompare(b.id)));
-  return { cards: board.issues.length, markedCards: marked.length, sharedCards: board.issues.length - marked.length, contentFingerprint };
+  const kanban = board.issues.filter((issue) => !["triage", "duplicate"].includes(issue.status));
+  const triage = board.issues.filter((issue) => issue.status === "triage");
+  if (secondary?.counts) {
+    assert.equal(board.issues.length, secondary.counts.allSourceIssues, "Keep the complete populated source workload stable");
+    assert.equal(kanban.length, secondary.counts.allBoardCards, "Verify actual populated kanban source count");
+  }
+  const perProject = Object.fromEntries(fixture.projects.map((projectId) => [projectId, {
+    issues: marked.filter((issue) => issue.project_id === projectId).length,
+    cards: kanban.filter((issue) => issue.project_id === projectId).length,
+    triage: triage.filter((issue) => issue.project_id === projectId).length,
+    cardIds: kanban.filter((issue) => issue.project_id === projectId).map((issue) => issue.id).sort(),
+  }]));
+  return { cards: kanban.length, markedCards: kanban.filter((issue) => originals.has(issue.id) || extraIds.has(issue.id)).length,
+    sharedCards: kanban.filter((issue) => !fixture.projects.includes(issue.project_id)).length,
+    sourceIssues: board.issues.length, triageIssues: triage.length, perProject,
+    cardIds: kanban.map((issue) => issue.id).sort(), contentFingerprint };
 }
 
 /** Verify the explicitly authorized small GitHub cohort through ordinary reads. */
