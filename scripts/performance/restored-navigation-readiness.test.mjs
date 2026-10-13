@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { JSDOM } from "jsdom";
-import { restoredDestinationReady, restoredPreparationMetadata, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
+import { restoredDestinationReady, restoredPreparationMetadata, restoredRequestInitiatorMetadata, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
 
 let dom;
 const globals = ["window", "document", "location", "getComputedStyle", "innerWidth", "innerHeight"];
@@ -20,6 +20,20 @@ function setup(html, href = "/projects/project/pages/page") {
   dom.window.__restored = { loadingSelector: RESTORED_LOADING_SELECTOR, boardReady: () => true };
 }
 const spec = { id: "tab", href: "/projects/project/pages/page", kind: "page", pageId: "page", title: "Performance guide 1.11", bodyText: "Expected body" };
+test("request attribution omits headers, payloads, external frames and query values", () => {
+  const event = { request: { url: "http://localhost:3111/projects/project?_rsc=unpublished-value&token=private-value", method: "GET",
+    headers: { authorization: "private-header" }, postData: "private-payload" }, type: "Fetch", timestamp: 10, wallTime: 20,
+    initiator: { type: "script", url: "http://localhost:3111/?secret=omitted", stack: { parentId: "opaque-debugger-id", callFrames: [
+      { functionName: "fetchServerResponse", url: "http://localhost:3111/_next/static/chunks/link.js?private=omitted", lineNumber: 4, columnNumber: 9 },
+      { functionName: "external", url: "https://external.test/private", lineNumber: 1, columnNumber: 1 },
+    ] } } };
+  const result = restoredRequestInitiatorMetadata(event, "http://localhost:3111");
+  assert.equal(result.path, "/projects/project"); assert.equal(result.hasRscQuery, true);
+  assert.deepEqual(result.frames, [{ functionName: "fetchServerResponse", path: "/_next/static/chunks/link.js", lineNumber: 4, columnNumber: 9 }]);
+  assert.equal(result.unresolvedAsyncParent, true);
+  assert.ok(!/private|unpublished|headers|postData|authorization|opaque-debugger/.test(JSON.stringify(result)));
+  assert.equal(restoredRequestInitiatorMetadata({ ...event, request: { url: "https://external.test/", method: "GET" } }, "http://localhost:3111"), null);
+});
 function fullPage({ editable = true, title = spec.title, text = spec.bodyText } = {}) {
   return `<button data-app-tab-id="tab" aria-selected="true"></button><div data-page-surface-id="page"><textarea>${title}</textarea>
     <div class="page-editor"><div class="tiptap" contenteditable="${editable}">${Array.from({ length: 8 }, () => "<h2>Section</h2>").join("")}

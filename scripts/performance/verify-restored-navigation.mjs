@@ -97,6 +97,10 @@ try {
   result.product = JSON.parse(await readFile(path.join(productRoot, ".next/min683-product.json"), "utf8"));
   assert.equal(result.product.build, result.build, "Verification requires the measured product's explicit source manifest");
   assert.match(result.product.sha, /^[a-f0-9]{40}$/);
+  assert.deepEqual(Object.keys(result.product.environmentFiles ?? {}).sort(), [".env", ".env.local", ".env.production", ".env.production.local"].sort(), "New verification requires the actual build's environment-file hashes");
+  assert.match(result.product.environmentFiles[".env"], /^[a-f0-9]{64}$/);
+  assert.ok(Object.values(result.product.environmentFiles).every((value) => value === null || /^[a-f0-9]{64}$/.test(value)));
+  result.environmentFiles = result.product.environmentFiles;
   result.sha = result.product.sha;
   result.runnerSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   result.runnerSourceHashScope = ["verify-restored-navigation.mjs", "verification-page-readiness.mjs", "board-readiness.mjs", "stable-restored-tabs.mjs",

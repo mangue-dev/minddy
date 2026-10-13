@@ -85,7 +85,7 @@ export function preparationSnapshotSummary(snapshot) {
 }
 
 export function classification(name, value) {
-  if (name.includes("protocol-diagnostic") || value.protocol?.startsWith("min683-excluded-")) return {
+  if (name.includes("protocol-diagnostic") || value.protocol?.startsWith("min683-excluded-") || value.excludedFromLatencyAggregates === true) return {
     stage: "diagnostic", eligibleForNavigationComparison: false,
     reason: value.excludedFromComparison ?? "Readiness and interaction diagnosis only; no ordinary latency conclusions" };
   if (name.includes("smoke")) return { stage: "diagnostic", eligibleForNavigationComparison: false,
@@ -105,18 +105,30 @@ export function pairedComparisonEligibility(baseline, candidate) {
   const runtimeVersionsMatch = baseline.runtime === candidate.runtime && JSON.stringify(candidate.versions) === JSON.stringify(baseline.versions);
   const viewportMatches = JSON.stringify(candidate.viewport) === JSON.stringify(baseline.viewport);
   const workloadIdentityMatches = !!candidate.workloadIdentity && candidate.workloadIdentity === baseline.workloadIdentity;
-  const eligibleForPairedNavigationConclusions = baseline.eligibleForNavigationComparison && candidate.eligibleForNavigationComparison &&
+  const validEnvironment = (files) => files && typeof files === "object" && /^[a-f0-9]{64}$/.test(files[".env"] ?? "") &&
+    JSON.stringify(Object.keys(files).sort()) === JSON.stringify([".env", ".env.local", ".env.production", ".env.production.local"].sort()) &&
+    Object.values(files).every((value) => value === null || /^[a-f0-9]{64}$/.test(value));
+  const environmentEvidenceKnown = !!validEnvironment(baseline.environmentFiles) && !!validEnvironment(candidate.environmentFiles);
+  const environmentMatches = environmentEvidenceKnown && JSON.stringify(Object.entries(baseline.environmentFiles).sort()) === JSON.stringify(Object.entries(candidate.environmentFiles).sort());
+  const sourceProtocolAndWorkloadMatch = baseline.eligibleForNavigationComparison && candidate.eligibleForNavigationComparison &&
     sourceKnown(baseline) && sourceKnown(candidate) && protocolMatches && runnerSourceHashMatches && runtimeVersionsMatch && viewportMatches && workloadIdentityMatches;
-  return { protocolMatches, runnerSourceHashMatches, runtimeVersionsMatch, viewportMatches, workloadIdentityMatches,
+  const eligibleForPairedNavigationConclusions = sourceProtocolAndWorkloadMatch && environmentMatches;
+  return { protocolMatches, runnerSourceHashMatches, runtimeVersionsMatch, viewportMatches, workloadIdentityMatches, environmentEvidenceKnown, environmentMatches,
+    sourceProtocolAndWorkloadMatch,
     productSourcesKnown: sourceKnown(baseline) && sourceKnown(candidate), eligibleForPairedNavigationConclusions,
     repetitionsMatch: baseline.repetitions === candidate.repetitions,
     eligibleForMatchedWarmConclusions: eligibleForPairedNavigationConclusions && baseline.repetitions === candidate.repetitions,
     eligibleForPairedFocusConclusions: eligibleForPairedNavigationConclusions && baseline.repetitions === candidate.repetitions && baseline.focusValid && candidate.focusValid };
 }
 
+/** Restoration journals contain private originals and are never public evidence. */
+export function evidenceFilenameSelected(name) {
+  return !name.endsWith("-restoration-journal.json") && /^(min683-restored-(baseline|before|preparation|serial-pr|pages|host|admission|authority|two-slots)|min683-executable-|min683-verification-scaled-).*\.json$/.test(name);
+}
+
 export async function refreshRestoredEvidence() {
   await mkdir(evidenceDirectory, { recursive: true });
-  const names = (await readdir(inputDirectory)).filter((name) => /^(min683-restored-(baseline|before|preparation|serial-pr|pages|host|admission|authority|two-slots)|min683-executable-).*\.json$/.test(name)).sort();
+  const names = (await readdir(inputDirectory)).filter(evidenceFilenameSelected).sort();
   const runs = [];
   for (const name of names) {
     const originalBytes = await readFile(path.join(inputDirectory, name));
@@ -140,6 +152,7 @@ export async function refreshRestoredEvidence() {
       declaredSha, effectiveSha: correctedSha, build: value.build,
       ...(correctedSha !== declaredSha ? { provenanceCorrection: "HEAD had advanced while the unchanged baseline build was measured; retain original declared SHA in raw evidence" } : {}),
       versions: value.versions, viewport: value.viewport, protocol: value.protocol, runnerSourceHash: value.runnerSourceHash ?? null,
+      environmentFiles: value.environmentFiles ?? value.product?.environmentFiles ?? null,
       secondaryCohort: value.workload?.secondary ? { kind: "populated", marker: value.workload.secondary.marker,
         fingerprint: value.workload.secondary.fingerprint, counts: value.workload.secondary.counts } : value.datasetInProgress
         ? { kind: "growing-excluded-diagnostic", marker: value.marker, independentSyntheticSourceCount: value.independentSyntheticSourceCount, globalSourceCount: value.globalSourceCount }
@@ -178,7 +191,8 @@ export async function refreshRestoredEvidence() {
     if (!baseline) continue;
     const eligibility = pairedComparisonEligibility(baseline, candidate);
     comparisons.push({ baseline: baseline.label, candidate: candidate.label, ...eligibility,
-      limitation: !eligibility.runnerSourceHashMatches ? "Changed runner source hashes require protocol review or a matching baseline; no paired causal conclusion is drawn"
+      limitation: !eligibility.environmentMatches ? "Build environment hashes are absent or differ; observed timing is retained without a strict paired causal conclusion"
+        : !eligibility.runnerSourceHashMatches ? "Changed runner source hashes require protocol review or a matching baseline; no paired causal conclusion is drawn"
         : !eligibility.repetitionsMatch ? "First-activation protocol matches, but warm repetition counts differ. Do not infer a causal warm/focus percentile improvement; population p95 and daily feel remain unvalidated"
           : "One first activation per destination; warm sample counts are recorded per journey. Population p95 and daily feel remain unvalidated",
       journeys: candidate.summaries.map((after) => {
@@ -212,6 +226,7 @@ export async function refreshRestoredEvidence() {
       "Ordinary focus runs do not prove remote mutation delivery, permissions recovery, autosave or daily feel.",
       "Fixed three-second preparation records its actual observation age and missing data before any activation. Cache metadata does not establish visible usable content or fresh write authority.",
       "Large secondary collections require their complete authorized source; UI detail journeys use the explicitly recorded bounded deterministic sample.",
+      "Historical build environment parity was not recorded and is unknown. Strict paired causal conclusions require matching actual environment-file hashes; historical observed timings remain retained.",
       "Historical v1 ordinary runner hashes cover four files; historical v1 executable hashes cover that runner alone. New protocols record their actual dependency scope. Different hashes and empty/populated datasets are not silently treated as equivalent."],
     variants: [...new Map(runs.map((run) => [run.build, { sha: run.effectiveSha, build: run.build }])).values()], runs, comparisons, incrementalComparisons };
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);

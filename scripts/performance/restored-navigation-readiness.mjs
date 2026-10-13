@@ -198,3 +198,28 @@ export function restoredPreparationMetadata(specs) {
     interpretation: 'Metadata snapshot before the first activation; full usable-content gates and fresh write authority are measured separately' };
 }
 
+/** Retain source attribution without request headers, payloads or URL query values. */
+export function restoredRequestInitiatorMetadata(event, origin) {
+  const scopedPath = (value) => {
+    try { const url = new URL(value); return url.origin === origin ? url.pathname : null; }
+    catch { return null; }
+  };
+  const path = scopedPath(event.request?.url);
+  if (!path) return null;
+  const frames = [];
+  let stack = event.initiator?.stack, depth = 0;
+  while (stack && depth++ < 4 && frames.length < 40) {
+    for (const frame of stack.callFrames ?? []) {
+      const sourcePath = scopedPath(frame.url);
+      if (!sourcePath || frames.length >= 40) continue;
+      frames.push({ functionName: String(frame.functionName ?? "").slice(0, 160), path: sourcePath,
+        lineNumber: frame.lineNumber, columnNumber: frame.columnNumber });
+    }
+    stack = stack.parent;
+  }
+  return { path, method: event.request.method, hasRscQuery: new URL(event.request.url).searchParams.has("_rsc"),
+    type: event.type, timestamp: event.timestamp, wallTime: event.wallTime,
+    initiatorType: event.initiator?.type ?? "unknown", initiatorPath: scopedPath(event.initiator?.url), frames,
+    unresolvedAsyncParent: !!event.initiator?.stack?.parentId };
+}
+

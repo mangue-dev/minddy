@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auditEvidence, classification, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, summarizeMeasurements } from "./summarize-restored-evidence.mjs";
+import { auditEvidence, classification, evidenceFilenameSelected, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, summarizeMeasurements } from "./summarize-restored-evidence.mjs";
 
 test("omits p95 below ten observations and preserves the full maximum", () => {
   assert.deepEqual(sampleStatistics([300, 20, 40, 60, 80]), { count: 5, p50: 60, p95: null, max: 300 });
@@ -39,14 +39,27 @@ test("excludes complete diagnostic runs and preserves failed ordinary runs as fa
   const diagnostic = classification("min683-restored-before-populated-protocol-diagnostic-4.json", {
     status: "complete", protocol: "min683-excluded-populated-readiness-diagnostic-v1", excludedFromComparison: "No latency claims" });
   assert.equal(diagnostic.stage, "diagnostic"); assert.equal(diagnostic.eligibleForNavigationComparison, false);
+  assert.equal(classification("min683-restored-before-correctness.json", { status: "passed", excludedFromLatencyAggregates: true }).eligibleForNavigationComparison, false);
+  assert.equal(evidenceFilenameSelected("min683-verification-scaled-native-1.json"), true);
+  assert.equal(evidenceFilenameSelected("min683-restored-before-correctness-restoration-journal.json"), false);
+  assert.equal(evidenceFilenameSelected("min683-verification-scaled-native-1-restoration-journal.json"), false);
 });
 const comparable = { effectiveSha: "a".repeat(40), build: "known-build", protocol: "complete-content", runnerSourceHash: "b".repeat(64),
   runtime: "Chromium", versions: { chromium: "153" }, viewport: { width: 1440, height: 1000, scale: 1 },
-  workloadIdentity: "c".repeat(64), eligibleForNavigationComparison: true, focusValid: true };
+  workloadIdentity: "c".repeat(64), eligibleForNavigationComparison: true, focusValid: true,
+  environmentFiles: { ".env": "f".repeat(64), ".env.local": "e".repeat(64), ".env.production": null, ".env.production.local": null } };
 test("requires known source/build provenance before drawing paired conclusions", () => {
   assert.equal(pairedComparisonEligibility(comparable, { ...comparable }).eligibleForPairedNavigationConclusions, true);
   assert.equal(pairedComparisonEligibility(comparable, { ...comparable, build: "unknown" }).eligibleForPairedNavigationConclusions, false);
   assert.equal(pairedComparisonEligibility(comparable, { ...comparable, effectiveSha: null }).eligibleForPairedNavigationConclusions, false);
+});
+test("retains source-controlled history but refuses strict causal comparisons with unknown or changed build environments", () => {
+  for (const environmentFiles of [undefined, {}, { ".env": "different" }, { ".env": "f".repeat(64) }, { ...comparable.environmentFiles, ".env.local": "d".repeat(64) }]) {
+    const pair = pairedComparisonEligibility(comparable, { ...comparable, environmentFiles });
+    assert.equal(pair.sourceProtocolAndWorkloadMatch, true);
+    assert.equal(pair.environmentMatches, false); assert.equal(pair.eligibleForPairedNavigationConclusions, false);
+  }
+  assert.equal(pairedComparisonEligibility(comparable, { ...comparable, environmentFiles: Object.fromEntries(Object.entries(comparable.environmentFiles).reverse()) }).environmentMatches, true);
 });
 test("rejects cross-runtime, changed-runner, viewport and workload comparisons", () => {
   for (const changed of [{ runtime: "unpackaged Electron" }, { runnerSourceHash: "d".repeat(64) },

@@ -9,7 +9,7 @@ import { openFixture, stableTabs, stableManifestPath, assertStableTabs } from ".
 import { loadConnectedBoardWorkload, loadForgeWorkload, forgeLinkFingerprint } from "./measure-forge-navigation.mjs";
 import { assertScope } from "./seed.mjs";
 import { boardReady } from "./board-readiness.mjs";
-import { restoredDestinationReady, restoredPreparationMetadata, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
+import { restoredDestinationReady, restoredPreparationMetadata, restoredRequestInitiatorMetadata, RESTORED_LOADING_SELECTOR } from "./restored-navigation-readiness.mjs";
 import { optionalSecondaryWorkload, secondaryReadiness, secondaryEvidence, secondaryJourneyIds } from "./secondary-navigation-workload.mjs";
 
 // Reuse the verified ten-tab fixture. No reseeding, content writes, paid work,
@@ -20,6 +20,8 @@ const repeats = Number(process.env.MINDDY_PERF_REPEATS ?? 3);
 const inactiveMs = Number(process.env.MINDDY_PERF_INACTIVE_MS ?? 16000);
 assert.ok(Number.isInteger(repeats) && repeats > 0 && repeats <= 100);
 assert.ok(Number.isInteger(inactiveMs) && inactiveMs >= 1000 && inactiveMs <= 60000);
+const traceRequestInitiators = process.argv.includes("--trace-request-initiators");
+assert.ok(!traceRequestInitiators || process.argv.includes("--diagnostic"), "Request-initiator tracing requires --diagnostic and cannot enter ordinary comparisons");
 const output = path.resolve("output/playwright/performance");
 await mkdir(output, { recursive: true });
 const resultPath = path.join(output, `${label}.json`);
@@ -69,6 +71,10 @@ try {
   const product = process.env.MINDDY_PERF_BUILD_ROOT ? JSON.parse(await readFile(path.join(productRoot, ".next/min683-product.json"), "utf8")) : { sha: git("rev-parse", "HEAD"), build };
   assert.equal(product.build, build);
   assert.match(product.sha, /^[a-f0-9]{40}$/);
+  assert.deepEqual(Object.keys(product.environmentFiles ?? {}).sort(), [".env", ".env.local", ".env.production", ".env.production.local"].sort(), "New measurements require the actual build's environment-file hashes");
+  assert.match(product.environmentFiles[".env"], /^[a-f0-9]{64}$/);
+  assert.ok(Object.values(product.environmentFiles).every((value) => value === null || /^[a-f0-9]{64}$/.test(value)));
+  result.environmentFiles = product.environmentFiles;
   result.runnerSourceHashScope = ["measure-restored-navigation.mjs", "restored-navigation-readiness.mjs", "board-readiness.mjs", "stable-restored-tabs.mjs",
     "measure-forge-navigation.mjs", "secondary-navigation-workload.mjs", "enrich-secondary-workload.mjs", "seed.mjs"];
   Object.assign(result, { sha: product.sha, build, runnerSha: git("rev-parse", "HEAD"), runnerSourceHash: await runnerHash(), workingDiffHash: fingerprint(git("diff", "--binary")),
@@ -197,6 +203,16 @@ try {
   });
   page.on("requestfailed", (req) => result.network.push({ path: new URL(req.url()).pathname, method: req.method(), failed: req.failure()?.errorText, ...req.timing() }));
   const cdp = await context.newCDPSession(page);
+  if (traceRequestInitiators) {
+    result.requestInitiators = { diagnosticOnly: true, maximumEvents: 5000, droppedEvents: 0, events: [] };
+    cdp.on("Network.requestWillBeSent", (event) => {
+      const metadata = restoredRequestInitiatorMetadata(event, base);
+      if (!metadata) return;
+      if (result.requestInitiators.events.length < result.requestInitiators.maximumEvents) result.requestInitiators.events.push(metadata);
+      else result.requestInitiators.droppedEvents++;
+    });
+    await cdp.send("Network.enable");
+  }
   await cdp.send("Performance.enable");
   const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map(({ name, value }) => [name, value]));
   const metricDelta = (before, after) => Object.fromEntries(["TaskDuration", "ScriptDuration", "LayoutDuration", "RecalcStyleDuration", "LayoutCount", "RecalcStyleCount"]

@@ -78,6 +78,10 @@ try {
   const product = JSON.parse(await readFile(path.join(productRoot, ".next/min683-product.json"), "utf8"));
   assert.equal(product.build, build, "The measured build must have an explicit matching source manifest");
   assert.match(product.sha, /^[a-f0-9]{40}$/);
+  assert.deepEqual(Object.keys(product.environmentFiles ?? {}).sort(), [".env", ".env.local", ".env.production", ".env.production.local"].sort(), "New measurements require the actual build's environment-file hashes");
+  assert.match(product.environmentFiles[".env"], /^[a-f0-9]{64}$/);
+  assert.ok(Object.values(product.environmentFiles).every((value) => value === null || /^[a-f0-9]{64}$/.test(value)));
+  result.environmentFiles = product.environmentFiles;
   result.runnerSourceHashScope = ["measure-executable-startup.mjs", "board-readiness.mjs", "stable-restored-tabs.mjs", "measure-forge-navigation.mjs",
     "secondary-navigation-workload.mjs", "enrich-secondary-workload.mjs", "seed.mjs", "restored-navigation-readiness.mjs"];
   Object.assign(result, { build, product, runnerSha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),

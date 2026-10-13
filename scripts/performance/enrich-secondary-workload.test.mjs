@@ -2,7 +2,35 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { enrichSecondaryWorkload, fingerprint, loadSecondaryWorkload, SECONDARY_EMAIL, SECONDARY_MARKER,
-  secondaryDefinitions, secondaryFixtureProjectIds, secondaryOriginalIssueIds, secondaryId, SCALED_SECONDARY_MARKER } from "./enrich-secondary-workload.mjs";
+  secondaryDefinitions, secondaryFixtureProjectIds, secondaryOriginalIssueIds, secondaryId, SCALED_SECONDARY_MARKER, readOnlyMapBounded } from "./enrich-secondary-workload.mjs";
+
+test("bounded read-only workers preserve input order and never exceed their limit", async () => {
+  let active = 0, maximum = 0;
+  const values = await readOnlyMapBounded(Array.from({ length: 19 }, (_, index) => index), async (value) => {
+    active++; maximum = Math.max(maximum, active);
+    await new Promise((resolve) => setImmediate(resolve));
+    active--; return `verified-${value}`;
+  }, 5);
+  assert.equal(maximum, 5); assert.equal(active, 0);
+  assert.deepEqual(values, Array.from({ length: 19 }, (_, index) => `verified-${index}`));
+  assert.deepEqual(await readOnlyMapBounded([], async () => assert.fail()), []);
+  await assert.rejects(readOnlyMapBounded([1], async () => 1, 7), /between one and six/);
+});
+test("a failed read stops new work and drains every in-flight read before rejecting", async () => {
+  const started = [], release = [];
+  let settled = false, active = 0;
+  const task = readOnlyMapBounded([0, 1, 2, 3, 4], async (index) => {
+    started.push(index); active++;
+    if (index === 0) { await Promise.resolve(); active--; throw new Error("Exact read failure"); }
+    await new Promise((resolve) => release.push(resolve)); active--;
+  }, 3);
+  task.then(() => { settled = true; }, () => { settled = true; });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(started, [0, 1, 2]); assert.equal(settled, false); assert.equal(active, 2);
+  release.forEach((resolve) => resolve());
+  await assert.rejects(task, /Exact read failure/); assert.equal(active, 0); assert.equal(settled, true);
+  assert.deepEqual(started, [0, 1, 2]);
+});
 
 function fixtureApi(options = {}) {
   const fixture = { email: SECONDARY_EMAIL, marker: "min-540-performance-v1", userId: "fixture-user",
@@ -232,7 +260,25 @@ test("scales with a durable migration backup, exact source counts and unchanged 
   for (const [route, comments] of oldComments) assert.deepEqual(state.comments.get(route), comments);
   assert.equal(result.preservation.oldIssueCount, 660); assert.equal(result.preservation.beforeFingerprint, result.preservation.afterFingerprint);
   const count = state.mutations.length;
-  assert.equal((await state.run()).lastRunMutations, 0); assert.equal(state.mutations.length, count);
+  const reads = [], ordinaryApi = state.api;
+  let activeComments = 0, maximumComments = 0;
+  state.api = async (route, method = "GET", payload) => {
+    assert.equal(method, "GET", "A complete replay must not reach any ensure mutation"); reads.push(route);
+    if (!route.endsWith("/comments")) return ordinaryApi(route, method, payload);
+    activeComments++; maximumComments = Math.max(maximumComments, activeComments);
+    try { await new Promise((resolve) => setImmediate(resolve)); return await ordinaryApi(route, method, payload); }
+    finally { activeComments--; }
+  };
+  const replay = await state.run();
+  assert.equal(replay.lastRunMutations, 0); assert.equal(state.mutations.length, count);
+  assert.equal(replay.readOnlyReplay.checkedEntities, 720); assert.equal(replay.readOnlyReplay.checkedComments, 1440);
+  assert.equal(maximumComments, 5); assert.equal(activeComments, 0);
+  assert.equal(reads.filter((route) => route.endsWith("/comments")).length, 760, "Verify all720 entities plus the retained40-entity legacy cohort");
+  assert.ok(reads.filter((route) => route.endsWith("/issues")).length < 30, "Do not repeat a whole list GET for each of570 issues");
+  const loaded = await loadSecondaryWorkload(state.api, state.fixture, replay);
+  for (const group of ["triage", "tasks", "feedback", "objectives"]) {
+    assert.deepEqual(loaded.readiness[group].details.map((row) => row.id), replay.entities[group].map((row) => row.id));
+  }
 });
 test("retains real global truncation as incomplete source and recovers without shrinking or recreating the scaled fixture", async () => {
   const state = await scalingFixture(); state.globalCap = 1000;
@@ -244,4 +290,31 @@ test("retains real global truncation as incomplete source and recovers without s
   state.globalCap = Infinity;
   const recovered = await state.run(); assert.equal(recovered.status, "complete"); assert.equal(recovered.lastRunMutations, 0);
   assert.equal(state.mutations.length, count); assert.equal(recovered.counts.allSourceIssues, 1206);
+  assert.equal(recovered.readOnlyReplay.fromStatus, "incomplete-source");
+});
+test("final source recovery refuses changed content, unfinished operations, settings and original snapshots without any writes", async () => {
+  const state = await scalingFixture(); state.globalCap = 1000;
+  await assert.rejects(state.run(), /expected global 1206/);
+  state.globalCap = Infinity;
+  const baseline = structuredClone(state.journal), mutations = state.mutations.length;
+  const oldBody = state.issues.find((row) => row.id === secondaryId("task-29-14")).description;
+  const targetComment = state.comments.get(`/api/issues/${secondaryId("task-29-14")}/comments`)[0], oldComment = targetComment.body;
+  const oldOriginalTitle = state.originalIssues[0].title;
+  for (const change of [
+    () => { state.journal.operations["task-29-14"].phase = "started"; },
+    () => { state.journal.operations.unknown = { phase: "accepted", id: "unexpected" }; },
+    () => { state.journal.settings.phase = "disabled"; },
+    () => { state.project.feedback_review_enabled = false; },
+    () => { state.journal.preservation.beforeFingerprint = "unexpected"; },
+    () => { state.issues.find((row) => row.id === secondaryId("task-29-14")).description = "Concurrent body"; },
+    () => { targetComment.body = "Concurrent comment"; },
+    () => { state.originalIssues[0].title = "Concurrent original title"; },
+    () => { state.journal.failure = "A different unfinished migration"; },
+  ]) {
+    state.journal = structuredClone(baseline); state.project.feedback_review_enabled = true;
+    state.issues.find((row) => row.id === secondaryId("task-29-14")).description = oldBody;
+    targetComment.body = oldComment; state.originalIssues[0].title = oldOriginalTitle;
+    change(); await assert.rejects(state.run());
+    assert.equal(state.mutations.length, mutations, "A strict final replay must never repair or recreate data");
+  }
 });

@@ -108,6 +108,23 @@ const listRows = (kind, value) => kind === "feedback" ? value.posts : value;
 const commentRoute = (kind, id) => kind === "feedback" ? `${endpoint(kind)}/${id}/comments`
   : `/api/${kind === "objective" ? "objectives" : "issues"}/${id}/comments`;
 
+/** Bound independent read-only work, preserve order and drain before failing. */
+export async function readOnlyMapBounded(items, read, concurrency = 5) {
+  assert.ok(Number.isInteger(concurrency) && concurrency >= 1 && concurrency <= 6, "Read-only concurrency must stay between one and six");
+  const results = Array(items.length);
+  let next = 0, failed = false, failure;
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (!failed) {
+      const index = next++;
+      if (index >= items.length) return;
+      try { results[index] = await read(items[index], index); }
+      catch (error) { if (!failed) { failed = true; failure = error; } }
+    }
+  }));
+  if (failed) throw failure;
+  return results;
+}
+
 /** Ordinary authorized reads hydrate content only in memory; saved/public evidence uses hashes. */
 export async function loadSecondaryWorkload(api, fixture, manifest) {
   manifest ??= JSON.parse(await readFile(secondaryManifestPath, "utf8"));
@@ -115,25 +132,36 @@ export async function loadSecondaryWorkload(api, fixture, manifest) {
   assert.equal(manifest.userId, fixture.userId); assert.equal(manifest.email, fixture.email);
   assert.equal(manifest.projectId, projectId);
   assertSecondaryProject(await api(`/api/projects/${projectId}`), fixture);
-  const sources = { issue: await api(endpoint("issue")), objective: await api(endpoint("objective")),
-    feedback: (await api(endpoint("feedback"))).posts };
+  const kinds = ["issue", "objective", "feedback"];
+  const values = await readOnlyMapBounded(kinds, async (kind) => listRows(kind, await api(endpoint(kind))), 3);
+  const sources = Object.fromEntries(kinds.map((kind, index) => [kind, values[index]]));
+  const expected = manifest.marker === SCALED_SECONDARY_MARKER ? { triage: 120, tasks: 450, feedback: 120, objectives: 30 } : { triage: 12, tasks: 12, feedback: 10, objectives: 6 };
   const readiness = {};
+  const validated = [];
   for (const [group, kind] of [["triage", "issue"], ["tasks", "issue"], ["feedback", "feedback"], ["objectives", "objective"]]) {
-    const details = [];
+    assert.equal(manifest.entities[group].length, expected[group], "The complete declared cohort must be retained");
+    assert.equal(manifest.counts[group], expected[group]);
     for (const record of manifest.entities[group]) {
       const row = sources[kind].find((item) => item.id === record.id);
       assert.ok(row, `Missing retained ${group} record`);
       assert.equal(fingerprint(entityFields(row, kind)), record.fingerprint, `Changed retained ${group} record`);
-      const comments = await api(commentRoute(kind, record.id));
-      for (const id of record.commentIds) {
-        const saved = comments.find((item) => item.id === id);
-        assert.equal(saved?.author_id, fixture.userId, "Missing scoped fixture comment");
-        assert.equal(fingerprint(saved.body), record.commentFingerprints[id], "Changed retained fixture comment");
-      }
-      details.push({ id: row.id, title: row.title ?? row.name, bodyText: row.description ?? row.body,
-        commentIds: record.commentIds, comments: comments.filter((item) => record.commentIds.includes(item.id)).map(({ id, body }) => ({ id, body })) });
+      assert.equal(record.commentIds.length, 2); assert.equal(new Set(record.commentIds).size, 2);
+      validated.push({ group, kind, record, row });
     }
-    readiness[group] = { listIds: manifest.entities[group].map((row) => row.id), details };
+  }
+  assert.equal(manifest.counts.comments, validated.length * 2);
+  const details = await readOnlyMapBounded(validated, async ({ kind, record, row }) => {
+    const comments = await api(commentRoute(kind, record.id));
+    for (const id of record.commentIds) {
+      const saved = comments.find((item) => item.id === id);
+      assert.equal(saved?.author_id, fixture.userId, "Missing scoped fixture comment");
+      assert.equal(fingerprint(saved.body), record.commentFingerprints[id], "Changed retained fixture comment");
+    }
+    return { id: row.id, title: row.title ?? row.name, bodyText: row.description ?? row.body,
+      commentIds: record.commentIds, comments: comments.filter((item) => record.commentIds.includes(item.id)).map(({ id, body }) => ({ id, body })) };
+  });
+  for (const group of Object.keys(expected)) {
+    readiness[group] = { listIds: manifest.entities[group].map((row) => row.id), details: details.filter((_, index) => validated[index].group === group) };
   }
   return { ...manifest, readiness };
 }
@@ -165,6 +193,84 @@ function assertEntity(row, spec, userId) {
     assert.equal(row.source, "internal"); assert.equal(row.created_by_member, userId);
     assert.equal(row.merged_into_id ?? null, null, "A stable feedback record must not be merged");
   }
+}
+
+/** Final source recovery cannot create, repair or reclassify any fixture record. */
+async function completeReadOnlyScaledReplay({ api, fixture, journal, definitions, before, addedIssueIds, feedbackAlreadyCompleted, persist }) {
+  const previousStatus = journal.status;
+  const expectedSource = { allSourceIssues: 1206, allBoardCards: 1086, projectSourceIssues: 670, projectBoardCards: 550 };
+  assert.ok(["incomplete-source", "complete"].includes(previousStatus));
+  assert.deepEqual(journal.expectedSource, expectedSource);
+  for (const [kind, count] of Object.entries(SECONDARY_COUNTS)) assert.equal(journal.counts[kind], count);
+  if (previousStatus === "incomplete-source") {
+    assert.equal(journal.sourceComplete, false);
+    assert.equal(journal.counts.allSourceIssues, 1000);
+    assert.equal(journal.counts.allBoardCards, 880);
+    assert.equal(journal.failure, "Complete API source required: expected global 1206/1086 and project 670/550 issues/cards, observed 1000/880 and 670/550");
+  } else {
+    assert.equal(journal.sourceComplete, true);
+    for (const [key, count] of Object.entries(expectedSource)) assert.equal(journal.counts[key], count);
+  }
+  assert.equal(journal.settings.phase, "restored", "A read-only source recovery cannot repair review settings");
+  assert.equal(journal.preservation.settingsRestored, true);
+  assert.equal(journal.preservation.beforeFingerprint, journal.preservation.afterFingerprint);
+  assert.equal(journal.beforeFingerprint, fingerprint(before));
+  assert.equal(journal.preservation.beforeFingerprint, fingerprint(before));
+  assert.equal(feedbackAlreadyCompleted, true, "All private feedback must already have both completion markers");
+  const allowed = new Set();
+  const objectiveIds = new Map(journal.entities.objectives.map((record) => [record.key, record.id]));
+  for (const [group, specs] of Object.entries(definitions)) {
+    assert.equal(journal.entities[group].length, specs.length);
+    for (const spec of specs) {
+      const record = journal.entities[group].find((item) => item.key === spec.key);
+      assert.ok(record, "A final source replay requires every accepted canonical record");
+      const operation = journal.operations[spec.key]; allowed.add(spec.key);
+      assert.equal(operation?.phase, "accepted"); assert.equal(operation.kind, spec.kind); assert.equal(operation.id, record.id);
+      const payload = { ...spec.payload, ...(spec.objectiveKey ? { objective_id: objectiveIds.get(spec.objectiveKey) } : {}) };
+      assert.equal(operation.inputFingerprint, fingerprint(payload));
+      if (spec.payload.id) assert.equal(record.id, spec.payload.id);
+      assert.equal(record.commentIds.length, 2);
+      for (const [index, comment] of spec.comments.entries()) {
+        const key = `${spec.key}:comment-${index}`, saved = journal.operations[key]; allowed.add(key);
+        assert.equal(saved?.phase, "accepted"); assert.equal(saved.kind, "comment");
+        assert.equal(saved.id, record.commentIds[index]); assert.equal(saved.parentId, record.id);
+        assert.equal(saved.inputFingerprint, fingerprint(comment));
+        assert.equal(record.commentFingerprints[saved.id], fingerprint(comment.body));
+      }
+      if (spec.kind === "feedback" && spec.status !== "open") {
+        const key = `${spec.key}:lifecycle`, lifecycle = journal.operations[key]; allowed.add(key);
+        assert.deepEqual(lifecycle, { id: record.id, phase: "accepted", desiredStatus: spec.status });
+      }
+    }
+  }
+  assert.deepEqual(Object.keys(journal.operations).sort(), [...allowed].sort(), "Unknown or unfinished operations cannot enter read-only recovery");
+  // The clone permits full canonical validation of a durable final source
+  // failure. It does not change the saved status before every proof succeeds.
+  await loadSecondaryWorkload(api, fixture, { ...journal, status: "complete" });
+  const after = await capturePreserved(api, fixture, addedIssueIds);
+  assert.deepEqual(after, before, "Read-only recovery must preserve every original issue, Page, tab and Git link");
+  const [board, projectIssues, currentProject, members] = await readOnlyMapBounded([
+    "/api/me/board", endpoint("issue"), `/api/projects/${projectId}`, `/api/projects/${projectId}/members`,
+  ], (route) => api(route), 4);
+  assertSecondaryProject(currentProject, fixture);
+  assert.equal(currentProject.feedback_review_enabled, journal.settings.originalFeedbackReviewEnabled);
+  assert.equal(members.isOwner, true); assert.deepEqual(members.members.map((row) => row.user_id).sort(), [fixture.userId]);
+  assert.equal(members.invitations?.length ?? 0, 0);
+  const expectedIds = new Set([...before.issues, ...journal.entities.triage, ...journal.entities.tasks].map((row) => row.id));
+  assert.equal(expectedIds.size, 1206); assert.equal(new Set(board.issues.map((row) => row.id)).size, board.issues.length);
+  assert.deepEqual(board.issues.map((row) => row.id).sort(), [...expectedIds].sort(), "The global source must contain every preserved and secondary identity");
+  const projectIds = [...secondaryOriginalIssueIds.slice(0, 100), ...journal.entities.triage.map((row) => row.id), ...journal.entities.tasks.map((row) => row.id)];
+  assert.deepEqual(projectIssues.map((row) => row.id).sort(), projectIds.sort());
+  const cards = (rows) => rows.filter((row) => !["triage", "duplicate"].includes(row.status)).length;
+  const source = { allSourceIssues: board.issues.length, allBoardCards: cards(board.issues), projectSourceIssues: projectIssues.length, projectBoardCards: cards(projectIssues) };
+  assert.deepEqual(source, expectedSource, "The complete source cannot be replaced by capped rows or inferred counts");
+  journal.readOnlyReplay = { protocol: "min683-final-source-read-only-replay-v1", fromStatus: previousStatus,
+    previousSource: Object.fromEntries(Object.keys(expectedSource).map((key) => [key, journal.counts[key]])),
+    checkedEntities: 720, checkedComments: 1440, commentReadConcurrency: 5, checkedAt: new Date().toISOString() };
+  journal.counts = { ...journal.counts, ...source }; journal.sourceComplete = true;
+  journal.status = "complete"; delete journal.failure; journal.completedAt = new Date().toISOString(); journal.lastRunMutations = 0;
+  await persist(journal);
+  return journal;
 }
 
 /** Journal every creation before transport and recover only exact scoped outcomes. */
@@ -217,7 +323,7 @@ export async function enrichSecondaryWorkload({ api, fixture, getIdentity, apply
     journal.failureHistory ??= [];
     if (journal.failureHistory.at(-1)?.reason !== journal.failure) journal.failureHistory.push({ at: new Date().toISOString(), reason: journal.failure });
   }
-  if (journal.status === "complete") await loadSecondaryWorkload(api, fixture, journal);
+  if (journal.status === "complete" && !scaled) await loadSecondaryWorkload(api, fixture, journal);
   // Refuse an unknown non-idempotent outcome before even changing review settings.
   // A successful read can recover a lost acknowledgement; absence cannot prove
   // that a server-generated creation never reached the database.
@@ -264,6 +370,9 @@ export async function enrichSecondaryWorkload({ api, fixture, getIdentity, apply
         legacyEntityFingerprint: journal.migration.legacyEntityFingerprint } : {}),
       preservedFingerprint: fingerprint(before), definitionsHash, mutations: 0 };
   }
+  if (scaled && ["incomplete-source", "complete"].includes(journal.status)) return completeReadOnlyScaledReplay({
+    api, fixture, journal, definitions, before, addedIssueIds, feedbackAlreadyCompleted, persist,
+  });
   journal.status = "applying"; journal.beforeFingerprint = fingerprint(before);
   await persist(journal);
   let mutationCount = 0;
