@@ -33,7 +33,7 @@ async function drain(prepared: ReturnType<typeof setup>) {
 }
 
 const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page")
-  ? { id: "page", content: { type: "doc", content: [] } }
+  ? { id: "page", project_id: "new", version: 1, content: { type: "doc", content: [] } }
   : url.endsWith("/members") ? { members: [] }
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
 

@@ -6,6 +6,7 @@ import { appTabPreparationQueries, appTabPreparationQuery, prefetchPullRequestDe
 import { navigationPreparationPriority } from "./navigation-preparation-priority";
 import { allPullRequestsQueryOptions } from "./use-agent-runs";
 import { prActivityPreparationQueries } from "./pr-activity-query";
+import { createPageNavigationPreparation } from "./page-navigation-preparation";
 
 /** Recent visible detail activities precede optional lists for old pinned PRs. */
 function recentActivityQueries(client: QueryClient) {
@@ -36,6 +37,7 @@ export function createPrTabPreparation(
     return () => { clearTimeout(timer); if (idle !== undefined) cancelIdleCallback(idle); };
   },
 ) {
+  const pagePreparation = createPageNavigationPreparation(client);
   const visits: string[] = [];
   let available: readonly string[] = [];
   let active = "", budget = 0, disposed = false;
@@ -102,15 +104,16 @@ export function createPrTabPreparation(
         preparing = options.queryKey;
         const key = preparing;
         if (route.section !== "pull-requests") priority.startRead(key);
-        const startedAt = Date.now();
+        const pageRead = route.pageId && options.queryKey[0] === "page";
         const pending = detail ? prefetchPullRequestDetail(client, route.prId!)
+          : pageRead ? client.fetchQuery<unknown>({ ...options, retry: false }).then(() => {
+            if (!disposed && !client.getQueryState(options.queryKey)?.isInvalidated) preparePageNavigation(route.pageId!);
+          }).catch(() => {})
           : client.prefetchQuery<unknown>({ ...options, retry: false });
         if (!pending) { preparing = undefined; priority.finishRead(key); continue; }
         void pending.finally(() => {
           if (preparing === key) preparing = undefined;
           priority.finishRead(key);
-          const state = client.getQueryState(options.queryKey);
-          if (!disposed && route.pageId && state?.status === "success" && !state.isInvalidated && state.dataUpdatedAt >= startedAt && options.queryKey[0] === "page") preparePageNavigation(route.pageId);
           if (!disposed && budget === 0) priority.release();
           if (!disposed && budget && !cancel && !otherTransport()) cancel = schedule(prepare);
         });
@@ -154,9 +157,11 @@ export function createPrTabPreparation(
       if (missingNavigation) priority.acquire(); else priority.release();
       cancelScheduled();
       cancel = schedule(prepare);
+      pagePreparation.visit(href, hrefs);
     },
     dispose() {
       disposed = true; cancel?.(); stop();
+      pagePreparation.dispose();
       priority.release();
       if (preparing) {
         const key = preparing;

@@ -21,7 +21,7 @@ function setup() {
     return () => { auxiliary.delete(task); };
   });
   const fetch = vi.fn<typeof globalThis.fetch>(async (url) => Response.json(String(url).endsWith("/pages/page")
-    ? { id: "page", content: { type: "doc", content: [] } }
+    ? { id: "page", project_id: "project", version: 1, content: { type: "doc", content: [] } }
     : String(url).endsWith("/pages") ? []
     : String(url).endsWith("/commits") ? { commits: [] } : { comments: [], timeline: [] }));
   vi.stubGlobal("fetch", fetch);
@@ -124,7 +124,7 @@ it.each([false, true])("shares one speculative Page read with five activities an
     view.client.setQueryData(allPullRequestsQueryOptions().queryKey, { pullRequests: prs.map((prId) => ({ prId, pr_state: "draft" })) });
     for (const id of prs) view.client.setQueryData(["pull-request", id], { pr: { title: "Prepared detail" } });
     view.fetch.mockImplementation((url, init) => {
-      if (String(url).endsWith("/pages/page")) return new Promise((resolve) => { finishPage = () => resolve(Response.json({ id: "page" })); });
+      if (String(url).endsWith("/pages/page")) return new Promise((resolve) => { finishPage = () => resolve(Response.json({ id: "page", project_id: "project", version: 1 })); });
       if (String(url).includes("/api/pull-requests/")) return new Promise((_resolve, reject) => {
         const signal = init!.signal!;
         signals.push(signal);

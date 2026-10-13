@@ -44,7 +44,6 @@ import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 
 import {
   discardPageOnUnload,
-  fetchPageApi,
   fetchPageBacklinksApi,
   fetchPageEventsApi,
   updatePageOnUnload,
@@ -62,6 +61,7 @@ import {
   PAGE_NAVIGATION_FRESH_MS,
   pageKey,
   usePageSurfaceReady,
+  fetchPageNavigationData,
   usePagesQuery,
 } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -342,15 +342,16 @@ function PageSurface({
     error,
   } = useQuery({
     queryKey: pageKey(pageId),
-    queryFn: () => fetchPageApi(projectId, pageId),
+    queryFn: ({ signal }) => fetchPageNavigationData(queryClient, projectId, pageId, signal),
     staleTime: PAGE_NAVIGATION_FRESH_MS,
     refetchOnMount: (query) =>
-      isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
+      !query.state.isInvalidated && isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
   const readyForThisSurface = usePageSurfaceReady(
     pageId,
     dataUpdatedAt,
     isFetchedAfterMount,
+    queryClient.getQueryState(pageKey(pageId))?.isInvalidated,
   );
 
   const warmPageActivity = useCallback(() => {
@@ -940,7 +941,7 @@ function PageSurface({
   }
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div data-page-surface-id={pageId} className="relative flex min-h-0 flex-1 flex-col">
       {/* A structural, non-scrolling header: breadcrumb on the left; presence,
           versions, comments, and document actions on the right. */}
       {!panel && <AppContentHeader contentClassName="gap-2">

@@ -66,4 +66,20 @@ describe("prepared page surface", () => {
       flushSync(() => root.unmount());
     }
   });
+
+  it("requires a new read when a prepared body has been invalidated", () => {
+    const initialTime = 30_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(initialTime);
+    preparePageNavigation("invalidated-page", initialTime);
+    function Surface({ fetched }: { fetched: boolean }) {
+      return createElement("div", null, usePageSurfaceReady("invalidated-page", initialTime, fetched, true) ? "Document" : "Loading");
+    }
+    const host = document.createElement("div"); const root = createRoot(host);
+    try {
+      flushSync(() => root.render(createElement(Surface, { fetched: false })));
+      expect(host.textContent).toBe("Loading");
+      flushSync(() => root.render(createElement(Surface, { fetched: true })));
+      expect(host.textContent).toBe("Document");
+    } finally { flushSync(() => root.unmount()); }
+  });
 });

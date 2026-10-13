@@ -1,7 +1,7 @@
 import { prepareAppTabSurface, isAppTabSurfaceReady } from "./app-tab-surfaces";
 import { feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-query";
-import { fetchPagesApi, fetchPageApi } from "./pages-api";
-import { pagesKey, pageKey } from "./use-pages-query";
+import { fetchPagesApi } from "./pages-api";
+import { pagesKey, pageKey, fetchPageNavigationData } from "./use-pages-query";
 import { issuesQueryFn } from "./issues-api";
 import type { FetchQueryOptions, QueryClient } from "@tanstack/react-query";
 
@@ -140,7 +140,7 @@ export function appTabPreparationQuery(client: QueryClient, href: string) {
   if (route.prId && route.section === "pull-requests") return pullRequestQueryOptions(route.prId);
   if (route.section === "pull-requests") return allPullRequestsQueryOptions();
   if (route.projectId && route.section === "pages") {
-    if (route.pageId) return { queryKey: pageKey(route.pageId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPageApi(route.projectId!, route.pageId!, signal) };
+    if (route.pageId) return { queryKey: pageKey(route.pageId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPageNavigationData(client, route.projectId!, route.pageId!, signal) };
     return { queryKey: pagesKey(route.projectId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPagesApi(route.projectId!, signal) };
   }
   if (route.projectId && route.section === "feedback") return feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href));

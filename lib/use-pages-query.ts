@@ -83,12 +83,21 @@ export function preparePageNavigation(pageId: string, now = Date.now()): void {
   preparedPages.set(pageId, now + PAGE_NAVIGATION_FRESH_MS);
 }
 
+/** A late authorized GET must not replace a newer accepted write in this cache. */
+export async function fetchPageNavigationData(client: QueryClient, projectId: string, pageId: string, signal?: AbortSignal): Promise<Page> {
+  const incoming = await fetchPageApi(projectId, pageId, signal);
+  if (incoming.id !== pageId || incoming.project_id !== projectId) throw new Error("Page response does not match its requested scope");
+  const current = client.getQueryData<Page>(pageKey(pageId));
+  return current?.id === pageId && current.project_id === projectId && current.version > incoming.version
+    ? current : incoming;
+}
+
 /** The tree and tab strip share the same freshness-bounded document preparation. */
 export function prefetchPageNavigation(queryClient: QueryClient, projectId: string, pageId: string): void {
   preparePageNavigation(pageId);
   void queryClient.prefetchQuery({
     queryKey: pageKey(pageId),
-    queryFn: ({ signal }) => fetchPageApi(projectId, pageId, signal),
+    queryFn: ({ signal }) => fetchPageNavigationData(queryClient, projectId, pageId, signal),
     staleTime: PAGE_NAVIGATION_FRESH_MS,
   });
 }
@@ -116,9 +125,10 @@ export function usePageSurfaceReady(
   pageId: string,
   dataUpdatedAt: number,
   isFetchedAfterMount: boolean,
+  invalidated = false,
 ): boolean {
   const [preparedOnMount] = useState(() =>
-    isPreparedPageData(pageId, dataUpdatedAt),
+    !invalidated && isPreparedPageData(pageId, dataUpdatedAt),
   );
   return preparedOnMount || isFetchedAfterMount;
 }
