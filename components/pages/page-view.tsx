@@ -344,7 +344,7 @@ function PageSurface({
     queryFn: surfaceRead.queryFn,
     staleTime: PAGE_NAVIGATION_FRESH_MS,
     refetchOnMount: (query) =>
-      !query.state.isInvalidated && isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
+      !query.state.isInvalidated && !surfaceRead.failure() && isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
   });
   const page = cachedPage?.id === pageId && cachedPage.project_id === projectId && cachedPage.version > 0
     ? cachedPage : undefined;

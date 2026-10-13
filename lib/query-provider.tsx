@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createQueryStorage, subscribeToQueryPersistence } from "./query-persistence";
 import { invalidateLocalSnapshotWrites } from "./local-snapshots";
 import { configurePayloadRetention, isMemoryOnlyPayload } from "./query-retention";
+import { observePageReadFailures } from "./page-read-receipts";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
@@ -192,6 +193,7 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
           },
         },
       });
+      observePageReadFailures(client);
       configurePayloadRetention(client);
       return client;
     }

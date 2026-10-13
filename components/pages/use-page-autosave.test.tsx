@@ -13,6 +13,7 @@ import { createPageSurfaceRead, fetchPageNavigationData, pageKey, PageWriteBasis
   preparePageNavigation, usePageSurfaceReady } from "@/lib/use-pages-query";
 import type { Page } from "@/lib/pages";
 import type { PageDocJSON } from "@/lib/pages-merge";
+import { observePageReadFailures } from "@/lib/page-read-receipts";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("mangue-ui", () => ({ cn: (...args: unknown[]) => args.filter(Boolean).join(" ") }));
@@ -49,23 +50,26 @@ function page(version = 5, content = doc()): Page {
   return { ...buildOptimisticPage("project", { id: "cached-page" }, []), version, content };
 }
 
-async function mount({ cached = page(), read, save, editor = false, preparation = false, prepared = false }: {
+async function mount({ cached = page(), read, save, editor = false, preparation = false, prepared = false, beforeMount }: {
   cached?: Page;
   read: () => Promise<Page>;
   save: (id: string, patch: UpdatePageInput) => Promise<Page>;
   editor?: boolean;
   preparation?: boolean;
   prepared?: boolean;
+  beforeMount?: (client: QueryClient) => Promise<void>;
 }) {
   let autosave!: PageAutosave;
   let preparedSurfaceReady = false;
   const onError = vi.fn();
   const editorRef = { current: null as Editor | null };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  observePageReadFailures(client);
   clients.push(client);
   vi.mocked(fetchPageApi).mockImplementation(read);
   client.setQueryData(pageKey(cached.id), cached, { updatedAt: Date.now() - (prepared ? 0 : 60_000) });
   if (prepared) preparePageNavigation(cached.id);
+  await beforeMount?.(client);
   if (preparation) {
     // The ordinary preparator starts before the surface exists, so its queryFn
     // is the shared authorized reader rather than the new surface's wrapper.
@@ -301,6 +305,36 @@ describe("cached Page display and fresh write authority", () => {
     expect(document.querySelector("[data-read-error]")).toBeNull();
     expect(h.editorRef.current!.getText()).toContain("Local before denial");
     expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Local before denial"), version: 5 });
+  });
+
+  it("keeps an unobserved raw denial after optimistic cache clearing and before the Page mounts", async () => {
+    const denied = new PageApiError("Page access denied", 403);
+    const reading = deferred<Page>();
+    const read = vi.fn().mockRejectedValueOnce(denied).mockImplementationOnce(() => reading.promise);
+    const save = vi.fn(async (_id: string, patch: UpdatePageInput) => page(6, patch.content as PageDocJSON));
+    const h = await mount({ read, save, editor: true, prepared: true,
+      beforeMount: async (client) => {
+        // No reader, hook or QueryObserver exists when this raw owner fails.
+        await expect(client.fetchQuery({ queryKey: pageKey("cached-page"),
+          queryFn: () => fetchPageApi("project", "cached-page"), staleTime: 0, retry: false })).rejects.toBe(denied);
+        client.setQueryData(pageKey("cached-page"), page(5));
+        expect(client.getQueryState(pageKey("cached-page"))?.error).toBeNull();
+      } });
+    expect(h.reader.failure()).toBe(denied);
+    expect(h.reader.hasAccepted(page(5))).toBe(false);
+    expect(h.preparedSurfaceReady).toBe(true);
+    expect(document.querySelector("[data-read-error]")?.textContent).toBe("Page access denied");
+    expect(document.querySelector(".tiptap")).toBeNull();
+    expect(save).not.toHaveBeenCalled();
+    await act(async () => { reading.resolve(page(5)); await new Promise((resolve) => setTimeout(resolve, 10)); });
+    expect(h.reader.failure()).toBeUndefined();
+    expect(document.querySelector("[data-read-error]")).toBeNull();
+    expect(h.editorRef.current!.getText()).toContain("Original local");
+    await act(async () => {
+      h.editorRef.current!.commands.setContent(doc("Typed after validation") as JSONContent);
+      expect(await h.autosave.flushBeforeNavigation()).toBe(true);
+    });
+    expect(save).toHaveBeenCalledWith("cached-page", { content: doc("Typed after validation"), version: 5 });
   });
 
   it("keeps conflicting local text recoverable while saving independent edits", async () => {
