@@ -66,19 +66,74 @@ export async function GET(request: NextRequest) {
     };
   }
 
-  const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
-    await Promise.all([
-      measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(auth.supabase, auth.user.id, timing)),
-      measureAllStartupPhase(timing, "projects", () => auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null)),
-      measureAllStartupPhase(timing, "categories", () => categoryStore(auth.supabase, auth.user.id).select("*")),
-      measureAllStartupPhase(timing, "objectives", () => objectiveStore(auth.supabase).select("*")),
-      // ALL relation types: `blocks` feeds the cycle reco ordering, and the
-      // full set powers the cards' relation chips + the side panel (RLS scopes
-      // the rows to my projects).
-      measureAllStartupPhase(timing, "relations", () => auth.supabase
-        .from("issue_relations")
-        .select("id, source_id, target_id, type, source_type, target_type")),
+  const decorateProjects = async (projectRows: { id: string; owner_id: string }[]) => {
+    // Members: owner (from projects) + collaborators (from project_members), all
+    // resolved to display names/avatars via the auth admin API (shared helper —
+    // GET /api/me/search-index builds the same map for the command palette).
+    // Integrations across my projects — feeds the cross-project integration
+    // filter (issues carry integration_id). Read via the service client like
+    // members, then bucketed by project. Kind and revocation state let the client
+    // hide integrations that cannot match a living board ticket.
+    // These reads share the authorized project IDs, but integrations do not
+    // depend on member or avatar resolution. Start both branches together.
+    const projectIds = projectRows.map((project) => project.id);
+    const [{ members }, { data: integrationRows }] = await Promise.all([
+      measureAllStartupPhase(timing, "members", () => buildMembersByProject(service, projectRows, timing)),
+      measureAllStartupPhase<{ data: IntegrationRef[] | null }>(timing, "integrations", () => projectIds.length
+        ? service
+            .from("integrations")
+            .select("id, name, project_id, kind, revoked_at")
+            .in("project_id", projectIds)
+            .order("id", { ascending: true })
+        : Promise.resolve({ data: [] as IntegrationRef[] })),
     ]);
+
+    const integrations: Record<string, IntegrationRef[]> = {};
+    await measureAllStartupPhase(timing, "integrations_decode", async () => {
+      for (const row of (integrationRows ?? []) as IntegrationRef[]) {
+        (integrations[row.project_id] ??= []).push({...row,
+          name:(await decodeIntegrationField(row,"name",row.name))!});
+      }
+    });
+    for(const rows of Object.values(integrations))
+      rows.sort((a,b)=>a.name.localeCompare(b.name));
+    return { members, integrations };
+  };
+  const projectsRead = Promise.resolve(measureAllStartupPhase(timing, "projects", () =>
+    auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null)));
+  // Drain the exact operation even when a different first-stage read fails.
+  // No service-role enrichment may start from a failed authorized scope read.
+  const decorationsRead = projectsRead.then(async (result) => {
+    if (result.error) return { ok: false as const, error: null };
+    try {
+      return { ok: true as const, value: await decorateProjects(
+        (result.data ?? []) as { id: string; owner_id: string }[]) };
+    } catch (error) { return { ok: false as const, error }; }
+  });
+  const readBoardResources = async () => {
+    try {
+      return await Promise.all([
+        measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(auth.supabase, auth.user.id, timing)),
+        projectsRead,
+        measureAllStartupPhase(timing, "categories", () => categoryStore(auth.supabase, auth.user.id).select("*")),
+        measureAllStartupPhase(timing, "objectives", () => objectiveStore(auth.supabase).select("*")),
+        // ALL relation types: `blocks` feeds the cycle reco ordering, and the
+        // full set powers the cards' relation chips + the side panel (RLS scopes
+        // the rows to my projects).
+        measureAllStartupPhase(timing, "relations", () => auth.supabase
+          .from("issue_relations")
+          .select("id, source_id, target_id, type, source_type, target_type")),
+        decorationsRead,
+      ]);
+    } catch (error) {
+      // Construction can throw before Promise.all exists, just as decoding can
+      // reject afterward. Drain the exact enrichment and preserve either error.
+      await decorationsRead.catch(() => undefined);
+      throw error;
+    }
+  };
+  const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes, decorations] =
+    await readBoardResources();
 
   const firstError =
     issuesRes.error ||
@@ -91,6 +146,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
+  if (!decorations.ok) throw decorations.error;
+  const { members, integrations } = decorations.value;
+
   const issues = (issuesRes.data ?? []).map(mapIssueRow);
 
   const categories: Record<string, Category[]> = {};
@@ -102,42 +160,6 @@ export async function GET(request: NextRequest) {
   for (const o of (objectivesRes.data ?? []) as Objective[]) {
     (objectives[o.project_id] ??= []).push(o);
   }
-
-  // Members: owner (from projects) + collaborators (from project_members), all
-  // resolved to display names/avatars via the auth admin API (shared helper —
-  // GET /api/me/search-index builds the same map for the command palette).
-  const projectRows = (projectsRes.data ?? []) as {
-    id: string;
-    owner_id: string;
-  }[];
-  // Integrations across my projects — feeds the cross-project integration
-  // filter (issues carry integration_id). Read via the service client like
-  // members, then bucketed by project. Kind and revocation state let the client
-  // hide integrations that cannot match a living board ticket.
-  // These reads share the authorized project IDs, but integrations do not
-  // depend on member or avatar resolution. Start both branches together.
-  const projectIds = projectRows.map((project) => project.id);
-  const [{ members }, { data: integrationRows }] = await Promise.all([
-    measureAllStartupPhase(timing, "members", () => buildMembersByProject(service, projectRows, timing)),
-    measureAllStartupPhase<{ data: IntegrationRef[] | null }>(timing, "integrations", () => projectIds.length
-      ? service
-          .from("integrations")
-          .select("id, name, project_id, kind, revoked_at")
-          .in("project_id", projectIds)
-          .order("id", { ascending: true })
-      : Promise.resolve({ data: [] as IntegrationRef[] })),
-  ]);
-
-  const integrations: Record<string, IntegrationRef[]> = {};
-  await measureAllStartupPhase(timing, "integrations_decode", async () => {
-    for (const row of (integrationRows ?? []) as IntegrationRef[]) {
-      (integrations[row.project_id] ??= []).push({...row,
-        name:(await decodeIntegrationField(row,"name",row.name))!});
-    }
-  });
-  for(const rows of Object.values(integrations))
-    rows.sort((a,b)=>a.name.localeCompare(b.name));
-
   const relations = (relationsRes.data ?? []) as IssueRelation[];
 
   const serialize = () => NextResponse.json({

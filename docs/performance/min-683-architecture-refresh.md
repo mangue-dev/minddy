@@ -125,6 +125,62 @@ bypass is part of this experiment. Before-source checks pass89 cases in six
 server suites and four strict parser/content-proof tests; full types, scoped
 lint, documentation/English/knowledge and an identified build precede tracing.
 
+### All phase reference before dependency overlap
+
+The admitted trace on `7ba0e3181` / `MBwOTC-9Laqpi-vCTq3u1` preserves the
+complete 1,206-issue source, 1,086-card membership and content fingerprint on
+both clients. All four real board responses carry the expected phase set.
+
+| Server phase | Web launch / refresh | Native launch / refresh |
+| --- | ---: | ---: |
+| Complete issues | 1101 / 1204 ms | 1022 / 948 ms |
+| Authorized projects finish, from request admission | 309 / 271 ms | 196 / 181 ms |
+| Members start, from request admission | 1166 / 1269 ms | 1093 / 1019 ms |
+| Members duration | 135 / 124 ms | 206 / 139 ms |
+| Successful response total | 1310 / 1402 ms | 1309 / 1169 ms |
+
+This identifies a material serialized enrichment tail, rather than assuming
+that overlapping it will improve the database-bound issue branch. The next
+increment must compare both the admitted phase trace and ordinary requests
+without the header. One observation per phase/client is not a percentile.
+The collector refreshes after complete All availability and response attribution;
+it does not impose the ordinary runner's three-second admission wait. Preserve
+that same literal excluded protocol for its corresponding after trace.
+
+The overlap candidate materializes the projects thenable exactly once and starts
+members/integrations only from its successful RLS-scoped result. Cycles still
+settle first. Complete issue/category/objective/relation results remain the
+response barrier; a database error retains its localized500 response. Both
+reader construction and asynchronous decoding failure await the exact started
+enrichment operation before rethrowing the original exception. This does not
+promise cancellation or complete drainage of nested `Promise.all` branches.
+Five of its nine route regressions fail behaviorally on the reference; all nine
+pass with overlap, together with the existing reader, store, member and live
+authorization suites. Full types, scoped lint and documentation/English/knowledge
+checks pass. Runtime retention still requires the separate build comparisons.
+
+### Remaining Page admission barrier
+
+Source inspection finds a separate head-of-line delay: the finite owner drains
+the project's seven prerequisites before either explicit Page body/tree pair.
+Its two slots do not provide destination fairness. The renewal owner's first-Page
+priority cannot rescue a missing body: unknown bodies have an infinite renewal
+deadline, and renewal yields to the finite navigation owner's reads. Initial
+PR-list transport can also hold the shared admission gate. In the independent
+web cases its response ends around refresh age2522–2732ms; scoped category reads
+first appear around2592–2734ms. These request observations do not expose the
+exact scheduler lock-release event.
+
+A bounded body/tree prefix could remove the seven-read ordering delay while
+retaining the same two slots, deduplication, foreground cancellation and initial
+subscription catch-up. It cannot promise all four reads by three seconds when
+only266–408ms remain after admission. Reject such an experiment if the first
+project pays the displaced cost. A second editor import, broader transport
+exception or timestamp-only cache promotion is unsupported by this evidence.
+Any global-to-project reuse first needs explicit resource-count, scope,
+invalidation and optimistic-overlay equivalence; the aggregate member array is
+not the project's permissions/invitations response.
+
 ## Resumed server working-set experiment
 
 The first Task 50 experiment is rejected as-is. Build `428939fe2` /
