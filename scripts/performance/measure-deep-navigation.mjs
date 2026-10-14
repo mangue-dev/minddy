@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { id } from "./seed.mjs";
 
 /** Genuine sidebar/tree clicks, with destination identity and complete content. */
-export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results, windowingCompatible = false, connectedBoard, allowedTabIds }) {
+export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results, windowingCompatible = false, connectedBoard, allowedTabIds, pageTrees }) {
   results.protocol = windowingCompatible ? "min683-deep-v5-canonical-editable-pages" : "min683-deep-v2-alternating-documents";
   const projects = fixture.projects.slice(0, 2);
   const sameTab = (tab) => !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`);
@@ -33,11 +33,21 @@ export async function measureDeepNavigation({ page, fixture, activeTab, pageTab,
     const href = `/projects/${projects[index]}${pages ? "/pages" : ""}`;
     const item = page.locator(`[role="menu"] a[href="${href}"]:visible`);
     assert.equal(await item.count(), 1);
-    const treeReady = ({ href, tab }) => location.pathname.startsWith(href) &&
-      !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`) &&
-      [...document.querySelectorAll('[data-sidebar-page-row] a[href]')].filter((node) => node.getClientRects().length).length === 20;
+    const treeReady = ({ href, tabIds, pageIds }) => {
+      if (!window.__instant.pageTreeReady({ href, tabIds, pageIds })) return false;
+      if (location.pathname === href) return true;
+      const spec = window.__instant.pageSpecifications[location.pathname];
+      const selected = document.querySelector('[data-app-tab-id][aria-selected="true"]')?.dataset.appTabId;
+      return !!spec && window.__instant.pageReady({ ...spec, tab: selected });
+    };
     await clickMeasured(name, item, pages ? treeReady : projectReady,
-      pages ? { href, tab: activeTab } : { project: projects[index], tab: activeTab });
+      pages ? { href, tabIds: allowedTabIds ?? [activeTab, pageTab.id], pageIds: pageTrees[href] } : { project: projects[index], tab: activeTab });
+    if (pages) {
+      const selected = await page.locator('[data-app-tab-id][aria-selected="true"]').getAttribute("data-app-tab-id");
+      assert.ok((allowedTabIds ?? [activeTab, pageTab.id]).includes(selected));
+      (results.sectionTabTransitions ??= []).push({ name, fromTab: activeTab, selectedTab: selected, href });
+      activeTab = selected;
+    }
     return results.measurements.at(-1);
   }
   // No extra destination tab exists for project 2 or its documents. The

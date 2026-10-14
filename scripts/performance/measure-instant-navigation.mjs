@@ -14,7 +14,7 @@ import { verifyBoardWindowing } from "./verify-board-windowing.mjs";
 import { boardReady, revealBoardIssue } from "./board-readiness.mjs";
 import { forgeLinkFingerprint, loadConnectedBoardWorkload, loadForgeWorkload, measureForgeNavigation } from "./measure-forge-navigation.mjs";
 import { stableManifestPath } from "./stable-restored-tabs.mjs";
-import { broadIssueReady, broadPageReady, broadPageSpec } from "./broad-navigation-readiness.mjs";
+import { broadIssueReady, broadPageReady, broadPageSpec, broadPageTreeReady } from "./broad-navigation-readiness.mjs";
 
 // Real authorized reads against the existing encrypted fixture. No reseeding,
 // personal profile, content mutation, generated API response or paid workflow.
@@ -133,6 +133,7 @@ const pendingNetwork = new Set();
 try {
   assertScope("projects", await api(`/api/projects/${project}`), fixture.userId);
   const pageSpecifications = {};
+  const pageTrees = {};
   const original = await api(`/api/projects/${project}/pages/${fixture.firstPage}`);
   assertScope("pages", original, fixture.userId);
   assert.equal(original.content.content.length, 80);
@@ -145,6 +146,13 @@ try {
   }
   if (deep) {
     assert.equal(fixture.pageBlockWorkload?.stableBlockIds, true, "Normalize the deep-navigation fixture first");
+    for (const projectId of fixture.projects.slice(0, 2)) {
+      const tree = await api(`/api/projects/${projectId}/pages`);
+      assert.ok(Array.isArray(tree));
+      assert.deepEqual(tree.map((page) => page.id).sort(), Array.from({ length: 20 }, (_, document) => id(`page-${fixture.projects.indexOf(projectId)}-${document}`)).sort());
+      assert.ok(tree.every((page) => page.project_id === projectId));
+      pageTrees[`/projects/${projectId}/pages`] = tree.map((page) => page.id);
+    }
     for (const [project, document] of [[0, 10], [0, 11], [1, 0], [1, 1]]) {
       const href = `/api/projects/${id(`project-${project}`)}/pages/${id(`page-${project}-${document}`)}`;
       const value = await api(href);
@@ -195,17 +203,18 @@ try {
   }
   await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
-  const installProbe = ({ readiness, windowingCompatible, issueSource, pageSource, pageSpecifications }) => {
+  const installProbe = ({ readiness, windowingCompatible, issueSource, pageSource, pageTreeSource, pageSpecifications }) => {
     localStorage.setItem("cookie_consent", "declined");
     window.__instant = { longTasks: [], sample: null };
     window.__instant.windowingCompatible = windowingCompatible;
     window.__instant.boardReady = new Function(`return (${readiness})`)();
     window.__instant.issueReady = new Function(`return (${issueSource})`)();
     window.__instant.pageReady = new Function(`return (${pageSource})`)();
+    window.__instant.pageTreeReady = new Function(`return (${pageTreeSource})`)();
     window.__instant.pageSpecifications = pageSpecifications;
     try { new PerformanceObserver((list) => window.__instant.longTasks.push(...list.getEntries().map(({ startTime, duration }) => ({ startTime, duration })))).observe({ type: "longtask", buffered: true }); } catch { /* Unsupported entries are omitted. */ }
   };
-  const probeOptions = { readiness: boardReady.toString(), windowingCompatible, issueSource: broadIssueReady.toString(), pageSource: broadPageReady.toString(), pageSpecifications };
+  const probeOptions = { readiness: boardReady.toString(), windowingCompatible, issueSource: broadIssueReady.toString(), pageSource: broadPageReady.toString(), pageTreeSource: broadPageTreeReady.toString(), pageSpecifications };
   await context.addInitScript(installProbe, probeOptions);
   page = process.argv.includes("--electron") ? await browser.firstWindow() : await context.newPage();
   // Electron can create its initial window before context instrumentation.
@@ -300,7 +309,7 @@ try {
     const profile = !profiled && ((process.argv.includes("--profile") && name === "page-to-board") ||
       (process.argv.includes("--profile-project-switch") && name === "project-switch"));
     if (profile) { await cdp.send("Profiler.enable"); await cdp.send("Profiler.start"); }
-    await page.evaluate(({ condition, complete, args, traceFiles }) => {
+    await page.evaluate(({ condition, complete, args, traceFiles, name }) => {
       window.__instant.sample = null;
       const check = new Function("args", `return (${condition})(args)`);
       const checkComplete = new Function("args", `return (${complete})(args)`);
@@ -327,13 +336,20 @@ try {
         const observeComplete = () => {
           if ([...document.querySelectorAll('[data-slot="skeleton"], [role="status"][aria-label="Loading"], [data-testid="pr-activity-skeleton"], [data-testid="pr-files-skeleton"], [data-testid="pr-detail-loading-content"]')].some((node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden")) sample.completeLoadingFrames++;
           if (!checkComplete(args)) { requestAnimationFrame(observeComplete); return; }
+          if (name === "issue-open") {
+            const visible = (node) => node.getClientRects().length && getComputedStyle(node).visibility !== "hidden" && !node.closest('[inert], [aria-hidden="true"]');
+            const panel = [...document.querySelectorAll('[role="dialog"]')].find((node) => visible(node) &&
+              [...node.querySelectorAll('textarea')].some((title) => visible(title) && title.value.trim() === args.title));
+            sample.contentReadPhasesAtUsability = [...panel?.querySelectorAll('[data-query-read-phase]') ?? []].filter(visible).map((node) => node.dataset.queryReadPhase);
+            sample.contentUsableDOMMs = performance.now() - sample.start;
+          }
           requestAnimationFrame(() => requestAnimationFrame(() => { sample.completeMs = performance.now() - sample.start; }));
         };
         requestAnimationFrame(observe);
         requestAnimationFrame(observeComplete);
       };
       document.addEventListener("pointerdown", onDown, { capture: true, once: true });
-    }, { condition: condition.toString(), complete: complete.toString(), args, traceFiles: results.diagnostic && name === "pr-activity-to-files" });
+    }, { condition: condition.toString(), complete: complete.toString(), args, name, traceFiles: results.diagnostic && name === "pr-activity-to-files" });
     const driverStart = Date.now();
     const point = { x: box.x + box.width / 2, y: box.y + Math.min(box.height / 2, 25), button: "left", clickCount: 1 };
     await cdp.send("Input.dispatchMouseEvent", { type: "mousePressed", ...point });
@@ -451,7 +467,7 @@ try {
     assert.ok(!results.network.some((entry) => entry.path.startsWith("/api/pull-requests/") && entry.method !== "GET"), "Read-only navigation submitted a forge write");
   } else if (deep) {
     await tab(tabs[1], "initial-project-tab");
-    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results, windowingCompatible, connectedBoard, allowedTabIds: stable?.specs.map((spec) => spec.id) ?? tabs.map((spec) => spec.id) });
+    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results, windowingCompatible, connectedBoard, pageTrees, allowedTabIds: stable?.specs.map((spec) => spec.id) ?? tabs.map((spec) => spec.id) });
   } else {
     let issueStatus, issueSpec;
     if (!secondary) {
@@ -462,7 +478,8 @@ try {
       assert.deepEqual(comments.map((comment) => comment.id).sort(), [id(`comment-${fixture.firstIssue}-0`), id(`comment-${fixture.firstIssue}-1`)].sort(), "Verify every canonical fixture comment");
       assert.ok(comments.every((comment) => comment.author_id === fixture.userId && typeof comment.body === "string" && comment.body));
       issueSpec = { id: issue.id, title: issue.title, description: issue.description, comments: comments.map(({ id, body }) => ({ id, body })) };
-      results.issueReadiness = { issueId: issue.id, comments: comments.length, descriptionFingerprint: forgeLinkFingerprint(issue.description), shellMetric: "paintMs", fullEditableContentMetric: "completeMs", freshTimelineRequired: true };
+      results.issueReadiness = { issueId: issue.id, comments: comments.length, descriptionFingerprint: forgeLinkFingerprint(issue.description), shellMetric: "paintMs", fullEditableContentMetric: "completeMs", freshTimelineRequired: false,
+        acceptedContentContract: "Fresh or refreshing timeline with every canonical confirmed comment, exact complete body and usable editing controls; background reconciliation is recorded separately" };
     }
     await tab(tabs[1], secondary ? "unvisited-home" : "unvisited-project");
     await tab(tabs[2], secondary ? "unvisited-pr-list" : "unvisited-page");

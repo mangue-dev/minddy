@@ -9,7 +9,7 @@ export function broadIssueReady(spec) {
   const editors = [...panel.querySelectorAll('.tiptap[contenteditable="true"]')].filter(visible);
   if (!editors.some((node) => normalize(node.innerText ?? node.textContent) === normalize(spec.description))) return false;
   if (![...panel.querySelectorAll('[role="textbox"][contenteditable="true"][aria-placeholder]')].some(visible)) return false;
-  const timeline = [...panel.querySelectorAll('[data-query-read-phase="fresh"]')].find(visible);
+  const timeline = [...panel.querySelectorAll('[data-query-read-phase="fresh"], [data-query-read-phase="refreshing"]')].find(visible);
   if (!timeline) return false;
   const comments = [...timeline.querySelectorAll('[data-comment-id]')].filter(visible);
   return comments.length === spec.comments.length && spec.comments.every((expected) => comments.some((node) =>
@@ -23,7 +23,12 @@ export function broadPageReady(spec) {
     getComputedStyle(node).visibility !== "hidden" && !node.closest('[inert], [aria-hidden="true"]');
   const normalize = (value) => String(value).replace(/\s+/g, " ").trim();
   if (location.pathname !== spec.href || !document.querySelector(`[data-app-tab-id="${spec.tab}"][aria-selected="true"]`)) return false;
-  const surface = document.querySelector(`[data-page-surface-id="${spec.pageId}"]`);
+  const surface = [...document.querySelectorAll(`[data-page-surface-id="${spec.pageId}"]`)].find((node) => {
+    if (!visible(node)) return false;
+    const host = node.closest('[data-app-view-active]');
+    return (!host || host.dataset.appViewActive === "true") &&
+      (!host?.dataset.retainedTabId || host.dataset.retainedTabId === spec.tab);
+  });
   if (!surface || !visible(surface)) return false;
   const title = [...surface.querySelectorAll('h1, textarea')].some((node) => visible(node) &&
     !node.disabled && !node.readOnly && (node.value ?? node.textContent).trim() === spec.title);
@@ -44,4 +49,15 @@ export function broadPageSpec(body, href, tab) {
     return { tag: block.type === "heading" ? `h${block.attrs?.level}` : "p", text: text(block) };
   });
   return { href, tab, pageId: body.id, title: body.title, blocks };
+}
+
+/** Existing destinations may select another authorized tab without losing the tree. */
+export function broadPageTreeReady({ href, tabIds, pageIds }) {
+  const selected = document.querySelector('[data-app-tab-id][aria-selected="true"]')?.dataset.appTabId;
+  const selectedPage = location.pathname.startsWith(`${href}/`) ? location.pathname.slice(href.length + 1) : null;
+  if (location.pathname !== href && !pageIds.includes(selectedPage) || !tabIds.includes(selected)) return false;
+  const links = [...document.querySelectorAll('[data-sidebar-page-row] a[href]')].filter((node) =>
+    node.getClientRects().length && !node.closest('[inert], [aria-hidden="true"]'));
+  const ids = links.map((node) => node.getAttribute("href").startsWith(`${href}/`) ? node.getAttribute("href").slice(href.length + 1) : null);
+  return ids.length === pageIds.length && new Set(ids).size === ids.length && ids.every((id) => pageIds.includes(id));
 }
