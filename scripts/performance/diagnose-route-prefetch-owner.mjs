@@ -38,7 +38,7 @@ const result = {
   label, protocol: "min683-excluded-route-prefetch-owner-v1", status: "running", timestamp: new Date().toISOString(),
   excludedFromComparison: "Five-second read-only source attribution with CDP headers and async stacks; no ordinary latency or acceptance conclusion",
   runtime: "headful isolated Chromium", windowMs: 5000, maximumEvents: 5000, droppedEvents: 0,
-  requests: [], bookendHttp: [], bookends: [], cleanup: [], errors: [],
+  requests: [], ownAllPublications: [], bookendHttp: [], bookends: [], cleanup: [], errors: [],
   limitations: [
     "One All startup only. No activation, hover, touch, refresh, content mutation or reseed. Only this run's exactly observed authorized All-view publication may be restored after browser close with a revision-guarded acknowledged PATCH.",
     "Header values, cookies, bodies, raw URL queries and cross-origin stack paths are never exported. Only whitelisted prefetch header booleans are retained.",
@@ -69,7 +69,10 @@ async function restoreOwnAllViewPublication(current, fixture) {
     assert.ok(!context, "The isolated renderer must close before destination cleanup");
     assert.equal(original.href, "/all");
     assert.ok(result.allDomGate?.selectedAll && result.allDomGate.selectedAllId === original.id);
-    assert.equal(result.allDomGate.relativeHref, published.href);
+    const ownPublication = result.ownAllPublications.at(-1);
+    assert.ok(ownPublication, "Require this renderer's acknowledged saved-tab publication, independently of window.location");
+    assert.equal(ownPublication.tabId, original.id);
+    assert.equal(ownPublication.href, published.href);
     const observed = new URL(published.href, session.base);
     assert.equal(observed.origin, session.base); assert.equal(observed.pathname, "/all");
     assert.equal(observed.hash, ""); assert.equal(observed.searchParams.size, 1);
@@ -84,6 +87,8 @@ async function restoreOwnAllViewPublication(current, fixture) {
     assert.ok(Array.isArray(views) && views.some((view) => view.id === viewId && view.project_id === null && view.user_id === fixture.userId));
     const revision = published.revision;
     assert.ok(Number.isSafeInteger(revision) && revision > 0);
+    assert.ok(revision >= ownPublication.acknowledgedRevision);
+    entry.ownPublicationAcknowledgedRevision = ownPublication.acknowledgedRevision;
     const route = `/api/me/app-tabs/${original.id}`;
     const request = { phase, method: "PATCH", path: route, observedAt: new Date().toISOString(), knownOwnAllPublication: true };
     result.bookendHttp.push(request);
@@ -254,6 +259,38 @@ try {
   await context.addInitScript(installObserver, { boardSource: boardReady.toString(), readySource: restoredDestinationReady.toString(), loadingSelector: RESTORED_LOADING_SELECTOR, allSpec });
   page = await context.newPage();
   page.on("pageerror", () => { result.rendererError = true; });
+  page.on("requestfinished", (request) => {
+    const url = new URL(request.url());
+    // This observer sees only this isolated renderer's exact own-All PATCH.
+    // No other request payload or response body is read or retained here.
+    if (request.method() !== "PATCH" || url.origin !== base || url.pathname !== `/api/me/app-tabs/${allSpec.id}` || url.search) return;
+    let publication;
+    try {
+      const text = request.postData();
+      if (!text || Buffer.byteLength(text) > 16_384) return;
+      const body = JSON.parse(text);
+      const href = body?.patch?.href;
+      if (typeof href !== "string" || !/^\/all\?view=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(href)) return;
+      if (!Number.isSafeInteger(body.revision) || body.revision < 1) return;
+      publication = { tabId: allSpec.id, href, requestRevision: body.revision };
+    } catch { return; }
+    track((async () => {
+      const response = await request.response();
+      if (response?.status() !== 200) return;
+      const acknowledgement = await response.json();
+      const tab = acknowledgement?.tab;
+      if (acknowledgement.code || tab?.id !== publication.tabId || tab.href !== publication.href ||
+          !Number.isSafeInteger(tab.revision) || tab.revision <= publication.requestRevision) {
+        result.rejectedOwnPublicationAcknowledgements = (result.rejectedOwnPublicationAcknowledgements ?? 0) + 1;
+        return;
+      }
+      // Retain only the whitelisted URL/identity/revision acknowledgement.
+      // Sorting handles out-of-order response callbacks without replaying writes.
+      result.ownAllPublications.push({ ...publication, method: "PATCH", status: 200,
+        acknowledgedRevision: tab.revision, observedAt: new Date().toISOString() });
+      result.ownAllPublications.sort((left, right) => left.acknowledgedRevision - right.acknowledgedRevision);
+    })());
+  });
   page.on("response", (response) => {
     if (!collecting || new URL(response.url()).origin !== base || ![403, 429].includes(response.status())) return;
     track((async () => {
