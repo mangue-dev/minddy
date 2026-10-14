@@ -7,11 +7,14 @@ let generation = 0;
 const revisions = new Map<string, number>();
 const pendingOpens = new WeakMap<Storage, Map<string, { raw: string; generation: number; value: Promise<unknown> }>>();
 
-async function request(body: Record<string, unknown>) {
+export type LocalSnapshotSaveOptions = { signal?: AbortSignal; expectedOwner?: string };
+
+async function request(body: Record<string, unknown>, options: LocalSnapshotSaveOptions = {}) {
   const started = generation;
   return withClientRequestDeadline(async (signal) => {
-    await prepareClientSession();
+    const owner = await prepareClientSession();
     signal.throwIfAborted();
+    if (options.expectedOwner !== undefined && owner !== options.expectedOwner) throw new Error("Local account changed");
     if (started !== generation) throw new Error("Local account changed");
     const response = await fetch("/api/me/local-snapshots", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store", signal,
@@ -19,8 +22,15 @@ async function request(body: Record<string, unknown>) {
     if (!response.ok) throw new Error("Unable to save or restore local data");
     const value = await response.json();
     signal.throwIfAborted();
+    if (options.expectedOwner !== undefined) {
+      const currentOwner = await prepareClientSession();
+      signal.throwIfAborted();
+      if (currentOwner !== options.expectedOwner || value?.snapshot?.owner !== options.expectedOwner) {
+        throw new Error("Local account changed");
+      }
+    }
     return value;
-  }, 8_000);
+  }, 8_000, options.signal);
 }
 
 export function invalidateLocalSnapshotWrites(): void { generation += 1; }
@@ -31,11 +41,13 @@ export function removeLocalSnapshot(storage: Storage, key: string): void {
 }
 
 /** The server owns all keys; only authenticated ciphertext is written to device storage. */
-export async function saveLocalSnapshot(storage: Storage, key: string, slot: Slot, value: unknown, claimLegacy = false): Promise<void> {
+export async function saveLocalSnapshot(storage: Storage, key: string, slot: Slot, value: unknown,
+  claimLegacy = false, options: LocalSnapshotSaveOptions = {}): Promise<void> {
   const started = generation;
   const revision = (revisions.get(key) ?? 0) + 1;
   revisions.set(key, revision);
-  const { snapshot } = await request({ operation: "seal", slot, value, claimLegacy });
+  const { snapshot } = await request({ operation: "seal", slot, value, claimLegacy }, options);
+  options.signal?.throwIfAborted();
   if (started !== generation) throw new Error("Local account changed");
   if (revisions.get(key) !== revision) return;
   if (snapshot?.format !== "minddy-local-v1" || typeof snapshot.ciphertext !== "string") throw new Error("Invalid local snapshot");
