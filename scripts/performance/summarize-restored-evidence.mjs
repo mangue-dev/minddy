@@ -16,6 +16,11 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  { id: `all-overlap-${runtime}`, disposition: "rejected-mixed-runtime-experiment", declaredSourceDelta: "Task 53 starts member/integration enrichment from the single successful RLS projects read while complete board readers remain pending; the before source already includes the same explicitly admitted timing helper, and ordinary paired requests carry no diagnostic header; removed after mixed first-destination results",
+    baseline: `min683-restored-before-scaled-all-overlap-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-all-overlap-${runtime}-1`,
+    expectedBaseline: { sha: "7ba0e3181e17ef71c2fcd187c8efd328d610e05f", build: "MBwOTC-9Laqpi-vCTq3u1" },
+    expectedCandidate: { sha: "cb922c6acfc8621620ff44e8781ac70cdb3e8cff", build: "E3ZnePxMEhwQ2_V-VuFUO" } },
   { id: `startup-priority-${runtime}`, disposition: "provisionally-retained-pending-full-matrix", declaredSourceDelta: "Task 51 exact account/session/client startup-priority reservation only, compared with the retained reader/auth source after both RSC controls were removed; first-observation timing differences are not attributed to search when neither run starts it in the startup interval",
     baseline: `min683-restored-before-scaled-startup-priority-${runtime}-1`,
     candidate: `min683-restored-after-scaled-startup-priority-${runtime}-1`,

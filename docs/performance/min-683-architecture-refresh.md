@@ -159,6 +159,43 @@ pass with overlap, together with the existing reader, store, member and live
 authorization suites. Full types, scoped lint and documentation/English/knowledge
 checks pass. Runtime retention still requires the separate build comparisons.
 
+The matching admitted after trace (`cb922c6ac` / `E3ZnePxMEhwQ2_V-VuFUO`)
+confirms the dependency change on both clients. Members start at request
+age264/157ms web and139/172ms native and finish before the complete issues.
+Successful server totals are1104/1297ms web and986/1141ms native. The issue
+branch itself varies941.8/1212.5ms web and913.1/1058.2ms native, so these sparse
+total differences are not attributed wholly to the removed tail. All four
+responses retain the exact complete source/card/content proof; full fixture,
+Page versions, ten tabs and Git pass cleanup with no recorded errors. Ordinary
+telemetry-disabled comparisons remain separate.
+
+### All overlap rejected after ordinary comparisons
+
+The ordinary header-free v5 pair uses one ten-tab alternation and55 total
+journey observations per client. Both products use the same frozen runner,
+cohort and environment fingerprints and preserve Page contents/versions, all
+ten tabs and the Git connection. Both observe genuine sixteen-second focus
+loss and complete all ten return navigations, with no recorded errors.
+
+| Complete interface observation | Reference web | Overlap web | Reference native | Overlap native |
+| --- | ---: | ---: | ---: | ---: |
+| Authenticated renderer launch | 2637 ms | 2337 ms | 2418 ms | 2121 ms |
+| Refresh | 2199 ms | 1912 ms | 2203 ms | 2220 ms |
+| First project | 615 ms | 730 ms | 721 ms | 606 ms |
+| First primary Page | 384 ms | 361 ms | 477 ms | 328 ms |
+| First foreign Page | 454 ms | 562 ms | 436 ms | 528 ms |
+| First PR | 3335 ms | 3203 ms | 2810 ms | 3060 ms |
+
+These sparse first observations do not establish causality for each changed
+destination. They also do not justify retaining the candidate: both foreign
+Pages regress, native PR regresses, first-three-second body preparation remains
+missing and warm Feedback still takes730/1009ms. The successful server overlap
+trace is not sufficient acceptance evidence. Reject and remove the route
+reordering and its candidate-only active test suite; keep the signed source,
+red/green logs, compiled products and all raw results. The retained application
+returns to the timing-before order. Task53 completes attribution and rejection,
+not the broader startup or everyday-use criteria.
+
 ### Remaining Page admission barrier
 
 Source inspection finds a separate head-of-line delay: the finite owner drains
