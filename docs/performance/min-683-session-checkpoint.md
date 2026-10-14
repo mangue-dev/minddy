@@ -1,5 +1,44 @@
 # MIN-683: session checkpoint, 2026-10-14
 
+## Latest bounded CI and admission pass
+
+Read [the bounded pass outcome](min-683-bounded-pass.md) first. It resumes the
+same branch/draft PR420 from `db15c6f8a`. The two React Query mock imports and
+two autosave assertions are repaired without changing save behavior. Five
+scanner matches are independently verified SQL-definition fingerprints; only
+their exact values/path are excepted, with changed-value/wrong-path regressions.
+Three additional CodeQL diagnostic-tooling alerts receive bounded identifier
+and fixed-point normalization corrections; verify remote CI for the published
+head rather than equating local tests with remote success.
+
+One anchored first-Page admission candidate is measured and rejected. Control
+`f5abefe20` / `aByBbQwsVOkTw0_Zh99sx` and candidate `df0df1acc` /
+`42GBfxy2f9Sdm3r17tRLT` share current complete source, environment, collector
+and workload hashes. Primary Page changes 472.9→300.5ms web /387.0→333.7ms
+native, but first project changes 552.7→788.2ms /592.2→700.4ms. There is no
+accepted scheduling improvement or causal attribution of every difference.
+Signed rejection `9a51543cb` restores original order and the actual control
+build. Both whole products remain retained under ignored build directories.
+
+Four three-target independent runs pass exact content/version/complete-source/
+ten-tab/Git preservation. The first native attempt remains a failed Electron
+resolution attempt, diagnosed before a corrected `NODE_PATH=./desktop/node_modules`
+launch. Their new matched reader-dependency hash is `0a0e66d6…`; earlier v5
+hashes/focus-window failures remain historical. The index is generated once
+after measurements. Existing v8 write proofs are reused, with no content write,
+reseed, version reset, account permission or Git connection change in this pass.
+
+The [bootstrap design](min-683-bootstrap-resume.md) remains uninstalled: plain
+JSON and the existing buffered transport delay small results. Implement a
+bounded independent-frame/account/cancellation/invalidation/read-start contract
+before sharing authorization/transport; retain full ordinary readers and no TTL
+cache. The issue stays in progress, including all-tab preparation, common latency,
+native Home/draft recovery/daily feel and the inaccessible real PR420 incident.
+Publish only through `npm run work:pr`, preserving existing title/body/draft and
+matching DCO. No merge/deploy/production migration or `work:done` is authorized.
+
+## Previous cold-data checkpoint
+
 The dedicated cold-preparation/data-access session resumes on the same branch
 from `46b747efb` with three distinct subagents and root-only UI ownership. Read
 the [current session outcome](min-683-cold-session.md),

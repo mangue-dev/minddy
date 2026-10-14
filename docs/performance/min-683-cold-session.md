@@ -1,5 +1,10 @@
 # MIN-683: cold-data session, 2026-10-14
 
+The subsequent [bounded CI/admission pass](min-683-bounded-pass.md) repairs the
+published CI failures, records the bootstrap transport boundary and rejects one
+matched scheduling candidate. The measurements and versions below belong to
+this earlier session; they are not relabeled or pooled with that later cohort.
+
 This session reuses `codex/min-683-instant-navigation` and draft PR420 from
 `46b747efb`. The worktree was clean after refreshing origin. Three agents own
 database attribution, server/cache contracts and preview/preparation diagnosis;

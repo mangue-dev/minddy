@@ -97,6 +97,30 @@ than replacing completeness with an ordering-only assertion. Existing
 The root must record the selected bounded strategy before changing source and
 reject it if independent first-project or initial usability pays a regression.
 
+Root subsequently records this smaller candidate in plan task 66 after the
+local CI gate passes. The candidate adds only an execution view in
+`createPrTabPreparation`: the first listed board's exact complete issue read,
+the first listed explicit Page's exact body/tree, then the original listed
+order and optional neighbor. Canonical manifests, selected-detail indexes,
+readers, receipts, two-slot limit and forge gates remain unchanged. If no listed
+board is present, the Page prefix has no synthetic issue anchor.
+
+Three new behavioral regressions first fail against the unchanged scheduler:
+the second slot admits categories rather than the explicit Page; the Page tree
+is behind the project list; the hidden/cancellation case starts the same wrong
+second read. They pass with the candidate. The existing complete nine-endpoint
+assertion retains exact DTO readers and maximum concurrency while reflecting
+the intended issue/body/tree prefix. The focused run passes 63 cases across
+`pr-tab-preparation.test.ts`, `pr-tab-foreground-handoff.test.ts` and the mounted
+`app-tabs-foreground-handoff.test.ts`. No runtime improvement follows from these
+tests; root must compare the identified controls before accepting the candidate.
+
+The [root comparison](min-683-bounded-pass.md) subsequently rejects this
+candidate: the primary Page improves, but first project observations worsen
+on both clients and no general non-regression acceptance follows. Commit
+`9a51543cb` restores the original source/test order. The 63-case red/green
+evidence belongs to the explicitly rejected candidate, not retained code.
+
 ## Minimum root measurement before expanding scope
 
 Identify an actual compiled control and candidate against the same current
