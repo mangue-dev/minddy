@@ -186,6 +186,23 @@ not whether Chromium durability or startup cleanup causes it. This newly
 confirmed gap is the first continuation priority; no speculative persistence
 fix is shipped under the user's publication deadline.
 
+**Continuation: cause identified and corrected.** An isolated probe with the
+same Electron binary, a disposable profile and no Minddy code writes one
+localStorage key, then sends a real SIGKILL. Kills at 0ms (three attempts) and
+1s lose the key; a kill after 6s or after `session.flushStorageData()` keeps
+it. Chromium's deferred DOM-storage commit fully explains run3. Draft
+persistence now awaits an optional desktop `flushStorage` bridge member after
+sealing (`ab8f2a319`); browsers and older shells keep the deferred commit.
+Run4 (`min683-executable-native-forced-quit-4`, unchanged collector, product
+`Ae6KdM_T1pZh7A1RwmFit` from `ab8f2a319`) keeps the identical 872-byte
+fingerprint across SIGKILL/restart, offers the draft again, creates no server
+issue and passes all preservation bookends. This is n=1 for unpackaged
+Electron; packaged shells need a desktop release to carry the new preload
+member. Power-loss durability and unsaved in-memory edits remain separate.
+The startup purge in `lib/auth-context.tsx` on a `null`→user owner transition
+is a separate, unobserved risk. The retained 783 product moved intact to
+`min683-built-products/ZRKbS9ItC3LDVGfvC-J4R/.next` before the rebuild.
+
 The requested qualitative acceptance path is project → Page → project, with
 typing and scrolling. Automated focus, content, selection, secondary detail and
 departure proofs remain separate from the user's evaluation of daily feel.
@@ -200,7 +217,7 @@ unknown GitHub quota cannot diagnose that private preview incident.
 | Ten tabs prepared before first use | Open: fixed-three-second snapshots still contain missing/pending prerequisites; complete visible content is checked on activation rather than inferred from a shell. |
 | Common navigation100/300ms | Open: warm control alternation/focus is mostly fast, while cold and secondary/PR detail outliers exceed300ms. |
 | Nine independent inactive destinations | Diagnostic coverage completed, including complete native Home and real paused Routines. Controlled native Home entry and different diagnostic hashes remain explicit. |
-| Forced-quit recovery | Open: canonical destination coherence passes after stabilization in run2, but run3 confirms an acknowledged encrypted draft key absent after SIGKILL/restart. Unsaved memory and power-loss durability remain separate. |
+| Forced-quit recovery | Corrected for unpackaged desktop: run3 loss is Chromium's deferred storage commit; with the draft flush, run4 recovers the identical acknowledged draft after SIGKILL (n=1). Packaged release, unsaved memory and power-loss durability remain separate. |
 | Daily usability | Automated retained v6/v8 proof is separate from the user's pending project→Page→project typing/scrolling acceptance and the inaccessible personal preview incident. |
 
 The user requests a20-minute publication/handoff cutoff for continuation by
