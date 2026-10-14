@@ -14,6 +14,18 @@ import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
+// This scheduling suite keeps its ordinary per-reader fixtures. The framed
+// adapter and paired admission have separate real-QueryClient regressions.
+vi.mock("./project-bootstrap-api", async () => {
+  const { fetchMembersApi } = await import("./members-api");
+  const { objectivesQueryFn } = await import("./objectives-api");
+  return { createProjectBootstrapPair: (_client: unknown, projectId: string) => ({
+    members: ({ signal }: { signal?: AbortSignal }) => fetchMembersApi(projectId, signal),
+    objectives: objectivesQueryFn(projectId),
+    dispose: () => {},
+  }) };
+});
+
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
 } }) }));

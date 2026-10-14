@@ -11,6 +11,7 @@ import { createPageNavigationPreparation } from "./page-navigation-preparation";
 import { adjacentProjectDestination } from "./project-navigation-working-set";
 import { pullRequestAccountRetryAt } from "./pull-request-query";
 import { createNavigationWorkingSet } from "./navigation-working-set";
+import { createProjectBootstrapPair } from "./project-bootstrap-api";
 
 const PASSIVE_SHELL_READS = new Set([
   ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
@@ -74,6 +75,8 @@ export function createPrTabPreparation(
   let cancel: (() => void) | undefined;
   type Read = { key: readonly unknown[]; identity: string; cancelled: boolean; forge: boolean };
   const preparing = new Map<string, Read>();
+  type BootstrapPair = { transport: ReturnType<typeof createProjectBootstrapPair>; pending: Set<string> };
+  const bootstrapPairs = new Set<BootstrapPair>();
   const activeQueryHashes = new Set<string>();
   const priority = navigationPreparationPriority(client);
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
@@ -198,6 +201,7 @@ export function createPrTabPreparation(
     const firstPage = listed.find((item) => item.route.pageId);
     if (firstPage) pagePreparation.prioritize(firstPage.href);
     const missingNavigation = hasQueuedNormal() || [...preparing.values()].some((read) => !read.forge);
+    const pairedReads = new Map<string, { options: PreparedQuery["options"]; pair: BootstrapPair }>();
     syncPriority();
     // Optional neighboring data never displaces a listed destination.
     for (const item of [...listed, ...(neighbor ? [neighbor] : [])]) {
@@ -208,7 +212,9 @@ export function createPrTabPreparation(
       const forge = route.section === "pull-requests";
       if (forge && [...preparing.values()].some((read) => read.forge)) continue;
       if (route.section === "pull-requests" && !missingNavigation && missingRecentActivity(client)) return;
-      for (const { options, identity } of item.queries) {
+      for (const [index, query] of item.queries.entries()) {
+        const { identity } = query;
+        let options = pairedReads.get(identity)?.options ?? query.options;
         if (!pendingKeys.has(identity) || preparing.has(identity) || parkedForge.has(identity)) continue;
         if (preparing.size >= SCOPED_PREPARATION_CONCURRENCY) return;
         if (forge && [...preparing.values()].some((read) => read.forge)) break;
@@ -216,6 +222,26 @@ export function createPrTabPreparation(
         // while the final ordinary navigation prerequisite is still in flight.
         if (forge && options.queryKey[0] !== "pull-request" && missingRecentActivity(client)) continue;
         if (neighboring && Date.now() - (neighborAttempts.get(identity) ?? -Infinity) < 30_000) continue;
+        // Share only the next two already eligible exact reads, with both
+        // ordinary slots free. Never delay other work to manufacture a pair.
+        if (!forge && !neighboring && preparing.size === 0 && options.queryKey.length === 2 && options.queryKey[0] === "members" &&
+            typeof options.queryKey[1] === "string") {
+          const next = item.queries.slice(index + 1).find((candidate) => pendingKeys.has(candidate.identity) &&
+            !preparing.has(candidate.identity) && !parkedForge.has(candidate.identity));
+          if (next?.options.queryKey.length === 2 && next.options.queryKey[0] === "objectives" &&
+              next.options.queryKey[1] === options.queryKey[1] &&
+              [options, next.options].every((candidate) => {
+                const state = client.getQueryState(candidate.queryKey);
+                return (!state || state.fetchStatus === "idle") && (state?.data === undefined || state.isInvalidated);
+              })) {
+            const transport = createProjectBootstrapPair(client, options.queryKey[1]);
+            const pair: BootstrapPair = { transport, pending: new Set([identity, next.identity]) };
+            bootstrapPairs.add(pair);
+            options = { ...options, queryFn: ({ signal }) => transport.members({ signal }) };
+            pairedReads.set(identity, { options, pair });
+            pairedReads.set(next.identity, { options: { ...next.options, queryFn: ({ signal }) => transport.objectives({ signal }) }, pair });
+          }
+        }
         const detail = options.queryKey[0] === "pull-request";
         // The helper keeps account-wide Retry-After and serial detail ownership.
         // Register ownership before the cache emits the start of the request.
@@ -252,6 +278,11 @@ export function createPrTabPreparation(
         const operation = client.getQueryCache().find({ queryKey: read.key, exact: true })?.promise;
         void operation?.catch((error: unknown) => { if (isCancelledError(error)) read.cancelled = true; });
         void pending.finally(() => {
+          const pair = pairedReads.get(identity)?.pair;
+          if (pair) {
+            pair.pending.delete(identity);
+            if (!pair.pending.size && bootstrapPairs.delete(pair)) pair.transport.dispose();
+          }
           if (preparing.get(identity) === read) preparing.delete(identity);
           priority.finishRead(read.key);
           if (disposed) return;
@@ -370,6 +401,8 @@ export function createPrTabPreparation(
       selectionSources.clear();
       pendingInsertSources.clear();
       pagePreparation.dispose();
+      for (const pair of bootstrapPairs) pair.transport.dispose();
+      bootstrapPairs.clear();
       workingSet.dispose();
       priority.release();
       yieldReads();
