@@ -16,6 +16,11 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  { id: `startup-priority-${runtime}`, disposition: "provisionally-retained-pending-full-matrix", declaredSourceDelta: "Task 51 exact account/session/client startup-priority reservation only, compared with the retained reader/auth source after both RSC controls were removed; first-observation timing differences are not attributed to search when neither run starts it in the startup interval",
+    baseline: `min683-restored-before-scaled-startup-priority-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-startup-priority-${runtime}-1`,
+    expectedBaseline: { sha: "17df83a86731a1dd4b6a91a24817df25c019bc9f", build: "O_eiQyt6nCiGv-7JKKrHK" },
+    expectedCandidate: { sha: "30ee7c5ee6c8937e8955d96216dc1f585ef68207", build: "Liw1Se4ZRwp__V1fmrDJD" } },
   { id: `server-bootstrap-two-bodies-${runtime}`, disposition: "rejected-experiment", declaredSourceDelta: "Task 50 positive initial-document admission plus only two explicit Page bodies in RSC, removing eight shared records from the initial prototype; startup and first-destination evidence does not justify retention",
     baseline: `min683-restored-before-scaled-server-bootstrap-${runtime}-1`,
     candidate: `min683-restored-after-scaled-page-body-bootstrap-${runtime}-1`,

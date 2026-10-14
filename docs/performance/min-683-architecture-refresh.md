@@ -39,6 +39,37 @@ knowledge checks pass before building and comparing this source candidate. It is
 checks alone; startup, first-click tails, optional search availability and main
 thread work still require the identified comparison.
 
+### First admission comparison: mixed, provisional
+
+Build `30ee7c5ee` / `Liw1Se4ZRwp__V1fmrDJD` completes all 145 observations
+per client with full source/Page-version/ten-tab/Git preservation, no recorded
+errors or rate-limit responses, and observed sixteen-second absence. The first
+project improves from 679 to 531 ms web and 698 to 605 ms native. Primary /
+foreign Pages remain 364/475 ms web and 353/441 ms native. Cold PR, Routines and
+Feedback also remain above the requested deadline.
+
+Web launch/refresh change 2552/2462 to 2600/2274 ms; native 2302/2261 to
+2387/2515 ms. Sampled alternation Task/Script work changes 9627/5861 to
+9944/6156 ms web and 9992/6213 to10438/6612 ms native. These are mixed costs,
+not a validated performance win. Neither exact reference starts automatic search
+inside the first three seconds: it starts around refresh age33s web /34s native,
+versus32s /13s in the candidate. The earlier RSC experiment exercised the gap,
+but it is removed. Do not attribute this pair's timing differences to preventing
+startup indexing. The scheduling contract is provisionally retained pending
+broader evidence, with Task51 still in progress; no all-tab acceptance is claimed.
+
+The separate `diagnose-independent-first.mjs` keeps the frozen eight-file v5
+runner intact. Default targets are the project and both explicit Pages; each
+gets its own private context/native profile, natural unclicked All launch, then
+refresh. The sole trusted target input is aimed at renderer age3000ms, with
+literal timing/hit-test/availability and a maximum100ms dispatch allowance.
+Late/unavailable targets remain failures, and the complete All observer does not
+block dispatch. The existing full-content gates and two-frame paint opportunity
+are unchanged; results are excluded from ordinary comparisons. Full fixture and
+Git preservation bracket the batch, stable destinations are restored between
+cases, and actual403/429 stops later cases. Backend/CDN/GitHub caches are not reset.
+Syntax/lint/English review is required before execution; no result is implied.
+
 ## Resumed server working-set experiment
 
 The first Task 50 experiment is rejected as-is. Build `428939fe2` /
