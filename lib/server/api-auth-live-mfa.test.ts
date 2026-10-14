@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const SESSION_ID = "22222222-2222-4222-8222-222222222222";
@@ -19,7 +20,7 @@ vi.mock("next-intl/server", () => ({
   getTranslations: async () => (key: string) => key,
 }));
 
-const { getAuthedUser } = await import("./api-auth");
+const { getAuthedUser, authorizeUserClient } = await import("./api-auth");
 
 function request(): NextRequest {
   return new NextRequest("https://www.minddy.app/api/projects");
@@ -265,5 +266,36 @@ describe("getAuthedUser live authorization enforcement", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.response.status).toBe(503);
+  });
+});
+
+describe("request-scoped server component authorization", () => {
+  it.each([
+    { sessionActive: true, mfaAllowed: true, status: 200 },
+    { sessionActive: false, mfaAllowed: true, status: 401 },
+    { sessionActive: true, mfaAllowed: false, status: 403 },
+  ])("shares the live session and MFA boundary ($status)", async ({ status, ...liveState }) => {
+    const client = { auth: { getClaims } } as unknown as SupabaseClient;
+    authorizationAbortSignal.mockResolvedValue({ data: liveState, error: null });
+
+    const result = await authorizeUserClient(client);
+
+    expect(result.ok ? 200 : result.response.status).toBe(status);
+    expect(getClaims).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("auth_authorization_state", {
+      p_user: USER_ID, p_session: SESSION_ID, p_aal: "aal1", p_amr: [],
+    });
+    if (result.ok) {
+      expect(result.supabase).toBe(client);
+      expect(result.user.id).toBe(USER_ID);
+    }
+  });
+
+  it("does not accept signed claims when the live lookup is unavailable", async () => {
+    const client = { auth: { getClaims } } as unknown as SupabaseClient;
+    authorizationAbortSignal.mockResolvedValue({ data: null, error: { message: "unavailable" } });
+    const result = await authorizeUserClient(client);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(503);
   });
 });

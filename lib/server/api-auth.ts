@@ -203,7 +203,18 @@ export async function getAuthedUser(
     };
   }
 
-  const supabase = createSupabaseFromRequest(request);
+  return authorizeUserClient(createSupabaseFromRequest(request), options);
+}
+
+/**
+ * Share the verified claims, live-session and MFA boundary with request-scoped
+ * server components. The caller supplies its cookie-backed, RLS-enforced client;
+ * this does not authorize a service client or weaken the route origin guard.
+ */
+export async function authorizeUserClient(
+  supabase: SupabaseClient,
+  options?: { allowAal1?: boolean },
+): Promise<AuthedResult> {
   let authResult: Awaited<ReturnType<typeof supabase.auth.getClaims>>;
   try {
     authResult = await supabase.auth.getClaims();
