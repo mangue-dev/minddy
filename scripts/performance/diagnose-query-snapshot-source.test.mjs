@@ -101,3 +101,11 @@ test(`${name}: rejects accessors and exotic objects without invoking private get
   assert.equal(result.calls, 0);
 });
 }
+
+test("rejects executable or oversized project identifiers before expression construction", () => {
+  const probe = persistenceProbeSource(cases[0].source, "fixture-build.js");
+  for (const projects of [["project\";throw Error('injected');//"], ["project\n"], ["${injected}"], ["x".repeat(65)], Array(7).fill("project")]) {
+    assert.throws(() => metadataExpression(probe, projects));
+    assert.throws(() => restoreMetadataExpression(probe, projects));
+  }
+});

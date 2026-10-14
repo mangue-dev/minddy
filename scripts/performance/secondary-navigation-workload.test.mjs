@@ -44,3 +44,9 @@ test("declares bounded repeatable detail samples while retaining complete large 
   assert.deepEqual(secondaryJourneyIds([]), []);
   assert.deepEqual(secondaryJourneyIds(["one"]), ["one"]);
 });
+
+test("normalizes newly exposed and unterminated comment markers to a fixed point", () => {
+  assert.equal(renderedFixtureText("Visible <!<!-- nested -->-- hidden --> text"), "Visible text");
+  assert.equal(renderedFixtureText("Visible <!-- unfinished"), "Visible");
+  assert.equal(renderedFixtureText("<!-- marker -->\n## Useful heading\nBody"), "Useful heading Body");
+});

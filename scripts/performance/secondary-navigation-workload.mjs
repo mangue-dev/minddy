@@ -10,8 +10,14 @@ export async function optionalSecondaryWorkload(api, fixture) {
 }
 
 /** Compare rendered fixture prose without HTML markers or Markdown syntax. */
-export const renderedFixtureText = (value) => String(value).replace(/<!--[\s\S]*?-->/g, "")
-  .replace(/^#{1,6}\s+/gm, "").replace(/\s+/g, " ").trim();
+export function renderedFixtureText(value) {
+  let text = String(value), previous;
+  do {
+    previous = text;
+    text = text.replace(/<!--[\s\S]*?(?:-->|$)/g, "");
+  } while (text !== previous);
+  return text.replace(/^#{1,6}\s+/gm, "").replace(/\s+/g, " ").trim();
+}
 
 /** Declare a bounded, deterministic UI sample without claiming exhaustive detail coverage. */
 export function secondaryJourneyIds(ids) {

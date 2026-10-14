@@ -92,7 +92,7 @@ export function persistenceProbeSource(source, filename) {
 /** Observe the provider's actual pre-mount predicate at its invalidation call. */
 export function restoreMetadataExpression(probe, projects) {
   assert.ok(probe.restore, "Locate the actual restored-query invalidation call");
-  return `(()=>{const predicate=(${probe.restore.predicate});const projects=${JSON.stringify(projects)};
+  return `(()=>{const predicate=(${probe.restore.predicate});const projects=${projectScopeLiteral(projects)};
     const queries=${probe.restore.client}.getQueryCache().getAll();
     return{boundary:"Immediately before ordinary restored-before-mount invalidation",refetchType:"active",eligible:queries.filter(predicate).map(query=>({
       prefix:typeof query.queryKey[0]==="string"&&/^[a-z-]{1,50}$/.test(query.queryKey[0])?query.queryKey[0]:"other",
@@ -125,7 +125,7 @@ export function snapshotWireMetadata(probe, wire, projects) {
 export function metadataExpression(probe, projects) {
   return `(()=>{const value=${probe.parameter};const ordinary=(${probe.budgetSource});const measured=(${probe.diagnosticSource});const extended=(${probe.extendedSource});
     const rowCount=(data)=>Array.isArray(data)?data.length:null;
-    const groups=new Map();const projects=${JSON.stringify(projects)};
+    const groups=new Map();const projects=${projectScopeLiteral(projects)};
     const queries=value.clientState.queries.map(query=>{const key=query.queryKey;const prefix=typeof key[0]==="string"&&/^[a-z-]{1,50}$/.test(key[0])?key[0]:"other";
       const scope=projects.includes(key[1])?"synthetic-project-"+(projects.indexOf(key[1])+1):key[0]==="me"?"account":"other";
       const group=prefix+":"+scope;groups.set(group,(groups.get(group)||0)+1);
@@ -135,4 +135,13 @@ export function metadataExpression(probe, projects) {
     return{productionFits:ordinary(value),productionTraversal:measured(value),fitsWithoutByteLimit:ordinary(value,Infinity),boundedFullTraversal:extended(value,Infinity),
       selectedQueries:queries.length,pausedMutations:value.clientState.mutations.length,groups:Object.fromEntries(groups),queries,envelope,
       predicateBasis:"Actual provider-selected PersistedClient argument, captured before production budget preflight"};})()`;
+}
+
+/** Only inert bounded identifiers may enter a diagnostic JavaScript expression. */
+function projectScopeLiteral(projects) {
+  assert.ok(Array.isArray(projects) && projects.length <= 6, "Use the bounded fixture project scope");
+  return `[${projects.map((id) => {
+    if (typeof id !== "string" || !/^[a-zA-Z0-9-]{1,64}$/.test(id)) throw new Error("Invalid diagnostic project identifier");
+    return `"${id}"`;
+  }).join(",")}]`;
 }
