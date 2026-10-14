@@ -1,4 +1,4 @@
-import { objectiveStore } from "@/lib/server/objective-store";
+import { loadProjectObjectives } from "@/lib/server/project-working-set-readers";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -12,17 +12,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
-
-  const { data, error } = await objectiveStore(auth.supabase)
-    .select("*")
-    .eq("project_id", id)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("[api/objectives] list failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-  return NextResponse.json(data);
+  const result = await loadProjectObjectives(auth, id);
+  if (!result.ok) return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
+  return NextResponse.json(result.data);
 }
 
 /** POST /api/projects/[id]/objectives — create an objective (any member). */

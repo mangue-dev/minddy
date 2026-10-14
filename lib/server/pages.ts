@@ -6,7 +6,9 @@ import { isDatabaseSchema } from "@/lib/page-databases";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { readCompleteScopedRows } from "./complete-scoped-rows";
 import {
+  byPosition,
   descendantIds,
   isPosition,
   positionAtEnd,
@@ -438,7 +440,7 @@ function announcePageWrite({
   });
 }
 
-/* ─── Lecture ──────────────────────────────────────────────────────────────── */
+/* ─── Reading ──────────────────────────────────────────────────────────────── */
 
 /** The LIVING pages of the project, flat. The tree is rebuilt at the caller's house. */
 export async function listPages(
@@ -451,23 +453,22 @@ export async function listPages(
     return { ok: false, status: 404, errorKey: "projectNotFound" };
   }
 
-  const { data, error } = await getServiceClient()
-    .from("pages")
-    .select(LIST_COLUMNS)
-    .eq("project_id", projectId)
-    .is("deleted_at", null)
-    .order("position", { ascending: true });
-
-  if (error) {
-    console.error("[pages] list failed:", error.message);
+  try {
+    const rows = await readCompleteScopedRows<Record<string, unknown>>((after) => {
+      let query = getServiceClient().from("pages").select(LIST_COLUMNS, { count: "exact" })
+        .eq("project_id", projectId).is("deleted_at", null).order("id").limit(1000);
+      if (after) query = query.gt("id", after);
+      return query;
+    }, (row) => row.id);
+    const pages = await Promise.all(rows.map(async (row) => {
+      const { content: _body, ...summary } = await decodePageProjection(row, actorId);
+      return summary as unknown as PageSummary;
+    }));
+    return { ok: true, pages: pages.sort(byPosition) };
+  } catch {
+    console.error("[pages] complete_list_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  const pages = await Promise.all((data ?? []).map(async (row) => {
-    const { content: _body, ...summary } = await decodePageProjection(
-      row as Record<string, unknown>, actorId);
-    return summary as unknown as PageSummary;
-  }));
-  return { ok: true, pages };
 }
 
 /** A page with his body. */

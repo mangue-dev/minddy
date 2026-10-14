@@ -65,7 +65,7 @@ function safeError(error?: { code?: string; message?: string }): { code: string;
 class ObjectiveQuery implements PromiseLike<Result<ProjectedRow[]>> {
   private selection = "*";
   private options?: { count?: "exact"; head?: boolean };
-  private filters: Array<{ kind: "eq" | "in" | "is" | "neq"; column: string; value: unknown }> = [];
+  private filters: Array<{ kind: "eq" | "in" | "is" | "neq" | "gt"; column: string; value: unknown }> = [];
   private ordering?: { column: string; ascending: boolean };
   private maximum?: number;
   private interval?: [number, number];
@@ -81,7 +81,7 @@ class ObjectiveQuery implements PromiseLike<Result<ProjectedRow[]>> {
     }
     this.selection = columns; this.options = options; return this;
   }
-  private filter(kind: "eq" | "in" | "is" | "neq", column: string, value: unknown) {
+  private filter(kind: ObjectiveQuery["filters"][number]["kind"], column: string, value: unknown) {
     if (column === "name" || column === "description" || storageFields.has(column)) {
       throw new Error("Objective content filters require authorized application search");
     }
@@ -89,6 +89,7 @@ class ObjectiveQuery implements PromiseLike<Result<ProjectedRow[]>> {
   }
   eq(column: string, value: unknown) { return this.filter("eq", column, value); }
   neq(column: string, value: unknown) { return this.filter("neq", column, value); }
+  gt(column: string, value: unknown) { return this.filter("gt", column, value); }
   in(column: string, value: unknown[]) { return this.filter("in", column, value); }
   is(column: string, value: null | boolean) { return this.filter("is", column, value); }
   order(column: string, options?: { ascending?: boolean }) {
