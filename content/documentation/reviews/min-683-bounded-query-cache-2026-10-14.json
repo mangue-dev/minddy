@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-14",
+  "reviewer": "agent:/root/preparation",
+  "article": "applications",
+  "articleRevisions": {
+    "en": 10,
+    "fr": 10,
+    "de": 10,
+    "es": 10,
+    "it": 10,
+    "pt-BR": 10
+  },
+  "sourceRevision": 10,
+  "locales": [
+    "en",
+    "fr",
+    "de",
+    "es",
+    "it",
+    "pt-BR"
+  ],
+  "workflows": [
+    "A12"
+  ],
+  "changedSection": "desktop-renderer-recovery",
+  "scope": "Only the optional saved query-cache paragraph and its revision/review metadata.",
+  "audience": "Members and operators reopening a desktop window with a large workspace cache.",
+  "outcome": "Understand which cached results can survive a restart, why some data must be fetched again, and why this does not change separate draft recovery or provide a backup.",
+  "compatibility": "0.11.1 candidate, Cloud and self-hosted; existing platform availability and unrelated procedures retained. This record does not approve or publish a release.",
+  "method": "Reviewed the source decision tree, existing real-persister regressions, and the completed excluded compiled-production persistence probe. Compared the six replacement paragraphs for factual parity, idiom and user-facing scope. Agent factual/language review is not human reader acceptance or a new installation/recovery procedure run.",
+  "evidence": [
+    "lib/query-snapshot-budget.ts",
+    "lib/query-persistence.ts",
+    "lib/query-provider.tsx",
+    "lib/navigation-working-set.ts",
+    "lib/query-storage-writes.test.ts",
+    "lib/local-snapshot-security.test.ts",
+    "output/playwright/performance/min683-query-snapshot-after-scaled-diagnostic-2.json",
+    "output/playwright/performance/min683-window-selection-integration-tests.log"
+  ],
+  "verifiedClaims": [
+    "The unchanged query-data preflight budget is 2 MiB, with existing depth/value limits. This is not a promise that the encrypted storage envelope is at most 2 MiB.",
+    "An already eligible whole snapshot that fits is retained. An oversized snapshot may drop individually ineligible whole query entries, then use complete eligible results owned by active queries or the bounded listed-navigation working set if needed. Rows are never truncated to fit.",
+    "The remaining whole selection must fit the same budget; otherwise the old local query snapshot and pending optional writes are retired. Live in-memory queries are not changed.",
+    "The compiled excluded probe used source 8655f2a4cec53c7e2c856dfe2346a62912bc7f49 and build V64G9fNPlmZ3KhKjdmZNG. It recorded 40 complete query entries totaling 1,942,261 estimated bytes before encryption, successful authorized reopening after refresh, and unchanged issue/Page content, Page versions, ten stable tabs and GitHub link. Its encrypted envelope was larger; no latency conclusion follows.",
+    "Separate draft snapshots and the existing persistence whitelist are unchanged. The paragraph grants no offline restart, backup, all-tab preparation or fresh write authority guarantee."
+  ],
+  "languageReview": {
+    "en": {
+      "reviewer": "agent:/root/preparation",
+      "date": "2026-10-14",
+      "revision": 10,
+      "scope": "Read the replacement paragraph in this language, compared every condition to English revision 10, and checked natural wording and existing product terms. Existing unrelated text retained."
+    },
+    "fr": {
+      "reviewer": "agent:/root/preparation",
+      "date": "2026-10-14",
+      "revision": 10,
+      "scope": "Read the replacement paragraph in this language, compared every condition to English revision 10, and checked natural wording and existing product terms. Existing unrelated text retained."
+    },
+    "de": {
+      "reviewer": "agent:/root/preparation",
+      "date": "2026-10-14",
+      "revision": 10,
+      "scope": "Read the replacement paragraph in this language, compared every condition to English revision 10, and checked natural wording and existing product terms. Existing unrelated text retained."
+    },
+    "es": {
+      "reviewer": "agent:/root/preparation",
+      "date": "2026-10-14",
+      "revision": 10,
+      "scope": "Read the replacement paragraph in this language, compared every condition to English revision 10, and checked natural wording and existing product terms. Existing unrelated text retained."
+    },
+    "it": {
+      "reviewer": "agent:/root/preparation",
+      "date": "2026-10-14",
+      "revision": 10,
+      "scope": "Read the replacement paragraph in this language, compared every condition to English revision 10, and checked natural wording and existing product terms. Existing unrelated text retained."
+    },
+    "pt-BR": {
+      "reviewer": "agent:/root/preparation",
+      "date": "2026-10-14",
+      "revision": 10,
+      "scope": "Read the replacement paragraph in this language, compared every condition to English revision 10, and checked natural wording and existing product terms. Existing unrelated text retained."
+    }
+  },
+  "retainedFigures": {
+    "ids": [
+      "web-and-mobile-workflow",
+      "install-the-pwa-workflow",
+      "desktop-app-workflow",
+      "devices-and-notifications-workflow",
+      "devices-and-notifications-registered-workflow",
+      "desktop-renderer-recovery"
+    ],
+    "reason": "No visible control, label, permission flow or recovery dialog changed. A text explanation is sufficient for this cache limit/fallback. All images, captions, alt text, capture dates, geometry and prior visual evidence remain unchanged; figure revision metadata advances only for article publication parity. No new visual or operational capture is claimed."
+  },
+  "limits": [
+    "Review is scoped to the changed cache paragraph; it is not release-wide approval.",
+    "MIN-683 startup and navigation targets remain unvalidated by this documentation change.",
+    "No API calls, UI session or deployment was performed for this review."
+  ],
+  "checks": [
+    "npm run check:documentation (passed)",
+    "npm run check:documentation:release (passed; static publication checks only, no release approval or publication)",
+    "npm run check:knowledge (passed)",
+    "npm run check:owned-english (passed)",
+    "git diff --check (passed)",
+    "Six-locale body/figure comparison (passed: only the cache paragraph changed; existing figures differ only by revision parity)"
+  ]
+}

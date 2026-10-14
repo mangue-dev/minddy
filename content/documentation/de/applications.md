@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-14",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-682 native notification fallback delta; prior evidence retained)",
+    "version": "0.11.1 candidate (MIN-683 bounded saved-cache delta; prior evidence retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,14 +65,19 @@
       "scripts/desktop-renderer-hang.integration.mjs",
       "lib/use-desktop-notifications.ts",
       "lib/use-desktop-notifications.test.ts",
-      "content/documentation/reviews/min-682-native-notification-fallback-2026-10-12.json"
+      "content/documentation/reviews/min-682-native-notification-fallback-2026-10-12.json",
+      "lib/query-provider.tsx",
+      "lib/navigation-working-set.ts",
+      "lib/query-storage-writes.test.ts",
+      "lib/local-snapshot-security.test.ts",
+      "content/documentation/reviews/min-683-bounded-query-cache-2026-10-14.json"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review)",
-    "date": "2026-10-12"
+    "revision": 10,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained); agent:/root/preparation (MIN-683 whole-query cache fallback; source, regression and compiled excluded-probe review; prior unrelated evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review); agent:/root/preparation (six-locale cache-paragraph idiom and retained-meaning review; agent review, not human reader acceptance)",
+    "date": "2026-10-14"
   },
   "related": [
     "issues"
@@ -97,7 +102,7 @@
       "src": "/documentation/de/web-and-mobile-workflow.png",
       "alt": "Mobiles Ticketpanel mit lokalisiertem Titel, Beschreibung, Eigenschaften und Kommentarfeld.",
       "caption": "Auf einem schmalen Bildschirm erscheinen Ticketdetails in einem angepassten Panel. Schließen Sie es über die Schaltfläche, um zum Projekt zurückzukehren; Numo bleibt über seine schwebende Schaltfläche erreichbar.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -114,7 +119,7 @@
       "src": "/documentation/de/install-the-pwa-workflow.png",
       "alt": "Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.",
       "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,7 +136,7 @@
       "src": "/documentation/de/desktop-app-workflow.png",
       "alt": "Desktop-Einstellungen in der echten macOS-Electron-Entwicklungsapp, Version 0.11.1, mit lokalem Server und isoliertem Profil.",
       "caption": "Desktop-Einstellungen in der echten macOS-Electron-Entwicklungsapp, Version 0.11.1, mit lokalem Server und isoliertem Profil. Die Aufnahme bestätigt keine signierten Releases oder anderen Betriebssysteme.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,7 +152,7 @@
       "src": "/documentation/de/devices-and-notifications-workflow.png",
       "alt": "Push-Einstellungen mit gesperrter Browserberechtigung und ohne registriertes Gerät.",
       "caption": "Dieser Browser blockiert Benachrichtigungen. Erlauben Sie sie in den Website-Einstellungen, bevor Sie das Gerät registrieren.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -164,7 +169,7 @@
       "src": "/documentation/de/devices-and-notifications-registered.png",
       "alt": "Aktives, für das Konto registriertes Browser-Gerät mit dem tatsächlichen Datum des letzten Versands.",
       "caption": "Für das Konto ist ein aktives Browser-Gerät registriert. Die Liste zeigt das Registrierungsdatum und den letzten Versand. Ob ein Banner erscheint, hängt weiterhin von der Browserberechtigung und den Betriebssystemeinstellungen ab.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -180,7 +185,7 @@
       "src": "/documentation/de/desktop-renderer-recovery.png",
       "alt": "Lokale Wiederherstellungsseite nach einem erzwungenen Renderer-Absturz mit Reload window und Check server settings.",
       "caption": "Wiederherstellungsseite in der macOS-Entwicklungsapp mit isoliertem Profil und Demonstrationsserver. Die native Oberfläche verwendet in allen Sprachen englische Beschriftungen.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -253,7 +258,7 @@ Wenn ein Desktop-Fenster abstürzt, bietet eine lokale Wiederherstellungsseite *
 
 Wenn eine Seite nach 30 Sekunden noch lädt oder ein Fenster fünf Sekunden nach Erkennung durch die Desktop-App weiterhin nicht reagiert, bietet ein nativer Dialog **Wait** und **Recover window** an. **Wait** ist die Standardauswahl und lässt Ihre Arbeit sowie die laufende Anfrage unverändert. Der Dialog schließt sich, sobald der Ladevorgang endet oder das Fenster wieder reagiert. Bei der Wiederherstellung können ungespeicherte Änderungen verloren gehen: Wählen Sie **Recover window**, um die lokale Wiederherstellungsseite zu öffnen, und anschließend **Reload window**, um zum letzten Bildschirm zurückzukehren.
 
-Der optional gespeicherte Abfragecache ist auf 2 MiB begrenzt. Wird das Limit überschritten, wird sein vorheriger lokaler Snapshot entfernt. Die aktuellen Daten bleiben im Arbeitsspeicher und werden nach einem Neustart erneut abgerufen. Separat gespeicherte Entwürfe sind davon nicht betroffen. Dieser Cache ist keine Sicherung Ihrer Arbeit.
+Der optional gespeicherte Abfragecache ist auf 2 MiB Abfragedaten begrenzt. Ist der gesamte Cache zu groß, speichert minddy vollständige, dafür geeignete Abfrageergebnisse und bevorzugt bei Bedarf die aktuellen Ansichten und die Tabs in der Tableiste. Überschreitet auch diese Auswahl das Limit, wird der vorherige lokale Snapshot entfernt. Daten, die nicht im gespeicherten Cache enthalten sind, bleiben während der Sitzung im Arbeitsspeicher und werden nach einem Neustart bei Bedarf erneut abgerufen. Separat gespeicherte Entwürfe sind davon nicht betroffen. Dieser Cache ist keine Sicherung Ihrer Arbeit.
 
 Um den Speicherverbrauch bei langen Sitzungen zu reduzieren, werden inaktive PR-Details, Commit- und Agent-Diffs, Agent-Ereignisströme und Seiteninhalte nach einer Minute freigegeben und bei Bedarf erneut geladen. Aktive Abfragen bleiben erhalten. Tab-Beschriftungen speichern nur kompakte PR-Informationen; ein geöffneter Tab hält daher keine Patches im Speicher.
 
