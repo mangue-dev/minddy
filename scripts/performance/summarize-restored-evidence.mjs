@@ -16,11 +16,11 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
-  ...(runtime === "web" ? [{ id: "foreground-handoff-web", disposition: "provisional-web-only-native-pending", declaredSourceDelta: "Task 56 exact selected-read protection across observer adoption only, compared with the retained consumer-only Feedback source; native and broad validation remain pending at the explicit user stop",
-    baseline: "min683-restored-after-scaled-feedback-scope-web-1",
-    candidate: "min683-restored-after-scaled-foreground-handoff-web-2",
+  { id: `foreground-handoff-${runtime}`, disposition: "provisional-both-clients-broad-validation-pending", declaredSourceDelta: "Task 56 exact selected-read protection across observer adoption only, compared with the retained consumer-only Feedback source; one ordinary run per client completes, while independent first access, broad and write validation remain separate",
+    baseline: `min683-restored-after-scaled-feedback-scope-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-foreground-handoff-${runtime}-${runtime === "web" ? 2 : 1}`,
     expectedBaseline: { sha: "90ad0a49e7cd435aeb0fc1718f2f41a6e602e55f", build: "SuSa35kVIhHyV5Nor8RG2" },
-    expectedCandidate: { sha: "3692e7549060f8b682ec99865757a65c5e92a4e2", build: "Qp1Rr4apU_XHLQh2IVfT6" } }] : []),
+    expectedCandidate: { sha: "3692e7549060f8b682ec99865757a65c5e92a4e2", build: "Qp1Rr4apU_XHLQh2IVfT6" } },
   { id: `feedback-scope-${runtime}`, disposition: "retained-consumer-scope-correction-only", declaredSourceDelta: "Task 54 mounted Feedback consumer reuses its exact accepted normal query when it already contains the requested scoped target; the preparator remains unchanged, and the rejected All overlap is absent; first-open and unvisited-detail latency remain unresolved",
     baseline: `min683-restored-before-scaled-all-overlap-${runtime}-1`,
     candidate: `min683-restored-after-scaled-feedback-scope-${runtime}-1`,
@@ -85,7 +85,8 @@ export function explicitStageComparisons(runs, stages) {
 
 /** Report recorded transport starts and sampled thread work without slot guesses. */
 export function summarizeTransportAndThread(value) {
-  const network = value.network ?? [];
+  const recordedTransport = Array.isArray(value.network);
+  const network = recordedTransport ? value.network : [];
   const transport = (entries) => ({ recordedHttpStarts: entries.length,
     recordedFailedRequests: entries.filter((entry) => entry.failed).length,
     localSnapshotPostStarts: entries.filter((entry) => entry.method === "POST" && entry.path === "/api/me/local-snapshots").length });
@@ -109,7 +110,7 @@ export function summarizeTransportAndThread(value) {
       sampledThread: { taskDuration: threadSum("TaskDuration"), scriptDuration: threadSum("ScriptDuration"),
         uniqueReportedLongTasks: tasks.size, reportedLongTaskDurationMs: [...tasks.values()].reduce((sum, duration) => sum + duration, 0) } };
   });
-  return { wholeRecordedRun: transport(network), phases,
+  return { wholeRecordedRun: recordedTransport ? transport(network) : null, phases,
     interpretation: "Request starts are from finished/failed transport records, not an exhaustive dispatch trace; unfinished requests may be absent. Phase envelopes include between-click driver work. Snapshot POST slot/payload is unobserved, so window-tab and query-cache seals are not distinguished. CDP thread deltas span each before/after probe, including driver and background work; ScriptDuration is part of TaskDuration and must not be added to it. Long tasks are deduplicated only by reported renderer origin/start/duration; unobserved intervals are not inferred." };
 }
 

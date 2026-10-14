@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -26,16 +26,18 @@ await mkdir(output, { recursive: true });
 const resultPath = path.join(output, `${label}.json`);
 const lockPath = path.join(output, ".task47-exclusive-ui-owner.lock");
 const lease = await open(lockPath, "wx");
+const leaseToken = randomUUID();
+await lease.writeFile(JSON.stringify({ token: leaseToken, label, pid: process.pid }));
 const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
-const result = { protocol: "min683-excluded-window-selection-v1", excludedFromLatencyAggregates: true,
+const result = { protocol: "min683-excluded-window-selection-v2-explicit-filter-consumption", excludedFromLatencyAggregates: true,
   excludedFromComparison: "Held window-selection persistence diagnostic; never ordinary latency evidence",
   interpretation: "Correctness under held window-selection persistence; diagnostic durations are never latency acceptance evidence",
   label, runtime: electron ? "unpackaged Electron" : "headful Chromium", startedAt: new Date().toISOString(),
-  status: "running", checks: [], metadata: [], network: { windowSeals: [], snapshotOpens: [], rateLimits: [] }, cleanup: [],
+  status: "running", checks: [], metadata: [], network: { windowSeals: [], snapshotOpens: [], rateLimits: [], blockedForeignApis: [], pageWatchHeartbeats: [], interruptedPassiveProbes: [] }, cleanup: [],
   limitations: ["A hard reload cannot guarantee receipt of the latest optional persistence ACK before unload.",
     "A successful recovery must show the actual PR identity and complete useful content, including its ordinary authorization result.",
-    "No remote/content write, editor input, personal browser profile, intentional tab creation, or forced GitHub refresh belongs to this diagnostic."] };
+    "No content write, editor input, personal browser profile, intentional tab creation, or forced GitHub refresh belongs to this diagnostic. Ordinary scoped Page-viewer heartbeats are permitted and recorded; their timestamps are not content/version evidence."] };
 let fixtureSession, browser, context, page, userData, originalTabs, specs, forge, secondary, board, releaseHeld;
 let failure, held, armed = false;
 const createdIds = new Set();
@@ -44,10 +46,19 @@ const pending = new Set();
 const mutations = [];
 const runnerSources = [fileURLToPath(import.meta.url), ...["stable-restored-tabs.mjs", "measure-forge-navigation.mjs", "secondary-navigation-workload.mjs", "enrich-secondary-workload.mjs",
   "board-readiness.mjs", "restored-navigation-readiness.mjs", "seed.mjs"].map((file) => path.resolve("scripts/performance", file))];
+const step = async (name) => {
+  result.currentStep = name;
+  await writeFile(resultPath, JSON.stringify(result, null, 2));
+};
 const runnerHash = async () => digest(await Promise.all(runnerSources.map((file) => readFile(file, "utf8"))));
 const knownTabFields = ({ id, user_id, custom_name, pinned, position }) => ({ id, user_id, custom_name, pinned, position });
 const pendingTask = (operation) => {
-  const task = operation.catch((error) => { result.checks.push({ asynchronousError: String(error.message).slice(0, 200) }); })
+  const task = operation.catch((error) => {
+    const message = String(error.message);
+    if (/Target page, context or browser has been closed|No resource with given identifier found/.test(message))
+      result.network.interruptedPassiveProbes.push({ message: message.slice(0, 200), acknowledgementUnverified: true });
+    else result.checks.push({ asynchronousError: message.slice(0, 200) });
+  })
     .finally(() => pending.delete(task));
   pending.add(task);
 };
@@ -133,7 +144,11 @@ try {
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.origin !== base) { await route.abort(); throw new Error("Refuse a foreign API origin"); }
+    if (url.origin !== base) {
+      // Refuse the request without throwing outside the driver's finally block.
+      result.network.blockedForeignApis.push({ origin: url.origin, method: request.method() });
+      await route.abort(); return;
+    }
     const method = request.method();
     if (["GET", "HEAD", "OPTIONS"].includes(method)) return route.continue();
     if (url.pathname === "/api/me/local-snapshots" && method === "POST") {
@@ -159,6 +174,11 @@ try {
       return route.continue();
     }
     if (url.pathname.startsWith("/api/me/app-tabs") && ["POST", "PATCH", "DELETE"].includes(method)) return route.continue();
+    if (["POST", "DELETE"].includes(method) && specs.some((spec) => spec.kind === "page" &&
+        url.pathname === `/api/projects/${spec.projectId}/pages/${spec.pageId}/watch`)) {
+      result.network.pageWatchHeartbeats.push({ path: url.pathname, method });
+      return route.continue();
+    }
     mutations.push({ path: url.pathname, method });
     await route.abort();
   });
@@ -247,9 +267,13 @@ try {
   };
   const completedSeal = (spec, since = 0) => result.network.windowSeals.slice(since).some((event) => event.knownTabId === spec.id && event.completed && event.status === 200 && event.envelopePresent && event.ownerMatches);
 
+  await step("initial-All-navigation");
   await page.goto(`${base}/all`, { waitUntil: "domcontentloaded" });
+  await step("warm-All-readiness");
   await ready(all);
+  await step("warm-PR-readiness");
   await activate(pr);
+  await step("warm-Page-readiness");
   await activate(document);
   const warmReturnSince = result.network.windowSeals.length;
   await activate(all);
@@ -259,24 +283,45 @@ try {
   // Hold exactly the first older Page seal. Do not delay query-cache seals,
   // canonical tabs, Page content, PR detail, or the subsequent reload itself.
   armed = true;
+  await step("activate-held-Page");
   await activate(document);
+  await step("wait-for-held-Page-seal");
   await waitUntil(() => !!held, "The older Page selection seal must be intercepted");
   assert.equal(held.event.knownTabId, document.id);
+  await step("activate-Home-after-held-Page");
   await activate(home);
+  await step("activate-PR-after-Home");
   await activate(pr);
+  // Open draft links are intentionally retained until a manual filter choice
+  // or confirmed terminal transition. Exercise the real filter control twice
+  // to consume the address while restoring the exact starting section lens.
+  const messages = JSON.parse(await readFile("messages/en.json", "utf8"));
+  await step("consume-PR-address-through-filter-intent");
+  await page.getByRole("button", { name: messages.PullRequests.filterSections, exact: true }).filter({ visible: true }).click();
+  const completed = page.getByRole("option", { name: messages.PullRequests.sectionCompleted, exact: true }).filter({ visible: true });
+  await completed.click();
+  await step("wait-for-consumed-PR-address");
   await page.waitForFunction(() => location.pathname === "/pull-requests" && !new URL(location.href).searchParams.has("pr"));
+  if (await completed.count() === 0) await page.getByRole("button", { name: messages.PullRequests.filterSections, exact: true }).filter({ visible: true }).click();
+  await completed.click();
+  await page.keyboard.press("Escape");
+  await ready(pr);
+  result.addressConsumption = { actualFilterIntent: true, toggles: 2, originalLensRestored: true,
+    earlierAutomaticConsumptionAssumptionRejected: true };
   assert.equal(held.event.completed, false);
   const preReload = await metadata("rapid-Page-Home-PR-before-real-reload");
   result.checks.push({ case: "rapid-selection", olderSealHeldAtReload: true,
     latestSelectionHadAcknowledgedSealBeforeReload: completedSeal(pr, held.event.ordinal + 1),
     selectedTabId: preReload.selectedTabId, barePrAddress: true, expectedPrId: pr.prId });
   const navigated = page.waitForEvent("framenavigated", (frame) => frame === page.mainFrame());
+  await step("reload-with-older-seal-held");
   const reload = page.reload({ waitUntil: "domcontentloaded" });
   // The real unload owns its own flush semantics. Release the obsolete
   // transport only after navigation commits; its ACK is never a prerequisite.
   await navigated;
   releaseHeld();
   await reload;
+  await step("complete-PR-after-rapid-reload");
   await ready(pr);
   await metadata("rapid-real-reload-complete-PR");
   assert.equal((await assertStableTabs(api, fixture, specs)).length, 10);
@@ -300,12 +345,24 @@ try {
   failure = error;
   result.status = "failed";
   result.failure = { name: error.name, message: String(error.message).slice(0, 500) };
+  if (page && !page.isClosed()) result.failureSurface = await page.evaluate(() => {
+    const selected = document.querySelector('[data-app-tab-id][aria-selected="true"]');
+    const visible = (node) => !!node?.getClientRects().length && !node.closest('[inert], [aria-hidden="true"]');
+    return { pathname: location.pathname, searchKeys: [...new URL(location.href).searchParams.keys()],
+      selectedTabId: selected?.getAttribute("data-app-tab-id") ?? null,
+      visibleDescription: [...document.querySelectorAll('[data-testid="pr-description"]')].some(visible),
+      selectedReadiness: [...document.querySelectorAll('[data-testid="pr-readiness-control"]')].filter(visible).length,
+      visibleEditablePages: [...document.querySelectorAll('.tiptap[contenteditable="true"]')].filter(visible).length };
+  }).catch(() => ({ unavailable: true }));
 } finally {
   releaseHeld?.();
-  if (page) await page.unrouteAll({ behavior: "wait" }).catch(() => {});
-  await Promise.allSettled(pending);
+  await step("cleanup-browser-and-probes");
+  if (page) await page.unrouteAll({ behavior: "ignoreErrors" }).catch(() => {});
+  // Closing the browser aborts response bodies before draining passive probes.
+  // Waiting for those bodies first can deadlock after an interrupted reload.
   await browser?.close().catch(() => {});
   await Promise.allSettled(pending);
+  await step("cleanup-fixture-bookends");
   if (fixtureSession && originalTabs) {
     try {
       const { api, fixture } = fixtureSession;
@@ -347,7 +404,8 @@ try {
   result.finishedAt = new Date().toISOString();
   await writeFile(resultPath, JSON.stringify(result, null, 2));
   await lease.close();
-  await rm(lockPath, { force: true });
+  assert.equal(JSON.parse(await readFile(lockPath, "utf8")).token, leaseToken, "Never remove another UI owner's lease");
+  await rm(lockPath);
   console.log(JSON.stringify({ excludedFromComparison: true, status: result.status, resultPath }));
 }
 if (failure) process.exitCode = 1;

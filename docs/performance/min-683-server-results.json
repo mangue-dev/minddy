@@ -1,0 +1,742 @@
+{
+  "protocol": "min683-excluded-server-payload-v1",
+  "excludedFromOrdinaryComparison": true,
+  "collector": {
+    "path": "scripts/performance/min683-server-payload.mjs",
+    "sha256": "fdb98751b9d35b7dbfa975b0e2f17ba6e9e343f255cb994a6135bfa778f8dd4e"
+  },
+  "evidencePolicy": "Metadata, exact response sizes, fixed timing phases and fixture digests only; no credentials, returned content, ciphertext or write journals.",
+  "discardedAttempt": {
+    "file": "min683-server-payload-1.json",
+    "reason": "The collector used the nonexistent /relations route instead of the ordinary /issue-relations route; it stopped at that failed read. This is a collector failure, retained and excluded, with no content or tab write requested."
+  },
+  "records": [
+    {
+      "file": "min683-server-payload-1.json",
+      "sha256": "7bab9b5cd242f7450203d2bd81018bc163f2b38ec28f1284450de6d43e7b772c",
+      "record": {
+        "label": "min683-server-payload-1",
+        "protocol": "min683-excluded-server-payload-v1",
+        "product": {
+          "sha": "3692e7549060f8b682ec99865757a65c5e92a4e2",
+          "build": "Qp1Rr4apU_XHLQh2IVfT6",
+          "environmentFiles": {
+            ".env.production.local": null,
+            ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+            ".env.production": null,
+            ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+          }
+        },
+        "base": "http://localhost:3111",
+        "timestamp": "2026-10-14T14:21:33.333Z",
+        "status": "failed-excluded-diagnostic",
+        "referenceFile": "min683-restored-after-scaled-foreground-handoff-native-1.json",
+        "referenceHash": "943afe836cd165cba3d9f3ce494768998deac459275c022896672d2984d0fe1c",
+        "collectorHash": "abf101ff8dcd422dbe3b573d88fc53c1a2ae772bc849adc6d41378c151086e31",
+        "requests": [
+          {
+            "route": "/api/me/board",
+            "status": 200,
+            "admitted": true,
+            "headersMs": 2488.3029589999996,
+            "bodyMs": 2492.3007500000003,
+            "decodedBytes": 2441996,
+            "contentEncoding": null,
+            "contentLength": null,
+            "serverTiming": {
+              "totalMs": 2484.6,
+              "phases": {
+                "auth": {
+                  "durationMs": 62.6,
+                  "calls": 1,
+                  "firstStartOffsetMs": 0
+                },
+                "projects": {
+                  "durationMs": 235,
+                  "calls": 1,
+                  "firstStartOffsetMs": 63.5
+                },
+                "objectives": {
+                  "durationMs": 694,
+                  "calls": 1,
+                  "firstStartOffsetMs": 63.6
+                },
+                "relations": {
+                  "durationMs": 1212.7,
+                  "calls": 1,
+                  "firstStartOffsetMs": 63.7
+                },
+                "issues_db": {
+                  "durationMs": 2020.4,
+                  "calls": 2,
+                  "firstStartOffsetMs": 63.7
+                },
+                "issues_decode": {
+                  "durationMs": 171.4,
+                  "calls": 2,
+                  "firstStartOffsetMs": 1373.3
+                },
+                "categories": {
+                  "durationMs": 1472,
+                  "calls": 1,
+                  "firstStartOffsetMs": 63.6
+                },
+                "issues": {
+                  "durationMs": 2194.9,
+                  "calls": 1,
+                  "firstStartOffsetMs": 63.3
+                },
+                "members_db": {
+                  "durationMs": 118.3,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2264
+                },
+                "integrations": {
+                  "durationMs": 123.8,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2264.1
+                },
+                "members_identity": {
+                  "durationMs": 79.2,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2382.4
+                },
+                "members_avatar": {
+                  "durationMs": 83.2,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2384.1
+                },
+                "members": {
+                  "durationMs": 203.4,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2264
+                },
+                "integrations_decode": {
+                  "durationMs": 0,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2467.4
+                },
+                "json": {
+                  "durationMs": 16.8,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2467.6
+                }
+              }
+            },
+            "fields": {
+              "issues": {
+                "bytes": 2395669,
+                "rows": 1206
+              },
+              "members": {
+                "bytes": 2015
+              },
+              "categories": {
+                "bytes": 10502
+              },
+              "objectives": {
+                "bytes": 31581
+              },
+              "integrations": {
+                "bytes": 2
+              },
+              "relations": {
+                "bytes": 2082,
+                "rows": 10
+              },
+              "cycles": {
+                "bytes": 56
+              }
+            },
+            "fingerprint": "60538d9ee23c5448add3fe8233cafaf48bc3e3b0cb108267d7571f26f10f5cbb"
+          },
+          {
+            "route": "/api/projects/:project/issues",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 484.6502499999997,
+            "bodyMs": 485.8377499999997,
+            "decodedBytes": 1197717,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 670,
+            "fingerprint": "074960a6bad311784c99c3edb7dc0163329f0ec93f97fff6795312ab00894d61"
+          },
+          {
+            "route": "/api/projects/:project/categories",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 219.58266700000013,
+            "bodyMs": 219.86616699999968,
+            "decodedBytes": 1458,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 6,
+            "fingerprint": "de952b62b2656189413185d02314cbf7e9eabb8ee964c66ecea7326a5ef9aa7d"
+          },
+          {
+            "route": "/api/projects/:project/objectives",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 254.60429100000056,
+            "bodyMs": 255.00216600000022,
+            "decodedBytes": 30842,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 30,
+            "fingerprint": "dd456479fb1550ad07a8fc1ec0890d23e2b07c1c58b642efdf543bda624a0f7d"
+          },
+          {
+            "route": "/api/projects/:project/members",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 273.76537499999995,
+            "bodyMs": 274.0348330000006,
+            "decodedBytes": 255,
+            "contentEncoding": null,
+            "contentLength": null,
+            "fields": {
+              "members": {
+                "bytes": 211,
+                "rows": 1
+              },
+              "invitations": {
+                "bytes": 2,
+                "rows": 0
+              },
+              "isOwner": {
+                "bytes": 4
+              }
+            },
+            "fingerprint": "515f5d44319a582e80a7360226d5b3abb632a992e5502da3c044dae82bf8bad6"
+          },
+          {
+            "route": "/api/projects/:project/integrations",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 282.3500410000006,
+            "bodyMs": 283.00433300000077,
+            "decodedBytes": 34,
+            "contentEncoding": null,
+            "contentLength": null,
+            "fields": {
+              "integrations": {
+                "bytes": 2,
+                "rows": 0
+              },
+              "isOwner": {
+                "bytes": 4
+              }
+            },
+            "fingerprint": "dd2fb424de251a74c24f1dcfe84f385468833513e96410f0cde674316b8cd5dc"
+          }
+        ],
+        "preservation": {},
+        "limitations": [
+          "Sequential quiet authenticated local API reads; no UI latency comparison or cold-instance claim.",
+          "Decoded HTTP response bytes and JSON field bytes are exact; they are not wire/compression bytes.",
+          "Server issue DB spans include PostgREST, transport and parsing; SQL plans are separate evidence.",
+          "No forge endpoint, account metadata write, content write, tab write or schema change is requested."
+        ],
+        "identity": {
+          "email": "captures-demo+min540@minddy.app",
+          "userId": "86df71f9-44a7-4cc1-8085-5baa6c744490",
+          "marker": "min-540-performance-v1",
+          "cyclesDisabled": true
+        },
+        "sourceProof": {
+          "completeIssueSource": true,
+          "sourceIssues": 1206,
+          "kanbanCards": 1086,
+          "uniqueIssues": 1206,
+          "contentFingerprint": "775248ba7329f58864035021478b8c25837c228292c1fe2e213a58940b2c1d03"
+        },
+        "projectOverlap": {
+          "rows": 670,
+          "containedInGlobal": true,
+          "resourceCountOnlyInProject": true
+        },
+        "failure": "Inspect fixed metadata, source proof and preservation; no private response is exported",
+        "finishedAt": "2026-10-14T14:21:38.266Z"
+      }
+    },
+    {
+      "file": "min683-server-payload-2.json",
+      "sha256": "5f923c88c9f2247e6179659ab6d9614c91a985665c4ee3918c408d9ea6727362",
+      "record": {
+        "label": "min683-server-payload-2",
+        "protocol": "min683-excluded-server-payload-v1",
+        "product": {
+          "sha": "3692e7549060f8b682ec99865757a65c5e92a4e2",
+          "build": "Qp1Rr4apU_XHLQh2IVfT6",
+          "environmentFiles": {
+            ".env.production.local": null,
+            ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+            ".env.production": null,
+            ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+          }
+        },
+        "base": "http://localhost:3111",
+        "timestamp": "2026-10-14T14:22:03.134Z",
+        "status": "complete-excluded-diagnostic",
+        "referenceFile": "min683-restored-after-scaled-foreground-handoff-native-1.json",
+        "referenceHash": "943afe836cd165cba3d9f3ce494768998deac459275c022896672d2984d0fe1c",
+        "collectorHash": "fdb98751b9d35b7dbfa975b0e2f17ba6e9e343f255cb994a6135bfa778f8dd4e",
+        "requests": [
+          {
+            "route": "/api/me/board",
+            "status": 200,
+            "admitted": true,
+            "headersMs": 2517.977167,
+            "bodyMs": 2522.025458,
+            "decodedBytes": 2441996,
+            "contentEncoding": null,
+            "contentLength": null,
+            "serverTiming": {
+              "totalMs": 2514.7,
+              "phases": {
+                "auth": {
+                  "durationMs": 64.1,
+                  "calls": 1,
+                  "firstStartOffsetMs": 0
+                },
+                "projects": {
+                  "durationMs": 92.8,
+                  "calls": 1,
+                  "firstStartOffsetMs": 64.5
+                },
+                "objectives": {
+                  "durationMs": 345.1,
+                  "calls": 1,
+                  "firstStartOffsetMs": 64.6
+                },
+                "relations": {
+                  "durationMs": 904.5,
+                  "calls": 1,
+                  "firstStartOffsetMs": 64.6
+                },
+                "categories": {
+                  "durationMs": 946.1,
+                  "calls": 1,
+                  "firstStartOffsetMs": 64.6
+                },
+                "issues_db": {
+                  "durationMs": 2037.7,
+                  "calls": 2,
+                  "firstStartOffsetMs": 64.6
+                },
+                "issues_decode": {
+                  "durationMs": 37.9,
+                  "calls": 2,
+                  "firstStartOffsetMs": 1201.6
+                },
+                "issues": {
+                  "durationMs": 2077.4,
+                  "calls": 1,
+                  "firstStartOffsetMs": 64.5
+                },
+                "members_db": {
+                  "durationMs": 270.6,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2147.8
+                },
+                "members_identity": {
+                  "durationMs": 0.2,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2418.4
+                },
+                "integrations": {
+                  "durationMs": 305.7,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2147.8
+                },
+                "members_avatar": {
+                  "durationMs": 77.7,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2418.4
+                },
+                "members": {
+                  "durationMs": 348.5,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2147.8
+                },
+                "integrations_decode": {
+                  "durationMs": 0,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2496.2
+                },
+                "json": {
+                  "durationMs": 18.4,
+                  "calls": 1,
+                  "firstStartOffsetMs": 2496.3
+                }
+              }
+            },
+            "fields": {
+              "issues": {
+                "bytes": 2395669,
+                "rows": 1206
+              },
+              "members": {
+                "bytes": 2015
+              },
+              "categories": {
+                "bytes": 10502
+              },
+              "objectives": {
+                "bytes": 31581
+              },
+              "integrations": {
+                "bytes": 2
+              },
+              "relations": {
+                "bytes": 2082,
+                "rows": 10
+              },
+              "cycles": {
+                "bytes": 56
+              }
+            },
+            "fingerprint": "60538d9ee23c5448add3fe8233cafaf48bc3e3b0cb108267d7571f26f10f5cbb"
+          },
+          {
+            "route": "/api/projects/:project/issues",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 607.3584169999999,
+            "bodyMs": 609.1358340000002,
+            "decodedBytes": 1197717,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 670,
+            "fingerprint": "074960a6bad311784c99c3edb7dc0163329f0ec93f97fff6795312ab00894d61"
+          },
+          {
+            "route": "/api/projects/:project/categories",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 189.29954099999986,
+            "bodyMs": 189.89291600000024,
+            "decodedBytes": 1458,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 6,
+            "fingerprint": "de952b62b2656189413185d02314cbf7e9eabb8ee964c66ecea7326a5ef9aa7d"
+          },
+          {
+            "route": "/api/projects/:project/objectives",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 197.10791700000027,
+            "bodyMs": 197.48999999999978,
+            "decodedBytes": 30842,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 30,
+            "fingerprint": "dd456479fb1550ad07a8fc1ec0890d23e2b07c1c58b642efdf543bda624a0f7d"
+          },
+          {
+            "route": "/api/projects/:project/members",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 213.02545800000007,
+            "bodyMs": 213.73275000000012,
+            "decodedBytes": 255,
+            "contentEncoding": null,
+            "contentLength": null,
+            "fields": {
+              "members": {
+                "bytes": 211,
+                "rows": 1
+              },
+              "invitations": {
+                "bytes": 2,
+                "rows": 0
+              },
+              "isOwner": {
+                "bytes": 4
+              }
+            },
+            "fingerprint": "515f5d44319a582e80a7360226d5b3abb632a992e5502da3c044dae82bf8bad6"
+          },
+          {
+            "route": "/api/projects/:project/integrations",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 243.45700000000033,
+            "bodyMs": 244.3048749999998,
+            "decodedBytes": 34,
+            "contentEncoding": null,
+            "contentLength": null,
+            "fields": {
+              "integrations": {
+                "bytes": 2,
+                "rows": 0
+              },
+              "isOwner": {
+                "bytes": 4
+              }
+            },
+            "fingerprint": "dd2fb424de251a74c24f1dcfe84f385468833513e96410f0cde674316b8cd5dc"
+          },
+          {
+            "route": "/api/projects/:project/issue-relations",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 149.6190829999996,
+            "bodyMs": 150.03908299999966,
+            "decodedBytes": 2,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 0,
+            "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "route": "/api/projects/:project/pages",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 376.8947079999998,
+            "bodyMs": 377.0793329999997,
+            "decodedBytes": 14152,
+            "contentEncoding": null,
+            "contentLength": null,
+            "rows": 20,
+            "fingerprint": "7c08124eed3bfac3fddc8742a19f1177f160ebd0880828402124bb18facd0414"
+          },
+          {
+            "route": "/api/projects/:project/pages/:page",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 333.7162079999998,
+            "bodyMs": 333.93866700000035,
+            "decodedBytes": 28948,
+            "contentEncoding": null,
+            "contentLength": null,
+            "fields": {
+              "id": {
+                "bytes": 38
+              },
+              "project_id": {
+                "bytes": 38
+              },
+              "parent_id": {
+                "bytes": 4
+              },
+              "title": {
+                "bytes": 24
+              },
+              "icon": {
+                "bytes": 4
+              },
+              "version": {
+                "bytes": 1
+              },
+              "position": {
+                "bytes": 6
+              },
+              "favorite": {
+                "bytes": 5
+              },
+              "created_by": {
+                "bytes": 38
+              },
+              "updated_by": {
+                "bytes": 38
+              },
+              "updated_kind": {
+                "bytes": 7
+              },
+              "updated_api_key_id": {
+                "bytes": 4
+              },
+              "created_at": {
+                "bytes": 34
+              },
+              "updated_at": {
+                "bytes": 34
+              },
+              "deleted_at": {
+                "bytes": 4
+              },
+              "deleted_by": {
+                "bytes": 4
+              },
+              "deleted_root_id": {
+                "bytes": 4
+              },
+              "parent_block_removed": {
+                "bytes": 5
+              },
+              "database_schema": {
+                "bytes": 4
+              },
+              "database_revision": {
+                "bytes": 1
+              },
+              "database_title_name": {
+                "bytes": 4
+              },
+              "property_values": {
+                "bytes": 2
+              },
+              "content_revision": {
+                "bytes": 1
+              },
+              "page_is_database": {
+                "bytes": 5
+              },
+              "page_has_values": {
+                "bytes": 5
+              },
+              "page_is_blank": {
+                "bytes": 5
+              },
+              "content": {
+                "bytes": 28186
+              },
+              "encryption_version": {
+                "bytes": 1
+              }
+            },
+            "fingerprint": "652aef063832f66d04244cdc763bbd2d3c2ada019c1f3824ed1ae30505190efc"
+          },
+          {
+            "route": "/api/projects/:foreignProject/pages/:foreignPage",
+            "status": 200,
+            "admitted": false,
+            "headersMs": 316.8906659999993,
+            "bodyMs": 317.2229159999997,
+            "decodedBytes": 28945,
+            "contentEncoding": null,
+            "contentLength": null,
+            "fields": {
+              "id": {
+                "bytes": 38
+              },
+              "project_id": {
+                "bytes": 38
+              },
+              "parent_id": {
+                "bytes": 4
+              },
+              "title": {
+                "bytes": 23
+              },
+              "icon": {
+                "bytes": 4
+              },
+              "version": {
+                "bytes": 1
+              },
+              "position": {
+                "bytes": 6
+              },
+              "favorite": {
+                "bytes": 5
+              },
+              "created_by": {
+                "bytes": 38
+              },
+              "updated_by": {
+                "bytes": 38
+              },
+              "updated_kind": {
+                "bytes": 7
+              },
+              "updated_api_key_id": {
+                "bytes": 4
+              },
+              "created_at": {
+                "bytes": 34
+              },
+              "updated_at": {
+                "bytes": 32
+              },
+              "deleted_at": {
+                "bytes": 4
+              },
+              "deleted_by": {
+                "bytes": 4
+              },
+              "deleted_root_id": {
+                "bytes": 4
+              },
+              "parent_block_removed": {
+                "bytes": 5
+              },
+              "database_schema": {
+                "bytes": 4
+              },
+              "database_revision": {
+                "bytes": 1
+              },
+              "database_title_name": {
+                "bytes": 4
+              },
+              "property_values": {
+                "bytes": 2
+              },
+              "content_revision": {
+                "bytes": 1
+              },
+              "page_is_database": {
+                "bytes": 5
+              },
+              "page_has_values": {
+                "bytes": 5
+              },
+              "page_is_blank": {
+                "bytes": 5
+              },
+              "content": {
+                "bytes": 28186
+              },
+              "encryption_version": {
+                "bytes": 1
+              }
+            },
+            "fingerprint": "91a6f2fd46ee5e323eaf7c50e8a2d6ecade9ec45046538517312db6625bd4a16"
+          }
+        ],
+        "preservation": {
+          "tenTabsUnchanged": true,
+          "pageBodiesAndVersionsUnchanged": true,
+          "completeIssueSourceUnchanged": true,
+          "compiledProductUnchanged": true
+        },
+        "limitations": [
+          "Sequential quiet authenticated local API reads; no UI latency comparison or cold-instance claim.",
+          "Decoded HTTP response bytes and JSON field bytes are exact; they are not wire/compression bytes.",
+          "Server issue DB spans include PostgREST, transport and parsing; SQL plans are separate evidence.",
+          "No forge endpoint, account metadata write, content write, tab write or schema change is requested."
+        ],
+        "identity": {
+          "email": "captures-demo+min540@minddy.app",
+          "userId": "86df71f9-44a7-4cc1-8085-5baa6c744490",
+          "marker": "min-540-performance-v1",
+          "cyclesDisabled": true
+        },
+        "sourceProof": {
+          "completeIssueSource": true,
+          "sourceIssues": 1206,
+          "kanbanCards": 1086,
+          "uniqueIssues": 1206,
+          "contentFingerprint": "775248ba7329f58864035021478b8c25837c228292c1fe2e213a58940b2c1d03"
+        },
+        "projectOverlap": {
+          "rows": 670,
+          "containedInGlobal": true,
+          "resourceCountOnlyInProject": true
+        },
+        "finalSourceProof": {
+          "completeIssueSource": true,
+          "sourceIssues": 1206,
+          "kanbanCards": 1086,
+          "uniqueIssues": 1206,
+          "contentFingerprint": "775248ba7329f58864035021478b8c25837c228292c1fe2e213a58940b2c1d03"
+        },
+        "finishedAt": "2026-10-14T14:22:10.716Z"
+      }
+    }
+  ]
+}

@@ -143,3 +143,9 @@ test("redacts cookie metadata and fixture paragraphs and refuses protected respo
   assert.throws(() => auditEvidence({ content: { type: "doc" } }), /Full content/);
   assert.throws(() => auditEvidence({ error: "eyJabcdefghij.abcdefghijkl.abcdefghijkl" }), /JWT-like/);
 });
+
+test("keeps diagnostic network classifications separate from an absent dispatch trace", () => {
+  const summary = summarizeTransportAndThread({ network: { windowSeals: [{ completed: true }] } });
+  assert.equal(summary.wholeRecordedRun, null);
+  assert.ok(summary.phases.every((phase) => phase.recordedStartEnvelope === null));
+});

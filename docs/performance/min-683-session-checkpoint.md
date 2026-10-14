@@ -1,10 +1,15 @@
 # MIN-683: session checkpoint, 2026-10-14
 
-Work stopped at the user’s explicit request. The next session is dedicated to
-cold preparation and database/data-access architecture, with subagents. No new
-experiment, UI test or content mutation is scheduled. The last running web
-measurement finished and closed cleanly; the local production server is stopped.
-MIN-683 remains in progress. No merge, deployment or `work:done` is authorized.
+The dedicated cold-preparation/data-access session resumes on the same branch
+from `46b747efb` with three distinct subagents and root-only UI ownership. Read
+the [current session outcome](min-683-cold-session.md),
+[database attribution](min-683-db-attribution.md),
+[server/cache decision](min-683-server-attribution.md) and
+[preview diagnosis limits](min-683-preview-sync.md) before the historical
+checkpoint below. SQL/RLS/count/JSON and actual session/MFA measurements are
+separate from transport/decryption/admission/rendering. No new index, TTL or
+cross-request DTO cache is installed. MIN-683 remains in progress. No merge,
+deployment, production migration or `work:done` is authorized.
 
 ## Repository and actual product
 
@@ -86,8 +91,13 @@ The final handoff web run is
 no recorded errors, actual observed16s absence/return and complete fixture/Page-
 version/ten-tab/Git preservation. Renderer launch/refresh2720/2371ms; first
 project604ms, Pages364/469ms, PR3136ms, Routines671ms, Triage311ms, Feedback923ms,
-objectives242ms. There is no matching native handoff run yet and no general
-performance win is claimed. The first attempt is retained as failed before
+objectives242ms. At the prior stop there was no matching native handoff run.
+The resumed `min683-restored-after-scaled-foreground-handoff-native-1` now
+completes 55 observations with the same v5 hash and full preservation; the
+results index checks its exact pair. Renderer launch/refresh are 2,778/2,153 ms;
+first project is 737 ms, Pages 389/461 ms, PR 3,143 ms and Feedback 1,025 ms.
+These first destinations remain slow. No general
+performance win is claimed. The first web attempt is retained as failed before
 renderer creation: Git diff capture exceeded its process buffer while evidence
 was uncommitted. Evidence was committed and the same frozen runner/build
 relaunched with a new label; no ordinary runner change hid the failure.
