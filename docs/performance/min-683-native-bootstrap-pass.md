@@ -136,6 +136,34 @@ within three seconds. No write test precedes these matched read-only launches.
 
 ## Recovery and daily acceptance boundaries
 
+The subsequent [default route-prefetch experiment](min-683-route-prefetch-increment.md)
+is rejected. Its excluded header attribution verifies18 automatic Next-prefetch
+requests (seven segment requests) before interaction. The isolated gate's web
+project improves607.8→328.0ms, but the native project changes335.3→599.9ms;
+both native Pages are also slower. One observation per destination/client cannot
+establish causality. The exact `783cf10` application source and complete product
+are restored. No broader candidate run is spent after this mixed result.
+
+New unlisted-project controls on that retained product complete at542.2ms web
+and404.0ms native. Each uses an actual sidebar anchor, one trusted click at three
+seconds, no prior visit/hover and complete-content/preservation bookends. These
+are controls only, not proof that the rejected gate preserves cold navigation.
+
+The current rich-cohort ordinary web control on `98e236e1f` completes75
+observations. Repeated alternation has n=30, p50=68.4ms, p95=136.9ms,
+maximum175.1ms; focus-return navigation has n=10, p50=80.2ms, p95=185.3ms,
+maximum185.3ms. Independent first destinations are not pooled with these warm
+returns. This ordinary control's nine first activations have median636.2ms and
+maximum3,334.8ms (no p95 at n=9); eleven first secondary detail switches have
+p50=261.2ms, p95/max427.3ms. Complete first PR files take2,174.0ms (n=1).
+The global100/300ms criterion remains open. These are control observations,
+not a new complete ordinary matrix on the final retained bootstrap source.
+
+The two new native ordinary attempts remain failed: one last focus-navigation
+timeout after75 observations, and one invalid actual16-second absence after65.
+Neither is promoted or silently rerun. Prior accepted v6/v8 evidence remains
+separately identified; these failures limit the current native ordinary matrix.
+
 The separate forced-quit collector kills the process immediately after ordinary
 creation-draft save acknowledgement, without flushing storage after that save.
 Successful restart can prove only that acknowledged encrypted local copy survived
@@ -144,11 +172,41 @@ create a server draft row or imply fsync/power-loss durability. Unsaved creation
 forms and pending Page edits remain in memory. Optional encrypted sessionStorage
 selection and acknowledged server-backed tab destinations are different scopes.
 
+**Recovery is not validated.** Run1 saves/seals the local draft and performs
+real SIGKILL, then samples a transient Home URL before restored All commits;
+it remains a failed collector label. Run2 waits for the canonical route and
+exact owned publication (including deliberate selections outside the URL),
+passes that coherence check, then fails because the saved draft is not offered.
+Run3 adds only encrypted storage identity metadata and confirms872bytes in
+`minddy:drafts:issue` after ordinary save acknowledgement, then no key at the
+same origin after SIGKILL/restart. No post-save storage flush is performed.
+All three restore original destinations and remove the isolated profile;
+no server issue is created. The evidence establishes loss across this restart,
+not whether Chromium durability or startup cleanup causes it. This newly
+confirmed gap is the first continuation priority; no speculative persistence
+fix is shipped under the user's publication deadline.
+
 The requested qualitative acceptance path is project → Page → project, with
 typing and scrolling. Automated focus, content, selection, secondary detail and
 departure proofs remain separate from the user's evaluation of daily feel.
 Performance Tester has no added right to personal PR420; its expected 404 and
 unknown GitHub quota cannot diagnose that private preview incident.
+
+## Acceptance and continuation
+
+| Criterion | Evidence and remaining boundary |
+| --- | --- |
+| Complete startup in2–3seconds | Three retained unpackaged native process launches finish in1.64–1.80seconds, with separate renderer clocks. Packaged/cold-environment universality remains unverified. |
+| Ten tabs prepared before first use | Open: fixed-three-second snapshots still contain missing/pending prerequisites; complete visible content is checked on activation rather than inferred from a shell. |
+| Common navigation100/300ms | Open: warm control alternation/focus is mostly fast, while cold and secondary/PR detail outliers exceed300ms. |
+| Nine independent inactive destinations | Diagnostic coverage completed, including complete native Home and real paused Routines. Controlled native Home entry and different diagnostic hashes remain explicit. |
+| Forced-quit recovery | Open: canonical destination coherence passes after stabilization in run2, but run3 confirms an acknowledged encrypted draft key absent after SIGKILL/restart. Unsaved memory and power-loss durability remain separate. |
+| Daily usability | Automated retained v6/v8 proof is separate from the user's pending project→Page→project typing/scrolling acceptance and the inaccessible personal preview incident. |
+
+The user requests a20-minute publication/handoff cutoff for continuation by
+Claude. No further scheduling or Feedback experiment is started after that
+instruction. The [continuation handoff](min-683-claude-handoff.md) gives exact
+products, safe next decisions, fixture boundaries and remaining evidence.
 
 ## Documentation impact
 
@@ -157,3 +215,22 @@ control, configuration or desktop version change. The public manual remains
 accurate; no public article or figure edit or invented review date is required.
 The final checkpoint records executed checks, immutable measured products,
 acceptance limits and exact published-head CI separately from ancestor CI.
+
+Final local verification passes11,606 unit tests in1,246 files (127 tests and
+21 files skipped), type checking, repository lint,19 measurement-tool tests,
+encrypted-access/schema policy, owned English, documentation, knowledge and
+release-documentation checks. The first full unit attempt finds two outdated
+priority-test mocks still returning ordinary JSON/separate member/objective
+requests; they now return the actual framed transport and assert both complete
+per-key results while preserving priority assertions. The complete rerun passes.
+No production draft-storage/auth/desktop path is changed to hide the recovery
+failure. Public-repository worktree/history scanning passes; DCO matching is
+checked for every nonmerge PR-range commit. No migration, public manual locale,
+desktop version or main-user connection is changed.
+
+The evidence index is generated exactly once after all UI work:159 finished
+labels, including failed and explicitly excluded diagnostics. Its exact narrow
+header-probe namespace is tested; restoration journals remain excluded. Those
+counts are evidence records, not successful observations or new latency claims.
+Publish through `npm run work:pr`; verify the final head's GitHub checks after
+push and report them separately from this local verification.

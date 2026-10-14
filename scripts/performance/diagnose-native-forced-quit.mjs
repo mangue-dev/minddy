@@ -21,6 +21,33 @@ function completeRestoredInterface({ boardSource, homeSource, cards, cardIds }) 
   return window.__nativeCompleteBoard(cards, undefined, cardIds);
 }
 
+/** Read the surface's exact owned publication, including selections outside the URL. */
+function restoredSelection() {
+  const active = document.querySelector('[data-app-tab-id][aria-selected="true"]');
+  const activeTabId = active?.getAttribute("data-app-tab-id") ?? null;
+  let fiber = active?.[Object.keys(active).find(key => key.startsWith("__reactFiber$"))];
+  let publication;
+  for (let depth = 0; fiber && depth < 100; depth++, fiber = fiber.return) {
+    if (typeof fiber.memoizedProps?.value?.readTagged === "function") {
+      publication = fiber.memoizedProps.value.readTagged(); break;
+    }
+  }
+  const owned = publication?.tabId === activeTabId && typeof publication?.snapshot?.href === "string";
+  const relativeHref = location.pathname + location.search + location.hash;
+  return { pathname: location.pathname, relativeHref, activeTabId,
+    effectiveHref: owned ? publication.snapshot.href : relativeHref,
+    publicationOwnerId: owned ? publication.tabId : null };
+}
+
+/** Record persistence identity without exposing the encrypted payload. */
+async function draftStorageMetadata(page) {
+  const value = await page.evaluate(() => ({ origin: location.origin, raw: localStorage.getItem("minddy:drafts:issue") }));
+  const stored = value.raw ? JSON.parse(value.raw) : null;
+  return { origin: value.origin, present: value.raw !== null, bytes: value.raw?.length ?? 0,
+    sha256: value.raw ? hash(value.raw) : null, format: stored?.format, owner: stored?.owner,
+    hasCiphertext: typeof stored?.ciphertext === "string" };
+}
+
 assert.ok(process.argv.includes("--run-diagnostic"));
 assert.ok(process.env.MINDDY_PERF_BUILD_ROOT);
 const root = process.cwd(), output = path.join(root, "output/playwright/performance");
@@ -108,6 +135,7 @@ try {
     return { format: envelope?.format, hasCiphertext: typeof envelope?.ciphertext === "string", owner: envelope?.owner };
   });
   assert.equal(stored.format, "minddy-local-v1"); assert.equal(stored.owner, fixture.userId); assert.ok(stored.hasCiphertext);
+  result.draftStorageBeforeKill = await draftStorageMetadata(recoveryPage);
   // Kill immediately after the ordinary UI save acknowledgement; no manufactured storage flush.
   const beforeKillSelection = await recoveryPage.evaluate(() => ({ pathname: location.pathname, relativeHref: location.pathname + location.search + location.hash,
     activeTabId: document.querySelector('[data-app-tab-id][aria-selected="true"]')?.getAttribute('data-app-tab-id') ?? null }));
@@ -119,12 +147,23 @@ try {
   app = await launch(); recoveryPage = await app.firstWindow();
   recoveryPage.on("request", recordCreation);
   await recoveryPage.waitForFunction(completeRestoredInterface, readySpec, { timeout: 15000 });
-  const restartSelection = await recoveryPage.evaluate(() => ({ pathname: location.pathname, relativeHref: location.pathname + location.search + location.hash,
-    activeTabId: document.querySelector('[data-app-tab-id][aria-selected="true"]')?.getAttribute('data-app-tab-id') ?? null }));
+  result.draftStorageAfterRestart = await draftStorageMetadata(recoveryPage);
+  assert.equal(result.draftStorageAfterRestart.sha256, result.draftStorageBeforeKill.sha256,
+    "The acknowledged encrypted draft storage must survive the real SIGKILL unchanged");
   const restartedTabs = await api("/api/me/app-tabs");
-  const selectedTab = restartedTabs.find(tab => tab.id === restartSelection.activeTabId);
+  // Home may finish before the restored All navigation commits. Wait for the
+  // canonical selected route rather than accepting that transient Home shell.
+  await recoveryPage.waitForFunction(tabs => {
+    const id = document.querySelector('[data-app-tab-id][aria-selected="true"]')?.getAttribute("data-app-tab-id");
+    const tab = tabs.find(value => value.id === id);
+    return !!tab && new URL(tab.href, location.origin).pathname === location.pathname;
+  }, restartedTabs.map(({ id, href }) => ({ id, href })), { timeout: 15000 });
+  await recoveryPage.waitForFunction(completeRestoredInterface, readySpec, { timeout: 15000 });
+  const restartSelection = await recoveryPage.evaluate(restoredSelection);
+  const selectedTab = (await api("/api/me/app-tabs")).find(tab => tab.id === restartSelection.activeTabId);
   assert.ok(selectedTab, "The restored active tab must exist in the current authoritative tab list");
-  assert.equal(selectedTab.href, restartSelection.relativeHref, "Active tab and complete destination must agree after SIGKILL");
+  assert.equal(new URL(restartSelection.effectiveHref, base).pathname, restartSelection.pathname);
+  assert.equal(selectedTab.href, restartSelection.effectiveHref, "Active tab and exact effective destination must agree after SIGKILL");
   await recoveryPage.waitForFunction(completeRestoredInterface, readySpec, { timeout: 15000 });
   await recoveryPage.locator(`[data-app-tab-id="${projectSpec.id}"]`).click();
   await recoveryPage.locator(`[data-app-tab-id="${projectSpec.id}"][aria-selected="true"]`).waitFor();

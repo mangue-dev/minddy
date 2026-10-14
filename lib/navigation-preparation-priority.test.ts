@@ -44,7 +44,12 @@ function setup() {
     if (delay <= 50) auxiliary.add(task);
     return () => { auxiliary.delete(task); };
   });
-  const fetch = vi.fn<typeof globalThis.fetch>(async (url) => Response.json(String(url).endsWith("/pages/page")
+  const fetch = vi.fn<typeof globalThis.fetch>(async (url) => String(url).endsWith("/bootstrap?readers=members,objectives")
+    ? new Response([
+      { version: 1, reader: "members", ok: true, data: { members: [] } },
+      { version: 1, reader: "objectives", ok: true, data: [] },
+    ].map(frame => JSON.stringify(frame) + "\n").join(""), { headers: { "Content-Type": "application/x-ndjson" } })
+    : Response.json(String(url).endsWith("/pages/page")
     ? { id: "page", project_id: "project", version: 1, content: { type: "doc", content: [] } }
     : ["/pages", "/issues", "/objectives"].some((suffix) => String(url).endsWith(suffix)) ? []
     : String(url).endsWith("/members") ? { members: [] }
@@ -70,8 +75,10 @@ it("prepares open Page prerequisites before optional PR activity and resumes wit
     expect(navigationPreparationPending(view.client)).toBe(false);
     expect(view.fetch.mock.calls.map(([url]) => url)).toEqual([
       "/api/projects/project/pages/page", "/api/projects/project/pages", "/api/projects/project/issues",
-      "/api/projects/project/members", "/api/projects/project/objectives",
+      "/api/projects/project/bootstrap?readers=members,objectives",
     ]);
+    expect(view.client.getQueryData(["members", "project"])).toEqual({ members: [] });
+    expect(view.client.getQueryData(["objectives", "project"])).toEqual([]);
     await view.flush(view.auxiliary);
     expect(view.fetch.mock.calls.some(([url]) => String(url).endsWith("/comments"))).toBe(true);
   } finally { view.close(); }
@@ -105,10 +112,12 @@ it("prepares Pages ahead of old PR tabs without reserving optional PR metadata p
       "/api/projects/project/pages/page", "/api/projects/project/pages",
     ]);
     for (let step = 0; step < 4 && view.tabs.size; step++) await view.flush(view.tabs);
-    expect(view.fetch.mock.calls.slice(0, 5).map(([url]) => url)).toEqual([
+    expect(view.fetch.mock.calls.slice(0, 4).map(([url]) => url)).toEqual([
       "/api/projects/project/pages/page", "/api/projects/project/pages", "/api/projects/project/issues",
-      "/api/projects/project/members", "/api/projects/project/objectives",
+      "/api/projects/project/bootstrap?readers=members,objectives",
     ]);
+    expect(view.client.getQueryData(["members", "project"])).toEqual({ members: [] });
+    expect(view.client.getQueryData(["objectives", "project"])).toEqual([]);
     expect(navigationPreparationPending(view.client)).toBe(false);
     view.navigation.visit("/home", ["/home", ...oldPrTabs]);
     expect(navigationPreparationPending(view.client)).toBe(false);

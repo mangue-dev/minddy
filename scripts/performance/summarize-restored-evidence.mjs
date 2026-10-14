@@ -16,6 +16,16 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  { id: `bootstrap-physical-transport-${runtime}`, disposition: "retained-prototype-global-acceptance-open", declaredSourceDelta: "Admit one exact complete member/objective framed pair plus one ordinary reader with two held physical transports. These independent three-second first activations remain excluded from ordinary latency aggregates; accepted resource frames and whole-body aborts are separate observations.",
+    baseline: `min683-restored-before-two-slots-focused-${runtime}-1`,
+    candidate: `min683-restored-after-two-slots-focused-${runtime}-1`,
+    expectedBaseline: { sha: "98e236e1fa83acfb09e3de2eb16f9d28e0aa93d6", build: "5M8Rpj0Mn7jJFIBMCBSj6" },
+    expectedCandidate: { sha: "783cf10cad0c802c364ee963edfdfd3440ad964b", build: "ZRKbS9ItC3LDVGfvC-J4R" } },
+  { id: `default-route-prefetch-${runtime}`, disposition: "rejected-mixed-runtime-experiment", declaredSourceDelta: "Initially close only omitted automatic internal AppLink prefetch through existing startup/navigation priority, preserving explicit options and real intent. Mixed web/native first activation does not justify retention; exact source is restored. These separate independent cases remain excluded from ordinary latency aggregates.",
+    baseline: `min683-restored-after-two-slots-focused-${runtime}-1`,
+    candidate: `min683-restored-after-route-prefetch-focused-${runtime}-1`,
+    expectedBaseline: { sha: "783cf10cad0c802c364ee963edfdfd3440ad964b", build: "ZRKbS9ItC3LDVGfvC-J4R" },
+    expectedCandidate: { sha: "cbe64ba12a52874ee7b0b5ac3cde3a1f13305502", build: "HM4mJKSv43gfNCz9cz0me" } },
   { id: `startup-final-review-${runtime}`, disposition: "removal-rejected-existing-admission-retained", declaredSourceDelta: "Remove only Task51 startup admission while retaining Task56 and all application readers. Both products use the same v6 window-minimization protocol; web removal admits indexing before the first project and moves cost into activation. Mixed native single observations establish no universal speedup. Independent three-second diagnostics remain excluded from ordinary comparisons.",
     baseline: `min683-restored-before-startup-final-review-${runtime}-1`,
     candidate: `min683-restored-after-startup-final-review-${runtime}-1`,
@@ -265,7 +275,9 @@ export function pairedComparisonEligibility(baseline, candidate) {
 
 /** Restoration journals contain private originals and are never public evidence. */
 export function evidenceFilenameSelected(name) {
-  return !name.endsWith("-restoration-journal.json") && /^(min683-restored-(baseline|before|after|preparation|serial-pr|pages|host|admission|authority|two-slots)|min683-executable-|min683-verification-scaled-).*\.json$/.test(name);
+  return !name.endsWith("-restoration-journal.json") &&
+    (/^(min683-restored-(baseline|before|after|preparation|serial-pr|pages|host|admission|authority|two-slots)|min683-executable-|min683-verification-scaled-).*\.json$/.test(name) ||
+      /^excluded-min683-route-prefetch-owner-\d+\.json$/.test(name));
 }
 
 export async function refreshRestoredEvidence() {

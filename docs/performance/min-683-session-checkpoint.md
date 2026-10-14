@@ -1,6 +1,43 @@
 # MIN-683: session checkpoint, 2026-10-14
 
-## Latest targeted merge-readiness pass
+## Latest native/bootstrap pass and Claude handoff
+
+Read [the current pass](min-683-native-bootstrap-pass.md) and
+[the continuation handoff](min-683-claude-handoff.md) first. This resumes published
+`242b7b77d` on the same branch/draft PR420. The retained application source is
+`783cf10cad0c802c364ee963edfdfd3440ad964b`, actual whole product
+`ZRKbS9ItC3LDVGfvC-J4R`; later source experiments are exactly reverted. Do not
+relabel this binary as the later documentation/tooling HEAD.
+
+The bounded project bootstrap reuses complete member/objective readers with
+request-local live authorization, independent frames and exact per-key owners.
+Two held physical preparation transports admit one pair plus one ordinary read.
+The fixed startup reservation and selected-read adoption protection remain
+unchanged; existing v8 write/focus/merge/departure evidence is reused. Both a
+cold PR-list overlap and omitted default-Link prefetch gate are measured and
+rejected. Gate web project607.8→328.0ms is not retained against native
+335.3→599.9ms. No extra broad runs are spent on rejected products.
+
+Independent diagnostic coverage now includes all nine inactive destinations,
+full native Home and real paused Routines. Natural unpackaged native startup is
+measured separately: process median1732.5ms/max1800.4ms, n3, with separate
+renderer clocks. Fixed-three-second snapshots do not prove ten-tab readiness;
+cold/detail outliers remain above300ms. The main report separates the current
+ordinary web control, failed current native focus attempts and historical220
+accepted observations. None is promoted into an invented final-source matrix.
+
+Real-SIGKILL recovery is failed: stabilized canonical destination coherence
+passes in run2, but run3 confirms872bytes of acknowledged encrypted draft before
+kill and an absent key after restart at the same origin. Root adds no post-save
+flush; the exact cause remains unresolved. This is Claude's first priority.
+Final checks and exact publication/CI are recorded in the current pass and final
+delivery. The user requests a20-minute stop for a Claude
+handoff; no further Feedback/issue-bootstrap implementation is started. Their
+selected qualitative path is project→Page→project with typing/scrolling, still
+awaiting actual acceptance. MIN-683 stays in progress. Preserve current Page
+versions16/2, ten tabs and all scaled collections; never reseed or reset.
+
+## Previous targeted merge-readiness pass
 
 Read [the targeted review](min-683-merge-readiness-pass.md) first. Both provisional
 changes are now retained for specific guarantees. Task51's isolated removal

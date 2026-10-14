@@ -86,6 +86,10 @@ test("excludes complete diagnostic runs and preserves failed ordinary runs as fa
   assert.equal(evidenceFilenameSelected("min683-restored-before-correctness-restoration-journal.json"), false);
   assert.equal(evidenceFilenameSelected("min683-verification-scaled-native-1-restoration-journal.json"), false);
   assert.equal(evidenceFilenameSelected("min683-restored-after-scaled-complete-resume-native-1.json"), true);
+  assert.equal(evidenceFilenameSelected("excluded-min683-route-prefetch-owner-3.json"), true);
+  assert.equal(evidenceFilenameSelected("excluded-min683-route-prefetch-owner-3-restoration-journal.json"), false);
+  assert.equal(evidenceFilenameSelected("excluded-min683-route-prefetch-owner-private.json"), false);
+  assert.equal(evidenceFilenameSelected("excluded-unrelated-diagnostic-3.json"), false);
   assert.equal(classification("min683-restored-after-scaled-complete-resume-native-1.json", { status: "complete-with-open-acceptance" }).stage, "after");
 });
 const comparable = { effectiveSha: "a".repeat(40), build: "known-build", protocol: "complete-content", runnerSourceHash: "b".repeat(64),
