@@ -93,7 +93,13 @@ including both new v6 pairs; all 119 historical run records remain identical.
 
 Publication checks pass for tracked history and the staged additions; redacted
 Gitleaks scans 1585 commits across `origin/main origin/production HEAD` without
-a leak. No excluded path is changed. Exact remote CI is recorded after publication.
+a leak. No excluded path is changed. The reviewed application, final evidence
+and decisions are published at `86819f240` through `npm run work:pr`; later
+publication notes do not relabel the compiled products. PR title, description
+and draft state are verified unchanged. Read the
+[current PR checks](https://github.com/mangue-dev/minddy/pull/420/checks) for the
+exact final published head; its result is also recorded in the MIN-683 outcome
+comment. Local success and an ancestor's green CI do not certify a newer head.
 The preceding published head `1f4156520` has all relevant CI checks passing;
 that result cannot certify a later head. Publication uses `npm run work:pr`,
 preserving the existing title, description and draft state, with matching DCO.
