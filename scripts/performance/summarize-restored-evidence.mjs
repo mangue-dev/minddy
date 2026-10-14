@@ -115,6 +115,24 @@ export function sampleStatistics(values) {
     p95: samples.length >= 10 ? samples[Math.ceil(samples.length * 0.95) - 1] : null, max: samples.at(-1) } : { p50: null, p95: null, max: null }) };
 }
 
+/** Excluded collectors may record a tab count rather than ordinary tab identities. */
+export function stableTabsForWorkloadIdentity(tabs) {
+  return Array.isArray(tabs) ? tabs.map(({ id, href, kind, projectId, pageId, title, bodyText }) =>
+    ({ id, href, kind, projectId, pageId, title, bodyText })) : undefined;
+}
+
+export function secondaryCohortEvidence(value) {
+  if (value.workload?.secondary) return { kind: "populated", marker: value.workload.secondary.marker,
+    fingerprint: value.workload.secondary.fingerprint, counts: value.workload.secondary.counts };
+  if (value.excludedFromComparison && value.workload?.secondaryCounts) return {
+    kind: "populated-excluded-diagnostic", fingerprint: value.workload.secondaryFingerprint,
+    counts: value.workload.secondaryCounts, manifestSha256: value.secondaryManifestSha256,
+  };
+  return value.datasetInProgress
+    ? { kind: "growing-excluded-diagnostic", marker: value.marker, independentSyntheticSourceCount: value.independentSyntheticSourceCount, globalSourceCount: value.globalSourceCount }
+    : { kind: "empty", description: "Triage, feedback and objectives had no fixture entries; these runs do not establish populated-secondary readiness." };
+}
+
 /** Preserve diagnostic error messages without assuming every runner throws a string. */
 export function failureSummary(failure) {
   if (failure == null) return null;
@@ -256,15 +274,12 @@ export async function refreshRestoredEvidence() {
       ...(correctedSha !== declaredSha ? { provenanceCorrection: "HEAD had advanced while the unchanged baseline build was measured; retain original declared SHA in raw evidence" } : {}),
       versions: value.versions, viewport: value.viewport, protocol: value.protocol, runnerSourceHash: value.runnerSourceHash ?? null,
       environmentFiles: value.environmentFiles ?? value.product?.environmentFiles ?? null,
-      secondaryCohort: value.workload?.secondary ? { kind: "populated", marker: value.workload.secondary.marker,
-        fingerprint: value.workload.secondary.fingerprint, counts: value.workload.secondary.counts } : value.datasetInProgress
-        ? { kind: "growing-excluded-diagnostic", marker: value.marker, independentSyntheticSourceCount: value.independentSyntheticSourceCount, globalSourceCount: value.globalSourceCount }
-        : { kind: "empty", description: "Triage, feedback and objectives had no fixture entries; these runs do not establish populated-secondary readiness." },
+      secondaryCohort: secondaryCohortEvidence(value),
       runnerSourceHashScope: value.runnerSourceHashScope ?? (!value.runnerSourceHash ? "Not recorded" : value.protocol === "min683-real-executable-startup-v1"
         ? ["measure-executable-startup.mjs"]
         : ["measure-restored-navigation.mjs", "restored-navigation-readiness.mjs", "board-readiness.mjs", "stable-restored-tabs.mjs"]),
       workloadIdentity: value.workload ? sha256(JSON.stringify({ counts: value.workload.fixtureCounts,
-        tabs: value.workload.stableTabs?.map(({ id, href, kind, projectId, pageId, title, bodyText }) => ({ id, href, kind, projectId, pageId, title, bodyText })),
+        tabs: stableTabsForWorkloadIdentity(value.workload.stableTabs),
         connectedBoard: value.workload.connectedBoard, forge: value.workload.forge, secondary: value.workload.secondary })) : null,
       workingDiffHash: value.workingDiffHash ?? null, repetitions: value.repeats,
       focusValid: value.focus?.validFocusTransition === true, focusProtocol: value.focusProtocol ?? null,

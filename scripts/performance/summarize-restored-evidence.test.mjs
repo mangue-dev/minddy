@@ -1,6 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auditEvidence, classification, evidenceFilenameSelected, explicitStageComparisons, failureSummary, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, summarizeMeasurements, summarizeTransportAndThread } from "./summarize-restored-evidence.mjs";
+import { auditEvidence, classification, evidenceFilenameSelected, explicitStageComparisons, failureSummary, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, secondaryCohortEvidence, stableTabsForWorkloadIdentity, summarizeMeasurements, summarizeTransportAndThread } from "./summarize-restored-evidence.mjs";
+
+test("accepts excluded count-only tab metadata without manufacturing ordinary identities or an empty cohort", () => {
+  assert.equal(stableTabsForWorkloadIdentity(10), undefined);
+  assert.equal(stableTabsForWorkloadIdentity(undefined), undefined);
+  const tab = { id: "tab", href: "/all", kind: "all", ignored: "Unpublished metadata" };
+  assert.deepEqual(stableTabsForWorkloadIdentity([tab]), [{ id: "tab", href: "/all", kind: "all",
+    projectId: undefined, pageId: undefined, title: undefined, bodyText: undefined }]);
+  const counts = { triage: 120, feedback: 120, objectives: 30, tasks: 450, comments: 1440 };
+  assert.deepEqual(secondaryCohortEvidence({ excludedFromComparison: "Admitted timing", secondaryManifestSha256: "manifest-hash",
+    workload: { stableTabs: 10, secondaryCounts: counts, secondaryFingerprint: "cohort-hash" } }), {
+    kind: "populated-excluded-diagnostic", counts, fingerprint: "cohort-hash", manifestSha256: "manifest-hash",
+  });
+  assert.deepEqual(secondaryCohortEvidence({ workload: { secondary: { marker: "ordinary", fingerprint: "accepted", counts } } }),
+    { kind: "populated", marker: "ordinary", fingerprint: "accepted", counts });
+});
 
 test("retains both structured diagnostic failures and ordinary error strings", () => {
   assert.equal(failureSummary({ name: "TimeoutError", message: "Observed gate failed\nDiagnostic stack" }), "TimeoutError: Observed gate failed");
