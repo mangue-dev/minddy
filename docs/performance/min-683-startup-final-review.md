@@ -2,11 +2,13 @@
 
 ## Decision
 
-Remove the Task51 startup-only optional-work reservation before presenting
-PR420 as an increment ready for review. This is a bounded risk-reduction
-decision, not a finding that the helper is incorrect or that removing it
-necessarily improves latency. The root agent verifies the resulting web/native
-product and records the actual measured outcome separately.
+Retain the Task51 startup-only optional-work reservation. The
+initial source-only recommendation was removal because its historical pair did
+not exercise the indexing gap. The root agent's new matched runtime evidence
+does exercise that gap and shows the removal moving cost into first project
+activation on web. The matching independent control confirms the direction;
+the exact retained application source is restored. This is an admission/fairness decision,
+not certification of general latency or all-tab preparation.
 
 The reviewed source is `1f4156520`. The isolated implementation commit is
 `30ee7c5ee` (`perf: reserve navigation priority during tab restoration`). Its
@@ -41,12 +43,15 @@ speedup, certify all-tab preparation or supply destination percentiles.
 
 Ownership/lifecycle regressions establish the helper's exact account, session
 and QueryClient token isolation, synchronous handoff, settled-failure release,
-Strict Mode replay and real retirement. Those guarantees are valuable but do
-not justify another optional-admission delay in the merge increment without
-the missing runtime evidence. No new correctness defect is identified in the
-helper by this source review.
+Strict Mode replay and real retirement. At the initial source review, those
+guarantees did not justify another optional-admission delay without the missing
+runtime evidence. The newly exercised gap below changes that decision. No new
+correctness defect is identified in the helper by this source review.
 
 ## Exact removal boundary
+
+The following removal boundary records the reviewed experiment; it is no
+longer the recommended final source if the new comparison remains valid.
 
 Remove the helper import/memo/layout effect and settled-query-error effect
 from `AccountTabSync`. Change its wrapped visit back to the direct existing
@@ -73,3 +78,33 @@ with its original labels. The root agent owns checks, runtime comparisons, final
 status and publication; no test/build/browser/benchmark ran from this reviewer.
 MIN-683 remains in progress because all-tab preparation, common latency and
 broader acceptance criteria remain open. No merge or deployment is authorized.
+
+## New bounded removal comparison
+
+The root reports four complete v6 runs, baseline and no-token candidate on web
+and native, with all 55 observations, actual focus and full content/version/tab/
+Git bookends passing. The exact source/build labels belong to the root's final
+measurement report; this review does not invent them or rerun the collector.
+
+| Single observation | Retained reservation | Removed reservation |
+| --- | ---: | ---: |
+| Web first project, ms | 617 | 1068 |
+| Native first project, ms | 629 | 592 |
+| Web search-index request start, ms | 18368, after project click | 1338, before project click |
+| Web project task work, ms | 354 | 552 |
+
+The removed-reservation web case has seven cold scoped prerequisites; baseline
+already has categories and members. This newly exercised admission gap makes
+the historical absence of early indexing an insufficient reason to remove the
+token. It supports retaining the existing startup deferral, together with its
+ownership/failure-release tests and explicit palette bypass. It does not prove
+that indexing alone caused every timing difference. Native results remain mixed
+and do not establish a universal improvement.
+
+The independent three-second web project is 664 ms retained versus 967 ms
+removed; primary Page is 448 versus 507 ms, foreign Page 422 versus 412 ms.
+Both three-context diagnostics complete with current bodies/versions, full
+source collections, ten tab destinations and Git connection unchanged. They
+use matching hashes and remain excluded from ordinary comparisons. This
+confirms a removal risk without certifying global acceptance. Historical mixed
+v5 evidence above retains its original interpretation.

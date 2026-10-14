@@ -1,5 +1,29 @@
 # MIN-683: session checkpoint, 2026-10-14
 
+## Latest targeted merge-readiness pass
+
+Read [the targeted review](min-683-merge-readiness-pass.md) first. Both provisional
+changes are now retained for specific guarantees. Task51's isolated removal
+admits early web indexing and moves first-project cost from617→1068ms;
+independent three-second activation confirms664→967ms. The removal is rejected
+and its original source/tests restored. Task56 remains a cancellation correctness
+fix backed by eight real QueryClient/provider cases, not a general speed claim.
+
+Four matched v6 web/native runs complete220 observations and real sixteen-second
+focus absence/return. Web uses newly identified actual-window minimization;
+historical failed v5 runs remain failed. Six separate independent project/Page
+activations preserve complete content, current versions, full source collections,
+ten destinations and Git connection. The frozen ordinary collector is unchanged.
+The retained application audit identifies no confirmed blocker. Existing v8
+write/focus/merge/departure proof is reused because no write contract changes.
+
+Actual retained control remains `f5abefe201` / `aByBbQwsVOkTw0_Zh99sx`; rejected
+removal is `706f34a84` / `hcJuyHv9zWg6xw4WO7oia`. Both whole products are retained.
+The evidence index is generated once after measurements. Check the targeted
+report for final checks/publication; earlier green CI cannot certify a later head.
+MIN-683 remains in progress, with 100/300ms, all-tab preparation and broader
+acceptance still open. No merge, deploy or production migration is authorized.
+
 ## Latest bounded CI and admission pass
 
 Read [the bounded pass outcome](min-683-bounded-pass.md) first. It resumes the

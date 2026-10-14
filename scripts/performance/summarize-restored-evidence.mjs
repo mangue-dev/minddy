@@ -16,6 +16,11 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  { id: `startup-final-review-${runtime}`, disposition: "removal-rejected-existing-admission-retained", declaredSourceDelta: "Remove only Task51 startup admission while retaining Task56 and all application readers. Both products use the same v6 window-minimization protocol; web removal admits indexing before the first project and moves cost into activation. Mixed native single observations establish no universal speedup. Independent three-second diagnostics remain excluded from ordinary comparisons.",
+    baseline: `min683-restored-before-startup-final-review-${runtime}-1`,
+    candidate: `min683-restored-after-startup-final-review-${runtime}-1`,
+    expectedBaseline: { sha: "f5abefe201960ced3435eb3046d640602984f68e", build: "aByBbQwsVOkTw0_Zh99sx" },
+    expectedCandidate: { sha: "706f34a848bf1008f011b9af29c5b76331147167", build: "hcJuyHv9zWg6xw4WO7oia" } },
   { id: `draft-readiness-${runtime}`, disposition: "correctness-retained-performance-acceptance-open", declaredSourceDelta: "Only preserve accepted effective draft readiness in the two header variants; draft mutation and fresh-read gates remain unchanged. Web's ordinary focus guard fails after45 completed observations and must remain ineligible; native completes55. No cold-preparation speedup is claimed.",
     baseline: `min683-restored-after-scaled-foreground-handoff-${runtime}-${runtime === "web" ? 2 : 1}`,
     candidate: `min683-restored-after-scaled-draft-only-${runtime}-1`,
