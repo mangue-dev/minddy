@@ -1,5 +1,44 @@
 # MIN-683: architecture review for restored tabs
 
+## Isolated startup admission candidate
+
+The source control is `17df83a86` / `O_eiQyt6nCiGv-7JKKrHK`: the retained
+application, complete ordinary collection readers and shared live authorization,
+with both RSC experiments removed. Its v5 web/native runs each complete 145
+observations, genuine sixteen-second absence and all preservation gates. Web
+renderer launch/refresh are 2552/2462 ms and native 2302/2261 ms; first project
+679/698 ms, primary Page381/370 ms and foreign Page479/494 ms. First observations
+are sparse, not p95. Source cohort/environment/runner hashes remain unchanged.
+
+Task 51 now reserves optional-work priority from the exact desktop account,
+session and QueryClient's layout effect while ordinary canonical tabs and sealed
+window selection resolve in their existing order. It starts no query, timer or
+polling. Its first session visit calls the finite worker synchronously before
+releasing the startup token, so optional subscribers cannot observe a gap when
+listed work remains. Later visits keep their normal behavior. Explicit palette
+intent still bypasses automatic indexing deferral.
+
+Settled canonical-query failure, a complete empty tab list, failed initialization
+and real account/client/mobile retirement release only that owner's token.
+One microtask distinguishes synchronous Strict Mode replay from retirement;
+unmounted callbacks cannot deliver a visit or release a replacement's token.
+The helper supports later effect reattachment of the same session memo; existing
+controller effect cancellation still fences older asynchronous initialization.
+This does not certify full ancestor Activity hiding for the existing tab writer.
+Existing query/restore deadlines and normal retry behavior stay unchanged.
+Required foreground reads and initial subscription catch-up remain authoritative.
+This reserves admission only; it does not mark data fresh/prepared or change
+Page editing authority, TTLs, persistence, preparation concurrency or GitHub
+budgets. It cannot itself establish three-second all-tab readiness.
+
+The mounted regression reproduces five failures against the unmodified provider,
+while its two ordinary failure cases already pass. The new helper/provider checks and affected lifecycle/search/preparation checks
+pass: 175 cases across eleven suites, including the thirteen new ownership and
+mounted-provider cases. Full types, scoped lint, English, documentation and
+knowledge checks pass before building and comparing this source candidate. It is not retained on the basis of unit
+checks alone; startup, first-click tails, optional search availability and main
+thread work still require the identified comparison.
+
 ## Resumed server working-set experiment
 
 The first Task 50 experiment is rejected as-is. Build `428939fe2` /

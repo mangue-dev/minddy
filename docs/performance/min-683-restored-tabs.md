@@ -8,8 +8,12 @@ input diagnostics distinguish actual pointer delivery, session activation, route
 commit and complete usable content. The corrected v5 ordinary protocol has now
 observed real focus loss and return on both runtimes against the retained
 `c1ec2b80e` / `ZiBY2UkSzHhI8dl5J1UxZ` product. Final rapid-refresh, long-absence and
-journaled live editing/focus verification remain pending. A server-started Page
-working-set experiment is in source preparation, not yet a measured improvement.
+journaled live editing/focus verification remain pending. Both server-started
+RSC working-set controls are rejected and removed after moving startup/first-click
+cost. Their evidence and source history remain preserved. The separate startup
+admission candidate follows a newly measured retained-source control; see the
+[architecture report](min-683-architecture-refresh.md). No source-only proposal
+is a measured improvement.
 
 Acceptance remains open. The stable ten-tab fixture contains 120 triage issues,
 120 private feedback posts and 30 active objectives with fifteen linked tasks
