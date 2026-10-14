@@ -16,6 +16,11 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  ...(runtime === "web" ? [{ id: "foreground-handoff-web", disposition: "provisional-web-only-native-pending", declaredSourceDelta: "Task 56 exact selected-read protection across observer adoption only, compared with the retained consumer-only Feedback source; native and broad validation remain pending at the explicit user stop",
+    baseline: "min683-restored-after-scaled-feedback-scope-web-1",
+    candidate: "min683-restored-after-scaled-foreground-handoff-web-2",
+    expectedBaseline: { sha: "90ad0a49e7cd435aeb0fc1718f2f41a6e602e55f", build: "SuSa35kVIhHyV5Nor8RG2" },
+    expectedCandidate: { sha: "3692e7549060f8b682ec99865757a65c5e92a4e2", build: "Qp1Rr4apU_XHLQh2IVfT6" } }] : []),
   { id: `feedback-scope-${runtime}`, disposition: "retained-consumer-scope-correction-only", declaredSourceDelta: "Task 54 mounted Feedback consumer reuses its exact accepted normal query when it already contains the requested scoped target; the preparator remains unchanged, and the rejected All overlap is absent; first-open and unvisited-detail latency remain unresolved",
     baseline: `min683-restored-before-scaled-all-overlap-${runtime}-1`,
     candidate: `min683-restored-after-scaled-feedback-scope-${runtime}-1`,

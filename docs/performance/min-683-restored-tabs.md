@@ -2,6 +2,15 @@
 
 ## Current status
 
+Work is stopped at the user's request; see the current
+[checkpoint](min-683-session-checkpoint.md) for the next dedicated database and
+cold-preparation session. The retained consumer-only Feedback correction paints
+the first warm return in59/70ms web/native, versus1001/938ms, with no loading
+frames. Cold Feedback and unvisited details remain slow. The selected-read
+handoff has behavioral regressions and one complete55-observation web run;
+native and broader runtime validation remain pending. The All enrichment
+overlap is rejected and removed despite its successful server trace.
+
 Work resumed from the user's 2026-10-14 stop, beginning with the failed web
 activation. The original failure remains unexplained and preserved. New excluded
 input diagnostics distinguish actual pointer delivery, session activation, route

@@ -250,6 +250,22 @@ preactivation hover can start other reads before the session selects its href;
 this bounded fix does not protect that separate intent path. Its isolated build
 must compare full first access, warm journeys and observed focus on both clients.
 
+At the user's explicit stop, `3692e7549` / `Qp1Rr4apU_XHLQh2IVfT6` has one
+complete55-observation web run, observed16s focus absence/return and full
+preservation. Renderer launch/refresh2720/2371ms, first project604ms, Pages364/
+469ms and PR3136ms do not close cold acceptance. Native and broad validation are
+pending; the handoff remains provisional. Its first attempt failed before
+renderer creation because uncommitted evidence exceeded the Git diff capture
+buffer. That failed record is retained; committing evidence allowed an unchanged
+ordinary runner/build retry with a distinct label. No timing was fabricated.
+
+The next dedicated session prioritizes database/read-path attribution and
+server-side bootstrap/cache strategies with explicit freshness/invalidation.
+It must also diagnose the newly reported preview PR merge-state verification
+stall from actual responses and deployed migration state, without assuming a
+GitHub limit or applying a migration. See the current
+[checkpoint](min-683-session-checkpoint.md).
+
 ## Resumed server working-set experiment
 
 The first Task 50 experiment is rejected as-is. Build `428939fe2` /

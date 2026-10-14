@@ -1,95 +1,218 @@
 # MIN-683: session checkpoint, 2026-10-14
 
-Work stopped at the user's explicit request to sleep. No further UI, API test,
-measurement or content mutation is scheduled. MIN-683 remains in progress. No
-merge, release, deployment or `work:done` is authorized.
+Work stopped at the user’s explicit request. The next session is dedicated to
+cold preparation and database/data-access architecture, with subagents. No new
+experiment, UI test or content mutation is scheduled. The last running web
+measurement finished and closed cleanly; the local production server is stopped.
+MIN-683 remains in progress. No merge, deployment or `work:done` is authorized.
 
-## Retained source and fixture
+## Repository and actual product
 
-- Branch: `codex/min-683-instant-navigation`; draft PR #420.
-- Latest compiled application: `c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4`,
-  build `ZiBY2UkSzHhI8dl5J1UxZ`. Its explicit product manifest is retained in
-  `.next/min683-product.json` and the ignored performance output directory.
-- Task46 earlier admission is rejected and reverted (`cd56d5502`). Preserve its
-  measured source/history; do not layer new experiments on it accidentally.
-- Retain bounded whole-query persistence, Task47 latest-selection writer, and
-  Task48 newer-Page ACK/rollback correction. Writer transport improvement is
-  provisional until real rapid-refresh correctness is verified.
-- Verified tester only: `captures-demo+min540@minddy.app`, user
-  `86df71f9-44a7-4cc1-8085-5baa6c744490`. Ten stable tabs, 120 triage issues,
-  120 private feedback posts, 30 objectives with 15 tasks each; 1,440 comments.
-  Complete global/project issue counts are 1,206/670 and kanban counts 1,086/550.
-  Main account and primary Git connection remain unchanged.
-- Frozen scaled journal SHA-256:
-  `431c744f478b39c6824cadc49a8f9f3b3422a7234777b1f489d42b5cc7be48c7`.
-  Do not reseed or replay `--apply` over this immutable migration proof.
+- Repository: `/Users/clementguerin/Projets/minddy-ticketing/minddy`.
+- Existing branch: `codex/min-683-instant-navigation`; draft PR420.
+- Minddy project: `07b14964-0def-4941-8ddf-686572d6345d`.
+- Latest compiled application: `3692e7549060f8b682ec99865757a65c5e92a4e2`,
+  build `Qp1Rr4apU_XHLQh2IVfT6`. `.next/min683-product.json` records its
+  actual source and four environment-file hashes. Later documentation/evidence
+  commits do not change this compiled application.
+- Compiled controls are retained under ignored
+  `output/playwright/performance/min683-built-products/<build-id>/.next`:
+  `Liw1Se4ZRwp__V1fmrDJD`, `MBwOTC-9Laqpi-vCTq3u1`,
+  `E3ZnePxMEhwQ2_V-VuFUO` and `SuSa35kVIhHyV5Nor8RG2`.
+  Stop the server before swapping whole directories. Never label a binary with
+  current HEAD merely because the runner advances.
+- Every created commit has an author-matching DCO sign-off. Continue English
+  Conventional Commits and use `npm run work:pr` for publication. Do not replace
+  the existing PR title/body without an explicit request.
 
-## Last completed observations
+## Retained changes and rejected experiments
 
-The writer comparison reduces recorded snapshot POST starts during 100
-alternations from 284 to 34 native and 286 to 35 web. Slots are not recorded;
-these cannot all be described as window-tab seals. CPU observations are mixed.
-Its one natural unpackaged Electron restart reaches the complete global board
-in 2,961.7 ms. First openings and three-second all-tab preparation still fail
-the requested targets. See the full report and audited indexes.
+1. Complete ordinary project issue/member/objective/Page-tree readers and shared
+   live-session/MFA authorization are retained. These preserve RLS, permissions,
+   protected decoding, complete pagination and ordinary failure contracts.
+2. Both restored-Page RSC bootstrap controls are rejected and removed. Their
+   signed source, failures and measurements remain. The ten-record version
+   improves Pages but worsens startup/first board; the two-body version does not
+   establish the required preparation. Initial subscription catch-up invalidates
+   those early records. Do not skip that catch-up or freshen timestamps.
+3. Task51 startup-priority reservation is provisional: its exact account/session/
+   QueryClient lifecycle is tested, but ordinary runtime costs are mixed. It is
+   not a validated all-tab performance win.
+4. Task53 All enrichment overlap is rejected and removed at `4231b2ff1`.
+   Explicitly admitted default-off fixed server timing remains, with the
+   original read order. The admitted trace explains the serialized tail, but
+   ordinary first-destination regressions do not justify retaining the overlap.
+5. Task54 consumer-only Feedback correction is retained at `90ad0a49e` /
+   `SuSa35kVIhHyV5Nor8RG2`. It reuses the exact healthy normal query only when
+   that query already contains the requested scoped post matching the actual
+   controls. No96-row subset is stored under the full120-row key. Cold/resolved/
+   invalidated/denied/out-of-scope targets keep the full reader. The wider
+   cache-dependent preparator adaptation is deliberately not installed: its
+   dependency index would need both candidate keys and further ordering proof.
+   Existing explicit-link full-scope background work remains.
+6. Task56 exact selected-read handoff is present at `3692e7549`, provisionally
+   retained pending the remaining runtime matrix. Five meaningful red failures
+   include an actual mounted AccountTabSync/session/worker case; eight new cases,
+   160 existing lifecycle/preparation cases and eight Page authority cases pass.
+   Full types/lint/English/documentation/knowledge checks pass. A visit installs
+   exact active query hashes before navigation; later foreground work cannot
+   cancel that selected read merely because its observer has not committed.
+   Other reads yield; hidden/offline/disposed ownership and explicit invalidation
+   remain cancellable. No new freshness, receipt or write authority is granted.
+   Preactivation hover remains a separate possible cancellation path.
 
-The final Page-correctness build's native restored run passes its complete
-content/preservation gates. Its first project/Page/foreign-Page/PR observations
-are 456/405/444/2,548 ms. Its independent natural executable restart reaches the
-complete global board in 3,030.27 ms. These are sparse observations, not p95.
+Retain earlier bounded whole-query persistence, Task47 latest-selection writer
+and Task48 newer-Page ACK/rollback correction. Task47 real rapid-refresh safety
+is still pending; no hard-unload delivery guarantee is established.
 
-The final web run is **failed**: first visits and alternation pass, but the
-focus-return foreign-Page click leaves the primary Page selected for ten seconds.
-There is no loading or resource start. The frozen runner records neither the
-hit-test nor pointer target, so input misdispatch versus product failure remains
-unresolved. All cleanup/content/Page-version/tab/Git checks pass. Preserve
-`min683-restored-after-scaled-page-coherence-web-1.json`; do not relabel it as
-successful because `errors` is empty. Ordinary web actual focus loss is also
-unvalidated by that protocol.
+## Current measurements and their limits
 
-## Resume in order
+The immutable one-cycle/55-observation control is `7ba0e3181` /
+`MBwOTC-9Laqpi-vCTq3u1`, with labels
+`min683-restored-before-scaled-all-overlap-{web,native}-1`.
 
-1. Read AGENTS.md, issue/plan, this checkpoint and the current reports. Preserve
-   local changes; fetch references and reuse the existing branch. Servers were
-   stopped. Reuse the explicit compiled product only while application sources
-   match; new application changes need a new identified build.
-2. Attribute the failed web activation with a separately excluded pointer-target,
-   hit-test, busy/guard and tab-identity diagnostic. Keep frozen ordinary hashes
-   intact. An unresolved failure is not grounds for silently rerunning to success.
-3. Finish the final native/web broad primary, deep and forge checks. Their planned
-   one-loop coverage does not establish warm p95 or match ten-loop warm statistics.
-   Respect actual GitHub Retry-After; the earlier 403/failed forge run is retained.
-4. Run excluded real rapid-refresh selection checks on both runtimes, then an
-   excluded long-absence native read-only check beyond the Page payload lifetime.
-   No such proof has run yet. Do not claim hard-unload snapshot durability.
-5. Only after all read-only comparisons finish, explicitly reserve the sole UI
-   owner for `verify-restored-navigation.mjs --verify` on native and web. Require
-   its actual 75-second observed focus absence. This mutates only journaled fixture
-   records and must restore content; legitimate versions/timestamps advance.
-   Never export restoration journals containing original bodies.
-6. Synchronize plan states and publish measured outcomes through `npm run work:pr`
-   with matching-author DCO. Keep the ticket in progress until cold preparation,
-   common-navigation limits, genuine resume and daily feel are validated.
+The matched consumer-only Feedback pair uses
+`min683-restored-after-scaled-feedback-scope-{web,native}-1`.
+First warm Feedback improves1001.1→59.4ms web and937.7→69.6ms native;
+loading frames113/105→0/0, with the same96 visible unresolved identities and
+complete selected content/edit/reply controls. These are single first-warm
+observations, not per-destination p95. Cold Feedback remains988/1236ms versus
+1028/976ms in the control; several unvisited details remain above300ms. Existing
+background full-list work still occurs. Web renderer launch/refresh are2453/
+2048ms and native2327/2150ms; these are renderer clocks, not executable startup.
 
-The principal architectural gap remains late discovery plus many serial scoped
-reads. The shared authorized bootstrap design is documented but unimplemented.
-Feedback's one-time repeated-navigation delay is also a scope transition:
-normal unresolved 96 results become the separate unfiltered 120-result key when
-returning to a published `?post=` tab. Active destinations are excluded from
-preparation, so that extra key starts after departure. It is not payload GC or
-proof of expiry. Preserve full scopes, direct-link selection and freshness when
-addressing it; never insert a 96-row subset under the 120-row key.
+The final handoff web run is
+`min683-restored-after-scaled-foreground-handoff-web-2`:55 observations complete,
+no recorded errors, actual observed16s absence/return and complete fixture/Page-
+version/ten-tab/Git preservation. Renderer launch/refresh2720/2371ms; first
+project604ms, Pages364/469ms, PR3136ms, Routines671ms, Triage311ms, Feedback923ms,
+objectives242ms. There is no matching native handoff run yet and no general
+performance win is claimed. The first attempt is retained as failed before
+renderer creation: Git diff capture exceeded its process buffer while evidence
+was uncommitted. Evidence was committed and the same frozen runner/build
+relaunched with a new label; no ordinary runner change hid the failure.
 
-Focused checks pass for the retained increments: 143 writer/integration tests,
-93 Page/receipt/autosave/database tests and 87 preparation tests (overlapping
-sets, not a unique combined count), plus full types, scoped lint and English.
-The applications cache paragraph is updated in all six locales at revision 10;
-workflow A12 and section `desktop-renderer-recovery` have an actual agent review
-record. Documentation, static release-documentation and knowledge checks pass.
+The frozen eight-file v5 ordinary hash is
+`cb58539afa5d8d11547a6105c6279f75a52110387534b3d443722b3271a89d07`.
+Historical v4 hash95100e55… remains historical. New independent/excluded
+collectors must not silently change or enter ordinary pairs.
 
-The checkpoint publication check found two extra EOF blank lines in committed
-performance tooling. They were removed after every measurement stopped, without
-changing behavior. This changes the literal runner source hashes for future
-runs: historical recorded hashes remain truthful, but new runs must declare the
-new hash and cannot silently enter old strict pairs. The measured source is
-recoverable at `c1ec2b80e`; preserve this distinction during resume.
+The old failed web foreign-Page activation remains preserved and unexplained.
+Three excluded full-sequence input diagnostics distinguish delivery, session
+activation, route and complete content. Corrected v5 observations prove real
+focus loss on both clients. They do not identify the old failure’s root cause
+or replace the pending remote-mutation/long-absence verification.
+
+Independent first-access v2 probes use a fresh context/profile for each target,
+with trusted input near refresh age3s and no earlier activation/hover. On30ee/
+Liw1, project/primary/foreign reach full content in734/431/419ms web and622/421/
+394ms native. These instrumented results are excluded from ordinary aggregates.
+Only those three inactive destinations are covered, not all nine. Native Home
+may be a natural initial entry; prove its prior-activation status before claiming
+an independent Home first click.
+
+## Database and cold-admission evidence to investigate next
+
+- The real All endpoint returns1,206 complete issues/1,086 cards. Its two issue
+  batches take roughly0.95–1.20s before overlap, with around29–31ms protected
+  decoding. Aggregate `issues_db` timings are not a query plan and may include
+  driver/transport work. Attribute exact SQL/PostgREST, RLS, joins, counts,
+  projection size, pagination and transfer separately before proposing an index.
+- `loadGlobalBoardIssues` uses UUID keyset pagination, exact remaining count on
+  each batch, ordinary protected projection and final position/number sorting.
+  Completeness also supports a database row cap below1000; retain those tests.
+- Authorized projects finish around180–309ms from server admission, but members
+  used to begin only after all issue/category/objective/relation reads. Their
+  measured124–206ms tail justified a trial, not its retention. The rejected
+  source/build and all four before/after admitted traces remain available.
+- Global and project issue reads duplicate much data, but project issues add
+  resource counts. Project members add permissions/invitations absent from the
+  global array. Never promote aggregate slices into exact scoped keys without
+  DTO, living/trashed/empty project, RLS, counts, optimistic overlay, accepted
+  read-start and invalidation/owner parity. Categories/objectives also need their
+  actual ordering and completeness contracts. No reuse implementation exists.
+- Both Page bodies and trees are missing at fixed3s. No new static bundle starts
+  at the measured first Page clicks: PageEditor/Tiptap are statically imported.
+  Body/tree requests start at the click and finish shortly before full paint.
+  A second editor-bundle preload does not address this measured wait.
+- The two-slot finite owner drains seven project prerequisites before either
+  Page. The separate renewal worker cannot acquire an unknown body. Initial
+  PR-list transport can gate scoped work until around2.52–2.73s, leaving too
+  little time for two body/tree waves. Request timestamps alone do not identify
+  the precise scheduler unlock.
+- Default Next Link viewport prefetch bypasses session.prefetch admission.
+  Project RSC metadata can perform cookie/RLS name reads and decoding. Aborted
+  RSC requests do not quantify wasted server work, prove every layout rerenders,
+  or imply client effects/Git queries ran. A startup deferral is only a proposal;
+  preserve real intent and measure any cold/unlisted route cost transfer.
+
+Assign distinct subagents to database/read-path attribution, data-sharing/
+bootstrap parity and renderer/preparation/sync attribution. Root owns the sole
+UI benchmark. Agree on file ownership; no test/build/fixture job may overlap a
+timed UI run. First record a measured diagnosis and bounded strategy in the plan.
+Use actual authenticated/RLS query context for database evidence; service-role
+plans do not establish user-path cost or permissions. Read-only query plans need
+bounded execution, timeouts and no mutating functions. Do not apply production
+schema/index migrations or deploy; keep any justified migration reviewable in PR.
+
+Investigate server-side initial-load caching explicitly. Specify the account,
+project and access scope, row/version identity, read-start ordering and cache
+invalidation for remote changes, optimistic writes, revocation and multiple
+server instances. Separate accepted display data from live authorization and
+fresh write basis. Background reconciliation must deliver current data without
+silently extending a trust timeout or claiming cached authority is fresh.
+
+## Reported preview merge-state incident
+
+The user reports that the preview PR page remains indefinitely at merge-state
+verification and does not load its data. This incident has not been reproduced
+or diagnosed. A pending migration, server error, GitHub pending computation,
+polling/synchronization failure or403/429 quota response remain hypotheses.
+Successful local fixture PR journeys do not establish preview correctness.
+
+Identify the exact preview/build, inspect its actual response status/body shape
+and server logs without exposing credentials, and compare deployed migration
+state read-only. Trace the mergeability/sync state to completion, including
+errors, retry scheduling and GitHub Retry-After. Preserve the main GitHub
+connection/account; do not automatically apply a migration, bypass a limit or
+promote an unknown merge state into a successful ready state.
+
+Ignored, unexecuted proposals are available locally under
+`output/playwright/performance/page-prefix-source`,
+`foreground-handoff-source` and `route-prefetch-admission-source`.
+The Page prefix and route-prefetch proposals are not installed, tested or measured.
+Rebase every copy against actual source, especially the now-changed finite owner;
+do not blindly copy a whole older file over retained changes.
+
+## Immutable fixture and remaining checks
+
+Only `captures-demo+min540@minddy.app`, user
+`86df71f9-44a7-4cc1-8085-5baa6c744490`, marker
+`min-540-performance-v1` may be changed. Verify identity before every mutation.
+Ten stable tabs;120 triage,120 private/internal feedback (96 unresolved/24
+resolved),30 active objectives with15 linked tasks each, and1440 comments across
+720 entities. Complete global/project issue counts1206/670, kanban1086/550.
+Preserve original660 issues/120 Pages, five real fixture PRs, existing data,
+the main user’s tabs and primary GitHub connection. Respect actual Retry-After.
+Frozen scaled journal SHA256:
+`431c744f478b39c6824cadc49a8f9f3b3422a7234777b1f489d42b5cc7be48c7`.
+Never reseed or replay `--apply` over it. Only the four already-normalized
+benchmark documents0-10/0-11/1-0/1-1 are safe for UI editing; do not visit legacy
+1-2/1-3 or0-0 through the editor and trigger automatic normalization writes.
+
+No live mutating verifier ran in this resumed session; selected Page versions
+remain2 in the last preservation checks. Final broad primary/deep/forge pairs,
+all-nine independent first access, real rapid-refresh checks on both clients,
+long native absence, and actual75s remote Page/issue mutation plus immediate
+optimistic typing/merge/departure-save verification remain pending. Run all
+read-only comparisons before the journaled mutating verifier; its restoration
+preserves content but legitimately advances versions/timestamps. Do not pool
+those later cohorts with pre-mutation results. Never publish private restoration
+journals or full original documents. Routines are tested only in their empty
+state; no paid/generated work is authorized by the fixture setup.
+
+The majority-below100ms/no-common-above300ms, all-listed-before-first-activation
+and daily-feel criteria remain unmet. Keep MIN-683 in progress. The next session
+should start with database/data-access attribution rather than another blind
+client scheduling tweak. Publish measured results, rejected variants and limits
+with matching-author DCO through `npm run work:pr`; never merge or deploy.
