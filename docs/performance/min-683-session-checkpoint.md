@@ -86,3 +86,10 @@ sets, not a unique combined count), plus full types, scoped lint and English.
 The applications cache paragraph is updated in all six locales at revision 10;
 workflow A12 and section `desktop-renderer-recovery` have an actual agent review
 record. Documentation, static release-documentation and knowledge checks pass.
+
+The checkpoint publication check found two extra EOF blank lines in committed
+performance tooling. They were removed after every measurement stopped, without
+changing behavior. This changes the literal runner source hashes for future
+runs: historical recorded hashes remain truthful, but new runs must declare the
+new hash and cannot silently enter old strict pairs. The measured source is
+recoverable at `c1ec2b80e`; preserve this distinction during resume.

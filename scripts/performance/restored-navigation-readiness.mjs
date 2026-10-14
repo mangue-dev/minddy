@@ -279,4 +279,3 @@ export function restoredFailureDiagnostics(spec) {
     board: { expectedCards: spec.cards ?? null, cards: root?.querySelectorAll('[data-issue-id]').length ?? 0, scrollers },
     visibleLoadingCount: [...document.querySelectorAll(window.__restored.loadingSelector)].filter(visible).length };
 }
-
