@@ -70,6 +70,61 @@ Git preservation bracket the batch, stable destinations are restored between
 cases, and actual403/429 stops later cases. Backend/CDN/GitHub caches are not reset.
 Syntax/lint/English review is required before execution; no result is implied.
 
+## Independent first activation and All attribution
+
+The first independent web diagnostic is preserved as incomplete: the foreign
+Page's driver setup missed its100ms dispatch allowance, so no click or latency
+was fabricated. Its two measured targets remain excluded observations. Protocol
+v2 prearms passive tracing and any tab-strip scroll near age2800ms, without
+activation or hover; thread deltas include that earlier driver interval. It
+leaves the complete gates and ordinary eight-source hash unchanged.
+
+On `30ee7c5ee` / `Liw1Se4ZRwp__V1fmrDJD`, three separate web contexts press
+project/primary/foreign tabs at3022/3024/3028ms and reach full content in
+734/431/419ms. Three isolated native profiles press at3041/3039/3036ms and
+reach622/421/394ms. All preserve the full source, Page versions,720 entities,
+1440 comments, ten tabs and Git. These are instrumented single observations,
+not p95 or acceptance. Only project and the two explicit Pages are covered.
+
+Both independent web Page cases start no new static-resource request after the
+click; the last JS response is roughly698/793ms earlier. The pages-shell loads
+PageView, PageEditor and its Tiptap/mention dependencies through static imports.
+A second dynamic PageEditor preload is unsupported by this evidence. At three
+seconds both bodies are missing. Primary body/tree responses finish at click
++334/+408ms, before full paint at431ms; foreign responses finish+365/+360ms,
+before paint419ms. The remaining differences are not additive causal clocks,
+and editor setup is still deferred to mount. Independent thread metrics include
+roughly216/220ms before the click and cannot isolate editor initialization.
+
+Task53 first adds explicit metadata-only attribution to the existing All GET,
+without changing its database/decryption order. The exact diagnostic header is
+`x-minddy-performance-diagnostic: all-startup-v1`. Ordinary requests allocate no
+timing collector; admitted successful responses add only fixed `Server-Timing`
+phase durations, first-start offsets and invocation counts. Auth/MFA/RLS, cycle
+reconciliation, complete issue decoding, final DTO and failure behavior remain.
+Failed auth/first-stage responses keep their original response. No body, ID,
+name, SQL or token is emitted by this diagnostic.
+
+The collector intercepts only the actual same-origin renderer board request,
+checks complete response identity/content in memory and exports timing/count/hash
+proof only. It tags phases at dispatch, distinguishes full-All availability
+from later attribution waiting, preserves the full fixture and stops on actual
+rate limits. It records compiler/source/environment/own-two-source/ordinary-eight
+hashes. These traces are excluded from ordinary latency conclusions. Even with
+telemetry off the added direct helper calls/header check and one async boundary
+are source changes; this is not described as an unchanged binary.
+
+The measured question is whether member/integration enrichment creates a
+material tail: source currently starts it only after the entire first-stage
+issue/category/objective/relation barrier, though it depends only on the
+successful RLS projects result. If attribution supports overlap, a separate
+one-projects-promise increment must keep cycles first, preserve DTO/error/ACL,
+await the exact enrichment settlement on first-stage failure and rethrow the
+original exception. No implicit global-to-project cache promotion or freshness
+bypass is part of this experiment. Before-source checks pass89 cases in six
+server suites and four strict parser/content-proof tests; full types, scoped
+lint, documentation/English/knowledge and an identified build precede tracing.
+
 ## Resumed server working-set experiment
 
 The first Task 50 experiment is rejected as-is. Build `428939fe2` /

@@ -44,6 +44,10 @@
       "build": "vWb6Ds4gSW9hF908kNPMC"
     },
     {
+      "sha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
+      "build": "Liw1Se4ZRwp__V1fmrDJD"
+    },
+    {
       "sha": "d27feb89ce3b03fa10e2495bf52bfed3977cf74b",
       "build": "Jiski42ci5lVv2VlAa8dV"
     },
@@ -57,10 +61,6 @@
     {
       "sha": "428939fe2b8e20152ddf7ded17984fa4fe69f39f",
       "build": "fbeUzZQpzSVJfhE3uDYsT"
-    },
-    {
-      "sha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
-      "build": "Liw1Se4ZRwp__V1fmrDJD"
     },
     {
       "sha": "bbd6b7ccea55e267f2b850a545b2e60df9a42acb",
@@ -6665,6 +6665,384 @@
           "$.workload.stableTabs[2].bodyText",
           "$.workload.stableTabs[3].bodyText"
         ],
+        "audit": "No response bodies, auth values, full fixture documents or credential-like strings; duplicate fixture paragraphs replaced by hashes"
+      }
+    },
+    {
+      "label": "min683-restored-after-independent-first-diagnostic-native-2",
+      "filename": "min683-restored-after-independent-first-diagnostic-native-2.json",
+      "stage": "diagnostic",
+      "eligibleForNavigationComparison": false,
+      "reason": "Independent first-click diagnosis; no ordinary latency or population percentile conclusions",
+      "runtime": "unpackaged Electron",
+      "timestamp": "2026-10-14T13:02:30.499Z",
+      "status": "complete-excluded-diagnostic",
+      "declaredSha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
+      "effectiveSha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
+      "build": "Liw1Se4ZRwp__V1fmrDJD",
+      "protocol": "min683-excluded-independent-first-v2-prearmed-input",
+      "runnerSourceHash": null,
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "secondaryCohort": {
+        "kind": "populated",
+        "marker": "min683-secondary-scaled-v2",
+        "counts": {
+          "triage": 120,
+          "tasks": 450,
+          "objectives": 30,
+          "feedback": 120,
+          "comments": 1440,
+          "allSourceIssues": 1206,
+          "allBoardCards": 1086,
+          "projectSourceIssues": 670,
+          "projectBoardCards": 550
+        }
+      },
+      "runnerSourceHashScope": "Not recorded",
+      "workloadIdentity": "dc1d2ef9870544920e1c22cfe8eba3ef2551a3a5984251f6c94e4c0feef16eb4",
+      "workingDiffHash": null,
+      "focusValid": false,
+      "focusProtocol": null,
+      "remoteMutationVerified": false,
+      "preparationSinceRefreshMs": null,
+      "failure": null,
+      "cleanup": [
+        {
+          "stableTabsAndOriginalDestinationsRestored": true,
+          "pageBodiesAndVersionsUnchanged": true,
+          "completeSecondaryCohortUnchanged": true,
+          "completeGlobalIssueSourceUnchanged": true,
+          "githubConnectionUnchanged": true
+        }
+      ],
+      "transportAndThread": {
+        "wholeRecordedRun": {
+          "recordedHttpStarts": 0,
+          "recordedFailedRequests": 0,
+          "localSnapshotPostStarts": 0
+        },
+        "phases": [
+          {
+            "name": "first-restored-activation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          },
+          {
+            "name": "restored-alternation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          },
+          {
+            "name": "focus-return-navigation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          }
+        ],
+        "interpretation": "Request starts are from finished/failed transport records, not an exhaustive dispatch trace; unfinished requests may be absent. Phase envelopes include between-click driver work. Snapshot POST slot/payload is unobserved, so window-tab and query-cache seals are not distinguished. CDP thread deltas span each before/after probe, including driver and background work; ScriptDuration is part of TaskDuration and must not be added to it. Long tasks are deduplicated only by reported renderer origin/start/duration; unobserved intervals are not inferred."
+      },
+      "summaries": [],
+      "evidence": {
+        "path": "min-683-restored-evidence/min683-restored-after-independent-first-diagnostic-native-2.json.gz",
+        "originalRawSha256": "8c026ebf37da693a6c81ea9bb1e4ac40ba82eb58993c604f6f4e38b56b89fdf2",
+        "auditedJsonSha256": "5e16299ac4593abc4414af25cbc9ed88808e4ce631a8ea91dfba5066e69a5dbb",
+        "gzipSha256": "0b5df8b2a228d7dffc44735e92edb0a4a5e455e31b3c25d36f5c771fdd924006",
+        "removedFields": [],
+        "audit": "No response bodies, auth values, full fixture documents or credential-like strings; duplicate fixture paragraphs replaced by hashes"
+      }
+    },
+    {
+      "label": "min683-restored-after-independent-first-diagnostic-web-1",
+      "filename": "min683-restored-after-independent-first-diagnostic-web-1.json",
+      "stage": "diagnostic",
+      "eligibleForNavigationComparison": false,
+      "reason": "Independent first-click diagnosis; no ordinary latency or population percentile conclusions",
+      "runtime": "Chromium",
+      "timestamp": "2026-10-14T12:56:10.951Z",
+      "status": "incomplete-excluded-diagnostic",
+      "declaredSha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
+      "effectiveSha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
+      "build": "Liw1Se4ZRwp__V1fmrDJD",
+      "protocol": "min683-excluded-independent-first-v1",
+      "runnerSourceHash": null,
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "secondaryCohort": {
+        "kind": "populated",
+        "marker": "min683-secondary-scaled-v2",
+        "counts": {
+          "triage": 120,
+          "tasks": 450,
+          "objectives": 30,
+          "feedback": 120,
+          "comments": 1440,
+          "allSourceIssues": 1206,
+          "allBoardCards": 1086,
+          "projectSourceIssues": 670,
+          "projectBoardCards": 550
+        }
+      },
+      "runnerSourceHashScope": "Not recorded",
+      "workloadIdentity": "dc1d2ef9870544920e1c22cfe8eba3ef2551a3a5984251f6c94e4c0feef16eb4",
+      "workingDiffHash": null,
+      "focusValid": false,
+      "focusProtocol": null,
+      "remoteMutationVerified": false,
+      "preparationSinceRefreshMs": null,
+      "failure": null,
+      "cleanup": [
+        {
+          "stableTabsAndOriginalDestinationsRestored": true,
+          "pageBodiesAndVersionsUnchanged": true,
+          "completeSecondaryCohortUnchanged": true,
+          "completeGlobalIssueSourceUnchanged": true,
+          "githubConnectionUnchanged": true
+        }
+      ],
+      "transportAndThread": {
+        "wholeRecordedRun": {
+          "recordedHttpStarts": 0,
+          "recordedFailedRequests": 0,
+          "localSnapshotPostStarts": 0
+        },
+        "phases": [
+          {
+            "name": "first-restored-activation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          },
+          {
+            "name": "restored-alternation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          },
+          {
+            "name": "focus-return-navigation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          }
+        ],
+        "interpretation": "Request starts are from finished/failed transport records, not an exhaustive dispatch trace; unfinished requests may be absent. Phase envelopes include between-click driver work. Snapshot POST slot/payload is unobserved, so window-tab and query-cache seals are not distinguished. CDP thread deltas span each before/after probe, including driver and background work; ScriptDuration is part of TaskDuration and must not be added to it. Long tasks are deduplicated only by reported renderer origin/start/duration; unobserved intervals are not inferred."
+      },
+      "summaries": [],
+      "evidence": {
+        "path": "min-683-restored-evidence/min683-restored-after-independent-first-diagnostic-web-1.json.gz",
+        "originalRawSha256": "f1473157a9ecda614b5271d092b5b7577bdaa02e85cde6aeb6fef70b3e5cb0c4",
+        "auditedJsonSha256": "92d05fea3ceb510c5e29443341efc3ae1e7773448077761f71269025deaaa66d",
+        "gzipSha256": "7e16957943c8e3a18ca74ae88e405caead72fd32511817eae9aa53de848c572e",
+        "removedFields": [],
+        "audit": "No response bodies, auth values, full fixture documents or credential-like strings; duplicate fixture paragraphs replaced by hashes"
+      }
+    },
+    {
+      "label": "min683-restored-after-independent-first-diagnostic-web-2",
+      "filename": "min683-restored-after-independent-first-diagnostic-web-2.json",
+      "stage": "diagnostic",
+      "eligibleForNavigationComparison": false,
+      "reason": "Independent first-click diagnosis; no ordinary latency or population percentile conclusions",
+      "runtime": "Chromium",
+      "timestamp": "2026-10-14T13:00:14.300Z",
+      "status": "complete-excluded-diagnostic",
+      "declaredSha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
+      "effectiveSha": "30ee7c5ee6c8937e8955d96216dc1f585ef68207",
+      "build": "Liw1Se4ZRwp__V1fmrDJD",
+      "protocol": "min683-excluded-independent-first-v2-prearmed-input",
+      "runnerSourceHash": null,
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "secondaryCohort": {
+        "kind": "populated",
+        "marker": "min683-secondary-scaled-v2",
+        "counts": {
+          "triage": 120,
+          "tasks": 450,
+          "objectives": 30,
+          "feedback": 120,
+          "comments": 1440,
+          "allSourceIssues": 1206,
+          "allBoardCards": 1086,
+          "projectSourceIssues": 670,
+          "projectBoardCards": 550
+        }
+      },
+      "runnerSourceHashScope": "Not recorded",
+      "workloadIdentity": "dc1d2ef9870544920e1c22cfe8eba3ef2551a3a5984251f6c94e4c0feef16eb4",
+      "workingDiffHash": null,
+      "focusValid": false,
+      "focusProtocol": null,
+      "remoteMutationVerified": false,
+      "preparationSinceRefreshMs": null,
+      "failure": null,
+      "cleanup": [
+        {
+          "stableTabsAndOriginalDestinationsRestored": true,
+          "pageBodiesAndVersionsUnchanged": true,
+          "completeSecondaryCohortUnchanged": true,
+          "completeGlobalIssueSourceUnchanged": true,
+          "githubConnectionUnchanged": true
+        }
+      ],
+      "transportAndThread": {
+        "wholeRecordedRun": {
+          "recordedHttpStarts": 0,
+          "recordedFailedRequests": 0,
+          "localSnapshotPostStarts": 0
+        },
+        "phases": [
+          {
+            "name": "first-restored-activation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          },
+          {
+            "name": "restored-alternation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          },
+          {
+            "name": "focus-return-navigation",
+            "observations": 0,
+            "failedObservations": 0,
+            "recordedStartEnvelope": null,
+            "sampledThread": {
+              "taskDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "scriptDuration": {
+                "samples": 0,
+                "milliseconds": null
+              },
+              "uniqueReportedLongTasks": 0,
+              "reportedLongTaskDurationMs": 0
+            }
+          }
+        ],
+        "interpretation": "Request starts are from finished/failed transport records, not an exhaustive dispatch trace; unfinished requests may be absent. Phase envelopes include between-click driver work. Snapshot POST slot/payload is unobserved, so window-tab and query-cache seals are not distinguished. CDP thread deltas span each before/after probe, including driver and background work; ScriptDuration is part of TaskDuration and must not be added to it. Long tasks are deduplicated only by reported renderer origin/start/duration; unobserved intervals are not inferred."
+      },
+      "summaries": [],
+      "evidence": {
+        "path": "min-683-restored-evidence/min683-restored-after-independent-first-diagnostic-web-2.json.gz",
+        "originalRawSha256": "c85416815e8eb61a91dd88cbccf0c28430db7c71efc74feac5370e4b2a004b51",
+        "auditedJsonSha256": "40a6f9f8f4aff750e733196ba0ab5eb59b755d4f0df86dfd11c4bc41b2b301a0",
+        "gzipSha256": "e67148db24293072189b9be36c22284662bcdb2bab008e0cd92b5791691d1cb2",
+        "removedFields": [],
         "audit": "No response bodies, auth values, full fixture documents or credential-like strings; duplicate fixture paragraphs replaced by hashes"
       }
     },

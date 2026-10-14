@@ -1,5 +1,6 @@
 import "server-only";
 
+import { measureAllStartupPhase, type AllStartupTiming } from "./all-startup-timing";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -119,7 +120,8 @@ class IssueQuery implements PromiseLike<Result<ProjectedRow[]>> {
   private maximum?: number;
   private interval?: [number, number];
 
-  constructor(private readonly client: SupabaseClient, private readonly actorId: string | null) {}
+  constructor(private readonly client: SupabaseClient, private readonly actorId: string | null,
+    private readonly timing?: AllStartupTiming) {}
   select(selection = "*", options?: { count?: "exact"; head?: boolean }) {
     if (fields(selection).some((field) => [...storageFields].some((column) =>
       new RegExp(`\\b${column}\\b`).test(field)) ||
@@ -191,7 +193,8 @@ class IssueQuery implements PromiseLike<Result<ProjectedRow[]>> {
     }));
   }
   async execute(terminal?: "single" | "maybeSingle"): Promise<Result<ProjectedRow[]>> {
-    const { data, error, count, status } = terminal ? await this.query()[terminal]() : await this.query();
+    const { data, error, count, status } = await measureAllStartupPhase(this.timing, "issues_db",
+      () => terminal ? this.query()[terminal]() : this.query());
     if (error) {
       const protectedRead = fields(this.selection).some((field) => protectedFields.has(field));
       if (protectedRead) console.error("[issue-store] protected read failed", databaseFailure(error, status));
@@ -199,7 +202,8 @@ class IssueQuery implements PromiseLike<Result<ProjectedRow[]>> {
         ? { code: error.code, message: "Unable to access issue content" } : error, count };
     }
     const rows = data === null ? null : Array.isArray(data) ? data : [data];
-    return { data: rows ? await Promise.all(rows.map((row) => this.project(row as Row))) : null,
+    return { data: rows ? await measureAllStartupPhase(this.timing, "issues_decode",
+      () => Promise.all(rows.map((row) => this.project(row as Row)))) : null,
       error: null, count };
   }
   async maybeSingle(): Promise<Result<ProjectedRow>> {
@@ -216,8 +220,8 @@ class IssueQuery implements PromiseLike<Result<ProjectedRow[]>> {
   }
 }
 
-export function issueStore(client: SupabaseClient, actorId: string | null = null) {
-  return new IssueQuery(client, actorId);
+export function issueStore(client: SupabaseClient, actorId: string | null = null, timing?: AllStartupTiming) {
+  return new IssueQuery(client, actorId, timing);
 }
 
 /** Resolve issue titles only within the caller's already authorized projects. */

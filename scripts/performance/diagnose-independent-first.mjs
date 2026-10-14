@@ -35,13 +35,14 @@ const ordinaryScope = ["measure-restored-navigation.mjs", "restored-navigation-r
 const ordinaryHash = async () => fingerprint(await Promise.all(ordinaryScope.map((name) => readFile(path.join(root, "scripts/performance", name), "utf8"))));
 const sourcePath = fileURLToPath(import.meta.url);
 const targetAgeMs = 3000, maximumDispatchLatenessMs = 100;
-const result = { label, protocol: "min683-excluded-independent-first-v1", excludedFromComparison: "Independent first-click diagnosis; no ordinary latency or population percentile conclusions",
+const result = { label, protocol: "min683-excluded-independent-first-v2-prearmed-input", excludedFromComparison: "Independent first-click diagnosis; no ordinary latency or population percentile conclusions",
   timestamp: new Date().toISOString(), runtime: native ? "unpackaged Electron" : "Chromium", targetAgeMs, maximumDispatchLatenessMs,
   status: "running", cases: [], network: [], errors: [], cleanup: [], ordinaryDependencyScope: ordinaryScope,
   limitations: ["Every target has one observation in its own context/profile; no p95 is computed.",
     "A normal unclicked All launch precedes measured refresh. App-created caches survive only within that case and are never constructed by the diagnostic.",
     "Private renderer contexts do not reset database, application-server, CDN, or GitHub caches. This is a first-activation-after-refresh diagnostic, not a cold-backend benchmark.",
     "All readiness is observed independently, without waiting for DOMContentLoaded or All completion before the three-second target deadline.",
+    "Passive instrumentation and any tab-strip scroll are prepared near age2800ms; thread deltas include that driver interval before the trusted click.",
     "Dispatch age and lateness are reported literally. Missing/disabled/covered or over-deadline targets are unavailable, never silently clicked later.",
     "Two animation frames are a paint opportunity, not hardware presentation. Probes add work; these data are excluded from ordinary comparisons.",
     "The file lock coordinates this diagnostic's native/web invocations; the operator must also reserve sole UI ownership across other tools."] };
@@ -188,6 +189,35 @@ async function runCase(spec) {
     await page.reload({ waitUntil: "commit" });
     await page.waitForFunction(() => !!window.__independent);
     row.viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, scale: devicePixelRatio }));
+    // Prepare the passive measurement before the deadline, without activation,
+    // hover, or waiting for All. Thread deltas include this early driver baseline.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, Math.max(0, 2800 - performance.now()))));
+    row.passiveSetup = await page.evaluate((id) => {
+      document.querySelector(`[data-app-tab-id="${id}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
+      return { ageMs: performance.now(), timeOrigin: performance.timeOrigin };
+    }, spec.id);
+    await frames(page);
+    const beforeMetrics = await metrics();
+    await page.evaluate((spec) => {
+      window.__restored.sample = null;
+      document.addEventListener("pointerdown", (event) => {
+        if (!event.isTrusted) return;
+        window.__independent.stopAll = true;
+        const sample = window.__restored.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, contentMs: null, paintMs: null,
+          loadingFrames: 0, status: "waiting", trusted: event.isTrusted, actualPointerTabId: event.target.closest('[data-app-tab-id]')?.getAttribute('data-app-tab-id') ?? null };
+        if (sample.actualPointerTabId !== spec.id) { sample.status = "misdirected-input"; return; }
+        const observe = () => {
+          if (window.__restored.sample !== sample || sample.stopped) return;
+          const visible = (node) => node.getClientRects().length && !node.closest('[inert], [aria-hidden="true"]') && getComputedStyle(node).visibility !== "hidden";
+          if ([...document.querySelectorAll(window.__restored.loadingSelector)].some(visible)) sample.loadingFrames++;
+          if (!window.__restored.ready(spec)) { requestAnimationFrame(observe); return; }
+          sample.contentMs = performance.now() - sample.start;
+          requestAnimationFrame(() => requestAnimationFrame(() => { sample.paintMs = performance.now() - sample.start; sample.status = "complete"; }));
+        };
+        requestAnimationFrame(observe);
+      }, { capture: true, once: true });
+    }, spec);
+    row.threadBaselineAgeMs = await page.evaluate(() => performance.now());
     for (;;) {
       const age = await page.evaluate(() => performance.now());
       if (age >= targetAgeMs) break;
@@ -216,7 +246,6 @@ async function runCase(spec) {
       row.status = backoff ? "blocked-by-http-backoff" : "unavailable-at-deadline"; return;
     }
     const locator = page.locator(`[data-app-tab-id="${spec.id}"]`);
-    await locator.scrollIntoViewIfNeeded(); await frames(page);
     const box = await locator.boundingBox();
     assert.ok(box, "A measured target must have a visible rectangle");
     const point = { x: box.x + box.width / 2, y: box.y + Math.min(box.height / 2, 25) };
@@ -229,26 +258,6 @@ async function runCase(spec) {
     if (!row.beforeDispatch.expectedContainsHit || row.beforeDispatch.disabled || row.beforeDispatch.ageMs - targetAgeMs > maximumDispatchLatenessMs) {
       row.status = "unavailable-or-late-dispatch"; return;
     }
-    const beforeMetrics = await metrics();
-    await page.evaluate((spec) => {
-      window.__restored.sample = null;
-      document.addEventListener("pointerdown", (event) => {
-        if (!event.isTrusted) return;
-        window.__independent.stopAll = true;
-        const sample = window.__restored.sample = { start: performance.now(), timeOrigin: performance.timeOrigin, contentMs: null, paintMs: null,
-          loadingFrames: 0, status: "waiting", trusted: event.isTrusted, actualPointerTabId: event.target.closest('[data-app-tab-id]')?.getAttribute('data-app-tab-id') ?? null };
-        if (sample.actualPointerTabId !== spec.id) { sample.status = "misdirected-input"; return; }
-        const observe = () => {
-          if (window.__restored.sample !== sample || sample.stopped) return;
-          const visible = (node) => node.getClientRects().length && !node.closest('[inert], [aria-hidden="true"]') && getComputedStyle(node).visibility !== "hidden";
-          if ([...document.querySelectorAll(window.__restored.loadingSelector)].some(visible)) sample.loadingFrames++;
-          if (!window.__restored.ready(spec)) { requestAnimationFrame(observe); return; }
-          sample.contentMs = performance.now() - sample.start;
-          requestAnimationFrame(() => requestAnimationFrame(() => { sample.paintMs = performance.now() - sample.start; sample.status = "complete"; }));
-        };
-        requestAnimationFrame(observe);
-      }, { capture: true, once: true });
-    }, spec);
     const dispatchAge = await page.evaluate(() => performance.now());
     row.driverDispatchAgeMs = dispatchAge; row.driverDispatchLatenessMs = dispatchAge - targetAgeMs;
     if (backoff) { row.status = "blocked-by-http-backoff"; return; }

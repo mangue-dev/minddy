@@ -1,3 +1,4 @@
+import { createAllStartupTiming, measureAllStartupPhase } from "@/lib/server/all-startup-timing";
 import { loadGlobalBoardIssues } from "@/lib/server/global-board-issues";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
@@ -38,7 +39,8 @@ const PAST_CYCLES_SHOWN = 8;
  * lib/server/cycles.ts) using `?tz=` to resolve the user's calendar day.
  */
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  const timing = createAllStartupTiming(request);
+  const auth = await measureAllStartupPhase(timing, "auth", () => getAuthedUser(request));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
   const service = getServiceClient();
@@ -50,12 +52,12 @@ export async function GET(request: NextRequest) {
   );
   let cycles: BoardCycles = { enabled: false, current: null, upcoming: [], past: [] };
   if (prefs.enabled) {
-    const ensured = await ensureCycles({
+    const ensured = await measureAllStartupPhase(timing, "cycles", () => ensureCycles({
       service,
       userId: auth.user.id,
       prefs,
       today: todayInTz(request.nextUrl.searchParams.get("tz")),
-    });
+    }));
     cycles = {
       enabled: true,
       current: ensured.current ? toCycleInfo(ensured.current) : null,
@@ -66,16 +68,16 @@ export async function GET(request: NextRequest) {
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
     await Promise.all([
-      loadGlobalBoardIssues(auth.supabase, auth.user.id),
-      auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
-      categoryStore(auth.supabase, auth.user.id).select("*"),
-      objectiveStore(auth.supabase).select("*"),
+      measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(auth.supabase, auth.user.id, timing)),
+      measureAllStartupPhase(timing, "projects", () => auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null)),
+      measureAllStartupPhase(timing, "categories", () => categoryStore(auth.supabase, auth.user.id).select("*")),
+      measureAllStartupPhase(timing, "objectives", () => objectiveStore(auth.supabase).select("*")),
       // ALL relation types: `blocks` feeds the cycle reco ordering, and the
       // full set powers the cards' relation chips + the side panel (RLS scopes
       // the rows to my projects).
-      auth.supabase
+      measureAllStartupPhase(timing, "relations", () => auth.supabase
         .from("issue_relations")
-        .select("id, source_id, target_id, type, source_type, target_type"),
+        .select("id, source_id, target_id, type, source_type, target_type")),
     ]);
 
   const firstError =
@@ -116,27 +118,29 @@ export async function GET(request: NextRequest) {
   // depend on member or avatar resolution. Start both branches together.
   const projectIds = projectRows.map((project) => project.id);
   const [{ members }, { data: integrationRows }] = await Promise.all([
-    buildMembersByProject(service, projectRows),
-    projectIds.length
+    measureAllStartupPhase(timing, "members", () => buildMembersByProject(service, projectRows, timing)),
+    measureAllStartupPhase<{ data: IntegrationRef[] | null }>(timing, "integrations", () => projectIds.length
       ? service
           .from("integrations")
           .select("id, name, project_id, kind, revoked_at")
           .in("project_id", projectIds)
           .order("id", { ascending: true })
-      : Promise.resolve({ data: [] as IntegrationRef[] }),
+      : Promise.resolve({ data: [] as IntegrationRef[] })),
   ]);
 
   const integrations: Record<string, IntegrationRef[]> = {};
-  for (const row of (integrationRows ?? []) as IntegrationRef[]) {
-    (integrations[row.project_id] ??= []).push({...row,
-      name:(await decodeIntegrationField(row,"name",row.name))!});
-  }
+  await measureAllStartupPhase(timing, "integrations_decode", async () => {
+    for (const row of (integrationRows ?? []) as IntegrationRef[]) {
+      (integrations[row.project_id] ??= []).push({...row,
+        name:(await decodeIntegrationField(row,"name",row.name))!});
+    }
+  });
   for(const rows of Object.values(integrations))
     rows.sort((a,b)=>a.name.localeCompare(b.name));
 
   const relations = (relationsRes.data ?? []) as IssueRelation[];
 
-  return NextResponse.json({
+  const serialize = () => NextResponse.json({
     issues,
     members,
     categories,
@@ -145,4 +149,6 @@ export async function GET(request: NextRequest) {
     relations,
     cycles,
   });
+  const response = timing ? timing.sync("json", serialize) : serialize();
+  return timing ? timing.decorate(response) : response;
 }

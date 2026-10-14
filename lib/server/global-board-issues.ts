@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AllStartupTiming } from "./all-startup-timing";
 import { ISSUE_SELECT } from "./issue-mapper";
 import { issueStore } from "./issue-store";
 
@@ -17,7 +18,7 @@ function compareNumber(a: number | null, b: number | null): number {
 }
 
 /** Load every RLS-visible issue through the ordinary protected projection. */
-export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: string): Promise<Result> {
+export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: string, timing?: AllStartupTiming): Promise<Result> {
   const rows: Row[] = [];
   const ids = new Set<string>();
   let cursor: string | null = null;
@@ -25,7 +26,7 @@ export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: str
     for (;;) {
       // UUID order stays stable when a concurrent edit moves a card. The board's
       // position/number order is restored only after every batch succeeds.
-      let query = issueStore(client, actorId).select(ISSUE_SELECT, { count: "exact" })
+      let query = issueStore(client, actorId, timing).select(ISSUE_SELECT, { count: "exact" })
         .order("id", { ascending: true }).limit(BATCH_SIZE);
       if (cursor) query = query.gt("id", cursor);
       const result = await query;

@@ -1,4 +1,5 @@
 import "server-only";
+import { measureAllStartupPhase, type AllStartupTiming } from "./all-startup-timing";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "./auth-users";
 import { fetchAvatarSeeds } from "./avatar-seeds";
@@ -40,25 +41,26 @@ export async function loadMembersByProject(
  */
 export async function buildMembersByProject(
   service: SupabaseClient,
-  projectRows: { id: string; owner_id: string }[]
+  projectRows: { id: string; owner_id: string }[],
+  timing?: AllStartupTiming,
 ): Promise<{ members: Record<string, Member[]>; projectIds: string[] }> {
   const projectIds = projectRows.map((p) => p.id);
 
-  const { data: memberRows } = projectIds.length
-    ? await service
+  const { data: memberRows } = await measureAllStartupPhase<{ data: { project_id: string; user_id: string }[] | null }>(timing, "members_db", () => projectIds.length
+    ? service
         .from("project_members")
         .select("project_id, user_id, role")
         .in("project_id", projectIds)
         .order("created_at", { ascending: true })
-    : { data: [] as { project_id: string; user_id: string }[] };
+    : { data: [] as { project_id: string; user_id: string }[] });
 
   const ids = [
     ...projectRows.map((p) => p.owner_id),
     ...(memberRows ?? []).map((m) => m.user_id as string),
   ];
   const [usersById, seeds] = await Promise.all([
-    fetchAuthUsersById(service, ids),
-    fetchAvatarSeeds(service, ids),
+    measureAllStartupPhase(timing, "members_identity", () => fetchAuthUsersById(service, ids)),
+    measureAllStartupPhase(timing, "members_avatar", () => fetchAvatarSeeds(service, ids)),
   ]);
 
   const members: Record<string, Member[]> = {};
