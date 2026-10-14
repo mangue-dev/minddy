@@ -75,8 +75,18 @@ export function createPrTabPreparation(
   let cancel: (() => void) | undefined;
   type Read = { key: readonly unknown[]; identity: string; cancelled: boolean; forge: boolean };
   const preparing = new Map<string, Read>();
-  type BootstrapPair = { transport: ReturnType<typeof createProjectBootstrapPair>; pending: Set<string> };
+  type BootstrapReader = { key: readonly unknown[]; original: PreparedQuery["options"]["queryFn"]; installed: PreparedQuery["options"]["queryFn"] };
+  type BootstrapPair = { transport: ReturnType<typeof createProjectBootstrapPair>; pending: Set<string>; readers: Map<string, BootstrapReader> };
   const bootstrapPairs = new Set<BootstrapPair>();
+  const restoreBootstrapReader = (pair: BootstrapPair, identity: string) => {
+    const reader = pair.readers.get(identity);
+    if (!reader) return;
+    pair.readers.delete(identity);
+    const query = client.getQueryCache().find({ queryKey: reader.key, exact: true });
+    // A foreground observer may already have installed newer ordinary options.
+    // Restore only the exact temporary function this preparation operation owns.
+    if (query && query.options.queryFn === reader.installed) query.setOptions({ ...query.options, queryFn: reader.original });
+  };
   const activeQueryHashes = new Set<string>();
   const priority = navigationPreparationPriority(client);
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
@@ -235,11 +245,21 @@ export function createPrTabPreparation(
                 return (!state || state.fetchStatus === "idle") && (state?.data === undefined || state.isInvalidated);
               })) {
             const transport = createProjectBootstrapPair(client, options.queryKey[1]);
-            const pair: BootstrapPair = { transport, pending: new Set([identity, next.identity]) };
+            // Restore before TanStack publishes success/error, whose cache
+            // listeners may synchronously refetch this now-settled query.
+            let pair!: BootstrapPair;
+            const memberFn: PreparedQuery["options"]["queryFn"] = ({ signal }) => transport.members({ signal })
+              .finally(() => restoreBootstrapReader(pair, identity));
+            const objectiveFn: PreparedQuery["options"]["queryFn"] = ({ signal }) => transport.objectives({ signal })
+              .finally(() => restoreBootstrapReader(pair, next.identity));
+            pair = { transport, pending: new Set([identity, next.identity]), readers: new Map([
+              [identity, { key: options.queryKey, original: options.queryFn, installed: memberFn }],
+              [next.identity, { key: next.options.queryKey, original: next.options.queryFn, installed: objectiveFn }],
+            ]) };
             bootstrapPairs.add(pair);
-            options = { ...options, queryFn: ({ signal }) => transport.members({ signal }) };
+            options = { ...options, queryFn: memberFn };
             pairedReads.set(identity, { options, pair });
-            pairedReads.set(next.identity, { options: { ...next.options, queryFn: ({ signal }) => transport.objectives({ signal }) }, pair });
+            pairedReads.set(next.identity, { options: { ...next.options, queryFn: objectiveFn }, pair });
           }
         }
         const detail = options.queryKey[0] === "pull-request";
@@ -280,6 +300,7 @@ export function createPrTabPreparation(
         void pending.finally(() => {
           const pair = pairedReads.get(identity)?.pair;
           if (pair) {
+            restoreBootstrapReader(pair, identity);
             pair.pending.delete(identity);
             if (!pair.pending.size && bootstrapPairs.delete(pair)) pair.transport.dispose();
           }
@@ -401,7 +422,10 @@ export function createPrTabPreparation(
       selectionSources.clear();
       pendingInsertSources.clear();
       pagePreparation.dispose();
-      for (const pair of bootstrapPairs) pair.transport.dispose();
+      for (const pair of bootstrapPairs) {
+        for (const identity of Array.from(pair.readers.keys())) restoreBootstrapReader(pair, identity);
+        pair.transport.dispose();
+      }
       bootstrapPairs.clear();
       workingSet.dispose();
       priority.release();

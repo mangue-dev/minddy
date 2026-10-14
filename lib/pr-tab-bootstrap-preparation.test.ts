@@ -1,4 +1,4 @@
-import { QueryClient, type FetchQueryOptions } from "@tanstack/react-query";
+import { QueryClient, QueryObserver, type FetchQueryOptions } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { createProjectBootstrapPair } from "./project-bootstrap-api";
@@ -123,5 +123,81 @@ describe("admitted project bootstrap preparation", () => {
     expect(prepared.transport.dispose).toHaveBeenCalledOnce();
     await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
     prepared.client.clear();
+  });
+
+  it("restores ordinary inactive refetch readers after a completed one-shot pair", async () => {
+    const prepared = setup();
+    try {
+      prepared.flush();
+      prepared.members.resolve({ members: [] }); prepared.objectives.resolve([]);
+      await vi.waitFor(() => expect(prepared.transport.dispose).toHaveBeenCalledOnce());
+      await prepared.client.refetchQueries({ queryKey: ["members", "project"], exact: true });
+      await prepared.client.refetchQueries({ queryKey: ["objectives", "project"], exact: true });
+      expect(prepared.ordinaryMembers).toHaveBeenCalledOnce();
+      expect(prepared.ordinaryObjectives).toHaveBeenCalledOnce();
+      expect(prepared.transport.members).toHaveBeenCalledOnce();
+      expect(prepared.transport.objectives).toHaveBeenCalledOnce();
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("restores an old client's ordinary readers when its preparation owner retires", async () => {
+    const prepared = setup();
+    // Inactive refetch intentionally skips canceled initial reads that have
+    // never settled. Use real invalidated cache entries eligible for refetch.
+    prepared.client.setQueryData(["members", "project"], { members: [] });
+    prepared.client.setQueryData(["objectives", "project"], []);
+    await prepared.client.invalidateQueries({ queryKey: ["members", "project"], exact: true, refetchType: "none" });
+    await prepared.client.invalidateQueries({ queryKey: ["objectives", "project"], exact: true, refetchType: "none" });
+    prepared.flush();
+    expect(prepared.transport.members).toHaveBeenCalledOnce();
+    expect(prepared.transport.objectives).toHaveBeenCalledOnce();
+    prepared.preparation.dispose();
+    await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
+    try {
+      await prepared.client.refetchQueries({ queryKey: ["members", "project"], exact: true });
+      await prepared.client.refetchQueries({ queryKey: ["objectives", "project"], exact: true });
+      expect(prepared.ordinaryMembers).toHaveBeenCalledOnce();
+      expect(prepared.ordinaryObjectives).toHaveBeenCalledOnce();
+      expect(prepared.transport.members).toHaveBeenCalledOnce();
+      expect(prepared.transport.objectives).toHaveBeenCalledOnce();
+    } finally { prepared.client.clear(); }
+  });
+
+  it("preserves a foreground observer's newer reader when the pair settles", async () => {
+    const prepared = setup();
+    const foreground = vi.fn(async () => ({ members: [], source: "foreground" }));
+    try {
+      prepared.flush();
+      const observer = new QueryObserver(prepared.client, { queryKey: ["members", "project"], queryFn: foreground });
+      prepared.members.resolve({ members: [] }); prepared.objectives.resolve([]);
+      await vi.waitFor(() => expect(prepared.transport.dispose).toHaveBeenCalledOnce());
+      expect(prepared.client.getQueryCache().find({ queryKey: ["members", "project"], exact: true })?.options.queryFn).toBe(foreground);
+      await prepared.client.refetchQueries({ queryKey: ["members", "project"], exact: true });
+      expect(foreground).toHaveBeenCalledOnce();
+      expect(prepared.ordinaryMembers).not.toHaveBeenCalled();
+      observer.destroy();
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("restores the ordinary reader before a synchronous success listener refetches it", async () => {
+    const prepared = setup();
+    let refetch: Promise<void> | undefined;
+    const stop = prepared.client.getQueryCache().subscribe((event) => {
+      if (event.type !== "updated" || event.action.type !== "success" || event.action.manual ||
+          event.query.queryKey[0] !== "objectives" || refetch) return;
+      // Mark reentry before Query.fetch can notify its own cache listeners.
+      refetch = Promise.resolve();
+      refetch = prepared.client.refetchQueries({ queryKey: ["objectives", "project"], exact: true });
+    });
+    try {
+      prepared.flush();
+      prepared.objectives.resolve([]);
+      await vi.waitFor(() => expect(prepared.ordinaryObjectives).toHaveBeenCalledOnce());
+      await refetch;
+      expect(prepared.transport.objectives).toHaveBeenCalledOnce();
+      expect(prepared.transport.dispose).not.toHaveBeenCalled();
+      prepared.members.resolve({ members: [] });
+      await vi.waitFor(() => expect(prepared.transport.dispose).toHaveBeenCalledOnce());
+    } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 });

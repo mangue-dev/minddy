@@ -42,6 +42,14 @@ after both exact operations settle or when that lifetime retires. It introduces
 no intentional waiting window to manufacture a shared request. The focused
 integration suite checks admission, independent settlement, original order,
 project isolation and disposal; root runs it outside timed measurements.
+Each settled read restores its ordinary cached query function before the
+one-shot transport retires. Restoration compares function identity and keeps
+newer foreground observer options. Four additional real QueryClient cases
+cover inactive refetch after completion, old-client refetch after retirement
+of invalidated cached entries, foreground options takeover and a synchronous
+success-listener refetch. Restoration runs before query-function settlement
+reaches TanStack's cache notifications. Without this restoration, later invalidation
+could reuse a disposed one-shot function stored in TanStack query options.
 
 `lib/client-read.ts` buffers the complete body before checking the account and
 returning a reconstructed response. It cannot deliver independent frames.
