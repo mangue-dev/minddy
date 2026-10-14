@@ -7,7 +7,7 @@ import { prCommentsQueryOptions, prCommitsQueryOptions, prReviewCommentsQueryOpt
 
 import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { assertPullRequestReadBudget, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
+import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 import {
   fetchAgentRunApi,
@@ -198,6 +198,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
 }
 
 export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
+  const client = useQueryClient();
   const sortedPrIds = [...new Set(prIds)].sort();
   const enabled = sortedPrIds.length > 0;
   const { data, isPending, isError } = useQuery({
@@ -206,11 +207,13 @@ export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
     retry: pullRequestReadRetry,
     enabled,
     refetchOnMount: "always",
-    refetchInterval: (query) =>
-      pullRequestReadinessBatchRefetchInterval(
+    refetchInterval: (query) => {
+      const delay = Math.max(pullRequestReadRetryAt(query.state), pullRequestAccountRetryAt(client)) - Date.now();
+      return delay > 0 ? delay : pullRequestReadinessBatchRefetchInterval(
         query.state.data,
         query.state.status === "error",
-      ),
+      );
+    },
   });
   return {
     readinessByPrId: data?.readiness ?? {},

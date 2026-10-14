@@ -58,6 +58,13 @@ export class ApiError extends Error {
   }
 }
 
+function retryAfterDeadline(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  const deadline = Number.isFinite(seconds) ? Date.now() + Math.max(0, seconds) * 1000 : Date.parse(value);
+  return Number.isFinite(deadline) ? deadline : undefined;
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
   let data: unknown = null;
@@ -75,12 +82,7 @@ async function parseJson<T>(response: Response): Promise<T> {
     const message = payload?.error || text.trim() || "Request failed";
     const error = new ApiError(message, payload?.code, payload?.modelLimit);
     error.status = response.status;
-    const retryAfter = response.headers.get("retry-after");
-    if (retryAfter) {
-      const seconds = Number(retryAfter);
-      const retryAt = Number.isFinite(seconds) ? Date.now() + Math.max(0, seconds) * 1000 : Date.parse(retryAfter);
-      if (Number.isFinite(retryAt)) error.retryAt = retryAt;
-    }
+    error.retryAt = retryAfterDeadline(response.headers.get("retry-after"));
     throw error;
   }
   return data as T;
@@ -603,6 +605,9 @@ export interface PullRequestReadinessResponse {
 export interface PullRequestReadinessBatchResponse {
   readiness: Record<string, PullRequestReadiness>;
   unavailablePrIds: string[];
+  retryStatus?: 403 | 429;
+  /** Client-anchored transport deadline, never content freshness or write authority. */
+  retryAt?: number;
 }
 
 export async function fetchPullRequestReadinessApi(
@@ -616,7 +621,11 @@ export async function fetchPullRequestReadinessBatchApi(
 ): Promise<PullRequestReadinessBatchResponse> {
   const params = new URLSearchParams();
   for (const prId of prIds) params.append("pr", prId);
-  return parseJson(await fetchClientRead(`/api/pull-requests/readiness?${params}`));
+  const response = await fetchClientRead(`/api/pull-requests/readiness?${params}`);
+  const data = await parseJson<PullRequestReadinessBatchResponse>(response);
+  return data.retryStatus === 403 || data.retryStatus === 429
+    ? { ...data, retryAt: retryAfterDeadline(response.headers.get("retry-after")) ?? Date.now() + 60_000 }
+    : data;
 }
 
 /**
