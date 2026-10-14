@@ -121,7 +121,8 @@ export function ModelCombobox({
   capability?: ModelCatalogCapability;
 }) {
   const { provider, models, maxMultiplier, planId, recommended, loading } =
-    useAgentModelsQuery(scope, capability);
+    // The admin platform catalog is that page's content; composer pickers wait for startup.
+    useAgentModelsQuery(scope, capability, { deferUntilStartup: scope !== "platform" });
   const locale = useLocale();
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);

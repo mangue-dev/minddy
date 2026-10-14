@@ -82,7 +82,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   // the Agents/Numo tab. They sit ON the tab icon's top-right corner, drawn
   // plain — no pill, no ring — as if laid directly over the icon.
   const openPrCount = useOpenPullRequestCountQuery();
-  const { agentsAllowed } = usePlanGates();
+  const { agentsAllowed } = usePlanGates({ deferUntilStartup: true });
   const { sessions: agentSessions } = useAgentSessionsQuery();
   const { reads: agentReads } = useAgentReads();
   const anyAgentWorking = agentSessions.some((sessionItem) => sessionItem.working);

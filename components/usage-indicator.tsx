@@ -52,7 +52,7 @@ export function UsageIndicator({
     remainingPercent,
     state,
     usage,
-  } = useBillingSummary();
+  } = useBillingSummary({ deferUntilStartup: true });
   const [open, setOpen] = useState(false);
   const sidebar = variant === "sidebar";
   const handleOpenChange = (nextOpen: boolean) => {
@@ -139,7 +139,7 @@ export function UsageBreakdownBody({ compact = false }: { compact?: boolean }) {
  */
 function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations("Billing");
-  const { status, planId } = useBillingSummary();
+  const { status, planId } = useBillingSummary({ deferUntilStartup: true });
   const [redirecting, setRedirecting] = useState(false);
 
   const nextPlanId: BillingPlanId | null =

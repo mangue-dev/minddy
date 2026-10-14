@@ -56,7 +56,7 @@ export function useCreateActions(): CreateAction[] {
     warmCreateObjective,
     canCreate,
   } = useCreate();
-  const { projectLimitReached } = usePlanGates();
+  const { projectLimitReached } = usePlanGates({ deferUntilStartup: true });
 
   return [
     {

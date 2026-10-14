@@ -282,7 +282,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tBilling = useTranslations("Billing");
   const tProjects = useTranslations("Projects");
   const tPages = useTranslations("Pages");
-  const { agentsAllowed, projectLimitReached } = usePlanGates();
+  const { agentsAllowed, projectLimitReached } = usePlanGates({ deferUntilStartup: true });
   const pathname = usePathname();
   const appTabs = useOptionalAppTabNavigation();
   const activeAppTabId = appTabs?.activeId;

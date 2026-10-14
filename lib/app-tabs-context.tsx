@@ -19,6 +19,7 @@ import { SessionContext, useOptionalAppTabSession } from "./app-tab-session-cont
 import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
 import { createWindowSelectionPersistence } from "./window-selection-persistence";
 import { createRestoredTabStartupAdmission } from "./restored-tab-startup-admission";
+import { openStartupReads } from "./startup-read-admission";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -38,7 +39,7 @@ const noSubscription = () => () => {};
 type QueryState = { session: AppTabsSession; loading: boolean; loadError: boolean; reload: () => void };
 
 export function AppTabsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const mobile = useMobileLayout();
   const client = useQueryClient();
   const router = useRouter();
@@ -71,6 +72,11 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [user?.id, startNavigation]);
+  useEffect(() => {
+    // Only the desktop tab session holds auxiliary startup reads; a signed-out
+    // or mobile layout has no restoration to wait for.
+    if (!authLoading && (!user || mobile === true)) openStartupReads(client);
+  }, [authLoading, user, mobile, client]);
   useEffect(() => {
     if (!user) { previous.current = null; return; }
     if (mobile === undefined) return;

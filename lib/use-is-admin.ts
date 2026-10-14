@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useStartupReadsAdmitted } from "./startup-read-admission";
 import { useAuth } from "./auth-context";
 
 /**
@@ -11,10 +12,11 @@ import { useAuth } from "./auth-context";
  */
 export function useIsAdmin(): boolean {
   const { user } = useAuth();
+  const admitted = useStartupReadsAdmitted();
 
   const { data } = useQuery({
     queryKey: ["is-admin", user?.id ?? null],
-    enabled: !!user,
+    enabled: !!user && admitted,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<{ isAdmin: boolean }> => {
       const res = await fetch("/api/me/admin");

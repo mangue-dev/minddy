@@ -9,6 +9,7 @@ import { appTabsStorageKey } from "@/lib/app-tabs-storage";
 import { invalidateLocalSnapshotWrites } from "@/lib/local-snapshots";
 import { navigationPreparationPending, navigationPreparationPriority, subscribeNavigationPreparation } from "@/lib/navigation-preparation-priority";
 import { scheduleSearchIndexArm } from "@/lib/use-search-index";
+import { startupReadsAdmitted } from "@/lib/startup-read-admission";
 
 const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null, sdkOwner: "owner" }));
 const viewport = vi.hoisted(() => ({ mobile: false as boolean | undefined }));
@@ -211,5 +212,28 @@ describe("mounted restored-tab startup admission", () => {
     expect(navigationPreparationPending(client)).toBe(true);
     expect(visit).not.toHaveBeenCalled();
     oldClient.clear();
+  });
+});
+
+describe("auxiliary startup reads", () => {
+  it("stay held until restoration chooses the active tab", async () => {
+    await render();
+    expect(startupReadsAdmitted(client)).toBe(false);
+    reads[0].finish(rows()); await settle();
+    expect(value?.activeId).toBe(firstId);
+    expect(startupReadsAdmitted(client)).toBe(true);
+  });
+
+  it("are admitted when the canonical tab list fails", async () => {
+    await render();
+    reads[0].finish({ code: "database" }, 500); await settle();
+    expect(startupReadsAdmitted(client)).toBe(true);
+  });
+
+  it("are admitted at once on a mobile layout, which restores no tab", async () => {
+    viewport.mobile = true;
+    await render();
+    expect(reads).toHaveLength(0);
+    expect(startupReadsAdmitted(client)).toBe(true);
   });
 });

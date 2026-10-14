@@ -30,7 +30,7 @@ export function useDesktopNotifications(): void {
   const { notifications, unreadCount, initialized } = useNotifications();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { capabilities: pushCapabilities } = usePushDevicesQuery();
+  const { capabilities: pushCapabilities } = usePushDevicesQuery({ deferUntilStartup: true });
   const t = useTranslations("Inbox");
   const tIssue = useTranslations("Issue");
   const tTimeline = useTranslations("Timeline");

@@ -534,7 +534,7 @@ function AccountButton({
   const { user, signOut } = useAuth();
   const { capabilities } = useRuntimeConfig();
   const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
-  const { status } = useBillingSummary();
+  const { status } = useBillingSummary({ deferUntilStartup: true });
   const mobileIdentity = useMobileAccountIdentity();
   const tBilling = useTranslations("Billing");
   const planLabels: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = { free: "planFree", go: "planGo", pro: "planPro" };

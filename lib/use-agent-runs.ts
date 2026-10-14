@@ -6,6 +6,7 @@ import { cachedPullRequestListForPin } from "./pull-request-list-cache";
 import { prCommentsQueryOptions, prCommitsQueryOptions, prReviewCommentsQueryOptions } from "./pr-activity-query";
 
 import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useStartupReadsAdmitted } from "./startup-read-admission";
 import { useEffect, useMemo, useRef } from "react";
 import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
@@ -477,9 +478,11 @@ export const openPullRequestCountQueryKey = ["pull-requests", "open-count"] as c
  *   timer is what retires the old rule “go to the PR page to sync”.
  */
 export function useOpenPullRequestCountQuery() {
+  const admitted = useStartupReadsAdmitted();
   const { data } = useQuery({
     queryKey: openPullRequestCountQueryKey,
     queryFn: fetchOpenPullRequestCountApi,
+    enabled: admitted,
     refetchOnMount: "always",
     refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });

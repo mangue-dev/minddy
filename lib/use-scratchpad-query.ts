@@ -8,6 +8,7 @@ import {
   type MutableRefObject,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useStartupReadsAdmitted } from "./startup-read-admission";
 import { planProgress, type PlanProgress } from "@/lib/plan";
 import { mergeScratchpad } from "@/lib/scratchpad";
 
@@ -97,9 +98,11 @@ export function useScratchpadProgress(): PlanProgress {
  * read. The GET is the same as the badge — a single request for both, and the real-time bridge refreshes them together.
  */
 export function useScratchpadSummary(): { content: string; progress: PlanProgress } {
+  const admitted = useStartupReadsAdmitted();
   const { data } = useQuery({
     queryKey: SCRATCHPAD_KEY,
     queryFn: fetchScratchpad,
+    enabled: admitted,
     staleTime: 60_000,
   });
   return {

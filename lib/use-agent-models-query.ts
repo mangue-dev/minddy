@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useStartupReadsAdmitted } from "./startup-read-admission";
 import { DEFAULT_AGENT_PROVIDER, type AgentProviderId } from "@/lib/agent-providers";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import {
@@ -160,11 +161,16 @@ export async function fetchAgentModels(
     : catalog;
 }
 
+/** Chrome callers defer until startup restoration; page content reads at once. */
+type StartupDeferral = { deferUntilStartup?: boolean };
 export function useAgentModelsQuery(
   scope: AgentModelsScope = "user",
   capability: ModelCatalogCapability = "text",
+  { deferUntilStartup = false }: StartupDeferral = {},
 ) {
+  const admitted = useStartupReadsAdmitted();
   const { data, isPending } = useQuery({
+    enabled: !deferUntilStartup || admitted,
     // One scope = one catalog: the two should never share a cache.
     queryKey:
       scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope, capability],
