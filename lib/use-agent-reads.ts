@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useStartupReadsAdmitted } from "./startup-read-admission";
 import { useAuth } from "./auth-context";
 import { fetchAgentReadsApi, markAgentSessionReadApi } from "./agent-api";
 
@@ -25,12 +24,11 @@ export function useAgentReads() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const admitted = useStartupReadsAdmitted();
 
   const { data } = useQuery({
     queryKey: AGENT_READS_KEY,
     queryFn: fetchAgentReadsApi,
-    enabled: !!userId && admitted,
+    enabled: !!userId,
   });
 
   const reads = useMemo(() => data?.reads ?? {}, [data]);

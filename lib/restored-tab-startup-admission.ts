@@ -1,6 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { navigationPreparationPriority } from "@/lib/navigation-preparation-priority";
-import { openStartupReads } from "@/lib/startup-read-admission";
 
 /**
  * Hold optional work while this exact account/session resolves its existing
@@ -31,13 +30,12 @@ export function createRestoredTabStartupAdmission(client: QueryClient) {
       // The finite worker acquires its own priority before optional listeners
       // can observe release. Later visits still run after startup is finished.
       try { prepare(); }
-      finally { finished = true; priority.release(); openStartupReads(client); }
+      finally { finished = true; priority.release(); }
     },
     fail() {
       if (!mounted || finished) return;
       finished = true;
       priority.release();
-      openStartupReads(client);
     },
   };
 }

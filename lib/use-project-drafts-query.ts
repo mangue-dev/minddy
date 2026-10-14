@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useStartupReadsAdmitted } from "./startup-read-admission";
 import { useAuth } from "./auth-context";
 import {
   deleteProjectDraftApi,
@@ -30,12 +29,11 @@ export interface UseProjectDraftsResult {
 export function useProjectDrafts(): UseProjectDraftsResult {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const admitted = useStartupReadsAdmitted();
 
   const { data } = useQuery({
     queryKey: DRAFTS_KEY,
     queryFn: fetchProjectDraftsApi,
-    enabled: !!user?.id && admitted,
+    enabled: !!user?.id,
   });
 
   const saveDraft = useCallback(

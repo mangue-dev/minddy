@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useStartupReadsAdmitted } from "./startup-read-admission";
 import type { BranchCleanupTarget } from "./types";
 
 /**
@@ -20,10 +19,8 @@ async function fetchTargets(): Promise<BranchCleanupTarget[]> {
 }
 
 export function useBranchCleanupTargets(): BranchCleanupTarget[] {
-  const admitted = useStartupReadsAdmitted();
   const { data } = useQuery({
     queryKey: branchCleanupTargetsQueryKey,
-    enabled: admitted,
     queryFn: fetchTargets,
     // The list only moves when linking a repository or launching a first agent:
     // one reading per hour is more than enough, the persistent cache does the rest.

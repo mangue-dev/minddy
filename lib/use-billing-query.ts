@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useStartupReadsAdmitted } from "./startup-read-admission";
 import {
   fetchBillingStatusApi,
   fetchBillingUsageApi,
@@ -34,21 +33,15 @@ export type UsageState = "normal" | "warning" | "low" | "exhausted";
  * Shared billing state for the page and usage popover: plan, included budget,
  * consumption, remaining percentage, alert state, and segment breakdown.
  */
-/** Chrome callers defer until startup restoration; page content reads at once. */
-type StartupDeferral = { deferUntilStartup?: boolean };
-export function useBillingSummary({ deferUntilStartup = false }: StartupDeferral = {}) {
-  const admitted = useStartupReadsAdmitted();
-  const enabled = !deferUntilStartup || admitted;
+export function useBillingSummary() {
   const status = useQuery({
     queryKey: billingStatusQueryKey,
     queryFn: fetchBillingStatusApi,
-    enabled,
     staleTime: 60_000,
   });
   const usage = useQuery({
     queryKey: billingUsageQueryKey,
     queryFn: fetchBillingUsageApi,
-    enabled,
     staleTime: 60_000,
     // The ledger is written per generation while a Numo turn or a code worker
     // runs (one row per LLM round), so a client that never refetches shows a
@@ -112,8 +105,8 @@ export function roundRemainingPercent(remainingPercent: number): number {
  * that the billing charges (no “disabled” flash for paid plans — the
  * server remains the judge), hence the `null` = unlimited guests.
  */
-export function usePlanGates(options: StartupDeferral = {}) {
-  const { loading, usage } = useBillingSummary(options);
+export function usePlanGates() {
+  const { loading, usage } = useBillingSummary();
   return {
     loading,
     agentsAllowed: usage?.limits.allowAgents ?? true,
