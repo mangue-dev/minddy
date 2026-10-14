@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { id } from "./seed.mjs";
 
 /** Genuine sidebar/tree clicks, with destination identity and complete content. */
-export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results, windowingCompatible = false, connectedBoard }) {
-  results.protocol = windowingCompatible ? "min683-deep-v4-complete-fixture-source-counts" : "min683-deep-v2-alternating-documents";
+export async function measureDeepNavigation({ page, fixture, activeTab, pageTab, repeats, clickMeasured, results, windowingCompatible = false, connectedBoard, allowedTabIds }) {
+  results.protocol = windowingCompatible ? "min683-deep-v5-canonical-editable-pages" : "min683-deep-v2-alternating-documents";
   const projects = fixture.projects.slice(0, 2);
   const sameTab = (tab) => !!document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`);
   const projectReady = ({ project, tab }) => {
@@ -49,22 +49,26 @@ export async function measureDeepNavigation({ page, fixture, activeTab, pageTab,
     await switchProject(0, "project-return");
     await page.waitForTimeout(350);
   }
-  const pageReady = ({ href, title, tab }) => {
-    if (location.pathname !== href || !document.querySelector(`[data-app-tab-id="${tab}"][aria-selected="true"]`)) return false;
-    return [...document.querySelectorAll(".page-editor .tiptap")].some((node) =>
-      node.getClientRects().length &&
-      node.querySelectorAll(":scope > h2").length === 8 && node.querySelectorAll(":scope > p").length === 72 &&
-      [...document.querySelectorAll('h1, textarea')].some((header) => header.getClientRects().length &&
-        (header.value ?? header.textContent).trim() === title));
+  await page.evaluate((ids) => { window.__instant.deepAllowedTabs = ids; }, allowedTabIds ?? [activeTab, pageTab.id]);
+  results.pageTabTransitions = [];
+  const pageReady = ({ href, tab }) => {
+    const selected = document.querySelector('[data-app-tab-id][aria-selected="true"]')?.dataset.appTabId;
+    if (tab && selected !== tab || !window.__instant.deepAllowedTabs.includes(selected)) return false;
+    return window.__instant.pageReady({ ...window.__instant.pageSpecifications[href], tab: selected });
   };
   async function openPage(project, document, name) {
     const href = `/projects/${projects[project]}/pages/${id(`page-${project}-${document}`)}`;
     await clickMeasured(name, page.locator(`[data-sidebar-page-row] a[href="${href}"]:visible`).first(), pageReady,
-      { href, title: `Performance guide ${project + 1}.${document + 1}`, tab: activeTab });
+      { href });
+    const selected = await page.locator('[data-app-tab-id][aria-selected="true"]').getAttribute("data-app-tab-id");
+    assert.ok((allowedTabIds ?? [activeTab, pageTab.id]).includes(selected));
+    results.pageTabTransitions.push({ name, fromTab: activeTab, selectedTab: selected, href });
+    activeTab = selected;
     return results.measurements.at(-1);
   }
-  // Use distinct owned Page destinations: opening a destination already in
-  // another tab intentionally activates that tab in the normal product.
+  // Opening the stable foreign Page intentionally activates its existing tab.
+  // Track the actual authorized selection while preserving the original four
+  // normalized documents; visiting another old document could normalize it.
   activeTab = pageTab.id;
   await clickMeasured("initial-page-tab", page.locator(`[data-app-tab-id="${activeTab}"]`), pageReady,
     { href: pageTab.href, title: "Performance guide 1.11", tab: activeTab });
@@ -97,7 +101,7 @@ export async function measureDeepNavigation({ page, fixture, activeTab, pageTab,
     await page.waitForTimeout(350);
   }
   assert.equal(await page.evaluate(sameTab, activeTab), true);
-  results.verification = { sameTabPreserved: true, projectCardIdentityVerified: true, pageIdentityAndBlockCountVerified: true,
+  results.verification = { selectedAuthorizedTabVerified: true, existingStablePageActivationRecorded: true, projectCardIdentityVerified: true, pageIdentityAndBlockCountVerified: true,
     expectedProjectCards: Object.fromEntries(projects.map((project) => [project, connectedBoard?.perProject[project]?.cards ?? 100])),
     expectedPageBlocks: 80, realForgeDetailMeasured: false };
 }

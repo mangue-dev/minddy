@@ -1,5 +1,11 @@
 import { isDeepStrictEqual } from "node:util";
 
+/** A visible document can genuinely blur; never infer absence from a CDP command. */
+export function verifiedFocusAbsence(before, away, current) {
+  return before?.focused === true && away?.focused === false && current?.focused === false &&
+    Number.isFinite(away.wallClock) && Number.isFinite(current.wallClock) && current.wallClock - away.wallClock >= 15_000;
+}
+
 /** Never restore over an unrecognized concurrent focus-document edit. */
 export function focusPageRestorationState(item, current) {
   if (current.version === item.original.version && isDeepStrictEqual(current, item.original)) return "unchanged";

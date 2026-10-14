@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { existsSync } from "node:fs";
@@ -13,6 +14,7 @@ import { verifyBoardWindowing } from "./verify-board-windowing.mjs";
 import { boardReady, revealBoardIssue } from "./board-readiness.mjs";
 import { forgeLinkFingerprint, loadConnectedBoardWorkload, loadForgeWorkload, measureForgeNavigation } from "./measure-forge-navigation.mjs";
 import { stableManifestPath } from "./stable-restored-tabs.mjs";
+import { broadIssueReady, broadPageReady, broadPageSpec } from "./broad-navigation-readiness.mjs";
 
 // Real authorized reads against the existing encrypted fixture. No reseeding,
 // personal profile, content mutation, generated API response or paid workflow.
@@ -67,13 +69,13 @@ let tabs = forge ? [
   { id: id("min683-forge-home"), custom_name: "MIN-683 forge Home", href: "/home", home: true },
   { id: id("min683-forge-prs"), custom_name: "MIN-683 real PRs", href: `/pull-requests?pr=${forgeWorkload.prs[0].prId}` },
 ] : secondary ? [
-  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: globalCards },
+  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: globalCards, cardIds: connectedBoard?.cardIds },
   { id: id("min683-tab-home"), custom_name: "MIN-683 home", href: "/home", home: true },
   { id: id("min683-tab-prs"), custom_name: "MIN-683 PRs", href: "/pull-requests", prs: true,
     ...(forgeWorkload ? { realPrIds: forgeWorkload.prs.map((pr) => pr.prId) } : {}) },
 ] : [
-  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: globalCards },
-  { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: connectedBoard?.perProject[project]?.cards ?? 100 },
+  { id: id("min683-tab-board"), custom_name: "MIN-683 board", href: "/all", cards: globalCards, cardIds: connectedBoard?.cardIds },
+  { id: id("min683-tab-project"), custom_name: "MIN-683 project", href: `/projects/${project}`, cards: connectedBoard?.perProject[project]?.cards ?? 100, cardIds: connectedBoard?.perProject[project]?.cardIds },
   { id: id("min683-tab-page"), custom_name: "MIN-683 Page", href: `/projects/${project}/pages/${deep ? id("page-0-10") : fixture.firstPage}` },
 ];
 // Once established, the account's stable selection is reused by every matrix.
@@ -103,12 +105,22 @@ async function removeTab(spec) {
 }
 const productRoot = process.env.MINDDY_PERF_BUILD_ROOT ?? process.cwd();
 const productBuild = (await readFile(path.join(productRoot, ".next/BUILD_ID"), "utf8")).trim();
-const productSha = process.env.MINDDY_PERF_BUILD_ROOT
-  ? JSON.parse(await readFile(path.join(productRoot, ".next/min683-product.json"), "utf8"))
-  : { sha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), build: productBuild };
+const productSha = JSON.parse(await readFile(path.join(productRoot, ".next/min683-product.json"), "utf8"));
 assert.equal(productSha.build, productBuild, "Product manifest must match the measured production build");
 assert.match(productSha.sha, /^[a-f0-9]{40}$/);
-const results = { label, sha: productSha.sha,
+assert.deepEqual(Object.keys(productSha.environmentFiles ?? {}).sort(), [".env", ".env.local", ".env.production", ".env.production.local"].sort());
+assert.match(productSha.environmentFiles[".env"], /^[a-f0-9]{64}$/);
+assert.ok(Object.values(productSha.environmentFiles).every((value) => value === null || /^[a-f0-9]{64}$/.test(value)));
+const runnerSourceHashScope = ["measure-instant-navigation.mjs", "measure-deep-navigation.mjs", "broad-navigation-readiness.mjs",
+  "verify-board-windowing.mjs", "board-readiness.mjs", "measure-forge-navigation.mjs", "stable-restored-tabs.mjs",
+  "secondary-navigation-workload.mjs", "enrich-secondary-workload.mjs", "seed.mjs"];
+const sourceHash = async () => createHash("sha256").update(JSON.stringify(await Promise.all(runnerSourceHashScope.map((file) => readFile(path.resolve("scripts/performance", file), "utf8"))))).digest("hex");
+const cohortManifestPath = path.join(output, "min683-secondary-scaled-workload.json");
+const cohortManifestHash = existsSync(cohortManifestPath) ? createHash("sha256").update(await readFile(cohortManifestPath)).digest("hex") : null;
+const results = { label, sha: productSha.sha, product: productSha, environmentFiles: productSha.environmentFiles,
+  workloadIdentity: { secondaryManifestSha256: cohortManifestHash, stableManifestSha256: stable ? createHash("sha256").update(await readFile(stableManifestPath)).digest("hex") : null },
+  runnerSha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), runnerSourceHashScope, runnerSourceHash: await sourceHash(),
+  readinessProtocol: "min683-broad-v5-canonical-editable-content-no-hover",
   build: productBuild, workload: { counts: fixture.counts, categories: fixture.categoryWorkload ?? null, ...(deep ? { pageBlocks: fixture.pageBlockWorkload ?? null } : {}), ...(connected ? { forge: forgeWorkload } : {}), ...(connectedBoard ? { connectedBoard } : {}) }, timestamp: new Date().toISOString(),
   runtime: process.argv.includes("--electron") ? "unpackaged Electron" : "Chromium", repeats, scenario: forge ? "forge" : deep ? "deep" : secondary ? "secondary" : "primary",
   measurements: [], network: [], errors: [], cleanup: [], status: "running" };
@@ -120,9 +132,17 @@ const created = [];
 const pendingNetwork = new Set();
 try {
   assertScope("projects", await api(`/api/projects/${project}`), fixture.userId);
+  const pageSpecifications = {};
   const original = await api(`/api/projects/${project}/pages/${fixture.firstPage}`);
   assertScope("pages", original, fixture.userId);
   assert.equal(original.content.content.length, 80);
+  if (!forge && !secondary) {
+    const target = tabs.find((tab) => tab.href.includes("/pages/"));
+    const primaryPage = await api(`/api${target.href}`);
+    assertScope("pages", primaryPage, fixture.userId);
+    pageSpecifications[target.href] = broadPageSpec(primaryPage, target.href, target.id);
+    preservedPages.push({ href: `/api${target.href}`, content: primaryPage.content, version: primaryPage.version });
+  }
   if (deep) {
     assert.equal(fixture.pageBlockWorkload?.stableBlockIds, true, "Normalize the deep-navigation fixture first");
     for (const [project, document] of [[0, 10], [0, 11], [1, 0], [1, 1]]) {
@@ -132,7 +152,8 @@ try {
       assert.equal(value.content.content.length, 80);
       assert.equal(new Set(value.content.content.map((block) => block.attrs?.blockId)).size, 80);
       assert.ok(value.content.content.every((block) => typeof block.attrs?.blockId === "string"));
-      preservedPages.push({ href, content: value.content, version: value.version });
+      pageSpecifications[href.slice(4)] = broadPageSpec(value, href.slice(4), tabs[2].id);
+      if (!preservedPages.some((entry) => entry.href === href)) preservedPages.push({ href, content: value.content, version: value.version });
     }
   }
   const initialTabs = await listTabs();
@@ -174,14 +195,17 @@ try {
   }
   await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);
-  const installProbe = ({ readiness, windowingCompatible }) => {
+  const installProbe = ({ readiness, windowingCompatible, issueSource, pageSource, pageSpecifications }) => {
     localStorage.setItem("cookie_consent", "declined");
     window.__instant = { longTasks: [], sample: null };
     window.__instant.windowingCompatible = windowingCompatible;
     window.__instant.boardReady = new Function(`return (${readiness})`)();
+    window.__instant.issueReady = new Function(`return (${issueSource})`)();
+    window.__instant.pageReady = new Function(`return (${pageSource})`)();
+    window.__instant.pageSpecifications = pageSpecifications;
     try { new PerformanceObserver((list) => window.__instant.longTasks.push(...list.getEntries().map(({ startTime, duration }) => ({ startTime, duration })))).observe({ type: "longtask", buffered: true }); } catch { /* Unsupported entries are omitted. */ }
   };
-  const probeOptions = { readiness: boardReady.toString(), windowingCompatible };
+  const probeOptions = { readiness: boardReady.toString(), windowingCompatible, issueSource: broadIssueReady.toString(), pageSource: broadPageReady.toString(), pageSpecifications };
   await context.addInitScript(installProbe, probeOptions);
   page = process.argv.includes("--electron") ? await browser.firstWindow() : await context.newPage();
   // Electron can create its initial window before context instrumentation.
@@ -270,13 +294,14 @@ try {
   async function clickMeasured(name, locator, condition, args, complete = condition) {
     const beforeMetrics = traceLayout ? await cdp.send("Performance.getMetrics") : null;
     await locator.scrollIntoViewIfNeeded();
-    if (windowingCompatible && name === "issue-open") await frames();
+    await frames();
     const box = await locator.boundingBox();
     assert.ok(box);
     const profile = !profiled && ((process.argv.includes("--profile") && name === "page-to-board") ||
       (process.argv.includes("--profile-project-switch") && name === "project-switch"));
     if (profile) { await cdp.send("Profiler.enable"); await cdp.send("Profiler.start"); }
     await page.evaluate(({ condition, complete, args, traceFiles }) => {
+      window.__instant.sample = null;
       const check = new Function("args", `return (${condition})(args)`);
       const checkComplete = new Function("args", `return (${complete})(args)`);
       const onDown = (event) => {
@@ -310,7 +335,9 @@ try {
       document.addEventListener("pointerdown", onDown, { capture: true, once: true });
     }, { condition: condition.toString(), complete: complete.toString(), args, traceFiles: results.diagnostic && name === "pr-activity-to-files" });
     const driverStart = Date.now();
-    await page.mouse.click(box.x + box.width / 2, box.y + Math.min(box.height / 2, 25));
+    const point = { x: box.x + box.width / 2, y: box.y + Math.min(box.height / 2, 25), button: "left", clickCount: 1 };
+    await cdp.send("Input.dispatchMouseEvent", { type: "mousePressed", ...point });
+    await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...point });
     await page.waitForFunction(() => window.__instant.sample?.paintMs != null && window.__instant.sample?.completeMs != null, null, { polling: "raf" });
     const sample = await page.evaluate(() => ({ ...window.__instant.sample, longTasks: window.__instant.longTasks.filter((entry) => entry.startTime >= window.__instant.sample.start) }));
     if (results.diagnostic && name === "pr-activity-to-files") {
@@ -363,8 +390,8 @@ try {
     if (spec.prs) return ![...document.querySelectorAll('[data-testid="pr-sidebar-loading"]')].some((node) => node.getClientRects().length) && (spec.realPrIds
       ? spec.realPrIds.some((prId) => document.querySelector(`[data-navigation-href="/pull-requests?pr=${prId}"]`)?.getClientRects().length)
       : [...document.querySelectorAll('h1, h2, [data-testid="pr-list-item"], p, span')].some((node) => node.getClientRects().length && /Performance change|No pull request|Nothing to review|Link a GitHub or GitLab repository|Select a pull request/i.test(node.textContent)));
-    return spec.cards ? (window.__instant.windowingCompatible ? window.__instant.boardReady(spec.cards) : !!root?.getClientRects().length && !root.inert && root.querySelectorAll("[data-issue-id]").length === spec.cards)
-      : [...document.querySelectorAll(".page-editor .tiptap")].some((node) => node.getClientRects().length && node.textContent.includes("Workflow 8"));
+    return spec.cards ? (window.__instant.windowingCompatible ? window.__instant.boardReady(spec.cards, undefined, spec.cardIds) : !!root?.getClientRects().length && !root.inert && root.querySelectorAll("[data-issue-id]").length === spec.cards)
+      : window.__instant.pageReady(window.__instant.pageSpecifications[spec.href]);
   };
   async function tab(spec, name) {
     await clickMeasured(name, page.locator(`[data-app-tab-id="${spec.id}"]`), tabReady, { spec });
@@ -424,13 +451,18 @@ try {
     assert.ok(!results.network.some((entry) => entry.path.startsWith("/api/pull-requests/") && entry.method !== "GET"), "Read-only navigation submitted a forge write");
   } else if (deep) {
     await tab(tabs[1], "initial-project-tab");
-    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results, windowingCompatible, connectedBoard });
+    await measureDeepNavigation({ page, fixture, activeTab: tabs[1].id, pageTab: tabs[2], repeats, clickMeasured, results, windowingCompatible, connectedBoard, allowedTabIds: stable?.specs.map((spec) => spec.id) ?? tabs.map((spec) => spec.id) });
   } else {
-    let issueStatus;
-    if (windowingCompatible && !secondary) {
+    let issueStatus, issueSpec;
+    if (!secondary) {
       const issue = await api(`/api/issues/${fixture.firstIssue}`);
       assertScope("issues", issue, fixture.userId);
       issueStatus = issue.status;
+      const comments = await api(`/api/issues/${fixture.firstIssue}/comments`);
+      assert.deepEqual(comments.map((comment) => comment.id).sort(), [id(`comment-${fixture.firstIssue}-0`), id(`comment-${fixture.firstIssue}-1`)].sort(), "Verify every canonical fixture comment");
+      assert.ok(comments.every((comment) => comment.author_id === fixture.userId && typeof comment.body === "string" && comment.body));
+      issueSpec = { id: issue.id, title: issue.title, description: issue.description, comments: comments.map(({ id, body }) => ({ id, body })) };
+      results.issueReadiness = { issueId: issue.id, comments: comments.length, descriptionFingerprint: forgeLinkFingerprint(issue.description), shellMetric: "paintMs", fullEditableContentMetric: "completeMs", freshTimelineRequired: true };
     }
     await tab(tabs[1], secondary ? "unvisited-home" : "unvisited-project");
     await tab(tabs[2], secondary ? "unvisited-pr-list" : "unvisited-page");
@@ -445,8 +477,8 @@ try {
       }
       if (windowingCompatible) await revealBoardIssue(page, fixture.firstIssue, issueStatus);
       await clickMeasured("issue-open", page.locator(`[data-app-view-active="true"] [data-issue-id="${fixture.firstIssue}"]`),
-        () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task")), null,
-        () => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value.includes("Performance task") && node.querySelector('[data-query-read-phase="fresh"] [data-comment-id]')?.getClientRects().length));
+        ({ title }) => [...document.querySelectorAll('[role="dialog"]')].some((node) => node.getClientRects().length && node.querySelector("textarea")?.value === title), issueSpec,
+        (spec) => window.__instant.issueReady(spec));
       await page.keyboard.press("Escape");
       await page.locator('[role="dialog"]').first().waitFor({ state: "hidden" });
       await tab(tabs[1], "board-to-project");
@@ -614,6 +646,9 @@ try {
   await Promise.allSettled(pendingNetwork);
   await apiClient.dispose();
   if (failure) results.status = "failed";
+  results.runnerSourcesUnchanged = await sourceHash().then((value) => value === results.runnerSourceHash, () => false);
+  if (!results.runnerSourcesUnchanged) { results.status = "failed"; failure ??= new Error("Broad navigation dependencies changed during measurement"); }
+  results.finishedAt = new Date().toISOString();
   await writeFile(path.join(output, `${label}.json`), JSON.stringify(results, null, 2));
 }
 if (failure) throw failure;

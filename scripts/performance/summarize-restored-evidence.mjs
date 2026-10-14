@@ -11,7 +11,7 @@ const reportPath = path.resolve("docs/performance/min-683-restored-results.json"
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const baselineBuild = "IflZwyWntlTxQ6lF7WslG";
 const baselineSha = "ca44a35e43f589a65ce0169eb820f511d47b8899";
-const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission", "authority", "two-slots"];
+const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission", "authority", "two-slots", "after"];
 
 /** Keep first activations separate; fewer than ten observations have no p95. */
 export function sampleStatistics(values) {
@@ -123,7 +123,7 @@ export function pairedComparisonEligibility(baseline, candidate) {
 
 /** Restoration journals contain private originals and are never public evidence. */
 export function evidenceFilenameSelected(name) {
-  return !name.endsWith("-restoration-journal.json") && /^(min683-restored-(baseline|before|preparation|serial-pr|pages|host|admission|authority|two-slots)|min683-executable-|min683-verification-scaled-).*\.json$/.test(name);
+  return !name.endsWith("-restoration-journal.json") && /^(min683-restored-(baseline|before|after|preparation|serial-pr|pages|host|admission|authority|two-slots)|min683-executable-|min683-verification-scaled-).*\.json$/.test(name);
 }
 
 export async function refreshRestoredEvidence() {

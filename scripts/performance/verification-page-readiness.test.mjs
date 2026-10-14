@@ -2,7 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
 import { JSDOM } from "jsdom";
-import { verificationPageReady, focusPageRestorationState } from "./verification-page-readiness.mjs";
+import { verificationPageReady, focusPageRestorationState, verifiedFocusAbsence } from "./verification-page-readiness.mjs";
+
+test("remote verification refuses writes without observed sustained real focus loss", () => {
+  const before = { focused: true };
+  const away = { focused: false, visibility: "visible", wallClock: 10_000 };
+  const current = { focused: false, visibility: "visible", wallClock: 26_000 };
+  assert.equal(verifiedFocusAbsence(before, away, current), true);
+  assert.equal(verifiedFocusAbsence(before, { ...away, focused: true }, current), false);
+  assert.equal(verifiedFocusAbsence(before, away, { ...current, focused: true }), false);
+  assert.equal(verifiedFocusAbsence(before, away, { ...current, wallClock: 24_999 }), false);
+  assert.equal(verifiedFocusAbsence({ focused: false }, away, current), false);
+  assert.equal(verifiedFocusAbsence(before, away, { focused: false }), false);
+});
 
 test("requires the mounted focus document's real new body and matching accepted version", () => {
   const dom = new JSDOM(`<button data-app-tab-id="tab" aria-selected="true"></button><div data-page-surface-id="page">

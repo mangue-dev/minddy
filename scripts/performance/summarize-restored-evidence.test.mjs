@@ -43,6 +43,8 @@ test("excludes complete diagnostic runs and preserves failed ordinary runs as fa
   assert.equal(evidenceFilenameSelected("min683-verification-scaled-native-1.json"), true);
   assert.equal(evidenceFilenameSelected("min683-restored-before-correctness-restoration-journal.json"), false);
   assert.equal(evidenceFilenameSelected("min683-verification-scaled-native-1-restoration-journal.json"), false);
+  assert.equal(evidenceFilenameSelected("min683-restored-after-scaled-complete-resume-native-1.json"), true);
+  assert.equal(classification("min683-restored-after-scaled-complete-resume-native-1.json", { status: "complete-with-open-acceptance" }).stage, "after");
 });
 const comparable = { effectiveSha: "a".repeat(40), build: "known-build", protocol: "complete-content", runnerSourceHash: "b".repeat(64),
   runtime: "Chromium", versions: { chromium: "153" }, viewport: { width: 1440, height: 1000, scale: 1 },

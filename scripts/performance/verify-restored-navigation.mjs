@@ -9,7 +9,7 @@ import { openFixture, stableTabs, stableManifestPath, assertStableTabs } from ".
 import { assertScope, id } from "./seed.mjs";
 import { loadForgeWorkload, forgeLinkFingerprint } from "./measure-forge-navigation.mjs";
 import { boardReady, revealBoardIssue } from "./board-readiness.mjs";
-import { verificationPageReady, focusPageRestorationState } from "./verification-page-readiness.mjs";
+import { verificationPageReady, focusPageRestorationState, verifiedFocusAbsence } from "./verification-page-readiness.mjs";
 import { secondaryManifestPath } from "./enrich-secondary-workload.mjs";
 
 // This mutating diagnostic is intentionally separate from ordinary comparisons.
@@ -197,7 +197,8 @@ try {
     await page.waitForFunction((spec) => window.__restoredVerify.pageReady(spec), focusSpec);
     await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
     result.focusProtocol = { focusEmulationDisabled: true, genuineWindowMinimization: process.argv.includes("--electron"),
-      genuineDistractionWindow: !process.argv.includes("--electron"),
+      genuineSameWindowTabActivation: !process.argv.includes("--electron"),
+      absenceBasis: "Observed document.hasFocus=false before and after the inactivity interval; visibility is recorded independently",
       playwrightBackgroundThrottlingOverridesRemain: true };
     if (process.argv.includes("--electron")) await browser.evaluate(({ BrowserWindow }, base) => {
       const window = BrowserWindow.getAllWindows().find((item) => item.webContents.getURL().startsWith(base));
@@ -213,14 +214,14 @@ try {
       window.minimize(); window.blur();
     }, base);
     else {
-      // CDP minimization can leave macOS Chromium's document focused. A real
-      // second browser window supplies an observable target/OS focus transfer.
+      // A real tab in the same browser window produces document focus loss
+      // even where a second macOS window fails to become the key window.
       browserCdp = await browser.newBrowserCDPSession();
       const { targetInfo } = await cdp.send("Target.getTargetInfo");
       originalTargetId = targetInfo.targetId;
       const newPage = context.waitForEvent("page", { predicate: (candidate) => candidate !== page, timeout: 20000 })
         .then((created) => ({ page: created }), (error) => ({ error }));
-      ({ targetId: distractionTargetId } = await browserCdp.send("Target.createTarget", { url: "about:blank", newWindow: true, background: false,
+      ({ targetId: distractionTargetId } = await browserCdp.send("Target.createTarget", { url: "about:blank", newWindow: false, background: false,
         ...(targetInfo.browserContextId ? { browserContextId: targetInfo.browserContextId } : {}) }));
       const opened = await newPage;
       if (opened.error) throw opened.error;
@@ -230,14 +231,18 @@ try {
         distractionCdp.send("Emulation.setFocusEmulationEnabled", { enabled: false })]);
       const originalWindow = await browserCdp.send("Browser.getWindowForTarget", { targetId: originalTargetId });
       const distractionWindow = await browserCdp.send("Browser.getWindowForTarget", { targetId: distractionTargetId });
-      assert.notEqual(originalWindow.windowId, distractionWindow.windowId, "The distraction must be a genuine separate browser window");
+      assert.equal(originalWindow.windowId, distractionWindow.windowId, "The distraction must be a real tab in the same browser window");
       result.focusProtocol.windows = { originalWindowId: originalWindow.windowId, distractionWindowId: distractionWindow.windowId };
       await browserCdp.send("Target.activateTarget", { targetId: distractionTargetId });
+      await distractionPage.bringToFront();
     }
     // Do not mutate until the original renderer actually lost focus.
     await page.waitForFunction(() => !document.hasFocus());
     const away = await page.evaluate(() => ({ visibility: document.visibilityState, focused: document.hasFocus(), at: performance.now(), wallClock: Date.now() }));
     await page.waitForTimeout(16000);
+    const awayBeforeMutation = await page.evaluate(() => ({ visibility: document.visibilityState, focused: document.hasFocus(), at: performance.now(), wallClock: Date.now() }));
+    result.focusProtocol.observedAbsence = { focusBefore, away, awayBeforeMutation };
+    assert.ok(verifiedFocusAbsence(focusBefore, away, awayBeforeMutation), "No fixture write is allowed without a real observed inactivity interval");
     // Journal before transport, so cleanup can restore after an ambiguous ACK.
     const remoteTitle = `${issue.title} [MIN-683 resume ${randomUUID()}]`;
     journal.expectedIssueTitle = remoteTitle;
@@ -277,7 +282,7 @@ try {
     await activate(tabs[1]); await waitTab(tabs[1]); await waitBoard(kanbanCount(fixture.projects[0]));
     await revealBoardIssue(page, issue.id, issue.status);
     await page.locator(`[data-app-view-active="true"] [data-issue-id="${issue.id}"]`).getByText(remoteTitle, { exact: true }).waitFor();
-    result.assertions.push({ actualFocusAbsenceAndResume: true, focusBefore, away, returned, absenceMs: returned.at - away.at,
+    result.assertions.push({ actualFocusAbsenceAndResume: true, focusBefore, away, awayBeforeMutation, returned, absenceMs: returned.at - away.at,
       remoteIssueVisibleInActiveAndOtherBoard: true });
     if (distractionTargetId) { await browserCdp.send("Target.closeTarget", { targetId: distractionTargetId }); distractionTargetId = undefined; distractionPage = undefined; }
     // Return the existing foreign tab to its untouched screenshot document
