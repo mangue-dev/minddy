@@ -10,9 +10,14 @@ const digest = (value) => createHash("sha256").update(value).digest("hex");
 /** A title shell and complete usable content remain separate observations. */
 export function summarizeBroadMeasurements(measurements = []) {
   const groups = new Map();
+  const observed = new Set();
+  const splitFirst = new Set(["issue-open", "pr-activity-to-files", "pr-open-commits", "pr-change-file", "pr-files-to-activity"]);
   for (const sample of measurements) {
-    const key = JSON.stringify([sample.name, sample.destinationNumber ?? null]);
-    const group = groups.get(key) ?? { name: sample.name, destinationNumber: sample.destinationNumber ?? null, samples: [] };
+    const identity = JSON.stringify([sample.name, sample.destinationNumber ?? null]);
+    const phase = splitFirst.has(sample.name) ? observed.has(identity) ? "repeated" : "first-observed" : "as-named";
+    observed.add(identity);
+    const key = JSON.stringify([sample.name, sample.destinationNumber ?? null, phase]);
+    const group = groups.get(key) ?? { name: sample.name, destinationNumber: sample.destinationNumber ?? null, phase, samples: [] };
     group.samples.push(sample); groups.set(key, group);
   }
   return [...groups.values()].map(({ samples, ...group }) => ({ ...group,
@@ -69,6 +74,7 @@ export async function refreshBroadEvidence() {
     interpretation: ["Issue title-shell paint is never a full usable-content measurement; its completeMs is summarized separately.",
       "Canonical accepted issue content remains usable during background reconciliation; read phases at usability and network request timings remain separate evidence.",
       "Each PR identity remains separate. Fewer than ten observations have no p95; laboratory p95 is not a population percentile.",
+      "First observed issue/subview activations are separate from repetitions per PR. Ten loops leave nine repetitions, whose p95 remains omitted.",
       "Excluded protocol probes validate predicates and preservation, not latency. Failed runs remain retained and ineligible.",
       "Strict comparisons require matching environment-file evidence, runtime, viewport, cohort, gate source and actual product manifests.",
       "This broad matrix does not establish real focus recovery, remote delivery or forced-quit draft safety."], runs, comparisons };

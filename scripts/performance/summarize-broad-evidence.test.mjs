@@ -16,6 +16,21 @@ test("does not pool five PR identities into one misleading percentile", () => {
   assert.equal(summaries.length, 5);
   assert.ok(summaries.every((summary) => summary.fullUsableMs.p95 === null));
 });
+test("separates first issue and per-PR subview activations from nine repetitions", () => {
+  const summaries = summarizeBroadMeasurements([
+    { name: "issue-open", paintMs: 40, completeMs: 633 },
+    ...Array.from({ length: 9 }, () => ({ name: "issue-open", paintMs: 40, completeMs: 77 })),
+    ...[1, 2].flatMap((destinationNumber) => Array.from({ length: 10 }, (_, index) => ({ name: "pr-activity-to-files", destinationNumber, completeMs: index ? 45 : 1000 }))),
+  ]);
+  assert.equal(summaries.length, 6);
+  const first = summaries.find((summary) => summary.name === "issue-open" && summary.phase === "first-observed");
+  const repeated = summaries.find((summary) => summary.name === "issue-open" && summary.phase === "repeated");
+  assert.equal(first.fullUsableMs.max, 633);
+  assert.equal(repeated.fullUsableMs.max, 77);
+  assert.equal(repeated.observations, 9);
+  assert.equal(repeated.fullUsableMs.p95, null);
+  assert.ok(summaries.filter((summary) => summary.name === "pr-activity-to-files").every((summary) => summary.fullUsableMs.p95 === null));
+});
 test("excluded, failed, changed-source and old-gate broad runs remain ineligible", () => {
   const result = { status: "passed", errors: [], runnerSourcesUnchanged: true, readinessProtocol: "min683-broad-v5-canonical-editable-content-no-hover" };
   assert.equal(broadComparisonRecord(result).eligibleForNavigationComparison, true);
