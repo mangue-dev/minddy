@@ -39,3 +39,12 @@ describe("desktop preload auth subscription", () => {
     expect(mocks.send).toHaveBeenLastCalledWith("minddy:auth-link-not-ready");
   });
 });
+
+describe("desktop preload storage flush", () => {
+  it("asks the main process to commit DOM storage without passing page input", async () => {
+    const invoke = vi.fn(async () => undefined);
+    Object.assign(mocks, { invoke });
+    await bridge.flushStorage?.();
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("minddy:storage:flush");
+  });
+});

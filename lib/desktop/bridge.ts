@@ -243,6 +243,13 @@ export interface DesktopBridge {
    * loopback, and never returns anything other than template ids.
    */
   discoverLocalModels(input: LocalModelDiscoveryInput): Promise<LocalModelDiscoveryResult>;
+  /**
+   * Commits this window's DOM storage to disk now. Chromium otherwise defers
+   * localStorage commits by several seconds, so a crash or forced quit right
+   * after an acknowledged local save loses it. Optional for compatibility with
+   * desktop shells released before it existed.
+   */
+  flushStorage?(): Promise<void>;
 }
 
 declare global {

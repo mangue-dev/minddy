@@ -1300,6 +1300,13 @@ function registerIpc(): void {
     discoverLocalModels(input),
   );
 
+  // Chromium defers DOM storage commits by several seconds; a forced quit in
+  // that window loses an acknowledged local draft. The flush takes no input
+  // and only touches the caller's own session.
+  ipcMain.handle("minddy:storage:flush", (event) => {
+    event.sender.session.flushStorageData();
+  });
+
 }
 
 function readString(value: unknown): string | null {
