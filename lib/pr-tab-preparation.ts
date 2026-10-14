@@ -197,17 +197,10 @@ export function createPrTabPreparation(
     if (disposed || preparing.size >= SCOPED_PREPARATION_CONCURRENCY || !visible() || !onlineManager.isOnline() || otherTransport()) return;
     const firstPage = listed.find((item) => item.route.pageId);
     if (firstPage) pagePreparation.prioritize(firstPage.href);
-    const firstProject = firstPage && listed.find((item) => item.route.projectId && ["tickets", "triage"].includes(item.route.section));
-    // Keep the first board's complete issue read admitted while its next slot
-    // prepares one explicit Page. This execution view leaves manifests intact.
-    const prefix: Destination[] = firstPage ? [
-      ...(firstProject ? [{ ...firstProject, queries: firstProject.queries.filter(({ options }) => options.queryKey[0] === "issues") }] : []),
-      { ...firstPage, queries: firstPage.queries.filter(({ options }) => ["page", "pages"].includes(String(options.queryKey[0]))) },
-    ] : [];
     const missingNavigation = hasQueuedNormal() || [...preparing.values()].some((read) => !read.forge);
     syncPriority();
     // Optional neighboring data never displaces a listed destination.
-    for (const item of [...prefix, ...listed, ...(neighbor ? [neighbor] : [])]) {
+    for (const item of [...listed, ...(neighbor ? [neighbor] : [])]) {
       const route = item.route;
       const neighboring = item === neighbor;
       // Optional neighbors wait until every listed operation has actually settled.
