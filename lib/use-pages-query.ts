@@ -20,7 +20,7 @@ import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { acceptPageRead, acceptPageWrite, beginPageRead, capturePageReadFailure, finishPageRead, isAcceptedPageVersion, pageReadState } from "./page-read-receipts";
+import { acceptPageRead, acceptPageWrite, beginPageRead, capturePageReadFailure, finishPageRead, hasNewerAcceptedPageMetadata, isAcceptedPageVersion, pageReadState } from "./page-read-receipts";
 
 import {
   createPageApi,
@@ -42,6 +42,7 @@ import {
   type PageTreeNode,
 } from "./pages";
 import {
+  acceptPageReadSummary,
   beginPageWrite,
   beginPagePresence,
   queuePageWrite,
@@ -98,7 +99,15 @@ export async function fetchPageNavigationData(client: QueryClient, projectId: st
       isAcceptedPageVersion(query, { projectId, pageId, version: current.version })
       ? current : incoming;
     if (client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
-      acceptPageRead(query, sequence, { projectId, pageId, version: page.version }, signal);
+      const olderMetadata = hasNewerAcceptedPageMetadata(query,
+        { projectId, pageId, version: incoming.version, updatedAt: incoming.updated_at });
+      acceptPageRead(query, sequence, { projectId, pageId, version: page.version,
+        updatedAt: page.version === incoming.version ? incoming.updated_at : undefined }, signal);
+      const read = pageReadState(query);
+      if (read?.sequence === sequence && read.accepted?.sequence === sequence &&
+          !read.failure && !read.accepted.signal?.aborted && !olderMetadata) {
+        acceptPageReadSummary(client, projectId, incoming);
+      }
     }
     return page;
   } catch (error) {
@@ -122,7 +131,7 @@ export async function fetchPageCreationData(client: QueryClient, projectId: stri
       throw new Error("Page creation response does not match its requested scope");
     }
     if (client.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }) === query) {
-      acceptPageRead(query, sequence, { projectId, pageId, version: page.version }, undefined, "creation");
+      acceptPageRead(query, sequence, { projectId, pageId, version: page.version, updatedAt: page.updated_at }, undefined, "creation");
     }
     return page;
   } catch (error) {
@@ -490,6 +499,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
             cached,
             Object.keys(visible) as (keyof Page)[],
             (row) => ({ ...row, ...visible, ...previews.get(pageId) }),
+            { preserveNewerPageRead: true },
           )
         : null;
       return queuePageWrite(queryClient, `page:${pid}:${pageId}`, async () => {
@@ -500,8 +510,15 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
           await waitForPageCreation(pageId);
           if (canDispatch && !canDispatch()) throw new PageWriteBasisError("Page write owner retired before dispatch");
           const page = await updatePageApi(pid, pageId, input);
-          write?.settle(page);
-          const { content: _body, ...summary } = page;
+          // The current body can be newer than this delayed accepted ACK. The
+          // writer keeps canonical GET fields apart from queued local overlays.
+          const current = queryClient.getQueryData<Page>(pageKey(pageId));
+          const retained = current?.id === pageId && current.project_id === pid && current.version > page.version &&
+            isAcceptedPageVersion(queryClient.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }),
+              { projectId: pid, pageId, version: current.version }) ? current : page;
+          const settled = write?.settle(page);
+          const accepted = settled?.version === retained.version ? { ...retained, ...settled } : retained;
+          const { content: _body, ...summary } = accepted;
           const confirmed = Object.fromEntries(
             Object.keys(visible).map((key) => [
               key,
@@ -526,16 +543,16 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
           queryClient.setQueryData<Page>(pageKey(pageId), (row) =>
             row
               ? {
-                  ...page,
+                  ...accepted,
                   database_schema: row.database_schema,
                   database_revision: row.database_revision,
                   database_title_name: row.database_title_name,
                   property_values: row.property_values,
                 }
-              : page,
+              : accepted,
           );
           acceptPageWrite(queryClient.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }),
-            { projectId: page.project_id, pageId: page.id, version: page.version });
+            { projectId: page.project_id, pageId: page.id, version: page.version, updatedAt: page.updated_at });
           return page;
         } catch (error) {
           write?.settle();

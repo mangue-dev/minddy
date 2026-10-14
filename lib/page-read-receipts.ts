@@ -1,8 +1,8 @@
 import { isCancelledError, type Query, type QueryClient } from "@tanstack/react-query";
 
-type ScopedPageVersion = { projectId: string; pageId: string; version: number };
+type ScopedPageVersion = { projectId: string; pageId: string; version: number; updatedAt?: string };
 type PageReadReceipt = ScopedPageVersion & { sequence: number; source: "read" | "creation"; signal?: AbortSignal };
-type PageReadState = { sequence: number; pending?: { sequence: number; source: "read" | "creation"; signal?: AbortSignal }; accepted?: PageReadReceipt; acceptedWrite?: ScopedPageVersion; failure?: unknown };
+type PageReadState = { sequence: number; pending?: { sequence: number; source: "read" | "creation"; signal?: AbortSignal }; accepted?: PageReadReceipt; acceptedWrite?: ScopedPageVersion; newestMetadata?: ScopedPageVersion & { signal?: AbortSignal }; failure?: unknown };
 
 // Query identity isolates accounts and retires metadata with cache eviction.
 // There is no document payload, device persistence or independent body cache.
@@ -13,6 +13,38 @@ export function pageReadState(query: Query | undefined): PageReadState | undefin
   return query && reads.get(query);
 }
 
+/** Order actual server metadata without using a client cache timestamp. */
+export function isNewerPageMetadata(candidate: { version: number; updatedAt: string },
+  current: { version: number; updatedAt: string }): boolean {
+  if (candidate.version !== current.version) return candidate.version > current.version;
+  const candidateAt = Date.parse(candidate.updatedAt), currentAt = Date.parse(current.updatedAt);
+  if (!Number.isFinite(candidateAt) || !Number.isFinite(currentAt)) return false;
+  if (candidateAt !== currentAt) return candidateAt > currentAt;
+  // PostgreSQL timestamps retain finer precision than JavaScript milliseconds.
+  const fraction = (value: string) => (value.match(/\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/)?.[1] ?? "").padEnd(9, "0");
+  return fraction(candidate.updatedAt) > fraction(current.updatedAt);
+}
+
+function acceptMetadata(read: PageReadState, page: ScopedPageVersion, signal?: AbortSignal): void {
+  if (!page.updatedAt || !Number.isFinite(Date.parse(page.updatedAt))) return;
+  const current = read.newestMetadata;
+  if (!current || current.signal?.aborted || !current.updatedAt ||
+      isNewerPageMetadata({ version: page.version, updatedAt: page.updatedAt },
+        { version: current.version, updatedAt: current.updatedAt })) {
+    read.newestMetadata = { ...page, signal };
+  }
+}
+
+/** Reject older metadata; this never certifies cached fields or a write basis. */
+export function hasNewerAcceptedPageMetadata(query: Query | undefined, page: ScopedPageVersion): boolean {
+  const read = pageReadState(query);
+  if (!page.updatedAt) return false;
+  return [read?.newestMetadata?.signal?.aborted ? undefined : read?.newestMetadata, read?.acceptedWrite].some((accepted) =>
+    !!accepted?.updatedAt && accepted.projectId === page.projectId && accepted.pageId === page.pageId &&
+    isNewerPageMetadata({ version: accepted.version, updatedAt: accepted.updatedAt },
+      { version: page.version, updatedAt: page.updatedAt! }));
+}
+
 /** Successful ordinary PATCH ingestion proves a version; manual cache updates do not. */
 export function acceptPageWrite(query: Query | undefined, page: ScopedPageVersion): void {
   if (!query || query.queryKey.length !== 2 || query.queryKey[0] !== "page" ||
@@ -21,6 +53,7 @@ export function acceptPageWrite(query: Query | undefined, page: ScopedPageVersio
   if (read.acceptedWrite && read.acceptedWrite.projectId === page.projectId &&
       read.acceptedWrite.pageId === page.pageId && read.acceptedWrite.version > page.version) return;
   read.acceptedWrite = page;
+  acceptMetadata(read, page);
   reads.set(query, read);
 }
 
@@ -42,10 +75,11 @@ export function beginPageRead(query: Query | undefined, signal?: AbortSignal, so
 
 /** Only an actual scoped GET or successful creation can accept a new write basis. */
 export function acceptPageRead(query: Query | undefined, sequence: number,
-  page: { projectId: string; pageId: string; version: number }, signal?: AbortSignal, source: "read" | "creation" = "read"): void {
+  page: ScopedPageVersion, signal?: AbortSignal, source: "read" | "creation" = "read"): void {
   const read = pageReadState(query);
   if (!read || read.sequence !== sequence || signal?.aborted) return;
   read.accepted = { sequence, ...page, signal, source };
+  acceptMetadata(read, page, signal);
   read.failure = undefined;
 }
 
