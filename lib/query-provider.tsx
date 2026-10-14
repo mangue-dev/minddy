@@ -7,6 +7,7 @@ import { createQueryStorage, subscribeToQueryPersistence } from "./query-persist
 import { invalidateLocalSnapshotWrites } from "./local-snapshots";
 import { configurePayloadRetention, isMemoryOnlyPayload } from "./query-retention";
 import { observePageReadFailures } from "./page-read-receipts";
+import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
@@ -208,7 +209,13 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
     }
     return {
       queryClient,
-      persister: createQueryStorage(storage, QUERY_CACHE_STORAGE_KEY),
+      persister: createQueryStorage(storage, QUERY_CACHE_STORAGE_KEY, () => {
+        const hashes = new Set(navigationWorkingSetQueryHashes(queryClient));
+        for (const query of queryClient.getQueryCache().getAll()) {
+          if (query.isActive()) hashes.add(query.queryHash);
+        }
+        return hashes;
+      }),
       maxAge: PERSIST_MAX_AGE_MS,
       buster: PERSIST_BUSTER,
       dehydrateOptions: { shouldDehydrateQuery: isPersistable },

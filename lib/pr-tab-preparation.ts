@@ -10,6 +10,7 @@ import { prActivityPreparationQueries } from "./pr-activity-query";
 import { createPageNavigationPreparation } from "./page-navigation-preparation";
 import { adjacentProjectDestination } from "./project-navigation-working-set";
 import { pullRequestAccountRetryAt } from "./pull-request-query";
+import { createNavigationWorkingSet } from "./navigation-working-set";
 
 const PASSIVE_SHELL_READS = new Set([
   ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
@@ -61,6 +62,7 @@ export function createPrTabPreparation(
   },
 ) {
   const pagePreparation = createPageNavigationPreparation(client);
+  const workingSet = createNavigationWorkingSet(client);
   const visits: string[] = [];
   let available: readonly string[] = [];
   let active = "", disposed = false;
@@ -134,6 +136,7 @@ export function createPrTabPreparation(
     neighbor = undefined; manifest.clear();
     for (const item of listed) for (const query of item.queries) manifest.set(query.identity, { query, neighboring: false });
     refreshNeighbor(); refreshPending();
+    workingSet.replace(listed.flatMap((item) => item.queries.map(({ options }) => options.queryKey)));
   };
   const actionable = (item: Destination) => item.queries.some((query) => pendingKeys.has(query.identity));
   const hasQueuedNormal = () => listed.some((item) => item.route.section !== "pull-requests" && actionable(item));
@@ -179,6 +182,7 @@ export function createPrTabPreparation(
     manifest.clear();
     for (const item of listed) for (const query of item.queries) manifest.set(query.identity, { query, neighboring: false });
     for (const query of neighbor?.queries ?? []) if (!manifest.has(query.identity)) manifest.set(query.identity, { query, neighboring: true });
+    workingSet.replace(listed.flatMap((item) => item.queries.map(({ options }) => options.queryKey)));
     for (const key of previous) if (!manifest.has(key)) {
       attempted.delete(key); parkedForge.delete(key); deferredForge.delete(key);
       const read = preparing.get(key);
@@ -362,6 +366,7 @@ export function createPrTabPreparation(
       selectionSources.clear();
       pendingInsertSources.clear();
       pagePreparation.dispose();
+      workingSet.dispose();
       priority.release();
       yieldReads();
     },

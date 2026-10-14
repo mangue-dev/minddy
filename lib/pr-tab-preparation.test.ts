@@ -1,4 +1,4 @@
-import { onlineManager, QueryClient, QueryObserver } from "@tanstack/react-query";
+import { hashKey, onlineManager, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPrTabPreparation, isPassiveShellMaintenanceRead, SCOPED_PREPARATION_CONCURRENCY } from "./pr-tab-preparation";
 import { pullRequestQueryOptions } from "./pull-request-query";
@@ -10,6 +10,7 @@ import { fetchPageNavigationData, isPreparedPageData, pageKey } from "./use-page
 import { issuesQueryFn } from "./issues-api";
 import { issueWrites, mergeServerIssue, removeIssueEverywhere } from "./optimistic/issue-writes";
 import type { Issue } from "./types";
+import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
@@ -48,6 +49,31 @@ const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
 
 describe("account-owned PR preparation", () => {
+  it("publishes only actual inactive listed prerequisites without starting reads and retains them after transport priority ends", async () => {
+    const prepared = setup();
+    prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
+    prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+    try {
+      const before = prepared.client.getQueryCache().getAll().length;
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]);
+      const expected = new Set(appTabPreparationQueries(prepared.client, "/projects/new").map((option) => hashKey(option.queryKey)));
+      expect(navigationWorkingSetQueryHashes(prepared.client)).toEqual(expected);
+      expect(prepared.client.getQueryCache().getAll()).toHaveLength(before);
+      expect(prepared.fetch).not.toHaveBeenCalled();
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["issues", "neighbor"]))).toBe(false);
+      await drain(prepared);
+      expect(navigationPreparationPending(prepared.client)).toBe(false);
+      expect(navigationWorkingSetQueryHashes(prepared.client)).toEqual(expected);
+      prepared.preparation.visit("/routines", ["/routines", "/home"]);
+      expect(navigationWorkingSetQueryHashes(prepared.client)).toEqual(new Set(
+        appTabPreparationQueries(prepared.client, "/home").map((option) => hashKey(option.queryKey)),
+      ));
+      prepared.preparation.dispose();
+      prepared.preparation.visit("/home", ["/home", "/projects/new"]);
+      expect(navigationWorkingSetQueryHashes(prepared.client).size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
   it.each(["accepted", "rejected", "disposed"] as const)("waits for an actual selected insert's %s transition after an overlaid ordinary issues read", async (outcome) => {
     const prepared = setup(), unrelated = setup();
     // Selection fixtures omit unrelated issue fields; the real reader still applies its pending-write overlay.
@@ -69,6 +95,7 @@ describe("account-owned PR preparation", () => {
       unrelated.preparation.visit("/home", ["/home", "/projects/other/triage"]);
       expect(paths).toEqual(["/api/projects/new/issues"]);
       expect(isPreparedAppTabDestination(prepared.client, href)).toBe(false);
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["comments", "pending"]))).toBe(false);
       expect(prepared.tasks.size).toBe(0);
       const unrelatedTasks = unrelated.tasks.size;
       if (outcome === "disposed") prepared.preparation.dispose();
@@ -88,6 +115,7 @@ describe("account-owned PR preparation", () => {
         "/api/projects/new/issues", `/api/issues/${selected}/comments`, `/api/issues/${selected}/events`,
       ]);
       if (outcome !== "disposed") expect(isPreparedAppTabDestination(prepared.client, href)).toBe(true);
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["comments", selected]))).toBe(outcome !== "disposed");
       expect(prepared.tasks.size).toBe(0);
     } finally {
       prepared.preparation.dispose(); unrelated.preparation.dispose();
@@ -133,6 +161,9 @@ describe("account-owned PR preparation", () => {
         expect(isPreparedAppTabDestination(prepared.client, href), href).toBe(true);
         for (const options of appTabPreparationQueries(prepared.client, href)) expect(prepared.client.getQueryState(options.queryKey)?.status).toBe("success");
       }
+      expect(navigationWorkingSetQueryHashes(prepared.client)).toEqual(new Set(tabs.slice(1).flatMap((href) =>
+        appTabPreparationQueries(prepared.client, href).map((option) => hashKey(option.queryKey)),
+      )));
       const paths = prepared.fetch.mock.calls.map(([url]) => String(url));
       expect(paths.filter((path) => path.startsWith("/api/issues/"))).toEqual(["/api/issues/issue-119/comments", "/api/issues/issue-119/events"]);
       expect(paths.filter((path) => path.startsWith("/api/objectives/"))).toEqual([
@@ -164,6 +195,8 @@ describe("account-owned PR preparation", () => {
       await vi.waitFor(() => expect(signals.size).toBe(2));
       const observer = new QueryObserver(prepared.client, { queryKey: ["comments", "old"] }); stop = observer.subscribe(() => {});
       await prepared.client.fetchQuery({ queryKey: ["issues", "new"], queryFn: async () => [{ ...old, id: "new" }], staleTime: 0 });
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["comments", "old"]))).toBe(false);
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["comments", "new"]))).toBe(true);
       expect(signals.get("/api/issues/old/comments")!.aborted).toBe(false);
       expect(signals.get("/api/issues/old/events")!.aborted).toBe(true);
       prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
@@ -187,6 +220,8 @@ describe("account-owned PR preparation", () => {
       prepared.client.setQueryData(["issues", "new"], [{ ...old, id: "pending", created_at: "2026-01-02" }, old]);
       prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
       expect(isPreparedAppTabDestination(prepared.client, "/projects/new/triage")).toBe(false);
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["comments", "pending"]))).toBe(false);
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["comments", "old"]))).toBe(true);
       prepared.client.setQueryData(["issues", "new"], [old]);
       expect(isPreparedAppTabDestination(prepared.client, "/projects/new/triage")).toBe(true);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
@@ -203,6 +238,7 @@ describe("account-owned PR preparation", () => {
     try {
       prepared.preparation.visit("/home", ["/home", "/projects/new/triage"]); await drain(prepared);
       expect(prepared.client.getQueryState(["comments", "denied"])?.status).toBe("error");
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["comments", "denied"]))).toBe(true);
       expect(isPreparedAppTabDestination(prepared.client, "/projects/new/triage")).toBe(false);
       await prepared.client.fetchQuery({ queryKey: ["issues", "new"], queryFn: async () => [issue], staleTime: 0 });
       for (let step = 0; step < 3; step++) { foreground.dispatchEvent(new Event("focus")); prepared.flush(); }

@@ -10,6 +10,75 @@ import {
 
 const SAVE_DELAY_MS = 5_000;
 const IDLE_TIMEOUT_MS = 1_000;
+const MAX_FALLBACK_QUERIES = 128;
+type SnapshotRecord = Record<string, unknown>;
+type SnapshotContainer = SnapshotRecord | readonly unknown[];
+
+function plainRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" &&
+    [Object.prototype, null].includes(Object.getPrototypeOf(value));
+}
+
+/** Read envelope structure without invoking an accessor or serialization hook. */
+function ownValue(value: SnapshotContainer, key: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  return descriptor && Object.hasOwn(descriptor, "value") ? descriptor.value : undefined;
+}
+
+function replaceDataProperty<T extends SnapshotRecord>(value: T, key: string, replacement: unknown): T {
+  const descriptors: Record<string, PropertyDescriptor> = Object.getOwnPropertyDescriptors(value);
+  descriptors[key] = { ...descriptors[key], value: replacement };
+  return Object.create(Object.getPrototypeOf(value), descriptors);
+}
+
+/** Keep complete small queries when one optional query exceeds the existing snapshot budget. */
+export function boundedQuerySnapshot(client: PersistedClient, preferredHashes?: () => ReadonlySet<string>): PersistedClient | null {
+  try {
+    if (!plainRecord(client) || typeof ownValue(client, "buster") !== "string" ||
+        typeof ownValue(client, "timestamp") !== "number" || !Number.isFinite(ownValue(client, "timestamp"))) return null;
+    const state = ownValue(client, "clientState");
+    if (!plainRecord(state)) return null;
+    const queries = ownValue(state, "queries"), mutations = ownValue(state, "mutations");
+    if (!Array.isArray(queries) || Object.getPrototypeOf(queries) !== Array.prototype ||
+        !Array.isArray(mutations) || Object.getPrototypeOf(mutations) !== Array.prototype) return null;
+    const fits = fitsQuerySnapshotBudget(client);
+    if (!fits && queries.length > MAX_FALLBACK_QUERIES) return null;
+    if (fits) {
+      for (let index = 0; index < queries.length; index++) {
+        const query = ownValue(queries, String(index));
+        if (!plainRecord(query) || typeof ownValue(query, "queryHash") !== "string" ||
+            !Array.isArray(ownValue(query, "queryKey")) || !plainRecord(ownValue(query, "state"))) return null;
+      }
+      return client;
+    }
+    // Validate the preserved envelope and mutations before inspecting optional
+    // query payloads. Extra metadata remains part of the final whole budget.
+    const emptyState = replaceDataProperty(state, "queries", []);
+    const emptyClient = replaceDataProperty(client, "clientState", emptyState);
+    if (!fitsQuerySnapshotBudget(emptyClient)) return null;
+    const retained = [];
+    for (let index = 0; index < queries.length; index++) {
+      const query = ownValue(queries, String(index));
+      if (!plainRecord(query) || typeof ownValue(query, "queryHash") !== "string" ||
+          !Array.isArray(ownValue(query, "queryKey")) || !plainRecord(ownValue(query, "state"))) return null;
+      if (fitsQuerySnapshotBudget(query)) retained.push(query);
+    }
+    if (!retained.length && !mutations.length) return null;
+    const candidate = replaceDataProperty(client, "clientState", replaceDataProperty(state, "queries", retained));
+    if (fitsQuerySnapshotBudget(candidate)) return candidate;
+    if (!preferredHashes) return null;
+    // Admission describes complete query ownership, never a row or byte quota.
+    // Read it only when the otherwise eligible collection cannot fit together.
+    const hashes = preferredHashes();
+    const preferred = retained.filter((query) => {
+      const hash = ownValue(query, "queryHash");
+      return typeof hash === "string" && hashes.has(hash);
+    });
+    if (!preferred.length && !mutations.length) return null;
+    const workingSet = replaceDataProperty(client, "clientState", replaceDataProperty(state, "queries", preferred));
+    return fitsQuerySnapshotBudget(workingSet) ? workingSet : null;
+  } catch { return null; }
+}
 
 /** Coalesce the entire snapshot operation, including dehydration, until idle. */
 export function scheduleQuerySnapshot(save: () => void): () => void {
@@ -122,7 +191,7 @@ export function subscribeToQueryPersistence(
 }
 
 /** Snapshots retain reload recovery without placing decrypted data on disk. */
-export function createQueryStorage(storage: Storage | undefined, key: string): Persister {
+export function createQueryStorage(storage: Storage | undefined, key: string, preferredHashes?: () => ReadonlySet<string>): Persister {
   let revision = 0;
   type Write = {
     client: PersistedClient;
@@ -170,16 +239,23 @@ export function createQueryStorage(storage: Storage | undefined, key: string): P
   return {
     persistClient: (client) => {
       if (!storage) return Promise.resolve();
-      if (!fitsQuerySnapshotBudget(client)) {
+      const bounded = boundedQuerySnapshot(client, preferredHashes);
+      if (!bounded) {
         // The cache remains live in memory. Retire the previous disk snapshot
         // and pending writes so a later reload cannot resurrect obsolete state.
         remove();
         return Promise.resolve();
       }
+      client = bounded;
       const generation = localSnapshotGeneration();
       // The save timestamp changes even for an identical cache. Keep query
       // freshness metadata in the comparison, but ignore that outer timestamp.
-      const content = JSON.stringify({ buster: client.buster, clientState: client.clientState });
+      // JSON ignores symbol properties. Copy only enumerable string data
+      // descriptors so an ignored symbol getter cannot run during object rest.
+      const persistedState = Object.fromEntries(Object.entries(Object.getOwnPropertyDescriptors(client))
+        .filter(([name, descriptor]) => name !== "timestamp" && descriptor.enumerable)
+        .map(([name, descriptor]) => [name, descriptor.value]));
+      const content = JSON.stringify(persistedState);
       if (saved?.generation === generation && saved.content === content && !running && !queued) {
         return Promise.resolve();
       }

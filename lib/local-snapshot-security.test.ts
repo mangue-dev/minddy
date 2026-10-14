@@ -41,6 +41,32 @@ it("keeps oversized cache data in memory and leaves separately saved drafts unto
   } finally { client.clear(); }
 });
 
+it("seals only complete fitting queries when another query is oversized without exposing plaintext or changing drafts", async () => {
+  const client = new QueryClient();
+  const large = { issues: [{ id: "large", description: "x".repeat(MAX_QUERY_SNAPSHOT_BYTES) }] };
+  const rows = Array.from({ length: 670 }, (_, index) => ({ id: `issue-${index}`, title: `PRIVATE_SCOPED_SENTINEL_${index}` }));
+  client.setQueryData(["me", "board"], large);
+  client.setQueryData(["issues", "synthetic-project"], rows);
+  window.localStorage.setItem("minddy.issue-drafts", "encrypted-draft");
+  const transport = vi.fn<typeof globalThis.fetch>(async () => Response.json({ snapshot: {
+    format: "minddy-local-v1", owner: "owner", expiresAt: Date.now() + 1000, ciphertext: "authenticated-filtered-envelope",
+  } }));
+  vi.stubGlobal("fetch", transport);
+  try {
+    await persistQueryClientSave({ queryClient: client, persister: createQueryStorage(window.localStorage, "minddy.query-cache") });
+    expect(transport).toHaveBeenCalledTimes(1);
+    const request = JSON.parse(transport.mock.calls[0][1]!.body as string);
+    expect(request.slot).toBe("query-cache");
+    expect(request.value.clientState.queries).toHaveLength(1);
+    expect(request.value.clientState.queries[0]).toMatchObject({ queryKey: ["issues", "synthetic-project"], state: { data: rows } });
+    expect(window.localStorage.getItem("minddy.query-cache")).toContain("authenticated-filtered-envelope");
+    expect(window.localStorage.getItem("minddy.query-cache")).not.toContain("PRIVATE_SCOPED_SENTINEL");
+    expect(client.getQueryData(["issues", "synthetic-project"])).toBe(rows);
+    expect(client.getQueryData(["me", "board"])).toBe(large);
+    expect(window.localStorage.getItem("minddy.issue-drafts")).toBe("encrypted-draft");
+  } finally { client.clear(); }
+});
+
 it("does not recreate local data after logout while a seal is in flight", async () => {
   let release!: (value: Response) => void;
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { release = resolve; })));
