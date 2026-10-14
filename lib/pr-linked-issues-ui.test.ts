@@ -16,7 +16,10 @@ const h = vi.hoisted(() => ({ unlink: vi.fn(), pending: false, issueId: "" }));
 vi.mock("@/lib/use-unlink-pull-request-issue", () => ({
   useUnlinkPullRequestIssue: () => ({ mutateAsync: h.unlink, isPending: h.pending, variables: { issueId: h.issueId } }),
 }));
-vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: { issues: [] }, isPending: false }) }));
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@tanstack/react-query")>(),
+  useQuery: () => ({ data: { issues: [] }, isPending: false }),
+}));
 // Import the actual primitives without the barrel's unrelated emoji JSON dependency.
 vi.mock("mangue-ui", async () => ({
   ...(await vi.importActual<Record<string, unknown>>("mangue-ui/lib/utils.ts")),

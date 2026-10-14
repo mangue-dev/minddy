@@ -99,3 +99,33 @@ test("documentation exceptions detect changed values and values outside their ex
     assert.equal(counts.get(path), expected, path);
   }
 });
+
+test("MIN-683 helper fingerprints are allowed only at their exact evidence path", (context) => {
+  const probe = spawnSync("gitleaks", ["version"], { encoding: "utf8" });
+  if (probe.error?.code === "ENOENT") {
+    context.skip("Gitleaks is unavailable; CI runs the pinned history scanner separately.");
+    return;
+  }
+  assert.equal(probe.status, 0);
+  const directory = mkdtempSync(join(tmpdir(), "minddy-helper-fingerprint-policy-"));
+  const evidencePath = "docs/performance/min-683-db-attribution-results.json";
+  const evidence = JSON.parse(read(evidencePath));
+  const authPlan = evidence.runs.find((run) => run.reviewedHelperHashes);
+  const hashes = authPlan.reviewedHelperHashes;
+  const original = JSON.stringify({ reviewedHelperHashes: hashes }, null, 2);
+  const changed = original.replace(hashes["auth.jwt"], "0123456789abcdef".repeat(4));
+  for (const [path, content] of [[evidencePath, changed], ["docs/unrelated-helper-fingerprints.json", original]]) {
+    const target = join(directory, path);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, content);
+  }
+  const report = join(directory, "redacted-report.json");
+  const result = spawnSync("gitleaks", ["dir", directory, "--config", new URL(".gitleaks.toml", root).pathname,
+    "--no-banner", "--redact=100", "--report-format", "json", "--report-path", report], { encoding: "utf8" });
+  assert.equal(result.status, 1, "Changed fingerprints and copied values must still be scanned.");
+  const findings = JSON.parse(readFileSync(report, "utf8"));
+  assert.ok(findings.some((finding) => finding.File.endsWith(evidencePath)));
+  assert.ok(findings.some((finding) => finding.File.endsWith("docs/unrelated-helper-fingerprints.json")));
+  for (const finding of findings) assert.equal(finding.Secret, "REDACTED");
+  assert.equal(findings.filter((finding) => finding.File.endsWith(evidencePath)).length, 1);
+});

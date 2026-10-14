@@ -94,7 +94,13 @@ describe("database entry navigation saves", () => {
       await navigation;
     });
     expect(navigated).toBe(true);
-    expect(save).toHaveBeenLastCalledWith("entry", { title: "Second title" });
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("entry", { title: "Second title" }, expect.any(Function));
+    const canDispatch = save.mock.lastCall![2] as () => boolean;
+    expect(canDispatch()).toBe(true);
+    await act(async () => root!.unmount());
+    root = undefined;
+    expect(canDispatch()).toBe(false);
   });
   it("keeps the entry open and its draft available when saving fails", async () => {
     const save = vi.fn().mockRejectedValue(new Error("Offline"));
@@ -114,6 +120,12 @@ describe("database entry navigation saves", () => {
     });
     expect(saved).toBe(true);
     expect(h.autosave.state).toBe("saved");
-    expect(save).toHaveBeenLastCalledWith("entry", { title: "Unsaved title" });
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("entry", { title: "Unsaved title" }, expect.any(Function));
+    const canDispatch = save.mock.lastCall![2] as () => boolean;
+    expect(canDispatch()).toBe(true);
+    await act(async () => root!.unmount());
+    root = undefined;
+    expect(canDispatch()).toBe(false);
   });
 });

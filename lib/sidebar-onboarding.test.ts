@@ -33,7 +33,10 @@ vi.mock("@/lib/create-context", () => ({ useCreate: () => ({ openCreateIssue: mo
 vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantPanelActions: () => ({ open: mocks.openNumo }) }));
 vi.mock("@/lib/use-invitations-query", () => ({ useInvitationResponder: () => ({ invitations: [], busyId: null }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
-vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@tanstack/react-query")>(),
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}));
 vi.mock("@/components/home/onboarding-import-dialog", () => ({ OnboardingImportDialog: () => null }));
 vi.mock("@/components/home/onboarding-join-dialog", () => ({ OnboardingJoinDialog: () => null }));
 vi.mock("@/components/app-link", () => ({ default: "a" }));
