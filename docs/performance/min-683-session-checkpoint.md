@@ -1,5 +1,14 @@
 # MIN-683: session checkpoint, 2026-10-14
 
+## Latest startup query-cache pass (2026-10-15)
+
+Read [the startup cache pass](min-683-startup-cache-pass.md) first. Forced-quit
+draft loss is explained by Chromium's deferred storage commit and corrected by a
+desktop flush (`ab8f2a319`, run4 passes). The startup tree no longer remounts
+its QueryClient when auth first resolves (`6413d75f2`): restored All completes
+at a web median of about 2530 ms against 2838 ms, and a native median of 2977 ms
+against 3183 ms. That report lists the remaining startup gaps.
+
 ## Latest native/bootstrap pass and Claude handoff
 
 Read [the current pass](min-683-native-bootstrap-pass.md) and
