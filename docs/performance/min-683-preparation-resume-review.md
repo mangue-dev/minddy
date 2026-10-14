@@ -31,7 +31,7 @@ saving. Evidence must record actual requested reader sets and request counts.
 Fetching a sibling before it owns a query and a scoped slot is a separate
 admission change, not harmless transport deduplication.
 
-The implemented candidate is narrower: only a listed normal member read whose
+The initial candidate was narrower: only a listed normal member read whose
 next pending prerequisite is objectives in the same project can form a pair.
 Both slots must be free, neither key may already be fetching or paused, and
 both keys must lack data or be explicitly invalidated so `fetchQuery` actually
@@ -42,14 +42,91 @@ after both exact operations settle or when that lifetime retires. It introduces
 no intentional waiting window to manufacture a shared request. The focused
 integration suite checks admission, independent settlement, original order,
 project isolation and disposal; root runs it outside timed measurements.
-Each settled read restores its ordinary cached query function before the
-one-shot transport retires. Restoration compares function identity and keeps
+Each one-shot wrapper restores its ordinary cached query function synchronously
+after its first actual join, while the stream may still be pending. Restoration
+also runs if that join throws; it compares function identity and keeps
 newer foreground observer options. Four additional real QueryClient cases
 cover inactive refetch after completion, old-client refetch after retirement
 of invalidated cached entries, foreground options takeover and a synchronous
-success-listener refetch. Restoration runs before query-function settlement
-reaches TanStack's cache notifications. Without this restoration, later invalidation
+success-listener refetch. A repeated invalidation cannot reuse the temporary
+wrapper even when TanStack emits no new event. Without this restoration, later invalidation
 could reuse a disposed one-shot function stored in TanStack query options.
+
+Root's identified corrected `98e236` candidate emits no bootstrap request in
+any of the nine independent web cases. That admission is rejected as a
+performance increment: code correctness without actual shared transport does
+not establish an authorization saving.
+
+The next hypothesis, recorded in issue plan task58 before code changes, bounds
+two physical HTTP transports rather than two TanStack owners. One existing
+ordinary normal read can coexist with the exact member/objective pair, yielding
+three registered query owners and two client transports. The server pair still
+has at most two readers; only one pair may exist. Queued ordering remains
+unchanged, and no unrelated work waits to manufacture a pair.
+Optional neighbors and forge companions cannot trigger pair admission.
+
+The retained admission is further limited to data-absent, currently
+noninvalidated idle keys. Cached keys and already invalidated keys, including
+invalidated empty keys, stay on their complete ordinary readers. TanStack's
+`Query.invalidate()` emits no new event while `isInvalidated` is already true;
+the preparator cannot infer every generation from that event stream. Tests
+cover this exclusion and an actual cold pair that acquires cached data before
+inactive `invalidateQueries` with `refetchType: "all"`. It replaces the
+unprovable claim that seeded, already invalidated cache entries can safely
+join the one-shot cohort.
+
+The preparator atomically registers both pair owners and their priority before
+the first fetch. A dispatch marker prevents the second preadmitted owner from
+being blocked by the physical-slot cap. The pair owns one physical unit until
+both exact operations settle, including cancellation settlement; completion of
+its first frame cannot release that unit early. Selected foreground ownership
+continues to protect each exact query separately.
+
+Declared owners alone do not prove query-function joins: a synchronous listener
+can navigate, hide, invalidate, remove or warm a sibling before its dispatch.
+The coordinator's synchronous `finishAdmission` verifies actual joins. An
+incomplete cohort is disposed, its joined operation is canceled with ordinary
+reversion, its never-dispatched ownership is removed, and temporary query
+functions are restored. A newly accepted cached sibling remains accepted. An
+interruption before either dispatch removes the pair's physical membership
+without waiting for nonexistent completion callbacks. No automatic ordinary
+fallback hides a real transport, authentication or reader error.
+
+A bounded parser size refusal is a separate legitimate-input case. Only the
+coordinator's exact `ProjectBootstrapLimitError` may restore and invoke the
+original complete ordinary reader while its owner is still live and its signal
+is not aborted. If both resources exceed the stream bound, their ordinary
+fallbacks serialize within the pair's reserved single physical unit, preserving
+the two-transport cap alongside an existing issue read. The original query
+functions capture their own actual request starts. Denial, account changes,
+cancellation, malformed or truncated streams and ordinary reader errors remain
+explicit failures with no fallback.
+
+The pair's exact cache-generation fence remains subscribed through ordinary
+size fallback, even after the stream coordinator has unsubscribed. It checks
+the resource generation before queued dispatch and before accepting the full
+ordinary response; a later inactive invalidation cannot disappear under that
+late result. Invalidation also synchronously restores only that resource's
+temporary query function before `refetchType: "all"` can reuse it. A subsequent
+fetch on a new generation is foreground replacement work, not the old
+preparation owner. Old bookkeeping retires without canceling the replacement
+operation, and observed healthy sibling ownership remains protected.
+
+Every new non-preadmitted read rechecks visible/online/foreground admission
+within the same pass. A first-read listener that starts unrelated foreground
+work cannot cause the remaining loop to admit a new speculative pair. Already
+declared sibling owners retain the explicit join/retirement path. The two-slot
+bound concerns scoped preparation; legitimate foreground reads retain their
+ordinary authority and trigger yielding of unrelated speculation.
+
+Focused integration cases cover three-owner saturation, independent-frame slot
+retention, prevention of a second pair, original ordering and project scope,
+exact selected-owner protection, first-fetch and pre-dispatch priority
+interruption, freshly cached unjoined siblings, invalidation epochs, disposal,
+ordinary refetch restoration and foreground options takeover. Root must run
+these and measure actual pair admission before retaining this increment.
+Additional cases distinguish bounded-size complete-reader fallback from denial
+and malformed-stream errors and verify fallback transport serialization.
 
 `lib/client-read.ts` buffers the complete body before checking the account and
 returning a reconstructed response. It cannot deliver independent frames.

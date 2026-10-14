@@ -1,4 +1,4 @@
-import { hashKey, isCancelledError, onlineManager, type Query, type QueryClient } from "@tanstack/react-query";
+import { hashKey, isCancelledError, onlineManager, type Query, type QueryClient, type QueryFunctionContext } from "@tanstack/react-query";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
@@ -11,7 +11,7 @@ import { createPageNavigationPreparation } from "./page-navigation-preparation";
 import { adjacentProjectDestination } from "./project-navigation-working-set";
 import { pullRequestAccountRetryAt } from "./pull-request-query";
 import { createNavigationWorkingSet } from "./navigation-working-set";
-import { createProjectBootstrapPair } from "./project-bootstrap-api";
+import { createProjectBootstrapPair, ProjectBootstrapLimitError } from "./project-bootstrap-api";
 
 const PASSIVE_SHELL_READS = new Set([
   ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
@@ -47,7 +47,7 @@ function missingRecentActivity(client: QueryClient): boolean {
 
 /** Only the displayed working set is prepared; larger accounts keep normal intent navigation. */
 export const RESTORED_TAB_PREPARATION_LIMIT = 10;
-/** Scoped preparation stays bounded even when maintenance reconciles alongside it. */
+/** Scoped preparation retains at most two HTTP transports, including one paired read. */
 export const SCOPED_PREPARATION_CONCURRENCY = 2;
 
 /** Drain a finite account-owned working set, yielding each read to foreground work. */
@@ -73,11 +73,20 @@ export function createPrTabPreparation(
   const deferredForge = new Set<string>();
   let forgeWake: ReturnType<typeof setTimeout> | undefined;
   let cancel: (() => void) | undefined;
-  type Read = { key: readonly unknown[]; identity: string; cancelled: boolean; forge: boolean };
+  type Read = { key: readonly unknown[]; identity: string; cancelled: boolean; forge: boolean; dispatched: boolean; pair?: BootstrapPair; generation?: number; superseded?: boolean };
   const preparing = new Map<string, Read>();
   type BootstrapReader = { key: readonly unknown[]; original: PreparedQuery["options"]["queryFn"]; installed: PreparedQuery["options"]["queryFn"] };
-  type BootstrapPair = { transport: ReturnType<typeof createProjectBootstrapPair>; pending: Set<string>; readers: Map<string, BootstrapReader> };
+  type BootstrapPair = { transport: ReturnType<typeof createProjectBootstrapPair>; pending: Set<string>; readers: Map<string, BootstrapReader>; reads: Map<string, Read>; joined: Set<string>; generations: Map<string, number>; stop: () => void; disposed: boolean };
   const bootstrapPairs = new Set<BootstrapPair>();
+  const transportSlots = () => {
+    const pairedOwners = new Set<string>();
+    for (const pair of bootstrapPairs) for (const identity of pair.pending) if (preparing.has(identity)) pairedOwners.add(identity);
+    return preparing.size - pairedOwners.size + bootstrapPairs.size;
+  };
+  const disposeBootstrapPair = (pair: BootstrapPair) => {
+    if (pair.disposed) return;
+    pair.disposed = true; pair.stop(); pair.transport.dispose();
+  };
   const restoreBootstrapReader = (pair: BootstrapPair, identity: string) => {
     const reader = pair.readers.get(identity);
     if (!reader) return;
@@ -98,7 +107,7 @@ export function createPrTabPreparation(
   const otherTransport = () => {
     const auxiliary = new Set(recentActivityQueries(client).map((options) => hashKey(options.queryKey)));
     return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" && !isCachedTabReconciliation(query) && !isPassiveShellMaintenanceRead(query) &&
-      !(preparing.has(query.queryHash) && !query.isActive()) &&
+      !(preparing.has(query.queryHash) && !preparing.get(query.queryHash)!.cancelled && !preparing.get(query.queryHash)!.superseded && !query.isActive()) &&
       !(auxiliary.has(query.queryHash) && !query.isActive()));
   };
   type PreparedQuery = { options: ReturnType<typeof appTabPreparationQueries>[number]; identity: string };
@@ -159,7 +168,7 @@ export function createPrTabPreparation(
     else priority.release();
   };
   const enqueue = () => {
-    if (!disposed && [...pendingKeys].some((identity) => !parkedForge.has(identity)) && !cancel && preparing.size < SCOPED_PREPARATION_CONCURRENCY &&
+    if (!disposed && [...pendingKeys].some((identity) => !parkedForge.has(identity)) && !cancel && transportSlots() < SCOPED_PREPARATION_CONCURRENCY &&
         visible() && onlineManager.isOnline() && !otherTransport()) cancel = schedule(prepare);
   };
   const wakeForgeAfterSettlement = () => {
@@ -171,6 +180,12 @@ export function createPrTabPreparation(
     }, 0);
   };
   const yieldRead = (read: Read) => {
+    if (read.superseded) {
+      // The replacement operation is foreground work on this same key. Retire
+      // old bookkeeping without canceling that newer query's transport.
+      read.cancelled = true; attempted.delete(read.identity); refreshPending(read.identity);
+      return;
+    }
     if (read.cancelled || client.getQueryCache().find({ queryKey: read.key, exact: true })?.getObserversCount()) return;
     if (!disposed && visible() && onlineManager.isOnline() && activeQueryHashes.has(read.identity)) return;
     read.cancelled = true;
@@ -179,6 +194,22 @@ export function createPrTabPreparation(
     attempted.delete(read.identity);
     refreshPending(read.identity);
     void client.cancelQueries({ queryKey: read.key, exact: true });
+    const pair = read.pair;
+    if (pair && Array.from(pair.reads.values()).some((owner) => !owner.dispatched)) {
+      // A synchronous listener can interrupt admission before the second query
+      // joins. Retire that incomplete request rather than leave an orphan wait.
+      pair.transport.finishAdmission();
+      for (const identity of Array.from(pair.readers.keys())) restoreBootstrapReader(pair, identity);
+      disposeBootstrapPair(pair);
+      for (const owner of pair.reads.values()) if (!owner.dispatched) {
+        owner.cancelled = true;
+        if (preparing.get(owner.identity) === owner) preparing.delete(owner.identity);
+        pair.pending.delete(owner.identity);
+        attempted.delete(owner.identity); refreshPending(owner.identity);
+        priority.finishRead(owner.key);
+      }
+      if (!pair.pending.size) bootstrapPairs.delete(pair);
+    }
   };
   const yieldReads = () => { for (const read of preparing.values()) yieldRead(read); };
   const refreshSelectedDependencies = (identity: string) => {
@@ -207,11 +238,11 @@ export function createPrTabPreparation(
   };
   const prepare = () => {
     cancel = undefined;
-    if (disposed || preparing.size >= SCOPED_PREPARATION_CONCURRENCY || !visible() || !onlineManager.isOnline() || otherTransport()) return;
+    if (disposed || transportSlots() >= SCOPED_PREPARATION_CONCURRENCY || !visible() || !onlineManager.isOnline() || otherTransport()) return;
     const firstPage = listed.find((item) => item.route.pageId);
     if (firstPage) pagePreparation.prioritize(firstPage.href);
     const missingNavigation = hasQueuedNormal() || [...preparing.values()].some((read) => !read.forge);
-    const pairedReads = new Map<string, { options: PreparedQuery["options"]; pair: BootstrapPair }>();
+    const pairedReads = new Map<string, { options: PreparedQuery["options"]; pair: BootstrapPair; read: Read }>();
     syncPriority();
     // Optional neighboring data never displaces a listed destination.
     for (const item of [...listed, ...(neighbor ? [neighbor] : [])]) {
@@ -225,16 +256,22 @@ export function createPrTabPreparation(
       for (const [index, query] of item.queries.entries()) {
         const { identity } = query;
         let options = pairedReads.get(identity)?.options ?? query.options;
-        if (!pendingKeys.has(identity) || preparing.has(identity) || parkedForge.has(identity)) continue;
-        if (preparing.size >= SCOPED_PREPARATION_CONCURRENCY) return;
+        const admitted = pairedReads.get(identity);
+        if (admitted?.read.cancelled) continue;
+        if (!admitted && (!pendingKeys.has(identity) || preparing.has(identity) || parkedForge.has(identity))) continue;
+        // Earlier fetch/priority listeners may have admitted foreground work
+        // during this same pass. A new read must still satisfy current admission.
+        if (!admitted && (!visible() || !onlineManager.isOnline() || otherTransport())) { changed(); return; }
+        if (!admitted && transportSlots() >= SCOPED_PREPARATION_CONCURRENCY) return;
         if (forge && [...preparing.values()].some((read) => read.forge)) break;
         // A second slot must not let an optional list overtake recent activity
         // while the final ordinary navigation prerequisite is still in flight.
         if (forge && options.queryKey[0] !== "pull-request" && missingRecentActivity(client)) continue;
         if (neighboring && Date.now() - (neighborAttempts.get(identity) ?? -Infinity) < 30_000) continue;
-        // Share only the next two already eligible exact reads, with both
-        // ordinary slots free. Never delay other work to manufacture a pair.
-        if (!forge && !neighboring && preparing.size === 0 && options.queryKey.length === 2 && options.queryKey[0] === "members" &&
+        // One exact pair may share a second HTTP slot alongside one ordinary
+        // read. Never wait, reorder work or admit a second paired transport.
+        if (!admitted && !forge && !neighboring && !bootstrapPairs.size && preparing.size <= 1 &&
+            Array.from(preparing.values()).every((read) => !read.forge) && options.queryKey.length === 2 && options.queryKey[0] === "members" &&
             typeof options.queryKey[1] === "string") {
           const next = item.queries.slice(index + 1).find((candidate) => pendingKeys.has(candidate.identity) &&
             !preparing.has(candidate.identity) && !parkedForge.has(candidate.identity));
@@ -242,43 +279,120 @@ export function createPrTabPreparation(
               next.options.queryKey[1] === options.queryKey[1] &&
               [options, next.options].every((candidate) => {
                 const state = client.getQueryState(candidate.queryKey);
-                return (!state || state.fetchStatus === "idle") && (state?.data === undefined || state.isInvalidated);
+                return (!state || state.fetchStatus === "idle") && state?.data === undefined && !state?.isInvalidated;
               })) {
             const transport = createProjectBootstrapPair(client, options.queryKey[1]);
-            // Restore before TanStack publishes success/error, whose cache
-            // listeners may synchronously refetch this now-settled query.
+            // Restore immediately after the first join. A repeated invalidate
+            // may emit no cache event while an already invalidated query fetches.
             let pair!: BootstrapPair;
-            const memberFn: PreparedQuery["options"]["queryFn"] = ({ signal }) => transport.members({ signal })
-              .finally(() => restoreBootstrapReader(pair, identity));
-            const objectiveFn: PreparedQuery["options"]["queryFn"] = ({ signal }) => transport.objectives({ signal })
-              .finally(() => restoreBootstrapReader(pair, next.identity));
-            pair = { transport, pending: new Set([identity, next.identity]), readers: new Map([
+            let fallback: Promise<unknown> = Promise.resolve();
+            const sizeFallback = (error: unknown, reader: string, context: QueryFunctionContext, original: PreparedQuery["options"]["queryFn"]) => {
+              restoreBootstrapReader(pair, reader);
+              if (!(error instanceof ProjectBootstrapLimitError) || disposed || pair.disposed || context.signal.aborted || typeof original !== "function") throw error;
+              const generation = pair.generations.get(reader);
+              const guard = () => {
+                if (disposed || pair.disposed || context.signal.aborted) throw error;
+                if (pair.generations.get(reader) !== generation) throw new DOMException("Project read generation changed", "AbortError");
+              };
+              // The shared stream has ended. Serialize complete ordinary
+              // readers within its one reserved physical transport slot.
+              const nextFallback = fallback.catch(() => {}).then(() => {
+                guard();
+                return original(context);
+              }).then((value) => {
+                // The coordinator's stream subscription has ended on overflow;
+                // this owner still fences invalidation through its ordinary GET.
+                guard();
+                return value;
+              });
+              fallback = nextFallback;
+              return nextFallback;
+            };
+            const originalMemberFn = options.queryFn, originalObjectiveFn = next.options.queryFn;
+            const memberFn: PreparedQuery["options"]["queryFn"] = (context) => {
+              pair.joined.add(identity);
+              try {
+                return transport.members({ signal: context.signal }).catch((error: unknown) => sizeFallback(error, identity, context, originalMemberFn));
+              } finally { restoreBootstrapReader(pair, identity); }
+            };
+            const objectiveFn: PreparedQuery["options"]["queryFn"] = (context) => {
+              pair.joined.add(next.identity);
+              try {
+                return transport.objectives({ signal: context.signal }).catch((error: unknown) => sizeFallback(error, next.identity, context, originalObjectiveFn));
+              } finally { restoreBootstrapReader(pair, next.identity); }
+            };
+            pair = { transport, pending: new Set([identity, next.identity]), reads: new Map(), joined: new Set(),
+              generations: new Map([[identity, 0], [next.identity, 0]]), stop: () => {}, disposed: false, readers: new Map([
               [identity, { key: options.queryKey, original: options.queryFn, installed: memberFn }],
               [next.identity, { key: next.options.queryKey, original: next.options.queryFn, installed: objectiveFn }],
             ]) };
+            pair.stop = client.getQueryCache().subscribe((event) => {
+              const reader = event.query.queryHash;
+              if (pair.generations.has(reader) && (event.type === "removed" || (event.type === "updated" && event.action.type === "invalidate"))) {
+                pair.generations.set(reader, pair.generations.get(reader)! + 1);
+                // invalidateQueries may synchronously refetch an inactive
+                // cached key before this operation's Promise settles.
+                restoreBootstrapReader(pair, reader);
+              }
+              const owner = pair.reads.get(reader);
+              if (owner?.dispatched && event.type === "updated" && event.action.type === "fetch" &&
+                  pair.generations.get(reader) !== owner.generation) {
+                owner.superseded = true;
+                changed();
+              }
+            });
+            const memberRead: Read = { key: options.queryKey, identity, cancelled: false, forge: false, dispatched: false, pair, generation: 0 };
+            const objectiveRead: Read = { key: next.options.queryKey, identity: next.identity, cancelled: false, forge: false, dispatched: false, pair, generation: 0 };
+            pair.reads.set(identity, memberRead); pair.reads.set(next.identity, objectiveRead);
             bootstrapPairs.add(pair);
             options = { ...options, queryFn: memberFn };
-            pairedReads.set(identity, { options, pair });
-            pairedReads.set(next.identity, { options: { ...next.options, queryFn: objectiveFn }, pair });
+            pairedReads.set(identity, { options, pair, read: memberRead });
+            pairedReads.set(next.identity, { options: { ...next.options, queryFn: objectiveFn }, pair, read: objectiveRead });
+            // Both exact query owners exist before any priority/cache listener
+            // can observe dispatch. Cancellation still belongs to each owner.
+            for (const owner of pair.reads.values()) {
+              preparing.set(owner.identity, owner);
+              attempted.add(owner.identity); pendingKeys.delete(owner.identity);
+            }
+            for (const owner of pair.reads.values()) if (!owner.cancelled && preparing.get(owner.identity) === owner) priority.startRead(owner.key);
+            syncPriority();
           }
         }
         const detail = options.queryKey[0] === "pull-request";
         // The helper keeps account-wide Retry-After and serial detail ownership.
         // Register ownership before the cache emits the start of the request.
-        const read: Read = { key: options.queryKey, identity, cancelled: false, forge };
-        preparing.set(identity, read);
-        attempted.add(identity); pendingKeys.delete(identity);
+        const read: Read = pairedReads.get(identity)?.read ?? { key: options.queryKey, identity, cancelled: false, forge, dispatched: false };
+        if (!read.pair) {
+          preparing.set(identity, read);
+          attempted.add(identity); pendingKeys.delete(identity);
+        }
+        if (read.cancelled) continue;
         if (neighboring) {
           neighborAttempts.set(identity, Date.now());
           if (neighborAttempts.size > 64) neighborAttempts.delete(neighborAttempts.keys().next().value!);
         }
         syncPriority();
-        if (!forge) priority.startRead(read.key);
+        if (!forge && !read.pair) priority.startRead(read.key);
         const pageRead = route.pageId && options.queryKey[0] === "page";
+        read.dispatched = true;
         const pending = detail ? prefetchPullRequestDetail(client, route.prId!)
           : client.fetchQuery<unknown>({ ...options, retry: false }).then(() => {
             if (pageRead && !disposed && !read.cancelled && !client.getQueryState(options.queryKey)?.isInvalidated) preparePageNavigation(route.pageId!);
           }).catch((error: unknown) => { if (isCancelledError(error)) read.cancelled = true; });
+        // A synchronous listener can fill or fetch the sibling before its
+        // fetchQuery call. Actual joins, not declared owners, start the stream.
+        if (read.pair && Array.from(read.pair.reads.values()).every((owner) => owner.dispatched) && !read.pair.transport.finishAdmission()) {
+          for (const pairedIdentity of Array.from(read.pair.readers.keys())) restoreBootstrapReader(read.pair, pairedIdentity);
+          disposeBootstrapPair(read.pair);
+          for (const owner of read.pair.reads.values()) if (read.pair.joined.has(owner.identity)) {
+            owner.cancelled = true;
+            attempted.delete(owner.identity); refreshPending(owner.identity);
+            if (!owner.superseded) void client.cancelQueries({ queryKey: owner.key, exact: true });
+          }
+        }
+        // Cache fetch listeners run before Query installs its retryer. Replay
+        // an interruption after dispatch so the exact new operation is aborted.
+        if (read.cancelled && !read.superseded) void client.cancelQueries({ queryKey: read.key, exact: true });
         if (!pending) {
           preparing.delete(identity); priority.finishRead(read.key);
           // A busy account helper has not attempted this displayed tab. Keep
@@ -302,7 +416,7 @@ export function createPrTabPreparation(
           if (pair) {
             restoreBootstrapReader(pair, identity);
             pair.pending.delete(identity);
-            if (!pair.pending.size && bootstrapPairs.delete(pair)) pair.transport.dispose();
+            if (!pair.pending.size && bootstrapPairs.delete(pair)) disposeBootstrapPair(pair);
           }
           if (preparing.get(identity) === read) preparing.delete(identity);
           priority.finishRead(read.key);
@@ -312,8 +426,8 @@ export function createPrTabPreparation(
           syncPriority();
           enqueue();
         });
-        // Fill at most one additional normal slot in this pass. Forge-backed
-        // reads stay serialized independently of the normal slot limit.
+        // A normal read and one exact pair occupy at most two HTTP slots.
+        // Forge-backed reads retain their separate serial ownership.
         if (forge) break;
       }
     }
@@ -424,7 +538,7 @@ export function createPrTabPreparation(
       pagePreparation.dispose();
       for (const pair of bootstrapPairs) {
         for (const identity of Array.from(pair.readers.keys())) restoreBootstrapReader(pair, identity);
-        pair.transport.dispose();
+        disposeBootstrapPair(pair);
       }
       bootstrapPairs.clear();
       workingSet.dispose();

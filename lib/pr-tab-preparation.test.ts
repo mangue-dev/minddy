@@ -14,16 +14,22 @@ import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
-// This scheduling suite keeps its ordinary per-reader fixtures. The framed
-// adapter and paired admission have separate real-QueryClient regressions.
+// This transparent adapter preserves ordinary per-reader fixtures, so its fetch
+// calls count logical owned reads, not shared HTTP transports. The real framed
+// adapter and physical two-transport cap have separate QueryClient regressions.
 vi.mock("./project-bootstrap-api", async () => {
   const { fetchMembersApi } = await import("./members-api");
   const { objectivesQueryFn } = await import("./objectives-api");
-  return { createProjectBootstrapPair: (_client: unknown, projectId: string) => ({
-    members: ({ signal }: { signal?: AbortSignal }) => fetchMembersApi(projectId, signal),
-    objectives: objectivesQueryFn(projectId),
-    dispose: () => {},
-  }) };
+  return { ProjectBootstrapLimitError: class extends Error {}, createProjectBootstrapPair: (_client: unknown, projectId: string) => {
+    let members = false, objectives = false;
+    const readObjectives = objectivesQueryFn(projectId);
+    return {
+      members: ({ signal }: { signal?: AbortSignal }) => { members = true; return fetchMembersApi(projectId, signal); },
+      objectives: ({ signal }: { signal?: AbortSignal }) => { objectives = true; return readObjectives({ signal }); },
+      finishAdmission: () => members && objectives,
+      dispose: () => {},
+    };
+  } };
 });
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
@@ -151,13 +157,13 @@ describe("account-owned PR preparation", () => {
     } finally { prepared.preparation.dispose(); prepared.client.clear(); issueWrites.reset(); }
   });
   it("discovers only one complete detail per populated listed secondary view after its ordinary list succeeds", async () => {
-    const prepared = setup(); let active = 0, maximum = 0;
+    const prepared = setup(); let activeOwnedReads = 0, maximumOwnedReads = 0;
     const issues = Array.from({ length: 120 }, (_, index) => ({ id: `issue-${index}`, project_id: "new", status: "triage", created_at: new Date(index * 1000).toISOString() }));
     const objectives = Array.from({ length: 120 }, (_, index) => ({ id: `goal-${index}`, project_id: "new", status: "planned" }));
     const posts = Array.from({ length: 120 }, (_, index) => ({ id: `post-${index}`, project_id: "new", status: "open", vote_count: index,
       created_at: new Date(index * 1000).toISOString(), review_state: "published", sensitivity: null, category_ids: [] }));
     prepared.fetch.mockImplementation(async (url) => {
-      maximum = Math.max(maximum, ++active); await Promise.resolve(); active--;
+      maximumOwnedReads = Math.max(maximumOwnedReads, ++activeOwnedReads); await Promise.resolve(); activeOwnedReads--;
       const path = String(url);
       if (path.endsWith("/new/issues")) return Response.json(issues);
       if (path.endsWith("/new/objectives")) return Response.json(objectives);
@@ -178,13 +184,13 @@ describe("account-owned PR preparation", () => {
       )));
       const paths = prepared.fetch.mock.calls.map(([url]) => String(url));
       expect(paths.filter((path) => path.startsWith("/api/issues/"))).toEqual(["/api/issues/issue-119/comments", "/api/issues/issue-119/events"]);
-      expect(paths.filter((path) => path.startsWith("/api/objectives/"))).toEqual([
+      expect(paths.filter((path) => path.startsWith("/api/objectives/")).sort()).toEqual([
         "/api/objectives/goal-0/comments", "/api/objectives/goal-0/events", "/api/objectives/goal-0/resources", "/api/objectives/goal-0/feedback?count=1",
-      ]);
+      ].sort());
       expect(paths.filter((path) => /\/feedback\/post-/.test(path))).toEqual([
         "/api/projects/new/feedback/post-119", "/api/projects/new/feedback/post-119/comments", "/api/projects/new/feedback/post-119/events",
       ]);
-      expect(paths).toHaveLength(18); expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
+      expect(paths).toHaveLength(18); expect(maximumOwnedReads).toBe(SCOPED_PREPARATION_CONCURRENCY + 1);
       expect(paths.some((path) => path.includes("/settings") || path.includes("/git-link"))).toBe(false);
       expect(prepared.tasks.size).toBe(0);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
@@ -257,7 +263,7 @@ describe("account-owned PR preparation", () => {
       expect(prepared.fetch).toHaveBeenCalledTimes(2); expect(prepared.tasks.size).toBe(0);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
-  it("saturates two normal slots and refills only the slot whose shared query settles", async () => {
+  it("admits the exact member/objective owner pair when one of two ordinary transports settles", async () => {
     const prepared = setup();
     const reads = new Map<string, { signal: AbortSignal; finish: () => void }>();
     prepared.fetch.mockImplementation((url, init) => new Promise((resolve, reject) => {
@@ -271,13 +277,14 @@ describe("account-owned PR preparation", () => {
       prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(2);
       reads.get("/api/projects/new/categories")!.finish();
       await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); prepared.flush();
-      await vi.waitFor(() => expect(reads.size).toBe(3));
-      expect(prepared.client.isFetching()).toBe(2);
+      await vi.waitFor(() => expect(reads.size).toBe(4));
+      expect(prepared.client.isFetching()).toBe(3);
       expect(reads.get("/api/projects/new/issues")!.signal.aborted).toBe(false);
-      expect([...reads.keys()]).toEqual(["/api/projects/new/issues", "/api/projects/new/categories", "/api/projects/new/members"]);
+      expect([...reads.keys()]).toEqual(["/api/projects/new/issues", "/api/projects/new/categories", "/api/projects/new/members", "/api/projects/new/objectives"]);
       prepared.preparation.dispose();
       expect(reads.get("/api/projects/new/issues")!.signal.aborted).toBe(true);
       expect(reads.get("/api/projects/new/members")!.signal.aborted).toBe(true);
+      expect(reads.get("/api/projects/new/objectives")!.signal.aborted).toBe(true);
       await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
       expect(prepared.tasks.size).toBe(0);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
@@ -492,26 +499,28 @@ describe("account-owned PR preparation", () => {
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
-  it("drains at most two scoped reads during healthy shell maintenance without canceling authorized reads", async () => {
-    const prepared = setup(); let release!: () => void; let scoped = 0, maximum = 0;
+  it("drains all seven scoped owners during healthy shell maintenance without canceling authorized reads", async () => {
+    const prepared = setup(); let release!: () => void; let scopedOwners = 0, maximumOwnedReads = 0;
     prepared.client.setQueryData(["me", "summary"], { counts: { total: 1 } });
     const maintenance = prepared.client.fetchQuery({ queryKey: ["me", "summary"], queryFn: () => new Promise((resolve) => { release = () => resolve({ counts: { total: 2 } }); }) });
     prepared.fetch.mockImplementation(async (url) => {
-      maximum = Math.max(maximum, ++scoped); await Promise.resolve(); scoped--; return fixtureResponse(String(url));
+      maximumOwnedReads = Math.max(maximumOwnedReads, ++scopedOwners); await Promise.resolve(); scopedOwners--; return fixtureResponse(String(url));
     });
     try {
       prepared.preparation.visit("/home", ["/home", "/projects/new"]);
-      for (let index = 0; index < 4; index++) {
+      for (let index = 0; index < 7 && prepared.fetch.mock.calls.length < 7; index++) {
         prepared.flush();
-        const completed = Math.min((index + 1) * 2, 7);
-        await vi.waitFor(() => expect(prepared.fetch.mock.calls.length).toBe(completed));
         await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(1));
       }
-      expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY); expect(prepared.client.getQueryState(["me", "summary"])?.fetchStatus).toBe("fetching");
+      expect(prepared.fetch.mock.calls.map(([url]) => String(url))).toEqual([
+        "/api/projects/new/issues", "/api/projects/new/categories", "/api/projects/new/members", "/api/projects/new/objectives",
+        "/api/projects/new/issue-relations", "/api/projects/new/integrations", "/api/projects/new/views",
+      ]);
+      expect(maximumOwnedReads).toBe(SCOPED_PREPARATION_CONCURRENCY + 1); expect(prepared.client.getQueryState(["me", "summary"])?.fetchStatus).toBe("fetching");
       expect(prepared.client.getQueryData(["me", "summary"])).toEqual({ counts: { total: 1 } });
       release(); await maintenance; await drain(prepared);
       expect(prepared.client.getQueryData(["me", "summary"])).toEqual({ counts: { total: 2 } });
-    } finally { release?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+    } finally { release?.(); await maintenance.catch(() => {}); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
   it.each(["missing", "failed"])("keeps %s shell summaries ahead of speculation", async (condition) => {
@@ -527,7 +536,7 @@ describe("account-owned PR preparation", () => {
       release(); await required;
       prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url))); await drain(prepared);
       expect(prepared.fetch).toHaveBeenCalledTimes(7);
-    } finally { release?.(); prepared.preparation.dispose(); prepared.client.clear(); }
+    } finally { release?.(); await required.catch(() => {}); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
   it("preserves a scoped read through passive maintenance churn but yields to explicit search and unknown foreground reads", async () => {
@@ -679,12 +688,12 @@ describe("account-owned PR preparation", () => {
       expect(signal.aborted).toBe(true);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
-  it("warms all seven neighboring project prerequisites alongside an open board and Page within two normal read slots", async () => {
-    const prepared = setup(); let concurrent = 0, maximum = 0;
+  it("warms all seven neighboring project prerequisites alongside an open board and Page within the three-owner budget", async () => {
+    const prepared = setup(); let concurrentOwnedReads = 0, maximumOwnedReads = 0;
     prepared.client.setQueryData(["projects"], [{ id: "new" }, { id: "neighbor" }]);
     prepared.fetch.mockImplementation(async (url) => {
-      maximum = Math.max(maximum, ++concurrent);
-      await Promise.resolve(); concurrent--;
+      maximumOwnedReads = Math.max(maximumOwnedReads, ++concurrentOwnedReads);
+      await Promise.resolve(); concurrentOwnedReads--;
       return fixtureResponse(String(url));
     });
     try {
@@ -696,7 +705,7 @@ describe("account-owned PR preparation", () => {
         "/api/projects/neighbor/issues", "/api/projects/neighbor/categories", "/api/projects/neighbor/members",
         "/api/projects/neighbor/objectives", "/api/projects/neighbor/issue-relations", "/api/projects/neighbor/integrations", "/api/projects/neighbor/views",
       ]);
-      expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
+      expect(maximumOwnedReads).toBe(SCOPED_PREPARATION_CONCURRENCY + 1);
       expect(appTabPreparationQueries(prepared.client, "/projects/neighbor").every((options) => prepared.client.getQueryState(options.queryKey)?.status === "success")).toBe(true);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
@@ -751,12 +760,12 @@ describe("account-owned PR preparation", () => {
     } finally { stop(); finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
-  it("warms every prerequisite of never-visited open project and Page tabs within two scoped read slots", async () => {
+  it("warms every prerequisite of never-visited open project and Page tabs within the three-owner budget", async () => {
     const prepared = setup();
-    let concurrent = 0, maximum = 0;
+    let concurrentOwnedReads = 0, maximumOwnedReads = 0;
     prepared.fetch.mockImplementation(async (url) => {
-      maximum = Math.max(maximum, ++concurrent);
-      await Promise.resolve(); concurrent--;
+      maximumOwnedReads = Math.max(maximumOwnedReads, ++concurrentOwnedReads);
+      await Promise.resolve(); concurrentOwnedReads--;
       return fixtureResponse(String(url));
     });
     prepared.preparation.visit("/home", ["/home", "/projects/new", "/projects/new/pages/page"]);
@@ -766,7 +775,7 @@ describe("account-owned PR preparation", () => {
       "/api/projects/new/objectives", "/api/projects/new/issue-relations", "/api/projects/new/integrations",
       "/api/projects/new/views", "/api/projects/new/pages/page", "/api/projects/new/pages",
     ]);
-    expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
+    expect(maximumOwnedReads).toBe(SCOPED_PREPARATION_CONCURRENCY + 1);
     expect(prepared.client.getQueryData(["views", "new"])).toEqual([]);
     prepared.flush(); expect(prepared.tasks.size).toBe(0);
     prepared.preparation.dispose(); prepared.client.clear();

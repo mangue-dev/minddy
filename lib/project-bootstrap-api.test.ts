@@ -134,4 +134,35 @@ describe("independently framed project reads", () => {
     expect(fetchMock).not.toHaveBeenCalled(); pair.dispose();
     await expect(result).rejects.toMatchObject({ name: "AbortError" });
   });
+  it("retires an unjoined cohort on cancellation and never adds listeners for a late join", async () => {
+    const client = new QueryClient(); clients.push(client);
+    const pair = createProjectBootstrapPair(client, "project"); pairs.push(pair);
+    const canceled = new AbortController(); canceled.abort();
+    await expect(pair.members({ signal: canceled.signal })).rejects.toMatchObject({ name: "AbortError" });
+    const late = new AbortController(); const listen = vi.spyOn(late.signal, "addEventListener");
+    await expect(pair.objectives({ signal: late.signal })).rejects.toMatchObject({ name: "AbortError" });
+    expect(listen).not.toHaveBeenCalled(); expect(fetchMock).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
+  });
+  it("bounds abandoned admission even when its caller forgets to finish the cohort", async () => {
+    const client = new QueryClient(); clients.push(client);
+    const pair = createProjectBootstrapPair(client, "project"); pairs.push(pair);
+    const pending = pair.members(); void pending.catch(() => {});
+    await vi.advanceTimersByTimeAsync(CLIENT_READ_TIMEOUT_MS);
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchMock).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
+  });
+  it("preserves bounded ordinary HTTP denial messages and codes", async () => {
+    const run = setup();
+    fetchMock.mockResolvedValueOnce(Response.json({ error: "Session is no longer active", code: "session_inactive" }, { status: 401 }));
+    await expect(run.members).rejects.toMatchObject({ status: 401, message: "Session is no longer active", code: "session_inactive" });
+    await expect(run.objectives).rejects.toMatchObject({ status: 401 });
+  });
+  it("fences a changed account while an HTTP denial body is consumed", async () => {
+    const run = setup();
+    // setup has already captured the original owner before its first await.
+    mocks.session.mockResolvedValue("replacement");
+    fetchMock.mockResolvedValueOnce(Response.json({ error: "Old account failure" }, { status: 403 }));
+    await expect(run.members).rejects.toThrow("account changed");
+    await expect(run.objectives).rejects.toThrow("account changed");
+  });
 });

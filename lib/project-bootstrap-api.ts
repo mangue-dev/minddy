@@ -19,6 +19,8 @@ type Owner = {
   promise: Promise<unknown>;
 };
 export const PROJECT_BOOTSTRAP_FRAME_BYTES = 2 * 1024 * 1024;
+/** Parser limits select an ordinary complete read, never a truncated DTO. */
+export class ProjectBootstrapLimitError extends Error {}
 const readers: Reader[] = ["members", "objectives"];
 
 /** Share only two already admitted query operations; no settled data is cached here. */
@@ -26,6 +28,7 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
   const controller = new AbortController();
   const owners = new Map<Reader, Owner>();
   let started = false, disposed = false;
+  const admissionDeadline = setTimeout(() => dispose(), CLIENT_READ_TIMEOUT_MS);
   const startedAt = Date.now();
   for (const name of readers) {
     let resolve!: Owner["resolve"], reject!: Owner["reject"];
@@ -43,6 +46,9 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
   };
   const cancel = (owner: Owner, error: unknown) => {
     settle(owner, error);
+    // An unopened cohort cannot keep a cache subscription while waiting for a
+    // query function which cancellation or a synchronous cache update skipped.
+    if (!started) { dispose(); return; }
     if ([...owners.values()].every((entry) => entry.settled)) controller.abort(error);
   };
   const unsubscribe = client.getQueryCache().subscribe((event) => {
@@ -54,6 +60,7 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    clearTimeout(admissionDeadline);
     const error = new DOMException("Project bootstrap disposed", "AbortError");
     controller.abort(error);
     for (const owner of owners.values()) settle(owner, error);
@@ -67,7 +74,38 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
         const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/bootstrap?readers=members,objectives`, {
           signal, cache: "no-store",
         });
-        if (!response.ok) throw new HttpResponseError("Project bootstrap failed", response.status);
+        if (!response.ok) {
+          let text = "";
+          const stream = response.body?.getReader();
+          if (stream) {
+            const onAbort = () => { void stream.cancel(signal.reason).catch(() => {}); };
+            signal.addEventListener("abort", onAbort, { once: true });
+            try {
+              const decoder = new TextDecoder();
+              let bytes = 0;
+              while (true) {
+                signal.throwIfAborted();
+                const chunk = await stream.read();
+                signal.throwIfAborted();
+                if (chunk.done) { text += decoder.decode(); break; }
+                bytes += chunk.value.byteLength;
+                if (bytes > 16_384) break;
+                text += decoder.decode(chunk.value, { stream: true });
+              }
+            } finally {
+              signal.removeEventListener("abort", onAbort);
+              await stream.cancel().catch(() => {});
+              stream.releaseLock();
+            }
+          }
+          let body: { error?: unknown; code?: unknown } | undefined;
+          try { body = JSON.parse(text); } catch { /* Non-JSON failures keep a bounded generic message. */ }
+          if (await prepareClientSession() !== account) throw new Error("Local account changed");
+          signal.throwIfAborted();
+          const error = new HttpResponseError(typeof body?.error === "string" ? body.error : "Project bootstrap failed", response.status);
+          if (typeof body?.code === "string") Object.assign(error, { code: body.code });
+          throw error;
+        }
         if (!response.headers.get("content-type")?.startsWith("application/x-ndjson") || !response.body) {
           throw new Error("Invalid project bootstrap response");
         }
@@ -83,13 +121,13 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
             signal.throwIfAborted();
             if (done) break;
             bytes += value.byteLength;
-            if (bytes > PROJECT_BOOTSTRAP_FRAME_BYTES * 2) throw new Error("Project bootstrap response too large");
+            if (bytes > PROJECT_BOOTSTRAP_FRAME_BYTES * 2) throw new ProjectBootstrapLimitError("Project bootstrap response too large");
             buffered += decoder.decode(value, { stream: true });
             let end: number;
             while ((end = buffered.indexOf("\n")) >= 0) {
               const line = buffered.slice(0, end);
               buffered = buffered.slice(end + 1);
-              if (new TextEncoder().encode(line).byteLength > PROJECT_BOOTSTRAP_FRAME_BYTES) throw new Error("Project bootstrap frame too large");
+              if (new TextEncoder().encode(line).byteLength > PROJECT_BOOTSTRAP_FRAME_BYTES) throw new ProjectBootstrapLimitError("Project bootstrap frame too large");
               const frame = JSON.parse(line);
               if (frame?.version !== 1 || !readers.includes(frame.reader) || typeof frame.ok !== "boolean") throw new Error("Invalid project bootstrap frame");
               const owner = owners.get(frame.reader)!;
@@ -106,7 +144,7 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
                 settle(owner, new HttpResponseError(frame.error, frame.status));
               }
             }
-            if (new TextEncoder().encode(buffered).byteLength > PROJECT_BOOTSTRAP_FRAME_BYTES) throw new Error("Project bootstrap frame too large");
+            if (new TextEncoder().encode(buffered).byteLength > PROJECT_BOOTSTRAP_FRAME_BYTES) throw new ProjectBootstrapLimitError("Project bootstrap frame too large");
           }
           buffered += decoder.decode();
           if (buffered.length || readers.some((name) => !owners.get(name)!.received)) throw new Error("Truncated project bootstrap response");
@@ -124,6 +162,7 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
   };
   const join = (name: Reader, signal?: AbortSignal) => {
     const owner = owners.get(name)!;
+    if (disposed) return owner.promise;
     if (owner.joined) throw new Error("Project bootstrap query already joined");
     owner.joined = true;
     owner.signal = signal;
@@ -135,6 +174,7 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
     }
     if (!started && readers.every((reader) => owners.get(reader)!.joined)) {
       started = true;
+      clearTimeout(admissionDeadline);
       void run();
     }
     return owner.promise;
@@ -144,6 +184,11 @@ export function createProjectBootstrapPair(client: QueryClient, projectId: strin
     objectives: async ({ signal }: { signal?: AbortSignal } = {}) => applyPendingObjectives(
       await join("objectives", signal) as Objective[], startedAt, projectId,
     ),
+    finishAdmission() {
+      if (!disposed && readers.every((reader) => owners.get(reader)!.joined)) return true;
+      dispose();
+      return false;
+    },
     dispose,
   };
 }
