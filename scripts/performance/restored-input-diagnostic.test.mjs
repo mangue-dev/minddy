@@ -131,8 +131,9 @@ test("delayed activation settlement keeps its original operation identity after 
   } finally { window.__restoredInput.dispose(); dom.window.close(); }
 });
 
-test("ordinary focus proof requires initial focus, both full-duration clocks, real absence and a visible focused return", async () => {
-  const source = await readFile(new URL("./measure-restored-navigation.mjs", import.meta.url), "utf8");
+for (const collector of ["measure-restored-navigation.mjs", "measure-restored-readiness-review.mjs"]) {
+test(`${collector}: focus proof requires initial focus, both full-duration clocks, real absence and a visible focused return`, async () => {
+  const source = await readFile(new URL(`./${collector}`, import.meta.url), "utf8");
   const begin = source.indexOf("function observedFocusInterval(");
   const end = source.indexOf("\n}", begin) + 2;
   const proof = vm.runInNewContext(`(${source.slice(begin, end)})`);
@@ -151,6 +152,7 @@ test("ordinary focus proof requires initial focus, both full-duration clocks, re
     [before, away, endAbsence, returned, NaN],
   ]) assert.equal(proof(...args), false);
 });
+}
 
 test("the genuine web-tab diagnostic rejects Electron before any fixture session or output work", () => {
   const run = spawnSync(process.execPath, [new URL("./diagnose-restored-input.mjs", import.meta.url).pathname,
