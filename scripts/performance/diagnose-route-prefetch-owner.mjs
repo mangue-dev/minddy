@@ -22,6 +22,8 @@ assert.match(label, /^excluded-[a-zA-Z0-9_-]+$/, "Every output label must start 
 const output = path.join(root, "output/playwright/performance");
 await mkdir(output, { recursive: true });
 const resultPath = path.join(output, `${label}.json`);
+await readFile(resultPath).then(() => { throw new Error("Evidence label already exists; retain it and choose a new diagnostic label"); },
+  (error) => { if (error.code !== "ENOENT") throw error; });
 const lockPath = path.join(output, "min683-route-prefetch-owner-ui.lock");
 const token = randomUUID(), lock = await open(lockPath, "wx");
 await lock.writeFile(JSON.stringify({ token, label, pid: process.pid, startedAt: new Date().toISOString() }));
@@ -29,16 +31,16 @@ const hash = (value) => createHash("sha256").update(value).digest("hex");
 const fingerprint = (value) => hash(JSON.stringify(value));
 const sourcePaths = [fileURLToPath(import.meta.url), ...[
   "stable-restored-tabs.mjs", "measure-forge-navigation.mjs", "secondary-navigation-workload.mjs",
-  "enrich-secondary-workload.mjs", "seed.mjs", "board-readiness.mjs", "restored-navigation-readiness.mjs",
+  "enrich-secondary-workload.mjs", "seed.mjs", "board-readiness.mjs", "restored-navigation-readiness.mjs", "../../captures/lib/env.mjs",
 ].map((name) => path.join(root, "scripts/performance", name))];
 const sourceHashes = async () => Object.fromEntries(await Promise.all(sourcePaths.map(async (file) => [path.relative(root, file), hash(await readFile(file))])));
 const result = {
   label, protocol: "min683-excluded-route-prefetch-owner-v1", status: "running", timestamp: new Date().toISOString(),
   excludedFromComparison: "Five-second read-only source attribution with CDP headers and async stacks; no ordinary latency or acceptance conclusion",
   runtime: "headful isolated Chromium", windowMs: 5000, maximumEvents: 5000, droppedEvents: 0,
-  requests: [], bookendHttp: [], cleanup: [], errors: [],
+  requests: [], bookendHttp: [], bookends: [], cleanup: [], errors: [],
   limitations: [
-    "One All startup only. No activation, hover, touch, refresh, content mutation, reseed or fixture normalization is performed by this runner.",
+    "One All startup only. No activation, hover, touch, refresh, content mutation or reseed. Only this run's exactly observed authorized All-view publication may be restored after browser close with a revision-guarded acknowledged PATCH.",
     "Header values, cookies, bodies, raw URL queries and cross-origin stack paths are never exported. Only whitelisted prefetch header booleans are retained.",
     "Next prefetch headers identify prefetch transport; a generic fetch wrapper alone does not prove the precise Link owner or viewport cause.",
     "Async stack depth16 is requested when supported; the existing sanitized metadata helper retains its own bounded four-parent/forty-frame projection.",
@@ -51,13 +53,94 @@ let phase = "excluded-setup";
 const preservedPages = [], requestRows = new Map(), headerFlags = new Map();
 const pending = new Set();
 let collecting = false;
+const immutableTab = ({ id, user_id, custom_name, pinned, position, href }) => ({ id, user_id, custom_name, pinned, position, href });
+const tabContract = (tabs) => tabs.map(immutableTab).sort((left, right) => left.id.localeCompare(right.id));
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Restore only this renderer's proven automatic All-view URL publication. */
+async function restoreOwnAllViewPublication(current, fixture) {
+  const original = originalTabs.find((tab) => tab.id === specs[0].id);
+  const published = current.find((tab) => tab.id === original?.id);
+  if (published?.href === original?.href) return current;
+  phase = "excluded-fixture-bookend-own-all-view-cleanup";
+  const entry = { phase, status: "checking", beforeFingerprint: fingerprint(tabContract(originalTabs)), currentFingerprint: fingerprint(tabContract(current)) };
+  result.bookends.push(entry);
+  try {
+    assert.ok(!context, "The isolated renderer must close before destination cleanup");
+    assert.equal(original.href, "/all");
+    assert.ok(result.allDomGate?.selectedAll && result.allDomGate.selectedAllId === original.id);
+    assert.equal(result.allDomGate.relativeHref, published.href);
+    const observed = new URL(published.href, session.base);
+    assert.equal(observed.origin, session.base); assert.equal(observed.pathname, "/all");
+    assert.equal(observed.hash, ""); assert.equal(observed.searchParams.size, 1);
+    const viewId = observed.searchParams.get("view");
+    assert.ok(uuidPattern.test(viewId ?? ""));
+    assert.equal(published.href, `/all?view=${viewId}`);
+    await assertStableTabs(async () => current, fixture, specs);
+    // Before writing, reject every unrecognized change to any of the ten tabs.
+    const expectedPublication = originalTabs.map((tab) => tab.id === original.id ? { ...tab, href: published.href } : tab);
+    assert.deepEqual(tabContract(current), tabContract(expectedPublication));
+    const views = await readApi("/api/me/views");
+    assert.ok(Array.isArray(views) && views.some((view) => view.id === viewId && view.project_id === null && view.user_id === fixture.userId));
+    const revision = published.revision;
+    assert.ok(Number.isSafeInteger(revision) && revision > 0);
+    const route = `/api/me/app-tabs/${original.id}`;
+    const request = { phase, method: "PATCH", path: route, observedAt: new Date().toISOString(), knownOwnAllPublication: true };
+    result.bookendHttp.push(request);
+    assert.ok(!backoff, "No cleanup write is allowed during observed backoff");
+    let response;
+    try { response = await session.api(route, "PATCH", { revision, patch: { href: original.href } }); }
+    catch (error) {
+      request.ok = false;
+      const status = /: (\d{3})$/.exec(String(error?.message ?? ""));
+      if (status) request.status = Number(status[1]);
+      if (request.status === 429) backoff = { status: 429, retryAfterSeconds: null, observedAt: new Date().toISOString(),
+        limitation: "Existing fixture API helper does not expose Retry-After; stop without retry" };
+      throw new Error("Known-own cleanup request failed; retain the current server revision");
+    }
+    request.ok = true;
+    const acknowledged = response.tab;
+    assert.ok(acknowledged && !response.code, "Require the ordinary mutation acknowledgement wrapper");
+    assert.deepEqual(immutableTab(acknowledged), immutableTab(original));
+    assert.ok(Number.isSafeInteger(acknowledged.revision) && acknowledged.revision > revision);
+    entry.publicationHref = published.href; entry.originalHref = original.href;
+    entry.revisionBeforePatch = revision; entry.acknowledgedRevision = acknowledged.revision;
+    entry.acknowledged = true;
+    const after = await readApi("/api/me/app-tabs");
+    assert.deepEqual(tabContract(after), tabContract(originalTabs));
+    assert.equal(after.find((tab) => tab.id === original.id)?.revision, acknowledged.revision);
+    const otherBefore = current.filter((tab) => tab.id !== original.id), otherAfter = after.filter((tab) => tab.id !== original.id);
+    assert.deepEqual(tabContract(otherAfter), tabContract(otherBefore));
+    entry.otherNineContractsUnchanged = true;
+    entry.otherNineMetadataChanged = fingerprint(otherBefore) !== fingerprint(otherAfter);
+    entry.currentFingerprint = fingerprint(tabContract(after)); entry.status = "passed";
+    return after;
+  } catch {
+    entry.status = "failed"; result.failedBookend = phase;
+    throw new Error("Known-own All destination cleanup failed; do not retry the write");
+  }
+}
+
+/** Fixed phase names and fingerprints explain failures without exposing content. */
+async function preserveBookend(name, beforeFingerprint, verify) {
+  phase = `excluded-fixture-bookend-${name}`;
+  const entry = { phase, beforeFingerprint, currentFingerprint: null, status: "checking" };
+  result.bookends.push(entry);
+  try { await verify(entry); entry.status = "passed"; }
+  catch { entry.status = "failed"; result.failedBookend = phase; throw new Error("Fixture bookend failed"); }
+}
 
 async function readApi(route) {
   assert.ok(route.startsWith("/api/") && !route.includes("?") && !route.includes(".."));
   assert.ok(!backoff, "Respect observed backoff without additional fixture requests");
   const entry = { phase, method: "GET", path: route, observedAt: new Date().toISOString() };
   result.bookendHttp.push(entry);
-  try { const value = await session.api(route); entry.ok = true; return value; }
+  try {
+    const value = await session.api(route);
+    entry.ok = true;
+    if (phase.startsWith("excluded-fixture-bookend-")) entry.responseFingerprint = fingerprint(value);
+    return value;
+  }
   catch (error) {
     entry.ok = false;
     const status = /: (\d{3})$/.exec(String(error?.message ?? ""));
@@ -179,7 +262,8 @@ try {
       // A 403 with no Retry-After is an explicit denial, not proof of quota.
       if (response.status() === 403 && raw === null) { result.observedExplicitDenial = true; return; }
       backoff ??= { status: response.status(), retryAfterSeconds: Number.isFinite(seconds) ? seconds : null, observedAt: new Date().toISOString() };
-      await context.close(); context = undefined;
+      const active = context; context = undefined;
+      await active?.close();
     })());
   });
   cdp = await context.newCDPSession(page);
@@ -188,6 +272,7 @@ try {
   catch { result.asyncStackDepth16Supported = false; }
   cdp.on("Network.requestWillBeSentExtraInfo", (event) => {
     if (!collecting) return;
+    if (!headerFlags.has(event.requestId) && headerFlags.size >= result.maximumEvents) { result.droppedEvents++; return; }
     const flags = mergeFlags(headerFlags.get(event.requestId), prefetchFlags(event.headers));
     headerFlags.set(event.requestId, flags);
     const row = requestRows.get(event.requestId); if (row) row.prefetchHeaders = mergeFlags(row.prefetchHeaders, flags);
@@ -223,11 +308,16 @@ try {
   collecting = false;
   result.captureEndedAt = new Date().toISOString(); result.observedWindowMs = Date.now() - started;
   if (backoff) throw new Error("Observed HTTP backoff stops attribution");
-  result.allDomGate = await page.evaluate((spec) => ({ ...window.__routePrefetchOwner,
-    readyAtCaptureEnd: window.__restored?.ready(spec) === true, pathnameIsAll: location.pathname === "/all",
-    selectedAll: document.querySelector('[data-app-tab-id][aria-selected="true"]')?.getAttribute("data-app-tab-id") === spec.id,
-    observedAgeMs: performance.now(), documentReadyState: document.readyState,
-  }), allSpec);
+  result.allDomGate = await page.evaluate((spec) => {
+    const selectedAllId = document.querySelector('[data-app-tab-id][aria-selected="true"]')?.getAttribute("data-app-tab-id") ?? null;
+    const relative = location.pathname + location.search + location.hash;
+    // Export only the exact authorized cleanup shape; never arbitrary query data.
+    const relativeHref = /^\/all(?:\?view=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(relative) ? relative : null;
+    return { ...window.__routePrefetchOwner,
+      readyAtCaptureEnd: window.__restored?.ready(spec) === true, pathnameIsAll: location.pathname === "/all",
+      selectedAll: selectedAllId === spec.id, selectedAllId, relativeHref, unexpectedRelativeHref: relativeHref === null,
+      observedAgeMs: performance.now(), documentReadyState: document.readyState };
+  }, allSpec);
   assert.ok(result.allDomGate.readyAtCaptureEnd && result.allDomGate.pathnameIsAll && result.allDomGate.selectedAll,
     "Full usable All must be verified independently of prefetch request attribution");
   assert.ok(!result.rendererError && !result.responseObserverFailed && !result.droppedEvents);
@@ -247,26 +337,79 @@ try {
   await browser?.close().catch(() => { failure = true; result.status = "failed-cleanup"; });
   await Promise.allSettled(pending);
   if (session && originalTabs && !backoff) try {
-    phase = "excluded-fixture-bookend";
     const { fixture } = session;
     const api = readApi;
-    assert.deepEqual(await assertStableTabs(api, fixture, specs), originalTabs, "Preserve current tab revisions and exact destinations without normalization");
-    for (const saved of preservedPages) assert.equal(fingerprint(await api(saved.href)), saved.fingerprint);
-    if (secondary) assert.deepEqual(await secondaryCollections(api, secondary), result.secondaryCollectionsBefore);
-    if (connected) assert.deepEqual(await loadConnectedBoardWorkload(api, fixture, secondary), connected);
-    const { link } = await api(`/api/projects/${forge.project}/git-link`);
-    assert.equal(forgeLinkFingerprint(link), forge.linkFingerprint);
-    result.cleanup.push({ exactTenTabsAndRevisionsUnchanged: true, fullPagesAndVersionsUnchanged: true,
+    phase = "excluded-fixture-bookend-tabs";
+    const capturedTabs = await api("/api/me/app-tabs");
+    const tabsAfterOwnCleanup = await restoreOwnAllViewPublication(capturedTabs, fixture);
+    await preserveBookend("tabs", fingerprint(tabContract(originalTabs)), async (entry) => {
+      const current = tabsAfterOwnCleanup;
+      entry.rawBeforeFingerprint = fingerprint(originalTabs); entry.rawCurrentFingerprint = fingerprint(current);
+      entry.currentFingerprint = fingerprint(tabContract(current));
+      entry.rawMetadataChanged = entry.rawBeforeFingerprint !== entry.rawCurrentFingerprint;
+      entry.missingTabCount = originalTabs.filter((before) => !current.some((tab) => tab.id === before.id)).length;
+      entry.unrecognizedTabCount = current.filter((after) => !originalTabs.some((tab) => tab.id === after.id)).length;
+      entry.changedContractFields = originalTabs.flatMap((before) => {
+        const after = current.find((tab) => tab.id === before.id);
+        if (!after) return [];
+        const fields = ["id", "user_id", "custom_name", "pinned", "position", "href"].filter((field) => before[field] !== after[field]);
+        return fields.length ? [{ id: before.id, fields }] : [];
+      });
+      entry.revisionChanges = originalTabs.flatMap((before) => {
+        const after = current.find((tab) => tab.id === before.id);
+        if (!after || before.revision === after.revision) return [];
+        const safeRevision = (value) => typeof value === "number" || typeof value === "string" && /^\d+$/.test(value) ? value : null;
+        return [{ id: before.id, beforeRevision: safeRevision(before.revision), currentRevision: safeRevision(after.revision) }];
+      });
+      entry.timestampChanges = originalTabs.filter((before) => {
+        const after = current.find((tab) => tab.id === before.id);
+        return after && (before.updated_at !== after.updated_at || before.created_at !== after.created_at);
+      }).length;
+      // Use the ordinary collectors' identity/metadata/destination contract.
+      // Revisions, timestamps and enriched labels are observed, never reset.
+      await assertStableTabs(async () => current, fixture, specs);
+      assert.deepEqual(tabContract(current), tabContract(originalTabs));
+    });
+    for (const [index, saved] of preservedPages.entries()) await preserveBookend(`page-${index}`, saved.fingerprint, async (entry) => {
+      const current = await api(saved.href);
+      entry.currentFingerprint = fingerprint(current);
+      entry.beforeVersion = saved.version; entry.currentVersion = current.version;
+      assert.equal(entry.currentFingerprint, saved.fingerprint);
+    });
+    if (secondary) await preserveBookend("secondary-collections", result.secondaryCollectionsBefore?.fingerprint ?? null, async (entry) => {
+      const current = await secondaryCollections(api, secondary);
+      entry.currentFingerprint = current.fingerprint;
+      entry.beforeCounts = result.secondaryCollectionsBefore.counts; entry.currentCounts = current.counts;
+      assert.deepEqual(current, result.secondaryCollectionsBefore);
+    });
+    if (connected) await preserveBookend("complete-board", fingerprint(connected), async (entry) => {
+      const current = await loadConnectedBoardWorkload(api, fixture, secondary);
+      entry.currentFingerprint = fingerprint(current);
+      assert.deepEqual(current, connected);
+    });
+    await preserveBookend("git-link", forge.linkFingerprint, async (entry) => {
+      const { link } = await api(`/api/projects/${forge.project}/git-link`);
+      entry.currentFingerprint = forgeLinkFingerprint(link);
+      assert.equal(entry.currentFingerprint, forge.linkFingerprint);
+    });
+    result.cleanup.push({ exactTenTabContractsAndDestinationsUnchanged: true, revisionAndEnrichmentChangesRecordedOnly: true, fullPagesAndVersionsUnchanged: true,
       secondaryCollectionsUnchanged: true, commentsNotRefetched: true, completeIssueSourceUnchanged: true, githubConnectionUnchanged: true });
   } catch { failure = true; result.status = "failed-preservation"; result.cleanup.push({ fullPreservationVerified: false }); }
   if (backoff) result.cleanup.push({ fixtureBookendDeferredForBackoff: true, noRetryOrRestorationWrite: true });
-  if (result.collectorSourceHashes) result.collectorSourcesUnchanged = fingerprint(await sourceHashes()) === fingerprint(result.collectorSourceHashes);
-  if (result.manifestHashes) result.manifestsUnchanged = hash(await readFile(stableManifestPath)) === result.manifestHashes.stable && hash(await readFile(secondaryManifestPath)) === result.manifestHashes.secondary;
+  if (result.collectorSourceHashes) result.collectorSourcesUnchanged = await sourceHashes().then((value) => fingerprint(value) === fingerprint(result.collectorSourceHashes), () => false);
+  if (result.manifestHashes) result.manifestsUnchanged = await Promise.all([readFile(stableManifestPath), readFile(secondaryManifestPath)])
+    .then(([stable, secondary]) => hash(stable) === result.manifestHashes.stable && hash(secondary) === result.manifestHashes.secondary, () => false);
   if (result.collectorSourcesUnchanged === false || result.manifestsUnchanged === false) { failure = true; result.status = "failed-changed-source-or-cohort"; }
   if (backoff) result.backoff = backoff;
   await session?.close().catch(() => { failure = true; result.status = "failed-cleanup"; });
+  result.summary ??= { sameOriginRequests: result.requests.length,
+    routeRscRequests: result.requests.filter((row) => !row.path.startsWith("/api/") && row.hasRscQuery).length,
+    nextRouterPrefetchRequests: result.requests.filter((row) => row.prefetchHeaders.nextRouterPrefetch).length,
+    segmentPrefetchRequests: result.requests.filter((row) => row.prefetchHeaders.nextRouterSegmentPrefetch).length,
+    purposePrefetchRequests: result.requests.filter((row) => row.prefetchHeaders.purposePrefetch).length };
   result.finishedAt = new Date().toISOString();
-  await writeFile(resultPath, JSON.stringify(result, null, 2));
+  // Never overwrite a failed attribution with a later retry bearing the same label.
+  await writeFile(resultPath, JSON.stringify(result, null, 2), { flag: "wx" });
   await lock.close(); assert.equal(JSON.parse(await readFile(lockPath, "utf8")).token, token); await rm(lockPath);
   console.log(JSON.stringify({ resultPath, status: result.status }));
 }
