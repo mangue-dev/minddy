@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { OnboardingProvider } from "@/lib/use-onboarding";
 import { AuthProvider } from "@/lib/auth-context";
@@ -35,6 +35,7 @@ import { PushNotificationDismiss } from "@/components/push-notification-dismiss"
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
 import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
+import { RestoredPageBootstrapAccount, RestoredPageBootstrapNavigation } from "@/components/restored-page-bootstrap-record";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
 const AssistantPanel = dynamic(
@@ -61,9 +62,10 @@ function DeferredKeyboardCheatsheet() {
   return open ? <KeyboardCheatsheet /> : null;
 }
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({ children, bootstrap }: { children: ReactNode; bootstrap?: ReactNode }) {
   return (
     <AuthProvider>
+      <RestoredPageBootstrapNavigation>
       {/* Adopts the ACCOUNT theme at sign-in (and migrates legacy accounts):
           renders nothing, sits here to see both Auth and Theme providers. */}
       <ThemeAccountSync />
@@ -72,6 +74,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  Supabase to read it (see lib/keyboard/use-send-mode). */}
       <SendModeBoundary>
         <AccountQueryProvider>
+          <RestoredPageBootstrapAccount>{bootstrap}</RestoredPageBootstrapAccount>
           <RealtimeProvider>
             <ProjectsProvider>
               <IssuePanelProvider>
@@ -143,6 +146,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           </RealtimeProvider>
         </AccountQueryProvider>
       </SendModeBoundary>
+      </RestoredPageBootstrapNavigation>
     </AuthProvider>
   );
 }

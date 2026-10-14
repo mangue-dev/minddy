@@ -1,5 +1,59 @@
 # MIN-683: architecture review for restored tabs
 
+## Resumed server working-set experiment
+
+Task 50 is a source candidate, not yet a measured improvement. It starts the
+initial document's protected reads under the same verified claims, live-session
+and MFA guard as ordinary routes. RSC navigation and framework/browser prefetch
+requests are excluded before authentication. Canonical account tabs select at
+most two distinct explicit Pages; each resource reader independently enforces
+its existing authorization and decryption contract.
+
+The fixture produces ten exact ordinary query records: each project's issues,
+members, objectives and Page tree, plus both explicit bodies. Two top-level
+readers execute concurrently; an ordinary reader can retain its own existing
+parallel database subreads. Independent Suspense records do not await one
+aggregate result. A request-scoped ten-second SDK deadline bounds optional
+server work without changing ordinary API deadlines. All, Home, routines,
+selected secondary details and forge preparation keep their existing owners.
+This slice cannot certify the complete all-tab deadline.
+
+The project issues/members/objectives routes reuse typed readers. Same-scope
+UUID keyset batches handle a database cap lower than the requested limit;
+exact counts describe each remaining scope. Page trees use the same complete
+reader and restore normal tree order. Later database/decryption failure returns
+no partial collection. Membership metadata failures fail closed, while actual
+absence/denial keeps the ordinary 404. Resource-count failure retains the
+existing best-effort zero-count contract. These separate reads are not one
+transactional server snapshot.
+
+Client ingestion waits for account-bound snapshot restoration, the initial
+document generation and the first committed account QueryClient. It retains
+only primitive client identities and a bounded 128-key priority history;
+foreground fetches, failures, invalidations, writes and removals take priority
+even when their original Query has since disappeared. Old pure hydration does
+not become a newer read. The optional initial-document window closes after
+fifteen seconds or metadata overflow and fails closed thereafter. There is no
+body history, timer, cross-account cache or extra retry request in this tracker.
+
+Complete issue/objective records retain the ordinary pending-write overlays at
+the initial navigation's conservative read-start boundary. An unsettled insert
+rejects the entire optional collection. Existing trees and every existing Page
+Query retain their current owner; a new Page body can seed display only. It
+creates no accepted read/write receipt or prepared editing lease, so the
+mounted surface still requires its ordinary actual scoped GET before saving.
+Known denial, newer ACKs, deleted Pages and retired clients cannot be revived
+by an older streamed record. Snapshot size, persistence exclusions, freshness
+limits and optimistic merge/departure semantics remain unchanged.
+
+Focused checks currently pass: 157 tests across the new server/client slices
+and seven existing Page correctness suites, 47 shared-reader/store tests, 88
+Page server tests, 25 authorization/cookie tests and seven provider/retention
+tests. These are overlapping checks, not a unique aggregate count. Full types,
+scoped lint, owned-English, documentation and knowledge checks pass. Production
+build and unchanged-cohort before/after measurements are still required before
+retention; reject startup contention or a cost shifted to another first click.
+
 ## Decision to test
 
 Treat the account's restored tab strip as an explicit working set with complete

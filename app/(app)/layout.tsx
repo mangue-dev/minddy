@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { FullCatalogMessages } from "@/components/full-catalog-messages";
+import { RestoredPageWorkingSet } from "@/components/restored-page-working-set";
 import { AppProviders } from "./app-providers";
 
 /**
- * Segment of the authenticated app. SERVER component, which does nothing else
- * what to carry this `metadata` and climb the client provider tree
- * (`app-providers.tsx`) — a client page cannot export metadata,
- * But that's exactly what was needed here.
+ * Authenticated server layout. The optional restored-Page working set streams
+ * independently of the shell and its client providers; it does not block All
+ * or turn a slow protected read into an aggregate startup dependency.
  *
  * `noindex, nofollow` on everything behind the authentication (MIN-88).
  * Belt and suspenders: the `Disallow` of robots.txt politely requests not to
@@ -22,7 +23,9 @@ export const metadata: Metadata = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <FullCatalogMessages>
-      <AppProviders>{children}</AppProviders>
+      <AppProviders bootstrap={<Suspense fallback={null}><RestoredPageWorkingSet /></Suspense>}>
+        {children}
+      </AppProviders>
     </FullCatalogMessages>
   );
 }
