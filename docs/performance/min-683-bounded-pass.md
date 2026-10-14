@@ -3,7 +3,7 @@
 This pass resumes the clean existing branch and draft PR420 at `db15c6f8a`.
 The root owns CI, integration and all UI measurements; three agents separately
 review database/RLS, server bootstrap and preparation/authorized incident
-traces. The CI gate precedes the only performance experiment. No merge,
+traces. The known mock/autosave/scanner gate precedes the only performance experiment. No merge,
 deployment, production migration, index, account permission change, reseed or
 shared DTO cache occurs. MIN-683 remains in progress.
 
@@ -40,6 +40,28 @@ explicit bounded inert-character validation before expression construction.
 Ten tooling regressions pass, including malformed/nested markers and attempted
 executable/oversized identifiers. Remote CodeQL remains an exact-head check;
 local regression success alone does not certify that remote check.
+
+## Remote CI follow-up: reviewed invitation access
+
+On published `e98ad7b11`, both unit shards and all CodeQL analyses/aggregate
+pass. The validation job then exposes a separate missing registration in the
+encrypted-access guard, previously hidden behind the scanner failure. Its local
+log also rejected the shared reader; the root initially misread the last exit
+status of a chained command and corrects that interpretation here. This does
+not invalidate the read-only UI content/version bookends or turn failed CI green.
+
+`loadProjectMembers` already checks a living project and owner/member access,
+and only an owner decodes pending invitations. Its service query moved into
+`lib/server/project-working-set-readers.ts` without registering that exact file
+in `allowedInvitationAccess`. Register only that path, require the encrypted
+invitation projection and actual decoder call, and leave the issue/objective
+raw-table rules intact. Four guard regressions pass (including missing decoding,
+missing ciphertext projection, raw issue/objective access and an unreviewed
+invitation path); the real reader's 27 pagination/ACL/decoder/error tests pass.
+No runtime query, DTO, RLS policy or permission changes. Missing egress artifacts
+in that failed validation job are a downstream consequence of stopping before
+its egress steps, not a separate runtime diagnosis. Republish this guard fix and
+verify the new exact head; `e98ad7b11` itself remains failed.
 
 ## Bootstrap decision
 

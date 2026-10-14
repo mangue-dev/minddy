@@ -8,6 +8,7 @@ const allowedInvitationAccess = new Set([
   "lib/server/encryption/invitation-backfill.ts",
   "lib/server/invitation-token.ts",
   "lib/server/members.ts",
+  "lib/server/project-working-set-readers.ts",
   "lib/server/retention.ts",
 ]);
 
@@ -330,6 +331,11 @@ for (const file of files) {
     violations.push(normalized);
   }
   const requiredDecoders = protectedReaderContracts.get(normalized);
+  if (normalized === "lib/server/project-working-set-readers.ts" &&
+      (!/await\s+decryptInvitationEmail\s*\(/.test(source) ||
+        !/invited_email_ciphertext/.test(source))) {
+    violations.push(normalized);
+  }
   if (requiredDecoders && (requiredDecoders.some((name) =>
       !new RegExp(`\\b${name}\\s*\\(`).test(source)) ||
       !/encrypted_content\s*,\s*encryption_version/.test(source))) {

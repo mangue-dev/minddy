@@ -10,6 +10,11 @@ their exact values/path are excepted, with changed-value/wrong-path regressions.
 Three additional CodeQL diagnostic-tooling alerts receive bounded identifier
 and fixed-point normalization corrections; verify remote CI for the published
 head rather than equating local tests with remote success.
+On `e98ad7b11` both unit shards and CodeQL pass, but encrypted-access validation
+rejects the shared invitation reader's missing exact-path registration. The local
+log was initially misread. The narrow registration/decoder-projection guard fix
+passes four negative guard cases and 27 complete-reader cases; verify the next
+published head. No query/RLS/DTO changes are made.
 
 One anchored first-Page admission candidate is measured and rejected. Control
 `f5abefe20` / `aByBbQwsVOkTw0_Zh99sx` and candidate `df0df1acc` /
