@@ -21,11 +21,16 @@ export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
     candidate: `min683-restored-after-scaled-one-slot-${runtime}-1`,
     expectedBaseline: { sha: "8655f2a4cec53c7e2c856dfe2346a62912bc7f49", build: "V64G9fNPlmZ3KhKjdmZNG" },
     expectedCandidate: { sha: "d27feb89ce3b03fa10e2495bf52bfed3977cf74b", build: "Jiski42ci5lVv2VlAa8dV" } },
-  { id: `earlier-tabs-${runtime}`, declaredSourceDelta: "Task 46 expected-owner canonical tab read in parallel with window snapshot opening; actual application delta is reviewed separately from measurement eligibility",
+  { id: `earlier-tabs-${runtime}`, disposition: "rejected-experiment", declaredSourceDelta: "Task 46 expected-owner canonical tab read in parallel with window snapshot opening; actual application delta is reviewed separately from measurement eligibility",
     baseline: `min683-restored-after-scaled-complete-resume-${runtime}-1`,
     candidate: `min683-restored-after-scaled-earlier-tabs-${runtime}-1`,
     expectedBaseline: { sha: "8655f2a4cec53c7e2c856dfe2346a62912bc7f49", build: "V64G9fNPlmZ3KhKjdmZNG" },
     expectedCandidate: { sha: "0829375f38ce3ad2fed40cf5b32877fb6af019a3", build: "g9Ee5-J9CBrV9Wq8eaIFx" } },
+  { id: `window-selection-${runtime}`, disposition: "provisionally-retained-pending-safety", declaredSourceDelta: "Task 47 snapshot writer applied to the retained 8655 application with Task 46 reverted; source review and rapid-refresh safety remain separate from protocol eligibility",
+    baseline: `min683-restored-after-scaled-complete-resume-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-window-selection-${runtime}-1`,
+    expectedBaseline: { sha: "8655f2a4cec53c7e2c856dfe2346a62912bc7f49", build: "V64G9fNPlmZ3KhKjdmZNG" },
+    expectedCandidate: { sha: "0eb4b938b7c435a3a536173a81ce30e8c063fb61", build: "f9LzXYsBiQZXGZcWy518h" } },
 ]);
 
 /** Eligibility verifies protocol evidence, never an application delta by itself. */
