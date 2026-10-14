@@ -8,16 +8,15 @@ import { invalidateLocalSnapshotWrites } from "./local-snapshots";
 import { configurePayloadRetention, isMemoryOnlyPayload } from "./query-retention";
 import { observePageReadFailures } from "./page-read-receipts";
 import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
-import { observeRestoredPageBootstrapPriority } from "./restored-page-bootstrap-priority";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
  * The device retains no decryption key. Reload recovery needs an authenticated
  * server round trip; plaintext stays in memory. Legacy clear caches are purged.
  *
- * Views render on the client. Initial-document working-set records can stream
- * independently while the bundle, account and optional snapshot restore load;
- * normal protected reads remain the fallback. By restoring the saved cache, the page
+ * The app is fully rendered client-side: a full reload would start
+ * from scratch — bundle, session restore, then a dozen requests before
+ * the first useful content. By rehydrating the cache from disk, the page
  * immediately repaints the last known state, while the realtime bridge
  * (lib/realtime-provider.tsx) and mount refetches reconcile behind.
  * This is stale-while-revalidate, not a source of truth: nothing is served
@@ -195,7 +194,6 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
           },
         },
       });
-      observeRestoredPageBootstrapPriority(client);
       observePageReadFailures(client);
       configurePayloadRetention(client);
       return client;

@@ -48,15 +48,37 @@ shared layouts rerun the bootstrap on every navigation. The next control uses
 positive browser document/navigation metadata and declines missing hints.
 Tests exercise the installed Next filtered-header boundary.
 
-The next isolated candidate keeps only the same two explicit Page body reads
-and removes eight shared collection reads from initial HTML. Canonical account
-tabs select at most two distinct explicit Pages under the ordinary verified
-claims, live-session and MFA guard. Both resource reads retain their existing
-ACL/decryption/liveness/positive-version checks, a request-scoped ten-second
-SDK deadline and independent Suspense records. No internal HTTP or forge fan-out
-is introduced. Ordinary scoped routes and the existing bounded client worker
-continue to own all shared collections. This refinement is unmeasured until an
-identified build and unchanged-cohort comparison exist; reject moved cost again.
+The narrower two-body control is rejected too. Build `8d9586d4f` /
+`m1dLh_-V3G7ODAWqmCXEX` uses positive document admission and removes all eight
+shared collection reads from initial HTML. Both 145-observation runs preserve
+content and prove real focus absence, but first project remains 825 ms web /
+653 ms native, and the foreign Page remains 495 / 419 ms. Web renderer launch /
+refresh are 2770 / 2211 ms, compared with 2496 / 1952 ms in the reference.
+Neither cached body at three seconds establishes complete Page readiness: the
+required project collections and trees are still missing or invalidated. The
+raws retain that distinction. Individual sparse observations cannot establish
+causality, but these results do not justify retaining the extra startup work.
+
+Both RSC integrations and their unused client ingestion/priority machinery have
+therefore been removed from the retained application. Their signed commits,
+source tests and audited evidence remain recoverable in history. The positive
+header test exposed a real framework boundary, but it does not justify keeping
+an otherwise rejected optimization. Mounted RSC record props also retain their
+two bodies independently of Query GC; the rejected design must not be described
+as having the same plaintext lifetime as the cache.
+
+Next isolate the optional-work admission gap, after building and measuring the
+retained source with only the complete scoped-reader/auth refactors. Reserve an
+account/session/QueryClient-owned priority token while the ordinary canonical
+tab query and sealed window selection resolve. Hand off synchronously only after
+the finite worker acquires its own listed-work priority. Settled query failure,
+empty canonical scope, failed initialization and actual owner/client/mobile
+retirement must release the exact token, while Strict Mode replay preserves it.
+This starts no extra query, timer or polling and keeps the GET/window order
+unchanged. Explicit search intent bypasses the optional gate. Required All,
+PR-list and agent reads plus subscription catch-up keep their existing owners.
+This separate source proposal remains unmeasured and cannot certify all tabs
+prepared at three seconds.
 
 The shared-reader completeness fixes are separate: issues, members, objectives
 and Page trees preserve ordinary DTOs, ordering and failure contracts across
@@ -64,21 +86,13 @@ lower database transport caps. A later error returns no partial collection;
 resource-count failure keeps its prior best-effort zero-count contract. These
 separate reads are not a transactional server snapshot.
 
-Client ingestion remains bounded by the initial document, verified account,
-first committed QueryClient, completed snapshot restoration, fifteen-second
-window and 128-key foreground-priority history. Existing Page queries, failures,
-invalidations, newer reads/writes and retired clients take priority. Optional
-new bodies seed display only; they create no actual GET receipt, preparation
-lease, write authority or persisted body. Immediate typing, actual fresh-basis
-GET, versioned merge, newer ACK handling and departure guards remain intact.
-Freshness and storage budgets are unchanged.
-
-The initial source checks passed: 157 overlapping server/client/Page checks,
-47 shared-reader/store tests, 88 Page server tests, 25 authorization/cookie
-tests and seven provider/retention tests, plus full types, scoped lint, English,
-documentation, knowledge and a production build. These counts overlap and
-must not be summed. The narrower candidate requires its own focused checks and
-production build before measurement. MIN-683 remains in progress.
+The rejected candidate checks passed: 157 overlapping server/client/Page
+checks initially, then 33 focused two-body/framework-boundary cases; 47 shared
+reader/store tests, 88 Page server tests, 25 authorization/cookie tests and seven
+provider/retention tests, plus full types, scoped lint, English, documentation,
+knowledge and production builds. These counts overlap and must not be summed.
+Post-removal source requires its own checks/build and same-cohort control before
+the next increment. MIN-683 remains in progress.
 
 ## Decision to test
 
