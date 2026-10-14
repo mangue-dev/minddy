@@ -189,9 +189,9 @@ try {
     results.versions = { electron: runtime.electron, chromium: runtime.chromium };
     context = browser.context();
   } else {
-    browser = await chromium.launch();
+    browser = await chromium.launch({ headless: !process.argv.includes("--headful") });
     context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light", locale: "en-US" });
-    results.versions = { chromium: browser.version() };
+    results.versions = { chromium: browser.version(), headless: !process.argv.includes("--headful") };
   }
   await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: base }]);

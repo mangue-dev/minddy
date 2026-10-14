@@ -10,6 +10,7 @@ import { loadConnectedBoardWorkload, loadForgeWorkload, forgeLinkFingerprint } f
 import { optionalSecondaryWorkload, secondaryEvidence } from "./secondary-navigation-workload.mjs";
 import { boardReady } from "./board-readiness.mjs";
 import { restoredPreparationMetadata } from "./restored-navigation-readiness.mjs";
+import { executableCacheMetadata } from "./executable-startup-readiness.mjs";
 
 // Setup authenticates only a disposable fixture profile. Measured launches
 // reuse its persisted cookies and natural desktop entry without injection,
@@ -56,7 +57,7 @@ try {
   forge = await loadForgeWorkload(api);
   secondary = await optionalSecondaryWorkload(api, fixture);
   connectedBoard = await loadConnectedBoardWorkload(api, fixture, secondary);
-  result.protocol = "min683-real-executable-startup-v3-fixed-process-preparation";
+  result.protocol = "min683-real-executable-startup-v4-optional-cache-evidence";
   result.workload = { connectedBoard, forge, fixtureCounts: fixture.counts, secondary: secondaryEvidence(secondary) };
   specs = stableTabs(fixture, forge);
   for (const spec of specs.filter((entry) => entry.kind === "pr")) spec.prId = forge.prs[0].prId;
@@ -83,7 +84,7 @@ try {
   assert.ok(Object.values(product.environmentFiles).every((value) => value === null || /^[a-f0-9]{64}$/.test(value)));
   result.environmentFiles = product.environmentFiles;
   result.runnerSourceHashScope = ["measure-executable-startup.mjs", "board-readiness.mjs", "stable-restored-tabs.mjs", "measure-forge-navigation.mjs",
-    "secondary-navigation-workload.mjs", "enrich-secondary-workload.mjs", "seed.mjs", "restored-navigation-readiness.mjs"];
+    "secondary-navigation-workload.mjs", "enrich-secondary-workload.mjs", "seed.mjs", "restored-navigation-readiness.mjs", "executable-startup-readiness.mjs"];
   Object.assign(result, { build, product, runnerSha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     runnerSourceHash: hash(await Promise.all(result.runnerSourceHashScope.map((file) => readFile(path.resolve("scripts/performance", file), "utf8")))),
     fixture: { account: fixture.email, userId: fixture.userId, stableTabCount: specs.length, globalCards: connectedBoard.cards } });
@@ -179,19 +180,21 @@ try {
   });
   assert.equal(rendererTabs.length, specs.length);
   assert.ok(rendererTabs.every((tab) => tab.user_id === fixture.userId && specs.some((spec) => spec.id === tab.id)));
-  // Wait for the real server-sealed query-cache envelope, then leave the normal
-  // five-second save/idle schedule time to include startup preparation.
-  await page.waitForFunction((owner) => {
-    try { const value = JSON.parse(localStorage.getItem("minddy.query-cache")); return value?.format === "minddy-local-v1" && value.owner === owner && typeof value.ciphertext === "string"; }
-    catch { return false; }
-  }, fixture.userId, { timeout: 30000 });
+  // Leave the normal five-second save/idle schedule an opportunity. A complete
+  // scaled source can exceed the optional snapshot budget before encryption;
+  // an absent cache must remain visible evidence, not prevent a real restart.
   await page.waitForTimeout(7000);
+  const cacheMetadata = await page.evaluate(({ source, owner }) =>
+    new Function(`return (${source})`)()(localStorage.getItem("minddy.query-cache"), owner),
+    { source: executableCacheMetadata.toString(), owner: fixture.userId });
+  assert.ok(!cacheMetadata.envelopePresent || cacheMetadata.ownerMatches, "A disposable fixture profile must never contain another account's envelope");
   await browser.evaluate(async ({ session }) => { await session.defaultSession.cookies.flushStore(); await session.defaultSession.flushStorageData(); });
   const persistedSetupCookies = await context.cookies(base);
   const authCookies = authCookieMetadata(persistedSetupCookies);
   assert.ok(authCookies.length && authCookies.every((cookie) => cookie.expires > Date.now() / 1000), "The auth cookie store must be persistent before restart");
   Object.assign(result.setup, { driverMs: performance.now() - setupStart, actualRendererFixtureIdentityVerified: true,
-    stableTabsVerified: true, serverSealedCachePresent: true, cookiesExplicitlyFlushed: true, cookieMetadata: authCookies,
+    stableTabsVerified: true, serverSealedCachePresent: cacheMetadata.present, cacheMetadata, normalSnapshotFlushOpportunityMs: 7000,
+    optionalCachePresenceIsNotReadiness: true, cookiesExplicitlyFlushed: true, cookieMetadata: authCookies,
     excludedDeviceOnlyAnalyticsPreference: "declined",
     setupFinalPath: new URL(page.url()).pathname });
   await Promise.allSettled(pending);
