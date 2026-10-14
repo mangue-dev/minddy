@@ -19,7 +19,6 @@ import { SessionContext, useOptionalAppTabSession } from "./app-tab-session-cont
 import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
 import { createWindowSelectionPersistence } from "./window-selection-persistence";
 import { createRestoredTabStartupAdmission } from "./restored-tab-startup-admission";
-import { createRoutePrefetchAdmission, RoutePrefetchAdmissionContext, type RoutePrefetchAdmission } from "./route-prefetch-admission-context";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -50,7 +49,6 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   const desktop = mobile === false && !!owner;
   // Only the desktop controller owns account queries, restoration and writes.
   const session = useMemo(() => desktop && owner ? createAccountSession(owner, client) : null, [desktop, owner, client]);
-  const routePrefetchAdmission = useMemo(() => createRoutePrefetchAdmission(client), [client, owner, session]);
   const snapshot = useSyncExternalStore(session?.subscribe ?? noSubscription, session?.getSnapshot ?? emptySnapshot, session?.getSnapshot ?? emptySnapshot);
   const [queryState, setQueryState] = useState<QueryState | null>(null);
   const [navigationPending, startNavigation] = useTransition();
@@ -91,8 +89,7 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   // Keep the provider topology and descendant drafts stable across layout changes.
   return <SessionContext.Provider key={owner ?? "signed-out"} value={session}><NavigationContext.Provider value={navigation}>
     <Context.Provider value={value}><MobileNavigationContext.Provider value={owner && mobile === true ? mobileNavigation : null}>
-    <RoutePrefetchAdmissionContext.Provider value={mobile === true ? null : routePrefetchAdmission}>
-      {session && owner ? <AccountTabSync key={owner} owner={owner} session={session} resumeAtCurrentRoute={resumeAtCurrentRoute} onQueryState={setQueryState} routePrefetchAdmission={routePrefetchAdmission} /> : null}
+      {session && owner ? <AccountTabSync key={owner} owner={owner} session={session} resumeAtCurrentRoute={resumeAtCurrentRoute} onQueryState={setQueryState} /> : null}
       {session ? <PrBackgroundSync /> : null}
       {session ? <Suspense fallback={null}><AppTabRouteSync /></Suspense> : null}
       {owner && mobile && navigationPending && <div role="progressbar" aria-label={tc("loading")}
@@ -100,7 +97,7 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
         <div className="h-full w-1/3 bg-primary" />
       </div>}
       {children}
-    </RoutePrefetchAdmissionContext.Provider></MobileNavigationContext.Provider></Context.Provider>
+    </MobileNavigationContext.Provider></Context.Provider>
   </NavigationContext.Provider></SessionContext.Provider>;
 }
 
@@ -122,10 +119,9 @@ function createAccountSession(owner: string, client: QueryClient) {
   return controller;
 }
 
-function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState, routePrefetchAdmission }: {
+function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: {
   owner: string; session: AppTabsSession; resumeAtCurrentRoute: boolean;
   onQueryState: (state: QueryState) => void;
-  routePrefetchAdmission: RoutePrefetchAdmission;
 }) {
   const keepCurrentRoute = useRef(resumeAtCurrentRoute).current;
   const client = useQueryClient();
@@ -139,11 +135,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState, ro
     return { active: false, writer: createWindowSelectionPersistence(storage, storageKey, owner) };
   }, [session, storageKey, owner]);
   const startupAdmission = useMemo(() => createRestoredTabStartupAdmission(client), [client, owner, session]);
-  useLayoutEffect(() => {
-    const stop = startupAdmission.mount();
-    routePrefetchAdmission.observeLifecycle();
-    return stop;
-  }, [startupAdmission, routePrefetchAdmission]);
+  useLayoutEffect(() => startupAdmission.mount(), [startupAdmission]);
   useEffect(() => {
     if (query.isError && !query.isFetching) startupAdmission.fail();
   }, [query.isError, query.isFetching, startupAdmission]);
