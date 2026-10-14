@@ -128,7 +128,15 @@ these and measure actual pair admission before retaining this increment.
 Additional cases distinguish bounded-size complete-reader fallback from denial
 and malformed-stream errors and verify fallback transport serialization.
 
-## Exact default shell PR-list overlap increment
+## Rejected exact default shell PR-list overlap increment
+
+Root measured source `71699b21b` / build `h7ZyinaT49cODlbHnC7ol` against the
+identified `783cf10ca` product. Independent web project/primary Page/foreign
+Page change 607.8→639.9, 373.6→386.3 and 402.4→410.5 ms, n=1 per destination.
+All startup is mixed and all three cases still attempt one bootstrap. No useful
+gain is established. Root restores the exact preceding application source and
+tests rather than widening this experiment. The following records the rejected
+hypothesis and tested boundary, not the retained admission policy.
 
 The root agent's corrected evidence reading identifies three bootstrap attempts
 in the `783cf10` independent web cases, one per case. The primary Page case has

@@ -8,10 +8,9 @@ import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { appTabPreparationQueries, isPreparedAppTabDestination, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 import { fetchPageNavigationData, isPreparedPageData, pageKey } from "./use-pages-query";
 import { issuesQueryFn } from "./issues-api";
-import { GLOBAL_BOARD_KEY, issueWrites, mergeServerIssue, removeIssueEverywhere } from "./optimistic/issue-writes";
+import { issueWrites, mergeServerIssue, removeIssueEverywhere } from "./optimistic/issue-writes";
 import type { Issue } from "./types";
 import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
-import { allPullRequestsQueryKey, allPullRequestsQueryOptions } from "./use-agent-runs";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
@@ -66,23 +65,6 @@ const fixtureResponse = (url: string) => Response.json(url.endsWith("/pages/page
   ? { id: "page", project_id: "new", version: 1, content: { type: "doc", content: [] } }
   : url.endsWith("/members") ? { members: [] }
   : url.endsWith("/integrations") ? { integrations: [], isOwner: true } : []);
-
-function observeHeldPrList(client: QueryClient, key: readonly unknown[] = allPullRequestsQueryKey()) {
-  let resolve!: (value: unknown) => void, reject!: (error: unknown) => void, signal!: AbortSignal;
-  const observer = new QueryObserver(client, {
-    queryKey: key, retry: false,
-    queryFn: (context) => {
-      signal = context.signal;
-      return new Promise<unknown>((accept, fail) => {
-        resolve = accept; reject = fail;
-        signal.addEventListener("abort", () => fail(signal.reason), { once: true });
-      });
-    },
-  });
-  const stop = observer.subscribe(() => {});
-  return { observer, resolve: (value: unknown = { pullRequests: [], hasMore: false, truncated: false, repoCount: 0, anyPr: false }) => resolve(value),
-    reject: (error: unknown) => reject(error), signal: () => signal, close: () => { stop(); observer.destroy(); } };
-}
 
 describe("account-owned PR preparation", () => {
   it("publishes only actual inactive listed prerequisites without starting reads and retains them after transport priority ends", async () => {
@@ -539,115 +521,6 @@ describe("account-owned PR preparation", () => {
       release(); await maintenance; await drain(prepared);
       expect(prepared.client.getQueryData(["me", "summary"])).toEqual({ counts: { total: 2 } });
     } finally { release?.(); await maintenance.catch(() => {}); prepared.preparation.dispose(); prepared.client.clear(); }
-  });
-
-  it("overlaps only the cold default shell list with two scoped reads and preserves its full response", async () => {
-    const prepared = setup();
-    const reads = new Map<string, { signal: AbortSignal; finish: (value: unknown) => void }>();
-    prepared.fetch.mockImplementation((url, init) => new Promise((resolve, reject) => {
-      const signal = init!.signal!;
-      reads.set(String(url), { signal, finish: (value) => resolve(Response.json(value)) });
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }));
-    const options = allPullRequestsQueryOptions();
-    const shell = new QueryObserver(prepared.client, { ...options, retry: false });
-    const stopShell = shell.subscribe(() => {});
-    const listPath = "/api/pull-requests?state=open&limit=100";
-    try {
-      await vi.waitFor(() => expect(reads.has(listPath)).toBe(true));
-      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
-      await vi.waitFor(() => expect(reads.size).toBe(3));
-      expect(Array.from(reads.keys())).toEqual([listPath, "/api/projects/new/issues", "/api/projects/new/categories"]);
-      expect(prepared.client.isFetching()).toBe(3);
-      prepared.flush(); expect(prepared.fetch).toHaveBeenCalledTimes(3);
-      prepared.preparation.dispose();
-      expect(reads.get(listPath)!.signal.aborted).toBe(false);
-      expect(reads.get("/api/projects/new/issues")!.signal.aborted).toBe(true);
-      expect(reads.get("/api/projects/new/categories")!.signal.aborted).toBe(true);
-      const payload = { pullRequests: [], hasMore: true, truncated: false, repoCount: 2, anyPr: true };
-      reads.get(listPath)!.finish(payload);
-      await vi.waitFor(() => expect(prepared.client.getQueryData(options.queryKey)).toEqual(payload));
-      expect(prepared.fetch.mock.calls.filter(([url]) => String(url) === listPath)).toHaveLength(1);
-    } finally { prepared.preparation.dispose(); stopShell(); shell.destroy(); prepared.client.clear(); }
-  });
-
-  it.each([
-    ["pinned PR", allPullRequestsQueryKey("open", 100, { pr: "pinned" })],
-    ["pinned run", allPullRequestsQueryKey("open", 100, { run: "pinned" })],
-    ["expanded", allPullRequestsQueryKey("open", 200)],
-    ["completed", allPullRequestsQueryKey("completed", 100)],
-    ["unknown shape", ["pull-requests", "all", "open", 100, null, null, "unknown"]],
-  ])("keeps the %s PR list as a foreground transport on a non-PR destination", async (_name, key) => {
-    const prepared = setup(), shell = observeHeldPrList(prepared.client, key as readonly unknown[]);
-    try {
-      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
-      expect(prepared.fetch).not.toHaveBeenCalled();
-      expect(shell.signal().aborted).toBe(false);
-      shell.resolve(); await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
-    } finally { shell.close(); prepared.preparation.dispose(); prepared.client.clear(); }
-  });
-
-  it.each(["/pull-requests", "/pull-requests?pr=selected", "/unknown"])("does not exempt the cold default list for visible destination %s", async (href) => {
-    const prepared = setup(), shell = observeHeldPrList(prepared.client);
-    try {
-      prepared.preparation.visit(href, [href, "/projects/new"]); prepared.flush();
-      expect(prepared.fetch).not.toHaveBeenCalled();
-      expect(shell.signal().aborted).toBe(false);
-      shell.resolve(); await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
-    } finally { shell.close(); prepared.preparation.dispose(); prepared.client.clear(); }
-  });
-
-  it("retains All transport priority while the cold shell list continues independently", async () => {
-    const prepared = setup(), shell = observeHeldPrList(prepared.client);
-    let finishBoard!: () => void;
-    const board = prepared.client.fetchQuery({ queryKey: GLOBAL_BOARD_KEY,
-      queryFn: () => new Promise<Record<string, never>>((resolve) => { finishBoard = () => resolve({}); }) });
-    prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
-    try {
-      prepared.preparation.visit("/all", ["/all", "/projects/new"]); prepared.flush();
-      expect(prepared.fetch).not.toHaveBeenCalled();
-      finishBoard(); await board;
-      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1)); prepared.flush();
-      await vi.waitFor(() => expect(prepared.fetch).toHaveBeenCalledTimes(2));
-      expect(prepared.fetch.mock.calls.map(([url]) => String(url))).toEqual(["/api/projects/new/issues", "/api/projects/new/categories"]);
-      expect(prepared.client.getQueryState(allPullRequestsQueryKey())?.fetchStatus).toBe("fetching");
-      expect(shell.signal().aborted).toBe(false);
-    } finally { finishBoard(); await board; shell.resolve(); shell.close(); prepared.preparation.dispose(); prepared.client.clear(); }
-  });
-
-  it("restores PR foreground priority before a newly selected route mounts its observer", async () => {
-    const prepared = setup(), shell = observeHeldPrList(prepared.client);
-    const signals: AbortSignal[] = [];
-    prepared.fetch.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
-      const signal = init!.signal!; signals.push(signal);
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }));
-    try {
-      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
-      await vi.waitFor(() => expect(signals).toHaveLength(2));
-      prepared.preparation.visit("/pull-requests", ["/pull-requests", "/projects/new"]); prepared.flush();
-      expect(signals.every((signal) => signal.aborted)).toBe(true);
-      expect(shell.signal().aborted).toBe(false);
-      expect(prepared.fetch).toHaveBeenCalledTimes(2);
-      expect(prepared.client.getQueryCache().find({ queryKey: allPullRequestsQueryKey(), exact: true })?.getObserversCount()).toBe(1);
-      shell.resolve(); await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
-    } finally { shell.close(); prepared.preparation.dispose(); prepared.client.clear(); }
-  });
-
-  it("retains an explicit shell Retry-After failure while overlapping ordinary scoped data", async () => {
-    const prepared = setup(), shell = observeHeldPrList(prepared.client);
-    prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
-    const error = new ApiError("Quota exhausted"); error.status = 429; error.retryAt = Date.now() + 120_000;
-    try {
-      prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
-      shell.reject(error);
-      await vi.waitFor(() => expect(prepared.client.getQueryState(allPullRequestsQueryKey())?.error).toBe(error));
-      await drain(prepared);
-      expect(prepared.client.getQueryData(allPullRequestsQueryKey())).toBeUndefined();
-      expect(prepared.client.getQueryState(allPullRequestsQueryKey())?.error).toMatchObject({ status: 429, retryAt: error.retryAt });
-      expect(prepared.fetch).toHaveBeenCalledTimes(7);
-      expect(shell.signal().aborted).toBe(false);
-    } finally { shell.close(); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
   it.each(["missing", "failed"])("keeps %s shell summaries ahead of speculation", async (condition) => {

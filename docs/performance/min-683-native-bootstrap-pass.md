@@ -59,6 +59,22 @@ accepted objectives while members remain pending. All-tab preparation remains
 unvalidated. Initial catch-up and cancellation are retained; these data alone
 do not establish the reason for every body abort.
 
+The next isolated source change, `71699b21b` / `h7ZyinaT49cODlbHnC7ol`, exempts
+only the always-on default global open PR list from blocking preparation on a
+known non-PR route. Its request, data, errors and retries continue unchanged;
+All's actual reads and every visible PR route retain foreground priority.
+Twelve scheduling cases plus the existing focused suites pass (107 total),
+with types and lint. The exact live request plus two held scoped transports
+remains within one shell request plus two preparation transports.
+
+The matched independent web project/primary Page/foreign Page values are
+607.8→639.9, 373.6→386.3 and 402.4→410.5 ms. Initial All values are
+2,146.2→2,255.4, 2,014.2→2,197.8 and 2,157.5→2,063.2 ms. Every case still makes
+one bootstrap attempt. These sparse, mixed observations justify no useful gain;
+the admission exception is rejected and its exact previous source/tests restored.
+No native or broader ordinary run is spent on this rejected increment. The
+whole candidate product and complete preservation evidence remain retained.
+
 ## Newly completed independent coverage
 
 The frozen v2 web diagnostic completes all nine inactive destinations on both
