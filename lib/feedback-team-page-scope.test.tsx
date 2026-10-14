@@ -169,6 +169,9 @@ function Host({ hidden = false }: { hidden?: boolean }) {
       ] }) })));
 }
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)); });
+// Resolving the full response, parsing it and selecting the post can take more
+// than one short tick on a loaded CI worker; wait for the observable outcome.
+const settleUntil = async (done: () => boolean) => { for (let tick = 0; tick < 200 && !done(); tick++) await settle(); };
 const selectedTitle = () => container.querySelector<HTMLTextAreaElement>('[data-testid="feedback-title"]')?.value;
 const render = (hidden = false) => act(() => root.render(createElement(Host, { hidden })));
 function seedNormal(filters: FeedbackListFilters = normalFilters) {
@@ -242,8 +245,10 @@ describe("FeedbackTeamPage requested-post query scope", () => {
     expect(requests).toEqual([`/api/projects/${projectId}/feedback`]);
     expect(client.getQueryData(["feedback", projectId])).toBeUndefined();
     expect(state.skeletonCommits).toBeGreaterThan(0);
-    await act(async () => { finishFull!(); await new Promise((resolve) => setTimeout(resolve, 5)); });
-    expect(selectedTitle()).toBe(reason === "resolved" ? "Feedback 120" : "Feedback 4");
+    await act(async () => { finishFull!(); });
+    const expected = reason === "resolved" ? "Feedback 120" : "Feedback 4";
+    await settleUntil(() => selectedTitle() === expected);
+    expect(selectedTitle()).toBe(expected);
     expect(state.controls).toMatchObject({ state: "all", onlyToReview: false, properties: {} });
     expect(new URL(state.publication, "https://minddy.test").searchParams.get("post")).toBe(target);
     expect(client.getQueryData<{ posts: unknown[] }>(["feedback", projectId])?.posts).toHaveLength(120);
@@ -258,7 +263,8 @@ describe("FeedbackTeamPage requested-post query scope", () => {
     expect(state.controls?.onlyToReview).toBe(true); expect(requests).toEqual([]);
     await act(() => state.setSearch?.(`post=${postId(1)}`)); await settle();
     expect(requests).toEqual([`/api/projects/${projectId}/feedback`]);
-    await act(async () => { finishFull!(); await new Promise((resolve) => setTimeout(resolve, 5)); });
+    await act(async () => { finishFull!(); });
+    await settleUntil(() => selectedTitle() === "Feedback 1");
     expect(selectedTitle()).toBe("Feedback 1");
     // The existing zero-review-count effect can clear review-only while the
     // full query is pending; do not invent a new status-state contract here.
