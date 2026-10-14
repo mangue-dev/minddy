@@ -44,6 +44,11 @@ const fingerprint = (value) => createHash("sha256").update(JSON.stringify(value)
 const runnerHash = async () => fingerprint(await Promise.all(result.runnerSourceHashScope.map((file) => readFile(path.resolve("scripts/performance", file), "utf8"))));
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 const frames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+function observedFocusInterval(before, away, end, resumed, configuredMs) {
+  return before?.focused === true && away?.focused === false && end?.focused === false && resumed?.focused === true && resumed?.visibility === "visible" &&
+    Number.isFinite(configuredMs) && configuredMs > 0 && Number.isFinite(away.start) && Number.isFinite(end.at) &&
+    Number.isFinite(away.wallClock) && Number.isFinite(end.wallClock) && end.at - away.start >= configuredMs && end.wallClock - away.wallClock >= configuredMs;
+}
 try {
   session = await openFixture();
   const { base, fixture, api } = session;
@@ -65,7 +70,7 @@ try {
   secondary = await optionalSecondaryWorkload(api, fixture);
   connectedBoard = await loadConnectedBoardWorkload(api, fixture, secondary);
   result.protocol = secondary ? secondary.marker === "min683-secondary-scaled-v2"
-    ? "min683-restored-v4-scaled-preactivation-snapshot" : "min683-restored-v4-bounded-preactivation-snapshot" : "min683-restored-v4-complete-preactivation-snapshot";
+    ? "min683-restored-v5-scaled-preactivation-observed-focus" : "min683-restored-v5-bounded-preactivation-observed-focus" : "min683-restored-v5-complete-preactivation-observed-focus";
   const productRoot = process.env.MINDDY_PERF_BUILD_ROOT ?? process.cwd();
   const build = (await readFile(path.join(productRoot, ".next/BUILD_ID"), "utf8")).trim();
   const product = process.env.MINDDY_PERF_BUILD_ROOT ? JSON.parse(await readFile(path.join(productRoot, ".next/min683-product.json"), "utf8")) : { sha: git("rev-parse", "HEAD"), build };
@@ -387,8 +392,17 @@ try {
   // Disable Playwright's focus override, then transfer actual native focus.
   await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
   result.focusProtocol = { focusEmulationDisabled: true, genuineWindowMinimization: process.argv.includes("--electron"),
-    genuineDistractionWindow: !process.argv.includes("--electron"),
-    playwrightBackgroundThrottlingOverridesRemain: true };
+    genuineSameWindowTab: !process.argv.includes("--electron"),
+    playwrightBackgroundThrottlingOverridesRemain: true, configuredInactiveMs: inactiveMs, clockToleranceMs: 0,
+    absenceBasis: "Observed document.hasFocus=false at both ends of the configured interval on renderer and wall clocks; visibility is recorded independently" };
+  if (process.argv.includes("--electron")) await browser.evaluate(({ BrowserWindow }, base) => {
+    const window = BrowserWindow.getAllWindows().find((item) => item.webContents.getURL().startsWith(base));
+    if (!window) throw new Error("Missing fixture renderer window");
+    window.show(); window.focus();
+  }, session.base);
+  else await page.bringToFront();
+  await page.waitForFunction(() => document.hasFocus(), null, { timeout: 5000 });
+  const focusBefore = await page.evaluate(() => ({ visibility: document.visibilityState, focused: document.hasFocus(), at: performance.now(), wallClock: Date.now() }));
   if (process.argv.includes("--electron")) await browser.evaluate(({ BrowserWindow }, base) => {
     const window = BrowserWindow.getAllWindows().find((item) => item.webContents.getURL().startsWith(base));
     if (!window) throw new Error("Missing fixture renderer window");
@@ -400,21 +414,25 @@ try {
     originalTargetId = targetInfo.targetId;
     const incoming = context.waitForEvent("page", { predicate: (candidate) => candidate !== page, timeout: 20000 })
       .then((created) => ({ page: created }), (error) => ({ error }));
-    ({ targetId: distractionTargetId } = await browserCdp.send("Target.createTarget", { url: "about:blank", newWindow: true, background: false,
+    ({ targetId: distractionTargetId } = await browserCdp.send("Target.createTarget", { url: "about:blank", newWindow: false, background: false,
       ...(targetInfo.browserContextId ? { browserContextId: targetInfo.browserContextId } : {}) }));
     const opened = await incoming;
     if (opened.error) throw opened.error;
+    await opened.page.waitForLoadState("load");
     const distractionCdp = await context.newCDPSession(opened.page);
-    await distractionCdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
+    await Promise.all([cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false }),
+      distractionCdp.send("Emulation.setFocusEmulationEnabled", { enabled: false })]);
     const originalWindow = await browserCdp.send("Browser.getWindowForTarget", { targetId: originalTargetId });
     const distractionWindow = await browserCdp.send("Browser.getWindowForTarget", { targetId: distractionTargetId });
-    assert.notEqual(originalWindow.windowId, distractionWindow.windowId);
+    assert.equal(originalWindow.windowId, distractionWindow.windowId, "The distraction must be a real tab in the same browser window");
     result.focusProtocol.windows = { originalWindowId: originalWindow.windowId, distractionWindowId: distractionWindow.windowId };
     await browserCdp.send("Target.activateTarget", { targetId: distractionTargetId });
+    await opened.page.bringToFront();
   }
-  const absenceObserved = await page.waitForFunction(() => document.visibilityState === "hidden" || !document.hasFocus(), null, { timeout: 5000 }).then(() => true, () => false);
-  const away = await page.evaluate(() => ({ hidden: document.visibilityState === "hidden", focused: document.hasFocus(), start: performance.now() }));
+  const absenceObserved = await page.waitForFunction(() => !document.hasFocus(), null, { timeout: 5000 }).then(() => true, () => false);
+  const away = await page.evaluate(() => ({ hidden: document.visibilityState === "hidden", focused: document.hasFocus(), start: performance.now(), wallClock: Date.now() }));
   await page.waitForTimeout(inactiveMs);
+  const awayBeforeResume = await page.evaluate(() => ({ hidden: document.visibilityState === "hidden", focused: document.hasFocus(), at: performance.now(), wallClock: Date.now() }));
   const resumeStart = performance.now();
   if (process.argv.includes("--electron")) await browser.evaluate(({ BrowserWindow }, base) => {
     const window = BrowserWindow.getAllWindows().find((item) => item.webContents.getURL().startsWith(base));
@@ -422,16 +440,19 @@ try {
   }, session.base);
   else {
     await browserCdp.send("Target.activateTarget", { targetId: originalTargetId });
+    await page.bringToFront();
   }
   const resumeObserved = await page.waitForFunction(() => document.visibilityState === "visible" && document.hasFocus(), null, { timeout: 5000 }).then(() => true, () => false);
   const resumed = await page.evaluate(() => ({ visibility: document.visibilityState, focused: document.hasFocus(), at: performance.now() }));
-  result.focus = { away, resumed, driverResumeMs: performance.now() - resumeStart, receivedRemoteMutation: false,
-    absenceObserved, resumeObserved, validFocusTransition: absenceObserved && resumeObserved && (away.hidden || !away.focused) && resumed.visibility === "visible" && resumed.focused };
+  result.focus = { before: focusBefore, away, awayBeforeResume, resumed, driverResumeMs: performance.now() - resumeStart, receivedRemoteMutation: false,
+    configuredInactiveMs: inactiveMs, observedIntervalMs: { renderer: awayBeforeResume.at - away.start, wallClock: awayBeforeResume.wallClock - away.wallClock },
+    absenceObserved, resumeObserved, validFocusTransition: absenceObserved && resumeObserved && observedFocusInterval(focusBefore, away, awayBeforeResume, resumed, inactiveMs) };
   if (!result.focus.validFocusTransition) result.limitations.push("The runtime did not expose an actual focus/visibility transition; focus recovery is unvalidated.");
   if (distractionTargetId) {
     await browserCdp.send("Target.closeTarget", { targetId: distractionTargetId });
     distractionTargetId = null;
   }
+  assert.ok(result.focus.validFocusTransition, "Focus-return navigation requires the complete configured observed focus absence and return");
   for (const spec of specs) await activate(spec, "focus-return-navigation");
   await Promise.allSettled(pendingNetwork);
   result.preparedDestinations = specs.map((spec) => ({ id: spec.id, kind: spec.kind, firstActivationComplete: spec === specs[0] ||

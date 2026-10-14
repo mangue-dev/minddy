@@ -9196,6 +9196,2734 @@
       "auditedEvidence": "min-683-broad-evidence/min683-broad-before-scaled-complete-resume-primary-web-1.json.gz"
     },
     {
+      "name": "min683-broad-before-scaled-server-bootstrap-deep-native-1.json",
+      "status": "passed",
+      "diagnostic": false,
+      "effectiveSha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "build": "ZiBY2UkSzHhI8dl5J1UxZ",
+      "eligibleForNavigationComparison": true,
+      "protocol": "[\"min683-broad-v5-canonical-editable-content-no-hover\",\"min683-deep-v5-canonical-editable-pages\",\"deep\"]",
+      "runnerSourceHash": "f467519f5c4189a583a4d5c2a6d93e4dec56308fd29ea211c3ad5ee27af2fe44",
+      "runtime": "unpackaged Electron",
+      "versions": {
+        "electron": "43.7.5",
+        "chromium": "150.0.7871.250"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 860,
+        "scale": 2
+      },
+      "workloadIdentity": "e73ff36c8fdfca5ede361f121da7fda861679718cab594ca35d77800c315ead4",
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "repetitions": 1,
+      "focusValid": false,
+      "sha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "sourceScope": [
+        "measure-instant-navigation.mjs",
+        "measure-deep-navigation.mjs",
+        "broad-navigation-readiness.mjs",
+        "verify-board-windowing.mjs",
+        "board-readiness.mjs",
+        "measure-forge-navigation.mjs",
+        "stable-restored-tabs.mjs",
+        "secondary-navigation-workload.mjs",
+        "enrich-secondary-workload.mjs",
+        "seed.mjs"
+      ],
+      "measurements": [
+        {
+          "name": "startup",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2415,
+            "p95": null,
+            "max": 2415
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-board-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 15.799999952316284,
+            "p95": null,
+            "max": 15.799999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-project-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 129,
+            "p95": null,
+            "max": 129
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-switch-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 26.299999952316284,
+            "p95": null,
+            "max": 26.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-switch",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 408.10000014305115,
+            "p95": null,
+            "max": 408.10000014305115
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 31,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-return-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.600000143051147,
+            "p95": null,
+            "max": 19.600000143051147
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-return",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 95.5,
+            "p95": null,
+            "max": 95.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-switch-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 26.200000047683716,
+            "p95": null,
+            "max": 26.200000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 99,
+            "p95": null,
+            "max": 99
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-return-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.200000047683716,
+            "p95": null,
+            "max": 20.200000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 99.29999995231628,
+            "p95": null,
+            "max": 99.29999995231628
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-page-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 107.69999980926514,
+            "p95": null,
+            "max": 107.69999980926514
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-page-switch",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 369.2000000476837,
+            "p95": null,
+            "max": 369.2000000476837
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 39,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-page-return",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 53.89999985694885,
+            "p95": null,
+            "max": 53.89999985694885
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "page-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 41.90000009536743,
+            "p95": null,
+            "max": 41.90000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "page-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 48.19999980926514,
+            "p95": null,
+            "max": 48.19999980926514
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-pages-back",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 31.5,
+            "p95": null,
+            "max": 31.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-pages-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 29.399999856948853,
+            "p95": null,
+            "max": 29.399999856948853
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-pages",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 72.20000004768372,
+            "p95": null,
+            "max": 72.20000004768372
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-page",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 68.39999985694885,
+            "p95": null,
+            "max": 68.39999985694885
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-page-switch",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 520,
+            "p95": null,
+            "max": 520
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 59,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-return-back",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 29.09999990463257,
+            "p95": null,
+            "max": 29.09999990463257
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-return-menu",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18,
+            "p95": null,
+            "max": 18
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 96.20000004768372,
+            "p95": null,
+            "max": 96.20000004768372
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-page-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 45.799999952316284,
+            "p95": null,
+            "max": 45.799999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-document-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 470,
+            "p95": null,
+            "max": 470
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-switch-back",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 21.40000009536743,
+            "p95": null,
+            "max": 21.40000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-switch-menu",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 21,
+            "p95": null,
+            "max": 21
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 55,
+            "p95": null,
+            "max": 55
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-page-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 39.700000047683716,
+            "p95": null,
+            "max": 39.700000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-document-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 431.39999985694885,
+            "p95": null,
+            "max": 431.39999985694885
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        }
+      ],
+      "cleanup": [
+        {
+          "repositoryConnectionUnchanged": true
+        },
+        {
+          "connectedBoardUnchanged": true
+        },
+        {
+          "fixturePagesUnchanged": true
+        },
+        {
+          "preexistingTabsPreserved": true
+        }
+      ],
+      "failure": null,
+      "rawSha256": "a8c12bb433593eee87959a625f113032527766101240a662ec1f387f5042c408",
+      "auditedSha256": "b984d72b1749f01a5a5b4ae7185cb1ab05e8d45653f3e7c2c1335118198a7fa2",
+      "gzipSha256": "d967bb6e38ecbccbf7f792e4fa89eab86c496fb0318c9afab97ce471cf592426",
+      "auditedEvidence": "min-683-broad-evidence/min683-broad-before-scaled-server-bootstrap-deep-native-1.json.gz"
+    },
+    {
+      "name": "min683-broad-before-scaled-server-bootstrap-deep-web-1.json",
+      "status": "passed",
+      "diagnostic": false,
+      "effectiveSha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "build": "ZiBY2UkSzHhI8dl5J1UxZ",
+      "eligibleForNavigationComparison": true,
+      "protocol": "[\"min683-broad-v5-canonical-editable-content-no-hover\",\"min683-deep-v5-canonical-editable-pages\",\"deep\"]",
+      "runnerSourceHash": "f467519f5c4189a583a4d5c2a6d93e4dec56308fd29ea211c3ad5ee27af2fe44",
+      "runtime": "Chromium",
+      "versions": {
+        "chromium": "153.0.8010.12",
+        "headless": false
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scale": 1
+      },
+      "workloadIdentity": "e73ff36c8fdfca5ede361f121da7fda861679718cab594ca35d77800c315ead4",
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "repetitions": 1,
+      "focusValid": false,
+      "sha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "sourceScope": [
+        "measure-instant-navigation.mjs",
+        "measure-deep-navigation.mjs",
+        "broad-navigation-readiness.mjs",
+        "verify-board-windowing.mjs",
+        "board-readiness.mjs",
+        "measure-forge-navigation.mjs",
+        "stable-restored-tabs.mjs",
+        "secondary-navigation-workload.mjs",
+        "enrich-secondary-workload.mjs",
+        "seed.mjs"
+      ],
+      "measurements": [
+        {
+          "name": "startup",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2367,
+            "p95": null,
+            "max": 2367
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-board-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 17.299999952316284,
+            "p95": null,
+            "max": 17.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-project-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 133.5,
+            "p95": null,
+            "max": 133.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-switch-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 28,
+            "p95": null,
+            "max": 28
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-switch",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 487.09999990463257,
+            "p95": null,
+            "max": 487.09999990463257
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 40,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-return-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.700000047683716,
+            "p95": null,
+            "max": 20.700000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-project-return",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 107.89999985694885,
+            "p95": null,
+            "max": 107.89999985694885
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-switch-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 16.899999856948853,
+            "p95": null,
+            "max": 16.899999856948853
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 122.10000014305115,
+            "p95": null,
+            "max": 122.10000014305115
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-return-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.600000143051147,
+            "p95": null,
+            "max": 20.600000143051147
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 98.89999985694885,
+            "p95": null,
+            "max": 98.89999985694885
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-page-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 95.80000019073486,
+            "p95": null,
+            "max": 95.80000019073486
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-page-switch",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 369.39999985694885,
+            "p95": null,
+            "max": 369.39999985694885
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 39,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-page-return",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 49,
+            "p95": null,
+            "max": 49
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "page-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 40.5,
+            "p95": null,
+            "max": 40.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "page-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 45.40000009536743,
+            "p95": null,
+            "max": 45.40000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-pages-back",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.40000009536743,
+            "p95": null,
+            "max": 19.40000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-pages-menu",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.600000143051147,
+            "p95": null,
+            "max": 19.600000143051147
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-pages",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 68.10000014305115,
+            "p95": null,
+            "max": 68.10000014305115
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-page",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 64.80000019073486,
+            "p95": null,
+            "max": 64.80000019073486
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-cross-project-page-switch",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 377.59999990463257,
+            "p95": null,
+            "max": 377.59999990463257
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 42,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-return-back",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 23,
+            "p95": null,
+            "max": 23
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-return-menu",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.600000143051147,
+            "p95": null,
+            "max": 19.600000143051147
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 100.5,
+            "p95": null,
+            "max": 100.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-page-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 47.80000019073486,
+            "p95": null,
+            "max": 47.80000019073486
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-document-return",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 478.10000014305115,
+            "p95": null,
+            "max": 478.10000014305115
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-switch-back",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.799999952316284,
+            "p95": null,
+            "max": 19.799999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-switch-menu",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 22.59999990463257,
+            "p95": null,
+            "max": 22.59999990463257
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-pages-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 54.5,
+            "p95": null,
+            "max": 54.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-page-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 41.10000014305115,
+            "p95": null,
+            "max": 41.10000014305115
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "cross-project-document-switch",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 429.60000014305115,
+            "p95": null,
+            "max": 429.60000014305115
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        }
+      ],
+      "cleanup": [
+        {
+          "repositoryConnectionUnchanged": true
+        },
+        {
+          "connectedBoardUnchanged": true
+        },
+        {
+          "fixturePagesUnchanged": true
+        },
+        {
+          "preexistingTabsPreserved": true
+        }
+      ],
+      "failure": null,
+      "rawSha256": "d28fbdda568226053ab7500d57b67eb0d623d761480f786140b09322561f39e1",
+      "auditedSha256": "10371cbe051e241647c9a9f695e1520a79e770b6998ea2952add8eeddb4771f1",
+      "gzipSha256": "99b95c5c2fb8e973b207e690740a408b9ce5ab3cf90b509b6c7b3772fff265fc",
+      "auditedEvidence": "min-683-broad-evidence/min683-broad-before-scaled-server-bootstrap-deep-web-1.json.gz"
+    },
+    {
+      "name": "min683-broad-before-scaled-server-bootstrap-forge-native-1.json",
+      "status": "passed",
+      "diagnostic": false,
+      "effectiveSha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "build": "ZiBY2UkSzHhI8dl5J1UxZ",
+      "eligibleForNavigationComparison": true,
+      "protocol": "[\"min683-broad-v5-canonical-editable-content-no-hover\",\"min683-forge-v3-all-subviews\",\"forge\"]",
+      "runnerSourceHash": "f467519f5c4189a583a4d5c2a6d93e4dec56308fd29ea211c3ad5ee27af2fe44",
+      "runtime": "unpackaged Electron",
+      "versions": {
+        "electron": "43.7.5",
+        "chromium": "150.0.7871.250"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 860,
+        "scale": 2
+      },
+      "workloadIdentity": "5e16e89756c9dd993736f53d07e1309805601255d066e57faeaa615bb11d9fa5",
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "repetitions": 1,
+      "focusValid": false,
+      "sha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "sourceScope": [
+        "measure-instant-navigation.mjs",
+        "measure-deep-navigation.mjs",
+        "broad-navigation-readiness.mjs",
+        "verify-board-windowing.mjs",
+        "board-readiness.mjs",
+        "measure-forge-navigation.mjs",
+        "stable-restored-tabs.mjs",
+        "secondary-navigation-workload.mjs",
+        "enrich-secondary-workload.mjs",
+        "seed.mjs"
+      ],
+      "measurements": [
+        {
+          "name": "startup",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 254,
+            "p95": null,
+            "max": 254
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-board-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 30.799999952316284,
+            "p95": null,
+            "max": 30.799999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 1284.9000000953674,
+            "p95": null,
+            "max": 1284.9000000953674
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 145,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 43.69999980926514,
+            "p95": null,
+            "max": 43.69999980926514
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 21,
+            "p95": null,
+            "max": 21
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18.299999952316284,
+            "p95": null,
+            "max": 18.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 17,
+            "p95": null,
+            "max": 17
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 5,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2253.0999999046326,
+            "p95": null,
+            "max": 2253.0999999046326
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 267,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 36.299999952316284,
+            "p95": null,
+            "max": 36.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.800000190734863,
+            "p95": null,
+            "max": 20.800000190734863
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 17.899999856948853,
+            "p95": null,
+            "max": 17.899999856948853
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18.299999952316284,
+            "p95": null,
+            "max": 18.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 4,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 3636.2999999523163,
+            "p95": null,
+            "max": 3636.2999999523163
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 420,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 36.700000047683716,
+            "p95": null,
+            "max": 36.700000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.5,
+            "p95": null,
+            "max": 20.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18.200000047683716,
+            "p95": null,
+            "max": 18.200000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18.5,
+            "p95": null,
+            "max": 18.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 2,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2428.399999856949,
+            "p95": null,
+            "max": 2428.399999856949
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 279,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 36.299999952316284,
+            "p95": null,
+            "max": 36.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 28.200000047683716,
+            "p95": null,
+            "max": 28.200000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 15.099999904632568,
+            "p95": null,
+            "max": 15.099999904632568
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18.699999809265137,
+            "p95": null,
+            "max": 18.699999809265137
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 1,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 1861.7999999523163,
+            "p95": null,
+            "max": 1861.7999999523163
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 220,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 37.299999952316284,
+            "p95": null,
+            "max": 37.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 21.600000143051147,
+            "p95": null,
+            "max": 21.600000143051147
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18.5,
+            "p95": null,
+            "max": 18.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.700000047683716,
+            "p95": null,
+            "max": 19.700000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "real-pr-to-home",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 36.80000019073486,
+            "p95": null,
+            "max": 36.80000019073486
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "return-real-pr",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 43.90000009536743,
+            "p95": null,
+            "max": 43.90000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        }
+      ],
+      "cleanup": [
+        {
+          "repositoryConnectionUnchanged": true
+        },
+        {
+          "preexistingTabsPreserved": true
+        }
+      ],
+      "failure": null,
+      "rawSha256": "8cf1f50ead6e28c86311ea31645c28c1cd6de1b2da791a6c73708739098670b7",
+      "auditedSha256": "95c6183a796ad58ed26a77ecce8f831abc94e46d44d64246ee0c08c899f33369",
+      "gzipSha256": "746b95616b6544c611e254d764e514507d88ced9ca30d032c242c32cf10a9ce9",
+      "auditedEvidence": "min-683-broad-evidence/min683-broad-before-scaled-server-bootstrap-forge-native-1.json.gz"
+    },
+    {
+      "name": "min683-broad-before-scaled-server-bootstrap-forge-web-1.json",
+      "status": "passed",
+      "diagnostic": false,
+      "effectiveSha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "build": "ZiBY2UkSzHhI8dl5J1UxZ",
+      "eligibleForNavigationComparison": true,
+      "protocol": "[\"min683-broad-v5-canonical-editable-content-no-hover\",\"min683-forge-v3-all-subviews\",\"forge\"]",
+      "runnerSourceHash": "f467519f5c4189a583a4d5c2a6d93e4dec56308fd29ea211c3ad5ee27af2fe44",
+      "runtime": "Chromium",
+      "versions": {
+        "chromium": "153.0.8010.12",
+        "headless": false
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scale": 1
+      },
+      "workloadIdentity": "5e16e89756c9dd993736f53d07e1309805601255d066e57faeaa615bb11d9fa5",
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "repetitions": 1,
+      "focusValid": false,
+      "sha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "sourceScope": [
+        "measure-instant-navigation.mjs",
+        "measure-deep-navigation.mjs",
+        "broad-navigation-readiness.mjs",
+        "verify-board-windowing.mjs",
+        "board-readiness.mjs",
+        "measure-forge-navigation.mjs",
+        "stable-restored-tabs.mjs",
+        "secondary-navigation-workload.mjs",
+        "enrich-secondary-workload.mjs",
+        "seed.mjs"
+      ],
+      "measurements": [
+        {
+          "name": "startup",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 269,
+            "p95": null,
+            "max": 269
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-board-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 28.199999809265137,
+            "p95": null,
+            "max": 28.199999809265137
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 1178.7000000476837,
+            "p95": null,
+            "max": 1178.7000000476837
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 132,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 46.200000047683716,
+            "p95": null,
+            "max": 46.200000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 22.700000047683716,
+            "p95": null,
+            "max": 22.700000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 17.100000143051147,
+            "p95": null,
+            "max": 17.100000143051147
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 3,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.799999952316284,
+            "p95": null,
+            "max": 19.799999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 5,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2189.4000000953674,
+            "p95": null,
+            "max": 2189.4000000953674
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 258,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 37.5,
+            "p95": null,
+            "max": 37.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 27.200000047683716,
+            "p95": null,
+            "max": 27.200000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 17.700000047683716,
+            "p95": null,
+            "max": 17.700000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 5,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 17.299999952316284,
+            "p95": null,
+            "max": 17.299999952316284
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 4,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 3402.7999999523163,
+            "p95": null,
+            "max": 3402.7999999523163
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 393,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 36.5,
+            "p95": null,
+            "max": 36.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.40000009536743,
+            "p95": null,
+            "max": 20.40000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.200000047683716,
+            "p95": null,
+            "max": 19.200000047683716
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 4,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 18.399999856948853,
+            "p95": null,
+            "max": 18.399999856948853
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 2,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2788.2999999523163,
+            "p95": null,
+            "max": 2788.2999999523163
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 317,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 37.59999990463257,
+            "p95": null,
+            "max": 37.59999990463257
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.40000009536743,
+            "p95": null,
+            "max": 20.40000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.59999990463257,
+            "p95": null,
+            "max": 19.59999990463257
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 2,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 19.90000009536743,
+            "p95": null,
+            "max": 19.90000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "first-real-pr-switch",
+          "destinationNumber": 1,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2381.300000190735,
+            "p95": null,
+            "max": 2381.300000190735
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 282,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-activity-to-files",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 35.90000009536743,
+            "p95": null,
+            "max": 35.90000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-open-commits",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.600000143051147,
+            "p95": null,
+            "max": 20.600000143051147
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-change-file",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 16.90000009536743,
+            "p95": null,
+            "max": 16.90000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "pr-files-to-activity",
+          "destinationNumber": 1,
+          "phase": "first-observed",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 20.199999809265137,
+            "p95": null,
+            "max": 20.199999809265137
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "real-pr-to-home",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 44.60000014305115,
+            "p95": null,
+            "max": 44.60000014305115
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "return-real-pr",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 45.5,
+            "p95": null,
+            "max": 45.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        }
+      ],
+      "cleanup": [
+        {
+          "repositoryConnectionUnchanged": true
+        },
+        {
+          "preexistingTabsPreserved": true
+        }
+      ],
+      "failure": null,
+      "rawSha256": "3913f0d2ccecf259d4a4a9bd9515adb7c7b2d938a344b4c83e4176db3c358a3c",
+      "auditedSha256": "48368c664a687c152e1bc670796325e2de9cf0d9e900dc83002d94735010285d",
+      "gzipSha256": "16168a3e8d2d8b5615704980010a46fd3ee0966d7b409cfea1e85b1edbb32f00",
+      "auditedEvidence": "min-683-broad-evidence/min683-broad-before-scaled-server-bootstrap-forge-web-1.json.gz"
+    },
+    {
+      "name": "min683-broad-before-scaled-server-bootstrap-primary-native-1.json",
+      "status": "passed",
+      "diagnostic": false,
+      "effectiveSha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "build": "ZiBY2UkSzHhI8dl5J1UxZ",
+      "eligibleForNavigationComparison": true,
+      "protocol": "[\"min683-broad-v5-canonical-editable-content-no-hover\",\"min683-board-v2-visible-source-counts\",\"primary\"]",
+      "runnerSourceHash": "f467519f5c4189a583a4d5c2a6d93e4dec56308fd29ea211c3ad5ee27af2fe44",
+      "runtime": "unpackaged Electron",
+      "versions": {
+        "electron": "43.7.5",
+        "chromium": "150.0.7871.250"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 860,
+        "scale": 2
+      },
+      "workloadIdentity": "9b40c72baa67c4cc052f35f96197bc31ee4547f747a02c1df5d14577d59322e0",
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "repetitions": 1,
+      "focusValid": false,
+      "sha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "sourceScope": [
+        "measure-instant-navigation.mjs",
+        "measure-deep-navigation.mjs",
+        "broad-navigation-readiness.mjs",
+        "verify-board-windowing.mjs",
+        "board-readiness.mjs",
+        "measure-forge-navigation.mjs",
+        "stable-restored-tabs.mjs",
+        "secondary-navigation-workload.mjs",
+        "enrich-secondary-workload.mjs",
+        "seed.mjs"
+      ],
+      "measurements": [
+        {
+          "name": "startup",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2452,
+            "p95": null,
+            "max": 2452
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-board-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 12.5,
+            "p95": null,
+            "max": 12.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "unvisited-project",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 132.29999995231628,
+            "p95": null,
+            "max": 132.29999995231628
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "unvisited-page",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 103.40000009536743,
+            "p95": null,
+            "max": 103.40000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "return-board-first",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 88.89999985694885,
+            "p95": null,
+            "max": 88.89999985694885
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "issue-open",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "shellPaintMs": {
+            "count": 1,
+            "p50": 78.09999990463257,
+            "p95": null,
+            "max": 78.09999990463257
+          },
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 544.5,
+            "p95": null,
+            "max": 544.5
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 55,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": [
+            "fresh"
+          ]
+        },
+        {
+          "name": "board-to-project",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 93.59999990463257,
+            "p95": null,
+            "max": 93.59999990463257
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-to-page",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 80.40000009536743,
+            "p95": null,
+            "max": 80.40000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "page-to-board",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 101,
+            "p95": null,
+            "max": 101
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        }
+      ],
+      "cleanup": [
+        {
+          "repositoryConnectionUnchanged": true
+        },
+        {
+          "connectedBoardUnchanged": true
+        },
+        {
+          "fixturePagesUnchanged": true
+        },
+        {
+          "preexistingTabsPreserved": true
+        }
+      ],
+      "failure": null,
+      "rawSha256": "283a7f7714a79bba260943f4d8dcd46d2f88f9bbe2b9565e05ef43b2efe6b66e",
+      "auditedSha256": "a1c9e85e05af452be5797f3d5d4260e671e73b4d4a14ec8163ce517b0e6fea3e",
+      "gzipSha256": "a939f5318352a357db9319fe5afdf0887711a248253c551eaec90032db37d521",
+      "auditedEvidence": "min-683-broad-evidence/min683-broad-before-scaled-server-bootstrap-primary-native-1.json.gz"
+    },
+    {
+      "name": "min683-broad-before-scaled-server-bootstrap-primary-web-1.json",
+      "status": "passed",
+      "diagnostic": false,
+      "effectiveSha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "build": "ZiBY2UkSzHhI8dl5J1UxZ",
+      "eligibleForNavigationComparison": true,
+      "protocol": "[\"min683-broad-v5-canonical-editable-content-no-hover\",\"min683-board-v2-visible-source-counts\",\"primary\"]",
+      "runnerSourceHash": "f467519f5c4189a583a4d5c2a6d93e4dec56308fd29ea211c3ad5ee27af2fe44",
+      "runtime": "Chromium",
+      "versions": {
+        "chromium": "153.0.8010.12",
+        "headless": false
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scale": 1
+      },
+      "workloadIdentity": "9b40c72baa67c4cc052f35f96197bc31ee4547f747a02c1df5d14577d59322e0",
+      "environmentFiles": {
+        ".env.production.local": null,
+        ".env.local": "11a3b77040d157e1c2ab0b3293bb43cbd5724dbb65dd8602f3714a0ea87513d9",
+        ".env.production": null,
+        ".env": "f4ae2528520806295586ddd61489cdf1528cbbf5a06b6da8dd76caa877c5c09e"
+      },
+      "repetitions": 1,
+      "focusValid": false,
+      "sha": "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4",
+      "sourceScope": [
+        "measure-instant-navigation.mjs",
+        "measure-deep-navigation.mjs",
+        "broad-navigation-readiness.mjs",
+        "verify-board-windowing.mjs",
+        "board-readiness.mjs",
+        "measure-forge-navigation.mjs",
+        "stable-restored-tabs.mjs",
+        "secondary-navigation-workload.mjs",
+        "enrich-secondary-workload.mjs",
+        "seed.mjs"
+      ],
+      "measurements": [
+        {
+          "name": "startup",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 2305,
+            "p95": null,
+            "max": 2305
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "initial-board-tab",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 14.900000095367432,
+            "p95": null,
+            "max": 14.900000095367432
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 0,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "unvisited-project",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 127.90000009536743,
+            "p95": null,
+            "max": 127.90000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "unvisited-page",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 106.79999995231628,
+            "p95": null,
+            "max": 106.79999995231628
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "return-board-first",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 104.59999990463257,
+            "p95": null,
+            "max": 104.59999990463257
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "issue-open",
+          "destinationNumber": null,
+          "phase": "first-observed",
+          "observations": 1,
+          "shellPaintMs": {
+            "count": 1,
+            "p50": 87.70000004768372,
+            "p95": null,
+            "max": 87.70000004768372
+          },
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 603.7999999523163,
+            "p95": null,
+            "max": 603.7999999523163
+          },
+          "visibleShellLoadingObservations": 1,
+          "visibleFullContentLoadingObservations": 1,
+          "maximumFullContentLoadingFrames": 61,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": [
+            "fresh"
+          ]
+        },
+        {
+          "name": "board-to-project",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 95.90000009536743,
+            "p95": null,
+            "max": 95.90000009536743
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "project-to-page",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 88.69999980926514,
+            "p95": null,
+            "max": 88.69999980926514
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        },
+        {
+          "name": "page-to-board",
+          "destinationNumber": null,
+          "phase": "as-named",
+          "observations": 1,
+          "fullUsableMs": {
+            "count": 1,
+            "p50": 87.5,
+            "p95": null,
+            "max": 87.5
+          },
+          "visibleShellLoadingObservations": 0,
+          "visibleFullContentLoadingObservations": 0,
+          "maximumFullContentLoadingFrames": 0,
+          "observationsWithLongTasks": 1,
+          "contentReadPhasesAtUsability": []
+        }
+      ],
+      "cleanup": [
+        {
+          "repositoryConnectionUnchanged": true
+        },
+        {
+          "connectedBoardUnchanged": true
+        },
+        {
+          "fixturePagesUnchanged": true
+        },
+        {
+          "preexistingTabsPreserved": true
+        }
+      ],
+      "failure": null,
+      "rawSha256": "1f537f416cba645d4637996746374b8a4fab26d24f995eafe00ed7cca71e418a",
+      "auditedSha256": "3803489a1bda09617dfcb794f8f4e64509628d481c60fa9d6286cd889f0213da",
+      "gzipSha256": "aa665de30c4f06bc56c550891e68933449337f90f4827d0fff0223f9f564cbbe",
+      "auditedEvidence": "min-683-broad-evidence/min683-broad-before-scaled-server-bootstrap-primary-web-1.json.gz"
+    },
+    {
       "name": "min683-broad-protocol-diagnostic-deep-native-1.json",
       "status": "failed",
       "diagnostic": true,
@@ -12225,6 +14953,125 @@
       "eligibleForPairedNavigationConclusions": true,
       "repetitionsMatch": true,
       "eligibleForMatchedWarmConclusions": true,
+      "eligibleForPairedFocusConclusions": false
+    },
+    {
+      "baseline": "min683-broad-before-scaled-server-bootstrap-deep-native-1.json",
+      "candidate": "min683-broad-after-scaled-complete-resume-deep-native-1.json",
+      "protocolMatches": true,
+      "runnerSourceHashMatches": false,
+      "runtimeVersionsMatch": true,
+      "viewportMatches": true,
+      "workloadIdentityMatches": true,
+      "environmentEvidenceKnown": true,
+      "environmentMatches": true,
+      "sourceProtocolAndWorkloadMatch": false,
+      "productSourcesKnown": true,
+      "eligibleForPairedNavigationConclusions": false,
+      "repetitionsMatch": false,
+      "eligibleForMatchedWarmConclusions": false,
+      "eligibleForPairedFocusConclusions": false
+    },
+    {
+      "baseline": "min683-broad-before-scaled-server-bootstrap-deep-web-1.json",
+      "candidate": "min683-broad-after-scaled-complete-resume-deep-web-1.json",
+      "protocolMatches": true,
+      "runnerSourceHashMatches": false,
+      "runtimeVersionsMatch": true,
+      "viewportMatches": true,
+      "workloadIdentityMatches": true,
+      "environmentEvidenceKnown": true,
+      "environmentMatches": true,
+      "sourceProtocolAndWorkloadMatch": false,
+      "productSourcesKnown": true,
+      "eligibleForPairedNavigationConclusions": false,
+      "repetitionsMatch": false,
+      "eligibleForMatchedWarmConclusions": false,
+      "eligibleForPairedFocusConclusions": false
+    },
+    {
+      "baseline": "min683-broad-before-scaled-server-bootstrap-forge-native-1.json",
+      "candidate": "min683-broad-after-scaled-complete-resume-forge-native-1.json",
+      "protocolMatches": true,
+      "runnerSourceHashMatches": false,
+      "runtimeVersionsMatch": true,
+      "viewportMatches": true,
+      "workloadIdentityMatches": true,
+      "environmentEvidenceKnown": true,
+      "environmentMatches": true,
+      "sourceProtocolAndWorkloadMatch": false,
+      "productSourcesKnown": true,
+      "eligibleForPairedNavigationConclusions": false,
+      "repetitionsMatch": false,
+      "eligibleForMatchedWarmConclusions": false,
+      "eligibleForPairedFocusConclusions": false
+    },
+    {
+      "baseline": "min683-broad-before-scaled-server-bootstrap-forge-web-1.json",
+      "candidate": "min683-broad-after-scaled-complete-resume-forge-web-1.json",
+      "protocolMatches": true,
+      "runnerSourceHashMatches": false,
+      "runtimeVersionsMatch": true,
+      "viewportMatches": true,
+      "workloadIdentityMatches": true,
+      "environmentEvidenceKnown": true,
+      "environmentMatches": true,
+      "sourceProtocolAndWorkloadMatch": false,
+      "productSourcesKnown": true,
+      "eligibleForPairedNavigationConclusions": false,
+      "repetitionsMatch": false,
+      "eligibleForMatchedWarmConclusions": false,
+      "eligibleForPairedFocusConclusions": false
+    },
+    {
+      "baseline": "min683-broad-before-scaled-server-bootstrap-forge-web-1.json",
+      "candidate": "min683-broad-after-scaled-window-selection-forge-web-1.json",
+      "protocolMatches": true,
+      "runnerSourceHashMatches": false,
+      "runtimeVersionsMatch": true,
+      "viewportMatches": true,
+      "workloadIdentityMatches": true,
+      "environmentEvidenceKnown": true,
+      "environmentMatches": true,
+      "sourceProtocolAndWorkloadMatch": false,
+      "productSourcesKnown": true,
+      "eligibleForPairedNavigationConclusions": false,
+      "repetitionsMatch": false,
+      "eligibleForMatchedWarmConclusions": false,
+      "eligibleForPairedFocusConclusions": false
+    },
+    {
+      "baseline": "min683-broad-before-scaled-server-bootstrap-primary-native-1.json",
+      "candidate": "min683-broad-after-scaled-complete-resume-primary-native-1.json",
+      "protocolMatches": true,
+      "runnerSourceHashMatches": false,
+      "runtimeVersionsMatch": true,
+      "viewportMatches": true,
+      "workloadIdentityMatches": true,
+      "environmentEvidenceKnown": true,
+      "environmentMatches": true,
+      "sourceProtocolAndWorkloadMatch": false,
+      "productSourcesKnown": true,
+      "eligibleForPairedNavigationConclusions": false,
+      "repetitionsMatch": false,
+      "eligibleForMatchedWarmConclusions": false,
+      "eligibleForPairedFocusConclusions": false
+    },
+    {
+      "baseline": "min683-broad-before-scaled-server-bootstrap-primary-web-1.json",
+      "candidate": "min683-broad-after-scaled-complete-resume-primary-web-1.json",
+      "protocolMatches": true,
+      "runnerSourceHashMatches": false,
+      "runtimeVersionsMatch": true,
+      "viewportMatches": true,
+      "workloadIdentityMatches": true,
+      "environmentEvidenceKnown": true,
+      "environmentMatches": true,
+      "sourceProtocolAndWorkloadMatch": false,
+      "productSourcesKnown": true,
+      "eligibleForPairedNavigationConclusions": false,
+      "repetitionsMatch": false,
+      "eligibleForMatchedWarmConclusions": false,
       "eligibleForPairedFocusConclusions": false
     }
   ]

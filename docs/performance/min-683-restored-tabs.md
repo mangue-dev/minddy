@@ -2,11 +2,14 @@
 
 ## Current status
 
-Work stopped at the user's request on 2026-10-14. The
-[session checkpoint](min-683-session-checkpoint.md) records the exact retained
-build, failed final web activation and outstanding checks. No more tests or
-content writes are running. Final rapid-refresh, long-absence and journaled live
-editing/focus verification have not run; acceptance remains open.
+Work resumed from the user's 2026-10-14 stop, beginning with the failed web
+activation. The original failure remains unexplained and preserved. New excluded
+input diagnostics distinguish actual pointer delivery, session activation, route
+commit and complete usable content. The corrected v5 ordinary protocol has now
+observed real focus loss and return on both runtimes against the retained
+`c1ec2b80e` / `ZiBY2UkSzHhI8dl5J1UxZ` product. Final rapid-refresh, long-absence and
+journaled live editing/focus verification remain pending. A server-started Page
+working-set experiment is in source preparation, not yet a measured improvement.
 
 Acceptance remains open. The stable ten-tab fixture contains 120 triage issues,
 120 private feedback posts and 30 active objectives with fifteen linked tasks
@@ -30,6 +33,44 @@ benefit for the requested working-set deadline. The separately identified writer
 experiment is now measured and provisionally retained for transport efficiency;
 rapid-refresh safety and final correctness remain pending. None of these results
 closes acceptance.
+
+## Resumed focus attribution
+
+Three full-sequence input diagnostics are explicitly excluded from latency
+comparisons. They preserve the old failed raw file and its hash. All validate
+the complete scaled cohort, unchanged Page versions, ten restored tabs and Git
+identity; none reports a 403/429 or a dropped input-trace event.
+
+| Excluded diagnostic | Observation |
+| --- | --- |
+| Historical separate-window attempt | All 145 content observations pass; actual focus loss is absent. The old missing foreign activation does not reproduce. |
+| Same-window target activation, v1 | All 135 observations before focus pass; the run correctly fails because the original document remains focused. No focus-return navigation is counted. |
+| Load-ready same-window transfer, v2 | All 145 content observations pass. The original document is unfocused at both ends of 16,004.8 ms renderer / 16,005 ms wall time, then returns focused. Visibility remains `visible` and is recorded honestly. |
+
+The proven transfer waits for the blank target's load, disables focus emulation
+on both initialized targets, brings the real same-window tab forward, and does
+the converse on return. A blank-only isolated browser probe shows that target
+activation alone can work there; it does not explain the full-fixture failure.
+Playwright's main-frame initialization enables focus emulation, so the complete
+procedure is retained rather than attributing the difference to one command.
+
+The successful v2 foreign-Page click hits the exact intended tab. Trusted
+down/up/click events reach both capture and bubble without default prevention;
+the session is initially idle, error-free, with one departure guard. Its
+activation promise settles at +22.6 ms, the document route commits by +46.3 ms,
+and full content reaches the two-frame paint opportunity at +93.2 ms. These are
+instrumented single observations, not latency acceptance or proof about the old
+failed click. Session-promise completion is not interface readiness.
+
+Ordinary v5 keeps the complete-content gates and trusted click sequence. It
+requires initial focus, actual unfocused interval endpoints on both clocks for
+the full configured duration, and a visible/focused return; failure stops the
+focus-return phase. Its eight-source hash is `cb58539afa5d8d11547a6105c6279f75a52110387534b3d443722b3271a89d07`.
+The new pre-bootstrap web/native runs each complete all 145 observations, with
+16,004/16,004 ms and 16,002.7/16,002 ms renderer/wall absence respectively.
+These runs are a new protocol cohort and cannot silently enter historical v4
+strict pairs. They contain no remote writes or autosave validation. Cold
+preparation and first-open targets remain unmet.
 
 ## Latest writer observations
 
