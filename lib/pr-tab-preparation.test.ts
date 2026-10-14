@@ -271,6 +271,90 @@ describe("account-owned PR preparation", () => {
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
+  it("starts an explicit Page body beside the held first project issue read and then admits its exact tree", async () => {
+    const prepared = setup();
+    const reads = new Map<string, { signal: AbortSignal; finish: () => void }>();
+    prepared.fetch.mockImplementation((url, init) => new Promise((resolve, reject) => {
+      const path = String(url), signal = init!.signal!;
+      reads.set(path, { signal, finish: () => resolve(fixtureResponse(path)) });
+      signal.addEventListener("abort", () => reject(new Error("Speculation yielded")), { once: true });
+    }));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new", "/projects/new/pages/page"]); prepared.flush();
+      await vi.waitFor(() => expect(reads.size).toBe(2));
+      expect([...reads.keys()]).toEqual(["/api/projects/new/issues", "/api/projects/new/pages/page"]);
+      reads.get("/api/projects/new/pages/page")!.finish();
+      await vi.waitFor(() => { prepared.flush(); expect(reads.size).toBe(3); });
+      expect([...reads.keys()]).toEqual(["/api/projects/new/issues", "/api/projects/new/pages/page", "/api/projects/new/pages"]);
+      expect(prepared.client.isFetching()).toBe(SCOPED_PREPARATION_CONCURRENCY);
+      expect(reads.get("/api/projects/new/issues")!.signal.aborted).toBe(false);
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+      reads.get("/api/projects/new/issues")!.finish(); reads.get("/api/projects/new/pages")!.finish();
+      await drain(prepared);
+      const paths = prepared.fetch.mock.calls.map(([url]) => String(url));
+      expect(paths).toHaveLength(9);
+      expect(new Set(paths).size).toBe(9);
+      expect(paths.slice(3)).toEqual(["/api/projects/new/categories", "/api/projects/new/members",
+        "/api/projects/new/objectives", "/api/projects/new/issue-relations", "/api/projects/new/integrations", "/api/projects/new/views"]);
+    } finally { prepared.preparation.dispose(); for (const read of reads.values()) read.finish(); prepared.client.clear(); }
+  });
+
+  it("prefixes only the first listed explicit Page and keeps a denied body terminal until another visit", async () => {
+    const surface = new EventTarget() as EventTarget & { visibilityState: string; querySelectorAll: () => [] };
+    surface.visibilityState = "visible"; surface.querySelectorAll = () => [];
+    vi.stubGlobal("document", surface);
+    const prepared = setup();
+    prepared.fetch.mockImplementation(async (url) => String(url).endsWith("/pages/page")
+      ? Response.json({ error: "Forbidden" }, { status: 403 })
+      : String(url).endsWith("/pages/later") ? Response.json({ id: "later", project_id: "new", version: 1, content: { type: "doc", content: [] } })
+        : fixtureResponse(String(url)));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new", "/projects/new/pages/page", "/projects/new/pages/later"]);
+      await drain(prepared);
+      const paths = prepared.fetch.mock.calls.map(([url]) => String(url));
+      expect(paths.slice(0, 3)).toEqual(["/api/projects/new/issues", "/api/projects/new/pages/page", "/api/projects/new/pages"]);
+      expect(paths.at(-1)).toBe("/api/projects/new/pages/later");
+      expect(new Set(paths).size).toBe(10);
+      expect(paths).toHaveLength(10);
+      expect(prepared.client.getQueryState(pageKey("page"))?.status).toBe("error");
+      const count = prepared.fetch.mock.calls.length;
+      surface.visibilityState = "hidden"; surface.dispatchEvent(new Event("visibilitychange"));
+      surface.visibilityState = "visible"; surface.dispatchEvent(new Event("visibilitychange")); prepared.flush();
+      expect(prepared.fetch).toHaveBeenCalledTimes(count);
+      expect(isPreparedPageData("page", prepared.client.getQueryState(pageKey("page"))!.dataUpdatedAt)).toBe(false);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("yields the prefixed Page and anchored project while hidden and resumes their exact reads after cancellation", async () => {
+    const surface = new EventTarget() as EventTarget & { visibilityState: string; querySelectorAll: () => [] };
+    surface.visibilityState = "visible"; surface.querySelectorAll = () => [];
+    vi.stubGlobal("document", surface);
+    const prepared = setup();
+    const reads: Array<{ path: string; signal: AbortSignal; finish: () => void }> = [];
+    prepared.fetch.mockImplementation((url, init) => new Promise((resolve) => {
+      const path = String(url), signal = init!.signal!;
+      // Keep transport pending after cancellation to model an admitted response.
+      reads.push({ path, signal, finish: () => resolve(fixtureResponse(path)) });
+    }));
+    try {
+      prepared.preparation.visit("/home", ["/home", "/projects/new", "/projects/new/pages/page"]); prepared.flush();
+      await vi.waitFor(() => expect(reads).toHaveLength(2));
+      expect(reads.map((read) => read.path)).toEqual(["/api/projects/new/issues", "/api/projects/new/pages/page"]);
+      surface.visibilityState = "hidden"; surface.dispatchEvent(new Event("visibilitychange"));
+      expect(reads.every((read) => read.signal.aborted)).toBe(true);
+      prepared.flush(); expect(reads).toHaveLength(2);
+      for (const read of reads) read.finish();
+      await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(0));
+      prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+      surface.visibilityState = "visible"; surface.dispatchEvent(new Event("visibilitychange"));
+      await vi.waitFor(() => expect(prepared.tasks.size).toBe(1));
+      await drain(prepared);
+      expect(prepared.fetch.mock.calls.slice(2, 4).map(([url]) => String(url))).toEqual(["/api/projects/new/issues", "/api/projects/new/pages/page"]);
+      expect(prepared.client.getQueryState(pageKey("page"))?.status).toBe("success");
+      expect(prepared.fetch).toHaveBeenCalledTimes(11);
+    } finally { prepared.preparation.dispose(); for (const read of reads) read.finish(); prepared.client.clear(); }
+  });
+
   it("preserves a joined foreground slot, cancels its sibling and blocks refills until foreground settles", async () => {
     const prepared = setup();
     const reads = new Map<string, { signal: AbortSignal; finish: () => void }>();
@@ -750,9 +834,10 @@ describe("account-owned PR preparation", () => {
     prepared.preparation.visit("/home", ["/home", "/projects/new", "/projects/new/pages/page"]);
     await drain(prepared);
     expect(prepared.fetch.mock.calls.map(([url]) => url)).toEqual([
-      "/api/projects/new/issues", "/api/projects/new/categories", "/api/projects/new/members",
+      "/api/projects/new/issues", "/api/projects/new/pages/page", "/api/projects/new/pages",
+      "/api/projects/new/categories", "/api/projects/new/members",
       "/api/projects/new/objectives", "/api/projects/new/issue-relations", "/api/projects/new/integrations",
-      "/api/projects/new/views", "/api/projects/new/pages/page", "/api/projects/new/pages",
+      "/api/projects/new/views",
     ]);
     expect(maximum).toBe(SCOPED_PREPARATION_CONCURRENCY);
     expect(prepared.client.getQueryData(["views", "new"])).toEqual([]);
