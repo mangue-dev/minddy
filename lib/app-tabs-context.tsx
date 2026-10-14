@@ -18,7 +18,6 @@ import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-naviga
 import { SessionContext, useOptionalAppTabSession } from "./app-tab-session-context";
 import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
 import { createWindowSelectionPersistence } from "./window-selection-persistence";
-import { createRestoredTabStartupAdmission } from "./restored-tab-startup-admission";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -134,11 +133,6 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
     catch { /* Window selection persistence is optional. */ }
     return { active: false, writer: createWindowSelectionPersistence(storage, storageKey, owner) };
   }, [session, storageKey, owner]);
-  const startupAdmission = useMemo(() => createRestoredTabStartupAdmission(client), [client, owner, session]);
-  useLayoutEffect(() => startupAdmission.mount(), [startupAdmission]);
-  useEffect(() => {
-    if (query.isError && !query.isFetching) startupAdmission.fail();
-  }, [query.isError, query.isFetching, startupAdmission]);
   useLayoutEffect(() => {
     onQueryState({ session, loading: query.isPending, loadError: query.isError, reload: () => { void query.refetch(); } });
   }, [session, query.isPending, query.isError, query.refetch, onQueryState]);
@@ -152,12 +146,12 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       const identity = JSON.stringify([active.id, active.href, state.tabs.map((tab) => tab.href)]);
       if (identity === previous) return;
       previous = identity;
-      startupAdmission.handoff(() => preparation.visit(active.href, state.tabs.map((tab) => tab.href)));
+      preparation.visit(active.href, state.tabs.map((tab) => tab.href));
     };
     const stop = session.subscribe(visit);
     visit();
     return () => { stop(); preparation.dispose(); };
-  }, [client, session, startupAdmission]);
+  }, [client, session]);
   useEffect(() => {
     lifetime.active = true;
     return () => {
@@ -197,9 +191,6 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
   useEffect(() => {
     if (!query.data) return;
     session.receive(query.data);
-    // An empty canonical scope has no restored working set to reserve. Its
-    // ordinary first-tab creation must not hold optional admission indefinitely.
-    if (!session.getSnapshot().tabs.length) startupAdmission.fail();
     // Server tab reconciliation is ongoing; the window snapshot is startup-only.
     // Reopening it after each location PATCH repeats authorization/decryption
     // even though initialize already has an active destination and does nothing.
@@ -218,17 +209,11 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
         }
       } catch { /* Server-backed tab destinations remain available. */ }
       if (!cancelled && lifetime.active) {
-        try {
-          await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
-        } finally {
-          // initialize reports normal failures on the session and resolves.
-          // An empty/failed startup still releases optional admission.
-          if (!cancelled && lifetime.active && !session.getSnapshot().activeId) startupAdmission.fail();
-        }
+        await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
       }
     })();
     return () => { cancelled = true; };
-  }, [query.data, session, storageKey, keepCurrentRoute, lifetime, startupAdmission]);
+  }, [query.data, session, storageKey, keepCurrentRoute, lifetime]);
   // Flush the newest location and encrypted window selection on a real hide.
   // Unload cannot guarantee receipt of the optional snapshot's final ACK.
   useEffect(() => {
