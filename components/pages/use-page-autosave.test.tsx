@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, StrictMode, useEffect, useRef } from "react";
+import { act, Activity, createElement, StrictMode, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { Editor, JSONContent } from "@tiptap/react";
@@ -552,6 +552,102 @@ describe("cached Page display and fresh write authority", () => {
     expect(save).toHaveBeenCalledTimes(1);
     expect(h.autosave.hasUnsavedChanges()).toBe(false);
     expect(h.onError).not.toHaveBeenCalled();
+  });
+
+  it.each(["accepted", "conflict", "transient", "disposed"] as const)("handles a resumed draft whose debounce expires behind a retired PATCH (%s)", async (outcome) => {
+    vi.useFakeTimers();
+    const response = deferred<Page>();
+    const cached = page(5);
+    const save = vi.fn().mockImplementationOnce(() => response.promise)
+      .mockImplementation(async (_id: string, patch: UpdatePageInput) => {
+        if (outcome === "conflict" || outcome === "transient") throw new Error("New generation write failed");
+        return page(7, patch.content as PageDocJSON);
+      });
+    const onError = vi.fn();
+    let autosave!: PageAutosave;
+    let departure!: Promise<boolean>;
+    function Surface() {
+      autosave = usePageAutosave({ pageId: cached.id, page: cached, fresh: true, delayMs: 20,
+        save, onError, editorRef: { current: null } });
+      return createElement("div", {}, "Retained Page");
+    }
+    const render = async (mode: "visible" | "hidden") => {
+      await act(async () => root!.render(createElement(Activity, { mode, children: createElement(Surface) })));
+    };
+    try {
+      root = createRoot(document.body.appendChild(document.createElement("div")));
+      await render("visible");
+      await act(async () => {
+        autosave.schedule({ content: doc("Submitted before hiding") });
+        departure = autosave.flushBeforeNavigation();
+      });
+      await render("hidden"); await render("visible");
+      await act(async () => autosave.schedule({ content: doc("Typed after resume") }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+      expect(save).toHaveBeenCalledTimes(1);
+      if (outcome === "disposed") { await act(async () => root!.unmount()); root = undefined; }
+      await act(async () => {
+        if (outcome === "conflict") response.reject(new PageConflictError("Conflict", page(6)));
+        else if (outcome === "transient") response.reject(new Error("Connection interrupted"));
+        else response.resolve(page(6, doc("Submitted before hiding")));
+        expect(await departure).toBe(false);
+      });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+      if (outcome === "accepted") {
+        expect(save).toHaveBeenCalledTimes(2);
+        expect(save).toHaveBeenLastCalledWith(cached.id, { content: doc("Typed after resume"), version: 6 }, expect.any(Function));
+        expect(autosave.hasUnsavedChanges()).toBe(false);
+        expect(autosave.state).toBe("saved");
+      } else if (outcome === "disposed") {
+        expect(save).toHaveBeenCalledTimes(1);
+        expect(autosave.hasUnsavedChanges()).toBe(true);
+      } else {
+        expect(save).toHaveBeenCalledTimes(2);
+        expect(save).toHaveBeenLastCalledWith(cached.id, { content: doc("Typed after resume"), version: 5 }, expect.any(Function));
+        expect(autosave.hasUnsavedChanges()).toBe(true);
+        expect(autosave.state).toBe("error");
+      }
+      if (outcome === "conflict" || outcome === "transient") {
+        expect(onError).toHaveBeenCalledTimes(1);
+        expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: "New generation write failed" }));
+      } else expect(onError).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("preserves a newer resumed input's own debounce after the retired PATCH acknowledges", async () => {
+    vi.useFakeTimers();
+    const response = deferred<Page>(), cached = page(5);
+    const save = vi.fn().mockImplementationOnce(() => response.promise)
+      .mockImplementation(async (_id: string, patch: UpdatePageInput) => page(7, patch.content as PageDocJSON));
+    let autosave!: PageAutosave;
+    function Surface() {
+      autosave = usePageAutosave({ pageId: cached.id, page: cached, fresh: true, delayMs: 20,
+        save, onError: vi.fn(), editorRef: { current: null } });
+      return null;
+    }
+    const render = async (mode: "visible" | "hidden") => {
+      await act(async () => root!.render(createElement(Activity, { mode, children: createElement(Surface) })));
+    };
+    try {
+      root = createRoot(document.body.appendChild(document.createElement("div")));
+      await render("visible");
+      let departure!: Promise<boolean>;
+      await act(async () => {
+        autosave.schedule({ content: doc("Submitted") }); departure = autosave.flushBeforeNavigation();
+      });
+      await render("hidden"); await render("visible");
+      await act(async () => autosave.schedule({ content: doc("First resumed input") }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+      await act(async () => autosave.schedule({ content: doc("Latest resumed input"), title: "Latest title" }));
+      await act(async () => { response.resolve(page(6, doc("Submitted"))); expect(await departure).toBe(false); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(19); });
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(save).toHaveBeenCalledTimes(2);
+      expect(save).toHaveBeenLastCalledWith(cached.id, { content: doc("Latest resumed input"), title: "Latest title", version: 6 }, expect.any(Function));
+      expect(autosave.hasUnsavedChanges()).toBe(false);
+    } finally { vi.useRealTimers(); }
   });
 
   it("fences the previous write generation across StrictMode effect cleanup and restart", async () => {

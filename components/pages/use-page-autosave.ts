@@ -321,6 +321,10 @@ export function usePageAutosave({
       inFlight.current = false;
       finish();
       if (surfaceActive.current) setSaving(!currentOwner() && pending.current !== null);
+      // A resumed surface may consume its debounce while joining this older
+      // request. Hand off once to its live generation, whose ordinary failures
+      // stop with an error. Newer input keeps its own debounce timer.
+      if (!currentOwner() && surfaceActive.current && pending.current && !timer.current) armWrite();
     }
 
     /** The 409: merge, adopt, and say what we have not been able to merge. */
@@ -348,7 +352,7 @@ export function usePageAutosave({
       }
       return { ...rest, content: merged.doc, version: err.page.version };
     }
-  }, [pageId, save, takePending, adopt, onError, acquireFresh, reconcileRemote]);
+  }, [pageId, save, takePending, adopt, onError, acquireFresh, reconcileRemote, armWrite]);
 
   const writeRef = useRef(write);
   writeRef.current = write;
