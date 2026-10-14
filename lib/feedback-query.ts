@@ -1,6 +1,8 @@
-import { collectionFilterParams } from "./collection-filters";
+import type { QueryClient } from "@tanstack/react-query";
+import { matchesFeedbackFilters, collectionFilterParams } from "./collection-filters";
 import { parseFeedbackListFilters, type FeedbackListFilters } from "./feedback-list-filters";
 import { FEEDBACK_OPEN_STATUSES } from "./feedback/types";
+import { feedbackNeedsHumanReview } from "./secondary-view-selection";
 import type { TeamFeedbackListItem } from "./server/feedback/team-queries";
 
 /** The team view and tab preparation consume the same authorized query. */
@@ -26,4 +28,19 @@ export function feedbackFiltersForDestination(href: string): FeedbackListFilters
   const filters = parseFeedbackListFilters(params) ?? {};
   if (!params.has("objective")) filters.statuses = [...FEEDBACK_OPEN_STATUSES];
   return filters;
+}
+
+/** Reuse an exact accepted scope only when it already contains the requested post. */
+export function feedbackFiltersForRequestedPost(client: QueryClient, projectId: string,
+  postId: string | null, normalFilters: FeedbackListFilters, onlyToReview = false): FeedbackListFilters {
+  if (!postId) return normalFilters;
+  const state = client.getQueryState<{ posts: TeamFeedbackListItem[]; board_enabled: boolean }>(
+    feedbackQueryOptions(projectId, normalFilters).queryKey);
+  if (state?.status !== "success" || state.error || state.isInvalidated || !Array.isArray(state.data?.posts)) return {};
+  const target = state.data.posts.find((post) => post.id === postId && post.project_id === projectId);
+  if (!target ||
+      (normalFilters.statuses?.length && !normalFilters.statuses.includes(target.status)) ||
+      !matchesFeedbackFilters(target, normalFilters) ||
+      (onlyToReview && !feedbackNeedsHumanReview(target))) return {};
+  return normalFilters;
 }

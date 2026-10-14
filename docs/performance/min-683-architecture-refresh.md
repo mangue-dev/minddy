@@ -1354,6 +1354,33 @@ the restored-tab and three-second usability criteria.
 
 ## Warm Feedback selection changes the required query scope
 
+### Bounded consumer correction
+
+Task54 changes only the mounted consumer's query choice. When `post` already
+belongs to the exact successful, noninvalidated normal list and matches its
+project, status, property and review controls, retain that same query key and
+data. Otherwise use the existing full reader. No rows are copied, unioned or
+relabeled, no timestamps change, and errors/invalidation do not grant a new
+accepted scope. The existing deep-link selection, widening and URL consumption
+effects remain. This also preserves normal optimistic query data rather than
+introducing a separate display store or write authority.
+
+Four full-component cases fail behaviorally before the correction. The new
+eleven QueryClient boundary cases and six mounted FeedbackTeamPage cases pass
+with it. The component tests keep real query factories, filters, selection,
+retained route and Activity effects; unrelated chrome/editors/backend hooks are
+mocked, and detail DTOs are preseeded to isolate the list-key transition. They
+do not certify cold detail rendering or the real editor.
+
+The preparator intentionally retains its existing deterministic full scope for
+explicit links. A broader draft also adapted preparation, but review found
+that its selected-source dependency index would need to observe both candidate
+keys through arrival, removal and invalidation. That unverified change is not
+included. Existing full-list background work and preference selection therefore
+remain a limitation; no whole-preparation or new cache-completeness guarantee
+is claimed. The separate production comparison must verify actual complete
+Feedback content without a visible skeleton, including cold resolved targets.
+
 The retained scaled candidate's first native ordinary run keeps a material
 outlier: its `restored-alternation` Feedback sample paints at 2,003.7 ms, reaches
 full content at 1,985.6 ms and records 226 loading frames. The independent CDP

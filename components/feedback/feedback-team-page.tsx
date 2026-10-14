@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
-import { feedbackQueryOptions } from "@/lib/feedback-query";
+import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -625,7 +625,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
   const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", searchParams.has("objective") ? "all" : "unresolved");
-  const listFilters = postParam ? {} : { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
+  const [onlyToReview, setOnlyToReview] = useMobileCollectionState(`/projects/${projectId}/feedback`, "onlyToReview", false);
+  const normalListFilters = { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
+  const listFilters = feedbackFiltersForRequestedPost(queryClient, projectId, postParam, normalListFilters, onlyToReview);
   const { data: listData, isPending } = useQuery({
     ...feedbackQueryOptions(projectId, listFilters),
   });
@@ -642,7 +644,6 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const objectiveParam = searchParams.getAll("objective").join(",");
   useEffect(() => { if (objectiveParam) setState("all"); }, [objectiveParam, setState]);
   const [sort, setSort] = useMobileCollectionState<FeedbackSort>(`/projects/${projectId}/feedback`, "sort", "top");
-  const [onlyToReview, setOnlyToReview] = useMobileCollectionState(`/projects/${projectId}/feedback`, "onlyToReview", false);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
