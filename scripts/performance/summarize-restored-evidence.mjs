@@ -20,6 +20,14 @@ export function sampleStatistics(values) {
     p95: samples.length >= 10 ? samples[Math.ceil(samples.length * 0.95) - 1] : null, max: samples.at(-1) } : { p50: null, p95: null, max: null }) };
 }
 
+/** Preserve diagnostic error messages without assuming every runner throws a string. */
+export function failureSummary(failure) {
+  if (failure == null) return null;
+  if (typeof failure === "string") return failure.split("\n")[0];
+  if (typeof failure.message === "string") return `${typeof failure.name === "string" ? `${failure.name}: ` : ""}${failure.message.split("\n")[0]}`;
+  return "Unrecognized failure metadata; see audited evidence";
+}
+
 /** Fail closed on secrets; omit duplicate fixture paragraph text from evidence. */
 export function auditEvidence(value, location = "$", removed = []) {
   if (Array.isArray(value)) return value.map((entry, index) => auditEvidence(entry, `${location}[${index}]`, removed));
@@ -169,7 +177,7 @@ export async function refreshRestoredEvidence() {
       preparationSinceRefreshMs: value.preparationAtFirstActivation?.sinceRefreshMs ?? null,
       ...(value.refreshPreparationAtThreeSeconds || value.launchPreparationAtThreeSeconds ? { fixedRendererPreparation: {
         launch: preparationSnapshotSummary(value.launchPreparationAtThreeSeconds), refresh: preparationSnapshotSummary(value.refreshPreparationAtThreeSeconds) } } : {}),
-      failure: value.failure?.split("\n")[0] ?? null, cleanup: value.cleanup, acceptance: value.acceptance,
+      failure: failureSummary(value.failure), cleanup: value.cleanup, acceptance: value.acceptance,
       summaries: summarizeMeasurements(value.measurements),
       ...(value.launches ? { executableStartup: { setupExcluded: value.setupExcluded, measuredLaunches: value.launches.length,
         successfulLaunches: value.launches.filter((launch) => launch.status === "complete").length,

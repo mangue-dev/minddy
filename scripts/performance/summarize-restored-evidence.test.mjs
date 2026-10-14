@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auditEvidence, classification, evidenceFilenameSelected, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, summarizeMeasurements } from "./summarize-restored-evidence.mjs";
+import { auditEvidence, classification, evidenceFilenameSelected, failureSummary, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, summarizeMeasurements } from "./summarize-restored-evidence.mjs";
+
+test("retains both structured diagnostic failures and ordinary error strings", () => {
+  assert.equal(failureSummary({ name: "TimeoutError", message: "Observed gate failed\nDiagnostic stack" }), "TimeoutError: Observed gate failed");
+  assert.equal(failureSummary("Ordinary failure\nStack"), "Ordinary failure");
+  assert.equal(failureSummary(null), null);
+  assert.equal(failureSummary({ unknown: "Unpublished payload" }), "Unrecognized failure metadata; see audited evidence");
+});
 
 test("omits p95 below ten observations and preserves the full maximum", () => {
   assert.deepEqual(sampleStatistics([300, 20, 40, 60, 80]), { count: 5, p50: 60, p95: null, max: 300 });
