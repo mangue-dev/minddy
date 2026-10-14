@@ -16,7 +16,8 @@ import { PrBackgroundSync } from "./use-pr-background";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
 import { SessionContext, useOptionalAppTabSession } from "./app-tab-session-context";
-import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
+import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
+import { createWindowSelectionPersistence } from "./window-selection-persistence";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -126,10 +127,15 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
   const router = useRouter();
   const query = useAppTabsQuery(owner);
   const storageKey = appTabsStorageKey(owner);
+  const lifetime = useMemo(() => {
+    let storage: Storage | undefined;
+    try { if (typeof window !== "undefined") storage = window.sessionStorage; }
+    catch { /* Window selection persistence is optional. */ }
+    return { active: false, writer: createWindowSelectionPersistence(storage, storageKey, owner) };
+  }, [session, storageKey, owner]);
   useLayoutEffect(() => {
     onQueryState({ session, loading: query.isPending, loadError: query.isError, reload: () => { void query.refetch(); } });
   }, [session, query.isPending, query.isError, query.refetch, onQueryState]);
-  const mounted = useRef(false);
   useEffect(() => {
     const preparation = createPrTabPreparation(client);
     let previous = "";
@@ -147,14 +153,18 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
     return () => { stop(); preparation.dispose(); };
   }, [client, session]);
   useEffect(() => {
-    mounted.current = true;
+    lifetime.active = true;
     return () => {
-      mounted.current = false;
-      // Strict Mode replays effects with the same session. Dispose only after
-      // an actual unmount so in-flight work cannot affect another account.
-      queueMicrotask(() => { if (!mounted.current) session.dispose(); });
+      lifetime.active = false;
+      // Effect replay retains this exact writer. A replacement session has a
+      // separate lifetime and cannot keep the retired account's writer alive.
+      queueMicrotask(() => {
+        if (lifetime.active) return;
+        lifetime.writer.dispose();
+        session.dispose();
+      });
     };
-  }, [session]);
+  }, [session, lifetime]);
   useEffect(() => {
     // One warmup attempt per href (tab label, palette row): prefetchQuery
     // itself respects staleTime, so a fresh cache costs nothing anyway.
@@ -175,9 +185,9 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       else router.push(href, { scroll: false });
     };
     session.remember = (id, href) => {
-      void saveLocalSnapshot(sessionStorage, storageKey, "window-tabs", { id, href }).catch(() => {});
+      if (lifetime.active) lifetime.writer.remember(id, href);
     };
-  }, [router, session, storageKey, client]);
+  }, [router, session, client, lifetime]);
   useEffect(() => {
     if (!query.data) return;
     session.receive(query.data);
@@ -198,14 +208,18 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
           }
         }
       } catch { /* Server-backed tab destinations remain available. */ }
-      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
+      if (!cancelled && lifetime.active) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
     })();
     return () => { cancelled = true; };
-  }, [query.data, session, storageKey, keepCurrentRoute]);
-  // A refresh hides the page first: push the pending location write out
-  // immediately, or the next load restores a destination the session outgrew.
+  }, [query.data, session, storageKey, keepCurrentRoute, lifetime]);
+  // Flush the newest location and encrypted window selection on a real hide.
+  // Unload cannot guarantee receipt of the optional snapshot's final ACK.
   useEffect(() => {
-    const onHide = () => session.onPageHide();
+    const onHide = () => {
+      if (!lifetime.active) return;
+      session.onPageHide();
+      void lifetime.writer.flush();
+    };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") onHide();
     };
@@ -215,7 +229,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       window.removeEventListener("pagehide", onHide);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [session]);
+  }, [session, lifetime]);
   return null;
 }
 
