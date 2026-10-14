@@ -16,6 +16,16 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  { id: `draft-readiness-${runtime}`, disposition: "correctness-retained-performance-acceptance-open", declaredSourceDelta: "Only preserve accepted effective draft readiness in the two header variants; draft mutation and fresh-read gates remain unchanged. Web's ordinary focus guard fails after45 completed observations and must remain ineligible; native completes55. No cold-preparation speedup is claimed.",
+    baseline: `min683-restored-after-scaled-foreground-handoff-${runtime}-${runtime === "web" ? 2 : 1}`,
+    candidate: `min683-restored-after-scaled-draft-only-${runtime}-1`,
+    expectedBaseline: { sha: "3692e7549060f8b682ec99865757a65c5e92a4e2", build: "Qp1Rr4apU_XHLQh2IVfT6" },
+    expectedCandidate: { sha: "4d3b457b097b25b812fb4d499221d7198cf0856e", build: "m-eaUKb4_v56rZ4kOr4Po" } },
+  { id: `readiness-quota-${runtime}`, disposition: "correctness-retained-performance-acceptance-open", declaredSourceDelta: "Request-local batch quota admission and anchored account Retry-After only, including batch-only actor probe guards; compare against the badge-only compiled control. Web attempts remain overall failed at the unchanged focus-window guard; native completes55. Ordinary healthy observations are not a live quota diagnosis or a cold-cache performance acceptance.",
+    baseline: `min683-restored-after-scaled-draft-only-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-draft-quota-${runtime}-${runtime === "web" ? 2 : 1}`,
+    expectedBaseline: { sha: "4d3b457b097b25b812fb4d499221d7198cf0856e", build: "m-eaUKb4_v56rZ4kOr4Po" },
+    expectedCandidate: { sha: "f5abefe201960ced3435eb3046d640602984f68e", build: "aByBbQwsVOkTw0_Zh99sx" } },
   { id: `foreground-handoff-${runtime}`, disposition: "provisional-both-clients-broad-validation-pending", declaredSourceDelta: "Task 56 exact selected-read protection across observer adoption only, compared with the retained consumer-only Feedback source; one ordinary run per client completes, while independent first access, broad and write validation remain separate",
     baseline: `min683-restored-after-scaled-feedback-scope-${runtime}-1`,
     candidate: `min683-restored-after-scaled-foreground-handoff-${runtime}-${runtime === "web" ? 2 : 1}`,

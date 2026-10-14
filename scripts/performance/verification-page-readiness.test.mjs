@@ -73,3 +73,18 @@ test("primary draft cleanup recognizes only exact bodies and versions journaled 
   assert.equal(focusPageRestorationState(item, { ...original, version: 13, content: item.restorationCandidates[1].content }), "unexpected");
   assert.equal(focusPageRestorationState(item, { ...original, version: 12, content: { text: "Unexpected text" } }), "unexpected");
 });
+
+test("restores only an owned exact body/version with its journaled encryption content revision", () => {
+  const original = { id: "page", title: "Synthetic page", version: 2, content_revision: 2, content: { text: "Original" } };
+  const item = { original, expectedMutationBaseVersion: 2, expectedSavedVersion: 3, expectedSavedContentRevision: 3,
+    expectedMutatedContent: { text: "Owned remote update" } };
+  const current = { ...original, version: 3, content_revision: 3, content: item.expectedMutatedContent };
+  assert.equal(focusPageRestorationState(item, current), "owned-mutation");
+  assert.equal(focusPageRestorationState(item, { ...current, content_revision: 4 }), "unexpected");
+  assert.equal(focusPageRestorationState(item, { ...current, title: "Concurrent change" }), "unexpected");
+  assert.equal(focusPageRestorationState(item, { ...current, content: { text: "Concurrent body" } }), "unexpected");
+  const unproven = { ...item, expectedSavedContentRevision: undefined };
+  assert.equal(focusPageRestorationState(unproven, current), "unexpected");
+  const queued = { original, restorationCandidates: [{ version: 4, contentRevision: 4, content: { text: "Owned queued body" } }] };
+  assert.equal(focusPageRestorationState(queued, { ...original, version: 4, content_revision: 4, content: queued.restorationCandidates[0].content }), "owned-mutation");
+});

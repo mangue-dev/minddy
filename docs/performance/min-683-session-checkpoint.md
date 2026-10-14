@@ -16,14 +16,19 @@ deployment, production migration or `work:done` is authorized.
 - Repository: `/Users/clementguerin/Projets/minddy-ticketing/minddy`.
 - Existing branch: `codex/min-683-instant-navigation`; draft PR420.
 - Minddy project: `07b14964-0def-4941-8ddf-686572d6345d`.
-- Latest compiled application: `3692e7549060f8b682ec99865757a65c5e92a4e2`,
-  build `Qp1Rr4apU_XHLQh2IVfT6`. `.next/min683-product.json` records its
-  actual source and four environment-file hashes. Later documentation/evidence
-  commits do not change this compiled application.
+- Latest compiled application: `f5abefe201960ced3435eb3046d640602984f68e`,
+  build `aByBbQwsVOkTw0_Zh99sx`: accepted-draft label and request-local
+  readiness quota fixes on the retained navigation source.
+  `.next/min683-product.json` records its actual source and unchanged four
+  environment-file hashes. Later tooling/evidence commits do not relabel it.
+  The historical latency/preparation control remains `3692e754` /
+  `Qp1Rr4apU_XHLQh2IVfT6`, and the isolated badge control is `4d3b457b` /
+  `m-eaUKb4_v56rZ4kOr4Po`.
 - Compiled controls are retained under ignored
   `output/playwright/performance/min683-built-products/<build-id>/.next`:
   `Liw1Se4ZRwp__V1fmrDJD`, `MBwOTC-9Laqpi-vCTq3u1`,
-  `E3ZnePxMEhwQ2_V-VuFUO` and `SuSa35kVIhHyV5Nor8RG2`.
+  `E3ZnePxMEhwQ2_V-VuFUO`, `SuSa35kVIhHyV5Nor8RG2`,
+  `Qp1Rr4apU_XHLQh2IVfT6` and `m-eaUKb4_v56rZ4kOr4Po`.
   Stop the server before swapping whole directories. Never label a binary with
   current HEAD merely because the runner advances.
 - Every created commit has an author-matching DCO sign-off. Continue English
@@ -67,8 +72,10 @@ deployment, production migration or `work:done` is authorized.
    Preactivation hover remains a separate possible cancellation path.
 
 Retain earlier bounded whole-query persistence, Task47 latest-selection writer
-and Task48 newer-Page ACK/rollback correction. Task47 real rapid-refresh safety
-is still pending; no hard-unload delivery guarantee is established.
+and Task48 newer-Page ACK/rollback correction. The corrected Task47 held-seal/rapid-real-reload and settled-control diagnostics
+pass on web and native with the same actual PR/full useful content and exact
+source/version/ten-tab/Git bookends. Earlier collector failures remain retained;
+no hard-unload delivery guarantee or general latency acceptance is established.
 
 ## Current measurements and their limits
 
@@ -111,17 +118,27 @@ The old failed web foreign-Page activation remains preserved and unexplained.
 Three excluded full-sequence input diagnostics distinguish delivery, session
 activation, route and complete content. Corrected v5 observations prove real
 focus loss on both clients. They do not identify the old failure’s root cause
-or replace the pending remote-mutation/long-absence verification.
+or explain that historical delivery failure. The resumed v8 verifier separately
+passes actual75s absence and remote-mutation/write safety on both clients.
 
 Independent first-access v2 probes use a fresh context/profile for each target,
 with trusted input near refresh age3s and no earlier activation/hover. On30ee/
 Liw1, project/primary/foreign reach full content in734/431/419ms web and622/421/
 394ms native. These instrumented results are excluded from ordinary aggregates.
-Only those three inactive destinations are covered, not all nine. Native Home
+Those historical probes cover only three inactive destinations. The resumed
+Qp1R all-nine diagnostic covers nine web and eight independently unvisited native
+targets at3s; nativeHome retains natural-entry provenance and is not certified.
+Native Home
 may be a natural initial entry; prove its prior-activation status before claiming
 an independent Home first click.
 
-## Database and cold-admission evidence to investigate next
+## Database attribution decision and remaining cold-admission work
+
+The resumed reports now supply actual authenticated executor/JSON-wrapper and
+live PostgreSQL session/MFA timings, complete PostgREST payload/transport and
+request-local server phases. No new index/count removal or shared DTO cache is
+justified. The historical clues below retain their original attribution limits;
+use the current report before proposing the next exact project bootstrap.
 
 - The real All endpoint returns1,206 complete issues/1,086 cards. Its two issue
   batches take roughly0.95–1.20s before overlap, with around29–31ms protected
@@ -174,18 +191,22 @@ silently extending a trust timeout or claiming cached authority is fresh.
 
 ## Reported preview merge-state incident
 
-The user reports that the preview PR page remains indefinitely at merge-state
-verification and does not load its data. This incident has not been reproduced
-or diagnosed. A pending migration, server error, GitHub pending computation,
-polling/synchronization failure or403/429 quota response remain hypotheses.
-Successful local fixture PR journeys do not establish preview correctness.
+The clarified incident is actual MinddyPR420. `preview.mindi.app` does not
+resolve; verified `preview.minddy.app` maps to main `d5c2d862` /
+`dpl_F4h9ikqqXWanM97Zhdthi8hMEsx6`, not this PR's local binary. Runtime DB origin
+matches the read-only verified migration catalog. Performance Tester receives
+404 on candidate detail `27f9154b-226f-437e-b2ba-fd7da35848e3`; no alternate
+principal/session/membership is used. Historical403 lacks error bodies and
+Retry-After, so quota, exact server failure and polling cause remain unconfirmed.
+Public GitHub mergeable/draft/blocked does not prove installation quota.
 
-Identify the exact preview/build, inspect its actual response status/body shape
-and server logs without exposing credentials, and compare deployed migration
-state read-only. Trace the mergeability/sync state to completion, including
-errors, retry scheduling and GitHub Retry-After. Preserve the main GitHub
-connection/account; do not automatically apply a migration, bypass a limit or
-promote an unknown merge state into a successful ready state.
+Separate fixture proof corrects the loaded-draft checking label without granting
+readiness/write authority, and behavioral red/green preserves actual quota pause
+through batches/actor reads/account retries. Both fixes are local/PR changes;
+no preview or production deployment occurs. Successful fixture journeys do not
+resolve the inaccessible actual incident. Preserve the main connection/account,
+inspect exact failed RPC/error and polling when accessible in the authorized
+scope, respect Retry-After and never promote unknown into success.
 
 Ignored, unexecuted proposals are available locally under
 `output/playwright/performance/page-prefix-source`,
@@ -210,19 +231,31 @@ Never reseed or replay `--apply` over it. Only the four already-normalized
 benchmark documents0-10/0-11/1-0/1-1 are safe for UI editing; do not visit legacy
 1-2/1-3 or0-0 through the editor and trigger automatic normalization writes.
 
-No live mutating verifier ran in this resumed session; selected Page versions
-remain2 in the last preservation checks. Final broad primary/deep/forge pairs,
-all-nine independent first access, real rapid-refresh checks on both clients,
-long native absence, and actual75s remote Page/issue mutation plus immediate
-optimistic typing/merge/departure-save verification remain pending. Run all
-read-only comparisons before the journaled mutating verifier; its restoration
-preserves content but legitimately advances versions/timestamps. Do not pool
-those later cohorts with pre-mutation results. Never publish private restoration
-journals or full original documents. Routines are tested only in their empty
-state; no paid/generated work is authorized by the fixture setup.
+The corrected held-seal rapid reload passes web/native, with same actual PR and
+full content; failed premises/guards/cleanup cases remain retained. The excluded
+v8 verifier now passes actual75s focus absence, remote Page/issue visibility,
+immediate cached typing while an actual scoped GET is held, nonoverlapping
+merge, versioned departure wait and server persistence on both clients. Both
+private journals are clean and full original content is restored. Current
+primary0-10 version/content_revision is16; focus1-1 is12; untouched foreign1-0
+remains2. Other Pages and unrelated issue/Page metadata, ten tabs and Git are
+preserved. Timestamp/version advancement is legitimate, so do not pool these
+later cohorts with the prior frozen read-only results. Never publish journals
+or original full documents.
+
+The ordinary v5 runner remains frozen. Both quota web attempts and badge-only
+web control fail after45 complete observations because Chromium creates the
+focus distraction in another window; retain them as failures, not eligible
+successful paired/focus comparisons. Native original/badge/quota runs each
+complete55 observations and16s actual absence, but common first details remain
+above300ms. The separate excluded minimization proof does not relabel the web
+ordinary failures. NativeHome independence, wider primary/deep/forge runtime
+matrix, forced-quit draft recovery and daily feel remain open. Routines still
+cover only their empty fixture state; no paid/generated work is authorized.
 
 The majority-below100ms/no-common-above300ms, all-listed-before-first-activation
 and daily-feel criteria remain unmet. Keep MIN-683 in progress. The next session
-should start with database/data-access attribution rather than another blind
-client scheduling tweak. Publish measured results, rejected variants and limits
+should use the measured SQL/authorization/transport/admission split and cache
+coherence contract to evaluate one exact project bootstrap. Preserve early small
+results and fresh write bases, and reject any moved first-click cost. Publish measured results, rejected variants and limits
 with matching-author DCO through `npm run work:pr`; never merge or deploy.

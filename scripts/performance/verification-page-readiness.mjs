@@ -21,12 +21,13 @@ export function verifiedFocusAbsence(before, away, current, requiredMs = 16_000)
 /** Never restore over an unrecognized concurrent focus-document edit. */
 export function focusPageRestorationState(item, current) {
   if (current.version === item.original.version && isDeepStrictEqual(current, item.original)) return "unchanged";
-  const immutable = ({ version: _version, content: _content, updated_at: _at, updated_by: _by, updated_kind: _kind, updated_api_key_id: _key, ...rest }) => rest;
+  const immutable = ({ version: _version, content_revision: _revision, content: _content, updated_at: _at, updated_by: _by, updated_kind: _kind, updated_api_key_id: _key, ...rest }) => rest;
   if (!isDeepStrictEqual(immutable(current), immutable(item.original))) return "unexpected";
   const candidates = [...(item.restorationCandidates ?? []), ...(item.expectedMutatedContent ? [{
-    version: item.expectedSavedVersion ?? item.expectedMutationBaseVersion + 1, content: item.expectedMutatedContent,
+    version: item.expectedSavedVersion ?? item.expectedMutationBaseVersion + 1,
+    contentRevision: item.expectedSavedContentRevision, content: item.expectedMutatedContent,
   }] : [])];
-  if (candidates.some((candidate) => candidate.version === current.version && isDeepStrictEqual(candidate.content, current.content))) return "owned-mutation";
+  if (candidates.some((candidate) => candidate.version === current.version && candidate.contentRevision === current.content_revision && isDeepStrictEqual(candidate.content, current.content))) return "owned-mutation";
   return "unexpected";
 }
 

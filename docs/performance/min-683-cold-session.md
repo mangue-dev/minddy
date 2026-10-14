@@ -239,7 +239,124 @@ failed its overly broad mutation guard on blocked Page-viewer heartbeats. Its
 failed result remains; no overall acceptance follows from those partial checks.
 The corrected web6 run passes both real reloads, with no latest selection ACK
 before the held-seal reload, complete PR content and strict source/Page-version/
-ten-tab/Git preservation. The native counterpart remains separately required.
+ten-tab/Git preservation. The native1 counterpart also passes both real reloads and its strict bookends.
+Neither client received the latest selection ACK before the held-seal reload.
+
+## Identified healthy runtime controls
+
+All comparisons precede journaled content writes and reuse the complete frozen
+scaled source. The eight-file ordinary v5 hash is unchanged. Exact products are
+original `3692e754` / `Qp1Rr4apU_XHLQh2IVfT6`, badge-only `4d3b457b` /
+`m-eaUKb4_v56rZ4kOr4Po`, and badge/quota `f5abefe20` /
+`aByBbQwsVOkTw0_Zh99sx`. Whole build directories and manifests are retained;
+no binary is relabeled after a later documentation commit. Sources are compared
+in the index as two explicit increments, never as an attributed aggregate gain.
+
+Both badge/quota web attempts and the badge-only web control complete the
+first45 useful-content observations, then fail the unchanged ordinary guard:
+CDP creates a distraction in another browser window. Their results are **failed**
+and ineligible for ordinary successful paired/focus conclusions. Exact cleanup
+passes. There is no fabricated55-observation web run. The second quota web pass
+is a guard reproduction; the first PR observation of5,977.5ms remains retained.
+
+| Native ordinary single observation, ms | Original | Badge-only | Badge/quota |
+| --- | ---: | ---: | ---: |
+| Renderer launch / full board refresh | 2,778 / 2,153 | 2,410 / 2,064 | 2,374 / 2,140 |
+| First project | 737 | 401 | 449 |
+| First primary / foreign Page | 389 / 461 | 311 / 478 | 361 / 394 |
+| First Home / complete PR | 60 / 3,143 | 53 / 3,504 | 54 / 2,711 |
+| First Routines / Triage | 795 / 308 | 661 / 277 | 613 / 282 |
+| First Feedback / Objectives | 1,025 / 290 | 943 / 241 | 916 / 258 |
+| Warm listed destinations under100ms / maximum | 8 of10 / 132 | 8 of10 / 125 | 8 of10 / 119 |
+| Finished/failed HTTP records / snapshot POSTs | 763 / 36 | 802 / 37 | 782 / 39 |
+
+All three native runs complete55 observations and genuine16s absence/return,
+with no recorded application errors and exact content/version/ten-tab/Git
+bookends. Whole-run requests include passive/polling work over different
+elapsed durations; they are not fixed-window admission counts. Failed web
+runs contain a shorter sequence and cannot be pooled with those native totals.
+The final native first-Page task/script deltas are219/164ms (primary) and
+263/218ms (foreign), and PR1,004/684ms. Script is part of task time; neither
+is added to the full-content paint clock. The complete raw records preserve
+loading frames, request starts, statuses and phase-envelope thread evidence.
+
+The failed web control and latest quota attempt observe launch/refresh2,750/
+2,389ms versus2,485/2,270ms; first project672→428ms, primaryPage344→345ms,
+foreignPage494→394ms, PR2,472→2,744ms, Feedback1,003→1,038ms. These are
+individual completed subjourney observations inside failed runs, not eligible
+successful-run comparisons or percentiles. The first quota attempt's PR5,978ms
+prevents selecting only a favorable sample. No rate limit is diagnosed by these
+healthy reads. Mixed isolated timings do not establish a moved-cost mechanism
+or a general speedup; no cold-load optimization is accepted from them. Both
+correctness fixes retain unchanged complete read/write contracts and add no
+healthy-path transport request. Common details still exceed300ms and all-tab
+preparation remains incomplete, so MIN-683 stays in progress.
+
+## Long absence, typing, merge and departure verification
+
+All ordinary comparisons above finish before the first journaled content write.
+The excluded write verifier runs only on the final identified binary, with a
+new isolated profile and verified Performance Tester identity for every attempt.
+Its private restoration journals contain original bodies and never enter the
+public evidence selector. Content is restored through normal versioned PATCH;
+versions, content revisions and timestamps legitimately advance. These later
+cohorts cannot be pooled with the frozen latency cohort.
+
+Four failed web collectors remain explicit: an origin-storage launcher error
+before mutation; an observer-commit race and conservative content-revision
+refusal; an asynchronous route-removal exception; and a departure caret that
+split the earlier marker. The first refusal is independently reconciled only
+after exact version/body/revision/updater/remaining-metadata proof, restoring
+focusPage2→4 while the other two Pages stay exact. The route exception retains
+its failed outcome and operator cleanup, restoring primary2→4 and focus4→6.
+The later caret attribution proves one exact insertion inside the local marker:
+removing only the known inserted departure text recovers the entire preceding
+canonical document text. It demonstrates no lost text. That failed driver itself
+restores primary4→8 and focus6→8. No failed attempt is retroactively called
+passed, and no unknown concurrent body is overwritten.
+
+The final collector uses origin-scoped initialization, actual isolated-window
+minimization, one lifetime intercepted Page route, gates registered before
+admission, tracked route/response/PATCH completion and a bounded ambiguous-write
+refusal. Actual observer/editor readiness is awaited while the fresh GET stays
+held. A trusted keyboard append places departure typing at the document end,
+with marker integrity checked before departure. Cleanup sends only its own
+content and body version; it never copies stale title/icon metadata. Exact
+journaled content revision/body/version and unchanged other metadata remain
+required, with ordinary version conflict behavior. This does not claim an
+atomic metadata snapshot or automatic recovery from an ambiguous ACK.
+
+`min683-verification-scaled-cold-session-web-5`, protocol
+`min683-restored-correctness-v8-trusted-departure-append`, passes:
+
+- Actual observed blur lasts75,005.5ms on the renderer and75,006ms on the wall
+  clock before any remote mutation; visibility stays visible and is recorded
+  separately. Returned focus is actual, not inferred from a CDP command.
+- The mounted focus body advances8→9 and appears with its exact accepted content
+  after return. The remote issue title appears in both All and its project.
+- The accepted cached editor accepts immediate local typing while its actual
+  scoped fresh GET is held. Nonoverlapping remote/local edits merge; no fake
+  cache response or write receipt is injected.
+- Departure remains on the active Page while a versioned PATCH is held. After
+  release, the server's persisted version11 contains all three exact markers.
+- Normal cleanup restores primary8→12 and focus8→10, preserves the untouched
+  foreign Page exactly, restores the issue title, preserves all unrelated issue/
+  Page metadata, the ten stable tabs and Git connection, and leaves no dirty
+  journal entries.
+
+`min683-verification-scaled-cold-session-native-1` passes the same protocol and
+literal verifier hash `b47a709d0a17c956309e75c6ed7b02cd751c4ae7fbd01ef0a4680249a600e36d`.
+Actual blur before mutation lasts75,006.3ms renderer /75,007ms wall clock.
+The mounted focus body advances10→11; immediate typing, nonoverlapping merge,
+held-PATCH departure and all three persisted markers pass at primary version15.
+Cleanup restores primary12→16 and focus10→12, the untouched foreign Page stays
+exact at version2, the issue title is restored, all unrelated source metadata /
+ten tabs / Git remain preserved and both final journals have no dirty entries.
+These are two different version cohorts and correctness observations, never
+paired latency results.
+Read-failure/permission-denial contracts remain covered by existing real hook
+regressions; no live membership or primary-account permission is changed.
+Forced-quit draft recovery and population/daily-feel acceptance remain open.
 
 ## Review and publication
 
@@ -255,6 +372,16 @@ line shifts and existing branch reader extraction; no new DB operation is added.
 Internal performance reports and tooling are the documentation impact. Public
 controls, configuration, reader workflows and release versions do not change;
 no public article/figure translation delta or invented review date is needed.
+Validation passes: the final production build (including TypeScript), 89 focused
+quota/actor tests with32 new cases, 40 draft/read-boundary regressions, 38 final
+evidence/readiness tests, scoped application/tooling oxlint, documentation,
+knowledge, owned English, release documentation, encrypted-access and encryption
+schema inventory checks. The frozen pnpm lock installation check passes.
+The final evidence index contains114 retained runs and27 valid paired navigation
+comparisons; overall failed web runs remain ineligible. Diff and DCO/public
+repository review are required before pushing; journals and private operator
+snapshots stay ignored.
+
 Publication uses matching-author DCO and `npm run work:pr`, retaining PR420's
 existing title/body and draft state. Full cold preparation, common navigation
 limits, broad regression coverage and daily feel remain required before MIN-683

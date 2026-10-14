@@ -22,17 +22,19 @@ await mkdir(output, { recursive: true });
 const journalPath = path.join(output, `${label}-restoration-journal.json`);
 const resultPath = path.join(output, `${label}.json`);
 const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
-const result = { label, protocol: "min683-restored-correctness-v3-bounded-long-absence", excludedFromLatencyAggregates: true,
+const result = { label, protocol: "min683-restored-correctness-v8-trusted-departure-append", excludedFromLatencyAggregates: true,
   configuredInactiveMs: inactiveMs,
   timestamp: new Date().toISOString(), status: "running", assertions: [], errors: [], cleanup: [],
   limitations: ["Browser reload/forced-quit draft recovery is not verified by this diagnostic.",
     "Read failure and permission denial need separate hook tests; no live account permission is changed."] };
 const journal = { label, dirtyIssue: false, dirtyPages: [], issue: null, pages: [], attempts: [] };
 let session, browser, context, page, userData, tabs, forge, originalTabs, originalBoard, trees, failure;
-let browserCdp, distractionPage, distractionTargetId;
+let browserCdp;
 const createdTabs = new Set();
 const pendingRoutes = new Set();
 const responseProbes = new Set();
+const routeTasks = new Set();
+let closing = false, primaryWriteAmbiguous = false;
 let journalWrites = Promise.resolve();
 const recordJournal = () => {
   const snapshot = JSON.stringify(journal, null, 2);
@@ -41,7 +43,7 @@ const recordJournal = () => {
 };
 const tabFields = ({ id, user_id, custom_name, pinned, position }) => ({ id, user_id, custom_name, pinned, position });
 const immutableIssue = ({ title: _title, updated_at: _at, updated_by: _by, ...rest }) => rest;
-const immutablePage = ({ version: _version, updated_at: _at, updated_by: _by, updated_kind: _kind, updated_api_key_id: _key, ...rest }) => rest;
+const immutablePage = ({ version: _version, content_revision: _revision, updated_at: _at, updated_by: _by, updated_kind: _kind, updated_api_key_id: _key, ...rest }) => rest;
 function promiseGate() {
   let resolve;
   const promise = new Promise((done) => { resolve = done; });
@@ -142,11 +144,11 @@ try {
     const verificationProbeArgs = { boardSource: boardReady.toString(), pageSource: verificationPageReady.toString() };
     await context.addInitScript(installVerificationProbe, verificationProbeArgs);
     await page.addInitScript(installVerificationProbe, verificationProbeArgs);
-    await page.evaluate(installVerificationProbe, verificationProbeArgs);
+    // Install through init scripts before origin navigation; about:blank has no storage access.
     page.setDefaultTimeout(20000);
     page.on("pageerror", (error) => result.errors.push(error.message));
     page.on("requestfinished", (req) => {
-      if (req.method() !== "GET" || new URL(req.url()).pathname !== `/api/projects/${focusPage.projectId}/pages/${focusPage.pageId}`) return;
+      if (closing || req.method() !== "GET" || new URL(req.url()).pathname !== `/api/projects/${focusPage.projectId}/pages/${focusPage.pageId}`) return;
       const task = (async () => {
         const response = await req.response(), body = await response.json();
         (result.focusBodyReads ??= []).push({ status: response.status(), version: body.version ?? null, startTime: req.timing().startTime,
@@ -154,10 +156,13 @@ try {
       })().catch((error) => (result.probeErrors ??= []).push(error.message)).finally(() => responseProbes.delete(task));
       responseProbes.add(task);
     });
-    page.on("requestfinished", async (req) => {
-      if (req.method() !== "POST" || new URL(req.url()).pathname !== "/api/me/app-tabs") return;
-      const body = req.postDataJSON();
-      if ((await req.response())?.ok() && typeof body?.id === "string") createdTabs.add(body.id);
+    page.on("requestfinished", (req) => {
+      if (closing || req.method() !== "POST" || new URL(req.url()).pathname !== "/api/me/app-tabs") return;
+      const task = (async () => {
+        const body = req.postDataJSON();
+        if ((await req.response())?.ok() && typeof body?.id === "string") createdTabs.add(body.id);
+      })().catch((error) => (result.probeErrors ??= []).push(error.message)).finally(() => responseProbes.delete(task));
+      responseProbes.add(task);
     });
     const cdp = await context.newCDPSession(page);
     const frames = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
@@ -198,8 +203,8 @@ try {
       text: focusOriginal.content.content.find((block) => block.type === "paragraph").content.find((node) => node.type === "text").text };
     await page.waitForFunction((spec) => window.__restoredVerify.pageReady(spec), focusSpec);
     await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
-    result.focusProtocol = { focusEmulationDisabled: true, genuineWindowMinimization: process.argv.includes("--electron"),
-      genuineSameWindowTabActivation: !process.argv.includes("--electron"),
+    result.focusProtocol = { focusEmulationDisabled: true, genuineWindowMinimization: true,
+      genuineSameWindowTabActivation: false,
       absenceBasis: "Observed document.hasFocus=false before and after the inactivity interval; visibility is recorded independently",
       configuredInactiveMs: inactiveMs, minimumObservedIntervalMs: inactiveMs, clockToleranceMs: 0,
       playwrightBackgroundThrottlingOverridesRemain: true };
@@ -210,34 +215,21 @@ try {
     else await page.bringToFront();
     await page.waitForFunction(() => document.hasFocus());
     const focusBefore = await page.evaluate(() => ({ visibility: document.visibilityState, focused: document.hasFocus() }));
-    let originalTargetId;
+    let originalTargetId, originalWindow;
     if (process.argv.includes("--electron")) await browser.evaluate(({ BrowserWindow }, base) => {
       const window = BrowserWindow.getAllWindows().find((item) => item.webContents.getURL().startsWith(base));
       if (!window) throw new Error("Missing fixture renderer window");
       window.minimize(); window.blur();
     }, base);
     else {
-      // A real tab in the same browser window produces document focus loss
-      // even where a second macOS window fails to become the key window.
+      // Minimize only this isolated fixture window. The real focus guard below
+      // remains a prerequisite to every journaled remote write.
       browserCdp = await browser.newBrowserCDPSession();
       const { targetInfo } = await cdp.send("Target.getTargetInfo");
       originalTargetId = targetInfo.targetId;
-      const newPage = context.waitForEvent("page", { predicate: (candidate) => candidate !== page, timeout: 20000 })
-        .then((created) => ({ page: created }), (error) => ({ error }));
-      ({ targetId: distractionTargetId } = await browserCdp.send("Target.createTarget", { url: "about:blank", newWindow: false, background: false,
-        ...(targetInfo.browserContextId ? { browserContextId: targetInfo.browserContextId } : {}) }));
-      const opened = await newPage;
-      if (opened.error) throw opened.error;
-      distractionPage = opened.page;
-      const distractionCdp = await context.newCDPSession(distractionPage);
-      await Promise.all([cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false }),
-        distractionCdp.send("Emulation.setFocusEmulationEnabled", { enabled: false })]);
-      const originalWindow = await browserCdp.send("Browser.getWindowForTarget", { targetId: originalTargetId });
-      const distractionWindow = await browserCdp.send("Browser.getWindowForTarget", { targetId: distractionTargetId });
-      assert.equal(originalWindow.windowId, distractionWindow.windowId, "The distraction must be a real tab in the same browser window");
-      result.focusProtocol.windows = { originalWindowId: originalWindow.windowId, distractionWindowId: distractionWindow.windowId };
-      await browserCdp.send("Target.activateTarget", { targetId: distractionTargetId });
-      await distractionPage.bringToFront();
+      originalWindow = await browserCdp.send("Browser.getWindowForTarget", { targetId: originalTargetId });
+      result.focusProtocol.window = { id: originalWindow.windowId, originalBounds: originalWindow.bounds };
+      await browserCdp.send("Browser.setWindowBounds", { windowId: originalWindow.windowId, bounds: { windowState: "minimized" } });
     }
     // Do not mutate until the original renderer actually lost focus.
     await page.waitForFunction(() => !document.hasFocus());
@@ -260,7 +252,8 @@ try {
     journal.dirtyPages.push(focusPage.pageId); await recordJournal();
     const focusUpdated = await api(focusApi, "PATCH", { content: focusContent, version: focusOriginal.version });
     assert.equal(focusUpdated.id, focusPage.pageId); assert.ok(focusUpdated.version > focusOriginal.version);
-    focusRecord.expectedSavedVersion = focusUpdated.version; await recordJournal();
+    focusRecord.expectedSavedVersion = focusUpdated.version;
+    focusRecord.expectedSavedContentRevision = focusUpdated.content_revision; await recordJournal();
     const updatedBeforeResume = await page.evaluate(({ id, text }) => !!document.querySelector(`[data-page-surface-id="${id}"] .tiptap`)?.textContent.includes(text),
       { id: focusPage.pageId, text: remoteFocusText });
     if (process.argv.includes("--electron")) await browser.evaluate(({ BrowserWindow }, base) => {
@@ -268,6 +261,7 @@ try {
       window.restore(); window.show(); window.focus();
     }, base);
     else {
+      await browserCdp.send("Browser.setWindowBounds", { windowId: originalWindow.windowId, bounds: { windowState: "normal" } });
       await browserCdp.send("Target.activateTarget", { targetId: originalTargetId });
       await page.bringToFront();
     }
@@ -288,7 +282,6 @@ try {
     await page.locator(`[data-app-view-active="true"] [data-issue-id="${issue.id}"]`).getByText(remoteTitle, { exact: true }).waitFor();
     result.assertions.push({ actualFocusAbsenceAndResume: true, configuredInactiveMs: inactiveMs, focusBefore, away, awayBeforeMutation, returned, absenceMs: returned.at - away.at,
       remoteIssueVisibleInActiveAndOtherBoard: true });
-    if (distractionTargetId) { await browserCdp.send("Target.closeTarget", { targetId: distractionTargetId }); distractionTargetId = undefined; distractionPage = undefined; }
     // Return the existing foreign tab to its untouched screenshot document
     // before the later departure-save journey targets that same tab.
     await activate(foreignTab);
@@ -304,7 +297,10 @@ try {
     async function recordPrimaryMutation(input) {
       assert.ok(Number.isInteger(input.version) && input.version >= original.version && input.content,
         "The diagnostic must journal an exact versioned body before its transport");
-      (primaryRecord.restorationCandidates ??= []).push({ version: input.version + 1, content: input.content });
+      const baseRevision = input.version === original.version ? original.content_revision
+        : primaryRecord.restorationCandidates?.findLast((candidate) => candidate.version === input.version)?.contentRevision;
+      assert.ok(Number.isInteger(baseRevision), "Journal an exact known base content revision before a Page write");
+      (primaryRecord.restorationCandidates ??= []).push({ version: input.version + 1, contentRevision: baseRevision + 1, content: input.content });
       await recordJournal();
     }
     const pageApi = `/api/projects/${primary.projectId}/pages/${primary.pageId}`;
@@ -319,25 +315,62 @@ try {
     assert.deepEqual(accepted.content, original.content, "The accepted prepared body must match the authorized original");
     assert.equal(await page.locator(`[data-page-surface-id="${primary.pageId}"]`).count(), 0, "First editing activation must not have been visited");
     const readSeen = promiseGate(), allowRead = promiseGate();
+    const patchSeen = promiseGate(), allowPatch = promiseGate();
+    pendingRoutes.add(allowRead); pendingRoutes.add(allowPatch);
     const heldReads = [];
-    await page.route(`**${pageApi}`, async (route) => {
-      if (route.request().method() !== "GET") {
-        if (route.request().method() === "PATCH") await recordPrimaryMutation(route.request().postDataJSON());
-        await route.continue(); return;
-      }
-      const heldRead = { startedAt: Date.now(), continuedAt: null };
-      heldReads.push(heldRead);
-      readSeen.resolve();
-      const held = Promise.all([new Promise((done) => setTimeout(done, 800)), allowRead.promise]);
-      pendingRoutes.add(allowRead);
-      try { await held; heldRead.continuedAt = Date.now(); await route.continue(); }
-      catch (error) { heldRead.transportFailure = error.message; }
-      finally { pendingRoutes.delete(allowRead); }
+    let routePhase = "read", heldPatch;
+    // One handler lives through both phases; never remove an in-flight PATCH.
+    await page.route(`**${pageApi}`, (route) => {
+      const task = (async () => {
+        const request = route.request(), method = request.method();
+        if (closing) { await route.abort(); return; }
+        if (method === "GET" && routePhase === "read") {
+          const heldRead = { startedAt: Date.now(), continuedAt: null };
+          heldReads.push(heldRead); readSeen.resolve();
+          await Promise.all([new Promise((done) => setTimeout(done, 800)), allowRead.promise]);
+          heldRead.continuedAt = Date.now();
+        }
+        let input;
+        if (method === "PATCH") {
+          input = request.postDataJSON();
+          await recordPrimaryMutation(input);
+          if (routePhase === "patch" && !heldPatch) {
+            heldPatch = { startedAt: Date.now(), continuedAt: null, version: input.version, hasContent: !!input.content };
+            patchSeen.resolve();
+            await Promise.all([new Promise((done) => setTimeout(done, 800)), allowPatch.promise]);
+            heldPatch.continuedAt = Date.now();
+          }
+        }
+        if (closing) { await route.abort(); return; }
+        if (input) {
+          const outcome = { forwardedPagePatch: primary.pageId, baseVersion: input.version, settled: false };
+          journal.attempts.push(outcome); await recordJournal();
+          if (closing) { outcome.notForwarded = true; outcome.settled = true; await route.abort(); return; }
+          // Register before admission. A timeout remains ambiguous and prevents
+          // automatic cleanup from declaring an unchanged row restored.
+          let timer;
+          const receipt = Promise.race([
+            (async () => {
+              const response = await request.response();
+              assert.ok(response, "A forwarded PATCH needs an actual response");
+              assert.equal(await response.finished(), null, "A forwarded PATCH must finish before cleanup");
+              outcome.status = response.status(); outcome.settled = true;
+              await recordJournal();
+            })(),
+            new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Forwarded Page PATCH completion is ambiguous")), 30000); }),
+          ]).catch((error) => { primaryWriteAmbiguous = true; outcome.error = error.message; })
+            .finally(async () => { clearTimeout(timer); await recordJournal(); responseProbes.delete(receipt); });
+          responseProbes.add(receipt);
+        }
+        await route.continue();
+      })().catch((error) => { (result.routeErrors ??= []).push(error.message); failure ??= error; })
+        .finally(() => routeTasks.delete(task));
+      routeTasks.add(task); return task;
     });
     await page.evaluate((pageId) => window.__restoredVerify.client.invalidateQueries({ queryKey: ["page", pageId], exact: true, refetchType: "none" }), primary.pageId);
     await activate(primary);
     await Promise.race([readSeen.promise, new Promise((_, reject) => setTimeout(() => reject(new Error("No actual mounted Page GET was intercepted")), 20000))]);
-    assert.ok(await page.evaluate((pageId) => window.__restoredVerify.client.getQueryCache().find({ queryKey: ["page", pageId], exact: true })?.getObserversCount() > 0, primary.pageId));
+    await page.waitForFunction((pageId) => window.__restoredVerify.client.getQueryCache().find({ queryKey: ["page", pageId], exact: true })?.getObserversCount() > 0, primary.pageId);
     const editor = page.locator(`[data-page-surface-id="${primary.pageId}"] .tiptap[contenteditable="true"]:visible`);
     await editor.waitFor();
     assert.ok(heldReads.length && heldReads.every((read) => read.continuedAt === null), "Accepted cached editor must be usable before the fresh read");
@@ -357,22 +390,15 @@ try {
       const node = document.querySelector(`[data-page-surface-id="${id}"] .tiptap`);
       return !!node?.getClientRects().length && node.textContent.includes(localText) && node.textContent.includes(remoteText);
     }, { id: primary.pageId, localText, remoteText });
-    await page.unroute(`**${pageApi}`);
-    const patchSeen = promiseGate(), allowPatch = promiseGate();
-    let heldPatch;
-    await page.route(`**${pageApi}`, async (route) => {
-      if (route.request().method() !== "PATCH") { await route.continue(); return; }
-      const input = route.request().postDataJSON();
-      await recordPrimaryMutation(input);
-      if (heldPatch) { await route.continue(); return; }
-      heldPatch = { startedAt: Date.now(), continuedAt: null, version: input.version, hasContent: !!input.content };
-      patchSeen.resolve(); pendingRoutes.add(allowPatch);
-      try { await Promise.all([new Promise((done) => setTimeout(done, 800)), allowPatch.promise]); heldPatch.continuedAt = Date.now(); await route.continue(); }
-      catch (error) { heldPatch.transportFailure = error.message; }
-      finally { pendingRoutes.delete(allowPatch); }
-    });
+    routePhase = "patch";
     const departureText = ` MIN-683 departure ${randomUUID()}`;
-    await editor.locator("p").first().click(); await page.keyboard.insertText(departureText);
+    await editor.locator("p").last().click();
+    await page.keyboard.press("Meta+ArrowDown");
+    await page.keyboard.press("Meta+ArrowRight");
+    await page.keyboard.insertText(departureText);
+    const beforeDeparture = await editor.textContent();
+    assert.ok(beforeDeparture.endsWith(departureText), "Trusted departure typing must append rather than split earlier markers");
+    assert.ok(beforeDeparture.includes(localText) && beforeDeparture.includes(remoteText));
     await activate(other);
     await Promise.race([patchSeen.promise, new Promise((_, reject) => setTimeout(() => reject(new Error("No departure PATCH was intercepted")), 20000))]);
     assert.ok(heldPatch.version > 0 && heldPatch.hasContent, "Body saves must use an acquired version");
@@ -388,7 +414,6 @@ try {
     assert.ok(persisted.version > original.version);
     assert.equal(focusPageRestorationState(primaryRecord, persisted), "owned-mutation",
       "The persisted primary document must match a body and version journaled before transport");
-    await page.unroute(`**${pageApi}`);
     result.assertions.push({ immediateCachedTypingBeforeActualFreshGET: true, nonoverlappingRemoteAndLocalEditsMerged: true,
       departureWaitedForVersionedSave: true, serverPersistedAllEdits: true, heldReads, heldPatch,
       originalVersion: original.version, persistedVersion: persisted.version });
@@ -407,16 +432,20 @@ try {
     await page.locator(`[data-page-surface-id="${other.pageId}"]:visible`).screenshot({ path: screenshot });
     result.screenshots = [{ path: screenshot, fixturePageId: other.pageId, croppedToSyntheticContent: true, unchangedDocumentVerified: true, requestedColorScheme: "light" }];
     assert.equal(result.errors.length, 0, "Renderer errors during correctness verification");
+    assert.deepEqual(result.routeErrors ?? [], [], "Route failures cannot pass correctness verification");
+    assert.equal(primaryWriteAmbiguous, false, "Unresolved Page writes cannot pass correctness verification");
     result.status = "passed";
   }
 } catch (error) {
   failure = error; result.status = "failed"; result.failure = error.stack;
 } finally {
+  closing = true;
   for (const gate of pendingRoutes) gate.resolve();
-  if (page) await page.unrouteAll({ behavior: "wait" }).catch(() => {});
+  while (routeTasks.size) await Promise.allSettled(routeTasks);
+  // Collector admissions are now closed; tracked PATCH outcomes settle before
+  // browser teardown or any automatic restoration ownership decision.
   await Promise.allSettled(responseProbes);
-  if (distractionTargetId) await browserCdp?.send("Target.closeTarget", { targetId: distractionTargetId }).catch(() => {});
-  if (distractionPage && !distractionPage.isClosed()) await distractionPage.close().catch(() => {});
+  if (page) await page.unrouteAll({ behavior: "ignoreErrors" }).catch(() => {});
   if (browser) await browser.close().catch((error) => { result.cleanup.push({ error: error.message }); failure ??= error; });
   if (session) {
     const { api, fixture } = session;
@@ -435,6 +464,7 @@ try {
       for (const item of journal.pages) {
         let current = await api(item.href);
         if (journal.dirtyPages.includes(item.original.id)) {
+          assert.equal(primaryWriteAmbiguous, false, "Retain ambiguous admitted Page writes for operator reconciliation");
           const restoration = focusPageRestorationState(item, current);
           if (restoration === "unchanged") {
             journal.dirtyPages = journal.dirtyPages.filter((value) => value !== item.original.id); await recordJournal();
@@ -442,9 +472,11 @@ try {
             continue;
           }
           assert.equal(restoration, "owned-mutation", "Preserve an unexpected Page version or body for manual reconciliation");
-          journal.attempts.push({ restoringPage: item.original.id, currentVersion: current.version }); await recordJournal();
-          await api(item.href, "PATCH", { title: item.original.title, icon: item.original.icon, content: item.original.content, version: current.version });
+          const restoringRevision = current.content_revision;
+          journal.attempts.push({ restoringPage: item.original.id, currentVersion: current.version, currentContentRevision: restoringRevision }); await recordJournal();
+          await api(item.href, "PATCH", { content: item.original.content, version: current.version });
           current = await api(item.href);
+          assert.equal(current.content_revision, restoringRevision + 1, "Restore through the ordinary versioned content revision guard");
           assert.deepEqual(immutablePage(current), immutablePage(item.original));
           assert.ok(current.version > item.original.version);
           assert.notEqual(current.updated_at, item.original.updated_at);
@@ -486,6 +518,7 @@ try {
     await session.close();
   }
   if (userData) await rm(userData, { recursive: true, force: true });
+  if (failure) { result.status = "failed"; result.failure ??= failure.stack; }
   result.finishedAt = new Date().toISOString();
   await writeFile(resultPath, JSON.stringify(result, null, 2));
   console.log(JSON.stringify({ resultPath, journalPath, status: result.status, assertions: result.assertions, cleanup: result.cleanup }));
