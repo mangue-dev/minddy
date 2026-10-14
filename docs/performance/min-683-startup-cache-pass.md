@@ -73,6 +73,33 @@ p95, packaged-shell or production result.
   these API responses, so connection queueing and wire bytes are exaggerated
   locally compared with Vercel's HTTP/2 edge.
 
+## Rejected: auxiliary startup read gate
+
+The `app-tabs` waits on restoration had no network-free source: `app-tabs` is
+excluded from the disk cache, and its encrypted window selection needs a server
+round trip (about 600 ms). An earlier explicit early tab read was also rejected
+(`d18046c48`). The user chose to prioritize the tab read instead.
+
+`5d88e0dca` kept auxiliary chrome reads (admin flag, branch cleanup, agent
+reads, open PR count, scratchpad summary, project drafts, and chrome callers of
+billing, plan gates, push devices and the composer model catalog) disabled until
+restoration handed off, with a 2 s deadline. It worked as a mechanism:
+`app-tabs` returned at about 470–500 ms cold instead of about 835 ms, with 13
+concurrent reads instead of 21. It did not move the restored destination. The
+global board read started only about 100 ms earlier, behind the route
+transition, then took longer (cold 1.4–1.8 s against 1.3–1.5 s) because the
+released reads competed with it.
+
+| Client | Control `rfraESeJrLvSMt6LNdxuD` | Candidate `IG0hiUPb2ZkY8o5rP1gQX` |
+| --- | --- | --- |
+| Web, n=12 / n=6 | about 2530 median | 2419–2863, median about 2550 |
+| Native, n=5 each | 2528–3225, median 2977 | 2696–3200, median 2910 |
+
+`66292b3c8` restores the exact source. The startup critical path is now the
+global board read itself, which needs the field/consumer review noted below.
+Candidate evidence: `min683-gate-web-5d88.json`, `min683-gate-native-5d88.json`;
+its product is retained under `min683-built-products/IG0hiUPb2ZkY8o5rP1gQX/.next`.
+
 ## Evidence and products
 
 Raw profiles, traces and logs remain in ignored `output/playwright/performance/`:
