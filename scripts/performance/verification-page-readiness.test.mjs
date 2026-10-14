@@ -2,18 +2,32 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
 import { JSDOM } from "jsdom";
-import { verificationPageReady, focusPageRestorationState, verifiedFocusAbsence } from "./verification-page-readiness.mjs";
+import { verificationPageReady, focusPageRestorationState, verifiedFocusAbsence, parseVerificationInactiveMs } from "./verification-page-readiness.mjs";
+
+test("bounds configured inactivity before any fixture connection", () => {
+  assert.equal(parseVerificationInactiveMs(undefined), 75_000);
+  for (const value of ["16000", "70000", "75000", "300000"]) assert.equal(parseVerificationInactiveMs(value), Number(value));
+  for (const value of ["", "15999", "300001", "75000.5", " 75000", "1e5", "Infinity", "-75000", 75_000, null])
+    assert.throws(() => parseVerificationInactiveMs(value), /integer from 16000 to 300000/);
+});
 
 test("remote verification refuses writes without observed sustained real focus loss", () => {
   const before = { focused: true };
-  const away = { focused: false, visibility: "visible", wallClock: 10_000 };
-  const current = { focused: false, visibility: "visible", wallClock: 26_000 };
+  const away = { focused: false, visibility: "visible", wallClock: 10_000, at: 1000 };
+  const current = { focused: false, visibility: "visible", wallClock: 26_000, at: 17_000 };
   assert.equal(verifiedFocusAbsence(before, away, current), true);
   assert.equal(verifiedFocusAbsence(before, { ...away, focused: true }, current), false);
   assert.equal(verifiedFocusAbsence(before, away, { ...current, focused: true }), false);
   assert.equal(verifiedFocusAbsence(before, away, { ...current, wallClock: 24_999 }), false);
   assert.equal(verifiedFocusAbsence({ focused: false }, away, current), false);
   assert.equal(verifiedFocusAbsence(before, away, { focused: false }), false);
+  assert.equal(verifiedFocusAbsence(before, away, current, 75_000), false);
+  const longAbsence = { ...current, wallClock: 85_000, at: 76_000 };
+  assert.equal(verifiedFocusAbsence(before, away, longAbsence, 75_000), true);
+  assert.equal(verifiedFocusAbsence(before, away, { ...longAbsence, at: 75_999.9 }, 75_000), false);
+  assert.equal(verifiedFocusAbsence(before, away, { ...longAbsence, wallClock: 84_999 }, 75_000), false);
+  assert.equal(verifiedFocusAbsence(before, away, { ...longAbsence, focused: true }, 75_000), false);
+  assert.equal(verifiedFocusAbsence(before, away, longAbsence, 15_000), false);
 });
 
 test("requires the mounted focus document's real new body and matching accepted version", () => {

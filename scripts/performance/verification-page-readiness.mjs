@@ -1,9 +1,21 @@
 import { isDeepStrictEqual } from "node:util";
 
+/** Bound the actual inactivity experiment before opening any fixture session. */
+export function parseVerificationInactiveMs(value) {
+  if (value === undefined) return 75_000;
+  if (typeof value !== "string" || !/^\d+$/.test(value)) throw new Error("MINDDY_PERF_VERIFY_INACTIVE_MS must be an integer from 16000 to 300000");
+  const duration = Number(value);
+  if (!Number.isSafeInteger(duration) || duration < 16_000 || duration > 300_000)
+    throw new Error("MINDDY_PERF_VERIFY_INACTIVE_MS must be an integer from 16000 to 300000");
+  return duration;
+}
+
 /** A visible document can genuinely blur; never infer absence from a CDP command. */
-export function verifiedFocusAbsence(before, away, current) {
+export function verifiedFocusAbsence(before, away, current, requiredMs = 16_000) {
   return before?.focused === true && away?.focused === false && current?.focused === false &&
-    Number.isFinite(away.wallClock) && Number.isFinite(current.wallClock) && current.wallClock - away.wallClock >= 15_000;
+    Number.isSafeInteger(requiredMs) && requiredMs >= 16_000 && requiredMs <= 300_000 &&
+    Number.isFinite(away.wallClock) && Number.isFinite(current.wallClock) && current.wallClock - away.wallClock >= requiredMs &&
+    Number.isFinite(away.at) && Number.isFinite(current.at) && current.at - away.at >= requiredMs;
 }
 
 /** Never restore over an unrecognized concurrent focus-document edit. */

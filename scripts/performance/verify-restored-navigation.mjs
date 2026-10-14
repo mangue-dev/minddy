@@ -9,19 +9,21 @@ import { openFixture, stableTabs, stableManifestPath, assertStableTabs } from ".
 import { assertScope, id } from "./seed.mjs";
 import { loadForgeWorkload, forgeLinkFingerprint } from "./measure-forge-navigation.mjs";
 import { boardReady, revealBoardIssue } from "./board-readiness.mjs";
-import { verificationPageReady, focusPageRestorationState, verifiedFocusAbsence } from "./verification-page-readiness.mjs";
+import { verificationPageReady, focusPageRestorationState, verifiedFocusAbsence, parseVerificationInactiveMs } from "./verification-page-readiness.mjs";
 import { secondaryManifestPath } from "./enrich-secondary-workload.mjs";
 
 // This mutating diagnostic is intentionally separate from ordinary comparisons.
 // Its journal retains original fixture content before every ambiguous transport.
 const label = process.env.MINDDY_PERF_LABEL ?? "min683-restored-verification";
 assert.match(label, /^[a-zA-Z0-9_-]+$/);
+const inactiveMs = parseVerificationInactiveMs(process.env.MINDDY_PERF_VERIFY_INACTIVE_MS);
 const output = path.resolve("output/playwright/performance");
 await mkdir(output, { recursive: true });
 const journalPath = path.join(output, `${label}-restoration-journal.json`);
 const resultPath = path.join(output, `${label}.json`);
 const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
-const result = { label, protocol: "min683-restored-correctness-v2-mounted-focus-body", excludedFromLatencyAggregates: true,
+const result = { label, protocol: "min683-restored-correctness-v3-bounded-long-absence", excludedFromLatencyAggregates: true,
+  configuredInactiveMs: inactiveMs,
   timestamp: new Date().toISOString(), status: "running", assertions: [], errors: [], cleanup: [],
   limitations: ["Browser reload/forced-quit draft recovery is not verified by this diagnostic.",
     "Read failure and permission denial need separate hook tests; no live account permission is changed."] };
@@ -199,6 +201,7 @@ try {
     result.focusProtocol = { focusEmulationDisabled: true, genuineWindowMinimization: process.argv.includes("--electron"),
       genuineSameWindowTabActivation: !process.argv.includes("--electron"),
       absenceBasis: "Observed document.hasFocus=false before and after the inactivity interval; visibility is recorded independently",
+      configuredInactiveMs: inactiveMs, minimumObservedIntervalMs: inactiveMs, clockToleranceMs: 0,
       playwrightBackgroundThrottlingOverridesRemain: true };
     if (process.argv.includes("--electron")) await browser.evaluate(({ BrowserWindow }, base) => {
       const window = BrowserWindow.getAllWindows().find((item) => item.webContents.getURL().startsWith(base));
@@ -239,10 +242,11 @@ try {
     // Do not mutate until the original renderer actually lost focus.
     await page.waitForFunction(() => !document.hasFocus());
     const away = await page.evaluate(() => ({ visibility: document.visibilityState, focused: document.hasFocus(), at: performance.now(), wallClock: Date.now() }));
-    await page.waitForTimeout(16000);
+    await page.waitForTimeout(inactiveMs);
     const awayBeforeMutation = await page.evaluate(() => ({ visibility: document.visibilityState, focused: document.hasFocus(), at: performance.now(), wallClock: Date.now() }));
-    result.focusProtocol.observedAbsence = { focusBefore, away, awayBeforeMutation };
-    assert.ok(verifiedFocusAbsence(focusBefore, away, awayBeforeMutation), "No fixture write is allowed without a real observed inactivity interval");
+    result.focusProtocol.observedAbsence = { focusBefore, away, awayBeforeMutation,
+      wallClockMs: awayBeforeMutation.wallClock - away.wallClock, rendererMonotonicMs: awayBeforeMutation.at - away.at };
+    assert.ok(verifiedFocusAbsence(focusBefore, away, awayBeforeMutation, inactiveMs), "No fixture write is allowed without the full configured real observed inactivity interval on both clocks");
     // Journal before transport, so cleanup can restore after an ambiguous ACK.
     const remoteTitle = `${issue.title} [MIN-683 resume ${randomUUID()}]`;
     journal.expectedIssueTitle = remoteTitle;
@@ -282,7 +286,7 @@ try {
     await activate(tabs[1]); await waitTab(tabs[1]); await waitBoard(kanbanCount(fixture.projects[0]));
     await revealBoardIssue(page, issue.id, issue.status);
     await page.locator(`[data-app-view-active="true"] [data-issue-id="${issue.id}"]`).getByText(remoteTitle, { exact: true }).waitFor();
-    result.assertions.push({ actualFocusAbsenceAndResume: true, focusBefore, away, awayBeforeMutation, returned, absenceMs: returned.at - away.at,
+    result.assertions.push({ actualFocusAbsenceAndResume: true, configuredInactiveMs: inactiveMs, focusBefore, away, awayBeforeMutation, returned, absenceMs: returned.at - away.at,
       remoteIssueVisibleInActiveAndOtherBoard: true });
     if (distractionTargetId) { await browserCdp.send("Target.closeTarget", { targetId: distractionTargetId }); distractionTargetId = undefined; distractionPage = undefined; }
     // Return the existing foreign tab to its untouched screenshot document
