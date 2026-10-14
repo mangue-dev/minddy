@@ -16,6 +16,11 @@ const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission
 // Explicit comparisons retain original run labels, including an earlier
 // candidate reused as the reference for a separately controlled experiment.
 export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  { id: `server-bootstrap-ten-records-${runtime}`, disposition: "rejected-experiment", declaredSourceDelta: "Task 50 initial ten-record RSC bootstrap plus shared complete collection readers and live authorization extraction; complete Page gains do not offset measured startup/board regressions",
+    baseline: `min683-restored-before-scaled-server-bootstrap-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-server-bootstrap-${runtime}-1`,
+    expectedBaseline: { sha: "c1ec2b80e1d33ebc87df885cc5180b59de9c9cd4", build: "ZiBY2UkSzHhI8dl5J1UxZ" },
+    expectedCandidate: { sha: "428939fe2b8e20152ddf7ded17984fa4fe69f39f", build: "fbeUzZQpzSVJfhE3uDYsT" } },
   { id: `preparation-slots-${runtime}`, declaredSourceDelta: "8655 two-slot preparation versus the direct one-slot control; every other application source file is unchanged",
     baseline: `min683-restored-after-scaled-complete-resume-${runtime}-1`,
     candidate: `min683-restored-after-scaled-one-slot-${runtime}-1`,

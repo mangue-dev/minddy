@@ -5,8 +5,7 @@ import { isAppTabId, reconcileAppTabs, type AppTab } from "@/lib/app-tabs";
 import type { RestoredPageBootstrapRecord } from "@/lib/restored-page-bootstrap-types";
 import type { AuthedResult } from "./api-auth";
 import { listAppTabs } from "./app-tabs";
-import { getPage, listPages } from "./pages";
-import { loadProjectIssues, loadProjectMembers, loadProjectObjectives } from "./project-working-set-readers";
+import { getPage } from "./pages";
 
 type Authorized = Extract<AuthedResult, { ok: true }>;
 export type RestoredPageDestination = { projectId: string; pageId: string };
@@ -47,7 +46,7 @@ export function boundedRestoredPageReads(reads: readonly Read[]): Promise<Restor
   return records;
 }
 
-/** One initial request, no account-global cache, internal HTTP or forge fan-out. */
+/** Two explicit bodies only; shared collections keep their ordinary read path. */
 export async function startRestoredPageWorkingSet(auth: Authorized): Promise<{
   records: Promise<RestoredPageBootstrapRecord | null>[];
 } | null> {
@@ -63,24 +62,5 @@ export async function startRestoredPageWorkingSet(auth: Authorized): Promise<{
         !Number.isSafeInteger(result.page.version) || result.page.version <= 0) return null;
     return { kind: "page", ownerId, projectId, pageId, complete: true, data: result.page };
   });
-  const projects = [...new Set(destinations.map(({ projectId }) => projectId))];
-  for (const projectId of projects) reads.push(async () => {
-    const result = await listPages(projectId, ownerId);
-    return result.ok ? { kind: "pages", ownerId, projectId, complete: true, data: result.pages } : null;
-  });
-  for (const projectId of projects) {
-    reads.push(async () => {
-      const result = await loadProjectIssues(auth, projectId);
-      return result.ok ? { kind: "issues", ownerId, projectId, complete: true, data: result.data } : null;
-    });
-    reads.push(async () => {
-      const result = await loadProjectMembers(auth, projectId);
-      return result.ok ? { kind: "members", ownerId, projectId, complete: true, data: result.data } : null;
-    });
-    reads.push(async () => {
-      const result = await loadProjectObjectives(auth, projectId);
-      return result.ok ? { kind: "objectives", ownerId, projectId, complete: true, data: result.data } : null;
-    });
-  }
   return { records: boundedRestoredPageReads(reads) };
 }

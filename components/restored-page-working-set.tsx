@@ -15,7 +15,7 @@ async function CompletedRecord({ read }: { read: Promise<RestoredPageBootstrapRe
 /** Initial-document work must not multiply across SPA navigation or prefetch. */
 export async function RestoredPageWorkingSet() {
   const requestHeaders = await headers();
-  if (requestHeaders.has("rsc") || requestHeaders.has("next-router-prefetch") ||
+  if (requestHeaders.get("sec-fetch-dest") !== "document" || requestHeaders.get("sec-fetch-mode") !== "navigate" ||
       ["purpose", "sec-purpose"].some((name) => /\bprefetch\b/i.test(requestHeaders.get(name) ?? ""))) return null;
   try {
     const workingSet = await withSupabaseAbortSignal(AbortSignal.timeout(10_000), async () => {

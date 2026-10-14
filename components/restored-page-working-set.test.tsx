@@ -1,4 +1,5 @@
 import { Suspense, type ReactElement } from "react";
+import { createRequestStore } from "next/dist/server/async-storage/request-store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RestoredPageBootstrapRecord } from "@/lib/restored-page-bootstrap-types";
 import { RestoredPageWorkingSet } from "./restored-page-working-set";
@@ -12,6 +13,13 @@ vi.mock("./restored-page-bootstrap-record", () => ({ RestoredPageBootstrapRecord
 
 const client = { identity: "request-bound-client" };
 const authorized = { ok: true, user: { id: "verified-owner" }, supabase: client, claims: { session_id: "verified-test-session" } };
+const documentHeaders = { "sec-fetch-dest": "document", "sec-fetch-mode": "navigate" };
+const missingDocumentMetadata: Record<string, string>[] = [
+  {}, { "sec-fetch-dest": "document" }, { "sec-fetch-mode": "navigate" },
+  { "sec-fetch-dest": "empty", "sec-fetch-mode": "cors" },
+  { "sec-fetch-dest": "document", "sec-fetch-mode": "cors" },
+  { "sec-fetch-dest": "iframe", "sec-fetch-mode": "navigate" },
+];
 const record: RestoredPageBootstrapRecord = { kind: "issues", ownerId: "verified-owner", projectId: "authorized-project", complete: true, data: [] };
 type RecordProps = { read: Promise<RestoredPageBootstrapRecord | null> };
 function readBoundary(boundary: ReactElement<{ children: ReactElement<RecordProps> }>) {
@@ -24,9 +32,17 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+/** Use the installed framework's userland header view, not a recreated hidden list. */
+function frameworkHeaders(raw: Headers) {
+  return createRequestStore({ phase: "render", headers: raw, onUpdateCookies: undefined,
+    url: { pathname: "/all", search: "" }, rootParams: {},
+    implicitTags: { tags: [], expirationsByCacheKind: new Map() }, resumeDataCache: null, previewProps: undefined,
+    isHmrRefresh: false, serverComponentsHmrCache: undefined, hmrRefreshHash: undefined, fallbackParams: null }).headers;
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.headers.mockResolvedValue(new Headers());
+  mocks.headers.mockResolvedValue(new Headers(documentHeaders));
   mocks.client.mockResolvedValue(client);
   mocks.authorize.mockResolvedValue(authorized);
   mocks.start.mockResolvedValue(null);
@@ -36,12 +52,36 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe("initial-document-only server bootstrap", () => {
-  it.each([["rsc", "1"], ["next-router-prefetch", "1"], ["purpose", "prefetch"], ["sec-purpose", "prefetch;prerender"]])(
+  it.each([["purpose", "prefetch"], ["sec-purpose", "prefetch;prerender"]])(
     "does not authenticate or read resources for a request carrying %s", async (name, value) => {
-    mocks.headers.mockResolvedValue(new Headers({ [name]: value }));
+    mocks.headers.mockResolvedValue(new Headers({ ...documentHeaders, [name]: value }));
     expect(await RestoredPageWorkingSet()).toBeNull();
     expect(mocks.client).not.toHaveBeenCalled(); expect(mocks.authorize).not.toHaveBeenCalled();
     expect(mocks.start).not.toHaveBeenCalled(); expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(missingDocumentMetadata)("does no client, authorization or resource work without positive main-document metadata: %j", async (values) => {
+    mocks.headers.mockResolvedValue(new Headers(values));
+    expect(await RestoredPageWorkingSet()).toBeNull();
+    expect(mocks.client).not.toHaveBeenCalled(); expect(mocks.authorize).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled(); expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects an actual filtered Flight request even though userland cannot see its internal headers", async () => {
+    const raw = new Headers({ rsc: "1", "next-router-prefetch": "1", "sec-fetch-dest": "empty", "sec-fetch-mode": "cors" });
+    const userland = frameworkHeaders(raw);
+    expect(raw.has("rsc")).toBe(true); expect(raw.has("next-router-prefetch")).toBe(true);
+    expect(userland.has("rsc")).toBe(false); expect(userland.get("next-router-prefetch")).toBeNull();
+    mocks.headers.mockResolvedValue(userland);
+    expect(await RestoredPageWorkingSet()).toBeNull();
+    expect(mocks.client).not.toHaveBeenCalled(); expect(mocks.authorize).not.toHaveBeenCalled(); expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("admits ordinary document metadata through the actual framework view and preserves the live guard", async () => {
+    mocks.headers.mockResolvedValue(frameworkHeaders(new Headers(documentHeaders)));
+    await RestoredPageWorkingSet();
+    expect(mocks.authorize).toHaveBeenCalledExactlyOnceWith(client);
+    expect(mocks.start).toHaveBeenCalledExactlyOnceWith(authorized);
   });
 
   it("requires successful live authorization before reading canonical tabs or resource data", async () => {

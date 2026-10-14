@@ -112,31 +112,30 @@ describe("independently bounded record reads", () => {
 });
 
 describe("ordinary authorized bootstrap records", () => {
-  it("starts exactly ten complete records for two projects and preserves ordinary DTO identity", async () => {
+  it("starts exactly two complete body records without shared collection, HTTP or forge fan-out", async () => {
     const firstBody = page(pageA), secondBody = page(pageB, projectB);
     mocks.page.mockImplementation(async (pageId: string) => ({ ok: true, page: pageId === pageA ? firstBody : secondBody }));
     const workingSet = await startRestoredPageWorkingSet(auth);
-    expect(workingSet?.records).toHaveLength(10);
+    expect(workingSet?.records).toHaveLength(2);
     const records = await Promise.all(workingSet!.records);
-    expect(records.map((value) => value?.kind)).toEqual(["page", "page", "pages", "pages", "issues", "members", "objectives", "issues", "members", "objectives"]);
+    expect(records.map((value) => value?.kind)).toEqual(["page", "page"]);
     expect(records[0]).toEqual({ kind: "page", ownerId, projectId: projectA, pageId: pageA, complete: true, data: firstBody });
     expect(records[0]?.data).toBe(firstBody); expect(records[1]?.data).toBe(secondBody);
     expect(records.every((value) => value?.ownerId === ownerId && value.complete)).toBe(true);
     expect(mocks.tabs).toHaveBeenCalledExactlyOnceWith(auth.supabase, ownerId);
     expect(mocks.page.mock.calls).toEqual([[pageA, ownerId], [pageB, ownerId]]);
-    expect(mocks.pages.mock.calls).toEqual([[projectA, ownerId], [projectB, ownerId]]);
-    for (const reader of [mocks.issues, mocks.members, mocks.objectives]) expect(reader.mock.calls).toEqual([[auth, projectA], [auth, projectB]]);
+    for (const reader of [mocks.pages, mocks.issues, mocks.members, mocks.objectives]) expect(reader).not.toHaveBeenCalled();
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it("reuses one project's four shared ordinary records for two different bodies", async () => {
+  it("reads two distinct bodies in the same project without adding shared collection jobs", async () => {
     mocks.tabs.mockResolvedValue([tab(1, href(projectA, pageA)), tab(2, href(projectA, pageB)), tab(3, href(projectA, pageA))]);
     mocks.page.mockImplementation(async (pageId: string) => ({ ok: true, page: page(pageId) }));
     const result = await startRestoredPageWorkingSet(auth);
-    expect(result?.records).toHaveLength(6);
+    expect(result?.records).toHaveLength(2);
     await Promise.all(result!.records);
-    expect(mocks.pages).toHaveBeenCalledExactlyOnceWith(projectA, ownerId);
-    for (const reader of [mocks.issues, mocks.members, mocks.objectives]) expect(reader).toHaveBeenCalledExactlyOnceWith(auth, projectA);
+    expect(mocks.page.mock.calls).toEqual([[pageA, ownerId], [pageB, ownerId]]);
+    for (const reader of [mocks.pages, mocks.issues, mocks.members, mocks.objectives]) expect(reader).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -144,23 +143,23 @@ describe("ordinary authorized bootstrap records", () => {
     { deleted_at: undefined }, { version: 0 }, { version: -1 }, { version: 1.5 }, { version: Number.MAX_SAFE_INTEGER + 1 },
     { version: NaN }, { version: Infinity }, { version: undefined },
   ])("rejects a mismatched, deleted or invalid-version Page body: %j", async (patch) => {
-    mocks.tabs.mockResolvedValue([tab(1, href(projectA, pageA))]);
-    mocks.page.mockResolvedValue({ ok: true, page: page(pageA, projectA, patch) });
+    const accepted = page(pageB, projectB);
+    mocks.page.mockImplementation(async (pageId: string) => ({ ok: true, page: pageId === pageA ? page(pageA, projectA, patch) : accepted }));
     const result = await startRestoredPageWorkingSet(auth);
     const records = await Promise.all(result!.records);
     expect(records[0]).toBeNull();
-    expect(records.slice(1).every((value) => value?.complete)).toBe(true);
+    expect(records).toHaveLength(2);
+    expect(records[1]).toMatchObject({ kind: "page", ownerId, projectId: projectB, pageId: pageB, complete: true });
+    expect(records[1]?.data).toBe(accepted);
   });
 
-  it("keeps denied resources null independently and does not retry an ordinary authorization failure", async () => {
-    mocks.tabs.mockResolvedValue([tab(1, href(projectA, pageA))]);
-    mocks.page.mockResolvedValue({ ok: false, status: 404 });
-    mocks.pages.mockResolvedValue({ ok: false, status: 404 });
-    mocks.members.mockResolvedValue({ ok: false, status: 404, errorKey: "projectNotFound" });
+  it("keeps a denied body null independently and does not retry an ordinary authorization failure", async () => {
+    mocks.page.mockImplementation(async (pageId: string) => pageId === pageA ? { ok: false, status: 404 } : { ok: true, page: page(pageB, projectB) });
     const result = await startRestoredPageWorkingSet(auth);
     const records = await Promise.all(result!.records);
-    expect(records.map((value) => value?.kind ?? null)).toEqual([null, null, "issues", null, "objectives"]);
-    expect(mocks.page).toHaveBeenCalledTimes(1); expect(mocks.members).toHaveBeenCalledTimes(1);
+    expect(records.map((value) => value?.kind ?? null)).toEqual([null, "page"]);
+    expect(mocks.page.mock.calls).toEqual([[pageA, ownerId], [pageB, ownerId]]);
+    for (const reader of [mocks.pages, mocks.issues, mocks.members, mocks.objectives]) expect(reader).not.toHaveBeenCalled();
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 

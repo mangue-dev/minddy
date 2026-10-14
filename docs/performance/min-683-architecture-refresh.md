@@ -2,57 +2,83 @@
 
 ## Resumed server working-set experiment
 
-Task 50 is a source candidate, not yet a measured improvement. It starts the
-initial document's protected reads under the same verified claims, live-session
-and MFA guard as ordinary routes. RSC navigation and framework/browser prefetch
-requests are excluded before authentication. Canonical account tabs select at
-most two distinct explicit Pages; each resource reader independently enforces
-its existing authorization and decryption contract.
+The first Task 50 experiment is rejected as-is. Build `428939fe2` /
+`fbeUzZQpzSVJfhE3uDYsT` completes all 145 observations on each client,
+including observed sixteen-second focus loss and full fixture preservation,
+but moves cost into startup and first project navigation.
 
-The fixture produces ten exact ordinary query records: each project's issues,
-members, objectives and Page tree, plus both explicit bodies. Two top-level
-readers execute concurrently; an ordinary reader can retain its own existing
-parallel database subreads. Independent Suspense records do not await one
-aggregate result. A request-scoped ten-second SDK deadline bounds optional
-server work without changing ordinary API deadlines. All, Home, routines,
-selected secondary details and forge preparation keep their existing owners.
-This slice cannot certify the complete all-tab deadline.
+| Complete interface observation | Reference web | Ten-record web | Reference native | Ten-record native |
+| --- | ---: | ---: | ---: | ---: |
+| Authenticated renderer launch | 2496 ms | 3112 ms | 2454 ms | 3096 ms |
+| Refresh | 1952 ms | 3065 ms | 2042 ms | 2965 ms |
+| First project | 609 ms | 1009 ms | 466 ms | 853 ms |
+| First primary Page | 328 ms | 117 ms | 340 ms | 173 ms |
+| First foreign Page | 411 ms | 70 ms | 436 ms | 78 ms |
 
-The project issues/members/objectives routes reuse typed readers. Same-scope
-UUID keyset batches handle a database cap lower than the requested limit;
-exact counts describe each remaining scope. Page trees use the same complete
-reader and restore normal tree order. Later database/decryption failure returns
-no partial collection. Membership metadata failures fail closed, while actual
-absence/denial keeps the ordinary 404. Resource-count failure retains the
-existing best-effort zero-count contract. These separate reads are not one
-transactional server snapshot.
+These are one first observation per destination, not population percentiles.
+The matching v5 runner, environment hashes, frozen workload and preservation
+are recorded in the `scaled-server-bootstrap` raw evidence. The Page gain does
+not compensate for the startup/board regression. Sequential first visits also
+allow earlier destinations to warm dependencies; they do not prove that either
+Page could independently open at three seconds.
 
-Client ingestion waits for account-bound snapshot restoration, the initial
-document generation and the first committed account QueryClient. It retains
-only primitive client identities and a bounded 128-key priority history;
-foreground fetches, failures, invalidations, writes and removals take priority
-even when their original Query has since disappeared. Old pure hydration does
-not become a newer read. The optional initial-document window closes after
-fifteen seconds or metadata overflow and fails closed thereafter. There is no
-body history, timer, cross-account cache or extra retry request in this tracker.
+The reference sends HTML quickly; the ten-record stream keeps the response open
+for roughly 1.5–1.8 seconds. The runner currently starts its complete-All gate
+after DOMContentLoaded, but this measurement limitation does not explain away
+the regression: the actual required board response also finishes later. On web
+refresh, the candidate board response finishes near 2976 ms versus 1862 ms.
+Automatic search-index work is in flight from approximately 1871 to 3342 ms,
+before the finite tab worker acquires priority. Actual request-end calculations
+include the CDP request-start offset and pre-send queue; omitting those offsets
+would understate completion times.
 
-Complete issue/objective records retain the ordinary pending-write overlays at
-the initial navigation's conservative read-start boundary. An unsettled insert
-rejects the entire optional collection. Existing trees and every existing Page
-Query retain their current owner; a new Page body can seed display only. It
-creates no accepted read/write receipt or prepared editing lease, so the
-mounted surface still requires its ordinary actual scoped GET before saving.
-Known denial, newer ACKs, deleted Pages and retired clients cannot be revived
-by an older streamed record. Snapshot size, persistence exclusions, freshness
-limits and optimistic merge/departure semantics remain unchanged.
+At the three-second refresh probe both eighty-block Page bodies and all ten
+ordinary keys exist, but are invalidated; four project-board prerequisites are
+missing. Initial realtime SUBSCRIBED catch-up covers every selected family and
+all Page bodies. Its inactive invalidation is consistent with this state,
+although the raw does not record an invalidator call stack. It must remain:
+server reads precede subscription and cannot otherwise exclude a gap write.
+Ingestion waits for restoration to finish; the restore predicate alone does not
+explain a newly ingested nonpersisted Page body becoming invalidated.
 
-Focused checks currently pass: 157 tests across the new server/client slices
-and seven existing Page correctness suites, 47 shared-reader/store tests, 88
-Page server tests, 25 authorization/cookie tests and seven provider/retention
-tests. These are overlapping checks, not a unique aggregate count. Full types,
-scoped lint, owned-English, documentation and knowledge checks pass. Production
-build and unchanged-cohort before/after measurements are still required before
-retention; reject startup contention or a cost shifted to another first click.
+Installed Next 16.3.8 filters Flight headers from the userland `headers()` view.
+The negative `rsc` / `next-router-prefetch` admission check therefore cannot
+enforce document-only work. This is a framework source fact, not proof that
+shared layouts rerun the bootstrap on every navigation. The next control uses
+positive browser document/navigation metadata and declines missing hints.
+Tests exercise the installed Next filtered-header boundary.
+
+The next isolated candidate keeps only the same two explicit Page body reads
+and removes eight shared collection reads from initial HTML. Canonical account
+tabs select at most two distinct explicit Pages under the ordinary verified
+claims, live-session and MFA guard. Both resource reads retain their existing
+ACL/decryption/liveness/positive-version checks, a request-scoped ten-second
+SDK deadline and independent Suspense records. No internal HTTP or forge fan-out
+is introduced. Ordinary scoped routes and the existing bounded client worker
+continue to own all shared collections. This refinement is unmeasured until an
+identified build and unchanged-cohort comparison exist; reject moved cost again.
+
+The shared-reader completeness fixes are separate: issues, members, objectives
+and Page trees preserve ordinary DTOs, ordering and failure contracts across
+lower database transport caps. A later error returns no partial collection;
+resource-count failure keeps its prior best-effort zero-count contract. These
+separate reads are not a transactional server snapshot.
+
+Client ingestion remains bounded by the initial document, verified account,
+first committed QueryClient, completed snapshot restoration, fifteen-second
+window and 128-key foreground-priority history. Existing Page queries, failures,
+invalidations, newer reads/writes and retired clients take priority. Optional
+new bodies seed display only; they create no actual GET receipt, preparation
+lease, write authority or persisted body. Immediate typing, actual fresh-basis
+GET, versioned merge, newer ACK handling and departure guards remain intact.
+Freshness and storage budgets are unchanged.
+
+The initial source checks passed: 157 overlapping server/client/Page checks,
+47 shared-reader/store tests, 88 Page server tests, 25 authorization/cookie
+tests and seven provider/retention tests, plus full types, scoped lint, English,
+documentation, knowledge and a production build. These counts overlap and
+must not be summed. The narrower candidate requires its own focused checks and
+production build before measurement. MIN-683 remains in progress.
 
 ## Decision to test
 
