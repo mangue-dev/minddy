@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auditEvidence, classification, evidenceFilenameSelected, failureSummary, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, summarizeMeasurements } from "./summarize-restored-evidence.mjs";
+import { auditEvidence, classification, evidenceFilenameSelected, explicitStageComparisons, failureSummary, pairedComparisonEligibility, preparationSnapshotSummary, sampleStatistics, summarizeMeasurements, summarizeTransportAndThread } from "./summarize-restored-evidence.mjs";
 
 test("retains both structured diagnostic failures and ordinary error strings", () => {
   assert.equal(failureSummary({ name: "TimeoutError", message: "Observed gate failed\nDiagnostic stack" }), "TimeoutError: Observed gate failed");
@@ -12,6 +12,26 @@ test("retains both structured diagnostic failures and ordinary error strings", (
 test("omits p95 below ten observations and preserves the full maximum", () => {
   assert.deepEqual(sampleStatistics([300, 20, 40, 60, 80]), { count: 5, p50: 60, p95: null, max: 300 });
   assert.equal(sampleStatistics(Array.from({ length: 10 }, (_, index) => index + 1)).p95, 10);
+});
+test("counts recorded transport by phase envelope and never infers snapshot slots or adds script to task time", () => {
+  const task = { startTime: 110, duration: 60 };
+  const summary = summarizeTransportAndThread({ network: [
+    { path: "/api/me/local-snapshots", method: "POST", startTime: 1110 },
+    { path: "/api/me/board", method: "GET", startTime: 1180, failed: "Aborted" },
+    { path: "/api/me/local-snapshots", method: "POST", startTime: 1400 },
+  ], measurements: [
+    { name: "restored-alternation", timeOrigin: 1000, start: 100, driverMs: 30, thread: { TaskDuration: .1, ScriptDuration: .04 }, longTasks: [task] },
+    { name: "restored-alternation", timeOrigin: 1000, start: 200, driverMs: 30, thread: { TaskDuration: .2, ScriptDuration: .08 }, longTasks: [task] },
+  ] });
+  assert.equal(summary.wholeRecordedRun.localSnapshotPostStarts, 2);
+  const warm = summary.phases.find((phase) => phase.name === "restored-alternation");
+  assert.equal(warm.recordedStartEnvelope.recordedHttpStarts, 2);
+  assert.equal(warm.recordedStartEnvelope.recordedFailedRequests, 1);
+  assert.equal(warm.recordedStartEnvelope.localSnapshotPostStarts, 1);
+  assert.ok(Math.abs(warm.sampledThread.taskDuration.milliseconds - 300) < .00001);
+  assert.equal(warm.sampledThread.scriptDuration.milliseconds, 120);
+  assert.equal(warm.sampledThread.uniqueReportedLongTasks, 1);
+  assert.equal(summary.phases[0].recordedStartEnvelope, null);
 });
 test("does not include failed or unsupported shell observations in successful timing summaries", () => {
   const [summary] = summarizeMeasurements([
@@ -57,6 +77,21 @@ const comparable = { effectiveSha: "a".repeat(40), build: "known-build", protoco
   runtime: "Chromium", versions: { chromium: "153" }, viewport: { width: 1440, height: 1000, scale: 1 },
   workloadIdentity: "c".repeat(64), eligibleForNavigationComparison: true, focusValid: true,
   environmentFiles: { ".env": "f".repeat(64), ".env.local": "e".repeat(64), ".env.production": null, ".env.production.local": null } };
+test("explicit stages reference original after labels and fail closed on missing, failed or unexpected products", () => {
+  const baseline = { ...comparable, label: "original-after-run" };
+  const candidate = { ...comparable, label: "new-after-run", effectiveSha: "d".repeat(40), build: "new-build" };
+  const stage = { id: "controlled-delta", declaredSourceDelta: "Reviewed single constant change", baseline: baseline.label, candidate: candidate.label,
+    expectedBaseline: { sha: baseline.effectiveSha, build: baseline.build }, expectedCandidate: { sha: candidate.effectiveSha, build: candidate.build } };
+  const [result] = explicitStageComparisons([baseline, candidate], [stage]);
+  assert.equal(result.baseline, baseline.label); assert.equal(result.candidate, candidate.label);
+  assert.equal(result.eligibleForPairedNavigationConclusions, true); assert.deepEqual(result.missingRuns, []);
+  assert.equal(explicitStageComparisons([baseline], [stage])[0].eligibleForPairedNavigationConclusions, false);
+  assert.deepEqual(explicitStageComparisons([baseline], [stage])[0].missingRuns, [candidate.label]);
+  for (const changed of [{ build: "unreviewed-build" }, { effectiveSha: "e".repeat(40) }, { eligibleForNavigationComparison: false },
+    { runnerSourceHash: "f".repeat(64) }, { environmentFiles: null }, { workloadIdentity: "f".repeat(64) }])
+    assert.equal(explicitStageComparisons([baseline, { ...candidate, ...changed }], [stage])[0].eligibleForPairedNavigationConclusions, false);
+  assert.equal(explicitStageComparisons([baseline, candidate], [{ ...stage, expectedCandidate: undefined }])[0].eligibleForPairedNavigationConclusions, false);
+});
 test("requires known source/build provenance before drawing paired conclusions", () => {
   assert.equal(pairedComparisonEligibility(comparable, { ...comparable }).eligibleForPairedNavigationConclusions, true);
   assert.equal(pairedComparisonEligibility(comparable, { ...comparable, build: "unknown" }).eligibleForPairedNavigationConclusions, false);

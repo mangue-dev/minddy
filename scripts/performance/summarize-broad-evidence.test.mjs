@@ -37,3 +37,12 @@ test("excluded, failed, changed-source and old-gate broad runs remain ineligible
   for (const changed of [{ diagnostic: true }, { excludedFromComparison: true }, { status: "failed" }, { errors: ["Renderer error"] }, { runnerSourcesUnchanged: false }, { readinessProtocol: "old-shell" }])
     assert.equal(broadComparisonRecord({ ...result, ...changed }).eligibleForNavigationComparison, false);
 });
+
+test("separates a potentially cold first deep detail and keeps multi-click totals labeled", () => {
+  const summaries = summarizeBroadMeasurements(Array.from({ length: 10 }, (_, index) => ({ name: "cross-project-document-switch", completeMs: index ? 500 : 900 })));
+  assert.equal(summaries.length, 2);
+  assert.equal(summaries.find((summary) => summary.phase === "first-observed").fullUsableMs.max, 900);
+  const later = summaries.find((summary) => summary.phase === "repeated");
+  assert.equal(later.name, "cross-project-document-switch");
+  assert.equal(later.observations, 9); assert.equal(later.fullUsableMs.p95, null);
+});

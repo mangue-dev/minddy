@@ -13,6 +13,71 @@ const baselineBuild = "IflZwyWntlTxQ6lF7WslG";
 const baselineSha = "ca44a35e43f589a65ce0169eb820f511d47b8899";
 const candidateStages = ["preparation", "serial-pr", "pages", "host", "admission", "authority", "two-slots", "after"];
 
+// Explicit comparisons retain original run labels, including an earlier
+// candidate reused as the reference for a separately controlled experiment.
+export const explicitComparisonStages = ["native", "web"].flatMap((runtime) => [
+  { id: `preparation-slots-${runtime}`, declaredSourceDelta: "8655 two-slot preparation versus the direct one-slot control; every other application source file is unchanged",
+    baseline: `min683-restored-after-scaled-complete-resume-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-one-slot-${runtime}-1`,
+    expectedBaseline: { sha: "8655f2a4cec53c7e2c856dfe2346a62912bc7f49", build: "V64G9fNPlmZ3KhKjdmZNG" },
+    expectedCandidate: { sha: "d27feb89ce3b03fa10e2495bf52bfed3977cf74b", build: "Jiski42ci5lVv2VlAa8dV" } },
+  { id: `earlier-tabs-${runtime}`, declaredSourceDelta: "Task 46 expected-owner canonical tab read in parallel with window snapshot opening; actual application delta is reviewed separately from measurement eligibility",
+    baseline: `min683-restored-after-scaled-complete-resume-${runtime}-1`,
+    candidate: `min683-restored-after-scaled-earlier-tabs-${runtime}-1`,
+    expectedBaseline: { sha: "8655f2a4cec53c7e2c856dfe2346a62912bc7f49", build: "V64G9fNPlmZ3KhKjdmZNG" },
+    expectedCandidate: { sha: "0829375f38ce3ad2fed40cf5b32877fb6af019a3", build: "g9Ee5-J9CBrV9Wq8eaIFx" } },
+]);
+
+/** Eligibility verifies protocol evidence, never an application delta by itself. */
+export function explicitStageComparisons(runs, stages) {
+  return stages.map((stage) => {
+    const baseline = runs.find((run) => run.label === stage.baseline);
+    const candidate = runs.find((run) => run.label === stage.candidate);
+    const actual = (run) => run ? { sha: run.effectiveSha, build: run.build } : null;
+    const matches = (run, expected) => !!run && !!expected && run.effectiveSha === expected.sha && run.build === expected.build;
+    const expectedProductsMatch = matches(baseline, stage.expectedBaseline) && matches(candidate, stage.expectedCandidate);
+    const eligibility = baseline && candidate ? pairedComparisonEligibility(baseline, candidate) : null;
+    return { ...stage, actualBaseline: actual(baseline), actualCandidate: actual(candidate),
+      missingRuns: [!baseline && stage.baseline, !candidate && stage.candidate].filter(Boolean),
+      expectedProductsMatch, eligibility,
+      eligibleForPairedNavigationConclusions: expectedProductsMatch && eligibility?.eligibleForPairedNavigationConclusions === true,
+      eligibleForMatchedWarmConclusions: expectedProductsMatch && eligibility?.eligibleForMatchedWarmConclusions === true,
+      eligibleForPairedFocusConclusions: expectedProductsMatch && eligibility?.eligibleForPairedFocusConclusions === true,
+      transportAndThread: { baseline: baseline?.transportAndThread ?? null, candidate: candidate?.transportAndThread ?? null },
+      interpretation: "Original evidence labels are references, not copied or relabeled measurements. Matching protocol evidence does not independently prove the declared source delta or acceptance." };
+  });
+}
+
+/** Report recorded transport starts and sampled thread work without slot guesses. */
+export function summarizeTransportAndThread(value) {
+  const network = value.network ?? [];
+  const transport = (entries) => ({ recordedHttpStarts: entries.length,
+    recordedFailedRequests: entries.filter((entry) => entry.failed).length,
+    localSnapshotPostStarts: entries.filter((entry) => entry.method === "POST" && entry.path === "/api/me/local-snapshots").length });
+  const phases = ["first-restored-activation", "restored-alternation", "focus-return-navigation"].map((name) => {
+    const samples = (value.measurements ?? []).filter((sample) => sample.name === name);
+    const bounded = samples.filter((sample) => Number.isFinite(sample.timeOrigin) && Number.isFinite(sample.start) && Number.isFinite(sample.driverMs));
+    const start = bounded.length ? Math.min(...bounded.map((sample) => sample.timeOrigin + sample.start)) : null;
+    const end = bounded.length ? Math.max(...bounded.map((sample) => sample.timeOrigin + sample.start + sample.driverMs)) : null;
+    const tasks = new Map();
+    for (const sample of samples) for (const task of sample.longTasks ?? []) {
+      if (Number.isFinite(sample.timeOrigin) && Number.isFinite(task.startTime) && Number.isFinite(task.duration))
+        tasks.set(JSON.stringify([sample.timeOrigin, task.startTime, task.duration]), task.duration);
+    }
+    const threadSum = (field) => {
+      const values = samples.map((sample) => sample.thread?.[field]).filter(Number.isFinite);
+      return { samples: values.length, milliseconds: values.length ? values.reduce((sum, item) => sum + item, 0) * 1000 : null };
+    };
+    return { name, observations: samples.length, failedObservations: samples.filter((sample) => sample.status === "failed").length,
+      recordedStartEnvelope: start === null ? null : { startEpochMs: start, endEpochMs: end,
+        ...transport(network.filter((entry) => Number.isFinite(entry.startTime) && entry.startTime >= start && entry.startTime < end)) },
+      sampledThread: { taskDuration: threadSum("TaskDuration"), scriptDuration: threadSum("ScriptDuration"),
+        uniqueReportedLongTasks: tasks.size, reportedLongTaskDurationMs: [...tasks.values()].reduce((sum, duration) => sum + duration, 0) } };
+  });
+  return { wholeRecordedRun: transport(network), phases,
+    interpretation: "Request starts are from finished/failed transport records, not an exhaustive dispatch trace; unfinished requests may be absent. Phase envelopes include between-click driver work. Snapshot POST slot/payload is unobserved, so window-tab and query-cache seals are not distinguished. CDP thread deltas span each before/after probe, including driver and background work; ScriptDuration is part of TaskDuration and must not be added to it. Long tasks are deduplicated only by reported renderer origin/start/duration; unobserved intervals are not inferred." };
+}
+
 /** Keep first activations separate; fewer than ten observations have no p95. */
 export function sampleStatistics(values) {
   const samples = values.filter(Number.isFinite).sort((a, b) => a - b);
@@ -178,6 +243,7 @@ export async function refreshRestoredEvidence() {
       ...(value.refreshPreparationAtThreeSeconds || value.launchPreparationAtThreeSeconds ? { fixedRendererPreparation: {
         launch: preparationSnapshotSummary(value.launchPreparationAtThreeSeconds), refresh: preparationSnapshotSummary(value.refreshPreparationAtThreeSeconds) } } : {}),
       failure: failureSummary(value.failure), cleanup: value.cleanup, acceptance: value.acceptance,
+      transportAndThread: summarizeTransportAndThread(value),
       summaries: summarizeMeasurements(value.measurements),
       ...(value.launches ? { executableStartup: { setupExcluded: value.setupExcluded, measuredLaunches: value.launches.length,
         successfulLaunches: value.launches.filter((launch) => launch.status === "complete").length,
@@ -236,7 +302,8 @@ export async function refreshRestoredEvidence() {
       "Large secondary collections require their complete authorized source; UI detail journeys use the explicitly recorded bounded deterministic sample.",
       "Historical build environment parity was not recorded and is unknown. Strict paired causal conclusions require matching actual environment-file hashes; historical observed timings remain retained.",
       "Historical v1 ordinary runner hashes cover four files; historical v1 executable hashes cover that runner alone. New protocols record their actual dependency scope. Different hashes and empty/populated datasets are not silently treated as equivalent."],
-    variants: [...new Map(runs.map((run) => [run.build, { sha: run.effectiveSha, build: run.build }])).values()], runs, comparisons, incrementalComparisons };
+    variants: [...new Map(runs.map((run) => [run.build, { sha: run.effectiveSha, build: run.build }])).values()], runs, comparisons, incrementalComparisons,
+    explicitStageComparisons: explicitStageComparisons(runs, explicitComparisonStages) };
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify({ reportPath, evidenceDirectory, runs: runs.length, comparisons: comparisons.length,
     validPairedNavigationComparisons: comparisons.filter((item) => item.eligibleForPairedNavigationConclusions).length }));

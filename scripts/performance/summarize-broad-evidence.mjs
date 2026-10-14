@@ -11,7 +11,10 @@ const digest = (value) => createHash("sha256").update(value).digest("hex");
 export function summarizeBroadMeasurements(measurements = []) {
   const groups = new Map();
   const observed = new Set();
-  const splitFirst = new Set(["issue-open", "pr-activity-to-files", "pr-open-commits", "pr-change-file", "pr-files-to-activity"]);
+  const splitFirst = new Set(["issue-open", "pr-activity-to-files", "pr-open-commits", "pr-change-file", "pr-files-to-activity",
+    "project-switch", "project-return", "page-switch", "page-return", "cross-project-pages-return-back", "cross-project-pages-return-menu",
+    "cross-project-pages-return", "cross-project-page-return", "cross-project-document-return", "cross-project-pages-switch-back",
+    "cross-project-pages-switch-menu", "cross-project-pages-switch", "cross-project-page-switch", "cross-project-document-switch"]);
   for (const sample of measurements) {
     const identity = JSON.stringify([sample.name, sample.destinationNumber ?? null]);
     const phase = splitFirst.has(sample.name) ? observed.has(identity) ? "repeated" : "first-observed" : "as-named";
@@ -74,7 +77,8 @@ export async function refreshBroadEvidence() {
     interpretation: ["Issue title-shell paint is never a full usable-content measurement; its completeMs is summarized separately.",
       "Canonical accepted issue content remains usable during background reconciliation; read phases at usability and network request timings remain separate evidence.",
       "Each PR identity remains separate. Fewer than ten observations have no p95; laboratory p95 is not a population percentile.",
-      "First observed issue/subview activations are separate from repetitions per PR. Ten loops leave nine repetitions, whose p95 remains omitted.",
+      "First observed issue, subview and repeated deep-journey groups are separate from later observations. First observed does not imply an isolated cold view; ten-loop groups leave nine repetitions with no p95.",
+      "Combined cross-project workflows include driver work between trusted clicks and are not individual click-to-content timings.",
       "Excluded protocol probes validate predicates and preservation, not latency. Failed runs remain retained and ineligible.",
       "Strict comparisons require matching environment-file evidence, runtime, viewport, cohort, gate source and actual product manifests.",
       "This broad matrix does not establish real focus recovery, remote delivery or forced-quit draft safety."], runs, comparisons };
