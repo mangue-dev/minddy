@@ -1,7 +1,7 @@
 import { hashKey, isCancelledError, onlineManager, type Query, type QueryClient, type QueryFunctionContext } from "@tanstack/react-query";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
-import { appTabRoute } from "./app-tab-location";
+import { appTabRoute, normalizeAppTabLocation } from "./app-tab-location";
 import { appTabPendingIssueSelection, appTabPreparationQueries, appTabSelectionSource, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 import { issueWrites } from "./optimistic/issue-writes";
 import { isCachedTabReconciliation, navigationPreparationPriority } from "./navigation-preparation-priority";
@@ -17,6 +17,7 @@ const PASSIVE_SHELL_READS = new Set([
   ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
   ["me", "branch-cleanup-targets"], ["pull-requests", "open-count"],
 ].map(hashKey));
+const BACKGROUND_PR_LIST_HASH = hashKey(allPullRequestsQueryOptions().queryKey);
 
 /** Only established shell summaries may reconcile alongside bounded scoped preparation. */
 export function isPassiveShellMaintenanceRead(query: Pick<Query, "queryKey" | "queryHash" | "state">): boolean {
@@ -106,7 +107,12 @@ export function createPrTabPreparation(
   };
   const otherTransport = () => {
     const auxiliary = new Set(recentActivityQueries(client).map((options) => hashKey(options.queryKey)));
+    // The shell's exact default list discovers background PR owners. Keep its
+    // cold request running, but visible PR destinations retain foreground priority.
+    const backgroundPrList = normalizeAppTabLocation(active) !== null && appTabRoute(active).section !== "pull-requests"
+      ? BACKGROUND_PR_LIST_HASH : undefined;
     return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" && !isCachedTabReconciliation(query) && !isPassiveShellMaintenanceRead(query) &&
+      query.queryHash !== backgroundPrList &&
       !(preparing.has(query.queryHash) && !preparing.get(query.queryHash)!.cancelled && !preparing.get(query.queryHash)!.superseded && !query.isActive()) &&
       !(auxiliary.has(query.queryHash) && !query.isActive()));
   };

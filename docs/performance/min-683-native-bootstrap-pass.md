@@ -41,6 +41,24 @@ than claiming an unseen generation fence. Each actual one-shot query function
 restores its ordinary replacement immediately after joining; a later refetch
 cannot reuse a retired or already joined transport function.
 
+The physical-slot candidate `783cf10ca` / `ZRKbS9ItC3LDVGfvC-J4R` completes the
+three-target independent comparison on both clients. Web project/primary Page/
+foreign Page are 610.4→607.8, 432.6→373.6 and 408.0→402.4 ms; native values are
+602.5→335.3, 376.7→379.2 and 464.9→393.1 ms. Each cell has one independent case,
+so these are sparse observations, not a causal saving or per-destination p95.
+The ordinary eight-file, diagnostic, environment and full source fingerprints
+match within each comparison. Exact current content and fixture bookends pass.
+
+Network events live under each case, not the empty aggregate network array.
+There are three web and two native bootstrap attempts. Final body
+`ERR_ABORTED` does not imply resource failure: ownership disposal can abort the
+remaining stream after accepted frames. The primary web Page has all four
+issues/categories/members/objectives prerequisites successful at three seconds;
+the other web cases still have pending shared keys. Native primary Page has
+accepted objectives while members remain pending. All-tab preparation remains
+unvalidated. Initial catch-up and cancellation are retained; these data alone
+do not establish the reason for every body abort.
+
 ## Newly completed independent coverage
 
 The frozen v2 web diagnostic completes all nine inactive destinations on both
@@ -92,6 +110,13 @@ This is actual restored All, not Home, packaged/signing/updater startup, a cold
 backend, or a completed universal three-second criterion. Four earlier attempts
 failed in untimed setup: cookie/window ordering, incorrect Home expectation and
 an unhandled analytics consent modal. They contain no accepted launch sample.
+
+The unchanged startup collector on `783cf10ca` completes three launches at
+1,800.4 / 1,732.5 / 1,638.5 ms, with separate renderer times
+1,533.5 / 1,444.1 / 1,359.7 ms. Process median is 1,732.5 ms, maximum 1,800.4 ms,
+n=3. The median is effectively unchanged from control; the different maximum
+does not establish a causal startup improvement. This tested native series is
+within three seconds. No write test precedes these matched read-only launches.
 
 ## Recovery and daily acceptance boundaries
 

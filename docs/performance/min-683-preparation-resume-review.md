@@ -128,6 +128,54 @@ these and measure actual pair admission before retaining this increment.
 Additional cases distinguish bounded-size complete-reader fallback from denial
 and malformed-stream errors and verify fallback transport serialization.
 
+## Exact default shell PR-list overlap increment
+
+The root agent's corrected evidence reading identifies three bootstrap attempts
+in the `783cf10` independent web cases, one per case. The primary Page case has
+all four scoped prerequisites successful at three seconds, including members
+and objectives; those two reads are still fetching in the other two cases.
+Every HTTP request ends with `ERR_ABORTED`, which does not establish resource
+failure: after both resource owners succeed, pair disposal can abort the
+remaining response body. Native evidence contains two attempts in three cases;
+the primary Page case has successful objectives and pending members at three
+seconds. The earlier `98e236` nine-case web cohort contains no bootstrap request.
+These observations establish neither a causal performance gain nor a general
+accepted bootstrap saving. Request termination, accepted resource metadata and
+first-activation timing must be evaluated separately.
+
+The next bounded admission hypothesis is recorded in issue plan task58 before
+the change. `AppTabsProvider` mounts `PrBackgroundSync`, which unconditionally
+observes `useAllPullRequestsQuery()` under the exact default key
+`["pull-requests", "all", "open", 100, null, null]`. This full authorized list
+discovers five recent PR background owners; it is not the badge query. Sidebar
+and tab-strip badges use the separate `["pull-requests", "open-count"]` key.
+
+The candidate leaves the full list request, DTO, permissions, errors, polling
+and Retry-After behavior unchanged. Only the preparator's `otherTransport`
+classification changes: that exact default list may overlap scoped preparation
+when the current active tab is a valid known destination outside Pull Requests.
+An unknown or uninitialized active route keeps the ordinary gate. Visible PR
+routes, pinned lists, expanded lists, completed lists and unknown query shapes
+retain foreground priority. A route selection restores that priority before a
+new foreground observer mounts. Active query hashes alone cannot distinguish
+the pinned/expanded foreground list from the shell's default observer.
+
+The exact exception also applies to a cold list with no cached data; adding its
+key to the existing healthy-only shell summary set would not address the
+observed cold gate. All's board/view reads and other foreground work still block
+preparation. Existing startup reservation, selected-read protection, two scoped
+physical slots and one member/objective pair remain unchanged. This permits
+one ongoing shell request plus two scoped HTTP transports, not a universal
+two-request limit. Other background PR owners keep their existing admission and
+account read budgets.
+
+Regression cases hold the actual default reader alongside two scoped reads,
+preserve its complete response and signal, retain All's transport gate, reject
+nondefault keys and unknown/visible-PR destinations, restore foreground priority
+before observer adoption, and retain an explicit Retry-After failure. Root
+must compare identified products on unchanged data, measuring startup and first
+project/Page/PR activation before accepting any speed or completeness claim.
+
 `lib/client-read.ts` buffers the complete body before checking the account and
 returning a reconstructed response. It cannot deliver independent frames.
 A streaming helper must bound the entire read, consume the query signal,
