@@ -218,6 +218,38 @@ Any global-to-project reuse first needs explicit resource-count, scope,
 invalidation and optimistic-overlay equivalence; the aggregate member array is
 not the project's permissions/invitations response.
 
+## Exact active-read handoff
+
+Task56 addresses a concrete cancellation gap in the finite owner. Its immediate
+visit loop already spared selected destination keys, but a later unrelated
+foreground fetch could call `yieldReads` before their observers committed.
+The selected shared issue/Page read then had zero observers and was canceled.
+The session emits its selected href synchronously before navigation; the actual
+AccountTabSync subscription can therefore install exact active prerequisite
+hashes during that emission, without a new transport or activation hook.
+
+`yieldRead` now preserves those exact owned reads only while the owner is live,
+visible and online. The next visit replaces the set; disposal clears it. Normal
+unknown foreground work still blocks speculative refill, other inactive reads
+still yield, and canceled operations retain their slots until settlement.
+Explicit QueryClient invalidation/refetch can still cancel and replace the
+selected operation. No accepted body, version, timestamp, receipt, preparation
+lease or write authority is manufactured.
+
+Five of eight new cases fail behaviorally on the reference, including the
+mounted real provider/session/worker case. All eight and the relevant existing
+preparation/account/Page lifecycle suites pass168 cases across ten suites.
+The initial draft failures and cleanup issues are retained in their logs; the
+final red proof has five failures, three passes and no unhandled rejection.
+Revocation does not itself cancel useful listed work when the new view is
+already ready: the usual foreground/visibility/offline/retirement yield does.
+
+This source gap is not assigned to a specific recorded abort. The historical
+failed request entries have startTime0 and unavailable timing fields. Likewise,
+preactivation hover can start other reads before the session selects its href;
+this bounded fix does not protect that separate intent path. Its isolated build
+must compare full first access, warm journeys and observed focus on both clients.
+
 ## Resumed server working-set experiment
 
 The first Task 50 experiment is rejected as-is. Build `428939fe2` /
@@ -1380,6 +1412,22 @@ included. Existing full-list background work and preference selection therefore
 remain a limitation; no whole-preparation or new cache-completeness guarantee
 is claimed. The separate production comparison must verify actual complete
 Feedback content without a visible skeleton, including cold resolved targets.
+
+The separate product `90ad0a49e` / `SuSa35kVIhHyV5Nor8RG2` completes the
+matching55-observation v5 journey on web/native, including genuine observed
+sixteen-second absence, full fixture/Page-version preservation and stable ten
+tabs, with no recorded errors. First warm Feedback paints in59.4/69.6ms versus
+1001.1/937.7ms in the timing-before references, with zero loading frames and the
+same96 visible unresolved identities, editable content and reply controls.
+Retain this bounded consumer correction. These are single first-warm
+observations, not per-destination p95 or general startup acceptance.
+
+Cold Feedback remains988/1236ms (reference1028/976ms), and multiple unvisited
+Feedback details still exceed300ms. Web launch/refresh are2453/2048ms and
+native2327/2150ms. The resolver returns the unchanged normal filters when
+`post` is absent; no general cold-path speedup or statistical attribution for
+those variable first observations is claimed. All-tab preparation, remote
+mutation/departure safety and the remaining cold matrix stay open.
 
 The retained scaled candidate's first native ordinary run keeps a material
 outlier: its `restored-alternation` Feedback sample paints at 2,003.7 ms, reaches

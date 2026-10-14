@@ -74,6 +74,7 @@ export function createPrTabPreparation(
   let cancel: (() => void) | undefined;
   type Read = { key: readonly unknown[]; identity: string; cancelled: boolean; forge: boolean };
   const preparing = new Map<string, Read>();
+  const activeQueryHashes = new Set<string>();
   const priority = navigationPreparationPriority(client);
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
   const cancelScheduled = () => { cancel?.(); cancel = undefined; };
@@ -158,6 +159,7 @@ export function createPrTabPreparation(
   };
   const yieldRead = (read: Read) => {
     if (read.cancelled || client.getQueryCache().find({ queryKey: read.key, exact: true })?.getObserversCount()) return;
+    if (!disposed && visible() && onlineManager.isOnline() && activeQueryHashes.has(read.identity)) return;
     read.cancelled = true;
     // A canceled slot remains occupied until its operation settles. This keeps
     // late callbacks from clearing a replacement or admitting a third request.
@@ -346,6 +348,8 @@ export function createPrTabPreparation(
         Number(appTabRoute(a).section === "pull-requests") - Number(appTabRoute(b).section === "pull-requests"));
       available = [href, ...ranked].slice(0, RESTORED_TAB_PREPARATION_LIMIT);
       const options = appTabPreparationQueries(client, href);
+      activeQueryHashes.clear();
+      for (const option of options) activeQueryHashes.add(hashKey(option.queryKey));
       if (!options.length || options.some((option) => missing(option.queryKey))) {
         for (const read of preparing.values()) if (!options.some((option) => hashKey(option.queryKey) === read.identity)) yieldRead(read);
       }
@@ -358,7 +362,7 @@ export function createPrTabPreparation(
       enqueue();
     },
     dispose() {
-      disposed = true; cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
+      disposed = true; activeQueryHashes.clear(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
       clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", resume);
       if (typeof window !== "undefined") window.removeEventListener("focus", resume);
