@@ -117,6 +117,19 @@ function createAccountSession(owner: string, client: QueryClient) {
   return controller;
 }
 
+async function readStartupWindowSelection(storageKey: string, keepCurrentRoute: boolean) {
+  try {
+    if (keepCurrentRoute) return undefined;
+    const raw = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
+    if (raw?.format !== "minddy-local-v1") removeLocalSnapshot(sessionStorage, storageKey);
+    else {
+      const value = await restoreLocalSnapshot(sessionStorage, storageKey, "window-tabs");
+      if (value && typeof value === "object" && "id" in value && "href" in value && typeof value.id === "string" && typeof value.href === "string") return { id: value.id, href: value.href };
+    }
+  } catch { /* Server-backed tab destinations remain available. */ }
+  return undefined;
+}
+
 function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: {
   owner: string; session: AppTabsSession; resumeAtCurrentRoute: boolean;
   onQueryState: (state: QueryState) => void;
@@ -126,6 +139,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
   const router = useRouter();
   const query = useAppTabsQuery(owner);
   const storageKey = appTabsStorageKey(owner);
+  const windowSelection = useRef<ReturnType<typeof readStartupWindowSelection> | null>(null);
   useLayoutEffect(() => {
     onQueryState({ session, loading: query.isPending, loadError: query.isError, reload: () => { void query.refetch(); } });
   }, [session, query.isPending, query.isError, query.refetch, onQueryState]);
@@ -148,13 +162,18 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
   }, [client, session]);
   useEffect(() => {
     mounted.current = true;
+    // Window selection and canonical tabs have independent authorization reads.
+    // Open them together; neither may initialize the session on its own.
+    windowSelection.current ??= readStartupWindowSelection(storageKey, keepCurrentRoute);
     return () => {
       mounted.current = false;
       // Strict Mode replays effects with the same session. Dispose only after
       // an actual unmount so in-flight work cannot affect another account.
-      queueMicrotask(() => { if (!mounted.current) session.dispose(); });
+      queueMicrotask(() => {
+        if (!mounted.current) { session.dispose(); windowSelection.current = null; }
+      });
     };
-  }, [session]);
+  }, [session, storageKey, keepCurrentRoute]);
   useEffect(() => {
     // One warmup attempt per href (tab label, palette row): prefetchQuery
     // itself respects staleTime, so a fresh cache costs nothing anyway.
@@ -187,18 +206,12 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
     if (session.getSnapshot().activeId) return;
     let cancelled = false;
     void (async () => {
-      let restored: { id: string; href: string } | undefined;
-      try {
-        if (!keepCurrentRoute) {
-          const raw = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
-          if (raw?.format !== "minddy-local-v1") removeLocalSnapshot(sessionStorage, storageKey);
-          else {
-            const value = await restoreLocalSnapshot(sessionStorage, storageKey, "window-tabs");
-            if (value && typeof value === "object" && "id" in value && "href" in value && typeof value.id === "string" && typeof value.href === "string") restored = { id: value.id, href: value.href };
-          }
-        }
-      } catch { /* Server-backed tab destinations remain available. */ }
-      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
+      const selection = windowSelection.current;
+      const restored = selection ? await selection : undefined;
+      if (!cancelled) {
+        await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
+        if (windowSelection.current === selection) windowSelection.current = null;
+      }
     })();
     return () => { cancelled = true; };
   }, [query.data, session, storageKey, keepCurrentRoute]);
