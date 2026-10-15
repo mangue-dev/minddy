@@ -275,6 +275,25 @@ export function PageEditor({
     []
   );
 
+  // The "@" plugin keeps the options it was created with: when the extension
+  // list changes, tiptap only calls setOptions and never rebuilds plugins.
+  // Configure it once with readers of the latest mentions, so a new catalog
+  // (a save, a renamed page, the index arriving) neither rebuilds every
+  // extension nor leaves the suggestions on the first list.
+  const mentionsRef = useRef(mentions);
+  mentionsRef.current = mentions;
+  const hasMentions = mentions !== undefined;
+  const mentionSuggest = useMemo(
+    () =>
+      hasMentions
+        ? MentionSuggest.configure({
+            items: () => mentionsRef.current?.items() ?? [],
+            onQuery: () => mentionsRef.current?.onQuery?.(),
+          })
+        : null,
+    [hasMentions]
+  );
+
   const extensions = useMemo(
     () =>
       [
@@ -303,7 +322,7 @@ export function PageEditor({
           },
           extensions: { codeBlock: codeBlockEditorExtension() },
         }),
-        ...(mentions ? [MentionSuggest.configure(mentions)] : []),
+        ...(mentionSuggest ? [mentionSuggest] : []),
         // “->” becomes “→” under the fingers, as in the notebook and in
         // <MarkdownEditor> (components/editor-arrows.ts). An INPUT rule,
         // so nothing in the diagram: the markdown projection sees nothing, and
@@ -326,7 +345,7 @@ export function PageEditor({
         // takes ⌫ and ↑ only if no one else wanted them (title-bridge.ts).
         TitleBridge.configure({ onLeaveTop: leaveTop }),
       ] as unknown as Extensions,
-    [placeholderFor, slashItems, mentions, leaveTop]
+    [placeholderFor, slashItems, mentionSuggest, leaveTop]
   );
 
   // Activity destroys editor instances while retaining React refs. Keep the

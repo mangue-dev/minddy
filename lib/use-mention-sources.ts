@@ -14,7 +14,7 @@
 // the palette (lib/palette-index-merge): a ticket created ten seconds ago is
 // immediately quotable, and a deleted ticket ceases to be cited.
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { displayName } from "@/lib/display-name";
@@ -44,6 +44,21 @@ import type {
   MentionProject,
 } from "@/lib/mention-scan";
 import type { Member } from "@/lib/types";
+
+const NO_PAGES: MentionPage[] = [];
+
+function sameMentionPages(a: MentionPage[], b: MentionPage[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (page, i) =>
+        page.id === b[i].id &&
+        page.project_id === b[i].project_id &&
+        page.title === b[i].title &&
+        page.icon === b[i].icon
+    )
+  );
+}
 
 export interface MentionSources {
   projects: MentionProject[];
@@ -143,18 +158,26 @@ export function useMentionSources(
     freshObjectives,
   ]);
 
+  // Every save acknowledgement patches `version` and `updated_at` into the
+  // pages list, which a mention never reads. Keep the previous list while the
+  // cited fields are unchanged, so the options, the scanner and the links do
+  // not rebuild for a save.
+  const previousPages = useRef<MentionPage[]>(NO_PAGES);
   const pages = useMemo<MentionPage[]>(() => {
-    if (!projectId) return [];
-    const rows = exactProjectId && !pagesLoading
-      ? projectPages
-      : (index?.pages ?? []).filter((page) => page.project_id === projectId);
-    return rows.map((page) => ({
+    const rows = !projectId
+      ? []
+      : exactProjectId && !pagesLoading
+        ? projectPages
+        : (index?.pages ?? []).filter((page) => page.project_id === projectId);
+    const next = rows.map((page) => ({
       id: page.id,
       project_id: page.project_id,
       title: page.title,
       icon: page.icon,
     }));
+    return sameMentionPages(previousPages.current, next) ? previousPages.current : next;
   }, [projectId, exactProjectId, pagesLoading, projectPages, index?.pages]);
+  previousPages.current = pages;
 
   return { projects: mentionProjects, issues, objectives, pages, armNow };
 }
@@ -240,7 +263,9 @@ export function useDescriptionMentions(
     useMentionSources(projectId);
   const links = useMentionLinksFor({ issues, objectives, pages }, onOpenIssue);
 
-  const options = useMemo<MentionOption[]>(
+  // Split from the pages: renaming a page rebuilds its few rows, not the
+  // thousands of ticket rows of the index.
+  const entityOptions = useMemo<MentionOption[]>(
     () => [
       ...members.map((m) => ({
         type: "member" as const,
@@ -271,6 +296,12 @@ export function useDescriptionMentions(
         label: o.name,
         color: o.color,
       })),
+    ],
+    [members, projects, issues, objectives],
+  );
+  const options = useMemo<MentionOption[]>(
+    () => [
+      ...entityOptions,
       // A page WITHOUT A TITLE is not quotable: “@” followed by nothing denotes
       // nothing, and the pill would appear empty.
       ...pages
@@ -282,7 +313,7 @@ export function useDescriptionMentions(
           icon: p.icon,
         })),
     ],
-    [members, projects, issues, objectives, pages],
+    [entityOptions, pages],
   );
 
   const scan = useMemo(
