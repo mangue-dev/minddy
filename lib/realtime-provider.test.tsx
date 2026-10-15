@@ -7,6 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeProvider } from "./realtime-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
 import { recordAcceptedPageWrite } from "./optimistic-page-writes";
+import { globalBoardQueryFn } from "./global-board-api";
+import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import type { GlobalBoardResponse, Issue } from "./types";
 
 const realtime = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -19,8 +22,10 @@ vi.mock("./supabase", () => ({ getSupabase: () => ({
   rpc: realtime.rpc,
   channel: realtime.channel,
   removeChannel: realtime.removeChannel,
-  realtime: { setAuth: realtime.setAuth },
-  auth: { onAuthStateChange: (listener: (event: AuthChangeEvent) => void) => {
+  realtime: { setAuth: realtime.setAuth, isConnected: () => true, connect: vi.fn(),
+    sendHeartbeat: async () => {}, pendingHeartbeatRef: null },
+  auth: { getSession: async () => ({ data: { session: { user: { id: "user-1" } } }, error: null }),
+    onAuthStateChange: (listener: (event: AuthChangeEvent) => void) => {
     realtime.authListeners.add(listener);
     return { data: { subscription: { unsubscribe: () =>
       realtime.authListeners.delete(listener) } } };
@@ -324,5 +329,55 @@ describe("own page write echoes", () => {
     await update(page(18, later));
     await advance(250);
     expect(invalidated().slice(before)).toEqual(expect.arrayContaining(DOCUMENT_KEYS));
+  });
+});
+
+describe("remote ticket changes on the aggregate board", () => {
+  const row = (status: string, updatedAt: string) => ({ id: "issue-1", project_id: "project-1", title: "Ticket", status,
+    category_ids: [], created_at: "2026-10-15T10:00:00.000Z", updated_at: updatedAt }) as unknown as Issue;
+  const board = (issues: Issue[]): GlobalBoardResponse => ({ issues, members: {}, categories: {}, objectives: {},
+    integrations: {}, relations: [], cycles: { enabled: false, current: null, upcoming: [], past: [] } });
+  const at = "2026-10-15T10:00:00.000Z", later = "2026-10-15T10:00:05.000Z";
+  async function observedBoard() {
+    const fetch = vi.fn(async (path: string) => path.startsWith("/api/me/board")
+      ? Response.json(board([row("todo", at)]))
+      : path === "/api/issues/issue-1"
+        ? Response.json({ ...row("done", later), github_metadata: null })
+        : Response.json({ error: "Unexpected" }, { status: 500 }));
+    vi.stubGlobal("fetch", fetch);
+    client.setQueryData(GLOBAL_BOARD_KEY, board([row("todo", at)]));
+    const stop = new QueryObserver(client, { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: Infinity }).subscribe(() => {});
+    await mount();
+    await advance(1_000);
+    fetch.mockClear();
+    const paths = () => fetch.mock.calls.map(([path]) => path.split("?")[0]);
+    return { stop, paths };
+  }
+
+  it("reads only the changed ticket for a remote metadata broadcast", async () => {
+    const { stop, paths } = await observedBoard();
+    try {
+      const index = realtime.channel.mock.calls.findIndex(([topic]) => topic === "project:project-1:v:1");
+      const update = realtime.channel.mock.results[index].value.on.mock.calls
+        .find(([, filter]: [unknown, { event: string }]) => filter.event === "UPDATE")![2];
+      const metadata = { id: "issue-1", project_id: "project-1", updated_at: later };
+      await act(async () => update({ payload: { operation: "UPDATE", table: "issues", schema: "public", record: metadata, old_record: metadata } }));
+      await advance(250);
+      await advance(0);
+      expect(paths()).toEqual(["/api/issues/issue-1"]);
+      expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues[0]).toMatchObject({ status: "done", updated_at: later });
+    } finally { stop(); }
+  });
+
+  it("does not read every issue twice when the window comes back", async () => {
+    const { stop, paths } = await observedBoard();
+    try {
+      await act(async () => window.dispatchEvent(new Event("blur")));
+      await advance(20_000);
+      await act(async () => window.dispatchEvent(new Event("focus")));
+      await advance(1_000);
+      expect(paths()).not.toContain("/api/me/issues");
+      expect(paths().filter((path) => path === "/api/me/board")).toHaveLength(1);
+    } finally { stop(); }
   });
 });

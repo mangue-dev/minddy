@@ -174,6 +174,22 @@ describe("keysForProjectEvent — pages", () => {
   });
 });
 
+describe("keysForProjectEvent — remote tickets", () => {
+  const ISSUE = "55555555-5555-4555-8555-555555555555";
+  const board = (event: BroadcastChange) => keysForProjectEvent(event, PROJECT).filter((k) => JSON.stringify(k.key) === '["me","board"]');
+
+  it("names the changed ticket so the board can read it alone", () => {
+    const metadata = { id: ISSUE, project_id: PROJECT, updated_at: "2026-10-15T10:00:00.000Z" };
+    expect(board(change("issues", { operation: "UPDATE", record: metadata, old_record: metadata })))
+      .toEqual([{ key: ["me", "board"], refetch: "active", issueId: ISSUE }]);
+    expect(board(change("issue_categories", { operation: "DELETE", old_record: { issue_id: ISSUE, category_id: "c" } })))
+      .toEqual([{ key: ["me", "board"], refetch: "active", issueId: ISSUE }]);
+    expect(hasKey(keysForProjectEvent(change("issues", { record: metadata }), PROJECT), ["issues", PROJECT])).toBe(true);
+    // Without a ticket id the whole board is still refetched.
+    expect(board(change("issue_categories", { record: { category_id: "c" } }))).toEqual([{ key: ["me", "board"], refetch: "active" }]);
+  });
+});
+
 describe("keysForProjectEvent — issue relations", () => {
   const relation: IssueRelation & Record<string, unknown> = { id: "22222222-2222-4222-8222-222222222222", project_id: PROJECT, source_id: "a", source_type: "issue", target_id: "b", target_type: "issue", type: "blocks" };
   const checks = (client: QueryClient, event: BroadcastChange) => Object.fromEntries(

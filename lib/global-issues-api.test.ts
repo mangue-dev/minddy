@@ -1,11 +1,12 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GLOBAL_BOARD_KEY, insertIssueEverywhere, issueWrites, patchIssueEverywhere, removeIssueEverywhere } from "./optimistic/issue-writes";
 import {
   mergeIssueSnapshot,
   reconcileGlobalIssueSnapshot,
   reconcileProjectIssuesInGlobalCache,
-  shouldRefreshGlobalIssueSnapshot,
+  refreshBoardIssues,
+  MAX_BOARD_ISSUE_READS,
   refreshGlobalIssueSnapshot,
   GLOBAL_ISSUES_KEY,
 } from "./global-issues-api";
@@ -332,28 +333,94 @@ describe("Kanban cache reconciliation", () => {
   });
 });
 
-describe("shouldRefreshGlobalIssueSnapshot", () => {
-  // The snapshot re-reads every issue; on a cold start it must not duplicate
-  // the aggregate board read that is still in flight.
-  const boardQuery = (observers: number, data?: unknown) => ({
-    getObserversCount: () => observers,
-    state: { data },
+
+describe("refreshBoardIssues", () => {
+  // A remote ticket change on an observed board reads that ticket alone.
+  function observedBoard(rows: Issue[]) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(GLOBAL_BOARD_KEY, board(rows));
+    const stop = new QueryObserver(client, { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: Infinity }).subscribe(() => {});
+    return { client, close: () => { stop(); client.clear(); } };
+  }
+  const later = "2026-08-26T12:00:05.000Z";
+
+  it("patches the changed ticket from its own read and leaves the rest untouched", async () => {
+    const { client, close } = observedBoard([issue("a", "p1", "todo", 1), issue("b", "p2", "todo", 2)]);
+    const [, untouched] = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+    const fetch = vi.fn(async (path: string) => path === "/api/issues/a"
+      ? Response.json({ ...issue("a", "p1", "done", 1), updated_at: later, github_metadata: null })
+      : path === "/api/issues/c"
+        ? Response.json({ ...issue("c", "p1", "todo", 3), updated_at: later, github_metadata: null })
+        : Response.json({ error: "Unexpected" }, { status: 500 }));
+    vi.stubGlobal("fetch", fetch);
+    try {
+      await refreshBoardIssues(client, ["a", "c"]);
+      expect(fetch.mock.calls.map(([path]) => path).sort()).toEqual(["/api/issues/a", "/api/issues/c"]);
+      const issues = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+      expect(issues.map((row) => [row.id, row.status])).toEqual([["a", "done"], ["b", "todo"], ["c", "todo"]]);
+      expect(issues[0]).not.toHaveProperty("github_metadata");
+      expect(issues[1]).toBe(untouched);
+      expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(false);
+    } finally { close(); }
   });
 
-  it("does not fire while the board query has no data yet", () => {
-    const client = new QueryClient();
-    const pending = client.getQueryCache().build(client, { queryKey: GLOBAL_BOARD_KEY, queryFn: () => Promise.resolve(board([])) });
-    expect(shouldRefreshGlobalIssueSnapshot(pending)).toBe(false);
-    expect(shouldRefreshGlobalIssueSnapshot(boardQuery(1))).toBe(false);
+  it("removes a ticket that is no longer readable and keeps local edits and newer rows", async () => {
+    const newer = { ...issue("newer", "p1", "in_review", 2), updated_at: later };
+    const { client, close } = observedBoard([issue("gone", "p1", "todo", 1), newer, issue("edited", "p1", "todo", 3)]);
+    issueWrites.begin({ kind: "patch", id: "edited", patch: { status: "in_progress" } });
+    patchIssueEverywhere(client, "p1", "edited", { status: "in_progress" });
+    vi.stubGlobal("fetch", vi.fn(async (path: string) => path === "/api/issues/gone"
+      ? Response.json({ error: "Not found" }, { status: 404 })
+      : path === "/api/issues/newer"
+        ? Response.json(issue("newer", "p1", "todo", 2))
+        : Response.json({ ...issue("edited", "p1", "done", 3), updated_at: later })));
+    try {
+      await refreshBoardIssues(client, ["gone", "newer", "edited"]);
+      const issues = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+      expect(issues.map((row) => [row.id, row.status])).toEqual([["newer", "in_review"], ["edited", "in_progress"]]);
+    } finally { close(); }
   });
 
-  it("fires for a mounted board that already carries data", () => {
-    expect(shouldRefreshGlobalIssueSnapshot(boardQuery(1, board([])))).toBe(true);
+  it.each([
+    ["a failed ticket read", () => Response.json({ error: "Read failed" }, { status: 500 }), ["x"]],
+    ["too many tickets", () => Response.json(issue("x", "p1", "todo", 1)), Array.from({ length: MAX_BOARD_ISSUE_READS + 1 }, (_, index) => `id-${index}`)],
+  ] as const)("falls back to the full board read after %s", async (_case, respond, ids) => {
+    const { client, close } = observedBoard([issue("x", "p1", "todo", 1)]);
+    const fetch = vi.fn(async (path: string) => path.startsWith("/api/me/board") ? Response.json(board([issue("x", "p1", "done", 1)])) : respond());
+    vi.stubGlobal("fetch", fetch);
+    try {
+      await refreshBoardIssues(client, [...ids]);
+      await vi.waitFor(() => expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues[0].status).toBe("done"));
+      expect(fetch.mock.calls.filter(([path]) => path.startsWith("/api/me/board"))).toHaveLength(1);
+    } finally { close(); }
   });
 
-  it("ignores an unmounted board and absent queries", () => {
-    expect(shouldRefreshGlobalIssueSnapshot(boardQuery(0, board([])))).toBe(false);
-    expect(shouldRefreshGlobalIssueSnapshot(null)).toBe(false);
-    expect(shouldRefreshGlobalIssueSnapshot(undefined)).toBe(false);
+  it("lands on top of a board read already in flight instead of restarting it", async () => {
+    const { client, close } = observedBoard([issue("x", "p1", "todo", 1)]);
+    let finish!: (response: Response) => void;
+    const fetch = vi.fn((path: string) => path.startsWith("/api/me/board")
+      ? new Promise<Response>((resolve) => { finish = resolve; })
+      : Promise.resolve(Response.json({ ...issue("x", "p1", "done", 1), updated_at: later })));
+    vi.stubGlobal("fetch", fetch);
+    try {
+      void client.refetchQueries({ queryKey: GLOBAL_BOARD_KEY });
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      const refresh = refreshBoardIssues(client, ["x"]);
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      // The in-flight read predates the change and still answers with the old row.
+      finish(Response.json(board([issue("x", "p1", "todo", 1)])));
+      await refresh;
+      expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues[0].status).toBe("done");
+      expect(fetch.mock.calls.filter(([path]) => path.startsWith("/api/me/board"))).toHaveLength(1);
+    } finally { close(); }
+  });
+
+  it("only marks an unobserved board stale", async () => {
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    const idle = new QueryClient();
+    idle.setQueryData(GLOBAL_BOARD_KEY, board([issue("x", "p1", "todo", 1)]));
+    await refreshBoardIssues(idle, ["x"]);
+    expect(idle.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

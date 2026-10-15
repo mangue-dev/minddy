@@ -38,6 +38,12 @@ export type RefetchMode = "active" | "none";
 export interface Invalidation {
   key: QueryKey;
   refetch: RefetchMode;
+  /**
+   * Set on the aggregate board for a remote ticket change: the provider may
+   * read only this ticket instead of the whole board
+   * (lib/global-issues-api.ts refreshBoardIssues).
+   */
+  issueId?: string;
 }
 
 // Caches that aggregate several projects. A project event has to reach them too
@@ -291,16 +297,21 @@ export function keysForProjectEvent(
     // index all derive from issues (MIN-89). Plan progress on the cards and in
     // the side panel rides the same ["issues", projectId] cache.
     case "issues":
-    case "issue_categories": // issues are cached hydrated with category_ids
+    case "issue_categories": { // issues are cached hydrated with category_ids
       // The echo of OUR own writing (MIN-156): the two ticket caches
       // already carry the server line, merged when the PATCH returns. THE
       // refresh could not learn anything — but would open the window
       // race that we have just closed. Events from other clients (Numo,
       // MCP, teammates) do not match any local writing and therefore pass
       // unchanged, like derived views that are not patched.
-      return isOwnEcho(change)
-        ? ISSUE_DERIVED_KEYS
+      if (isOwnEcho(change)) return ISSUE_DERIVED_KEYS;
+      // Protected broadcasts carry metadata only, so the changed ticket is
+      // read back; the board itself is refetched only when that cannot work.
+      const issueId = change.table === "issues" ? routingRecord(change)?.id : issueIdOf(change);
+      return typeof issueId === "string" && issueId
+        ? [active(["issues", projectId]), { key: GLOBAL_BOARD_KEY, refetch: "active", issueId }, ...ISSUE_DERIVED_KEYS]
         : [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
+    }
     case "issue_relations":
       return [active(["issue-relations", projectId]), active(GLOBAL_BOARD_KEY)];
     // An objective is copied into TWO caches: that of its project and the

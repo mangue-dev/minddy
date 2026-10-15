@@ -42,8 +42,7 @@ import {
   INITIAL_CATCH_UP_COALESCE_MS,
   type CatchUpQueue,
 } from "./realtime-catch-up";
-import { refreshGlobalIssueSnapshot, shouldRefreshGlobalIssueSnapshot } from "./global-issues-api";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { refreshBoardIssues } from "./global-issues-api";
 import { trace } from "./desktop/trace";
 import { getDesktopBridge } from "./desktop/bridge";
 import type { Project } from "./types";
@@ -157,9 +156,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   // Trailing per-key coalescing: the first event schedules the invalidation,
   // followers within the window ride along.
   // `echoes` is null as soon as one coalesced event is not a possible own echo.
+  // `issueIds` is null as soon as one coalesced board event names no ticket.
   const timers = useRef(new Map<string, {
     timer: ReturnType<typeof setTimeout>;
     echoes: ((client: QueryClient) => boolean)[] | null;
+    issueIds: Set<string> | null;
   }>());
   useEffect(() => {
     const map = timers.current;
@@ -169,7 +170,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const invalidateCoalesced = useCallback(
-    ({ key, refetch }: Invalidation, ownEcho?: (client: QueryClient) => boolean) => {
+    ({ key, refetch, issueId }: Invalidation, ownEcho?: (client: QueryClient) => boolean) => {
       // The mode is part of the coalescing identity: a "none" event must never
       // swallow a pending "active" one for the same key.
       const k = `${refetch}:${JSON.stringify(key)}`;
@@ -179,15 +180,25 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           if (ownEcho) pending.echoes.push(ownEcho);
           else pending.echoes = null;
         }
+        if (pending.issueIds) {
+          if (issueId) pending.issueIds.add(issueId);
+          else pending.issueIds = null;
+        }
         return;
       }
       const entry = {
         echoes: ownEcho ? [ownEcho] : null,
+        issueIds: issueId ? new Set([issueId]) : null,
         timer: setTimeout(() => {
           timers.current.delete(k);
           // Every coalesced event must echo an accepted own write; one remote
           // change in the window keeps the refetch.
           if (entry.echoes?.every((echo) => echo(queryClient))) return;
+          // Remote ticket changes only: read those tickets, not the whole board.
+          if (entry.issueIds) {
+            void refreshBoardIssues(queryClient, [...entry.issueIds]);
+            return;
+          }
           void queryClient.invalidateQueries({
             queryKey: key,
             refetchType: refetch,
@@ -241,20 +252,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         keys: keys.length,
         cache: queryClient.getQueryCache().getAll().length,
       });
-      const coversGlobalBoard = keys.some(
-        (key) =>
-          key.length === GLOBAL_BOARD_KEY.length &&
-          key.every((part, index) => part === GLOBAL_BOARD_KEY[index])
-      );
-      const globalBoard = queryClient.getQueryCache().find({
-        queryKey: GLOBAL_BOARD_KEY,
-        exact: true,
-      });
-      if (coversGlobalBoard && shouldRefreshGlobalIssueSnapshot(globalBoard)) {
-        void refreshGlobalIssueSnapshot(queryClient).catch(() => {
-          // The normal aggregate refetch remains the fallback.
-        });
-      }
+      // No separate all-issue snapshot here: a board covered by the catch-up
+      // is refetched by it whenever it is observed, and reading every issue
+      // twice doubled the server work of each resume.
       const queue = initialSubscription
         ? initialCatchUpQueue.current
         : catchUpQueue.current;
