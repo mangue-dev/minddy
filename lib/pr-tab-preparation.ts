@@ -509,24 +509,33 @@ export function createPrTabPreparation(
   const stopOnline = onlineManager.subscribe(resume);
   if (typeof document !== "undefined") document.addEventListener("visibilitychange", resume);
   if (typeof window !== "undefined") window.addEventListener("focus", resume);
+  const publishSelection = (href: string) => {
+    cancelScheduled();
+    clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
+    active = href;
+    const options = appTabPreparationQueries(client, href);
+    activeQueryHashes.clear();
+    for (const option of options) activeQueryHashes.add(hashKey(option.queryKey));
+    if (!options.length || options.some((option) => missing(option.queryKey))) {
+      for (const read of preparing.values()) if (!options.some((option) => hashKey(option.queryKey) === read.identity)) yieldRead(read);
+    }
+  };
   return {
+    /** Publish the selected destination before its foreground reads start: its
+     *  speculative reads keep their transport and unrelated ones yield. A later
+     *  visit() with the same destination completes the pass. */
+    select(href: string) {
+      if (!disposed) publishSelection(href);
+    },
     visit(href: string, hrefs: readonly string[]) {
       if (disposed) return;
-      cancelScheduled();
-      clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
-      active = href;
+      publishSelection(href);
       const counts = new Map<string, number>();
       visits.forEach((target) => counts.set(target, (counts.get(target) ?? 0) + 1));
       const ranked = [...new Set(hrefs)].filter((target) => target !== href).sort((a, b) =>
         (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || visits.lastIndexOf(b) - visits.lastIndexOf(a) ||
         Number(appTabRoute(a).section === "pull-requests") - Number(appTabRoute(b).section === "pull-requests"));
       available = [href, ...ranked].slice(0, RESTORED_TAB_PREPARATION_LIMIT);
-      const options = appTabPreparationQueries(client, href);
-      activeQueryHashes.clear();
-      for (const option of options) activeQueryHashes.add(hashKey(option.queryKey));
-      if (!options.length || options.some((option) => missing(option.queryKey))) {
-        for (const read of preparing.values()) if (!options.some((option) => hashKey(option.queryKey) === read.identity)) yieldRead(read);
-      }
       visits.push(href); if (visits.length > 32) visits.shift();
       attempted.clear(); rebuildManifest();
       // Public code has no account payload and must not wait for query transport.

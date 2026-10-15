@@ -107,6 +107,16 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   </NavigationContext.Provider></SessionContext.Provider>;
 }
 
+/** Run after the next paint. A hidden document paints nothing: wait one task. */
+function afterPaint(work: () => void): () => void {
+  let frame: number | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  if (typeof requestAnimationFrame === "function" && document.visibilityState === "visible") {
+    frame = requestAnimationFrame(() => { frame = undefined; timer = setTimeout(work, 0); });
+  } else timer = setTimeout(work, 0);
+  return () => { if (frame !== undefined) cancelAnimationFrame(frame); clearTimeout(timer); };
+}
+
 /** How long a successful write waits for its own realtime echo before reading the list itself. */
 const ECHO_FALLBACK_MS = 2_000;
 
@@ -179,19 +189,40 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
   }, [session, query.isPending, query.isError, query.refetch, onQueryState]);
   useEffect(() => {
     const preparation = createPrTabPreparation(client);
-    let previous = "";
-    const visit = () => {
+    // `published`: the destination preparation protects; `selected`: it was
+    // published without the full pass that ranks and rebuilds the working set.
+    let previous = "", published = "", selected = false;
+    let cancel: (() => void) | undefined;
+    const current = () => {
       const state = session.getSnapshot();
       const active = state.tabs.find((tab) => tab.id === state.activeId);
-      if (!active) return;
-      const identity = JSON.stringify([active.id, active.href, state.tabs.map((tab) => tab.href)]);
-      if (identity === previous) return;
-      previous = identity;
-      startupAdmission.handoff(() => preparation.visit(active.href, state.tabs.map((tab) => tab.href)));
+      if (!active) return null;
+      const hrefs = state.tabs.map((tab) => tab.href);
+      return { href: active.href, hrefs, identity: JSON.stringify([active.id, active.href, hrefs]) };
     };
-    const stop = session.subscribe(visit);
+    const visit = () => {
+      cancel = undefined;
+      const next = current();
+      if (!next || (next.identity === previous && !selected)) return;
+      previous = next.identity; published = next.href; selected = false;
+      startupAdmission.handoff(() => preparation.visit(next.href, next.hrefs));
+    };
+    // The startup visit hands admission over synchronously. After that, a
+    // switch publishes its destination at once, before the incoming view's
+    // foreground reads start, and the full pass follows its paint.
+    const changed = () => {
+      if (!previous) { visit(); return; }
+      const next = current();
+      if (!next || (next.identity === previous && !selected)) return;
+      if (next.href !== published) {
+        published = next.href; selected = true;
+        preparation.select(next.href);
+      }
+      cancel ??= afterPaint(visit);
+    };
+    const stop = session.subscribe(changed);
     visit();
-    return () => { stop(); preparation.dispose(); };
+    return () => { stop(); cancel?.(); preparation.dispose(); };
   }, [client, session, startupAdmission]);
   useEffect(() => {
     lifetime.active = true;

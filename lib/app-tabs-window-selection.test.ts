@@ -22,7 +22,7 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/components/app-tab-route-sync", () => ({ AppTabRouteSync: () => null }));
 vi.mock("./use-pr-background", () => ({ PrBackgroundSync: () => null }));
-vi.mock("./pr-tab-preparation", () => ({ createPrTabPreparation: () => ({ visit, dispose: vi.fn() }) }));
+vi.mock("./pr-tab-preparation", () => ({ createPrTabPreparation: () => ({ visit, select: vi.fn(), dispose: vi.fn() }) }));
 vi.mock("./prefetch-tab-destination", () => ({
   prefetchAppTabDestination: vi.fn(), isPreparedAppTabDestination: () => false,
 }));

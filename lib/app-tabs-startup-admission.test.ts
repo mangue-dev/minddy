@@ -14,6 +14,7 @@ const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null,
 const viewport = vi.hoisted(() => ({ mobile: false as boolean | undefined }));
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }));
 const visit = vi.hoisted(() => vi.fn());
+const select = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => auth }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => ({ auth: {
@@ -23,7 +24,7 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/components/app-tab-route-sync", () => ({ AppTabRouteSync: () => null }));
 vi.mock("@/lib/use-pr-background", () => ({ PrBackgroundSync: () => null }));
-vi.mock("@/lib/pr-tab-preparation", () => ({ createPrTabPreparation: () => ({ visit, dispose: vi.fn() }) }));
+vi.mock("@/lib/pr-tab-preparation", () => ({ createPrTabPreparation: () => ({ visit, select, dispose: vi.fn() }) }));
 vi.mock("@/lib/prefetch-tab-destination", () => ({
   prefetchAppTabDestination: vi.fn(), isPreparedAppTabDestination: () => false,
 }));
@@ -69,6 +70,7 @@ beforeEach(() => {
   viewport.mobile = false;
   vi.clearAllMocks();
   visit.mockReset();
+  select.mockReset();
   invalidateLocalSnapshotWrites();
   sessionStorage.clear();
   window.history.replaceState(null, "", "/home");
@@ -167,6 +169,30 @@ describe("mounted restored-tab startup admission", () => {
     worker.release();
     expect(navigationPreparationPending(client)).toBe(false);
     stop();
+  });
+
+  it("publishes an activation's destination at once and prepares the rest after it paints", async () => {
+    await render(false);
+    reads[0].finish(rows()); await settle();
+    expect(visit).toHaveBeenCalledOnce();
+    expect(select).not.toHaveBeenCalled();
+    await act(async () => { await value!.session.activate(secondId); });
+    expect(value?.activeId).toBe(secondId);
+    expect(visit).toHaveBeenCalledOnce();
+    expect(select).toHaveBeenCalledExactlyOnceWith("/all");
+    await vi.waitFor(() => expect(visit).toHaveBeenCalledTimes(2));
+    expect(visit).toHaveBeenLastCalledWith("/all", ["/home", "/all"]);
+    // Switches within one frame share one full pass for the newest destination.
+    await act(async () => {
+      await value!.session.activate(firstId);
+      await value!.session.activate(secondId);
+    });
+    expect(select.mock.calls.slice(1)).toEqual([["/home"], ["/all"]]);
+    await vi.waitFor(() => expect(visit).toHaveBeenCalledTimes(3));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(visit).toHaveBeenCalledTimes(3);
+    expect(visit).toHaveBeenLastCalledWith("/all", ["/home", "/all"]);
+    expect(navigationPreparationPending(client)).toBe(false);
   });
 
   it("releases optional admission after the ordinary canonical query exhausts its retries", async () => {
