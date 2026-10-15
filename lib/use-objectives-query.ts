@@ -22,6 +22,8 @@ import type {
 } from "./types";
 
 const objectivesKey = (projectId: string) => ["objectives", projectId] as const;
+// Stable until the list loads, so memos keyed on it do not rerun every render.
+const NO_OBJECTIVES: Objective[] = [];
 
 export function useObjectivesQuery(projectId: string | null) {
   const queryClient = useQueryClient();
@@ -116,7 +118,7 @@ export function useObjectivesQuery(projectId: string | null) {
   );
 
   return {
-    objectives: (data ?? []) as Objective[],
+    objectives: (data ?? NO_OBJECTIVES) as Objective[],
     loading: enabled && isPending,
     createObjective,
     updateObjective,

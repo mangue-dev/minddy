@@ -47,9 +47,9 @@ import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
 import {
   pageHref,
   pagesHref,
-  pushPagesHistory,
   replacePagesHistory,
 } from "@/lib/pages-navigation";
+import { usePaletteDataGroups, useWikiPageNavigation } from "@/lib/use-palette-data-groups";
 import {
   useOpenPullRequestCountQuery,
 } from "@/lib/use-agent-runs";
@@ -312,18 +312,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // display, and nothing else reports them once you leave the home.
   const { invitations } = useMyInvitations();
   const inboxCount = unreadCount + invitations.length;
-  const navigateToWikiPage = useCallback(
-    (projectId: string, pageId: string) => {
-      const href = pageHref(projectId, pageId);
-      const base = pagesHref(projectId);
-      if (pathname === base || pathname.startsWith(`${base}/`)) {
-        openDestination(href, () => pushPagesHistory(href));
-      } else {
-        router.push(href);
-      }
-    },
-    [pathname, router, openDestination]
-  );
+  const navigateToWikiPage = useWikiPageNavigation(pathname, router, openDestination);
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();
   const mobileLayout = useMobileLayout() === true;
@@ -425,12 +414,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     pathname,
     searchParams.get("objective"),
   );
+  const objectivesProjectId =
+    currentProjectId && (paletteOpen || !!objectiveBoardId)
+      ? currentProjectId
+      : null;
   const { objectives: projectObjectives, loading: objectivesLoading } =
-    useObjectivesQuery(
-      currentProjectId && (paletteOpen || !!objectiveBoardId)
-        ? currentProjectId
-        : null,
-    );
+    useObjectivesQuery(objectivesProjectId);
   // The current project wiki pages, for ⌘K (MIN-270). Same cache as
   // the tree of the Pages tab: opening the tab does not ask for anything, and a page
   // fame there changes name in the palette without going back and forth.
@@ -519,10 +508,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         // An empty array means "this project has none" — but it also means "not
         // loaded yet", and replacing the index's rows with that would blink the
         // current project's objectives out of the list. Keep the index until the
-        // real answer lands.
-        objectivesLoading ? null : projectObjectives
+        // real answer lands. A disabled query has no answer either: its empty
+        // list is new on every render and would rebuild the closed model.
+        objectivesLoading || !objectivesProjectId ? null : projectObjectives
       ),
-    [searchIndex, currentProjectId, projectObjectives, objectivesLoading]
+    [searchIndex, currentProjectId, projectObjectives, objectivesLoading, objectivesProjectId]
   );
 
   // Triage is a hidden issue status — the sidebar counter derives from the
@@ -1173,20 +1163,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // Prepare the full model during the palette's idle warmup and retain it
   // between openings. Narrow windows also need the full model when a keyboard
   // shortcut opens the palette.
-  const desktopDataGroups = useMemo(
-    () =>
-      paletteMounted && (!mobileLayout || paletteOpen)
-        ? buildDataGroups(paletteIssues, paletteObjectives, palettePages)
-        : [],
-    [
-      paletteMounted,
-      mobileLayout,
-      paletteOpen,
-      buildDataGroups,
-      paletteIssues,
-      paletteObjectives,
-      palettePages,
-    ]
+  const desktopDataGroups = usePaletteDataGroups(
+    { mounted: paletteMounted, mobileLayout, open: paletteOpen },
+    buildDataGroups,
+    paletteIssues,
+    paletteObjectives,
+    palettePages,
   );
 
 

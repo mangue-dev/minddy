@@ -12,6 +12,10 @@ import type { SavedView } from "./types";
 
 export const savedViewsQueryKey = ["saved-views"] as const;
 
+// Stable while the list has never loaded: the palette maps its whole model
+// again whenever this array changes.
+const NO_SAVED_VIEWS: SavedView[] = [];
+
 /**
  * My saved views (the command palette). They live on base to
  * follow the account from one device to another; the list is short and only changes
@@ -58,7 +62,7 @@ export function useSavedViewsQuery(enabled = true) {
   );
 
   return {
-    savedViews: (data ?? []) as SavedView[],
+    savedViews: (data ?? NO_SAVED_VIEWS) as SavedView[],
     loading: isPending,
     createSavedView,
     renameSavedView,
