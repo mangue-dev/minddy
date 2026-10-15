@@ -57,6 +57,35 @@ export async function accessibleProjectIds(
   ]);
 }
 
+/**
+ * The access decision of `getProjectAccess` without decoding the project, for
+ * routes that only need to know whether the caller may use it. The project
+ * row and the membership probe are read together in this request.
+ */
+export async function hasProjectAccess(
+  userId: string,
+  projectId: string
+): Promise<{ isOwner: boolean } | null> {
+  const supabase = getServiceClient();
+  const [{ data: project }, { data: membership }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, owner_id")
+      .eq("id", projectId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("project_id", projectId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+  if (!project) return null;
+  const isOwner = project.owner_id === userId;
+  return isOwner || membership ? { isOwner } : null;
+}
+
 export async function getProjectAccess(
   userId: string,
   projectId: string

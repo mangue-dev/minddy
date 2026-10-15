@@ -10713,14 +10713,28 @@
     "file": "lib/server/project-access.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 66,
+    "line": 71,
     "storage": false
   },
   {
     "file": "lib/server/project-access.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 86,
+    "line": 77,
+    "storage": false
+  },
+  {
+    "file": "lib/server/project-access.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 95,
+    "storage": false
+  },
+  {
+    "file": "lib/server/project-access.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 115,
     "storage": false
   },
   {
