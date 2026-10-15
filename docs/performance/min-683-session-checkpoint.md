@@ -1,5 +1,13 @@
 # MIN-683: session checkpoint, 2026-10-14
 
+## Latest tab switching pass (2026-10-16)
+
+Read [the tab switching pass](min-683-tab-switching.md) first. It adds a tab
+switching collector, measures hot switches and early first visits on web and
+native, keeps eleven fixes (retained reveal, cold preparation, reveal freshness,
+ten retained views), rejects three and attributes the remaining hot-switch cost
+to the shell re-render after the URL change and board layerization.
+
 ## Latest global fluidity pass (2026-10-15)
 
 Read [the fluidity pass](min-683-fluidity-pass.md) first. Measurements now use a
