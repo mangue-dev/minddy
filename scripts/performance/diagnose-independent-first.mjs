@@ -123,14 +123,17 @@ async function runCase(spec) {
       activeProfile = await mkdtemp(path.join(tmpdir(), "minddy-min683-independent-"));
       const env = Object.fromEntries(["PATH", "HOME", "TMPDIR", "LANG"].filter((key) => process.env[key]).map((key) => [key, process.env[key]]));
       Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: activeProfile });
-      activeApp = await _electron.launch({ args: [`--user-data-dir=${activeProfile}`, path.join(root, "desktop")], cwd: path.join(root, "desktop"), env, timeout: 30000 });
+      // The optional local HTTP/2 proxy (h2-proxy.mjs) uses a self-signed localhost certificate.
+      const tlsArgs = base.startsWith("https:") ? ["--ignore-certificate-errors"] : [];
+      activeApp = await _electron.launch({ args: [...tlsArgs, `--user-data-dir=${activeProfile}`, path.join(root, "desktop")], cwd: path.join(root, "desktop"), env, timeout: 30000 });
       const runtime = await activeApp.evaluate(({ app }) => ({ packaged: app.isPackaged, userData: app.getPath("userData"), sessionData: app.getPath("sessionData"),
         electron: process.versions.electron, chromium: process.versions.chrome }));
       assert.equal(runtime.packaged, false); assert.equal(runtime.userData, activeProfile); assert.equal(runtime.sessionData, activeProfile);
       row.versions = { electron: runtime.electron, chromium: runtime.chromium };
       activeContext = activeApp.context();
     } else {
-      activeContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light", locale: "en-US" });
+      activeContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light", locale: "en-US",
+        ignoreHTTPSErrors: base.startsWith("https:") });
       row.versions = { chromium: browser.version(), headless: false };
     }
     await activeContext.addCookies(cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })));

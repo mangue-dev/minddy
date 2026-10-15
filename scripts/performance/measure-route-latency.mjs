@@ -3,6 +3,8 @@
 // Each route gets warm-up requests, then sequential measured requests, so routes never compete.
 // Usage: MINDDY_PERF_BASE_URL=https://localhost:3443 node scripts/performance/measure-route-latency.mjs <label> [samples]
 import { readFile, writeFile } from "node:fs/promises";
+import http from "node:http";
+import https from "node:https";
 import { openFixture } from "./stable-restored-tabs.mjs";
 import { secondaryManifestPath } from "./enrich-secondary-workload.mjs";
 
@@ -25,14 +27,19 @@ const routes = [
   "/api/agent-runs",
 ];
 const headers = { Cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; "), "Accept-Encoding": "br" };
-if (base.startsWith("https:")) process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// Certificate validation stays on: the local HTTP/2 proxy's self-signed certificate is trusted explicitly.
+const tls = base.startsWith("https:") ? { ca: await readFile("output/playwright/performance/h2-proxy-cert/cert.pem") } : {};
+const agent = new (base.startsWith("https:") ? https : http).Agent({ keepAlive: true, ...tls });
 
-async function time(route) {
-  const started = performance.now();
-  const response = await fetch(`${base}${route}`, { headers });
-  const firstByte = performance.now() - started;
-  await response.arrayBuffer();
-  return { status: response.status, firstByte, total: performance.now() - started };
+function time(route) {
+  return new Promise((resolve, reject) => {
+    const started = performance.now();
+    (base.startsWith("https:") ? https : http).get(`${base}${route}`, { headers, agent }, (response) => {
+      const firstByte = performance.now() - started;
+      response.on("data", () => {});
+      response.on("end", () => resolve({ status: response.statusCode, firstByte, total: performance.now() - started }));
+    }).on("error", reject);
+  });
 }
 
 const results = {};
@@ -46,5 +53,6 @@ for (const route of routes) {
     min: Math.round(sorted[0]), max: Math.round(sorted.at(-1)), samples: runs.map((run) => Math.round(run.total)) };
   console.log(JSON.stringify({ route: key, ...results[key], samples: undefined }));
 }
+agent.destroy();
 await session.close();
 await writeFile(`output/playwright/performance/${label}.json`, JSON.stringify({ label, base, samples, results }, null, 2));
