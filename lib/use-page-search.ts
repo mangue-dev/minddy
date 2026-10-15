@@ -21,7 +21,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { usePaletteStore } from "@/lib/command-palette";
+import { usePaletteStore } from "@/lib/command-palette/store";
 
 import type { PageSearchHit } from "./types";
 import { pageContentSearchQuery } from "./page-content-search-query";
@@ -37,10 +37,15 @@ const EMPTY_HITS: PageSearchHit[] = [];
  * Pages whose CONTENT meets what is typed in ⌘K, all projects
  * combined. Empty as long as the palette is closed: it returns nothing, and the
  * request would have no one to serve.
+ *
+ * The host re-renders only when the query crosses MIN_QUERY or the debounced
+ * query settles, never on each keystroke: the query is followed through a
+ * store subscription, so typing stays inside the palette's own search view.
  */
 export function usePageContentSearch(enabled: boolean): PageSearchHit[] {
-  // Closed palettes do not need to notify the application shell about typing.
-  const query = usePaletteStore((s) => enabled ? s.query : "");
+  const searchable = usePaletteStore(
+    (s) => enabled && s.query.trim().length >= MIN_QUERY,
+  );
   const [debounced, setDebounced] = useState("");
 
   useEffect(() => {
@@ -48,14 +53,25 @@ export function usePageContentSearch(enabled: boolean): PageSearchHit[] {
       setDebounced("");
       return;
     }
-    const trimmed = query.trim();
-    if (trimmed.length < MIN_QUERY) {
-      setDebounced("");
-      return;
-    }
-    const timer = setTimeout(() => setDebounced(trimmed), DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [query, enabled]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const follow = (query: string) => {
+      clearTimeout(timer);
+      const trimmed = query.trim();
+      if (trimmed.length < MIN_QUERY) {
+        setDebounced("");
+        return;
+      }
+      timer = setTimeout(() => setDebounced(trimmed), DEBOUNCE_MS);
+    };
+    follow(usePaletteStore.getState().query);
+    const stopFollowing = usePaletteStore.subscribe((state, previous) => {
+      if (state.query !== previous.query) follow(state.query);
+    });
+    return () => {
+      clearTimeout(timer);
+      stopFollowing();
+    };
+  }, [enabled]);
 
   const { data } = useQuery({
     ...pageContentSearchQuery(debounced),
@@ -64,5 +80,5 @@ export function usePageContentSearch(enabled: boolean): PageSearchHit[] {
     placeholderData: (previous) => previous,
   });
 
-  return enabled && query.trim().length >= MIN_QUERY ? data ?? EMPTY_HITS : EMPTY_HITS;
+  return searchable ? data ?? EMPTY_HITS : EMPTY_HITS;
 }

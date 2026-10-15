@@ -91,13 +91,11 @@ import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
 import { useCommandPaletteLauncher } from "@/lib/use-command-palette-launcher";
 import type {
   BranchCleanupTarget,
-  PageSearchHit,
   Project,
   SearchIndexIssue,
   SearchIndexObjective,
   SearchIndexPage,
 } from "@/lib/types";
-import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
@@ -512,11 +510,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ),
     [searchIndex, currentProjectId, wikiPages]
   );
-
-  // And what titles cannot give: pages whose CONTENT
-  // answers. A request to the server, late on typing, which enriches the
-  // list already displayed instead of making it wait.
-  const pageContentHits = usePageContentSearch(paletteOpen);
 
   const paletteObjectives = useMemo<SearchIndexObjective[]>(
     () =>
@@ -1059,6 +1052,29 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     return groups;
   }, [settingsSections, currentProject, user, router, t]);
 
+  // One wiki row, shared by the index model below and by the palette for pages
+  // that only the content search found.
+  const buildPageItem = useCallback(
+    (page: SearchIndexPage): PaletteItem | null => {
+      const project = projectById.get(page.project_id);
+      if (!project) return null;
+      return {
+        key: `wiki-${page.id}`,
+        label: page.title || tPages("untitled"),
+        icon: page.icon ? emojiIcon(page.icon) : File02Icon,
+        keywords: [project.name, project.key],
+        meta: projectChip(project),
+        metaText: project.name,
+        entityType: "page",
+        contextId: page.project_id,
+        data: page,
+        href: `/projects/${page.project_id}/pages/${page.id}`,
+        onSelect: () => navigateToWikiPage(page.project_id, page.id),
+      };
+    },
+    [projectById, navigateToWikiPage, tPages]
+  );
+
   // ── Data groups: tickets + objectives, all projects combined (MIN-91) ────
   // Separated from the command groups above because they are the only ones
   // weigh: a few thousand lines, each with its React elements
@@ -1070,8 +1086,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     (
       issues: SearchIndexIssue[],
       objectives: SearchIndexObjective[],
-      pages: SearchIndexPage[],
-      contentHits: PageSearchHit[] = []
+      pages: SearchIndexPage[]
     ): PaletteGroup[] => {
       const groups: PaletteGroup[] = [];
 
@@ -1137,64 +1152,22 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
       // ── The wiki, ALL PROJECTS (MIN-270, cross-project since MIN-276) ───
       //
-      // Two sources in one list, and that's intentional. The TITLES come from
-      // the index (filtered as you type, serverless); the CONTENT comes from
-      // Postgres, with the snippet that says why the page exits. The extract is
-      // placed in `description`: the palette engine classifies a match of
-      // title above a description match, so "found by its
-      // title” passes before “cited in a body” without having to sort.
-      // The row's right-aligned context stays the PROJECT NAME — the excerpt
-      // is for ranking, never for display.
-      //
-      // A page found by its content but missing from the index (ceiling
-      // reached, snapshot expired) is added to the list: the server comes
-      // to say that it exists and that it responds.
-      const excerptById = new Map(
-        contentHits.map((hit) => [hit.id, hit.excerpt] as const)
-      );
-      const known = new Set(pages.map((p) => p.id));
-      const extras: SearchIndexPage[] = contentHits
-        .filter((hit) => !known.has(hit.id))
-        .map((hit) => ({
-          id: hit.id,
-          project_id: hit.project_id,
-          title: hit.title,
-          icon: hit.icon,
-          updated_at: hit.updated_at,
-        }));
-
-      const allPages = [...pages, ...extras];
-      if (allPages.length > 0) {
-        groups.push({
-          key: "wiki-pages",
-          heading: t("pages"),
-          items: allPages.flatMap((page) => {
-            const project = projectById.get(page.project_id);
-            if (!project) return [];
-            const excerpt = excerptById.get(page.id) ?? "";
-            return [
-              {
-                key: `wiki-${page.id}`,
-                label: page.title || tPages("untitled"),
-                icon: page.icon ? emojiIcon(page.icon) : File02Icon,
-                description: excerpt,
-                keywords: [project.name, project.key],
-                meta: projectChip(project),
-                metaText: project.name,
-                entityType: "page",
-                contextId: page.project_id,
-                data: page,
-                href: `/projects/${page.project_id}/pages/${page.id}`,
-                onSelect: () => navigateToWikiPage(page.project_id, page.id),
-              },
-            ];
-          }),
-        });
-      }
+      // The TITLES come from the index (filtered as you type, serverless). The
+      // CONTENT hits are applied inside the palette (withPageContentHits), so
+      // a search result never rebuilds this model. The group is always present
+      // so a page found only by its content keeps the Pages category.
+      groups.push({
+        key: "wiki-pages",
+        heading: t("pages"),
+        items: pages.flatMap((page) => {
+          const row = buildPageItem(page);
+          return row ? [row] : [];
+        }),
+      });
 
       return groups;
     },
-    [projectById, navigateToWikiPage, openIssuePanel, t, ti, tPages]
+    [projectById, buildPageItem, openIssuePanel, t, ti]
   );
 
   // Prepare the full model during the palette's idle warmup and retain it
@@ -1203,12 +1176,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const desktopDataGroups = useMemo(
     () =>
       paletteMounted && (!mobileLayout || paletteOpen)
-        ? buildDataGroups(
-            paletteIssues,
-            paletteObjectives,
-            palettePages,
-            pageContentHits
-          )
+        ? buildDataGroups(paletteIssues, paletteObjectives, palettePages)
         : [],
     [
       paletteMounted,
@@ -1218,7 +1186,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       paletteIssues,
       paletteObjectives,
       palettePages,
-      pageContentHits,
     ]
   );
 
@@ -1636,6 +1603,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           destinationOnly={paletteMode === "destination"}
           onDestinationSelect={handleDestinationSelect}
           onPrefetchDestination={handleDestinationPrefetch}
+          pageItem={buildPageItem}
         />
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />
