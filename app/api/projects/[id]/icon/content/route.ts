@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getProjectAccess } from "@/lib/server/project-access";
-import { downloadProjectIcon } from "@/lib/server/project-icon";
+import { hasProjectAccess } from "@/lib/server/project-access";
+import {
+  downloadProjectIcon,
+  downloadProjectIconFromReference,
+} from "@/lib/server/project-icon";
 import { getBoardByToken } from "@/lib/server/feedback/boards";
 import { getPublicShareTarget } from "@/lib/server/view-shares";
 import { isShareUnlocked } from "@/lib/server/share-unlock";
@@ -19,6 +22,7 @@ export async function GET(request: NextRequest, { params }: Context) {
     return new NextResponse(null, { status: 404 });
   }
   let allowed = false;
+  let reference: { icon_url: unknown; icon_storage_path: unknown } | null = null;
   if (token && kind === "feedback") {
     const context = await getBoardByToken(token);
     allowed = context?.board.enabled === true && context.project.id === id;
@@ -28,11 +32,18 @@ export async function GET(request: NextRequest, { params }: Context) {
       await isShareUnlocked(context.share);
   } else {
     const auth = await getAuthedUser(request);
-    allowed = auth.ok && !!(await getProjectAccess(auth.user.id, id));
+    // The access row carries the icon reference: one project read, no decode.
+    const access = auth.ok
+      ? await hasProjectAccess(auth.user.id, id, ["icon_url", "icon_storage_path"])
+      : null;
+    allowed = !!access;
+    reference = access?.row ?? null;
   }
   if (!allowed) return new NextResponse(null, { status: 404 });
   try {
-    const icon = await downloadProjectIcon(id);
+    const icon = reference
+      ? await downloadProjectIconFromReference(id, reference)
+      : await downloadProjectIcon(id);
     if (!icon) return new NextResponse(null, { status: 404 });
     return new NextResponse(new Uint8Array(icon.bytes), {
       headers: { "content-type": icon.mimeType,
