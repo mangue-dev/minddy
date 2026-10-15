@@ -74,6 +74,12 @@ try {
   const primer = await app.firstWindow();
   await primer.goto(`${base}/home`, { waitUntil: "commit" });
   await primer.waitForFunction(completeRestoredInterface, readySpec, { timeout: 15000 });
+  // MINDDY_PERF_SEALED_SNAPSHOT=1: let the five-second save/idle schedule seal the query cache,
+  // so timed launches take the relaunch path real users take (sealed snapshot open before reads).
+  if (process.env.MINDDY_PERF_SEALED_SNAPSHOT === "1") {
+    await primer.waitForTimeout(7000);
+    result.sealedSnapshotAfterPrimer = await primer.evaluate(() => localStorage.getItem("minddy.query-cache") !== null);
+  }
   await app.evaluate(async ({ session }) => { await session.defaultSession.cookies.flushStore(); await session.defaultSession.flushStorageData(); });
   await app.close(); app = undefined;
   for (let index = 0; index < 5; index++) {
