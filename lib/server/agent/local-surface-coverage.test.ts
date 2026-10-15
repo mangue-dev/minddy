@@ -100,6 +100,8 @@ const COQUILLE = {
     "reads and writes the APNs identity; validation lives in @/lib/desktop/push-installation",
   "repo-store.ts": "reads and writes attachments; parsing lives in @/lib/desktop/local-repo",
   "server-store.ts": "reads and writes the selected server; validation lives in @/lib/desktop/server-origin",
+  "window-chrome-store.ts":
+    "reads and writes the last observed window frame; parsing and the startup decision live in @/lib/desktop/window-frame",
   "server-picker.ts":
     "composes the native server picker window; validation lives in @/lib/desktop/server-origin",
   "server-picker-preload.ts": "closed IPC bridge for the server picker window",

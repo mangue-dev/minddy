@@ -82,6 +82,10 @@ import {
   desktopTitleBarOverlay,
   desktopDocumentChrome,
   MACOS_TRAFFIC_LIGHT_POSITION,
+  rememberableWindowChrome,
+  startupIntegratedChrome,
+  windowChromeReplacement,
+  type RememberedWindowChrome,
 } from "@/lib/desktop/window-frame";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import {
@@ -114,6 +118,7 @@ import {
   readDesktopServerOrigin,
   writeDesktopServerOrigin,
 } from "./server-store";
+import { readWindowChrome, writeWindowChrome } from "./window-chrome-store";
 import { desktopShellFontDataUrl } from "./shell-font";
 import {
   checkForUpdatesManually,
@@ -148,6 +153,16 @@ const authLinkDelivery = createDesktopAuthLinkDelivery({
 });
 const integratedFrames = new WeakMap<BrowserWindow, boolean>();
 const documentChrome = new Map<number, boolean>();
+/** The frame the selected origin's last document asked for (Windows and Linux). */
+let rememberedChrome: RememberedWindowChrome | null = null;
+
+/** Writes the observation only when it changes: most launches write nothing. */
+function rememberWindowChrome(next: RememberedWindowChrome | null): void {
+  if (!next) return;
+  if (rememberedChrome?.origin === next.origin && rememberedChrome.integrated === next.integrated) return;
+  rememberedChrome = next;
+  writeWindowChrome(next);
+}
 const localNotifications = new DesktopLocalNotificationRegistry();
 /** Electron closes windows before `before-quit` during an updater relaunch. */
 let quittingForUpdate = false;
@@ -879,8 +894,8 @@ function createWindow(
   window.on("show", () => { shownOnce = true; });
   window.webContents.on("did-finish-load", () => {
     if (process.platform === "darwin" || mainWindow !== window) return;
-    const desired = documentChrome.get(window.webContents.id) ?? integrated;
-    if (desired === integrated) {
+    const desired = windowChromeReplacement(documentChrome.get(window.webContents.id), integrated);
+    if (desired === null) {
       if (showWhenReady && !shownOnce) window.show();
       return;
     }
@@ -1400,6 +1415,7 @@ function hardenSession(): void {
     if (mainWindow && details.webContentsId === mainWindow.webContents.id) {
       const supported = desktopDocumentChrome(details, origin);
       if (supported !== null) documentChrome.set(details.webContentsId, supported);
+      if (process.platform !== "darwin") rememberWindowChrome(rememberableWindowChrome(details, origin));
     }
     callback({});
   });
@@ -1563,7 +1579,14 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     const localSelected = customServerOrigin === LOCAL_SELF_HOST_ORIGIN;
     const localRoot = localSelected ? readLocalRuntimeRoot() : null;
-    mainWindow = createWindow(!localSelected, !backgroundLaunchRequested);
+    // Windows and Linux: start with the frame this origin's last document
+    // asked for, so its first load is not repeated in a replacement window.
+    rememberedChrome = process.platform === "darwin" ? null : readWindowChrome();
+    mainWindow = createWindow(
+      !localSelected,
+      !backgroundLaunchRequested,
+      startupIntegratedChrome(process.platform, rememberedChrome, origin),
+    );
     if (localRoot) {
       const generation = localRuntimeGeneration;
       showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
