@@ -8,7 +8,9 @@ import {
   ComputerIcon, Mic01Icon, Target01Icon, GitPullRequestIcon, GitMergeIcon,
   CheckIcon, Add01Icon, FlashIcon, Clock01Icon, TaskDone01Icon,
 } from "@hugeicons/core-free-icons";
-import { Claude, Gemini, OpenAI } from "@lobehub/icons";
+import Claude from "@lobehub/icons/es/Claude/components/Mono";
+import Gemini from "@lobehub/icons/es/Gemini/components/Mono";
+import OpenAI from "@lobehub/icons/es/OpenAI/components/Mono";
 import { NumoFace } from "@/components/numo-face";
 import { SmartFillIcon, SmartAssignIcon } from "@/components/smart-icons";
 import { Github, Gitlab } from "@/components/git/provider-icons";
