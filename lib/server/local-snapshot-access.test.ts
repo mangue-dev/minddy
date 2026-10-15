@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ service: null as unknown }));
@@ -15,7 +16,8 @@ function fixture() {
     { id: owned, owner_id: owner, deleted_at: null },
     { id: shared, owner_id: other, deleted_at: null },
   ] as Project[], members: [{ project_id: shared, user_id: owner, role: "member" }] as Member[],
-  error: false, calls: [] as { table: string; fields: string; limit: number }[] };
+  error: false, failTable: null as string | null, hold: null as Promise<void> | null,
+  calls: [] as { table: string; fields: string; limit: number }[] };
   h.service = {
     from: (table: string) => {
       let fields = ""; let after: string | null = null;
@@ -28,7 +30,8 @@ function fixture() {
         order: () => query,
         limit: async (limit: number) => {
           state.calls.push({ table, fields, limit });
-          if (state.error) return { data: null, error: { code: "unavailable" } };
+          if (state.hold) await state.hold;
+          if (state.error || state.failTable === table) return { data: null, error: { code: "unavailable" } };
           if (table === "projects") return { data: state.projects.filter((project) =>
             project.owner_id === conditions.get("owner_id") && project.deleted_at === null &&
             (after === null || project.id > after)).sort((a, b) => a.id.localeCompare(b.id)).slice(0, limit), error: null };
@@ -93,5 +96,46 @@ describe("local snapshot current project access", () => {
     const access = await localSnapshotProjectAccess(owner);
     expect(access.projectIds.size).toBe(301);
     expect(state.calls.filter((call) => call.table === "projects")).toHaveLength(2);
+  });
+  it("reads the ownership and membership scans in the same round trip", async () => {
+    const state = fixture();
+    let release!: () => void;
+    state.hold = new Promise((resolve) => { release = resolve; });
+    const pending = localSnapshotProjectAccess(owner);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(state.calls.map((call) => call.table)).toEqual(["projects", "project_members"]);
+    release();
+    const access = await pending;
+    // Existing sealed snapshots stay valid only if the proof is byte-identical.
+    expect(access.fingerprint).toBe(createHash("sha256").update(JSON.stringify([owner, [
+      [owned, owner, "owner"], [shared, other, "member"],
+    ]])).digest("hex"));
+  });
+  it("paginates both scans and limits their combined rows", async () => {
+    const state = fixture();
+    const id = (prefix: string, index: number) => `${prefix}-${index.toString().padStart(12, "0")}`;
+    state.projects = [
+      ...Array.from({ length: 301 }, (_, index) => ({ id: id("3", index), owner_id: owner, deleted_at: null })),
+      ...Array.from({ length: 301 }, (_, index) => ({ id: id("4", index), owner_id: other, deleted_at: null })),
+    ];
+    state.members = Array.from({ length: 301 }, (_, index) => ({ project_id: id("4", index), user_id: owner, role: "member" }));
+    expect((await localSnapshotProjectAccess(owner)).projectIds.size).toBe(602);
+    expect(state.calls.filter((call) => call.table === "projects")).toHaveLength(2);
+    expect(state.calls.filter((call) => call.table === "project_members")).toHaveLength(2);
+    state.projects = [
+      ...Array.from({ length: 5_001 }, (_, index) => ({ id: id("3", index), owner_id: owner, deleted_at: null })),
+      ...Array.from({ length: 5_000 }, (_, index) => ({ id: id("4", index), owner_id: other, deleted_at: null })),
+    ];
+    state.members = Array.from({ length: 5_000 }, (_, index) => ({ project_id: id("4", index), user_id: owner, role: "member" }));
+    await expect(localSnapshotProjectAccess(owner)).rejects.toThrow("verification limit");
+  });
+  it("stops the remaining scan once the other one fails", async () => {
+    const state = fixture();
+    state.projects = Array.from({ length: 900 }, (_, index) => ({
+      id: `33333333-3333-4333-8333-${index.toString().padStart(12, "0")}`, owner_id: owner, deleted_at: null,
+    }));
+    state.failTable = "project_members";
+    await expect(localSnapshotProjectAccess(owner)).rejects.toThrow("Unable to verify local snapshot memberships");
+    expect(state.calls.filter((call) => call.table === "projects").length).toBeLessThan(4);
   });
 });

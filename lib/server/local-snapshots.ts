@@ -31,10 +31,15 @@ export async function sealLocalSnapshot(owner: string, slot: LocalSnapshotSlot, 
 export async function openLocalSnapshot(owner: string, slot: LocalSnapshotSlot, snapshot: SealedLocalSnapshot): Promise<unknown> {
   if (snapshot.format !== "minddy-local-v1" || snapshot.owner !== owner) throw new Error("Invalid local snapshot");
   const store = getEncryptedStore();
-  const decoded = await store.decrypt<{ expiresAt: number; accessFingerprint: string | null; value: unknown }>(store.fromDatabase(snapshot.ciphertext), context(owner, slot));
+  // The live access proof does not depend on the plaintext, so it is read while
+  // decrypting; the value is returned only after both checks pass.
+  const [decoded, access] = await Promise.all([
+    store.decrypt<{ expiresAt: number; accessFingerprint: string | null; value: unknown }>(store.fromDatabase(snapshot.ciphertext), context(owner, slot)),
+    isDraft(slot) ? null : localSnapshotProjectAccess(owner),
+  ]);
   if (!Number.isSafeInteger(decoded.expiresAt) || decoded.expiresAt <= Date.now() || decoded.expiresAt !== snapshot.expiresAt) {
     throw new Error("Expired local snapshot");
   }
-  if (!isDraft(slot) && (await localSnapshotProjectAccess(owner)).fingerprint !== decoded.accessFingerprint) throw new Error("Local snapshot access changed");
+  if (access && access.fingerprint !== decoded.accessFingerprint) throw new Error("Local snapshot access changed");
   return decoded.value;
 }
