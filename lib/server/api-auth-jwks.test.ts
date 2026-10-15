@@ -13,6 +13,7 @@ vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) 
 
 const base64url = (value: string | Uint8Array) => Buffer.from(value).toString("base64url");
 let keyFetches = 0;
+let keyResponses = 0;
 let fixture = 0;
 
 async function signedSession() {
@@ -40,6 +41,7 @@ beforeEach(async () => {
   rpc.mockReset();
   rpc.mockReturnValue({ abortSignal: async () => ({ data: { sessionActive: true, mfaAllowed: true }, error: null }) });
   keyFetches = 0;
+  keyResponses = 0;
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -54,23 +56,30 @@ it("shares one key fetch between concurrent requests once the key set expires", 
     if (!url.endsWith("/auth/v1/.well-known/jwks.json")) throw new Error(`unexpected request ${url}`);
     keyFetches += 1;
     await new Promise((resolve) => setTimeout(resolve, 5));
+    keyResponses += 1;
     return Response.json({ keys: [jwk] });
   }));
   const { getAuthedUser } = await import("./api-auth");
   const cookie = `sb-jwks-fixture-${fixture}-auth-token=${encodeURIComponent(JSON.stringify(session))}`;
   const request = () => new NextRequest("https://www.minddy.app/api/projects", { headers: { cookie } });
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+  // Wait until every key response is delivered and consumed by its caller.
+  const settle = async () => {
+    while (keyResponses < keyFetches) await new Promise((resolve) => setTimeout(resolve, 1));
+    for (let tick = 0; tick < 5; tick++) await new Promise((resolve) => setTimeout(resolve, 0));
+  };
 
   expect((await getAuthedUser(request())).ok).toBe(true);
   await settle();
 
   keyFetches = 0;
+  keyResponses = 0;
   vi.setSystemTime(START + 10 * 60 * 1000 + 1_000);
   const results = await Promise.all(Array.from({ length: 6 }, () => getAuthedUser(request())));
   expect(results.map((result) => result.ok)).toEqual(Array(6).fill(true));
   expect(keyFetches).toBe(1);
 
   keyFetches = 0;
+  keyResponses = 0;
   vi.setSystemTime(START + 19 * 60 * 1000);
   const ahead = await Promise.all(Array.from({ length: 3 }, () => getAuthedUser(request())));
   expect(ahead.map((result) => result.ok)).toEqual(Array(3).fill(true));
