@@ -114,6 +114,8 @@ type QuerySnapshot = { data: unknown; updatedAt: number } | null;
 export function subscribeToQueryPersistence(
   options: PersistedQueryClientSaveOptions & {
     shouldPersistQuery: (query: Query) => boolean;
+    /** Persisted data updated at or after this time is not on disk yet. */
+    unsavedSince?: number;
   },
 ): { stop: () => void; flush: () => void } {
   const { queryClient, shouldPersistQuery } = options;
@@ -125,9 +127,12 @@ export function subscribeToQueryPersistence(
     shouldPersistQuery(query)
       ? { data: query.state.data, updatedAt: query.state.dataUpdatedAt }
       : null;
+  let unsaved = false;
   for (const query of queryClient.getQueryCache().getAll()) {
     const value = snapshot(query);
-    if (value) snapshots.set(query, value);
+    if (!value) continue;
+    snapshots.set(query, value);
+    if (options.unsavedSince !== undefined && value.updatedAt >= options.unsavedSince) unsaved = true;
   }
 
   const save = () => {
@@ -171,6 +176,7 @@ export function subscribeToQueryPersistence(
     else pausedMutations.delete(event.mutation);
     if (wasPaused || isPaused) schedule();
   });
+  if (unsaved) schedule();
 
   return {
     flush: () => {

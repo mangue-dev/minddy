@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useIsRestoring, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { globalBoardQueryFn } from "./global-board-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fetchViewsApi } from "./views-api";
@@ -9,10 +9,9 @@ import { fetchViewsApi } from "./views-api";
 /** Start authenticated cold board reads before the lazy view can mount. */
 export function useColdBoardPrefetch(active: boolean) {
   const client = useQueryClient();
-  const restoring = useIsRestoring();
 
   useEffect(() => {
-    if (!active || restoring) return;
+    if (!active) return;
     // The same query owns cancellation, deduplication and pending-write overlays.
     // Existing data, including stale restored data, keeps the board's normal
     // reconciliation path. No observer stays active when the view is hidden.
@@ -27,5 +26,5 @@ export function useColdBoardPrefetch(active: boolean) {
         queryFn: ({ signal }) => fetchViewsApi({ kind: "global" }, signal),
       });
     }
-  }, [active, restoring, client]);
+  }, [active, client]);
 }

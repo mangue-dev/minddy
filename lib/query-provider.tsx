@@ -1,7 +1,7 @@
 "use client";
 
-import { IsRestoringProvider, QueryClient, QueryClientProvider, type Query } from "@tanstack/react-query";
-import { persistQueryClientRestore } from "@tanstack/react-query-persist-client";
+import { QueryClient, QueryClientProvider, type Query } from "@tanstack/react-query";
+import { persistQueryClientRestore, type PersistedClient } from "@tanstack/react-query-persist-client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createQueryStorage, subscribeToQueryPersistence } from "./query-persistence";
 import { invalidateLocalSnapshotWrites } from "./local-snapshots";
@@ -22,15 +22,15 @@ import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
  * This is stale-while-revalidate, not a source of truth: nothing is served
  * from disk beyond PERSIST_MAX_AGE_MS.
  *
- * WHAT THIS IMPOSES ON THE REST OF THE APP. The restore is asynchronous: the first
- * render is painted BEFORE it returns, and during this window
- * react-query forces `fetchStatus: "idle"` on all queries. They are therefore
- * `pending`, without data, and yet `isLoading` (= `isPending && isFetching`)
- * is FALSE. A screen that gates its blank state to `isLoading` then paints it an
- * image before its own skeleton — on all pages at once, since the
- * cause is this provider. The UI loading flag therefore reads
- * `isPending`, and `enabled && isPending` when the query has a guard (a disabled
- * query remains `pending` forever). Locked by
+ * WHAT THIS IMPOSES ON THE REST OF THE APP. The restore is asynchronous and
+ * does not hold reads: observers fetch at mount while the sealed snapshot
+ * opens, so a relaunch does not add that server round trip before every
+ * startup request. Data from this load stays newer than restored data, and a
+ * query still in flight shows the restored entry until its live answer.
+ * The UI loading flag reads `isPending`, never `isLoading`
+ * (= `isPending && isFetching`), which is FALSE for a pending query without a
+ * request in flight, and `enabled && isPending` when the query has a guard
+ * (a disabled query remains `pending` forever). Locked by
  * lib/query-loading.test.ts.
  */
 
@@ -149,6 +149,19 @@ export function wasRestoredBeforeMount(
 }
 
 /**
+ * Hydration keeps whichever side has the newer `dataUpdatedAt`. A device clock
+ * corrected between sessions could date disk data after this mount. Keep every
+ * restored entry older than the mount so data from this load always wins and
+ * the post-restore refresh still recognizes the entry.
+ */
+function datedBeforeMount(client: PersistedClient | undefined, mountedAt: number): PersistedClient | undefined {
+  const queries = client?.clientState?.queries;
+  if (!client || !Array.isArray(queries)) return client;
+  return { ...client, clientState: { ...client.clientState, queries: queries.map((query) =>
+    query.state.dataUpdatedAt < mountedAt ? query : { ...query, state: { ...query.state, dataUpdatedAt: mountedAt - 1 } }) } };
+}
+
+/**
  * Purge the snapshot. Called at disconnection: the cache carries the data of the
  * account which is leaving, and the machine can be shared.
  */
@@ -176,7 +189,6 @@ export function clearPersistedQueryCache() {
 
 export function AppQueryProvider({ children }: { children: ReactNode }) {
   const [mountedAt] = useState(() => Date.now());
-  const [isRestoring, setIsRestoring] = useState(true);
   const restorePromise = useRef<Promise<void> | null>(null);
   const [queryClient] = useState(
     () => {
@@ -207,15 +219,16 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
     } catch {
       // Storage can be inaccessible in private or embedded browsing contexts.
     }
+    const persister = createQueryStorage(storage, QUERY_CACHE_STORAGE_KEY, () => {
+      const hashes = new Set(navigationWorkingSetQueryHashes(queryClient));
+      for (const query of queryClient.getQueryCache().getAll()) {
+        if (query.isActive()) hashes.add(query.queryHash);
+      }
+      return hashes;
+    });
     return {
       queryClient,
-      persister: createQueryStorage(storage, QUERY_CACHE_STORAGE_KEY, () => {
-        const hashes = new Set(navigationWorkingSetQueryHashes(queryClient));
-        for (const query of queryClient.getQueryCache().getAll()) {
-          if (query.isActive()) hashes.add(query.queryHash);
-        }
-        return hashes;
-      }),
+      persister: { ...persister, restoreClient: async () => datedBeforeMount(await persister.restoreClient(), mountedAt) },
       maxAge: PERSIST_MAX_AGE_MS,
       buster: PERSIST_BUSTER,
       dehydrateOptions: { shouldDehydrateQuery: isPersistable },
@@ -247,10 +260,12 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
         //
         // Refresh only entries whose timestamp proves they came from before
         // this provider mount. `invalidateQueries` deduplicates observers and
-        // starts one request per active restored query.
+        // starts one request per active restored query. A query with a request
+        // in flight already receives a live answer: invalidating it would
+        // cancel that request, since it now holds restored data, and repeat it.
         if (stopped) return;
         void queryClient.invalidateQueries({
-          predicate: (query) => wasRestoredBeforeMount(query, mountedAt),
+          predicate: (query) => query.state.fetchStatus === "idle" && wasRestoredBeforeMount(query, mountedAt),
           refetchType: "active",
         });
       })
@@ -260,8 +275,9 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
         persistence = subscribeToQueryPersistence({
           ...persistOptions,
           shouldPersistQuery: isPersistable,
+          // Reads that completed while the snapshot opened are not on disk yet.
+          unsavedSince: mountedAt,
         });
-        setIsRestoring(false);
       });
     const flush = () => persistence?.flush();
     const onVisibility = () => {
@@ -278,8 +294,6 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
   }, [mountedAt, persistOptions, queryClient]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <IsRestoringProvider value={isRestoring}>{children}</IsRestoringProvider>
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
