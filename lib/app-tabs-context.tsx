@@ -19,6 +19,7 @@ import { SessionContext, useOptionalAppTabSession } from "./app-tab-session-cont
 import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
 import { createWindowSelectionPersistence } from "./window-selection-persistence";
 import { createRestoredTabStartupAdmission } from "./restored-tab-startup-admission";
+import { INITIAL_ACCOUNT_CACHE_SCOPE, nextAccountCacheScope } from "./account-query-provider";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -38,7 +39,7 @@ const noSubscription = () => () => {};
 type QueryState = { session: AppTabsSession; loading: boolean; loadError: boolean; reload: () => void };
 
 export function AppTabsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const mobile = useMobileLayout();
   const client = useQueryClient();
   const router = useRouter();
@@ -46,6 +47,11 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   const freshSession = !previous.current || previous.current.owner !== user?.id;
   const resumeAtCurrentRoute = !freshSession && previous.current?.mobile === true;
   const owner = user?.id;
+  // Like the account query cache: the first auth resolution keeps the tree
+  // mounted before it, and every later identity change remounts it.
+  const [scope, setScope] = useState(INITIAL_ACCOUNT_CACHE_SCOPE);
+  const nextScope = nextAccountCacheScope(scope, loading, owner ?? null);
+  if (nextScope !== scope) setScope(nextScope);
   const desktop = mobile === false && !!owner;
   // Only the desktop controller owns account queries, restoration and writes.
   const session = useMemo(() => desktop && owner ? createAccountSession(owner, client) : null, [desktop, owner, client]);
@@ -87,7 +93,7 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   } : null, [session, snapshot, queryState]);
   const navigation = useMemo(() => session ? { session, activeId: snapshot?.activeId ?? null } : null, [session, snapshot?.activeId]);
   // Keep the provider topology and descendant drafts stable across layout changes.
-  return <SessionContext.Provider key={owner ?? "signed-out"} value={session}><NavigationContext.Provider value={navigation}>
+  return <SessionContext.Provider key={nextScope.key} value={session}><NavigationContext.Provider value={navigation}>
     <Context.Provider value={value}><MobileNavigationContext.Provider value={owner && mobile === true ? mobileNavigation : null}>
       {session && owner ? <AccountTabSync key={owner} owner={owner} session={session} resumeAtCurrentRoute={resumeAtCurrentRoute} onQueryState={setQueryState} /> : null}
       {session ? <PrBackgroundSync /> : null}
