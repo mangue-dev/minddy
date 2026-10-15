@@ -1,6 +1,7 @@
-import type { QueryKey } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import { GLOBAL_BOARD_KEY, issueWrites, objectiveWrites } from "./optimistic/issue-writes";
+import { isAcceptedPageEcho } from "./optimistic-page-writes";
 
 /**
  * WHAT A BROADCAST EVENT REFRESHES — the realtime
@@ -232,6 +233,26 @@ export function isOwnEcho(change: BroadcastChange): boolean {
     default:
       return false;
   }
+}
+
+/**
+ * The echo of our own page PATCH, decided when the coalesced invalidation
+ * fires rather than on arrival: the broadcast leaves at commit and usually
+ * lands just before the acknowledgement. Only an accepted write with the
+ * same stamps qualifies, so another window, device, teammate, Numo or the MCP
+ * still refetches. Undefined means the invalidation always applies.
+ */
+export function ownPageEchoCheck(
+  change: BroadcastChange,
+  { key }: Invalidation
+): ((client: QueryClient) => boolean) | undefined {
+  if (change.table !== "pages" || change.operation !== "UPDATE" || !change.record) return undefined;
+  const record = change.record;
+  if ((key[0] === "page" && key[1] === record.id) || key[0] === "pages") {
+    return (client) => isAcceptedPageEcho(client, record, false);
+  }
+  if (key[0] === "app-tab-metadata") return (client) => isAcceptedPageEcho(client, record, true);
+  return undefined;
 }
 
 export function keysForProjectEvent(

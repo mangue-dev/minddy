@@ -12,7 +12,7 @@ import { createPageSurfaceRead, fetchPageNavigationData, pageKey, pagesKey, useP
 import { observePageReadFailures, pageReadState } from "@/lib/page-read-receipts";
 import type { Page } from "@/lib/pages";
 import type { PageDocJSON } from "@/lib/pages-merge";
-import { beginPageWrite, queuePageWrite } from "@/lib/optimistic-page-writes";
+import { beginPageWrite, isAcceptedPageEcho, queuePageWrite } from "@/lib/optimistic-page-writes";
 
 vi.mock("@/lib/pages-api", async (original) => ({ ...await original<typeof import("@/lib/pages-api")>(),
   createPageApi: vi.fn(), duplicatePageApi: vi.fn(), fetchPageApi: vi.fn(), fetchPagesApi: vi.fn(), updatePageApi: vi.fn() }));
@@ -153,6 +153,25 @@ describe("normal Page creation write authority", () => {
     expect(await lateGet).toEqual(saved);
     expect(client.getQueryData(pageKey("source"))).toEqual(saved);
     expect(reader.hasAccepted(saved)).toBe(true);
+  });
+
+  it("recognizes the realtime echo of an accepted body PATCH in this account only", async () => {
+    const source = { ...buildOptimisticPage("project", { id: "source" }, []), version: 5 };
+    const saved = { ...source, content: body, version: 6, updated_at: "2026-10-15T10:00:00.123456+00:00" };
+    vi.mocked(updatePageApi).mockResolvedValue(saved);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(pagesKey("project"), [source]);
+    client.setQueryData(pageKey("source"), source);
+    let pages!: UsePagesResult;
+    function Producer() { pages = usePagesQuery("project"); return null; }
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => root!.render(createElement(QueryClientProvider, { client, children: createElement(Producer) })));
+    await act(async () => { await pages.updatePage("source", { content: body, version: 5 }); });
+    const echo = { id: "source", version: 6, updated_at: saved.updated_at };
+    expect(isAcceptedPageEcho(client, echo, true)).toBe(true);
+    expect(isAcceptedPageEcho(new QueryClient(), echo, false)).toBe(false);
+    expect(isAcceptedPageEcho(client, { ...echo, version: 7 }, false)).toBe(false);
   });
 
   it.each(["older-ack", "newer-ack"] as const)("orders actual same-version metadata by server timestamp (%s)", async (order) => {

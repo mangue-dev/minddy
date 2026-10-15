@@ -101,6 +101,45 @@ function stateFor(client: QueryClient) {
   return state;
 }
 
+type AcceptedEcho = { version: number; updatedAt: string; labels: boolean; at: number };
+const ECHO_RETENTION_MS = 30_000;
+const ECHOES_PER_PAGE = 8;
+const acceptedEchoes = new WeakMap<QueryClient, Map<string, AcceptedEcho[]>>();
+const labelFields = new Set<string>(["title", "icon", "parent_id"]);
+
+/**
+ * Remember an accepted PATCH by its server stamps. Its realtime echo carries
+ * the same id, version and updated_at; any other writer produces another stamp.
+ */
+export function recordAcceptedPageWrite(client: QueryClient, page: Pick<PageSummary, "id" | "version" | "updated_at">,
+  fields: readonly string[]): void {
+  if (!(page.version > 0) || typeof page.updated_at !== "string") return;
+  let pages = acceptedEchoes.get(client);
+  if (!pages) acceptedEchoes.set(client, pages = new Map());
+  const now = Date.now();
+  const kept = (pages.get(page.id) ?? []).filter((echo) => now - echo.at < ECHO_RETENTION_MS);
+  kept.push({ version: page.version, updatedAt: page.updated_at, labels: fields.some((field) => labelFields.has(field)), at: now });
+  pages.set(page.id, kept.slice(-ECHOES_PER_PAGE));
+}
+
+/**
+ * Whether a broadcast row only echoes a PATCH this client already ingested.
+ * The acknowledgement wrote the body and the list row; tab labels also hold
+ * unless that write changed a title, icon or parent.
+ */
+export function isAcceptedPageEcho(client: QueryClient, record: unknown, includesLabels: boolean): boolean {
+  if (!record || typeof record !== "object") return false;
+  const { id, version, updated_at: updatedAt } = record as { id?: unknown; version?: unknown; updated_at?: unknown };
+  if (typeof id !== "string" || typeof version !== "number" || typeof updatedAt !== "string") return false;
+  if (!Number.isFinite(Date.parse(updatedAt))) return false;
+  const now = Date.now(), broadcast = { version, updatedAt };
+  // Same instant to the microsecond, whatever the timestamp's textual offset.
+  return acceptedEchoes.get(client)?.get(id)?.some((echo) => now - echo.at < ECHO_RETENTION_MS &&
+    echo.version === version && Number.isFinite(Date.parse(echo.updatedAt)) &&
+    !isNewerPageMetadata(echo, broadcast) && !isNewerPageMetadata(broadcast, echo) &&
+    !(includesLabels && echo.labels)) ?? false;
+}
+
 /** Capture an accepted current GET summary before Query success reapplies local layers. */
 export function acceptPageReadSummary(client: QueryClient, projectId: string, page: Page): void {
   if (page.project_id !== projectId) return;

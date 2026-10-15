@@ -46,6 +46,7 @@ import {
   beginPageWrite,
   beginPagePresence,
   queuePageWrite,
+  recordAcceptedPageWrite,
   waitForPageWrites,
 } from "./optimistic-page-writes";
 import { remapSubpages } from "./pages-subpage";
@@ -553,6 +554,8 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
           );
           acceptPageWrite(queryClient.getQueryCache().find({ queryKey: pageKey(pageId), exact: true }),
             { projectId: page.project_id, pageId: page.id, version: page.version, updatedAt: page.updated_at });
+          // Both caches now hold this acknowledgement: its realtime echo has nothing to add.
+          recordAcceptedPageWrite(queryClient, page, Object.keys(input));
           return page;
         } catch (error) {
           write?.settle();

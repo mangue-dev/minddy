@@ -1,4 +1,6 @@
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import { recordAcceptedPageWrite } from "./optimistic-page-writes";
 import {
   canonicalSql,
   migrationFiles,
@@ -9,6 +11,7 @@ import {
 import {
   keysForProjectEvent,
   keysForUserEvent,
+  ownPageEchoCheck,
   USER_SCOPE_KEYS,
   projectScopeKeys,
   type BroadcastChange,
@@ -131,6 +134,34 @@ describe("keysForProjectEvent — pages", () => {
         (key) => JSON.stringify(key) === JSON.stringify(["pages", PROJECT])
       )
     ).toBe(true);
+  });
+
+  it("recognizes only the exact echo of an accepted own PATCH", () => {
+    const client = new QueryClient(), other = new QueryClient();
+    const at = "2026-10-15T10:00:00.123456+00:00";
+    recordAcceptedPageWrite(client, { id: PAGE, version: 17, updated_at: at }, ["content", "version"]);
+    const echo = (record: Record<string, unknown>) => {
+      const event = change("pages", { operation: "UPDATE", record: pageRow(record), old_record: pageRow() });
+      return Object.fromEntries(keysForProjectEvent(event, PROJECT).map((invalidation) =>
+        [JSON.stringify(invalidation.key), ownPageEchoCheck(event, invalidation)?.(client) ?? false]));
+    };
+    expect(echo({ version: 17, updated_at: at })).toMatchObject({
+      [JSON.stringify(["page", PAGE])]: true, [JSON.stringify(["pages", PROJECT])]: true,
+      [JSON.stringify(["app-tab-metadata"])]: true, [JSON.stringify(["me", "trash"])]: false,
+    });
+    // The same instant in another textual offset is still the same row.
+    expect(echo({ version: 17, updated_at: "2026-10-15T12:00:00.123456+02:00" })[JSON.stringify(["page", PAGE])]).toBe(true);
+    // A teammate's next version, or a move that keeps the version, is not ours.
+    for (const record of [{ version: 18, updated_at: at }, { version: 17, updated_at: "2026-10-15T10:00:01.000000+00:00" }]) {
+      expect(Object.values(echo(record)).some(Boolean)).toBe(false);
+    }
+    const event = change("pages", { operation: "UPDATE", record: pageRow({ version: 17, updated_at: at }) });
+    expect(ownPageEchoCheck(event, { key: ["page", PAGE], refetch: "active" })?.(other)).toBe(false);
+    // A rename acknowledged locally still refreshes the tab labels.
+    recordAcceptedPageWrite(client, { id: PAGE, version: 18, updated_at: at }, ["title"]);
+    expect(echo({ version: 18, updated_at: at })).toMatchObject({
+      [JSON.stringify(["page", PAGE])]: true, [JSON.stringify(["app-tab-metadata"])]: false,
+    });
   });
 
   it("catches up document bodies after a missed broadcast without treating the tree as their contents", () => {

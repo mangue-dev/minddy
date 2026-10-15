@@ -6,6 +6,7 @@ import type { AuthChangeEvent } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeProvider } from "./realtime-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
+import { recordAcceptedPageWrite } from "./optimistic-page-writes";
 
 const realtime = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -279,5 +280,49 @@ describe("Realtime authorization recovery", () => {
     await auth("TOKEN_REFRESHED");
     await advance(60_000);
     expect(requests("user:user-1")).toBe(2);
+  });
+});
+
+describe("own page write echoes", () => {
+  const page = (version: number, updatedAt: string) => ({ id: "page-1", project_id: "project-1", version, updated_at: updatedAt });
+  const at = "2026-10-15T10:00:00.123456+00:00", later = "2026-10-15T10:00:02.000000+00:00";
+  const DOCUMENT_KEYS = [["page", "page-1"], ["pages", "project-1"], ["app-tab-metadata"]].map((key) => JSON.stringify(key));
+  async function projectUpdates() {
+    await mount();
+    await advance(1_000);
+    const index = realtime.channel.mock.calls.findIndex(([topic]) => topic === "project:project-1:v:1");
+    const channel = realtime.channel.mock.results[index].value;
+    const update = channel.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "UPDATE")![2];
+    return (record: ReturnType<typeof page>) => act(async () => update({ payload: {
+      operation: "UPDATE", table: "pages", schema: "public", record, old_record: page(record.version - 1, at) } }));
+  }
+  function watchInvalidations() {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    return () => invalidate.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey));
+  }
+
+  it("skips the refetches an acknowledgement landing after its broadcast already wrote", async () => {
+    const update = await projectUpdates();
+    const invalidated = watchInvalidations();
+    // The broadcast leaves at commit, a few milliseconds before the PATCH response.
+    await update(page(17, at));
+    recordAcceptedPageWrite(client, page(17, at), ["content", "version"]);
+    await advance(250);
+    expect(invalidated().filter((key) => DOCUMENT_KEYS.includes(key))).toEqual([]);
+    expect(invalidated()).toContain(JSON.stringify(["me", "search-index"]));
+  });
+
+  it("still refetches a remote version, alone or coalesced with an own echo", async () => {
+    const update = await projectUpdates();
+    recordAcceptedPageWrite(client, page(17, at), ["content", "version"]);
+    const invalidated = watchInvalidations();
+    await update(page(18, later));
+    await advance(250);
+    expect(invalidated()).toEqual(expect.arrayContaining(DOCUMENT_KEYS));
+    const before = invalidated().length;
+    await update(page(17, at));
+    await update(page(18, later));
+    await advance(250);
+    expect(invalidated().slice(before)).toEqual(expect.arrayContaining(DOCUMENT_KEYS));
   });
 });

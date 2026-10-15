@@ -26,6 +26,7 @@ import {
   isOwnEcho,
   keysForProjectEvent,
   keysForUserEvent,
+  ownPageEchoCheck,
   projectScopeKeys,
   USER_SCOPE_KEYS,
   type BroadcastChange,
@@ -155,30 +156,45 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   // Trailing per-key coalescing: the first event schedules the invalidation,
   // followers within the window ride along.
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // `echoes` is null as soon as one coalesced event is not a possible own echo.
+  const timers = useRef(new Map<string, {
+    timer: ReturnType<typeof setTimeout>;
+    echoes: ((client: QueryClient) => boolean)[] | null;
+  }>());
   useEffect(() => {
     const map = timers.current;
     return () => {
-      for (const t of map.values()) clearTimeout(t);
+      for (const t of map.values()) clearTimeout(t.timer);
       map.clear();
     };
   }, []);
   const invalidateCoalesced = useCallback(
-    ({ key, refetch }: Invalidation) => {
+    ({ key, refetch }: Invalidation, ownEcho?: (client: QueryClient) => boolean) => {
       // The mode is part of the coalescing identity: a "none" event must never
       // swallow a pending "active" one for the same key.
       const k = `${refetch}:${JSON.stringify(key)}`;
-      if (timers.current.has(k)) return;
-      timers.current.set(
-        k,
-        setTimeout(() => {
+      const pending = timers.current.get(k);
+      if (pending) {
+        if (pending.echoes) {
+          if (ownEcho) pending.echoes.push(ownEcho);
+          else pending.echoes = null;
+        }
+        return;
+      }
+      const entry = {
+        echoes: ownEcho ? [ownEcho] : null,
+        timer: setTimeout(() => {
           timers.current.delete(k);
+          // Every coalesced event must echo an accepted own write; one remote
+          // change in the window keeps the refetch.
+          if (entry.echoes?.every((echo) => echo(queryClient))) return;
           void queryClient.invalidateQueries({
             queryKey: key,
             refetchType: refetch,
           });
-        }, INVALIDATE_COALESCE_MS)
-      );
+        }, INVALIDATE_COALESCE_MS),
+      };
+      timers.current.set(k, entry);
     },
     [queryClient]
   );
@@ -303,7 +319,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 // the user sees), the refresh then.
                 apply?.(change);
                 for (const invalidation of keysFor(change)) {
-                  invalidateCoalesced(invalidation);
+                  invalidateCoalesced(invalidation, ownPageEchoCheck(change, invalidation));
                 }
               });
             }
