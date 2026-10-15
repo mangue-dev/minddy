@@ -48,6 +48,8 @@ export class AppTabsSession {
   private creating = new Set<string>();
   private closing = new Map<string, AppTab>();
   private locations = new Map<string, string>();
+  /** The newest server row seen per tab, so an unchanged location skips its write. */
+  private confirmed = new Map<string, { href: string; revision: number }>();
   private order: { id: string; beforeId: string | null }[] = [];
   private orderBase: Map<string, number> | null = null;
   private closed = new Set<string>();
@@ -64,6 +66,7 @@ export class AppTabsSession {
   private forget(id: string) {
     this.closed.add(id);
     this.locations.delete(id);
+    this.confirmed.delete(id);
     for (const key of this.localState.keys()) if (key.startsWith(`${id}:`)) this.localState.delete(key);
   }
   getActiveHref = () => this.activeHref;
@@ -106,8 +109,18 @@ export class AppTabsSession {
     const href = this.locations.get(tab.id);
     this.emit({ tabs: sortAppTabs([...this.snapshot.tabs.filter((row) => row.id !== tab.id), href ? { ...tab, href } : tab]) });
   }
+  private confirm(tab: AppTab) {
+    const known = this.confirmed.get(tab.id);
+    if (this.closed.has(tab.id) || (known && known.revision > tab.revision)) return;
+    this.confirmed.set(tab.id, { href: normalizeAppTabLocation(tab.href) ?? "/home", revision: tab.revision });
+  }
+  /** Merges a row the server returned. */
+  private adopt(tab: AppTab) {
+    this.confirm(tab);
+    this.merge(tab);
+  }
   private report(error: unknown) {
-    if (error instanceof AppTabRequestError && error.tab) this.merge(error.tab);
+    if (error instanceof AppTabRequestError && error.tab) this.adopt(error.tab);
     this.emit({ error: error instanceof AppTabRequestError ? error.code : "database" });
   }
   /** Network latency must not hold the window's navigation queue. */
@@ -136,10 +149,12 @@ export class AppTabsSession {
   /** Remote edits update rows without changing this window's route. */
   receive(rows: AppTab[]) {
     if (this.orderBase) this.orderBase = new Map(rows.map((row) => [row.id, row.position]));
-    for (const tab of reconcileAppTabs(rows, this.owner)) {
+    const canonical = reconcileAppTabs(rows, this.owner);
+    for (const tab of canonical) {
+      this.confirm(tab);
       if (this.closing.has(tab.id)) this.merge(tab);
     }
-    const incoming = reconcileAppTabs(rows, this.owner).filter((tab) => !this.closed.has(tab.id) && !this.closing.has(tab.id));
+    const incoming = canonical.filter((tab) => !this.closed.has(tab.id) && !this.closing.has(tab.id));
     for (const tab of this.snapshot.tabs) {
       if (this.creating.has(tab.id) && !incoming.some((row) => row.id === tab.id)) incoming.push(tab);
     }
@@ -163,7 +178,7 @@ export class AppTabsSession {
     this.startup = { href, restored, keepCurrentRoute };
     return this.run(async () => {
       if (this.snapshot.activeId) return;
-      if (!this.snapshot.tabs.length) this.merge(await this.transport.create(true, crypto.randomUUID()));
+      if (!this.snapshot.tabs.length) this.adopt(await this.transport.create(true, crypto.randomUUID()));
       const normalized = normalizeAppTabLocation(href) ?? "/home";
       const explicit = keepCurrentRoute || href !== "/home";
       // The load destination claims the row that CONVENTIONALLY ALREADY shows
@@ -308,7 +323,7 @@ export class AppTabsSession {
     if (!this.creating.has(id)) return;
     const tab = await this.transport.create(false, id);
     this.creating.delete(id);
-    this.merge(tab);
+    this.adopt(tab);
   }
   private flushLocation() {
     clearTimeout(this.timer);
@@ -321,9 +336,17 @@ export class AppTabsSession {
         await this.createOnServer(id);
         const tab = this.snapshot.tabs.find((row) => row.id === id);
         if (!tab) continue;
+        // Activation, restoration and a route that briefly drops its published
+        // selection all come back to the href the server row already holds.
+        // Writing it again would only bump the revision and echo to every window.
+        const known = this.confirmed.get(id);
+        if (known?.revision === tab.revision && known.href === href) {
+          if (this.locations.get(id) === href) this.locations.delete(id);
+          continue;
+        }
         const saved = await this.transport.patch(tab, { href });
         if (this.locations.get(id) === href) this.locations.delete(id);
-        this.merge(saved);
+        this.adopt(saved);
       }
     });
   }
@@ -419,7 +442,7 @@ export class AppTabsSession {
     return this.persist(async () => {
       await this.createOnServer(id);
       const tab = this.snapshot.tabs.find((row) => row.id === id);
-      if (tab) this.merge(await this.transport.patch(tab, patch));
+      if (tab) this.adopt(await this.transport.patch(tab, patch));
     });
   };
   move = (id: string, beforeId: string | null) => this.run(async () => {
@@ -487,7 +510,7 @@ export class AppTabsSession {
     if (!this.snapshot.recovering || !(await this.saveEditors())) return;
     const oldId = this.snapshot.activeId;
     let next = this.snapshot.tabs.find((row) => row.id !== oldId);
-    if (!next) { next = await this.transport.create(true, crypto.randomUUID()); this.merge(next); }
+    if (!next) { next = await this.transport.create(true, crypto.randomUUID()); this.adopt(next); }
     if (oldId) this.forget(oldId);
     this.emit({ tabs: this.snapshot.tabs.filter((row) => row.id !== oldId) });
     this.select(next);

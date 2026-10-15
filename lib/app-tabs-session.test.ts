@@ -573,6 +573,43 @@ describe("application tab sessions", () => {
     expect(transport.patch).toHaveBeenLastCalledWith(expect.objectContaining({ id: second.id }), { href: "/all?view=a" });
     expect(session.getSnapshot().tabs).toHaveLength(1); session.dispose();
   });
+  it("does not rewrite a location the server row already holds", async () => {
+    const all = { ...createHomeTab("owner"), href: "/all?view=x" };
+    const other = { ...createHomeTab("owner", undefined, 1), href: "/routines" };
+    const { session, transport, navigate, rows } = setup([all, other]);
+    try {
+      await session.initialize("/home");
+      expect(navigate).toHaveBeenCalledWith(all.href);
+      // Restoration acknowledgement, then the board consumes `?view=` and
+      // republishes it: the layout pass briefly sees the bare URL.
+      session.observe(all.href, null);
+      session.observe("/all", null);
+      session.observe("/all", all.href);
+      await session.activate(other.id);
+      session.observe(other.href, null);
+      session.onPageHide(); await session.retry();
+      expect(transport.patch).not.toHaveBeenCalled();
+      expect(rows().map((row) => row.revision)).toEqual([1, 1]);
+      expect(session.getSnapshot().tabs.map((tab) => tab.href)).toEqual([all.href, other.href]);
+    } finally { session.dispose(); }
+  });
+  it("still writes a location that only matches a row's superseded href", async () => {
+    const all = { ...createHomeTab("owner"), href: "/all?view=x" };
+    const { session, transport, replace, rows } = setup([all]);
+    try {
+      await session.initialize("/home");
+      session.observe(all.href, null); await session.retry();
+      expect(transport.patch).not.toHaveBeenCalled();
+      replace([{ ...rows()[0], href: "/projects/p", revision: 2 }]);
+      // A stale list must not restore the superseded href as the server value.
+      session.receive([all]);
+      session.observe("/all", null);
+      session.observe("/all", all.href); await session.retry();
+      expect(transport.patch).toHaveBeenCalledOnce();
+      expect(transport.patch).toHaveBeenLastCalledWith(expect.objectContaining({ id: all.id, revision: 2 }), { href: all.href });
+      expect(rows()[0]).toMatchObject({ href: all.href, revision: 3 });
+    } finally { session.dispose(); }
+  });
   it("keeps a conflicting destination pending until retry uses the canonical revision", async () => {
     const { session, transport, rows } = setup(); await session.initialize("/home");
     const canonical = { ...rows()[0], revision: 2 };
