@@ -11,7 +11,8 @@ production finding and the open follow-ups. Its global issue cache
 re-evaluation retains four of the five set-aside commits after a write-capable
 protocol on a disposable project: resume refreshes the board in 1511 ms
 instead of 3446 ms, and trash, undo, relations and remote edits no longer
-refetch the 2.44 MB board. The issue-counter fix (`a44fd357f`) stays rejected.
+refetch the 2.44 MB board. The issue-counter fix is retained once corrected
+for the `content_revision` that the project content guard adds to every update.
 
 ## Latest startup query-cache pass (2026-10-15)
 

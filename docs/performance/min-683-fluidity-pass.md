@@ -90,6 +90,7 @@ against its stacked control.
 | E server (four fixes, two test follow-ups) | Inbox attribution and agent-run pins overlap their primary reads; local snapshot access in one round trip per page; one shared signing-key fetch; snapshot saves throttled to one per 30 s while data changes | `agent-runs` 264→190 ms, `notifications` 299→272 ms; startup neutral over two ABBA runs (+84 / +1 / +52, then −64 / +48 / −53), sealed 6/6. The signing-key and throttle effects need a 10-minute boundary or minutes of typing and are covered by tests only |
 | E renders (seven commits) | Stable auth identity, palette typing and model reuse, TOC and mention catalog stability, lazy updater, Windows/Linux first frame | 1696→1664 / 1709→1658 / 2029→1969; typing long tasks 67→61.5 ms |
 | `44e0846a7`, `1f8bdee21`, `847eba630`, `c0c99490e` | Global issue cache, re-evaluated with writes (below): unchanged project reads keep board rows, undo/relations/trash settle from the acknowledgement, remote ticket changes read only those tickets, resume keeps joined channels | Resume board fresh 3446→1511 ms (board reads 5→1); trash 1788→124 ms; remote edit 1530→807 ms; startup neutral over two ABBA runs |
+| `d7ef14096` | Issue-counter project updates patched in place, accepting the `content_revision` the project content guard adds to every update | After a remote creation, project list and Smart Assign warning reads 1→0 (2/2 per side) |
 
 Sequential route latency (median of 30 authenticated GETs per side):
 
@@ -113,14 +114,14 @@ A second pass confirms the route gains (for example Routines 620→208 ms).
 | `733e5fb1e` retained Page body beyond its 60 s collection | Page after 65 s away 87→86.5 ms: the eviction never shows in the real journey |
 | `519431387` trailing snapshot debounce | No snapshot sealed within 7 s of readiness (0/6), which delays exit durability; replaced by a throttle measured in round E |
 | `9ff6e81e5` PR detail read alongside the pinned list | Web −359 ms, native +278 ms under GitHub API variance; inconclusive |
-| `a44fd357f` issue-counter project updates patched in place | No gain against the real broadcast: a remote creation still triggers the same project list, Smart Assign warning and triage count reads (2/2 per side), so the counter-only update is never recognized. Its unit fixture assumes full old and new rows. The other four global issue cache commits are retained after the re-evaluation below |
 | `bundle-imports#3` framer-motion duplicate | Deferred: requires a mangue-ui dependency change |
 
 Rejected candidates never reached the published branch. Their commits remain on
 local worktree branches for a follow-up: `worktree-wf_5a021be1-8fc-1`
 (`d65c3d11a`), `worktree-wf_1fc4d2f7-768-1` (`733e5fb1e`, `519431387`),
 `worktree-wf_1fc4d2f7-768-2` (`5f5aeb2a1`), `worktree-wf_0e747944-62f-1`
-(`9ff6e81e5`) and `worktree-wf_0e747944-62f-2` (`a44fd357f`).
+(`9ff6e81e5`). The global issue cache commits of `worktree-wf_0e747944-62f-2`
+are all retained, one of them corrected (below).
 
 ## Global issue cache re-evaluation
 
@@ -153,7 +154,7 @@ has n=2 per side, with identical request counts within each side.
 | Card moved to trash on All | `1f8bdee21` | Card leaves the board after 1788 ms (1774–1802); 2 board reads | 124 ms (124–125); none |
 | Remote ticket edit | `847eba630` | Applied after 1530 ms (1396–1663) through a board read | 807 ms (787–827) through one ticket read |
 | Remote ticket creation | `847eba630` | Applied after 1522 ms (1484–1559) through a board read | 802 ms (764–839) through one ticket read |
-| Its project counter update | `a44fd357f` | Project list, Smart Assign warnings, triage counts | The same three reads: rejected |
+| Its project counter update | `d7ef14096` (corrected `a44fd357f`) | Project list, Smart Assign warnings and triage counts reread | Triage counts only, which the insertion refreshes anyway |
 
 Every board read is the 2.44 MB aggregate, and a cancelled read still runs to
 completion on the server. The write ABBA confirms resume (4312→1460 ms). Resume
@@ -161,10 +162,24 @@ is simulated with window blur and focus events, the desktop path, not a
 suspended socket. One early candidate smoke run, before the realtime timeline
 was recorded, showed 26 rejoins; nine later candidate resumes showed none.
 Network quiet times are not used, because Page and pull request warming keeps
-the network busy. The startup result covers the five commits; `a44fd357f` only
-handles project update broadcasts, which do not occur during startup. Evidence:
-`min683-h2-cache5-r{1,2}-*`, `min683-cache-readonly-*` and `min683-cache-writes-*`
-under ignored `output/playwright/performance/`.
+the network busy. The startup result covers the five commits; the counter
+commit only handles project update broadcasts, which do not occur during
+startup, and its correction only widens that check. Evidence:
+`min683-h2-cache5-r{1,2}-*`, `min683-cache-readonly-*`, `min683-cache-writes-*`
+and `min683-counter-writes-*` under ignored `output/playwright/performance/`.
+
+**Counter correction.** The first counter version (`a44fd357f`) never matched a
+real broadcast. Outside encryption maintenance, `guard_project_content`
+increments `content_revision` on every project update (migration
+`20270109200008`). A number reservation therefore changes `issue_seq`,
+`updated_at` and `content_revision`, while the check accepted only the first
+two, and its unit fixture had no revision column. The corrected commit accepts
+the revision; a content or settings change still rewrites another column and
+keeps the full refetch. Against the product with the first version
+(`3U0d6WHAlrofYiFX3WHO3`), the corrected product (`IL-bcg_biZoHrWrWwI5ES`)
+drops the project list and Smart Assign warning reads after a remote creation
+(1→0 each, 2/2 per side); every other scenario is unchanged. This ABBA used
+four more disposable projects, eight in total, all verified absent.
 
 ## Collectors added
 
