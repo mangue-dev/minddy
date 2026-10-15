@@ -40,6 +40,16 @@ type PresenceClient = Pick<
   realtime: { setAuth: () => Promise<unknown> };
 };
 
+/** Same pages with the same other accounts, whatever the order of connections. */
+function samePresence(a: PagePresenceMap, b: PagePresenceMap): boolean {
+  if (a.size !== b.size) return false;
+  for (const [pageId, people] of a) {
+    const other = b.get(pageId);
+    if (!other || other.length !== people.length || !people.every((id) => other.includes(id))) return false;
+  }
+  return true;
+}
+
 export interface PagePresenceHandle {
   /** Track another page without leaving the project channel. */
   move: (pageId: string) => void;
@@ -78,6 +88,9 @@ export function openPagePresence({
   let closed = false;
   let current = pageId;
   let connectVersion = 0;
+  // The consumer starts empty. A sync after our own track, a rejoin or a
+  // teammate's unrelated reconnect must not publish a new identical map.
+  let published: PagePresenceMap = new Map();
 
   const publish = (ch: RealtimeChannel) => {
     const state = ch.presenceState<PagePresenceState>();
@@ -96,6 +109,8 @@ export function openPagePresence({
         }
       }
     }
+    if (samePresence(pages, published)) return;
+    published = pages;
     onChange(pages);
   };
 

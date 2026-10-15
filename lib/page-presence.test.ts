@@ -212,6 +212,36 @@ describe("openPagePresence", () => {
     handle.close();
   });
 
+  it("publishes a new map only when someone else's presence changes", async () => {
+    const supabase = fakeSupabase();
+    const published: PagePresenceMap[] = [];
+    const handle = openPagePresence({
+      projectId: "proj",
+      userId: "moi",
+      pageId: "page-1",
+      onChange: (present) => published.push(present),
+      client: supabase.client,
+    });
+    await vi.waitFor(() => expect(supabase.calls.channels).toHaveLength(1));
+
+    // Joining alone: the consumer is already empty.
+    supabase.emit({ a: [{ userId: "moi", pageId: "page-1" }] });
+    expect(published).toHaveLength(0);
+    supabase.emit({ a: [{ userId: "moi", pageId: "page-1" }], b: [{ userId: "elle", pageId: "page-2" }] });
+    expect(published).toHaveLength(1);
+    // Our own move, a repeated sync and a reordered rejoin change nothing visible.
+    supabase.emit({ a: [{ userId: "moi", pageId: "page-2" }], b: [{ userId: "elle", pageId: "page-2" }] });
+    supabase.emit({ c: [{ userId: "lui", pageId: "page-2" }], b: [{ userId: "elle", pageId: "page-2" }] });
+    supabase.emit({ b: [{ userId: "elle", pageId: "page-2" }], c: [{ userId: "lui", pageId: "page-2" }] });
+    expect(published).toHaveLength(2);
+    expect(published[1].get("page-2")).toEqual(["lui", "elle"]);
+    // Someone leaving is published, down to the empty map.
+    supabase.emit({ b: [{ userId: "elle", pageId: "page-2" }] });
+    supabase.emit({});
+    expect(published.map((present) => present.get("page-2") ?? [])).toEqual([["elle"], ["lui", "elle"], ["elle"], []]);
+    handle.close();
+  });
+
   it("re-resolves and rejoins after a membership rekey", async () => {
     const supabase = fakeSupabase();
     const handle = openPagePresence({
