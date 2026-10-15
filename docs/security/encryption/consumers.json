@@ -9025,13 +9025,6 @@
   {
     "file": "lib/server/legacy-routine-proposals.ts",
     "operation": "from",
-    "resource": "projects",
-    "line": 32,
-    "storage": false
-  },
-  {
-    "file": "lib/server/legacy-routine-proposals.ts",
-    "operation": "from",
     "resource": "agent_routines",
     "line": 42,
     "storage": false
