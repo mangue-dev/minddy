@@ -44,8 +44,6 @@ import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 
 import {
   discardPageOnUnload,
-  fetchPageBacklinksApi,
-  fetchPageEventsApi,
   updatePageOnUnload,
 } from "@/lib/pages-api";
 import {
@@ -99,11 +97,7 @@ import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
 import { usePageWatch } from "@/lib/use-page-watch";
-import {
-  PAGE_ACTIVITY_FRESH_MS,
-  pageBacklinksKey,
-  pageEventsKey,
-} from "@/lib/page-activity-cache";
+import { usePageActivityWarmup } from "@/lib/page-activity-cache";
 import {
   pageHref,
   pagesHref,
@@ -365,22 +359,7 @@ function PageSurface({
     surfaceRead.canUsePrepared(page, dataUpdatedAt),
   );
 
-  const warmPageActivity = useCallback(() => {
-    void queryClient.prefetchQuery({
-      queryKey: pageEventsKey(pageId),
-      queryFn: () => fetchPageEventsApi(projectId, pageId),
-      staleTime: PAGE_ACTIVITY_FRESH_MS,
-    });
-    void queryClient.prefetchQuery({
-      queryKey: pageBacklinksKey(pageId),
-      queryFn: () => fetchPageBacklinksApi(projectId, pageId),
-      staleTime: PAGE_ACTIVITY_FRESH_MS,
-    });
-  }, [pageId, projectId, queryClient]);
-
-  useEffect(() => {
-    if (page) warmPageActivity();
-  }, [page, warmPageActivity]);
+  const warmPageActivity = usePageActivityWarmup(projectId, pageId, page);
 
   // The LIST line is the source of the displayed title and icon: it is
   // it that the sidebar, the breadcrumbs and the subpage block read, and the

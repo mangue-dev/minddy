@@ -115,12 +115,15 @@ describe("page interface regressions", () => {
 
   it("warms activity data before the comments panel opens", () => {
     const view = source("components/pages/page-view.tsx");
+    const warmup = source("lib/page-activity-cache.ts");
     const activity = source("components/pages/page-activity.tsx");
     const backlinks = source("components/pages/page-backlinks.tsx");
 
-    expect(view).toContain("queryClient.prefetchQuery({");
-    expect(view).toContain("pageEventsKey(pageId)");
-    expect(view).toContain("pageBacklinksKey(pageId)");
+    expect(view).toContain("usePageActivityWarmup(projectId, pageId, page)");
+    expect(view).toContain("onMouseEnter={warmPageActivity}");
+    expect(warmup).toContain("queryClient.prefetchQuery({");
+    expect(warmup).toContain("pageEventsKey(pageId)");
+    expect(warmup).toContain("pageBacklinksKey(pageId)");
     expect(activity).toContain("staleTime: PAGE_ACTIVITY_FRESH_MS");
     expect(backlinks).toContain("staleTime: PAGE_ACTIVITY_FRESH_MS");
     expect(activity).not.toContain('refetchOnMount: "always"');
