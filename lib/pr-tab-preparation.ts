@@ -2,7 +2,7 @@ import { hashKey, isCancelledError, onlineManager, type Query, type QueryClient,
 import { prepareAppTabSurface } from "./app-tab-surfaces";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
-import { appTabPendingIssueSelection, appTabPreparationQueries, appTabSelectionSource, prefetchPullRequestDetail } from "./prefetch-tab-destination";
+import { appTabPendingIssueSelection, appTabPreparationQueries, appTabSelectionSources, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 import { issueWrites } from "./optimistic/issue-writes";
 import { isCachedTabReconciliation, navigationPreparationPriority } from "./navigation-preparation-priority";
 import { allPullRequestsQueryOptions } from "./use-agent-runs";
@@ -115,6 +115,9 @@ export function createPrTabPreparation(
   let listed: Destination[] = [], neighbor: Destination | undefined;
   const manifest = new Map<string, { query: PreparedQuery; neighboring: boolean }>();
   const selectionSources = new Map<string, Set<Destination>>();
+  // Lists a destination may resolve to as one of several candidates. Their
+  // invalidation and manual writes can change which candidate owns it.
+  const scopeSources = new Set<string>();
   const pendingInsertSources = new Map<string, Set<string>>();
   const indexPendingInsertSources = () => {
     pendingInsertSources.clear();
@@ -148,12 +151,14 @@ export function createPrTabPreparation(
   };
   const rebuildManifest = () => {
     listed = available.filter((href) => href !== active).map(destination).filter((item) => item.queries.length);
-    selectionSources.clear();
+    selectionSources.clear(); scopeSources.clear();
     for (const item of listed) {
-      const source = appTabSelectionSource(item.href);
-      if (!source) continue;
-      const identity = hashKey(source), destinations = selectionSources.get(identity) ?? new Set<Destination>();
-      destinations.add(item); selectionSources.set(identity, destinations);
+      const sources = new Set(appTabSelectionSources(item.href).map(hashKey));
+      for (const identity of sources) {
+        const destinations = selectionSources.get(identity) ?? new Set<Destination>();
+        destinations.add(item); selectionSources.set(identity, destinations);
+        if (sources.size > 1) scopeSources.add(identity);
+      }
     }
     indexPendingInsertSources();
     neighbor = undefined; manifest.clear();
@@ -470,8 +475,11 @@ export function createPrTabPreparation(
     if (event.type !== "updated") return;
     const action = event.action;
     // Only the ordinary source read discovers details. Optimistic/manual
-    // notifications and unrelated observer churn never scan secondary lists.
-    if (action.type === "error" || (action.type === "success" && !action.manual)) refreshSelectedDependencies(identity);
+    // notifications and unrelated observer churn never scan secondary lists,
+    // except a candidate scope whose invalidation or manual write can move a
+    // destination to its other list key.
+    if (action.type === "error" || (action.type === "success" && !action.manual) ||
+        (scopeSources.has(identity) && (action.type === "invalidate" || action.type === "success"))) refreshSelectedDependencies(identity);
     if (event.query.queryKey[0] === "pull-request" && !preparing.has(identity) && pendingKeys.size && !forgeWake &&
         (action.type === "error" || (action.type === "success" && !action.manual))) {
       // Cache settlement precedes the helper's Promise.finally lock release.
@@ -533,7 +541,7 @@ export function createPrTabPreparation(
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", resume);
       if (typeof window !== "undefined") window.removeEventListener("focus", resume);
       neighborAttempts.clear();
-      selectionSources.clear();
+      selectionSources.clear(); scopeSources.clear();
       pendingInsertSources.clear();
       pagePreparation.dispose();
       for (const pair of bootstrapPairs) {

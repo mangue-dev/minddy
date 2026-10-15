@@ -11,6 +11,7 @@ import { issuesQueryFn } from "./issues-api";
 import { issueWrites, mergeServerIssue, removeIssueEverywhere } from "./optimistic/issue-writes";
 import type { Issue } from "./types";
 import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
+import { feedbackQueryOptions } from "./feedback-query";
 
 vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
@@ -193,6 +194,55 @@ describe("account-owned PR preparation", () => {
       expect(paths).toHaveLength(18); expect(maximumOwnedReads).toBe(SCOPED_PREPARATION_CONCURRENCY + 1);
       expect(paths.some((path) => path.includes("/settings") || path.includes("/git-link"))).toBe(false);
       expect(prepared.tasks.size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("moves a Feedback post destination between its accepted open list and the full list as the open list changes", async () => {
+    const prepared = setup();
+    const href = "/projects/new/feedback?post=post-5";
+    const open = feedbackQueryOptions("new").queryKey, full = ["feedback", "new"];
+    const posts = Array.from({ length: 8 }, (_, index) => ({ id: `post-${index}`, project_id: "new", status: index < 6 ? "open" : "shipped",
+      vote_count: 10 - index, created_at: new Date(index * 1000).toISOString(), review_state: "published", sensitivity: null, category_ids: [] }));
+    prepared.fetch.mockImplementation(async (url) => {
+      const path = String(url);
+      if (path === "/api/projects/new/feedback") return Response.json({ posts, board_enabled: false });
+      if (path.startsWith("/api/projects/new/feedback?")) return Response.json({ posts: posts.filter((post) => post.status === "open"), board_enabled: false });
+      const detail = path.match(/\/feedback\/(post-\d+)$/)?.[1];
+      if (detail) return Response.json({ post: posts.find((post) => post.id === detail) });
+      return fixtureResponse(path);
+    });
+    const fullReads = () => prepared.fetch.mock.calls.filter(([url]) => String(url) === "/api/projects/new/feedback").length;
+    const owned = () => { const hashes = navigationWorkingSetQueryHashes(prepared.client); return { open: hashes.has(hashKey(open)), full: hashes.has(hashKey(full)) }; };
+    const readOpen = () => prepared.client.fetchQuery({ ...feedbackQueryOptions("new"), staleTime: 0 });
+    try {
+      prepared.preparation.visit("/home", ["/home", href]); await drain(prepared);
+      expect(fullReads()).toBe(1);
+      expect(owned()).toEqual({ open: false, full: true });
+
+      await readOpen(); await drain(prepared);
+      expect(owned()).toEqual({ open: true, full: false });
+      expect(navigationWorkingSetQueryHashes(prepared.client).has(hashKey(["feedback-detail", "new", "post-5"]))).toBe(true);
+      expect(isPreparedAppTabDestination(prepared.client, href)).toBe(true);
+      await prepared.client.invalidateQueries({ queryKey: full, exact: true, refetchType: "none" }); await drain(prepared);
+      expect(fullReads()).toBe(1);
+
+      await prepared.client.invalidateQueries({ queryKey: open, exact: true, refetchType: "none" }); await drain(prepared);
+      expect(owned()).toEqual({ open: false, full: true });
+      expect(fullReads()).toBe(2);
+
+      await readOpen(); await drain(prepared);
+      expect(owned()).toEqual({ open: true, full: false });
+      prepared.client.removeQueries({ queryKey: open, exact: true }); await drain(prepared);
+      expect(owned()).toEqual({ open: false, full: true });
+
+      await readOpen(); await drain(prepared);
+      expect(owned()).toEqual({ open: true, full: false });
+      // An optimistic write that moves the post out of the open scope.
+      prepared.client.setQueryData<{ posts: typeof posts }>(open, (data) => data && ({ ...data,
+        posts: data.posts.map((post) => post.id === "post-5" ? { ...post, status: "shipped" } : post) }));
+      await drain(prepared);
+      expect(owned()).toEqual({ open: false, full: true });
+      expect(fullReads()).toBe(2);
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
 

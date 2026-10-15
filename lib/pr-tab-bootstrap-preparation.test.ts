@@ -7,7 +7,7 @@ import { navigationPreparationHasRead, subscribeNavigationPreparation } from "./
 const source = vi.hoisted(() => ({ queries: [] as FetchQueryOptions<unknown>[], routes: new Map<string, FetchQueryOptions<unknown>[]>() }));
 vi.mock("./prefetch-tab-destination", () => ({
   appTabPreparationQueries: (_client: unknown, href: string) => source.routes.get(href) ?? (href.startsWith("/projects/") ? source.queries : []),
-  appTabSelectionSource: () => null,
+  appTabSelectionSources: () => [],
   appTabPendingIssueSelection: () => null,
   prefetchPullRequestDetail: vi.fn(),
 }));

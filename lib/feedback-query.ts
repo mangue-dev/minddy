@@ -21,13 +21,28 @@ export function feedbackQueryOptions(projectId: string, filters: FeedbackListFil
   };
 }
 
-/** Prepare the same scope that a fresh feedback destination initially displays. */
-export function feedbackFiltersForDestination(href: string): FeedbackListFilters {
+/** The URL-owned normal scope of a destination; retained controls and `post` never shape it. */
+export function feedbackNormalFiltersForDestination(href: string): FeedbackListFilters {
   const params = new URL(href, "https://minddy.example").searchParams;
-  if (params.has("post")) return {};
   const filters = parseFeedbackListFilters(params) ?? {};
   if (!params.has("objective")) filters.statuses = [...FEEDBACK_OPEN_STATUSES];
   return filters;
+}
+
+/**
+ * Prepare the same scope that a fresh feedback destination initially displays:
+ * the consumer's accepted normal list when it contains `post`, otherwise the
+ * full list. It only chooses an existing reader and never writes either key.
+ */
+export function feedbackFiltersForDestination(client: QueryClient, projectId: string, href: string): FeedbackListFilters {
+  const post = new URL(href, "https://minddy.example").searchParams.get("post");
+  return feedbackFiltersForRequestedPost(client, projectId, post, feedbackNormalFiltersForDestination(href));
+}
+
+/** Every list key a destination may resolve to; their state changes can move it. */
+export function feedbackDestinationSourceKeys(projectId: string, href: string): (readonly unknown[])[] {
+  const normal = feedbackQueryOptions(projectId, feedbackNormalFiltersForDestination(href)).queryKey;
+  return new URL(href, "https://minddy.example").searchParams.has("post") ? [normal, feedbackQueryOptions(projectId, {}).queryKey] : [normal];
 }
 
 /** Reuse an exact accepted scope only when it already contains the requested post. */

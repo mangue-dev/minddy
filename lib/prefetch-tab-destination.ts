@@ -1,5 +1,5 @@
 import { prepareAppTabSurface, isAppTabSurfaceReady } from "./app-tab-surfaces";
-import { feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-query";
+import { feedbackDestinationSourceKeys, feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-query";
 import { fetchPagesApi } from "./pages-api";
 import { pagesKey, pageKey, fetchPageNavigationData } from "./use-pages-query";
 import { issuesQueryFn } from "./issues-api";
@@ -82,7 +82,7 @@ export function prefetchAppTabDestination(
     return;
   }
   if (route.projectId && route.section === "feedback") {
-    void queryClient.prefetchQuery(feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href)));
+    void queryClient.prefetchQuery(feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(queryClient, route.projectId, href)));
     return;
   }
   if (route.projectId && route.section === "objectives") {
@@ -159,7 +159,7 @@ export function appTabPreparationQuery(client: QueryClient, href: string) {
     if (route.pageId) return { queryKey: pageKey(route.pageId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPageNavigationData(client, route.projectId!, route.pageId!, signal) };
     return { queryKey: pagesKey(route.projectId), queryFn: ({ signal }: { signal: AbortSignal }) => fetchPagesApi(route.projectId!, signal) };
   }
-  if (route.projectId && route.section === "feedback") return feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href));
+  if (route.projectId && route.section === "feedback") return feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(client, route.projectId, href));
   if (route.projectId && ["tickets", "triage"].includes(route.section)) return { queryKey: ["issues", route.projectId] as const, queryFn: issuesQueryFn(route.projectId) };
   if (route.section === "all") return { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn };
   return null;
@@ -184,13 +184,15 @@ function preparationRead<T, Key extends QueryKey>(options: {
     } };
 }
 
-export function appTabSelectionSource(href: string): readonly unknown[] | null {
+/** Lists whose state can change a destination's selected detail or, for a
+ * Feedback `post`, which of its two deterministic list keys it resolves to. */
+export function appTabSelectionSources(href: string): (readonly unknown[])[] {
   const route = appTabRoute(href);
-  if (!route.projectId) return null;
-  if (route.section === "triage") return ["issues", route.projectId];
-  if (route.section === "objectives") return ["objectives", route.projectId];
-  if (route.section === "feedback") return feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(href)).queryKey;
-  return null;
+  if (!route.projectId) return [];
+  if (route.section === "triage") return [["issues", route.projectId]];
+  if (route.section === "objectives") return [["objectives", route.projectId]];
+  if (route.section === "feedback") return feedbackDestinationSourceKeys(route.projectId, href);
+  return [];
 }
 
 function selectedTriageIssue(client: QueryClient, href: string): string | null {
@@ -261,7 +263,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
     return queries;
   }
   if (route.projectId && route.section === "feedback") {
-    const filters = feedbackFiltersForDestination(href);
+    const filters = feedbackFiltersForDestination(client, route.projectId, href);
     const list = feedbackQueryOptions(route.projectId, filters);
     const queries: FetchQueryOptions<unknown>[] = [list,
       ...projectPreparationQueries(client, route.projectId).filter((option) => ["issues", "issue-relations", "members", "categories", "objectives"].includes(String(option.queryKey[0]))), tree!];

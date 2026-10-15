@@ -23,7 +23,7 @@ describe("requested feedback scope reuse", () => {
     const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
     const selected = feedbackFiltersForRequestedPost(client, project, id(96), normal);
     expect(selected).toBe(normal);
-    expect(feedbackFiltersForDestination(href(id(96)))).toEqual({});
+    expect(feedbackFiltersForDestination(client, project, href(id(96)))).toEqual(normal);
     expect(await client.fetchQuery(feedbackQueryOptions(project, selected))).toBe(accepted);
     expect(fetch).not.toHaveBeenCalled();
     expect(client.getQueryState(["feedback", project])).toBeUndefined();
@@ -63,7 +63,8 @@ describe("requested feedback scope reuse", () => {
     const client = new QueryClient(); client.setQueryData(feedbackQueryOptions(project, normal).queryKey, envelope());
     expect(feedbackFiltersForRequestedPost(client, project, id(120), normal)).toEqual({});
     expect(feedbackFiltersForRequestedPost(client, project, id(121), normal)).toEqual({});
-    expect(feedbackFiltersForDestination(href(id(1)))).toEqual({});
+    expect(feedbackFiltersForDestination(client, project, href(id(120)))).toEqual({});
+    expect(feedbackFiltersForDestination(client, project, href(id(121)))).toEqual({});
     client.clear();
   });
 

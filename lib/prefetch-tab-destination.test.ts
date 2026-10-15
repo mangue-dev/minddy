@@ -219,6 +219,53 @@ describe("tab destination prefetch", () => {
     });
   });
 
+  describe("requested Feedback post scope", () => {
+    const open = feedbackQueryOptions("p").queryKey;
+    const post = (id: string, overrides: Record<string, unknown> = {}) => ({ id, project_id: "p", status: "open", vote_count: 1,
+      created_at: "2026-01-01", review_state: "published", sensitivity: null, category_ids: [], ...overrides });
+    const href = "/projects/p/feedback?post=target";
+    const seedPrerequisites = () => {
+      client.setDefaultOptions({ queries: { retry: false, staleTime: 300_000 } });
+      client.setQueryData(open, { posts: [post("top", { vote_count: 9 }), post("target")], board_enabled: true });
+      // Every prerequisite except a list: only the open list above is seeded.
+      for (const options of appTabPreparationQueries(client, href)) {
+        if (options.queryKey[0] !== "feedback" && client.getQueryData(options.queryKey) === undefined) {
+          client.setQueryData(options.queryKey, options.queryKey[0] === "feedback-detail" ? { post: post("target") } : []);
+        }
+      }
+      for (const key of [["feedback-detail", "p", "target"], ["feedback-comments", "p", "target"], ["feedback-events", "p", "target"]]) {
+        if (client.getQueryData(key) === undefined) client.setQueryData(key, key[0] === "feedback-detail" ? { post: post("target") } : []);
+      }
+    };
+
+    it("prepares, reads and admits the accepted open list that contains the post", async () => {
+      seedPrerequisites();
+      expect(appTabPreparationQueries(client, href)[0].queryKey).toEqual(open);
+      expect(appTabPreparationQueries(client, href).map((option) => option.queryKey).slice(-3)).toEqual([
+        ["feedback-detail", "p", "target"], ["feedback-comments", "p", "target"], ["feedback-events", "p", "target"],
+      ]);
+      expect(isPreparedAppTabDestination(client, href)).toBe(true);
+      expect(client.getQueryState(["feedback", "p"])).toBeUndefined();
+      prefetchAppTabDestination(client, href, new Set());
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(requested()).toEqual([]);
+      expect(client.getQueryData<{ posts: unknown[] }>(open)?.posts).toHaveLength(2);
+    });
+
+    it.each(["absent", "invalidated", "error", "resolved", "foreign", "missing"])("falls back to the full list when the open list is %s", async (boundary) => {
+      seedPrerequisites();
+      if (boundary === "absent") client.removeQueries({ queryKey: open, exact: true });
+      if (boundary === "invalidated") await client.invalidateQueries({ queryKey: open, exact: true, refetchType: "none" });
+      if (boundary === "error") client.getQueryCache().find({ queryKey: open, exact: true })!.setState({ status: "error", error: new Error("Denied") });
+      const replace = { resolved: post("target", { status: "shipped" }), foreign: post("target", { project_id: "other" }), missing: post("other") }[boundary as "resolved"];
+      if (replace) client.setQueryData(open, { posts: [post("top", { vote_count: 9 }), replace], board_enabled: true });
+      expect(appTabPreparationQueries(client, href)[0].queryKey).toEqual(["feedback", "p"]);
+      expect(isPreparedAppTabDestination(client, href)).toBe(false);
+      prefetchAppTabDestination(client, href, new Set());
+      await vi.waitFor(() => expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain("/api/projects/p/feedback"));
+    });
+  });
+
   it("leaves unknown destinations alone", () => {
     prefetchAppTabDestination(client, "/settings", new Set());
     expect(requested()).toEqual([]);
