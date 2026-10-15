@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import { GLOBAL_BOARD_KEY, issueWrites, objectiveWrites } from "./optimistic/issue-writes";
 import { isAcceptedPageEcho } from "./optimistic-page-writes";
+import { isOwnRelationEcho } from "./optimistic/relation-writes";
 
 /**
  * WHAT A BROADCAST EVENT REFRESHES — the realtime
@@ -83,6 +84,9 @@ const ISSUE_AGGREGATE_KEYS: Invalidation[] = [
 ];
 
 const active = (key: QueryKey): Invalidation => ({ key, refetch: "active" });
+
+const sameKey = (a: QueryKey, b: QueryKey) =>
+  a.length === b.length && a.every((part, index) => part === b[index]);
 
 /** Metadata triggers can project DELETE's NEW row into a non-null empty record. */
 function routingRecord(change: BroadcastChange): Record<string, unknown> | null {
@@ -253,6 +257,28 @@ export function ownPageEchoCheck(
   }
   if (key[0] === "app-tab-metadata") return (client) => isAcceptedPageEcho(client, record, true);
   return undefined;
+}
+
+/**
+ * The echo of our own relation write, decided when the coalesced
+ * invalidation fires: the broadcast usually lands before the POST or DELETE
+ * acknowledgement. The aggregate board already holds that relation slice, so
+ * only its refetch is skipped; the small project relation list still reloads.
+ */
+function ownRelationEchoCheck(
+  change: BroadcastChange,
+  { key }: Invalidation
+): ((client: QueryClient) => boolean) | undefined {
+  if (change.table !== "issue_relations" || !sameKey(key, GLOBAL_BOARD_KEY)) return undefined;
+  return (client) => isOwnRelationEcho(client, change);
+}
+
+/** Every deferred own-echo check; undefined means the invalidation always applies. */
+export function ownEchoCheck(
+  change: BroadcastChange,
+  invalidation: Invalidation
+): ((client: QueryClient) => boolean) | undefined {
+  return ownPageEchoCheck(change, invalidation) ?? ownRelationEchoCheck(change, invalidation);
 }
 
 export function keysForProjectEvent(

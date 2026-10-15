@@ -1,6 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { recordAcceptedPageWrite } from "./optimistic-page-writes";
+import { addRelationOptimistically, beginRelationRemoval } from "./optimistic/relation-writes";
+import type { IssueRelation } from "./types";
 import {
   canonicalSql,
   migrationFiles,
@@ -11,6 +13,7 @@ import {
 import {
   keysForProjectEvent,
   keysForUserEvent,
+  ownEchoCheck,
   ownPageEchoCheck,
   USER_SCOPE_KEYS,
   projectScopeKeys,
@@ -168,6 +171,32 @@ describe("keysForProjectEvent — pages", () => {
     expect(projectScopeKeys(PROJECT)).toContainEqual(["pages", PROJECT]);
     expect(projectScopeKeys(PROJECT)).toContainEqual(["page"]);
     expect(projectScopeKeys(PROJECT)).not.toContainEqual(["page", PROJECT]);
+  });
+});
+
+describe("keysForProjectEvent — issue relations", () => {
+  const relation: IssueRelation & Record<string, unknown> = { id: "22222222-2222-4222-8222-222222222222", project_id: PROJECT, source_id: "a", source_type: "issue", target_id: "b", target_type: "issue", type: "blocks" };
+  const checks = (client: QueryClient, event: BroadcastChange) => Object.fromEntries(
+    keysForProjectEvent(event, PROJECT).map((invalidation) =>
+      [JSON.stringify(invalidation.key), ownEchoCheck(event, invalidation)?.(client) ?? false]));
+
+  it("skips only the aggregate board refetch for the echo of our own relation writes", async () => {
+    const client = new QueryClient(), other = new QueryClient();
+    let confirm!: (row: IssueRelation) => void;
+    const added = addRelationOptimistically(client, PROJECT, { source_id: "a", target_id: "b", type: "blocks" },
+      () => new Promise((resolve) => { confirm = resolve; }));
+    const insert = change("issue_relations", { record: relation });
+    // The broadcast leaves at commit, usually before the POST acknowledgement.
+    expect(checks(client, insert)).toEqual({ [JSON.stringify(["issue-relations", PROJECT])]: false, [JSON.stringify(["me", "board"])]: true });
+    confirm(relation);
+    await added;
+    expect(checks(client, insert)[JSON.stringify(["me", "board"])]).toBe(true);
+    const removal = beginRelationRemoval(client, PROJECT, relation.id);
+    removal.settle();
+    expect(checks(client, change("issue_relations", { operation: "DELETE", old_record: relation }))[JSON.stringify(["me", "board"])]).toBe(true);
+    // Another window, a teammate, Numo or the MCP still refreshes the board.
+    expect(checks(other, insert)[JSON.stringify(["me", "board"])]).toBe(false);
+    expect(checks(client, change("issue_relations", { record: { ...relation, id: "33333333-3333-4333-8333-333333333333", target_id: "c" } }))[JSON.stringify(["me", "board"])]).toBe(false);
   });
 });
 

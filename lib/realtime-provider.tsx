@@ -26,7 +26,7 @@ import {
   isOwnEcho,
   keysForProjectEvent,
   keysForUserEvent,
-  ownPageEchoCheck,
+  ownEchoCheck,
   projectScopeKeys,
   USER_SCOPE_KEYS,
   type BroadcastChange,
@@ -319,7 +319,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 // the user sees), the refresh then.
                 apply?.(change);
                 for (const invalidation of keysFor(change)) {
-                  invalidateCoalesced(invalidation, ownPageEchoCheck(change, invalidation));
+                  invalidateCoalesced(invalidation, ownEchoCheck(change, invalidation));
                 }
               });
             }
