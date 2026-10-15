@@ -122,7 +122,31 @@ const AUTH_INIT_TIMEOUT_MS = 8_000;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+/**
+ * True when two session snapshots describe the same account in the same state.
+ * `getSession()` parses the stored session on every call, so a foreground
+ * recovery hands back a new `user` object even when nothing changed. The SDK
+ * serializes both sides the same way, so the JSON comparison is stable; a key
+ * order difference only costs one extra render.
+ */
+function sameUser(prev: User | null, next: User | null): boolean {
+  if (prev === next) return true;
+  if (!prev || !next || prev.id !== next.id) return false;
+  return JSON.stringify(prev) === JSON.stringify(next);
+}
+
+export function AuthProvider({
+  children,
+  discoverOAuthProviders = true,
+}: {
+  children: ReactNode;
+  /**
+   * Reads the enabled external providers from Supabase Auth. Only the sign-in
+   * and sign-up screens show them, so the authenticated shell turns this off
+   * to skip a cross-origin request and a context update during startup.
+   */
+  discoverOAuthProviders?: boolean;
+}) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const metaWriteChain = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
+    if (!discoverOAuthProviders) return;
     const { supabaseUrl, supabaseAnonKey } = browserRuntimeConfig();
     const controller = new AbortController();
     let disposed = false;
@@ -201,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", resume);
       document.removeEventListener("visibilitychange", resumeVisible);
     };
-  }, []);
+  }, [discoverOAuthProviders]);
 
   useEffect(() => {
     const supabase = getSupabase();
@@ -238,10 +263,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // so ALL the cards. And “when returning to the foreground” is the gesture
       // more common in an office shell.
       setSession((prev) => (prev?.access_token === s?.access_token ? prev : s));
-      // ⚠ **No bail-out on `user`**: `refreshUser` and
-      // `updateUserMetadata` rely on the new identity to propagate the
-      // metadata.
-      setUser(s?.user ?? null);
+      // Bail out only on identical CONTENT. Foreground recovery re-reads the
+      // same stored session on every focus, tab return or reconnect; a new
+      // identity would re-render every consumer for nothing. Any real change
+      // (metadata, factors, another account, sign-out) still propagates, and
+      // `refreshUser` / `updateUserMetadata` set their own result directly.
+      setUser((prev) => {
+        const next = s?.user ?? null;
+        return sameUser(prev, next) ? prev : next;
+      });
       setLoading(false);
 
       // The database rotates every private topic when MFA assurance changes.
