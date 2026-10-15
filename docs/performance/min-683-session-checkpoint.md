@@ -1,5 +1,14 @@
 # MIN-683: session checkpoint, 2026-10-14
 
+## Latest global fluidity pass (2026-10-15)
+
+Read [the fluidity pass](min-683-fluidity-pass.md) first. Measurements now use a
+local HTTP/2 + brotli proxy and include the sealed relaunch path. Against the
+original control in one ABBA comparison, restored All completes at 1720 ms
+against 2186 ms (web cold), 1759 against 2391 ms (web reload) and 2031 against
+2790 ms (native). It lists retained and rejected fixes, the iad1/eu-west-1
+production finding and the open follow-ups.
+
 ## Latest startup query-cache pass (2026-10-15)
 
 Read [the startup cache pass](min-683-startup-cache-pass.md) first. Forced-quit
