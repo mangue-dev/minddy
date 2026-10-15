@@ -52,6 +52,11 @@ const h = vi.hoisted(() => ({
   updateError: null as { code: string; message: string } | null,
   pageListCap: 1000,
   pageListLaterError: false,
+  /** Page reads and access checks, in the order they were sent. */
+  trace: [] as string[],
+  /** Holds every access answer, or every single-page read, until released. */
+  accessHold: null as Promise<void> | null,
+  pageReadHold: null as Promise<void> | null,
   seq: 0,
 }));
 
@@ -83,6 +88,7 @@ vi.mock("@/lib/supabase-service", () => {
     const matching = () => all().filter((row) => filters.every((f) => f(row)));
 
     const run = (): { data: Record<string, unknown>[] | null; error: { code: string; message: string } | null; count?: number } => {
+      if (pages && mode === "select") h.trace.push(orderColumn === "id" ? "pages:list" : "pages:read");
       if (mode === "insert") {
         // An object OR an array: duplication writes an entire branch of a
         // shot (MIN-272), and a half-posed copy would be a false tree.
@@ -225,6 +231,7 @@ vi.mock("@/lib/supabase-service", () => {
       return { data: data?.[0] ?? null, error: data?.length ? null : new Error("no row") };
     };
     query.maybeSingle = async () => {
+      if (pages && h.pageReadHold) await h.pageReadHold;
       const { data, error } = run();
       return { data: data?.[0] ?? null, error };
     };
@@ -346,8 +353,11 @@ vi.mock("@/lib/server/page-mentions", () => ({
 }));
 
 vi.mock("@/lib/server/project-access", () => ({
-  getProjectAccess: async (_userId: string, projectId: string) =>
-    h.access.has(projectId) ? { project: { id: projectId }, isOwner: true, isMember: true } : null,
+  getProjectAccess: async (_userId: string, projectId: string) => {
+    h.trace.push(`access:${projectId}`);
+    if (h.accessHold) await h.accessHold;
+    return h.access.has(projectId) ? { project: { id: projectId }, isOwner: true, isMember: true } : null;
+  },
 }));
 
 /**
@@ -407,6 +417,9 @@ beforeEach(() => {
   h.updateError = null;
   h.pageListCap = 1000;
   h.pageListLaterError = false;
+  h.trace = [];
+  h.accessHold = null;
+  h.pageReadHold = null;
   h.access = new Set([PROJECT]);
   announce.recordPageEvent.mockClear();
   announce.notifyAgentPageWrite.mockClear();
@@ -568,6 +581,29 @@ describe("listPages", () => {
     h.pageListCap = 1;
     Object.assign(rowOf(invalid), { encryption_version: 0, encrypted_content: "invalid-legacy-state" });
     expect(await listPages(PROJECT, ACTOR)).toEqual({ ok: false, status: 500, errorKey: "databaseError" });
+  });
+
+  it("starts the first batch beside the access check and reads on only after access", async () => {
+    const ids = [await create("First"), await create("Second"), await create("Third")];
+    h.pageListCap = 1; h.trace = [];
+    let release!: () => void;
+    h.accessHold = new Promise((resolve) => { release = resolve; });
+    const pending = listPages(PROJECT, ACTOR);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(h.trace).toEqual(["pages:list", `access:${PROJECT}`]);
+    release();
+    const result = await pending;
+    expect(result.ok && result.pages.map(({ id }) => id).sort()).toEqual([...ids].sort());
+    expect(h.trace.filter((entry) => entry === "pages:list")).toHaveLength(3);
+  });
+
+  it("answers a denied list from its access check without decoding or reading on", async () => {
+    const undecodable = await create("First");
+    await create("Second");
+    Object.assign(rowOf(undecodable), { encryption_version: 0, encrypted_content: "invalid-legacy-state" });
+    h.pageListCap = 1; h.access = new Set(); h.trace = [];
+    expect(await listPages(PROJECT, ACTOR)).toEqual({ ok: false, status: 404, errorKey: "projectNotFound" });
+    expect(h.trace).toEqual(["pages:list", `access:${PROJECT}`]);
   });
 });
 
@@ -945,6 +981,28 @@ describe("getPage", () => {
       status: 404,
       errorKey: "pageNotFound",
     });
+  });
+
+  it("checks the route's project beside the page read, once", async () => {
+    const id = await create("A");
+    h.trace = [];
+    let release!: () => void;
+    h.pageReadHold = new Promise((resolve) => { release = resolve; });
+    const pending = getPage(id, ACTOR, { projectId: PROJECT });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(h.trace).toEqual([`access:${PROJECT}`]);
+    release();
+    expect(await pending).toMatchObject({ ok: true, page: { id } });
+    expect(h.trace).toEqual([`access:${PROJECT}`, "pages:read"]);
+  });
+
+  it.each([
+    { name: "still serves a page through its own project when the route names another", granted: [PROJECT], ok: true },
+    { name: "hides a page of an inaccessible project behind an accessible route project", granted: ["other-project"], ok: false },
+  ])("$name", async ({ granted, ok }) => {
+    const id = await create("A");
+    h.access = new Set(granted);
+    expect((await getPage(id, ACTOR, { projectId: "other-project" })).ok).toBe(ok);
   });
 });
 

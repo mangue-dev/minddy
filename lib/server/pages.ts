@@ -7,6 +7,7 @@ import { isDatabaseSchema } from "@/lib/page-databases";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { readCompleteScopedRows } from "./complete-scoped-rows";
+import { withSupabaseAbortSignal } from "./supabase-fetch";
 import {
   byPosition,
   descendantIds,
@@ -215,12 +216,20 @@ async function loadPage(
   service: Service,
   pageId: string,
   actorId: string,
-  { includeTrashed = false }: { includeTrashed?: boolean } = {}
+  { includeTrashed = false, projectAccess }: {
+    includeTrashed?: boolean;
+    /** A check already started for the project the caller expects. */
+    projectAccess?: { projectId: string; allowed: Promise<boolean> };
+  } = {}
 ): Promise<Page | null> {
   const query = service.from("pages").select(FULL_COLUMNS).eq("id", pageId);
   if (!includeTrashed) query.is("deleted_at", null);
   const { data } = await query.maybeSingle();
-  if (!data?.project_id || !(await access(actorId, data.project_id))) return null;
+  if (!data?.project_id) return null;
+  // The early check stands only for that project; any other page checks its own.
+  const allowed = projectAccess && data.project_id === projectAccess.projectId
+    ? await projectAccess.allowed : await access(actorId, data.project_id);
+  if (!allowed) return null;
   return decodePage(data, actorId);
 }
 
@@ -449,17 +458,33 @@ export async function listPages(
 ): Promise<
   { ok: true; pages: PageSummary[] } | { ok: false; status: number; errorKey: PageErrorKey }
 > {
-  if (!(await access(actorId, projectId))) {
+  const readBatch = (after: string | null) => {
+    let query = getServiceClient().from("pages").select(LIST_COLUMNS, { count: "exact" })
+      .eq("project_id", projectId).is("deleted_at", null).order("id").limit(1000);
+    if (after) query = query.gt("id", after);
+    return query;
+  };
+  // Only the first batch overlaps the access check. Later batches, decoding
+  // and the response wait for it, and a denial aborts that batch.
+  const abort = new AbortController();
+  // `then` sends the request now, inside the signal's scope.
+  const firstBatch = withSupabaseAbortSignal(abort.signal, () => Promise.resolve(readBatch(null).then((batch) => batch)));
+  void firstBatch.catch(() => {});
+  let allowed: boolean;
+  try {
+    allowed = await access(actorId, projectId);
+  } catch (error) {
+    abort.abort();
+    throw error;
+  }
+  if (!allowed) {
+    abort.abort();
     return { ok: false, status: 404, errorKey: "projectNotFound" };
   }
 
   try {
-    const rows = await readCompleteScopedRows<Record<string, unknown>>((after) => {
-      let query = getServiceClient().from("pages").select(LIST_COLUMNS, { count: "exact" })
-        .eq("project_id", projectId).is("deleted_at", null).order("id").limit(1000);
-      if (after) query = query.gt("id", after);
-      return query;
-    }, (row) => row.id);
+    const rows = await readCompleteScopedRows<Record<string, unknown>>(
+      (after) => after === null ? firstBatch : readBatch(after), (row) => row.id);
     const pages = await Promise.all(rows.map(async (row) => {
       const { content: _body, ...summary } = await decodePageProjection(row, actorId);
       return summary as unknown as PageSummary;
@@ -471,17 +496,23 @@ export async function listPages(
   }
 }
 
-/** A page with his body. */
+/**
+ * A page with its body. `projectId`, the project a route names, starts its
+ * access check alongside the page read; loadPage still decodes nothing until
+ * access to the page's own project is confirmed.
+ */
 export async function getPage(
   pageId: string,
-  actorId: string
+  actorId: string,
+  { projectId }: { projectId?: string } = {}
 ): Promise<PageResult<Page>> {
   const service = getServiceClient();
-  const page = await loadPage(service, pageId, actorId);
+  const allowed = projectId ? access(actorId, projectId) : undefined;
+  // Awaited only when the page belongs to that project.
+  void allowed?.catch(() => {});
+  const page = await loadPage(service, pageId, actorId,
+    { projectAccess: projectId && allowed ? { projectId, allowed } : undefined });
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
-  if (!(await access(actorId, page.project_id))) {
-    return { ok: false, status: 404, errorKey: "pageNotFound" };
-  }
   return { ok: true, page };
 }
 
