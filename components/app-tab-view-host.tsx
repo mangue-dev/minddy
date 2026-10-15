@@ -32,7 +32,7 @@ const Home = dynamic(appTabSurfaceLoaders.home);
 const Routines = dynamic(appTabSurfaceLoaders.routines);
 const Objectives = dynamic(appTabSurfaceLoaders.objectives);
 
-const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: RetainedAppView; active: boolean }) {
+const RetainedBoard = memo(function RetainedBoard({ view, active, roots }: { view: RetainedAppView; active: boolean; roots: Map<string, HTMLElement> }) {
   // Prepared public code can render synchronously. Fix the renderer at mount:
   // upgrading a mounted dynamic wrapper would discard its DOM and local state.
   // Keep activation from replaying unchanged board props. Account query and
@@ -45,6 +45,14 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   }
   activation.current.active = active;
   const scroll = useRetainedBoardScroll(active);
+  const root = scroll.ref;
+  // The host lives outside Activity, so hidden views stay registered.
+  useLayoutEffect(() => {
+    const node = root.current;
+    if (!node) return;
+    roots.set(view.key, node);
+    return () => { if (roots.get(view.key) === node) roots.delete(view.key); };
+  }, [roots, view.key, root]);
   const client = useQueryClient();
   const t = useTranslations("Board");
   const isBoard = view.kind === "global-board" || view.kind === "project-board";
@@ -156,6 +164,8 @@ function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeig
   const { tabs, activeId, session } = useAppTabs();
   const client = useQueryClient();
   const [state, setState] = useState<{ location: string; tabId: string | null; tabIds: string; hrefs: string; views: RetainedAppView[]; visits: string[] }>({ location: "", tabId: null, tabIds: "", hrefs: "", views: [], visits: [] });
+  // Mounted view roots, so the retention policy never searches the document.
+  const [roots] = useState(() => new Map<string, HTMLElement>());
   const location = `${pathname}?${search}`;
   const tabIds = tabs.map((tab) => tab.id).join(",");
   const hrefs = JSON.stringify(tabs.map((tab) => [tab.id, tab.href]));
@@ -182,13 +192,13 @@ function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeig
             // Query data is already owned by the account client. Charge the
             // expensive diff only while its DOM exists, rather than evicting
             // frequent destinations for files an Activity tab has not mounted.
-            const root = document.querySelector(`[data-retained-app-view="${view.key}"]`);
+            const root = roots.get(view.key);
             if (root && !root.querySelector('[data-testid="pr-diff-view"]')) return 1;
             const pr = new URLSearchParams(view.route.search).get("pr");
             return Math.max(1, Math.ceil((client.getQueryData<{ files: unknown[] }>(["pull-request", pr])?.files.length ?? 400) / 200));
           }
           if (view.kind === "pages") {
-            const root = document.querySelector(`[data-retained-app-view="${view.key}"]`);
+            const root = roots.get(view.key);
             const previous = [...root?.querySelectorAll<HTMLElement>('[data-retained-page-document]') ?? []]
               .map((node) => node.dataset.retainedPageDocument!);
             const selected = view.route.pathname.match(/^\/projects\/[^/]+\/pages\/([^/]+)$/)?.[1];
@@ -203,7 +213,7 @@ function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeig
               sum + retainedPageDocumentCost(client.getQueryData(["page", id])), 0));
           }
           if (view.kind !== "global-board" && view.kind !== "project-board") return 1;
-          const root = document.querySelector(`[data-retained-app-view="${view.key}"]`);
+          const root = roots.get(view.key);
           if (root?.querySelector("[data-board-windowed]")) {
             // Charge only mounted card work; interaction pins still count.
             return Math.max(1, Math.ceil(root.querySelectorAll("[data-issue-id]").length / 200));
@@ -228,7 +238,7 @@ function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeig
   return <>
     {views.map((view) => {
       const active = !!retainedAppViewKind(pathname) && view.tabId === tabId && view.route.pathname === pathname;
-      return <RetainedBoard key={view.key} view={view} active={active} />;
+      return <RetainedBoard key={view.key} view={view} active={active} roots={roots} />;
     })}
   </>;
 }

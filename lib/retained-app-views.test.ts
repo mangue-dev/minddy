@@ -512,6 +512,38 @@ describe("bounded retained board views", () => {
     expect(isRetainedDestination(consumed, "board", "/all?view=second")).toBe(false);
   });
 
+  it("measures each view once per recomputation and keeps an unchanged result", () => {
+    const open = new Set(["a", "b", "c", "d", "e"]);
+    const route = (id: string) => ({ pathname: `/projects/${id}`, search: "", projectId: id });
+    const visits: string[] = [];
+    let views: ReturnType<typeof retainAppView> = [];
+    for (const id of ["a", "b", "c", "d", "e", "c"]) {
+      visits.push(id);
+      views = retainAppView(views, route(id), id, open, { budget: 6, limit: 6, visits, cost: () => 1 });
+    }
+    const cost = vi.fn((view: { key: string; tabId: string | null }) => view.tabId === "a" ? 3 : 1);
+    const next = retainAppView(views, route("c"), "c", open, { budget: 4, limit: 6, visits, cost });
+    const measured = cost.mock.calls.map(([view]) => view.key);
+    expect(new Set(measured).size).toBe(measured.length);
+    expect(next.map((view) => view.tabId)).toEqual(["b", "d", "e", "c"]);
+    cost.mockClear();
+    const same = retainAppView(next, route("c"), "c", open, { budget: 4, limit: 6, visits, cost });
+    expect(same).toBe(next);
+    expect(cost.mock.calls.length).toBeLessThanOrEqual(next.length);
+    expect(retainAppView(next, { pathname: "/settings", search: "", projectId: null }, "c", open)).toBe(next);
+  });
+
+  it("measures retained views without searching the document", async () => {
+    vi.spyOn(surfaces, "preparedBoardSurface").mockReturnValue(Board);
+    const search = vi.spyOn(document, "querySelector");
+    for (const [id, path] of [["board", "/all"], ["other", "/projects/p"], ["board", "/all"], ["other", "/projects/p"]]) {
+      Object.assign(state, { activeId: id, path, activeHref: path });
+      await render();
+    }
+    expect(search.mock.calls.filter(([selector]) => String(selector).startsWith("[data-retained-app-view"))).toEqual([]);
+    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(2);
+  });
+
   it.each([2, 4, 6])("adapts to late frequent visits across twelve tabs under budget %s", (budget) => {
     const open = new Set(Array.from({ length: 12 }, (_, i) => `t${i}`));
     let views: ReturnType<typeof retainAppView> = [];
