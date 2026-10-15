@@ -31,8 +31,30 @@ function replaceDataProperty<T extends SnapshotRecord>(value: T, key: string, re
   return Object.create(Object.getPrototypeOf(value), descriptors);
 }
 
+/**
+ * Payloads that can never fit on their own, per account storage. A data
+ * object that fails the budget alone makes its query and the whole client
+ * fail too, so later saves skip it without walking it again. Only negative
+ * verdicts are kept: a payload is never admitted without a fresh walk. The
+ * hashes remember which queries were oversized, so a new payload under the
+ * same key is measured alone first instead of through the whole client.
+ */
+export type OversizedQueryMemo = { data: WeakSet<object>; hashes: Set<string> };
+
+export function createOversizedQueryMemo(): OversizedQueryMemo {
+  return { data: new WeakSet(), hashes: new Set() };
+}
+
+function queryData(query: unknown): object | undefined {
+  if (!plainRecord(query)) return undefined;
+  const state = ownValue(query, "state");
+  const data = plainRecord(state) ? ownValue(state, "data") : undefined;
+  return data && typeof data === "object" ? data : undefined;
+}
+
 /** Keep complete small queries when one optional query exceeds the existing snapshot budget. */
-export function boundedQuerySnapshot(client: PersistedClient, preferredHashes?: () => ReadonlySet<string>): PersistedClient | null {
+export function boundedQuerySnapshot(client: PersistedClient, preferredHashes?: () => ReadonlySet<string>,
+  memo?: OversizedQueryMemo): PersistedClient | null {
   try {
     if (!plainRecord(client) || typeof ownValue(client, "buster") !== "string" ||
         typeof ownValue(client, "timestamp") !== "number" || !Number.isFinite(ownValue(client, "timestamp"))) return null;
@@ -41,7 +63,20 @@ export function boundedQuerySnapshot(client: PersistedClient, preferredHashes?: 
     const queries = ownValue(state, "queries"), mutations = ownValue(state, "mutations");
     if (!Array.isArray(queries) || Object.getPrototypeOf(queries) !== Array.prototype ||
         !Array.isArray(mutations) || Object.getPrototypeOf(mutations) !== Array.prototype) return null;
-    const fits = fitsQuerySnapshotBudget(client);
+    let knownOversized = false;
+    if (memo) {
+      for (let index = 0; index < queries.length; index++) {
+        const query = ownValue(queries, String(index)), data = queryData(query);
+        if (!data) continue;
+        const hash = plainRecord(query) ? ownValue(query, "queryHash") : undefined;
+        if (!memo.data.has(data) && typeof hash === "string" && memo.hashes.has(hash)) {
+          if (fitsQuerySnapshotBudget(data)) memo.hashes.delete(hash);
+          else memo.data.add(data);
+        }
+        if (memo.data.has(data)) knownOversized = true;
+      }
+    }
+    const fits = !knownOversized && fitsQuerySnapshotBudget(client);
     if (!fits && queries.length > MAX_FALLBACK_QUERIES) return null;
     if (fits) {
       for (let index = 0; index < queries.length; index++) {
@@ -61,7 +96,12 @@ export function boundedQuerySnapshot(client: PersistedClient, preferredHashes?: 
       const query = ownValue(queries, String(index));
       if (!plainRecord(query) || typeof ownValue(query, "queryHash") !== "string" ||
           !Array.isArray(ownValue(query, "queryKey")) || !plainRecord(ownValue(query, "state"))) return null;
-      if (fitsQuerySnapshotBudget(query)) retained.push(query);
+      const data = queryData(query), hash = ownValue(query, "queryHash") as string;
+      if (data && memo?.data.has(data)) continue;
+      if (fitsQuerySnapshotBudget(query)) {
+        retained.push(query);
+        memo?.hashes.delete(hash);
+      } else memo?.hashes.add(hash);
     }
     if (!retained.length && !mutations.length) return null;
     const candidate = replaceDataProperty(client, "clientState", replaceDataProperty(state, "queries", retained));
@@ -199,6 +239,7 @@ export function subscribeToQueryPersistence(
 /** Snapshots retain reload recovery without placing decrypted data on disk. */
 export function createQueryStorage(storage: Storage | undefined, key: string, preferredHashes?: () => ReadonlySet<string>): Persister {
   let revision = 0;
+  const oversized = createOversizedQueryMemo();
   type Write = {
     client: PersistedClient;
     content: string;
@@ -245,7 +286,7 @@ export function createQueryStorage(storage: Storage | undefined, key: string, pr
   return {
     persistClient: (client) => {
       if (!storage) return Promise.resolve();
-      const bounded = boundedQuerySnapshot(client, preferredHashes);
+      const bounded = boundedQuerySnapshot(client, preferredHashes, oversized);
       if (!bounded) {
         // The cache remains live in memory. Retire the previous disk snapshot
         // and pending writes so a later reload cannot resurrect obsolete state.
