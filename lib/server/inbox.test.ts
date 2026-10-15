@@ -414,4 +414,64 @@ describe("readInboxNotifications target isolation", () => {
     );
     expect(mocks.resolveApiKeyActors).toHaveBeenCalledWith(["key-a"]);
   });
+
+  it("starts attribution reads without waiting for target hydration", async () => {
+    const started: string[] = [];
+    let releaseProjects!: () => void;
+    const projectsGate = new Promise<void>((resolve) => { releaseProjects = resolve; });
+    class GatedQuery extends Query {
+      constructor(private readonly table: string, rows: Row[]) {
+        super(rows);
+      }
+
+      override then<TResult1 = { data: Row[]; error: null }, TResult2 = never>(
+        onfulfilled?:
+          | ((value: { data: Row[]; error: null }) => TResult1 | PromiseLike<TResult1>)
+          | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+      ): Promise<TResult1 | TResult2> {
+        started.push(this.table);
+        const gate = this.table === "projects" ? projectsGate : Promise.resolve();
+        return gate.then(() => super.then(onfulfilled, onrejected));
+      }
+    }
+    const fixtures: Fixtures = {
+      notifications: [
+        notification("member-actor", { actor_id: "member-a" }),
+        notification("member-key", { api_key_id: "key-a", via_mcp: true }),
+      ],
+      projects: [{ id: "project-a", key: "A", owner_id: "owner-a" }],
+      project_members: [{ project_id: "project-a", user_id: "member-a" }],
+      api_keys: [{ id: "key-a", user_id: "member-a" }],
+    };
+    const service = { from: (table: string) => new GatedQuery(table, fixtures[table] ?? []) };
+    let releaseUsers!: () => void;
+    const usersGate = new Promise<void>((resolve) => { releaseUsers = resolve; });
+    mocks.fetchAuthUsersById.mockImplementation(async (_service: unknown, ids: string[]) => {
+      await usersGate;
+      return new Map(ids.map((id) => [id, { id, email: `${id}@example.test`, user_metadata: {} }]));
+    });
+    mocks.resolveApiKeyActors.mockImplementation(async (ids: string[]) =>
+      new Map(ids.map((id) => [id, { name: "Allowed key", agent: null }])));
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    const pending = readInboxNotifications({
+      client: client(fixtures) as never,
+      service: service as never,
+      userId: "user-1",
+      clientIsUserScoped: true,
+    });
+    await flush();
+    expect(started).toEqual(expect.arrayContaining(["projects", "api_keys", "project_members"]));
+    expect(started.filter((table) => table === "project_members")).toHaveLength(2);
+    releaseProjects();
+    await flush();
+    expect(mocks.resolveApiKeyActors).toHaveBeenCalledWith(["key-a"]);
+    releaseUsers();
+
+    const result = await pending;
+    const byId = new Map(result.notifications.map((row) => [row.id, row]));
+    expect(byId.get("member-actor")).toMatchObject({ actor_name: "Actor" });
+    expect(byId.get("member-key")).toMatchObject({ api_key_name: "Allowed key" });
+  });
 });
