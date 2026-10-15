@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -20,7 +20,8 @@ vi.mock("next-intl/server", () => ({
   getTranslations: async () => (key: string) => key,
 }));
 
-const { getAuthedUser, authorizeUserClient } = await import("./api-auth");
+const { getAuthedUser, authorizeUserClient, getAuthedUserWithRlsReads } = await import("./api-auth");
+const { supabaseServerFetch, supabaseServerFetchWithTimeout } = await import("./supabase-fetch");
 
 function request(): NextRequest {
   return new NextRequest("https://www.minddy.app/api/projects");
@@ -297,5 +298,115 @@ describe("request-scoped server component authorization", () => {
     const result = await authorizeUserClient(client);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.response.status).toBe(503);
+  });
+});
+
+describe("RLS reads overlapped with the live authorization check", () => {
+  function deferredLiveState() {
+    let resolve!: (value: unknown) => void;
+    authorizationAbortSignal.mockReturnValue(new Promise((done) => { resolve = done; }));
+    return (state: unknown) => resolve(state);
+  }
+
+  async function settle() {
+    for (let turn = 0; turn < 10; turn++) await new Promise((done) => setImmediate(done));
+  }
+
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("starts the reads before the live check resolves and returns them only after it", async () => {
+    const answer = deferredLiveState();
+    const readRls = vi.fn(async (_verified: { user: { id: string } }) => "rows");
+    let settled = false;
+    const pending = getAuthedUserWithRlsReads(request(), readRls).finally(() => { settled = true; });
+    await settle();
+
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(readRls).toHaveBeenCalledOnce();
+    expect(Object.keys(readRls.mock.calls[0][0])).toEqual(["user", "supabase"]);
+    expect(readRls.mock.calls[0][0].user.id).toBe(USER_ID);
+    expect(settled).toBe(false);
+
+    answer({ data: { sessionActive: true, mfaAllowed: true }, error: null });
+    const result = await pending;
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(await result.reads).toBe("rows");
+  });
+
+  it.each([
+    { name: "a revoked session", live: { data: { sessionActive: false, mfaAllowed: true }, error: null }, status: 401 },
+    { name: "a missing second factor", live: { data: { sessionActive: true, mfaAllowed: false }, error: null }, status: 403 },
+    { name: "an unavailable lookup", live: { data: null, error: { message: "unavailable" } }, status: 503 },
+  ])("answers $name with the serial response even when the reads fail", async ({ live, status }) => {
+    const answer = deferredLiveState();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const pending = getAuthedUserWithRlsReads(request(), async () => {
+        throw new Error("insufficient_privilege 42501");
+      });
+      await settle();
+      answer(live);
+      const result = await pending;
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.response.status).toBe(status);
+      expect("reads" in result).toBe(false);
+      if (status === 403) expect(await result.response.json()).toMatchObject({ code: "mfa_required" });
+    } finally { log.mockRestore(); }
+  });
+
+  it("holds request responses and service requests until the live check succeeds", async () => {
+    const answer = deferredLiveState();
+    const transport = vi.fn<typeof fetch>(async (input) => new Response(String(input)));
+    vi.stubGlobal("fetch", transport);
+    let delivered = false;
+    const pending = getAuthedUserWithRlsReads(request(), () => Promise.all([
+      supabaseServerFetchWithTimeout("https://project.supabase.co/rest/v1/issues")
+        .then((response) => { delivered = true; return response.text(); }),
+      supabaseServerFetch("https://project.supabase.co/rest/v1/envelope_data_keys")
+        .then((response) => response.text()),
+    ]));
+    await settle();
+
+    expect(transport.mock.calls.map(([input]) => String(input)))
+      .toEqual(["https://project.supabase.co/rest/v1/issues"]);
+    expect(delivered).toBe(false);
+
+    answer({ data: { sessionActive: true, mfaAllowed: true }, error: null });
+    const result = await pending;
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(await result.reads).toEqual([
+      "https://project.supabase.co/rest/v1/issues",
+      "https://project.supabase.co/rest/v1/envelope_data_keys",
+    ]);
+  });
+
+  it("aborts a denied read and never delivers it or sends a follow-up request", async () => {
+    const answer = deferredLiveState();
+    const signals: AbortSignal[] = [];
+    const transport = vi.fn<typeof fetch>((_input, init) => new Promise((_resolve, reject) => {
+      const signal = init!.signal!;
+      signals.push(signal);
+      signal.addEventListener("abort", () => reject(signal.reason));
+    }));
+    vi.stubGlobal("fetch", transport);
+    let observed = false;
+    const pending = getAuthedUserWithRlsReads(request(), () =>
+      supabaseServerFetchWithTimeout("https://project.supabase.co/rest/v1/issues")
+        .then(() => supabaseServerFetch("https://project.supabase.co/rest/v1/envelope_data_keys"))
+        .finally(() => { observed = true; }));
+    await settle();
+    expect(signals).toHaveLength(1);
+
+    answer({ data: { sessionActive: false, mfaAllowed: true }, error: null });
+    const result = await pending;
+    await settle();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(401);
+    expect(signals[0].aborted).toBe(true);
+    expect(transport).toHaveBeenCalledOnce();
+    expect(observed).toBe(false);
   });
 });

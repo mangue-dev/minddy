@@ -24,6 +24,38 @@ export function withSupabaseAbortSignal<T>(signal: AbortSignal, work: () => Prom
   return requestSignal.run(signal, work);
 }
 
+const authorizationGate = new AsyncLocalStorage<Promise<boolean>>();
+
+/**
+ * Overlap request-scoped reads with a pending authorization decision. Inside
+ * `work`, request clients send immediately but deliver no response before
+ * `authorized` fulfills with true, and every other client, including the
+ * service role, sends nothing before then. A false decision delivers and sends
+ * nothing at all, so no status, body, log or follow-up read can depend on a
+ * denied read; `signal` releases the requests already in flight.
+ */
+export function withSupabaseAuthorizationGate<T>(authorized: Promise<boolean>, signal: AbortSignal,
+  work: () => T): T {
+  return requestSignal.run(signal, () => authorizationGate.run(authorized, work));
+}
+
+// A denied request stays pending so nothing observes its outcome. A fresh
+// promise per request becomes collectable once its caller is dropped.
+const withheld = () => new Promise<never>(() => {});
+
+function sendAfter(authorized: Promise<boolean>, send: () => Promise<Response>): Promise<Response> {
+  return authorized.then((allowed) => allowed ? send() : withheld());
+}
+
+function deliverAfter(authorized: Promise<boolean>, send: () => Promise<Response>): Promise<Response> {
+  // Capture the outcome now so an early transport failure is never unhandled.
+  const outcome = new Promise<Response>((resolve) => resolve(send()))
+    .then((value) => ({ value }), (error: unknown) => ({ error }));
+  return authorized.then((allowed) => allowed
+    ? outcome.then((result) => "error" in result ? Promise.reject(result.error) : result.value)
+    : withheld());
+}
+
 function scopedOptions(input: Parameters<typeof fetch>[0], init?: RequestInit): RequestInit | undefined {
   const scoped = requestSignal.getStore();
   const cause = routineCause.getStore();
@@ -60,9 +92,15 @@ function routeSupabaseInput(input: Parameters<typeof fetch>[0]) {
   return input instanceof Request ? new Request(url, input) : url;
 }
 
-export const supabaseServerFetch: typeof fetch = (input, init) =>
-  fetch(routeSupabaseInput(input), scopedOptions(input, init));
+export const supabaseServerFetch: typeof fetch = (input, init) => {
+  const authorized = authorizationGate.getStore();
+  const send = () => fetch(routeSupabaseInput(input), scopedOptions(input, init));
+  return authorized ? sendAfter(authorized, send) : send();
+};
 
 /** Keep the existing auth deadline without imposing it on file uploads or RPCs. */
-export const supabaseServerFetchWithTimeout: typeof fetch = (input, init) =>
-  backendFetchWithTimeout(routeSupabaseInput(input), scopedOptions(input, init));
+export const supabaseServerFetchWithTimeout: typeof fetch = (input, init) => {
+  const authorized = authorizationGate.getStore();
+  const send = () => backendFetchWithTimeout(routeSupabaseInput(input), scopedOptions(input, init));
+  return authorized ? deliverAfter(authorized, send) : send();
+};

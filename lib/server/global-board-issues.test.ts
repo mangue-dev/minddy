@@ -13,8 +13,15 @@ vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) 
 vi.mock("./project-members", () => ({ buildMembersByProject: async () => ({ members: {} }) }));
 vi.mock("./cycles", () => ({ ensureCycles: vi.fn(), toCycleInfo: vi.fn(), todayInTz: vi.fn() }));
 vi.mock("@/lib/cycle-prefs", () => ({ resolveCyclePrefs: () => ({ enabled: false }) }));
-vi.mock("./api-auth", () => ({ getAuthedUser: async () => ({ ok: true,
-  user: { id: "actor", user_metadata: {} }, supabase: state.client }) }));
+vi.mock("./api-auth", () => {
+  const authed = () => ({ ok: true, user: { id: "actor", user_metadata: {} }, supabase: state.client });
+  return {
+    getAuthedUser: async () => authed(),
+    getAuthedUserWithRlsReads: async (_request: unknown,
+      readRls: (verified: ReturnType<typeof authed>) => Promise<unknown> | null) =>
+      ({ ...authed(), reads: readRls(authed()) }),
+  };
+});
 
 type Row = Record<string, unknown> & { id: string };
 const id = (index: number) => `00000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`;

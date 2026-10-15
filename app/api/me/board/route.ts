@@ -1,10 +1,15 @@
-import { createAllStartupTiming, measureAllStartupPhase } from "@/lib/server/all-startup-timing";
+import {
+  createAllStartupTiming,
+  measureAllStartupPhase,
+  type AllStartupTiming,
+} from "@/lib/server/all-startup-timing";
 import { loadGlobalBoardIssues } from "@/lib/server/global-board-issues";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { buildMembersByProject } from "@/lib/server/project-members";
@@ -21,6 +26,28 @@ import type {
 
 /** How many closed cycles the header's date-selector lists. */
 const PAST_CYCLES_SHOWN = 8;
+
+function cyclePrefsOf(user: User) {
+  return resolveCyclePrefs(
+    (user.user_metadata ?? null) as Record<string, unknown> | null
+  );
+}
+
+/** The board's RLS reads. They use the user's client only, never the service role. */
+function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined) {
+  return Promise.all([
+    measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(supabase, actorId, timing)),
+    measureAllStartupPhase(timing, "projects", () => supabase.from("projects").select("id, owner_id").is("deleted_at", null)),
+    measureAllStartupPhase(timing, "categories", () => categoryStore(supabase, actorId).select("*")),
+    measureAllStartupPhase(timing, "objectives", () => objectiveStore(supabase).select("*")),
+    // ALL relation types: `blocks` feeds the cycle reco ordering, and the
+    // full set powers the cards' relation chips + the side panel (RLS scopes
+    // the rows to my projects).
+    measureAllStartupPhase(timing, "relations", () => supabase
+      .from("issue_relations")
+      .select("id, source_id, target_id, type, source_type, target_type")),
+  ]);
+}
 
 /**
  * GET /api/me/board — everything the cross-project "My/All" kanban needs, so it
@@ -40,16 +67,18 @@ const PAST_CYCLES_SHOWN = 8;
  */
 export async function GET(request: NextRequest) {
   const timing = createAllStartupTiming(request);
-  const auth = await measureAllStartupPhase(timing, "auth", () => getAuthedUser(request));
+  // Without cycles, the RLS reads overlap the live session check; the response
+  // and every service-role read still wait for it. Cycle reconciliation writes
+  // through the service client first, so that path starts the reads afterwards.
+  const auth = await measureAllStartupPhase(timing, "auth", () => getAuthedUserWithRlsReads(request,
+    ({ user, supabase }) => cyclePrefsOf(user).enabled ? null : readBoardRows(supabase, user.id, timing)));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
   const service = getServiceClient();
 
   // Cycles first: the reconciliation may move issues around (rollover,
   // auto-fill), and the issues read below must reflect it.
-  const prefs = resolveCyclePrefs(
-    (auth.user.user_metadata ?? null) as Record<string, unknown> | null
-  );
+  const prefs = cyclePrefsOf(auth.user);
   let cycles: BoardCycles = { enabled: false, current: null, upcoming: [], past: [] };
   if (prefs.enabled) {
     const ensured = await measureAllStartupPhase(timing, "cycles", () => ensureCycles({
@@ -67,18 +96,7 @@ export async function GET(request: NextRequest) {
   }
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
-    await Promise.all([
-      measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(auth.supabase, auth.user.id, timing)),
-      measureAllStartupPhase(timing, "projects", () => auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null)),
-      measureAllStartupPhase(timing, "categories", () => categoryStore(auth.supabase, auth.user.id).select("*")),
-      measureAllStartupPhase(timing, "objectives", () => objectiveStore(auth.supabase).select("*")),
-      // ALL relation types: `blocks` feeds the cycle reco ordering, and the
-      // full set powers the cards' relation chips + the side panel (RLS scopes
-      // the rows to my projects).
-      measureAllStartupPhase(timing, "relations", () => auth.supabase
-        .from("issue_relations")
-        .select("id, source_id, target_id, type, source_type, target_type")),
-    ]);
+    await (auth.reads ?? readBoardRows(auth.supabase, auth.user.id, timing));
 
   const firstError =
     issuesRes.error ||
