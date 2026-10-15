@@ -444,3 +444,26 @@ describe("resume revalidation", () => {
     expect(requests("project:project-1")).toBe(3);
   });
 });
+
+describe("project counter broadcasts", () => {
+  it("patches the list for an issue number reservation instead of refetching it", async () => {
+    const stored = { id: "project-1", owner_id: "user-1", issue_seq: 7, updated_at: "2026-10-15T09:00:00.000000+00:00", deleted_at: null,
+      content_revision: 3 };
+    client.setQueryData(["projects"], [{ id: "project-1", name: "Project", issue_seq: 7, updated_at: stored.updated_at, deleted_at: null }]);
+    await mount();
+    await advance(1_000);
+    const index = realtime.channel.mock.calls.findIndex(([topic]) => topic === "user:user-1:v:1");
+    const update = realtime.channel.mock.results[index].value.on.mock.calls
+      .find(([, filter]: [unknown, { event: string }]) => filter.event === "UPDATE")![2];
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    // As broadcast: guard_project_content also increments content_revision.
+    const bumped = { ...stored, issue_seq: 8, updated_at: "2026-10-15T10:00:00.000000+00:00", content_revision: 4 };
+    await act(async () => update({ payload: { operation: "UPDATE", table: "projects", schema: "public", record: bumped, old_record: stored } }));
+    await advance(250);
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(client.getQueryData(["projects"])).toEqual([{ id: "project-1", name: "Project", issue_seq: 8, updated_at: bumped.updated_at, deleted_at: null }]);
+    await act(async () => update({ payload: { operation: "UPDATE", table: "projects", schema: "public", record: { ...bumped, deleted_at: bumped.updated_at }, old_record: bumped } }));
+    await advance(250);
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(expect.arrayContaining([["projects"], ["me", "smart-assign-warnings"]]));
+  });
+});

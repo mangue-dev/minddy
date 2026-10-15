@@ -23,8 +23,10 @@ import { projectIdFromPath } from "./project-id-from-path";
 import { projectTopicIds } from "./realtime-topics";
 import { adoptRemoteRow, remoteEchoOf } from "./optimistic/remote-echo";
 import {
+  applyProjectCounterBump,
   isOwnEcho,
   keysForProjectEvent,
+  projectCounterBump,
   keysForUserEvent,
   ownEchoCheck,
   projectScopeKeys,
@@ -413,8 +415,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!userId) return;
-    return openScope(`user:${userId}`, keysForUserEvent, USER_SCOPE_KEYS);
-  }, [userId, openScope]);
+    return openScope(`user:${userId}`, keysForUserEvent, USER_SCOPE_KEYS, (change) => {
+      // A counter-only project UPDATE has no invalidation; refetch the list
+      // only when the row it names is not in it.
+      if (projectCounterBump(change) && !applyProjectCounterBump(queryClient, change)) {
+        void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      }
+    });
+  }, [userId, openScope, queryClient]);
 
   // One channel per project, reconciled in place: joining a new project or
   // leaving one only opens/closes that channel, so navigating between projects

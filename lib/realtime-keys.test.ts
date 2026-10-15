@@ -11,7 +11,9 @@ import {
 } from "@/test/sql-migrations";
 
 import {
+  applyProjectCounterBump,
   keysForProjectEvent,
+  projectCounterBump,
   keysForUserEvent,
   ownEchoCheck,
   ownPageEchoCheck,
@@ -171,6 +173,73 @@ describe("keysForProjectEvent — pages", () => {
     expect(projectScopeKeys(PROJECT)).toContainEqual(["pages", PROJECT]);
     expect(projectScopeKeys(PROJECT)).toContainEqual(["page"]);
     expect(projectScopeKeys(PROJECT)).not.toContainEqual(["page", PROJECT]);
+  });
+});
+
+describe("keysForUserEvent — project counter", () => {
+  const OTHER = "66666666-6666-4666-8666-666666666666";
+  const stored = { id: PROJECT, owner_id: "owner", name: null, issue_seq: 41, updated_at: "2026-10-15T09:00:00.000000+00:00",
+    deleted_at: null, encrypted_content: "ciphertext:v1", encryption_version: 1, content_revision: 7,
+    encryption_checked_at: "2026-10-14T09:00:00.000000+00:00", automations: null, smart_assign_rules: null };
+  // As broadcast: guard_project_content also increments content_revision on the reservation.
+  const bumped = { ...stored, issue_seq: 42, updated_at: "2026-10-15T10:00:00.000000+00:00", content_revision: 8 };
+  const update = (record: Record<string, unknown>) => change("projects", { operation: "UPDATE", record, old_record: stored });
+  const cachedList = () => {
+    const client = new QueryClient();
+    client.setQueryData(["projects"], [
+      { id: OTHER, name: "Other", updated_at: "2026-10-15T09:30:00.000000+00:00", deleted_at: null },
+      { id: PROJECT, name: "Decoded", issue_seq: 41, updated_at: stored.updated_at, deleted_at: null },
+    ]);
+    return client;
+  };
+
+  it("patches an issue number reservation into the list without refetching it", () => {
+    expect(projectCounterBump(update(bumped))?.fields).toEqual({ issue_seq: 42, updated_at: bumped.updated_at, content_revision: 8 });
+    const client = cachedList();
+    expect(keysForUserEvent(update(bumped))).toEqual([]);
+    expect(applyProjectCounterBump(client, update(bumped))).toBe(true);
+    expect(client.getQueryData(["projects"])).toEqual([
+      { id: PROJECT, name: "Decoded", issue_seq: 42, updated_at: bumped.updated_at, deleted_at: null },
+      { id: OTHER, name: "Other", updated_at: "2026-10-15T09:30:00.000000+00:00", deleted_at: null },
+    ]);
+  });
+
+  it("matches the revision bump of the project content guard", () => {
+    // Outside encryption maintenance, guard_project_content increments
+    // content_revision on every UPDATE, the reservation included.
+    const sql = canonicalSql(readMigration("20270109200008_content_backfill_attempt_revisions.sql"));
+    expect(sql).toContain("'guard_project_content'");
+    expect(sql).toContain("then old.content_revision else old.content_revision+1 end");
+    expect(projectCounterBump(update({ ...bumped, content_revision: stored.content_revision }))).not.toBeNull();
+  });
+
+  it.each([
+    ["a trash", { deleted_at: "2026-10-15T10:00:00.000000+00:00" }],
+    ["a content rewrite", { encrypted_content: "ciphertext:v2" }],
+    ["a settings change", { smart_assign_rules: { enabled: true } }],
+    ["an unknown column", { revision: 2 }],
+  ])("keeps the full refresh for %s", (_case, extra) => {
+    const client = cachedList();
+    const before = client.getQueryData(["projects"]);
+    const event = update({ ...bumped, ...extra });
+    expect(keysForUserEvent(event).map((k) => k.key)).toEqual([["projects"], ["me", "smart-assign-warnings"], ["me", "triage-counts"]]);
+    expect(applyProjectCounterBump(client, event)).toBe(false);
+    expect(client.getQueryData(["projects"])).toBe(before);
+  });
+
+  it("asks for a refetch when the bumped project is missing, and never regresses a newer row", () => {
+    const client = new QueryClient();
+    client.setQueryData(["projects"], [{ id: OTHER, updated_at: stored.updated_at }]);
+    expect(applyProjectCounterBump(client, update(bumped))).toBe(false);
+    const newer = cachedList();
+    newer.setQueryData<Record<string, unknown>[]>(["projects"], (rows) => rows!.map((row) =>
+      row.id === PROJECT ? { ...row, issue_seq: 43, updated_at: "2026-10-15T11:00:00.000000+00:00" } : row));
+    const before = newer.getQueryData(["projects"]);
+    expect(applyProjectCounterBump(newer, update(bumped))).toBe(true);
+    expect(newer.getQueryData(["projects"])).toBe(before);
+    // INSERT and DELETE keep their invalidations.
+    expect(keysForUserEvent(change("projects", { record: bumped }))).toHaveLength(3);
+    expect(keysForUserEvent(change("projects", { operation: "DELETE", old_record: stored }))).toHaveLength(3);
   });
 });
 

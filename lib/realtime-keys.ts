@@ -162,6 +162,62 @@ function keysForAgentRun(change: BroadcastChange): Invalidation[] {
   ];
 }
 
+// What an issue number reservation (next_issue_number) changes on its project:
+// the counter, `updated_at` through the set_updated_at trigger, and
+// `content_revision`, which guard_project_content increments on every update
+// outside encryption maintenance. A content or settings change also rewrites
+// another column (encrypted_content, smart_assign_rules…), so it still refetches.
+const PROJECT_COUNTER_COLUMNS = new Set(["issue_seq", "updated_at", "content_revision"]);
+
+/**
+ * Every issue creation bumps its project's counter, which broadcasts the
+ * whole project row to every member. When nothing else differs between the
+ * two rows, the list only needs those two values and its order: the fields
+ * to patch, or null for any other change (which keeps the full refetch).
+ */
+export function projectCounterBump(
+  change: BroadcastChange
+): { id: string; fields: Record<string, unknown> } | null {
+  const { record, old_record: previous } = change;
+  if (change.table !== "projects" || change.operation !== "UPDATE" || !record || !previous) return null;
+  if (typeof record.id !== "string" || record.id !== previous.id || typeof record.updated_at !== "string") return null;
+  const fields: Record<string, unknown> = {};
+  for (const key of new Set([...Object.keys(record), ...Object.keys(previous)])) {
+    if (JSON.stringify(record[key]) === JSON.stringify(previous[key])) continue;
+    if (!PROJECT_COUNTER_COLUMNS.has(key)) return null;
+    fields[key] = record[key];
+  }
+  return Object.keys(fields).length > 0 ? { id: record.id, fields } : null;
+}
+
+/**
+ * Patch a counter bump into the cached project list, in the order of
+ * GET /api/projects (most recently updated first). Only values the cached
+ * row already carries are written: the broadcast row also holds ciphertext
+ * and archived columns the client never receives. False when the row is
+ * missing from a loaded list, so the caller refetches it.
+ */
+export function applyProjectCounterBump(client: QueryClient, change: BroadcastChange): boolean {
+  const bump = projectCounterBump(change);
+  if (!bump) return false;
+  const time = (value: unknown) => Date.parse(String(value)) || 0;
+  let found = true;
+  client.setQueryData<Record<string, unknown>[]>(["projects"], (projects) => {
+    if (!projects) return undefined;
+    const index = projects.findIndex((project) => project.id === bump.id);
+    found = index >= 0;
+    const cached = projects[index];
+    // A later write (a refetch, a bump delivered earlier) already holds newer values.
+    if (!cached || time(cached.updated_at) > time(bump.fields.updated_at ?? cached.updated_at)) return undefined;
+    const patched = { ...cached };
+    for (const [key, value] of Object.entries(bump.fields)) if (key in cached) patched[key] = value;
+    const next = projects.slice();
+    next[index] = patched;
+    return next.sort((a, b) => time(b.updated_at) - time(a.updated_at));
+  });
+  return found;
+}
+
 export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   switch (change.table) {
     case "app_tabs":
@@ -180,7 +236,9 @@ export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
     // PERIMETER of the sidebar numbers: without that, the line would disappear
     // the list — ["projects"] refreshes — but its share of the “Home” badge
     // remained, not having asked for the table again.
+    // An issue number reservation is patched in place (applyProjectCounterBump).
     case "projects":
+      if (projectCounterBump(change)) return [];
       return [
         active(["projects"]),
         active(SMART_ASSIGN_WARNINGS_KEY),
