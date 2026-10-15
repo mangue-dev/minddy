@@ -9,6 +9,8 @@ import {
 } from "@tanstack/react-query-persist-client";
 
 const SAVE_DELAY_MS = 5_000;
+/** Minimum spacing between snapshots while persisted data keeps changing. */
+const SAVE_INTERVAL_MS = 30_000;
 const IDLE_TIMEOUT_MS = 1_000;
 const MAX_FALLBACK_QUERIES = 128;
 type SnapshotRecord = Record<string, unknown>;
@@ -121,7 +123,7 @@ export function boundedQuerySnapshot(client: PersistedClient, preferredHashes?: 
 }
 
 /** Coalesce the entire snapshot operation, including dehydration, until idle. */
-export function scheduleQuerySnapshot(save: () => void): () => void {
+export function scheduleQuerySnapshot(save: () => void, delayMs = SAVE_DELAY_MS): () => void {
   let cancelled = false;
   let idle: number | undefined;
   const run = () => {
@@ -133,7 +135,7 @@ export function scheduleQuerySnapshot(save: () => void): () => void {
     } else {
       run();
     }
-  }, SAVE_DELAY_MS);
+  }, delayMs);
   return () => {
     cancelled = true;
     clearTimeout(timer);
@@ -175,17 +177,30 @@ export function subscribeToQueryPersistence(
     if (options.unsavedSince !== undefined && value.updatedAt >= options.unsavedSince) unsaved = true;
   }
 
+  let lastSaveAt = Number.NEGATIVE_INFINITY;
   const save = () => {
     cancelScheduled = undefined;
     if (stopped) return;
+    lastSaveAt = Date.now();
     // Persistence is optional: quota or storage failures must never reject an
     // interaction or leave an unhandled promise rejection.
     void persistQueryClientSave(options).catch(() => {});
   };
-  const schedule = () => {
-    if (!stopped && !cancelScheduled) {
-      cancelScheduled = scheduleQuerySnapshot(save);
-    }
+  let dueAt = 0;
+  const schedule = (throttled = true) => {
+    if (stopped) return;
+    // The first change after a quiet period saves after the usual delay, even
+    // while changes continue. Later cache saves keep SAVE_INTERVAL_MS apart, and
+    // the pending save captures every change up to the moment it runs. Paused
+    // mutations keep the usual delay, so a queued write reaches disk, and leaves
+    // it once sent, as promptly as before.
+    const delay = throttled
+      ? Math.max(SAVE_DELAY_MS, lastSaveAt + SAVE_INTERVAL_MS - Date.now())
+      : SAVE_DELAY_MS;
+    if (cancelScheduled && dueAt <= Date.now() + delay) return;
+    cancelScheduled?.();
+    dueAt = Date.now() + delay;
+    cancelScheduled = scheduleQuerySnapshot(save, delay);
   };
 
   const unsubscribeQueries = queryClient.getQueryCache().subscribe((event) => {
@@ -214,7 +229,7 @@ export function subscribeToQueryPersistence(
     const isPaused = event.type !== "removed" && event.mutation.state.isPaused;
     if (isPaused) pausedMutations.add(event.mutation);
     else pausedMutations.delete(event.mutation);
-    if (wasPaused || isPaused) schedule();
+    if (wasPaused || isPaused) schedule(false);
   });
   if (unsaved) schedule();
 
