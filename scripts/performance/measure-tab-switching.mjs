@@ -5,6 +5,10 @@
 // and the API requests it triggered. Tab locations are restored at the end; nothing else is written.
 // Usage: MINDDY_PERF_BASE_URL=https://localhost:3443 node scripts/performance/measure-tab-switching.mjs <label> [rounds] [contexts] [--electron]
 // --electron runs the unpackaged desktop shell (NODE_PATH=./desktop/node_modules) with an isolated profile per context.
+// --settle-ms=<n> waits n ms after restored All before the first visits (default 5000: preparation has settled;
+// 1000 measures first visits while startup preparation is still running).
+// --skip=<kind,...> leaves restored tabs of those kinds out of the cycle, for example pr while the
+// fixture's GitHub quota is backing off.
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -19,6 +23,8 @@ const label = process.argv[2] ?? "min683-tab-switching";
 const rounds = Number(process.argv[3] ?? 3);
 const contexts = Number(process.argv[4] ?? 2);
 const native = process.argv.includes("--electron");
+const settleMs = Number(process.argv.find((arg) => arg.startsWith("--settle-ms="))?.split("=")[1] ?? 5000);
+const skipKinds = new Set((process.argv.find((arg) => arg.startsWith("--skip="))?.split("=")[1] ?? "").split(",").filter(Boolean));
 const session = await openFixture();
 const { base, cookies, api, fixture } = session;
 const specs = stableTabs(fixture, await loadForgeWorkload(api));
@@ -128,8 +134,8 @@ try {
     });
     await page.goto(`${base}/home`, { waitUntil: "commit" });
     await page.waitForFunction(switchReady, { kind: "all", tabId: all.id, href: all.href, allCards: board.cards, allIds: board.cardIds }, { timeout: 30000, polling: 16 });
-    await page.waitForTimeout(5000);
-    const order = [...specs.slice(1), all];
+    await page.waitForTimeout(settleMs);
+    const order = [...specs.slice(1).filter((spec) => !skipKinds.has(spec.kind)), all];
     const firstVisits = [];
     for (const spec of order) firstVisits.push(await activate(page, spec, requests));
     const hot = [];
@@ -151,4 +157,4 @@ try {
   await assertStableTabs(api, fixture, specs);
   await session.close();
 }
-await writeFile(`output/playwright/performance/${label}.json`, JSON.stringify({ label, base, rounds, client: native ? "native" : "web", runs }, null, 2));
+await writeFile(`output/playwright/performance/${label}.json`, JSON.stringify({ label, base, rounds, settleMs, skipped: [...skipKinds], client: native ? "native" : "web", runs }, null, 2));
