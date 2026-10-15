@@ -388,6 +388,63 @@ describe("bounded retained board views", () => {
     expect(liveEffects).toBe(1);
   });
 
+  it("reveals an activated retained destination before Next commits its location", async () => {
+    await render();
+    Object.assign(state, { activeId: "other", path: "/projects/p", activeHref: "/projects/p" });
+    await render();
+    const board = container.querySelector('[data-retained-app-view="board:/all"]')!;
+    const project = container.querySelector('[data-retained-app-view="other:/projects/p"]')!;
+    // The session expects /all while Next's pushState transition still reports the outgoing route.
+    Object.assign(state, { activeId: "board", activeHref: "/all" });
+    await render();
+    expect(board.getAttribute("data-app-view-active")).toBe("true");
+    expect(project.getAttribute("data-app-view-active")).toBe("false");
+    expect(liveEffects).toBe(1);
+    // Later renders in the same gap neither revert nor lend the outgoing route to the incoming tab.
+    await render();
+    expect(board.getAttribute("data-app-view-active")).toBe("true");
+    state.path = "/all";
+    await render();
+    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(2);
+    expect(board.getAttribute("data-app-view-active")).toBe("true");
+    expect(mounts).toBe(2);
+  });
+
+  it("holds an activated retained destination while Next commits an older activation", async () => {
+    for (const [id, path] of [["board", "/all"], ["other", "/projects/p"], ["fourth", "/projects/q"]]) {
+      Object.assign(state, { activeId: id, path, activeHref: path });
+      await render();
+    }
+    Object.assign(state, { activeId: "board", activeHref: "/all" });
+    await render();
+    Object.assign(state, { activeId: "other", activeHref: "/projects/p" });
+    await render();
+    const active = () => [...container.querySelectorAll('[data-app-view-active="true"]')].map((node) => node.getAttribute("data-retained-app-view"));
+    expect(active()).toEqual(["other:/projects/p"]);
+    state.path = "/all";
+    await render();
+    expect(active()).toEqual(["other:/projects/p"]);
+    state.path = "/projects/p";
+    await render();
+    expect(active()).toEqual(["other:/projects/p"]);
+    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(3);
+    expect(mounts).toBe(3);
+  });
+
+  it("hides retained Home in the render that activates a retained board", async () => {
+    state.tabs = [{ id: "home" }, { id: "board" }];
+    Object.assign(state, { activeId: "board", path: "/all", activeHref: "/all" });
+    await render();
+    Object.assign(state, { activeId: "home", path: "/home", activeHref: "/home" });
+    await render();
+    const home = container.querySelector("[data-retained-home-view]")!;
+    expect(home.getAttribute("data-app-view-active")).toBe("true");
+    Object.assign(state, { activeId: "board", activeHref: "/all" });
+    await render();
+    expect(home.getAttribute("data-app-view-active")).toBe("false");
+    expect(container.querySelector('[data-retained-app-view="board:/all"]')!.getAttribute("data-app-view-active")).toBe("true");
+  });
+
   it("bounds retained weight and releases closed tabs", async () => {
     await render();
     for (const [id, path] of [["other", "/projects/p2"], ["fourth", "/projects/p3"], ["pages", "/projects/p4"]]) {

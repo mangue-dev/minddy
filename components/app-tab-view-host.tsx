@@ -99,10 +99,34 @@ const RetainedHome = memo(function RetainedHome({ tabId, active }: { tabId: stri
   </Activity>;
 });
 
+interface ViewHostRoute { pathname: string; search: string }
+
+/** Next commits `history.pushState` in a later, interruptible transition. Until
+ * it reaches an activated retained destination, that destination stands in for
+ * its location, so the tab highlight and the content commit in one render.
+ * In-tab navigation and cold destinations keep following Next. */
+function useViewHostRoute(tabs: ReturnType<typeof useOptionalAppTabs>): ViewHostRoute {
+  const pathname = usePathname();
+  const search = useSearchParams().toString();
+  const activeId = tabs?.activeId ?? null;
+  const href = tabs?.session.getActiveHref() ?? null;
+  const [activation, setActivation] = useState({ id: activeId, urgent: false });
+  const ahead = !!tabs && !!href && normalizeAppTabLocation(href) !== normalizeAppTabLocation(`${pathname}?${search}`) &&
+    tabs.session.isRetainedDestination(activeId, href);
+  // Only the activation render opts in; the destination then holds until Next
+  // commits it, so no intermediate location is lent to the incoming tab.
+  const urgent = ahead && (activation.id !== activeId || activation.urgent);
+  if (activation.id !== activeId || activation.urgent !== urgent) setActivation({ id: activeId, urgent });
+  if (!urgent) return { pathname, search };
+  const url = new URL(href!, "https://minddy.invalid");
+  return { pathname: url.pathname, search: url.searchParams.toString() };
+}
+
 /** One bounded host retains recent destinations while React suspends hidden effects. */
 export function AppTabViewHost({ children }: { children: ReactNode }) {
   const tabs = useOptionalAppTabs();
-  const pathname = usePathname();
+  const route = useViewHostRoute(tabs);
+  const { pathname } = route;
   const retained = !!tabs && !!retainedAppViewKind(pathname);
   const home = pathname === "/home";
   // One small Home working surface, shared across responsive layouts. Another
@@ -123,16 +147,14 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
       inert={!home} aria-hidden={!home || undefined} style={{ display: home ? undefined : "none" }}>
       <RetainedHome tabId={current.id} active={home} />
     </div>}
-    {tabs ? <DesktopTabViews homeWeight={current.seen ? 1 : 0} /> : null}
+    {tabs ? <DesktopTabViews homeWeight={current.seen ? 1 : 0} route={route} /> : null}
     {!retained && !home && children}
   </>;
 }
 
-function DesktopTabViews({ homeWeight }: { homeWeight: number }) {
+function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeight: number; route: ViewHostRoute }) {
   const { tabs, activeId, session } = useAppTabs();
   const client = useQueryClient();
-  const pathname = usePathname();
-  const search = useSearchParams().toString();
   const [state, setState] = useState<{ location: string; tabId: string | null; tabIds: string; hrefs: string; views: RetainedAppView[]; visits: string[] }>({ location: "", tabId: null, tabIds: "", hrefs: "", views: [], visits: [] });
   const location = `${pathname}?${search}`;
   const tabIds = tabs.map((tab) => tab.id).join(",");
