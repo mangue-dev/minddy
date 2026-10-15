@@ -59,6 +59,8 @@ function missingRecentActivity(client: QueryClient): boolean {
 export const RESTORED_TAB_PREPARATION_LIMIT = 10;
 /** Scoped preparation retains at most two HTTP transports, including one paired read. */
 export const SCOPED_PREPARATION_CONCURRENCY = 2;
+/** How long a hover protects its destination's reads without a selection. */
+export const PREPARATION_INTENT_MS = 3_000;
 
 /** Drain a finite account-owned working set, yielding each read to foreground work. */
 export function createPrTabPreparation(
@@ -107,6 +109,10 @@ export function createPrTabPreparation(
     if (query && query.options.queryFn === reader.installed) query.setOptions({ ...query.options, queryFn: reader.original });
   };
   const activeQueryHashes = new Set<string>();
+  // The hovered destination: its own reads survive its intent prefetch.
+  const intendedQueryHashes = new Set<string>();
+  let intentExpiry: ReturnType<typeof setTimeout> | undefined;
+  const clearIntent = () => { clearTimeout(intentExpiry); intentExpiry = undefined; intendedQueryHashes.clear(); };
   let activeForge = false;
   // Keys whose ordinary server read completed during this account lifetime.
   // Restored snapshots and manual writes never enter this set.
@@ -217,7 +223,8 @@ export function createPrTabPreparation(
       return;
     }
     if (read.cancelled || client.getQueryCache().find({ queryKey: read.key, exact: true })?.getObserversCount()) return;
-    if (!disposed && visible() && onlineManager.isOnline() && activeQueryHashes.has(read.identity)) return;
+    if (!disposed && visible() && onlineManager.isOnline() &&
+        (activeQueryHashes.has(read.identity) || intendedQueryHashes.has(read.identity))) return;
     read.cancelled = true;
     // A canceled slot remains occupied until its operation settles. This keeps
     // late callbacks from clearing a replacement or admitting a third request.
@@ -540,7 +547,7 @@ export function createPrTabPreparation(
   if (typeof document !== "undefined") document.addEventListener("visibilitychange", resume);
   if (typeof window !== "undefined") window.addEventListener("focus", resume);
   const publishSelection = (href: string) => {
-    cancelScheduled();
+    cancelScheduled(); clearIntent();
     clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
     active = href; activeForge = appTabRoute(href).section === "pull-requests";
     const options = appTabPreparationQueries(client, href);
@@ -556,6 +563,15 @@ export function createPrTabPreparation(
      *  visit() with the same destination completes the pass. */
     select(href: string) {
       if (!disposed) publishSelection(href);
+    },
+    /** Keep a hovered destination's speculative reads through the intent
+     *  prefetch it starts. Other destinations still yield, and the protection
+     *  ends at the next selection or after PREPARATION_INTENT_MS. */
+    intend(href: string) {
+      if (disposed) return;
+      clearIntent();
+      for (const option of appTabPreparationQueries(client, href)) intendedQueryHashes.add(hashKey(option.queryKey));
+      intentExpiry = setTimeout(() => { intentExpiry = undefined; intendedQueryHashes.clear(); changed(); }, PREPARATION_INTENT_MS);
     },
     visit(href: string, hrefs: readonly string[]) {
       if (disposed) return;
@@ -575,7 +591,7 @@ export function createPrTabPreparation(
       enqueue();
     },
     dispose() {
-      disposed = true; activeQueryHashes.clear(); settledReads.clear(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
+      disposed = true; activeQueryHashes.clear(); settledReads.clear(); clearIntent(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
       clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", resume);
       if (typeof window !== "undefined") window.removeEventListener("focus", resume);

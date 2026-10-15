@@ -1,6 +1,6 @@
 import { hashKey, onlineManager, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPrTabPreparation, isPassiveShellMaintenanceRead, SCOPED_PREPARATION_CONCURRENCY } from "./pr-tab-preparation";
+import { createPrTabPreparation, isPassiveShellMaintenanceRead, PREPARATION_INTENT_MS, SCOPED_PREPARATION_CONCURRENCY } from "./pr-tab-preparation";
 import { pullRequestQueryOptions } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 import { navigationPreparationPending } from "./navigation-preparation-priority";
@@ -647,6 +647,54 @@ describe("account-owned PR preparation", () => {
       expect(prepared.client.getQueryState(["issues", "new"])?.status).toBe("success");
       expect(prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests"))).toEqual([]);
     } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  describe("hover intent", () => {
+    function pendingReads(prepared: ReturnType<typeof setup>) {
+      const signals = new Map<string, AbortSignal>();
+      prepared.fetch.mockImplementation((url, init) => new Promise((_resolve, reject) => {
+        const signal = init!.signal!; signals.set(String(url), signal);
+        signal.addEventListener("abort", () => reject(new Error("Speculation yielded")), { once: true });
+      }));
+      return signals;
+    }
+    const issueReads = (prepared: ReturnType<typeof setup>) =>
+      prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/issues")).length;
+
+    it.each([
+      { name: "keeps a hovered destination's own preparation reads through its intent prefetch", project: "new", kept: true },
+      { name: "still yields preparation reads to another destination's intent prefetch", project: "other", kept: false },
+    ])("$name", async ({ project, kept }) => {
+      const prepared = setup(); const signals = pendingReads(prepared); let stop = () => {};
+      try {
+        prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+        await vi.waitFor(() => expect(signals.size).toBe(2));
+        prepared.preparation.intend(`/projects/${project}`);
+        // The hover's own prefetch of a prerequisite the lane has not started.
+        void prepared.client.prefetchQuery({ queryKey: ["members", project], queryFn: () => new Promise(() => {}) });
+        expect(signals.get("/api/projects/new/issues")!.aborted).toBe(!kept);
+        expect(signals.get("/api/projects/new/categories")!.aborted).toBe(!kept);
+        // The click mounts the board later, which joins a kept read instead of restarting it.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        stop = new QueryObserver(prepared.client, { queryKey: ["issues", "new"], queryFn: issuesQueryFn("new") }).subscribe(() => {});
+        await vi.waitFor(() => expect(issueReads(prepared)).toBe(kept ? 1 : 2));
+      } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
+    });
+
+    it.each(["lapses", "selects another tab"])("ends the protection when the hover %s", async (ending) => {
+      const prepared = setup(); const signals = pendingReads(prepared);
+      try {
+        prepared.preparation.visit("/home", ["/home", "/projects/new"]); prepared.flush();
+        await vi.waitFor(() => expect(signals.size).toBe(2));
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        prepared.preparation.intend("/projects/new");
+        void prepared.client.prefetchQuery({ queryKey: ["members", "new"], queryFn: () => new Promise(() => {}) });
+        expect(signals.get("/api/projects/new/issues")!.aborted).toBe(false);
+        if (ending === "lapses") vi.advanceTimersByTime(PREPARATION_INTENT_MS);
+        else prepared.preparation.select("/routines");
+        expect(signals.get("/api/projects/new/issues")!.aborted).toBe(true);
+      } finally { vi.useRealTimers(); prepared.preparation.dispose(); prepared.client.clear(); }
+    });
   });
 
   it("prepares every unique prerequisite in the representative ten-tab set without activation", async () => {

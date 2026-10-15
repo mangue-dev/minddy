@@ -14,7 +14,8 @@ import { createHomeTab } from "./app-tabs";
 import type { AppTabsSession } from "./app-tabs-session";
 
 const query = vi.hoisted(() => ({ isPending: false, isError: false, refetch: vi.fn() }));
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }));
+const preparations = vi.hoisted(() => [] as { intend: (href: string) => void }[]);
 const viewport = vi.hoisted(() => ({ mobile: false as boolean | undefined }));
 const queryCalls = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null, loading: false }));
@@ -27,6 +28,14 @@ vi.mock("./use-app-tabs-query", () => ({
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/components/app-tab-route-sync", () => ({ AppTabRouteSync: () => null }));
+vi.mock("./pr-tab-preparation", async (original) => {
+  const actual = await original<typeof import("./pr-tab-preparation")>();
+  return { ...actual, createPrTabPreparation: (...args: Parameters<typeof actual.createPrTabPreparation>) => {
+    const preparation = actual.createPrTabPreparation(...args);
+    preparations.push(preparation);
+    return preparation;
+  } };
+});
 
 let root: Root;
 let container: HTMLDivElement;
@@ -228,6 +237,13 @@ describe("application tab subscriptions", () => {
     expect(renders.actions).toBe(previous.actions);
     unregister();
   });
+});
+
+it("publishes a hovered destination to the live preparation before warming it", () => {
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+  const intend = vi.spyOn(preparations.at(-1)!, "intend");
+  session.prefetch("/projects/hovered");
+  expect(intend).toHaveBeenCalledWith("/projects/hovered");
 });
 
 it("uses local history only for a destination qualified by the mounted retained host", () => {

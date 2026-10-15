@@ -180,6 +180,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
     return { active: false, writer: createWindowSelectionPersistence(storage, storageKey, owner) };
   }, [session, storageKey, owner]);
   const startupAdmission = useMemo(() => createRestoredTabStartupAdmission(client), [client, owner, session]);
+  const preparationRef = useRef<ReturnType<typeof createPrTabPreparation> | null>(null);
   useLayoutEffect(() => startupAdmission.mount(), [startupAdmission]);
   useEffect(() => {
     if (query.isError && !query.isFetching) startupAdmission.fail();
@@ -189,6 +190,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
   }, [session, query.isPending, query.isError, query.refetch, onQueryState]);
   useEffect(() => {
     const preparation = createPrTabPreparation(client);
+    preparationRef.current = preparation;
     // `published`: the destination preparation protects; `selected`: it was
     // published without the full pass that ranks and rebuilds the working set.
     let previous = "", published = "", selected = false;
@@ -222,7 +224,10 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
     };
     const stop = session.subscribe(changed);
     visit();
-    return () => { stop(); cancel?.(); preparation.dispose(); };
+    return () => {
+      stop(); cancel?.(); preparation.dispose();
+      if (preparationRef.current === preparation) preparationRef.current = null;
+    };
   }, [client, session, startupAdmission]);
   useEffect(() => {
     lifetime.active = true;
@@ -246,6 +251,9 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       // again can reconstruct an unused tree while the user activates it.
       const retained = session.getSnapshot().tabs.some((tab) => tab.href === href && session.isRetainedDestination(tab.id, href));
       if (!retained && !isPreparedAppTabDestination(client, href)) router.prefetch(href);
+      // The hover's own prefetches must not cancel this destination's
+      // in-flight preparation reads, only other destinations' reads.
+      preparationRef.current?.intend(href);
       prefetchAppTabDestination(client, href, attempted);
     };
     session.navigate = (href) => {
