@@ -122,11 +122,12 @@ describe("local snapshot current project access", () => {
     expect((await localSnapshotProjectAccess(owner)).projectIds.size).toBe(602);
     expect(state.calls.filter((call) => call.table === "projects")).toHaveLength(2);
     expect(state.calls.filter((call) => call.table === "project_members")).toHaveLength(2);
+    // Neither scan alone exceeds the limit; together they inspect one row too many.
     state.projects = [
-      ...Array.from({ length: 5_001 }, (_, index) => ({ id: id("3", index), owner_id: owner, deleted_at: null })),
-      ...Array.from({ length: 5_000 }, (_, index) => ({ id: id("4", index), owner_id: other, deleted_at: null })),
+      ...Array.from({ length: 9_800 }, (_, index) => ({ id: id("3", index), owner_id: owner, deleted_at: null })),
+      ...Array.from({ length: 201 }, (_, index) => ({ id: id("4", index), owner_id: other, deleted_at: null })),
     ];
-    state.members = Array.from({ length: 5_000 }, (_, index) => ({ project_id: id("4", index), user_id: owner, role: "member" }));
+    state.members = Array.from({ length: 201 }, (_, index) => ({ project_id: id("4", index), user_id: owner, role: "member" }));
     await expect(localSnapshotProjectAccess(owner)).rejects.toThrow("verification limit");
   });
   it("stops the remaining scan once the other one fails", async () => {
