@@ -98,6 +98,14 @@ export const supabaseServerFetch: typeof fetch = (input, init) => {
   return authorized ? sendAfter(authorized, send) : send();
 };
 
+/**
+ * Fetch public Supabase material shared by every request, such as the signing
+ * key set, with the backend deadline but without any request's abort signal or
+ * authorization gate, so one request's outcome never fails another's fetch.
+ */
+export const supabaseSharedFetch: typeof fetch = (input, init) =>
+  backendFetchWithTimeout(routeSupabaseInput(input), init);
+
 /** Keep the existing auth deadline without imposing it on file uploads or RPCs. */
 export const supabaseServerFetchWithTimeout: typeof fetch = (input, init) => {
   const authorized = authorizationGate.getStore();

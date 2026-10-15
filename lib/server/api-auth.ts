@@ -22,6 +22,7 @@ import {
   isBackendUnavailableError,
 } from "@/lib/backend-availability";
 import { getServiceClient } from "@/lib/supabase-service";
+import { noteVerifiedSigningKey, verificationJwks } from "@/lib/server/auth-jwks";
 
 export { createCookieSink, type CookieSink };
 
@@ -222,13 +223,19 @@ async function verifySessionClaims(
 ): Promise<VerifiedSession | AuthFailure> {
   let authResult: Awaited<ReturnType<typeof supabase.auth.getClaims>>;
   try {
-    authResult = await supabase.auth.getClaims();
+    // A process-wide key set fetched once for concurrent requests; without
+    // one, the SDK performs its own lookup.
+    const jwks = await verificationJwks();
+    authResult = jwks
+      ? await supabase.auth.getClaims(undefined, { jwks })
+      : await supabase.auth.getClaims();
   } catch {
     console.error("[api-auth] claims_verification_failed");
     return serviceUnavailableResult();
   }
   const { data, error } = authResult;
   const claims = data?.claims;
+  if (claims?.sub) noteVerifiedSigningKey(data?.header);
   if (!claims?.sub) {
     if (isBackendUnavailableError(error)) return serviceUnavailableResult();
     return {
