@@ -12,9 +12,16 @@ const state = vi.hoisted(() => ({ store: null as EncryptedStore | null,
 vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => state.store }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => state.service }));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key, getLocale: async () => "en" }));
-vi.mock("./api-auth", () => ({ getAuthedUser: async () => state.denied
-  ? { ok: false, response: new Response(null, { status: 401 }) }
-  : { ok: true, user: { id: state.actor }, supabase: state.client } }));
+vi.mock("./api-auth", () => {
+  const authed = () => state.denied
+    ? { ok: false, response: new Response(null, { status: 401 }) }
+    : { ok: true, user: { id: state.actor }, supabase: state.client };
+  return { getAuthedUser: async () => authed(),
+    getAuthedUserWithRlsReads: async (_request: unknown, read: (verified: { user: { id: string }; supabase: unknown }) => unknown) => {
+      const result = authed();
+      return result.ok ? { ...result, reads: read({ user: result.user!, supabase: result.supabase }) } : result;
+    } };
+});
 vi.mock("./auth-users", () => ({ fetchAuthUsersById: (...args: unknown[]) => state.names(...args),
   toNamed: (user?: { email: string; full_name: string }) => ({ email: user?.email ?? null, full_name: user?.full_name ?? null }) }));
 vi.mock("./avatar-seeds", () => ({ fetchAvatarSeeds: (...args: unknown[]) => state.avatars(...args) }));

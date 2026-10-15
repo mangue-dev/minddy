@@ -1,7 +1,7 @@
 import { loadProjectIssues } from "@/lib/server/project-working-set-readers";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { createIssueForProject } from "@/lib/server/create-issue";
 
@@ -16,9 +16,11 @@ export const maxDuration = 60;
 /** GET /api/projects/[id]/issues — all issues of an accessible project. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getAuthedUser(request);
+  // The RLS reads overlap the live session check. Their responses, and so
+  // every decryption and the response body, still wait for it.
+  const auth = await getAuthedUserWithRlsReads(request, ({ user, supabase }) => loadProjectIssues({ supabase, user }, id));
   if (!auth.ok) return auth.response;
-  const [t, result] = await Promise.all([getTranslations("ApiErrors"), loadProjectIssues(auth, id)]);
+  const [t, result] = await Promise.all([getTranslations("ApiErrors"), auth.reads ?? loadProjectIssues(auth, id)]);
   if (!result.ok) return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   return NextResponse.json(result.data);
 }

@@ -216,7 +216,7 @@ describe("overlapped RLS read callbacks", () => {
       .map((path) => join("app", path))
       .filter((path) => readFileSync(join(process.cwd(), path), "utf8").includes("getAuthedUserWithRlsReads("));
 
-    expect(callers.sort()).toEqual(["app/api/me/app-tabs/route.ts", "app/api/me/board/route.ts"]);
+    expect(callers.sort()).toEqual(["app/api/me/app-tabs/route.ts", "app/api/me/board/route.ts", "app/api/projects/[id]/issues/route.ts"]);
     for (const path of callers) {
       expect({ path, ...violations(join(process.cwd(), path)) }).toEqual({ path, callbacks: 1, found: [] });
     }
