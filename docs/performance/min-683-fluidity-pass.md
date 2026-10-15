@@ -89,6 +89,7 @@ against its stacked control.
 | Task54 (two commits) | One fresh-destination resolver for Feedback `?post=` | Cold `?post=` activation 1347→784 ms and keeps the post 4/4 (control 0/4); first Feedback activation 973→470 ms |
 | E server (four fixes, two test follow-ups) | Inbox attribution and agent-run pins overlap their primary reads; local snapshot access in one round trip per page; one shared signing-key fetch; snapshot saves throttled to one per 30 s while data changes | `agent-runs` 264→190 ms, `notifications` 299→272 ms; startup neutral over two ABBA runs (+84 / +1 / +52, then −64 / +48 / −53), sealed 6/6. The signing-key and throttle effects need a 10-minute boundary or minutes of typing and are covered by tests only |
 | E renders (seven commits) | Stable auth identity, palette typing and model reuse, TOC and mention catalog stability, lazy updater, Windows/Linux first frame | 1696→1664 / 1709→1658 / 2029→1969; typing long tasks 67→61.5 ms |
+| `44e0846a7`, `1f8bdee21`, `847eba630`, `c0c99490e` | Global issue cache, re-evaluated with writes (below): unchanged project reads keep board rows, undo/relations/trash settle from the acknowledgement, remote ticket changes read only those tickets, resume keeps joined channels | Resume board fresh 3446→1511 ms (board reads 5→1); trash 1788→124 ms; remote edit 1530→807 ms; startup neutral over two ABBA runs |
 
 Sequential route latency (median of 30 authenticated GETs per side):
 
@@ -112,14 +113,58 @@ A second pass confirms the route gains (for example Routines 620→208 ms).
 | `733e5fb1e` retained Page body beyond its 60 s collection | Page after 65 s away 87→86.5 ms: the eviction never shows in the real journey |
 | `519431387` trailing snapshot debounce | No snapshot sealed within 7 s of readiness (0/6), which delays exit durability; replaced by a throttle measured in round E |
 | `9ff6e81e5` PR detail read alongside the pinned list | Web −359 ms, native +278 ms under GitHub API variance; inconclusive |
-| Five global issue cache commits (`e03306f8e`, `482d5cd4e`, `234b34f4e`, `429b9be75`, `a44fd357f`) | Not retained: one ABBA showed startup +75 / +40 / +71 ms, and their benefits (undo, relations, remote edits, resume) need writes the fixture forbids. A single ABBA can move ±80 ms (see E server), so this needs a write-capable protocol and a repeat before a verdict |
+| `a44fd357f` issue-counter project updates patched in place | No gain against the real broadcast: a remote creation still triggers the same project list, Smart Assign warning and triage count reads (2/2 per side), so the counter-only update is never recognized. Its unit fixture assumes full old and new rows. The other four global issue cache commits are retained after the re-evaluation below |
 | `bundle-imports#3` framer-motion duplicate | Deferred: requires a mangue-ui dependency change |
 
 Rejected candidates never reached the published branch. Their commits remain on
 local worktree branches for a follow-up: `worktree-wf_5a021be1-8fc-1`
 (`d65c3d11a`), `worktree-wf_1fc4d2f7-768-1` (`733e5fb1e`, `519431387`),
 `worktree-wf_1fc4d2f7-768-2` (`5f5aeb2a1`), `worktree-wf_0e747944-62f-1`
-(`9ff6e81e5`) and `worktree-wf_0e747944-62f-2` (global issue cache).
+(`9ff6e81e5`) and `worktree-wf_0e747944-62f-2` (`a44fd357f`).
+
+## Global issue cache re-evaluation
+
+The five global issue cache commits were first set aside after one startup
+ABBA (+75 / +40 / +71 ms) because their benefits need writes. They were
+cherry-picked onto `906af1cb7` and re-measured; control and candidate products
+were built in the same isolated worktree, so the shared checkout never
+switched branches.
+
+**Startup.** The slowdown does not reproduce. Two serial ABBA runs of
+`906af1cb7` (build `7atK2nndM9pZBwS2rWd4c`) against the five commits
+(`5b00d0969`, build `3U0d6WHAlrofYiFX3WHO3`) moved −103 / +38 / −8 ms, then
++14 / −83 / 0 ms. Pooled medians are 1714→1674 ms web cold (n=12), 1728→1719 ms
+web reload (n=12) and 1975→1979 ms native (n=20), sealed 6/6 in every arm. No
+bisection was needed.
+
+**Write protocol.** `measure-board-writes.mjs` acts on a disposable project
+created for each run under the fixture account and purged afterwards, with the
+owner's approval: one project and six issues per run, four for the ABBA, all
+verified absent afterwards. Fixture projects, tabs and Pages are never written.
+The read-only paths ran alone in a separate ABBA (n=6 per side); the write ABBA
+has n=2 per side, with identical request counts within each side.
+
+| Scenario | Fix | Control | Four retained fixes |
+| --- | --- | --- | --- |
+| Resume after 16.5 s away | `c0c99490e`, `847eba630` | Board fresh after 3446 ms (3089–4038); 5 board reads, 4 cancelled; 13 channel leaves and rejoins; 1 all-issue snapshot | 1511 ms (1457–1558); 1 board read; no rejoin; no snapshot |
+| All after a project read | `44e0846a7` | 622–1206 board rows replaced when the project read; activation 112 ms | 0 rows; 104 ms (ranges overlap) |
+| Undo and redo of a priority on All | `1f8bdee21` | 1 board read each | None |
+| Relation added, then removed, on All | `1f8bdee21` | 2 board reads each, 1 cancelled | None |
+| Card moved to trash on All | `1f8bdee21` | Card leaves the board after 1788 ms (1774–1802); 2 board reads | 124 ms (124–125); none |
+| Remote ticket edit | `847eba630` | Applied after 1530 ms (1396–1663) through a board read | 807 ms (787–827) through one ticket read |
+| Remote ticket creation | `847eba630` | Applied after 1522 ms (1484–1559) through a board read | 802 ms (764–839) through one ticket read |
+| Its project counter update | `a44fd357f` | Project list, Smart Assign warnings, triage counts | The same three reads: rejected |
+
+Every board read is the 2.44 MB aggregate, and a cancelled read still runs to
+completion on the server. The write ABBA confirms resume (4312→1460 ms). Resume
+is simulated with window blur and focus events, the desktop path, not a
+suspended socket. One early candidate smoke run, before the realtime timeline
+was recorded, showed 26 rejoins; nine later candidate resumes showed none.
+Network quiet times are not used, because Page and pull request warming keeps
+the network busy. The startup result covers the five commits; `a44fd357f` only
+handles project update broadcasts, which do not occur during startup. Evidence:
+`min683-h2-cache5-r{1,2}-*`, `min683-cache-readonly-*` and `min683-cache-writes-*`
+under ignored `output/playwright/performance/`.
 
 ## Collectors added
 
@@ -131,6 +176,10 @@ local worktree branches for a follow-up: `worktree-wf_5a021be1-8fc-1`
   route latency with TLS validation kept on.
 - `scripts/performance/measure-feedback-return.mjs`: Feedback `?post=` warm
   return and cold activation (Task54).
+- `scripts/performance/measure-board-writes.mjs`: undo, relations, trash,
+  remote edits and creations on a disposable project removed by the collector
+  (`--cleanup` finishes an interrupted run), plus resume and All after a project
+  read on the fixture (`--read-only`).
 - `profile-restored-startup.mjs` and `measure-native-restored-all-startup.mjs`
   accept an https base and the sealed relaunch variant;
   `diagnose-independent-first.mjs` accepts an https base.

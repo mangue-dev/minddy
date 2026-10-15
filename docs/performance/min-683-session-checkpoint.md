@@ -7,7 +7,11 @@ local HTTP/2 + brotli proxy and include the sealed relaunch path. Against the
 original control in one ABBA comparison, restored All completes at 1720 ms
 against 2186 ms (web cold), 1759 against 2391 ms (web reload) and 2031 against
 2790 ms (native). It lists retained and rejected fixes, the iad1/eu-west-1
-production finding and the open follow-ups.
+production finding and the open follow-ups. Its global issue cache
+re-evaluation retains four of the five set-aside commits after a write-capable
+protocol on a disposable project: resume refreshes the board in 1511 ms
+instead of 3446 ms, and trash, undo, relations and remote edits no longer
+refetch the 2.44 MB board. The issue-counter fix (`a44fd357f`) stays rejected.
 
 ## Latest startup query-cache pass (2026-10-15)
 
