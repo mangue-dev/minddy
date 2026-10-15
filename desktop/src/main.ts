@@ -35,6 +35,7 @@ import {
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
 import { windowCloseAction } from "@/lib/desktop/hide-window";
+import { desktopTestBackground } from "@/lib/desktop/test-background";
 import {
   linuxDesktopPaths,
   prepareLinuxDesktopPaths,
@@ -380,8 +381,7 @@ function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH):
   rebuildAppMenu();
   if (mainWindow) {
     loadDesktopWindow(mainWindow, `${origin}${entryPath}`);
-    mainWindow.show();
-    mainWindow.focus();
+    revealWindow(mainWindow);
   }
 }
 
@@ -434,8 +434,7 @@ const channelSwitch = createDesktopChannelSwitch({
     if (mainWindow) {
       rebuildAppMenu();
       goHome(mainWindow);
-      mainWindow.show();
-      mainWindow.focus();
+      revealWindow(mainWindow);
     }
   },
 });
@@ -626,8 +625,7 @@ function receiveDeepLink(raw: string): void {
   authLinkDelivery.receive(link);
   const window = mainWindow;
   if (!window) return;
-  window.show();
-  window.focus();
+  revealWindow(window);
   flushAuthLink();
 }
 
@@ -635,8 +633,7 @@ function flushOpenLink(): void {
   if (!pendingOpenPath || !mainWindow) return;
   const next = pendingOpenPath;
   pendingOpenPath = null;
-  mainWindow.show();
-  mainWindow.focus();
+  revealWindow(mainWindow);
   loadDesktopWindow(mainWindow, `${origin}${next}`);
 }
 
@@ -652,8 +649,7 @@ function revealLocalNotificationTarget(target: string | null): void {
   if (!mainWindow) return;
   const url = desktopLocalNotificationUrl(origin, target);
   if (url) loadDesktopWindow(mainWindow, url);
-  mainWindow.show();
-  mainWindow.focus();
+  revealWindow(mainWindow);
 }
 
 /**
@@ -889,14 +885,14 @@ function createWindow(
       );
     },
   );
-  if (process.platform === "darwin" && showWhenReady) window.once("ready-to-show", () => window.show());
+  if (process.platform === "darwin" && showWhenReady) window.once("ready-to-show", () => revealWindow(window, false));
   let shownOnce = false;
   window.on("show", () => { shownOnce = true; });
   window.webContents.on("did-finish-load", () => {
     if (process.platform === "darwin" || mainWindow !== window) return;
     const desired = windowChromeReplacement(documentChrome.get(window.webContents.id), integrated);
     if (desired === null) {
-      if (showWhenReady && !shownOnce) window.show();
+      if (showWhenReady && !shownOnce) revealWindow(window, false);
       return;
     }
     // Frame style is a constructor option. Wait for the document to finish so
@@ -1227,8 +1223,7 @@ function registerIpc(): void {
 
   ipcMain.on("minddy:focus", () => {
     if (!mainWindow) return;
-    mainWindow.show();
-    mainWindow.focus();
+    revealWindow(mainWindow);
   });
 
   // THE LOCAL PROJECT FILE (MIN-359) — the first three `handle` of the
@@ -1499,6 +1494,22 @@ if (!app.isPackaged && process.env.MINDDY_DESKTOP_TEST_USER_DATA?.trim()) {
   app.setPath("sessionData", process.env.MINDDY_DESKTOP_TEST_USER_DATA.trim());
 }
 
+// Electron test bench only: automated runs open their windows without taking
+// focus, so a measurement does not pull the person away from their work. See
+// lib/desktop/test-background.ts; a packaged app always ignores it.
+const testBackground = desktopTestBackground(app.isPackaged, process.env);
+if (testBackground && process.platform === "darwin") app.setActivationPolicy("accessory");
+
+/** Show a window, and give it focus unless the test bench runs in the background. */
+function revealWindow(window: BrowserWindow, focus = true): void {
+  if (testBackground) {
+    window.showInactive();
+    return;
+  }
+  window.show();
+  if (focus) window.focus();
+}
+
 // Single instance: the deep link must reach the app ALREADY opened, not in
 // launch a second which would have neither its session nor its window.
 if (!app.requestSingleInstanceLock()) {
@@ -1514,8 +1525,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on("second-instance", (_event, argv) => {
     for (const arg of desktopProtocolArguments(argv)) receiveDeepLink(arg);
     if (mainWindow && !isLinuxBackgroundLaunch(argv)) {
-      mainWindow.show();
-      mainWindow.focus();
+      revealWindow(mainWindow);
     }
   });
 
@@ -1637,8 +1647,7 @@ if (!app.requestSingleInstanceLock()) {
     // macOS: clicking the dock icon of an app without a visible window brings it back.
     app.on("activate", () => {
       if (!mainWindow) return;
-      mainWindow.show();
-      mainWindow.focus();
+      revealWindow(mainWindow);
     });
   });
 

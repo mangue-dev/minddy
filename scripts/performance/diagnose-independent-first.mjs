@@ -122,7 +122,8 @@ async function runCase(spec) {
     if (native) {
       activeProfile = await mkdtemp(path.join(tmpdir(), "minddy-min683-independent-"));
       const env = Object.fromEntries(["PATH", "HOME", "TMPDIR", "LANG"].filter((key) => process.env[key]).map((key) => [key, process.env[key]]));
-      Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: activeProfile });
+      // Open windows without taking focus (unpackaged test bench only, see lib/desktop/test-background.ts).
+  Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: activeProfile, MINDDY_DESKTOP_TEST_BACKGROUND: "1" });
       // The optional local HTTP/2 proxy (h2-proxy.mjs) uses a self-signed localhost certificate.
       const tlsArgs = base.startsWith("https:") ? ["--ignore-certificate-errors"] : [];
       activeApp = await _electron.launch({ args: [...tlsArgs, `--user-data-dir=${activeProfile}`, path.join(root, "desktop")], cwd: path.join(root, "desktop"), env, timeout: 30000 });

@@ -104,7 +104,8 @@ async function openContext() {
   }
   profile = await mkdtemp(path.join(tmpdir(), "minddy-min683-tabs-"));
   const env = Object.fromEntries(["PATH", "HOME", "TMPDIR", "LANG"].filter((key) => process.env[key]).map((key) => [key, process.env[key]]));
-  Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: profile });
+  // Open windows without taking focus (unpackaged test bench only, see lib/desktop/test-background.ts).
+  Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: profile, MINDDY_DESKTOP_TEST_BACKGROUND: "1" });
   const tlsArgs = base.startsWith("https:") ? ["--ignore-certificate-errors"] : [];
   app = await _electron.launch({ args: [...tlsArgs, `--user-data-dir=${profile}`, path.resolve("desktop")], cwd: path.resolve("desktop"), env, timeout: 30000 });
   // The window is created only once a session exists: add cookies before waiting for it.

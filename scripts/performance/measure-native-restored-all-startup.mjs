@@ -60,7 +60,8 @@ try {
       .map(async file => [file, hash(await readFile(path.join(root, file)))]))), fixtureAccount: fixture.email });
   profile = await mkdtemp(path.join(tmpdir(), "minddy-min683-startup-"));
   const env = Object.fromEntries(["PATH", "HOME", "TMPDIR", "LANG"].filter(key => process.env[key]).map(key => [key, process.env[key]]));
-  Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: profile });
+  // Open windows without taking focus (unpackaged test bench only, see lib/desktop/test-background.ts).
+  Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: profile, MINDDY_DESKTOP_TEST_BACKGROUND: "1" });
   // The optional local HTTP/2 proxy (h2-proxy.mjs) uses a self-signed localhost certificate.
   const tlsArgs = base.startsWith("https:") ? ["--ignore-certificate-errors"] : [];
   result.transport = base.startsWith("https:") ? "local h2-proxy (HTTP/2, TLS, brotli)" : "next start (HTTP/1.1)";
