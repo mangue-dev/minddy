@@ -610,6 +610,46 @@ describe("application tab sessions", () => {
       expect(rows()[0]).toMatchObject({ href: all.href, revision: 3 });
     } finally { session.dispose(); }
   });
+  it("activates without busy renders when no departure guard can wait", async () => {
+    const all = { ...createHomeTab("owner", undefined, 1), href: "/all" };
+    const { session } = setup([createHomeTab("owner"), all]);
+    try {
+      await session.initialize("/home");
+      const listener = vi.fn();
+      const stop = session.subscribe(listener);
+      await session.activate(all.id);
+      expect(session.getSnapshot()).toMatchObject({ activeId: all.id, busy: false });
+      expect(listener).toHaveBeenCalledOnce();
+      // A registered guard can wait: the strip still drops input meanwhile.
+      let finish!: (allowed: boolean) => void;
+      const unregister = session.registerDeparture(() => new Promise((resolve) => { finish = resolve; }));
+      const activation = session.activate(session.getSnapshot().tabs[0].id);
+      await vi.waitFor(() => expect(session.getSnapshot().busy).toBe(true));
+      finish(true); await activation;
+      expect(session.getSnapshot().busy).toBe(false);
+      unregister(); stop();
+    } finally { session.dispose(); }
+  });
+  it("acknowledges an activated destination without another render", async () => {
+    const all = { ...createHomeTab("owner", undefined, 1), href: "/all?view=a" };
+    const { session } = setup([createHomeTab("owner"), all]);
+    try {
+      await session.initialize("/home");
+      await session.activate(all.id);
+      const before = session.getSnapshot();
+      const listener = vi.fn();
+      const stop = session.subscribe(listener);
+      session.observe(all.href, null);
+      expect(listener).not.toHaveBeenCalled();
+      expect(session.getSnapshot()).toBe(before);
+      // A refined selection still publishes its new location.
+      session.observe("/all?view=b", null);
+      expect(listener).toHaveBeenCalled();
+      expect(session.getActiveHref()).toBe("/all?view=b");
+      expect(session.getSnapshot().tabs.find((tab) => tab.id === all.id)?.href).toBe("/all?view=b");
+      stop();
+    } finally { session.dispose(); }
+  });
   it("keeps a conflicting destination pending until retry uses the canonical revision", async () => {
     const { session, transport, rows } = setup(); await session.initialize("/home");
     const canonical = { ...rows()[0], revision: 2 };

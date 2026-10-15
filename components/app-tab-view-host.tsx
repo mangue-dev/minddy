@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { appTabSurfaceLoaders, preparedBoardSurface, preparedCollectionSurface } from "@/lib/app-tab-surfaces";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AppTabNavigationScope, useAppTabs, useOptionalAppTabs } from "@/lib/app-tabs-context";
+import { AppTabNavigationScope, useAppTabs, useOptionalAppTabNavigation, useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { nextReadActivationSequence } from "@/lib/read-activation-sequence";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
@@ -128,6 +128,14 @@ function useViewHostRoute(tabs: ReturnType<typeof useOptionalAppTabs>): ViewHost
   if (!urgent) return { pathname, search };
   const url = new URL(href!, "https://minddy.invalid");
   return { pathname: url.pathname, search: url.searchParams.toString() };
+}
+
+/** The labelled tab panel follows activation, so the shell around it does not. */
+export function AppTabPanel({ children }: { children: ReactNode }) {
+  const navigation = useOptionalAppTabNavigation();
+  return <div id="app-tab-content" role={navigation ? "tabpanel" : undefined} aria-labelledby={navigation?.activeId ? `app-tab-${navigation.activeId}` : undefined} className="h-full min-h-0">
+    <AppTabViewHost>{children}</AppTabViewHost>
+  </div>;
 }
 
 /** One bounded host retains recent destinations while React suspends hidden effects. */

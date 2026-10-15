@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AppTabViewHost } from "@/components/app-tab-view-host";
+import { AppTabPanel, AppTabViewHost } from "@/components/app-tab-view-host";
 import { isRetainedDestination, retainAppView, retainedAppViewKind } from "./retained-app-views";
 import { useAppTabRoute } from "./app-tab-route-context";
 import * as surfaces from "./app-tab-surfaces";
@@ -23,6 +23,7 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("./app-tabs-context", () => ({
   useAppTabs: () => ({ tabs: state.tabs, activeId: state.activeId, session: state }),
   useOptionalAppTabs: () => state.mobile ? null : ({ tabs: state.tabs, activeId: state.activeId, session: state }),
+  useOptionalAppTabNavigation: () => state.mobile ? null : ({ activeId: state.activeId, session: state }),
   AppTabNavigationScope: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("@/components/board-loading-skeleton", () => ({ BoardLoadingSkeleton: () => null }));
@@ -467,6 +468,18 @@ describe("bounded retained board views", () => {
     state.tabs = [{ id: "board" }];
     await render();
     expect(client.getQueryCache().find({ queryKey: ["issues", "p"] })?.getObserversCount()).toBe(0);
+  });
+
+  it("labels the tab panel from the active tab around the retained host", async () => {
+    const renderPanel = () => act(() => root.render(createElement(QueryClientProvider, { client }, createElement(AppTabPanel, { children: createElement("p") }))));
+    await renderPanel();
+    const panel = container.querySelector("#app-tab-content")!;
+    expect(panel.getAttribute("role")).toBe("tabpanel");
+    expect(panel.getAttribute("aria-labelledby")).toBe("app-tab-board");
+    Object.assign(state, { activeId: "other", path: "/projects/p", activeHref: "/projects/p" });
+    await renderPanel();
+    expect(panel.getAttribute("aria-labelledby")).toBe("app-tab-other");
+    expect(panel.querySelector('[data-app-view-active="true"]')?.getAttribute("data-retained-app-view")).toBe("other:/projects/p");
   });
 
   it("bounds retained weight and releases closed tabs", async () => {

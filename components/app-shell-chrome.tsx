@@ -66,8 +66,8 @@ import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSe
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
 import { useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
-import { AppTabViewHost } from "@/components/app-tab-view-host";
-import { useOptionalAppTabNavigation } from "@/lib/app-tabs-context";
+import { AppTabPanel } from "@/components/app-tab-view-host";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
@@ -255,6 +255,12 @@ function identifierBadge(id: string) {
   );
 }
 
+/** Activation closes transient surfaces without rendering the whole shell. */
+function AppTabChangeEffect({ onChange }: { onChange: () => void }) {
+  useAppTabChange(onChange);
+  return null;
+}
+
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   useMobileViewport();
   // A root marker keeps application typography scoped without repeatedly
@@ -282,8 +288,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tPages = useTranslations("Pages");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
-  const appTabs = useOptionalAppTabNavigation();
-  const activeAppTabId = appTabs?.activeId;
+  // The stable session: activation re-renders only the tab panel below.
+  const appTabSession = useOptionalAppTabSession();
   const searchParams = useSearchParams();
   const router = useAppRouter();
   const openDestination = useAppNavigation();
@@ -303,7 +309,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     closeIssue: closeIssuePanel,
   } = useIssuePanelActions();
   const previousPathname = useRef(pathname);
-  useAppTabChange(closeIssuePanel);
   useEffect(() => {
     if (previousPathname.current !== pathname) closeIssuePanel();
     previousPathname.current = pathname;
@@ -1509,18 +1514,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const handleDestinationSelect = useCallback((href: string) => {
     setPaletteOpen(false);
     setPaletteMode("default");
-    void appTabs?.session.create(href);
-  }, [appTabs?.session]);
+    void appTabSession?.create(href);
+  }, [appTabSession]);
   // Hovering a destination row is the intent to open it: the same prefetch
   // an existing tab label already gets (fourth pass MIN-540).
   const handleDestinationPrefetch = useCallback((href: string) => {
-    appTabs?.session.prefetch(href);
-  }, [appTabs?.session]);
+    appTabSession?.prefetch(href);
+  }, [appTabSession]);
 
   return (
     <div className="app-workspace relative flex h-dvh w-full min-w-0 flex-col overflow-hidden">
       <AppTopBar
-        ready={Boolean(appTabs)}
+        ready={Boolean(appTabSession)}
         hidden={sidebarHidden}
         inbox={inboxItem}
         onSearch={() => handlePaletteOpenChange(true)}
@@ -1569,7 +1574,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       }
     >
-      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0"><AppTabViewHost>{children}</AppTabViewHost></div>
+      <AppTabChangeEffect onChange={closeIssuePanel} />
+      <AppTabPanel>{children}</AppTabPanel>
       <ContentToaster />
       {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
