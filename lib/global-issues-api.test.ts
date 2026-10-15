@@ -218,10 +218,94 @@ describe("Kanban cache reconciliation", () => {
     ]);
 
     expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.issues).toEqual([
-      issue("z", "p2", "todo", 1),
       issue("a", "p1", "in_progress", 20),
+      issue("z", "p2", "todo", 1),
     ]);
     expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(true);
+  });
+
+  it("leaves the global board untouched when a project read carries nothing new", () => {
+    const client = new QueryClient();
+    const rows = [issue("a", "p1", "todo", 1), issue("z", "p2", "todo", 2), issue("b", "p1", "todo", 3)];
+    rows[0].category_ids = ["c1", "c2"];
+    client.setQueryData(GLOBAL_BOARD_KEY, board(rows));
+    const before = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+    const updatedAt = client.getQueryState(GLOBAL_BOARD_KEY)?.dataUpdatedAt;
+
+    reconcileProjectIssuesInGlobalCache(client, "p1", [
+      { ...issue("b", "p1", "todo", 3), resource_count: 0 },
+      { ...issue("a", "p1", "todo", 1), category_ids: ["c1", "c2"], resource_count: 2 },
+    ]);
+
+    expect(client.getQueryData(GLOBAL_BOARD_KEY)).toBe(before);
+    expect(client.getQueryState(GLOBAL_BOARD_KEY)?.dataUpdatedAt).toBe(updatedAt);
+    expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(false);
+  });
+
+  it("keeps an invalidation armed elsewhere when the project slice is unchanged", async () => {
+    const client = new QueryClient();
+    client.setQueryData(GLOBAL_BOARD_KEY, board([issue("a", "p1", "todo", 1)]));
+    await client.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY, refetchType: "none" });
+
+    reconcileProjectIssuesInGlobalCache(client, "p1", [issue("a", "p1", "todo", 1)]);
+
+    expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(true);
+  });
+
+  it("replaces only the changed rows, in place, and keeps the others' identity", () => {
+    const client = new QueryClient();
+    const rows = [issue("a", "p1", "todo", 1), issue("z", "p2", "todo", 2), issue("b", "p1", "todo", 3), issue("gone", "p1", "todo", 4)];
+    client.setQueryData(GLOBAL_BOARD_KEY, board(rows));
+    const [a, z, b] = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+    const moved = issue("a", "p1", "done", 1);
+
+    reconcileProjectIssuesInGlobalCache(client, "p1", [
+      issue("b", "p1", "todo", 3),
+      issue("new", "p1", "todo", 5),
+      moved,
+    ]);
+
+    const issues = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+    expect(issues.map((row) => row.id)).toEqual(["a", "z", "b", "new"]);
+    expect(issues[0]).not.toBe(a);
+    expect(issues[0].status).toBe("done");
+    expect(issues[1]).toBe(z);
+    expect(issues[2]).toBe(b);
+    expect(client.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(true);
+  });
+
+  it("replaces a row whose known resource count changed, and a moved row only once", () => {
+    const client = new QueryClient();
+    client.setQueryData(GLOBAL_BOARD_KEY, board([
+      { ...issue("a", "p1", "todo", 1), resource_count: 1 },
+      issue("m", "p2", "todo", 2),
+    ]));
+
+    reconcileProjectIssuesInGlobalCache(client, "p1", [
+      { ...issue("a", "p1", "todo", 1), resource_count: 2 },
+      { ...issue("m", "p1", "todo", 2), resource_count: 0 },
+    ]);
+
+    const issues = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+    expect(issues.map((row) => [row.id, row.project_id, row.resource_count])).toEqual([
+      ["a", "p1", 2],
+      ["m", "p1", 0],
+    ]);
+  });
+
+  it("keeps resource counts and row identity across a board refetch", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const counted = { ...issue("a", "p1", "todo", 1), resource_count: 3 };
+    client.setQueryData(GLOBAL_BOARD_KEY, board([counted, issue("z", "p2", "todo", 2)]));
+    const [cachedA, cachedZ] = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(board([issue("a", "p1", "todo", 1), issue("z", "p2", "todo", 2)]))));
+    try {
+      await client.fetchQuery({ queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: 0 });
+      const issues = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues;
+      expect(issues[0]).toBe(cachedA);
+      expect(issues[0].resource_count).toBe(3);
+      expect(issues[1]).toBe(cachedZ);
+    } finally { client.clear(); }
   });
 
   it("repairs global and loaded project caches from one snapshot", () => {

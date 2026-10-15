@@ -74,17 +74,77 @@ export function mergeIssueSnapshot(
   return concurrentInsertions.length > 0 ? [...merged, ...concurrentInsertions] : merged;
 }
 
-/** A successful project GET also makes that project's global slice current. */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length &&
+      a.every((value, index) => sameValue(value, b[index]));
+  }
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const key of keys) if (!sameValue(left[key], right[key])) return false;
+  return true;
+}
+
+/**
+ * Whether a project row leaves the cached board row as it is. The board
+ * endpoint never carries `resource_count`, so a board row without one is not
+ * replaced only to gain it; a count the board already holds stays current.
+ */
+function sameBoardRow(cached: Issue, fetched: Issue): boolean {
+  const keys = new Set([...Object.keys(cached), ...Object.keys(fetched)]);
+  for (const key of keys) {
+    if (key === "resource_count" && cached.resource_count === undefined) continue;
+    if (!sameValue(cached[key as keyof Issue], fetched[key as keyof Issue])) return false;
+  }
+  return true;
+}
+
+/**
+ * A successful project GET also makes that project's global slice current.
+ *
+ * Rows are replaced where they stand, and unchanged rows keep their identity:
+ * the board stays in server order and an identical read re-renders nothing.
+ * An unchanged slice leaves the query untouched, since writing it would also
+ * clear an invalidation another event left armed.
+ */
 export function reconcileProjectIssuesInGlobalCache(
   queryClient: QueryClient,
   projectId: string,
   issues: Issue[]
 ): void {
+  let changed = false;
   queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (current) => {
-    if (!current) return current;
-    const others = current.issues.filter((issue) => issue.project_id !== projectId);
-    return { ...current, issues: [...others, ...issues] };
+    if (!current) return undefined;
+    const fetchedById = new Map(issues.map((issue) => [issue.id, issue]));
+    const placed = new Set<string>();
+    const next: Issue[] = [];
+    for (const cached of current.issues) {
+      const fetched = fetchedById.get(cached.id);
+      if (!fetched || placed.has(cached.id)) {
+        if (!fetched && cached.project_id !== projectId) next.push(cached);
+        else changed = true;
+        continue;
+      }
+      placed.add(cached.id);
+      if (sameBoardRow(cached, fetched)) {
+        next.push(cached);
+      } else {
+        next.push(fetched);
+        changed = true;
+      }
+    }
+    for (const issue of issues) {
+      if (placed.has(issue.id)) continue;
+      placed.add(issue.id);
+      next.push(issue);
+      changed = true;
+    }
+    return changed ? { ...current, issues: next } : undefined;
   });
+  if (!changed) return;
   // The issue slice is current, but the aggregate metadata was not refreshed.
   void queryClient.invalidateQueries({
     queryKey: GLOBAL_BOARD_KEY,
