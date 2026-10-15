@@ -609,6 +609,46 @@ describe("account-owned PR preparation", () => {
     } finally { finish?.(); prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
+  it.each([
+    { name: "admits scoped reads beside the account PR list and the All board's catch-up refetch", active: "/all", board: "settled", admitted: true },
+    { name: "holds scoped reads while a PR tab waits on the account PR list", active: "/pull-requests", board: "settled", admitted: false },
+    { name: "holds scoped reads while the All board refreshes its restored snapshot", active: "/all", board: "restored", admitted: false },
+    { name: "holds scoped reads while the All board's first read is in flight", active: "/all", board: "missing", admitted: false },
+  ])("$name", async ({ active, board, admitted }) => {
+    const prepared = setup(); const stops: (() => void)[] = [];
+    prepared.fetch.mockImplementation(() => new Promise<Response>(() => {}));
+    try {
+      prepared.preparation.visit(active, [active, "/projects/new"]);
+      if (board === "settled") await prepared.client.fetchQuery({ queryKey: ["me", "board"], queryFn: async () => ({ issues: [] }) });
+      if (board === "restored") prepared.client.setQueryData(["me", "board"], { issues: [] });
+      for (const queryKey of [["me", "board"], ["pull-requests", "all", "open", 100, null, null]]) {
+        stops.push(new QueryObserver(prepared.client, { queryKey, queryFn: () => new Promise(() => {}) }).subscribe(() => {}));
+      }
+      expect(prepared.client.isFetching()).toBe(2);
+      prepared.flush();
+      const reads = prepared.client.getQueryCache().getAll().filter((query) => query.queryKey[1] === "new" && query.state.fetchStatus === "fetching");
+      if (admitted) expect(reads.length).toBeGreaterThan(0);
+      else expect(reads).toEqual([]);
+      expect(reads.length).toBeLessThanOrEqual(SCOPED_PREPARATION_CONCURRENCY);
+    } finally { for (const stop of stops) stop(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("keeps forge speculation behind the account PR list while ordinary tabs prepare", async () => {
+    const prepared = setup(); let stop = () => {};
+    prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+    try {
+      stop = new QueryObserver(prepared.client, { queryKey: ["pull-requests", "all", "open", 100, null, null],
+        queryFn: () => new Promise(() => {}) }).subscribe(() => {});
+      prepared.preparation.visit("/home", ["/home", "/pull-requests?pr=one", "/projects/new"]);
+      for (let step = 0; step < 8; step++) {
+        prepared.flush();
+        await vi.waitFor(() => expect(prepared.client.isFetching()).toBe(1));
+      }
+      expect(prepared.client.getQueryState(["issues", "new"])?.status).toBe("success");
+      expect(prepared.fetch.mock.calls.filter(([url]) => String(url).startsWith("/api/pull-requests"))).toEqual([]);
+    } finally { stop(); prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
   it("prepares every unique prerequisite in the representative ten-tab set without activation", async () => {
     const prepared = setup();
     prepared.fetch.mockImplementation(async (url) => {

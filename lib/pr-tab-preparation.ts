@@ -28,6 +28,16 @@ export function isPassiveShellMaintenanceRead(query: Pick<Query, "queryKey" | "q
     Array.isArray(key[2]) && key[2].every((href) => typeof href === "string");
 }
 
+/** Forge-backed reads keep their own account budget and serial ownership. */
+function isForgeRead(query: Pick<Query, "queryKey">): boolean {
+  return query.queryKey[0] === "pull-requests" || query.queryKey[0] === "pull-request";
+}
+
+/** The account-wide PR lists the shell keeps current regardless of the open tab. */
+function isAccountForgeList(query: Pick<Query, "queryKey">): boolean {
+  return query.queryKey[0] === "pull-requests" && (query.queryKey[1] === "all" || query.queryKey[1] === "open-count");
+}
+
 /** Recent visible detail activities precede optional lists for old pinned PRs. */
 function recentActivityQueries(client: QueryClient) {
   const list = client.getQueryData<{ pullRequests: { prId: string; pr_state: string }[] }>(allPullRequestsQueryOptions().queryKey);
@@ -97,6 +107,10 @@ export function createPrTabPreparation(
     if (query && query.options.queryFn === reader.installed) query.setOptions({ ...query.options, queryFn: reader.original });
   };
   const activeQueryHashes = new Set<string>();
+  let activeForge = false;
+  // Keys whose ordinary server read completed during this account lifetime.
+  // Restored snapshots and manual writes never enter this set.
+  const settledReads = new Set<string>();
   const priority = navigationPreparationPriority(client);
   const visible = () => typeof document === "undefined" || document.visibilityState !== "hidden";
   const cancelScheduled = () => { cancel?.(); cancel = undefined; };
@@ -104,11 +118,22 @@ export function createPrTabPreparation(
     const state = client.getQueryState(key);
     return state?.data === undefined || state.isInvalidated || state.status === "error";
   };
-  const otherTransport = () => {
+  /** A refresh that no displayed destination waits on. Forge speculation
+   *  (`forge`) still yields to every forge-backed read in flight. */
+  const backgroundRefresh = (query: Query, forge: boolean) => {
+    if (forge && isForgeRead(query)) return false;
+    if (isAccountForgeList(query)) return !activeForge;
+    // Reconciliation and realtime catch-up refresh data already on screen.
+    // The active destination's first read in this lifetime, data-less or
+    // restored from a snapshot, still gates the lane.
+    return query.state.status === "success" && query.state.data !== undefined &&
+      (!activeQueryHashes.has(query.queryHash) || settledReads.has(query.queryHash));
+  };
+  const otherTransport = (forge = false) => {
     const auxiliary = new Set(recentActivityQueries(client).map((options) => hashKey(options.queryKey)));
     return client.getQueryCache().getAll().some((query) => query.state.fetchStatus === "fetching" && !isCachedTabReconciliation(query) && !isPassiveShellMaintenanceRead(query) &&
       !(preparing.has(query.queryHash) && !preparing.get(query.queryHash)!.cancelled && !preparing.get(query.queryHash)!.superseded && !query.isActive()) &&
-      !(auxiliary.has(query.queryHash) && !query.isActive()));
+      !(auxiliary.has(query.queryHash) && !query.isActive()) && !backgroundRefresh(query, forge));
   };
   type PreparedQuery = { options: ReturnType<typeof appTabPreparationQueries>[number]; identity: string };
   type Destination = { href: string; route: ReturnType<typeof appTabRoute>; queries: PreparedQuery[]; pendingIssue: string | null };
@@ -268,6 +293,7 @@ export function createPrTabPreparation(
         // during this same pass. A new read must still satisfy current admission.
         if (!admitted && (!visible() || !onlineManager.isOnline() || otherTransport())) { changed(); return; }
         if (!admitted && transportSlots() >= SCOPED_PREPARATION_CONCURRENCY) return;
+        if (!admitted && forge && otherTransport(true)) break;
         if (forge && [...preparing.values()].some((read) => read.forge)) break;
         // A second slot must not let an optional list overtake recent activity
         // while the final ordinary navigation prerequisite is still in flight.
@@ -442,6 +468,8 @@ export function createPrTabPreparation(
     if (disposed || (!pendingKeys.size && !preparing.size)) return;
     if (!visible() || !onlineManager.isOnline() || otherTransport()) {
       cancelScheduled(); yieldReads();
+    } else if ([...preparing.values()].some((read) => read.forge) && otherTransport(true)) {
+      for (const read of preparing.values()) if (read.forge) yieldRead(read);
     }
     enqueue();
   };
@@ -464,6 +492,7 @@ export function createPrTabPreparation(
     const relevant = manifest.has(identity);
     const projects = event.query.queryKey.length === 1 && event.query.queryKey[0] === "projects";
     if (event.type === "removed") {
+      settledReads.delete(identity);
       refreshSelectedDependencies(identity);
       if (relevant) { attempted.delete(identity); refreshPending(identity); changed(); }
       return;
@@ -474,6 +503,7 @@ export function createPrTabPreparation(
     }
     if (event.type !== "updated") return;
     const action = event.action;
+    if (action.type === "success" && !action.manual) settledReads.add(identity);
     // Only the ordinary source read discovers details. Optimistic/manual
     // notifications and unrelated observer churn never scan secondary lists,
     // except a candidate scope whose invalidation or manual write can move a
@@ -512,7 +542,7 @@ export function createPrTabPreparation(
   const publishSelection = (href: string) => {
     cancelScheduled();
     clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
-    active = href;
+    active = href; activeForge = appTabRoute(href).section === "pull-requests";
     const options = appTabPreparationQueries(client, href);
     activeQueryHashes.clear();
     for (const option of options) activeQueryHashes.add(hashKey(option.queryKey));
@@ -545,7 +575,7 @@ export function createPrTabPreparation(
       enqueue();
     },
     dispose() {
-      disposed = true; activeQueryHashes.clear(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
+      disposed = true; activeQueryHashes.clear(); settledReads.clear(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
       clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", resume);
       if (typeof window !== "undefined") window.removeEventListener("focus", resume);
