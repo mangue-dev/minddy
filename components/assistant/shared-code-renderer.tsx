@@ -8,8 +8,8 @@ import {
   CodeBlockSurface,
 } from "@/components/code-block-surface";
 import {
-  CODE_LANGUAGE_OPTIONS,
-  codeBlockLowlight,
+  useCodeLanguageCatalog,
+  type CodeBlockHighlighter,
 } from "@/components/code-block-language-catalog";
 
 type StreamdownCodeProps = ComponentProps<"code"> & {
@@ -38,10 +38,14 @@ function highlightedNode(node: HighlightNode, key: number): ReactNode {
   );
 }
 
-function highlightedCode(code: string, language: string | undefined): ReactNode {
-  if (!language || !codeBlockLowlight.registered(language)) return code;
+function highlightedCode(
+  highlighter: CodeBlockHighlighter,
+  code: string,
+  language: string | undefined,
+): ReactNode {
+  if (!language || !highlighter.registered(language)) return code;
   try {
-    return (codeBlockLowlight.highlight(language, code).children as HighlightNode[]).map(
+    return (highlighter.highlight(language, code).children as HighlightNode[]).map(
       highlightedNode,
     );
   } catch {
@@ -60,7 +64,8 @@ export function ReadOnlyCodeBlock({
   className?: string;
 }) {
   const t = useTranslations("Common");
-  const selected = CODE_LANGUAGE_OPTIONS.find((option) => option.value === language);
+  const { highlighter, options } = useCodeLanguageCatalog(language);
+  const selected = options.find((option) => option.value === language);
   const languageLabel = selected?.label ?? (language || t("codePlainText"));
   return (
     <CodeBlockSurface
@@ -69,7 +74,7 @@ export function ReadOnlyCodeBlock({
       languageControl={<CodeBlockLanguageLabel label={languageLabel} />}
     >
       <code className={language ? `language-${language}` : undefined}>
-        {highlightedCode(code, language)}
+        {highlightedCode(highlighter, code, language)}
       </code>
     </CodeBlockSurface>
   );
