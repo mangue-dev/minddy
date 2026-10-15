@@ -9,7 +9,7 @@ import { AppTabNavigationScope, useAppTabs, useOptionalAppTabNavigation, useOpti
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { nextReadActivationSequence } from "@/lib/read-activation-sequence";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
-import { isRetainedDestination, retainAppView, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
+import { isRetainedDestination, RETAINED_APP_VIEW_LIMIT, retainAppView, retainedAppViewBudget, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
 import { RetainedBoardTitle } from "./retained-board-title";
 import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
@@ -191,9 +191,8 @@ function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeig
     if (!pendingActivation) {
       if (tabId && state.tabId !== tabId) visits = [...visits, tabId].slice(-32);
       const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
-      const pressured = !!memory && memory.usedJSHeapSize > memory.jsHeapSizeLimit * 0.7;
       views = retainAppView(views, { pathname, search, projectId: pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? null }, tabId, new Set(tabs.map((tab) => tab.id)), {
-        budget: Math.max(1, (pressured ? 3 : 6) - homeWeight), limit: 6 - homeWeight, visits,
+        budget: Math.max(1, retainedAppViewBudget(memory) - homeWeight), limit: RETAINED_APP_VIEW_LIMIT - homeWeight, visits,
         href: tabs.find((tab) => tab.id === tabId)?.href,
         cost: (view) => {
           if (view.kind === "pull-requests") {

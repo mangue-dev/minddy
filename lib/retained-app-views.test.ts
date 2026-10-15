@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppTabPanel, AppTabViewHost } from "@/components/app-tab-view-host";
-import { isRetainedDestination, retainAppView, retainedAppViewKind } from "./retained-app-views";
+import { isRetainedDestination, retainAppView, retainedAppViewBudget, retainedAppViewKind } from "./retained-app-views";
 import { useAppTabRoute } from "./app-tab-route-context";
 import * as surfaces from "./app-tab-surfaces";
 
@@ -54,6 +54,8 @@ function PreparedBoard() {
 let root: Root;
 let container: HTMLDivElement;
 let client: QueryClient;
+/** Pins the earlier six-unit capacity (JS heap past half its limit) for weight-charging cases. */
+const withEarlierCapacity = () => Object.defineProperty(performance, "memory", { configurable: true, value: { usedJSHeapSize: 60, jsHeapSizeLimit: 100 } });
 const render = async (children = createElement("p", null, "Other screen")) => { await act(() => root.render(createElement(QueryClientProvider, { client }, createElement(AppTabViewHost, { children })))); };
 
 beforeEach(() => {
@@ -76,6 +78,7 @@ afterEach(async () => {
   await act(() => root.unmount());
   client.clear();
   container.remove();
+  Reflect.deleteProperty(performance, "memory");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -97,6 +100,7 @@ describe("bounded retained board views", () => {
   });
 
   it("isolates routine selections and objective project scopes without expanding the shared host budget", async () => {
+    withEarlierCapacity();
     state.tabs = Array.from({ length: 8 }, (_, index) => ({ id: `collection-${index}` }));
     const routes = ["/routines", "/projects/p/objectives", "/projects/q/objectives", "/projects/p/feedback", "/projects/p/triage", "/projects/p/pages/a", "/projects/r/objectives", "/routines"];
     for (let index = 0; index < routes.length; index++) {
@@ -226,6 +230,7 @@ describe("bounded retained board views", () => {
     expect(container.querySelector('[data-retained-home-view] input')).toBe(input);
   });
   it.each([true, false])("charges actual mounted windows with conservative full-tree fallback (%s)", async (windowed) => {
+    withEarlierCapacity();
     client.setQueryData(["me", "board"], { issues: Array(636).fill({}) });
     client.setQueryData(["issues", "p"], Array(100).fill({}));
     await render();
@@ -242,6 +247,7 @@ describe("bounded retained board views", () => {
     expect(container.querySelector('[data-retained-app-view="board:/all"]')).toBe(global);
   });
   it.each([true, false])("charges each retained document without expanding the shared budget (%s)", async (smallIncoming) => {
+    withEarlierCapacity();
     const page = { database_schema: null, content: { type: "doc", content: [{ type: "paragraph" }] } };
     for (const id of ["p-a", "p-b", "q-a"]) client.setQueryData(["page", id], page);
     if (smallIncoming) client.setQueryData(["page", "q-b"], page);
@@ -269,6 +275,7 @@ describe("bounded retained board views", () => {
     expect(container.querySelector('[data-retained-app-view="fourth:/projects/q/pages/q-a"]')).not.toBeNull();
   });
   it("does not evict frequent boards for an unmounted large PR diff", async () => {
+    withEarlierCapacity();
     state.tabs = Array.from({ length: 12 }, (_, index) => ({ id: `t${index}` }));
     client.setQueryData(["me", "board"], { issues: Array(600).fill({}) });
     client.setQueryData(["issues", "p"], Array(100).fill({}));
@@ -493,6 +500,36 @@ describe("bounded retained board views", () => {
     state.tabs = [{ id: "pages" }];
     await render();
     expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(1);
+  });
+
+  it("keeps a rotation through ten restored light tabs hot, and shrinks under heap pressure", async () => {
+    const routes = ["/home", "/all", "/projects/p", "/projects/p/pages/a", "/projects/q/pages/b", "/pull-requests?pr=one",
+      "/routines", "/projects/p/triage", "/projects/p/feedback", "/projects/p/objectives"];
+    const smallPage = { database_schema: null, content: { type: "doc", content: [{ type: "paragraph" }] } };
+    client.setQueryData(["page", "a"], smallPage); client.setQueryData(["page", "b"], smallPage);
+    state.tabs = routes.map((href, index) => ({ id: `t${index}`, href }));
+    const visit = async (index: number) => {
+      const url = new URL(routes[index], "https://test.invalid");
+      Object.assign(state, { activeId: `t${index}`, path: url.pathname, search: url.search.slice(1), activeHref: routes[index] });
+      await render();
+    };
+    for (let index = 0; index < routes.length; index++) await visit(index);
+    const firstVisits = mounts;
+    for (let round = 0; round < 2; round++) for (let index = 0; index < routes.length; index++) await visit(index);
+    expect(mounts).toBe(firstVisits);
+    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(routes.length - 1);
+    expect(liveEffects).toBe(1);
+    // Past half of the heap limit, the earlier five-unit capacity applies again.
+    withEarlierCapacity();
+    await visit(1);
+    expect(container.querySelectorAll("[data-retained-app-view]")).toHaveLength(5);
+  });
+
+  it("stages the weighted budget by JS heap use", () => {
+    expect(retainedAppViewBudget(undefined)).toBe(10);
+    expect(retainedAppViewBudget({ usedJSHeapSize: 40, jsHeapSizeLimit: 100 })).toBe(10);
+    expect(retainedAppViewBudget({ usedJSHeapSize: 60, jsHeapSizeLimit: 100 })).toBe(6);
+    expect(retainedAppViewBudget({ usedJSHeapSize: 80, jsHeapSizeLimit: 100 })).toBe(3);
   });
 
   it("keeps independent same-route selections through an incoming query transition", async () => {

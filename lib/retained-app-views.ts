@@ -1,9 +1,30 @@
 import type { AppTabRouteSnapshot } from "./app-tab-route-context";
 import { normalizeAppTabLocation } from "./app-tab-location";
 
-/** Maximum view count; the weighted budget also bounds large boards. */
-export const RETAINED_APP_VIEW_LIMIT = 6;
-export const RETAINED_APP_VIEW_BUDGET = 6;
+/**
+ * Maximum view count, Home included. It matches the restored-tab preparation
+ * horizon (RESTORED_TAB_PREPARATION_LIMIT), so cycling through a typical
+ * restored window reveals views instead of remounting them; with six, a
+ * ten-tab rotation evicted on every switch.
+ *
+ * The weighted budget still bounds what stays mounted. One unit is about 200
+ * mounted board cards, one small Page document with its editor, or 200
+ * mounted PR diff files; large Pages cost two.
+ */
+export const RETAINED_APP_VIEW_LIMIT = 10;
+export const RETAINED_APP_VIEW_BUDGET = 10;
+/** The earlier capacity, used once the JS heap passes half of its limit. */
+export const RETAINED_APP_VIEW_HEAP_BUDGET = 6;
+/** The last resort, past 70% of the heap limit. */
+export const RETAINED_APP_VIEW_PRESSURED_BUDGET = 3;
+
+/** Weighted budget for the current heap. Browsers without `performance.memory` keep the full budget. */
+export function retainedAppViewBudget(memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number }): number {
+  if (!memory || !(memory.jsHeapSizeLimit > 0)) return RETAINED_APP_VIEW_BUDGET;
+  const used = memory.usedJSHeapSize / memory.jsHeapSizeLimit;
+  if (used > 0.7) return RETAINED_APP_VIEW_PRESSURED_BUDGET;
+  return used > 0.5 ? RETAINED_APP_VIEW_HEAP_BUDGET : RETAINED_APP_VIEW_BUDGET;
+}
 export interface RetainedAppView {
   key: string;
   tabId: string | null;
