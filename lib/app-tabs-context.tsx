@@ -101,13 +101,42 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   </NavigationContext.Provider></SessionContext.Provider>;
 }
 
+/** How long a successful write waits for its own realtime echo before reading the list itself. */
+const ECHO_FALLBACK_MS = 2_000;
+
 function createAccountSession(owner: string, client: QueryClient) {
   const key = appTabsQueryKey(owner);
   const abort = new AbortController();
+  let fallback: ReturnType<typeof setTimeout> | undefined;
   async function write<T>(operation: () => Promise<T>): Promise<T> {
+    const interrupted = client.isFetching({ queryKey: key }) > 0;
     await client.cancelQueries({ queryKey: key });
-    try { return await operation(); }
-    finally { void client.invalidateQueries({ queryKey: key }); }
+    const before = client.getQueryState(key);
+    let succeeded = false;
+    try {
+      const result = await operation();
+      succeeded = true;
+      return result;
+    } finally {
+      const after = client.getQueryState(key);
+      // A read cancelled here, or one that ran during the write, may hold the
+      // rows from before it: supersede it now. Otherwise the session already
+      // applied the acknowledgement and the write's own broadcast refetches
+      // the list; reading it here too only raced that echo.
+      const overlapped = interrupted || !before || !after || after.fetchStatus !== "idle" || after.isInvalidated ||
+        after.dataUpdatedAt !== before.dataUpdatedAt || after.errorUpdatedAt !== before.errorUpdatedAt;
+      if (!succeeded || overlapped) void client.invalidateQueries({ queryKey: key });
+      else {
+        // The trigger may drop its broadcast, or the user channel may be down.
+        const acknowledgedAt = Date.now();
+        clearTimeout(fallback);
+        fallback = setTimeout(() => {
+          const state = client.getQueryState(key);
+          if (abort.signal.aborted || !state || state.fetchStatus !== "idle" || state.dataUpdatedAt >= acknowledgedAt) return;
+          void client.invalidateQueries({ queryKey: key });
+        }, ECHO_FALLBACK_MS);
+      }
+    }
   }
   const controller = new AppTabsSession(owner, {
     create: (ensure, id) => write(() => createAppTab(ensure, id, abort.signal)),
@@ -115,7 +144,7 @@ function createAccountSession(owner: string, client: QueryClient) {
     close: (tab) => write(() => deleteAppTab(tab, abort.signal)),
     move: (tab, beforeId) => write(() => moveAppTab(tab, beforeId, abort.signal)),
   });
-  controller.onDispose = () => abort.abort();
+  controller.onDispose = () => { abort.abort(); clearTimeout(fallback); };
   return controller;
 }
 
