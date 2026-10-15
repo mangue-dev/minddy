@@ -39,6 +39,8 @@ function authed() {
           order() { return query; },
           limit() { return query; },
           gt() { return query; },
+          gte() { return query; },
+          lt() { return query; },
           is() { return query; },
           then(resolve: (result: unknown) => unknown) {
             const rows = table === "issue_relations" ? state.relations : [];

@@ -7,6 +7,13 @@ import { issueStore } from "./issue-store";
 
 const BATCH_SIZE = 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// Two disjoint halves of the UUID keyspace load concurrently, so a board
+// larger than one server page no longer pays its pages one after another.
+const UUID_MIDPOINT = "80000000-0000-0000-0000-000000000000";
+const RANGES: ReadonlyArray<{ from: string | null; before: string | null }> = [
+  { from: null, before: UUID_MIDPOINT },
+  { from: UUID_MIDPOINT, before: null },
+];
 type Row = Record<string, unknown> & { id: string; position: number | null; number: number | null };
 type Result = { data: Row[]; error: null } | { data: null; error: { message: string } };
 
@@ -20,14 +27,19 @@ function compareNumber(a: number | null, b: number | null): number {
 /** Load every RLS-visible issue through the ordinary protected projection. */
 export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: string, timing?: AllStartupTiming): Promise<Result> {
   const rows: Row[] = [];
+  // Shared by both ranges: a row returned twice fails the whole read.
   const ids = new Set<string>();
-  let cursor: string | null = null;
-  try {
-    for (;;) {
+  let failed = false;
+  const loadRange = async ({ from, before }: (typeof RANGES)[number]) => {
+    let cursor: string | null = null;
+    // A failed range already rejects the read; stop paging the other one.
+    while (!failed) {
       // UUID order stays stable when a concurrent edit moves a card. The board's
       // position/number order is restored only after every batch succeeds.
       let query = issueStore(client, actorId, timing).select(ISSUE_SELECT, { count: "exact" })
         .order("id", { ascending: true }).limit(BATCH_SIZE);
+      if (from) query = query.gte("id", from);
+      if (before) query = query.lt("id", before);
       if (cursor) query = query.gt("id", cursor);
       const result = await query;
       if (result.error || !Array.isArray(result.data)) throw new Error("Incomplete issue read");
@@ -37,6 +49,7 @@ export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: str
       for (const row of batch) {
         if (!row || typeof row.id !== "string" || !UUID.test(row.id) || ids.has(row.id) ||
             (cursor !== null && row.id <= cursor) ||
+            (from !== null && row.id < from) || (before !== null && row.id >= before) ||
             ![row.position, row.number].every((value) => value === null || typeof value === "number" && !Number.isNaN(value))) {
           throw new Error("Invalid issue pagination");
         }
@@ -46,9 +59,15 @@ export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: str
       }
       // count describes this filtered remainder, including rows beyond the
       // server cap. Without it, only an empty batch proves exhaustion.
-      if (count === batch.length || count == null && batch.length === 0) break;
+      if (count === batch.length || count == null && batch.length === 0) return;
       if (batch.length === 0) throw new Error("Issue pagination did not advance");
     }
+  };
+  try {
+    await Promise.all(RANGES.map((range) => loadRange(range).catch((error: unknown) => {
+      failed = true;
+      throw error;
+    })));
     rows.sort((a, b) => compareNumber(a.position, b.position) || compareNumber(a.number, b.number) ||
       (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     return { data: rows, error: null };
