@@ -28,7 +28,7 @@ import { issueWrites } from "./optimistic/issue-writes";
 import { feedbackCommentsOptions, feedbackDetailOptions, feedbackEventsOptions, objectiveCommentsOptions,
   objectiveEventsOptions, objectiveFeedbackCountOptions, objectiveResourcesOptions } from "./secondary-view-queries";
 import { issueCommentsOptions, issueEventsOptions } from "./issue-timeline-queries";
-import type { Issue, Objective } from "./types";
+import type { GlobalBoardResponse, Issue, Objective } from "./types";
 import type { TeamFeedbackListItem } from "./server/feedback/team-queries";
 
 const pullRequestWarmups = new WeakMap<QueryClient, Promise<void>>();
@@ -87,11 +87,13 @@ export function prefetchAppTabDestination(
   }
   if (route.projectId && route.section === "objectives") {
     for (const options of appTabPreparationQueries(queryClient, href)) void queryClient.prefetchQuery(options);
+    for (const options of predictedSelectionReads(queryClient, href)) void queryClient.prefetchQuery(options);
     return;
   }
   if (route.projectId && route.section !== "tickets" && route.section !== "triage") return;
   if (route.projectId) {
     prefetchProjectQueries(queryClient, route.projectId);
+    for (const options of predictedSelectionReads(queryClient, href)) void queryClient.prefetchQuery(options);
     return;
   }
 
@@ -196,6 +198,38 @@ function selectedTriageIssue(client: QueryClient, href: string): string | null {
   if (!route.projectId || route.section !== "triage") return null;
   const rows = triageSelectionItems(selectionRows<Issue>(client, ["issues", route.projectId], route.projectId));
   return secondarySelectionId(rows, new URL(href, "https://minddy.invalid").searchParams.get("issue"));
+}
+
+const compareIds = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+
+/**
+ * Intent only. While the exact scoped list has no data, the page cannot pick
+ * its default detail before that list returns. The complete global board,
+ * when current, predicts that selection with the page's own rules so the
+ * detail reads start with the list. The page still selects from the exact
+ * list: a wrong prediction warms a detail it never shows. Never a preparation
+ * prerequisite or readiness input.
+ */
+function predictedSelectionReads(client: QueryClient, href: string): FetchQueryOptions<unknown>[] {
+  const route = appTabRoute(href);
+  const projectId = route.projectId;
+  if (!projectId || (route.section !== "triage" && route.section !== "objectives")) return [];
+  if (client.getQueryData([route.section === "triage" ? "issues" : "objectives", projectId]) !== undefined) return [];
+  const board = client.getQueryState<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+  if (board?.status !== "success" || board.isInvalidated || !board.data) return [];
+  const params = new URL(href, "https://minddy.invalid").searchParams;
+  if (route.section === "triage") {
+    const issues = Array.isArray(board.data.issues) ? board.data.issues.filter((issue) => issue?.project_id === projectId) : [];
+    const id = secondarySelectionId(triageSelectionItems(issues), params.get("issue"));
+    return id && !issueWrites.hasUnsettledInsert(id) ? [preparationRead(issueCommentsOptions(client, id)), preparationRead(issueEventsOptions(id))] : [];
+  }
+  const objectives = board.data.objectives?.[projectId];
+  // The project reader's order: creation time, then id.
+  const rows = Array.isArray(objectives) ? objectives.filter((row) => row?.project_id === projectId)
+    .sort((a, b) => compareIds(a.created_at, b.created_at) || compareIds(a.id, b.id)) : [];
+  const id = secondarySelectionId(rows.filter((row) => matchesObjectiveState(row, "active")), params.get("open"), null, rows);
+  return id ? [preparationRead(objectiveCommentsOptions(id)), preparationRead(objectiveEventsOptions(id)),
+    preparationRead(objectiveResourcesOptions(id)), preparationRead(objectiveFeedbackCountOptions(projectId, id))] : [];
 }
 
 /** An optimistic creation remains selected, but its detail endpoints do not exist yet. */

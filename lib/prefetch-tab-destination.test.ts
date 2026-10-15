@@ -158,6 +158,67 @@ describe("tab destination prefetch", () => {
     await vi.waitFor(() => expect(requested()).toContain("/api/pull-requests/pr2"));
   });
 
+  describe("default detail prediction from the complete board", () => {
+    const board = (overrides: Partial<{ issues: unknown[]; objectives: Record<string, unknown[]> }> = {}) => ({
+      issues: [
+        { id: "older", project_id: "p", status: "triage", created_at: "2026-01-01" },
+        { id: "newest", project_id: "p", status: "triage", created_at: "2026-01-03" },
+        { id: "accepted", project_id: "p", status: "todo", created_at: "2026-01-04" },
+        { id: "foreign", project_id: "other", status: "triage", created_at: "2026-01-05" },
+      ],
+      objectives: { p: [
+        { id: "running", project_id: "p", status: "in_progress", created_at: "2026-01-03" },
+        { id: "done", project_id: "p", status: "done", created_at: "2026-01-01" },
+        { id: "planned", project_id: "p", status: "planned", created_at: "2026-01-02" },
+      ] },
+      ...overrides,
+    });
+    // The scoped lists never answer: predicted reads must not depend on them.
+    const holdLists = () => fetchMock.mockImplementation((url: string) =>
+      /^\/api\/projects\/p\/(issues|objectives)$/.test(String(url)) ? new Promise(() => {}) : Promise.resolve(response([])));
+
+    it("starts the predicted triage detail with its pending list without making it a prerequisite", async () => {
+      holdLists();
+      client.setQueryData(GLOBAL_BOARD_KEY, board());
+      prefetchAppTabDestination(client, "/projects/p/triage", new Set());
+      await vi.waitFor(() => expect(requested()).toEqual(expect.arrayContaining([
+        "/api/projects/p/issues", "/api/issues/newest/comments", "/api/issues/newest/events",
+      ])));
+      expect(requested().filter((url) => url.startsWith("/api/issues/"))).toEqual(["/api/issues/newest/comments", "/api/issues/newest/events"]);
+      expect(appTabPreparationQueries(client, "/projects/p/triage").map((option) => option.queryKey)).not.toContainEqual(["comments", "newest"]);
+      expect(isPreparedAppTabDestination(client, "/projects/p/triage")).toBe(false);
+    });
+
+    it("honors a URL selection the board confirms and starts the predicted objective detail", async () => {
+      holdLists();
+      client.setQueryData(GLOBAL_BOARD_KEY, board());
+      prefetchAppTabDestination(client, "/projects/p/triage?issue=older", new Set());
+      prefetchAppTabDestination(client, "/projects/p/objectives", new Set());
+      prefetchAppTabDestination(client, "/projects/p/objectives?open=done", new Set());
+      await vi.waitFor(() => expect(requested()).toEqual(expect.arrayContaining([
+        "/api/issues/older/comments", "/api/issues/older/events",
+        "/api/objectives/planned/comments", "/api/objectives/planned/events", "/api/objectives/planned/resources", "/api/objectives/planned/feedback",
+        "/api/objectives/done/comments", "/api/objectives/done/events", "/api/objectives/done/resources", "/api/objectives/done/feedback",
+      ])));
+      expect(requested().some((url) => url.includes("/running/") || url.includes("/newest/"))).toBe(false);
+    });
+
+    it.each([
+      ["the exact list already has data", () => { client.setQueryData(["issues", "p"], []); client.setQueryData(["objectives", "p"], []); }],
+      ["the board is invalidated", () => { void client.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY, refetchType: "none" }); }],
+      ["the board has no row for the project", () => { client.setQueryData(GLOBAL_BOARD_KEY, board({ issues: [], objectives: {} })); }],
+    ])("predicts nothing when %s", async (_label, arrange) => {
+      holdLists();
+      client.setQueryData(GLOBAL_BOARD_KEY, board());
+      arrange();
+      prefetchAppTabDestination(client, "/projects/p/triage", new Set());
+      prefetchAppTabDestination(client, "/projects/p/objectives", new Set());
+      await vi.waitFor(() => expect(requested()).toContain("/api/projects/p/members"));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(requested().filter((url) => url.startsWith("/api/issues/") || url.startsWith("/api/objectives/"))).toEqual([]);
+    });
+  });
+
   it("leaves unknown destinations alone", () => {
     prefetchAppTabDestination(client, "/settings", new Set());
     expect(requested()).toEqual([]);
