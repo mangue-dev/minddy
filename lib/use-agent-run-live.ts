@@ -7,7 +7,7 @@ import { getSupabase } from "./supabase";
 import type { AgentEventType } from "./agent-api";
 import { liveAfterEvent, liveFromStream, type AgentRunLive, type StreamPayload } from "./agent-live";
 import { parseAgentLocalDiff, type AgentLocalDiff } from "./agent-local-diff";
-import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
+import { resolveRealtimeTopic, watchRealtimeTopic } from "./realtime-topic";
 import { useAppTabActive } from "./app-tab-route-context";
 import { startVisiblePoll } from "./visible-poll";
 
@@ -39,6 +39,8 @@ interface Listener {
 
 interface Entry {
   channel: RealtimeChannel | null;
+  /** Generation the channel joined, kept by a resume revalidation. */
+  topic: string | null;
   listeners: Set<Listener>;
   /** Last subscriber left during opening → do not contact afterwards. */
   closed: boolean;
@@ -61,6 +63,7 @@ function subscribeRun(runId: string, listener: Listener): () => void {
   if (!entry) {
     const fresh: Entry = {
       channel: null,
+      topic: null,
       listeners: new Set(),
       closed: false,
       connectVersion: 0,
@@ -104,13 +107,15 @@ function subscribeRun(runId: string, listener: Listener): () => void {
           });
           channel.subscribe();
           fresh.channel = channel;
+          fresh.topic = topic;
         } catch {
           // Polling remains the durable fallback when access was revoked or
           // Realtime topic resolution is temporarily unavailable.
         }
       })();
     };
-    fresh.stopRekey = onRealtimeRekey(connect);
+    fresh.stopRekey = watchRealtimeTopic(supabase, `agent-run:${runId}`,
+      () => ({ resolved: fresh.topic, channel: fresh.channel, version: fresh.connectVersion }), connect);
     connect();
     let streamAt = 0;
     let diffAt = 0;

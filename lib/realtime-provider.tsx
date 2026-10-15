@@ -47,9 +47,10 @@ import { trace } from "./desktop/trace";
 import { getDesktopBridge } from "./desktop/bridge";
 import type { Project } from "./types";
 import {
-  onRealtimeRekey,
   resolveRealtimeTopic,
   signalRealtimeRekey,
+  signalRealtimeRevalidate,
+  watchRealtimeTopic,
 } from "./realtime-topic";
 
 /**
@@ -283,6 +284,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       let connectVersion = 0;
       let accessDenied = false;
       let authorization: AbortController | null = null;
+      let resolved: string | null = null;
 
       // Deterministically push the session token to the socket before joining:
       // supabase-js only re-sends it on SIGNED_IN/TOKEN_REFRESHED, never on
@@ -306,6 +308,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             if (cancelled || version !== connectVersion) return;
             accessDenied = false;
             authAttempts = 0;
+            resolved = resolvedTopic;
             const next = supabase.channel(resolvedTopic, {
               config: { private: true },
             });
@@ -388,14 +391,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             queueMicrotask(reconnect);
           }
         });
-      const stopRekey = onRealtimeRekey(reconnect);
+      // After an absence, a channel still joined on the current generation
+      // missed nothing the resume catch-up does not already cover, so it stays.
+      // Leaving it would force a second catch-up wave once rejoined.
+      const stopWatching = watchRealtimeTopic(supabase, topic,
+        () => ({ resolved, channel, version: connectVersion }), reconnect);
       connect();
 
       return () => {
         cancelled = true;
         connectVersion += 1;
         authorization?.abort();
-        stopRekey();
+        stopWatching();
         authSubscription.unsubscribe();
         if (authRetry) clearTimeout(authRetry);
         if (channel) void getSupabase().removeChannel(channel);
@@ -467,8 +474,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       const realtime = getSupabase().realtime;
       catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)]);
       // Re-resolve versioned topics in case a rekey broadcast was missed while
-      // this client was suspended or offline.
-      signalRealtimeRekey();
+      // this client was suspended or offline; only changed or broken channels
+      // reconnect (and catch up again once joined).
+      signalRealtimeRevalidate();
       if (probe) clearTimeout(probe);
       probe = wakeRealtime(realtime);
     };

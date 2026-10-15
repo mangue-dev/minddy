@@ -17,7 +17,7 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabase } from "./supabase";
-import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
+import { resolveRealtimeTopic, watchRealtimeTopic } from "./realtime-topic";
 
 /** Private topic authorized by `can_access_project`. */
 export const pagePresenceTopic = (projectId: string) =>
@@ -88,6 +88,7 @@ export function openPagePresence({
   let closed = false;
   let current = pageId;
   let connectVersion = 0;
+  let resolved: string | null = null;
   // The consumer starts empty. A sync after our own track, a rejoin or a
   // teammate's unrelated reconnect must not publish a new identical map.
   let published: PagePresenceMap = new Map();
@@ -138,6 +139,7 @@ export function openPagePresence({
           void ch.track({ userId, pageId: current } satisfies PagePresenceState);
         });
         channel = ch;
+        resolved = topic;
       } catch {
         // The resolver denies a revoked member. Presence is advisory, so the
         // durable page APIs remain the fallback without retrying a dead scope.
@@ -156,7 +158,8 @@ export function openPagePresence({
     }
     connect();
   };
-  const stopRekey = onRealtimeRekey(reconnect);
+  const stopRekey = watchRealtimeTopic(supabase, pagePresenceTopic(projectId),
+    () => ({ resolved, channel, version: connectVersion }), reconnect);
   connect();
 
   return {

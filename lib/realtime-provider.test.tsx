@@ -381,3 +381,66 @@ describe("remote ticket changes on the aggregate board", () => {
     } finally { stop(); }
   });
 });
+
+describe("resume revalidation", () => {
+  const board: GlobalBoardResponse = { issues: [], members: {}, categories: {}, objectives: {}, integrations: {},
+    relations: [], cycles: { enabled: false, current: null, upcoming: [], past: [] } };
+  async function resumeAfterAbsence(projectTopic: { data: unknown; error: unknown }) {
+    realtime.channel.mockImplementation(() => {
+      const channel = {
+        state: "joining",
+        on: vi.fn(() => channel),
+        subscribe: vi.fn((listener) => { channel.state = "joined"; listener("SUBSCRIBED"); }),
+      };
+      return channel;
+    });
+    // A board read takes seconds, so the first catch-up wave is still in flight
+    // when a rejoined channel would start a second one.
+    const fetch = vi.fn((path: string) => new Promise<Response>((done) => {
+      setTimeout(() => done(path.startsWith("/api/me/board") ? Response.json(board) : Response.json({ error: "Unexpected" }, { status: 500 })), 2_000);
+    }));
+    vi.stubGlobal("fetch", fetch);
+    client.setQueryData(GLOBAL_BOARD_KEY, board);
+    const stop = new QueryObserver(client, { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: Infinity }).subscribe(() => {});
+    await mount();
+    await advance(3_000);
+    realtime.rpc.mockImplementation(async (_name, { p_topic }: { p_topic: string }) => {
+      await new Promise((done) => setTimeout(done, 300));
+      return p_topic === "project:project-1" ? projectTopic : { data: `${p_topic}:v:1`, error: null };
+    });
+    fetch.mockClear();
+    realtime.removeChannel.mockClear();
+    const channels = realtime.channel.mock.calls.length;
+    await act(async () => window.dispatchEvent(new Event("blur")));
+    await advance(20_000);
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    await advance(5_000);
+    stop();
+    return {
+      boardReads: fetch.mock.calls.filter(([path]) => path.startsWith("/api/me/board")).length,
+      joined: realtime.channel.mock.calls.slice(channels).map(([topic]) => topic),
+    };
+  }
+
+  it("keeps channels joined on an unchanged generation and catches up once", async () => {
+    const result = await resumeAfterAbsence({ data: "project:project-1:v:1", error: null });
+    expect(realtime.removeChannel).not.toHaveBeenCalled();
+    expect(result.joined).toEqual([]);
+    expect(result.boardReads).toBe(1);
+  });
+
+  it("reconnects a channel whose generation changed and catches up after it joins", async () => {
+    const result = await resumeAfterAbsence({ data: "project:project-1:v:2", error: null });
+    expect(realtime.removeChannel).toHaveBeenCalledTimes(1);
+    expect(result.joined).toEqual(["project:project-1:v:2"]);
+    expect(result.boardReads).toBe(2);
+  });
+
+  it("closes a scope whose access was revoked while away", async () => {
+    const result = await resumeAfterAbsence({ data: null, error: denied });
+    expect(realtime.removeChannel).toHaveBeenCalledTimes(1);
+    expect(result.joined).toEqual([]);
+    await advance(60_000);
+    expect(requests("project:project-1")).toBe(3);
+  });
+});

@@ -7,7 +7,7 @@ import {
   numoCommentTopic,
   type CommentLiveTable,
 } from "./comment-live-topic";
-import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
+import { resolveRealtimeTopic, watchRealtimeTopic } from "./realtime-topic";
 
 /**
  * Compatibility receiver for comment streams from servers draining during rollout.
@@ -32,6 +32,8 @@ type Listener = (payload: StreamPayload) => void;
 
 interface Entry {
   channel: RealtimeChannel | null;
+  /** Generation the channel joined, kept by a resume revalidation. */
+  topic: string | null;
   listeners: Set<Listener>;
   /** Last subscriber left during opening → do not contact afterwards. */
   closed: boolean;
@@ -56,6 +58,7 @@ function subscribeComment(
   if (!entry) {
     const fresh: Entry = {
       channel: null,
+      topic: null,
       listeners: new Set(),
       closed: false,
       connectVersion: 0,
@@ -84,12 +87,14 @@ function subscribeComment(
           });
           channel.subscribe();
           fresh.channel = channel;
+          fresh.topic = topic;
         } catch {
           // The durable comment row and its polling loop remain the fallback.
         }
       })();
     };
-    fresh.stopRekey = onRealtimeRekey(connect);
+    fresh.stopRekey = watchRealtimeTopic(supabase, logicalTopic,
+      () => ({ resolved: fresh.topic, channel: fresh.channel, version: fresh.connectVersion }), connect);
     connect();
   }
   entry.listeners.add(listener);
