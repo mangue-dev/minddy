@@ -6,6 +6,7 @@ import type { AuthChangeEvent } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeProvider } from "./realtime-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
+import { realtimeCoverageLive } from "./realtime-coverage";
 import { recordAcceptedPageWrite } from "./optimistic-page-writes";
 import { globalBoardQueryFn } from "./global-board-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
@@ -285,6 +286,35 @@ describe("Realtime authorization recovery", () => {
     await auth("TOKEN_REFRESHED");
     await advance(60_000);
     expect(requests("user:user-1")).toBe(2);
+  });
+});
+
+describe("reveal coverage", () => {
+  it("vouches for cached reads only while every open scope is joined", async () => {
+    let status: ((value: string) => void) | undefined;
+    realtime.channel.mockImplementation((topic: string) => {
+      const channel = {
+        on: vi.fn(() => channel),
+        subscribe: vi.fn((listener) => {
+          if (topic.startsWith("project:")) status = listener;
+          else listener("SUBSCRIBED");
+        }),
+      };
+      return channel;
+    });
+    expect(realtimeCoverageLive()).toBe(false);
+    await mount();
+    await advance(0);
+    expect(realtimeCoverageLive()).toBe(false);
+    await act(async () => status!("SUBSCRIBED"));
+    expect(realtimeCoverageLive()).toBe(true);
+    await act(async () => status!("CHANNEL_ERROR"));
+    expect(realtimeCoverageLive()).toBe(false);
+    await act(async () => status!("SUBSCRIBED"));
+    expect(realtimeCoverageLive()).toBe(true);
+    await act(() => root.unmount());
+    mounted = false;
+    expect(realtimeCoverageLive()).toBe(false);
   });
 });
 

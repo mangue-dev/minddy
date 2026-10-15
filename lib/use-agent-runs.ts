@@ -30,6 +30,7 @@ import {
 } from "./agent-local-diff";
 import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
 import { readAgentEvents, type AgentEventsData } from "./agent-events-query";
+import { refetchOnRevealWhenStale } from "./reveal-freshness";
 import {
   PULL_REQUEST_SETTLED_POLL_MS,
   pullRequestReadinessBatchRefetchInterval,
@@ -44,9 +45,10 @@ export function issueAgentRunsQueryKey(issueId: string) {
  * Runs of the agent of an issue, with adaptive polling: ~3 s as long as the agent
  * WORK (queued/running); ~12 s backstop otherwise as soon as a run exists —
  * to capture a recovery triggered by ANOTHER client (other tab,
- * teammate) even when our conversation is open. `refetchOnMount: always`
- * guarantees a fresh state when opening the modal (avoids opening “compose” on
- * a session already alive because of an expired cache).
+ * teammate) even when our conversation is open. Opening the modal reads again
+ * unless realtime vouches for a recent cache (avoids opening “compose” on a
+ * session already alive because of an expired cache): run, chain and PR
+ * broadcasts invalidate this key, and so does the catch-up.
  */
 export function useIssueAgentRunsQuery(issueId: string | null) {
   const enabled = !!issueId;
@@ -54,7 +56,7 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
     queryKey: issueAgentRunsQueryKey(issueId ?? ""),
     queryFn: () => fetchIssueAgentRunsApi(issueId as string),
     enabled,
-    refetchOnMount: "always",
+    refetchOnMount: refetchOnRevealWhenStale,
     refetchInterval: (query) => {
       const runs = query.state.data?.runs ?? [];
       if (runs.some((r) => isAgentRunWorking(r.status))) return 3000;

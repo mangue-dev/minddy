@@ -46,6 +46,7 @@ import {
 } from "./realtime-catch-up";
 import { refreshBoardIssues } from "./global-issues-api";
 import { trace } from "./desktop/trace";
+import { openRealtimeCoverage } from "./realtime-coverage";
 import { getDesktopBridge } from "./desktop/bridge";
 import type { Project } from "./types";
 import {
@@ -281,6 +282,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // a write committed between the initial GET and SUBSCRIBED is never seen.
       let needsCatchUp = true;
       let hasSubscribed = false;
+      // Reveal freshness trusts a cache only while this scope is joined.
+      const coverage = openRealtimeCoverage();
       let authRetry: ReturnType<typeof setTimeout> | null = null;
       let authAttempts = 0;
       let connectVersion = 0;
@@ -340,18 +343,21 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                   needsCatchUp = false;
                   catchUp(scopeKeys, initialSubscription);
                 }
+                coverage.joined();
               } else if (
                 status === "CHANNEL_ERROR" ||
                 status === "TIMED_OUT" ||
                 status === "CLOSED"
               ) {
                 needsCatchUp = true;
+                coverage.dropped();
               }
             });
             channel = next;
           } catch (error) {
             if (cancelled || version !== connectVersion) return;
             needsCatchUp = true;
+            coverage.dropped();
             catchUp(scopeKeys);
             if (error && typeof error === "object" && "code" in error &&
                 error.code === "42501") {
@@ -373,6 +379,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         accessDenied = false;
         needsCatchUp = true;
+        coverage.dropped();
         connectVersion += 1;
         authorization?.abort();
         if (authRetry) {
@@ -403,6 +410,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       return () => {
         cancelled = true;
         connectVersion += 1;
+        coverage.close();
         authorization?.abort();
         stopWatching();
         authSubscription.unsubscribe();
