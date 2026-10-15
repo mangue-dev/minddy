@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { McpConnection } from "@/lib/mcp-client";
+import type { McpConnection } from "@/lib/mcp-connection";
 
 export const MCP_CONNECTIONS_QUERY_KEY = ["account-mcp-connections"];
 
