@@ -674,7 +674,7 @@ retain priority. A broad exemption for every cached Query is unsupported.
 
 | Exact Query identity | Traced owner | Coexistence boundary |
 | --- | --- | --- |
-| `["me", "summary"]` | Sidebar/Home summary | Healthy accepted data remains visible during revalidation; absent or failed Home prerequisites remain foreground. |
+| `["me", "summary"]` | Sidebar onboarding issue count, observed only while that count can change the checklist | Healthy accepted data remains visible during revalidation; absent or failed Home prerequisites remain foreground. |
 | `["me", "triage-counts"]` | Sidebar counts | Passive healthy cached count refresh only. |
 | `["me", "smart-assign-warnings"]` | Sidebar assignment indicators | Passive healthy cached refresh only; the endpoint's empty fallback is not an authorization receipt. |
 | `["me", "branch-cleanup-targets"]` | Command-palette choices | Passive cached refresh; explicit palette demand wins. |

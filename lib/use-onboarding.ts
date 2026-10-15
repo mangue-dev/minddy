@@ -13,6 +13,7 @@ import {
   ONBOARDING_STARTED_META_KEY,
   ONBOARDING_STEPS_META_KEY,
   ONBOARDING_VERSION_META_KEY,
+  onboardingNeedsIssueCount,
   readAcknowledgedSteps,
   resolveOnboardingState,
   withAcknowledgedStep,
@@ -33,8 +34,6 @@ export interface UseOnboardingResult extends OnboardingState {
 export function useOnboarding(): UseOnboardingResult {
   const { user, updateUserMetadata } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
-
-  const { counts, loading: summaryLoading } = useHomeSummaryQuery();
   const { track, setPersonProperties } = useAnalytics();
 
   const [pendingSteps, setPendingSteps] = useState<OnboardingStepId[]>([]);
@@ -57,6 +56,12 @@ export function useOnboarding(): UseOnboardingResult {
     if (pendingStart) patch[ONBOARDING_STARTED_META_KEY] = true;
     return patch;
   }, [meta, pendingSteps, pendingDismiss, pendingStart]);
+
+  // The dashboard payload supplies only the issue count here. Keep it, and its
+  // realtime refetches, off the shell once the count cannot change the outcome.
+  const { counts, loading: summaryLoading } = useHomeSummaryQuery({
+    enabled: !!user && onboardingNeedsIssueCount(effectiveMeta, projectsLoading ? null : projects.length),
+  });
 
   const state = useMemo(
     () =>
