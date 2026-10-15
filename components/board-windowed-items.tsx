@@ -1,15 +1,15 @@
 "use client";
 
 import {
-  useCallback, useLayoutEffect, useMemo, useRef, useState,
+  startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
   type FocusEvent, type KeyboardEvent, type ReactNode, type RefObject,
 } from "react";
 import { useDndContext } from "@dnd-kit/core";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import type { DropPreview } from "@/lib/board-drag";
 import {
-  BOARD_ROW_ESTIMATE, BOARD_ROW_GAP, BOARD_WINDOW_OVERSCAN,
-  BOARD_WINDOW_THRESHOLD, boardWindowRange, registerBoardRowHeights,
+  BOARD_ROW_ESTIMATE, BOARD_ROW_GAP, BOARD_WINDOW_INITIAL_OVERSCAN, BOARD_WINDOW_OVERSCAN,
+  BOARD_WINDOW_THRESHOLD, BOARD_WINDOW_WIDEN_TIMEOUT_MS, boardWindowRange, registerBoardRowHeights,
 } from "@/lib/board-windowing";
 import {
   BoardDropIndicator, BoardDropLandingPlaceholder, type BoardLandingPreview,
@@ -63,6 +63,19 @@ export function BoardWindowedItems<T extends { id: string }>({
     ...(landingPreview ? [...landingPreview.activeIds, LANDING_KEY] : []),
   ]), [owned, popovers, focused, active, dropPreview, landingPreview]);
   const windowed = issues.length > BOARD_WINDOW_THRESHOLD;
+  // Rows below the fold would otherwise mount in the task that first paints
+  // the board. Pinned interaction rows still extend either window.
+  const [overscan, setOverscan] = useState(BOARD_WINDOW_INITIAL_OVERSCAN);
+  useEffect(() => {
+    if (!windowed || overscan === BOARD_WINDOW_OVERSCAN) return;
+    const widen = () => startTransition(() => setOverscan(BOARD_WINDOW_OVERSCAN));
+    if (typeof requestIdleCallback !== "function") {
+      const timer = setTimeout(widen, 0);
+      return () => clearTimeout(timer);
+    }
+    const idle = requestIdleCallback(widen, { timeout: BOARD_WINDOW_WIDEN_TIMEOUT_MS });
+    return () => cancelIdleCallback(idle);
+  }, [windowed, overscan]);
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
     getScrollElement: () => scrollerRef.current,
@@ -71,7 +84,7 @@ export function BoardWindowedItems<T extends { id: string }>({
     estimateSize: (index) => rows[index].outOfFlow ? 0 :
       (rows[index].height ?? measured.current.get(rows[index].key) ?? BOARD_ROW_ESTIMATE) +
       (index === rows.length - 1 ? 0 : BOARD_ROW_GAP),
-    overscan: BOARD_WINDOW_OVERSCAN,
+    overscan,
     initialRect: { width: 320, height: 600 },
     scrollMargin: BOARD_ROW_GAP,
     scrollPaddingStart: BOARD_ROW_GAP,

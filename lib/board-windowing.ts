@@ -1,6 +1,10 @@
 /** Small columns keep natural flow; large ones retain only their visible rows. */
 export const BOARD_WINDOW_THRESHOLD = 16;
 export const BOARD_WINDOW_OVERSCAN = 5;
+/** A column's first commit mounts its visible rows and one neighbour. */
+export const BOARD_WINDOW_INITIAL_OVERSCAN = 1;
+/** Widen to the ordinary margin at idle, or after this delay under load. */
+export const BOARD_WINDOW_WIDEN_TIMEOUT_MS = 200;
 export const BOARD_ROW_GAP = 8;
 export const BOARD_ROW_ESTIMATE = 220;
 

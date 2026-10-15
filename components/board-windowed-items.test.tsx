@@ -170,6 +170,23 @@ describe("measured board windows", () => {
     } finally { await board.close(); }
   });
 
+  it("mounts one neighbour row in the first commit and widens the window at idle", async () => {
+    const idle: IdleRequestCallback[] = [];
+    vi.stubGlobal("requestIdleCallback", (callback: IdleRequestCallback) => idle.push(callback));
+    vi.stubGlobal("cancelIdleCallback", () => {});
+    const board = await setup();
+    try {
+      // Row 0 measures 900 px in a 500 px scroller: it is the only visible row.
+      const rows = () => [...board.host.querySelectorAll("article")].map((card) => card.getAttribute("data-issue-id"));
+      expect(rows()).toEqual(["0", "1"]);
+      expect(idle).toHaveLength(1);
+      await act(() => idle.splice(0).forEach((callback) => callback({ didTimeout: false, timeRemaining: () => 50 })));
+      expect(rows()).toEqual(["0", "1", "2", "3", "4", "5"]);
+      await act(() => board.render());
+      expect(idle).toHaveLength(0);
+    } finally { await board.close(); }
+  });
+
   it("retains measured geometry through Activity and reads hidden source changes on return", async () => {
     const board = await setup();
     try {
