@@ -445,6 +445,30 @@ describe("bounded retained board views", () => {
     expect(container.querySelector('[data-retained-app-view="board:/all"]')!.getAttribute("data-app-view-active")).toBe("true");
   });
 
+  it("keeps a hidden board's in-flight read observed across switches", async () => {
+    let finish!: (value: string[]) => void;
+    const aborted = vi.fn();
+    client.setQueryDefaults(["issues", "p"], { queryFn: ({ signal }) => new Promise<string[]>((resolve) => {
+      signal.addEventListener("abort", aborted);
+      finish = resolve;
+    }) });
+    client.setQueryData(["issues", "p"], ["old"]);
+    for (const [id, path] of [["board", "/all"], ["other", "/projects/p"], ["fourth", "/projects/q"]]) {
+      Object.assign(state, { activeId: id, path, activeHref: path });
+      await render();
+    }
+    const read = client.invalidateQueries({ queryKey: ["issues", "p"] });
+    expect(client.getQueryCache().find({ queryKey: ["issues", "p"] })?.getObserversCount()).toBe(1);
+    Object.assign(state, { activeId: "board", path: "/all", activeHref: "/all" });
+    await render();
+    expect(aborted).not.toHaveBeenCalled();
+    await act(async () => { finish(["fresh"]); await read; });
+    expect(client.getQueryData(["issues", "p"])).toEqual(["fresh"]);
+    state.tabs = [{ id: "board" }];
+    await render();
+    expect(client.getQueryCache().find({ queryKey: ["issues", "p"] })?.getObserversCount()).toBe(0);
+  });
+
   it("bounds retained weight and releases closed tabs", async () => {
     await render();
     for (const [id, path] of [["other", "/projects/p2"], ["fourth", "/projects/p3"], ["pages", "/projects/p4"]]) {

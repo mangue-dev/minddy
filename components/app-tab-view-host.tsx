@@ -14,7 +14,7 @@ import { RetainedBoardTitle } from "./retained-board-title";
 import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
-import { observeRetainedBoardData } from "@/lib/retained-board-data";
+import { createRetainedBoardData } from "@/lib/retained-board-data";
 import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
 import { useTranslations } from "next-intl";
 import { QueryReadBoundary } from "./query-read-boundary";
@@ -234,7 +234,17 @@ function DesktopTabViews({ homeWeight, route: { pathname, search } }: { homeWeig
       if (session.isRetainedDestination === qualifies) session.isRetainedDestination = () => false;
     };
   }, [session, views]);
-  useEffect(() => observeRetainedBoardData(client, views), [client, views]);
+  // One owner per client follows the views; a switch keeps shared observers.
+  const retainedData = useRef<ReturnType<typeof createRetainedBoardData> | null>(null);
+  useEffect(() => {
+    const data = createRetainedBoardData(client);
+    retainedData.current = data;
+    return () => {
+      data.dispose();
+      if (retainedData.current === data) retainedData.current = null;
+    };
+  }, [client]);
+  useEffect(() => { retainedData.current?.update(views); }, [client, views]);
   return <>
     {views.map((view) => {
       const active = !!retainedAppViewKind(pathname) && view.tabId === tabId && view.route.pathname === pathname;
