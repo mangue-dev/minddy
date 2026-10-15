@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Activity, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { appTabSurfaceLoaders, preparedBoardSurface, preparedCollectionSurface } from "@/lib/app-tab-surfaces";
@@ -85,6 +85,20 @@ const RetainedBoard = memo(function RetainedBoard({ view, active }: { view: Reta
   </div>;
 });
 
+const HOME_ROUTE: RetainedAppView["route"] = { pathname: "/home", search: "", projectId: null };
+
+// Shell and tab-list renders reach Home only through its own subscriptions:
+// stable props and route identity keep the composer out of those renders.
+const RetainedHome = memo(function RetainedHome({ tabId, active }: { tabId: string | null; active: boolean }) {
+  const view = useMemo<RetainedAppView>(() => ({ key: "home", kind: "home", tabId, route: HOME_ROUTE }), [tabId]);
+  return <Activity mode={active ? "visible" : "hidden"}>
+    <RetainedBoardTitle view={view} />
+    <AppTabNavigationScope activeId={tabId}>
+      <AppTabRouteProvider route={HOME_ROUTE} active={active}><Home /></AppTabRouteProvider>
+    </AppTabNavigationScope>
+  </Activity>;
+});
+
 /** One bounded host retains recent destinations while React suspends hidden effects. */
 export function AppTabViewHost({ children }: { children: ReactNode }) {
   const tabs = useOptionalAppTabs();
@@ -104,16 +118,10 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
     current = { ...current, seen: false, id: null, generation: current.generation + 1 };
     setHomeState(current);
   }
-  const view: RetainedAppView = { key: "home", kind: "home", tabId: current.id, route: { pathname: "/home", search: "", projectId: null } };
   return <>
     {current.seen && <div key={current.generation} className="h-full min-h-0" data-retained-home-view data-app-view-active={home ? "true" : "false"}
       inert={!home} aria-hidden={!home || undefined} style={{ display: home ? undefined : "none" }}>
-      <Activity mode={home ? "visible" : "hidden"}>
-        <RetainedBoardTitle view={view} />
-        <AppTabNavigationScope activeId={current.id}>
-          <AppTabRouteProvider route={view.route} active={home}><Home /></AppTabRouteProvider>
-        </AppTabNavigationScope>
-      </Activity>
+      <RetainedHome tabId={current.id} active={home} />
     </div>}
     {tabs ? <DesktopTabViews homeWeight={current.seen ? 1 : 0} /> : null}
     {!retained && !home && children}

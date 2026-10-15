@@ -209,6 +209,21 @@ describe("bounded retained board views", () => {
     expect(container.querySelector('[data-retained-home-view] input')).not.toBe(input);
     expect((container.querySelector('[data-retained-home-view] input') as HTMLInputElement).value).not.toBe("Unsent composer draft");
   });
+  it.each(["/home", "/settings"])("keeps unrelated host renders out of the retained Home surface at %s", async (path) => {
+    state.tabs = [{ id: "home" }, { id: "board" }];
+    Object.assign(state, { path: "/home", activeHref: "/home", activeId: "home" });
+    await render();
+    const input = container.querySelector('[data-retained-home-view] input');
+    Object.assign(state, { path, activeHref: path });
+    await render();
+    const settled = renders;
+    await render();
+    await render();
+    state.tabs = [...state.tabs, { id: "unrelated" }];
+    await render();
+    expect(renders).toBe(settled);
+    expect(container.querySelector('[data-retained-home-view] input')).toBe(input);
+  });
   it.each([true, false])("charges actual mounted windows with conservative full-tree fallback (%s)", async (windowed) => {
     client.setQueryData(["me", "board"], { issues: Array(636).fill({}) });
     client.setQueryData(["issues", "p"], Array(100).fill({}));
