@@ -271,6 +271,34 @@ describe("FeedbackTeamPage requested-post query scope", () => {
     expect(state.controls).toMatchObject({ onlyToReview: false, properties: {} });
   });
 
+  it.each(["accepted", "invalidated"])("keeps an explicit post selected while its consumption from the %s full list loads the normal scope", async (full) => {
+    client.setQueryData(["feedback", projectId], { posts: source, board_enabled: true });
+    if (full === "invalidated") await client.invalidateQueries({ queryKey: ["feedback", projectId], exact: true, refetchType: "none" });
+    let finishNormal: (() => void) | undefined;
+    vi.mocked(fetch).mockImplementation((async (url: string) => {
+      requests.push(url);
+      if (url === `/api/projects/${projectId}/feedback`) return Response.json({ posts: source, board_enabled: true });
+      if (url.startsWith(`/api/projects/${projectId}/feedback?`)) return new Promise<Response>((resolve) => {
+        finishNormal = () => resolve(Response.json({ posts: source.filter((post) => post.status === "open"), board_enabled: true }));
+      });
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch);
+    initialSearch = `post=${postId(5)}`;
+    await render(); await settleUntil(() => !!finishNormal);
+    expect(state.replace).toHaveBeenCalledWith(pathname);
+    expect(selectedTitle()).toBe("Feedback 5");
+    if (full === "accepted") expect(state.skeletonCommits).toBe(0);
+    await act(async () => { finishNormal!(); });
+    await settleUntil(() => client.getQueryState(feedbackQueryOptions(projectId, normalFilters).queryKey)?.status === "success");
+    await settle();
+    expect(selectedTitle()).toBe("Feedback 5");
+    expect(new URL(state.publication, "https://minddy.test").searchParams.get("post")).toBe(postId(5));
+    expect(requests.filter((url) => url.includes("?"))).toHaveLength(1);
+    if (full === "accepted") expect(requests).toEqual([expect.stringMatching(new RegExp(`^/api/projects/${projectId}/feedback\\?`))]);
+    expect(client.getQueryData<{ posts: unknown[] }>(feedbackQueryOptions(projectId, normalFilters).queryKey)?.posts).toHaveLength(96);
+    expect(client.getQueryData<{ posts: unknown[] }>(["feedback", projectId])?.posts).toHaveLength(120);
+  });
+
   it("does not consume a changed post into the active browser URL while its retained Activity is hidden", async () => {
     seedNormal(); initialSearch = `post=${postId(1)}`;
     await render(); await settle(); await render(true);

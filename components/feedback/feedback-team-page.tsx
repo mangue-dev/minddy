@@ -630,6 +630,13 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const listFilters = feedbackFiltersForRequestedPost(queryClient, projectId, postParam, normalListFilters, onlyToReview);
   const { data: listData, isPending } = useQuery({
     ...feedbackQueryOptions(projectId, listFilters),
+    // Consuming `?post=` narrows the full list to the normal scope. Keep the
+    // full list of this project on screen, filtered as it already was, while
+    // that scope loads; a narrower list never stands in for a wider one, and
+    // nothing is written to either key.
+    placeholderData: (previous, previousQuery) => previousQuery && previousQuery.queryKey.length === 2 &&
+      previousQuery.queryKey[0] === "feedback" && previousQuery.queryKey[1] === projectId &&
+      previousQuery.state.status === "success" && !previousQuery.state.isInvalidated ? previous : undefined,
   });
   const posts = useMemo(() => listData?.posts ?? [], [listData]);
   const boardEnabled = listData?.board_enabled ?? false;
@@ -773,10 +780,15 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     [removeRelation]
   );
 
+  // A post a deep link selected survives the scope read its consumption
+  // starts: an empty pending list is not a reason to drop the user's choice.
+  const consumedPost = useRef<{ projectId: string; postId: string } | null>(null);
   useEffect(() => {
+    if (isPending && consumedPost.current?.projectId === projectId && consumedPost.current.postId === selectedId) return;
+    if (!isPending && !postParam) consumedPost.current = null;
     const next = secondarySelectionId(visiblePosts, null, selectedId);
     if (next !== selectedId) setSelectedId(next);
-  }, [visiblePosts, selectedId]);
+  }, [visiblePosts, selectedId, isPending, projectId, postParam]);
 
   // Deep link from an Inbox notification: ?post=<id> selects that feedback and
   // opens the detail on mobile, then strips the param so a background list
@@ -809,11 +821,12 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       nextProperties = {};
       setProperties(nextProperties);
     }
+    consumedPost.current = { projectId, postId: postParam };
     setSelectedId(postParam);
     const remaining = collectionFilterParams(nextProperties, searchParams);
     remaining.delete("post");
     router.replace(pathname + (remaining.size ? `?${remaining}` : ""));
-  }, [postParam, posts, pathname, router, state, onlyToReview, properties, searchParams, setProperties]);
+  }, [postParam, posts, pathname, projectId, router, state, onlyToReview, properties, searchParams, setProperties]);
 
   // Invalidates the list AND all project details (prefix): a merge/undo
   // also changes the canonical post, not just the one we are looking at. THE
