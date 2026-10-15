@@ -61,7 +61,10 @@ try {
   profile = await mkdtemp(path.join(tmpdir(), "minddy-min683-startup-"));
   const env = Object.fromEntries(["PATH", "HOME", "TMPDIR", "LANG"].filter(key => process.env[key]).map(key => [key, process.env[key]]));
   Object.assign(env, { MINDDY_DESKTOP_ORIGIN: base, MINDDY_DESKTOP_TEST_USER_DATA: profile });
-  const launch = () => _electron.launch({ args: [`--user-data-dir=${profile}`, path.join(root, "desktop")], cwd: path.join(root, "desktop"), env, timeout: 30000 });
+  // The optional local HTTP/2 proxy (h2-proxy.mjs) uses a self-signed localhost certificate.
+  const tlsArgs = base.startsWith("https:") ? ["--ignore-certificate-errors"] : [];
+  result.transport = base.startsWith("https:") ? "local h2-proxy (HTTP/2, TLS, brotli)" : "next start (HTTP/1.1)";
+  const launch = () => _electron.launch({ args: [...tlsArgs, `--user-data-dir=${profile}`, path.join(root, "desktop")], cwd: path.join(root, "desktop"), env, timeout: 30000 });
   // Persist only fixture credentials in this private profile before timing.
   app = await launch();
   await app.context().addInitScript(() => localStorage.setItem("cookie_consent", "declined"));

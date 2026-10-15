@@ -45,6 +45,8 @@ async function profile(page, kind) {
     const res = performance.getEntriesByType("resource").map((r) => ({
       name: r.name.replace(location.origin, ""), type: r.initiatorType,
       start: Math.round(r.startTime), end: Math.round(r.responseEnd), transfer: r.transferSize, decoded: r.decodedBodySize,
+      // requestStart - startTime is browser queueing (HTTP/1.1 socket pool); nextHopProtocol confirms the transport.
+      requestStart: Math.round(r.requestStart), responseStart: Math.round(r.responseStart), protocol: r.nextHopProtocol,
     }));
     return {
       nav: { ttfb: Math.round(nav.responseStart), docEnd: Math.round(nav.responseEnd), dcl: Math.round(nav.domContentLoadedEventEnd),
@@ -60,7 +62,7 @@ async function profile(page, kind) {
     jsDecodedKB: Math.round(js.reduce((a, r) => a + r.decoded, 0) / 1024),
     lastJsEnd: Math.max(0, ...js.map((r) => r.end)),
     longTaskTotal: data.longTasks.reduce((a, [, d]) => a + d, 0), longTasks: data.longTasks,
-    api: api.map(({ name, start, end, transfer }) => ({ name: name.slice(0, 90), start, end, transfer })),
+    api: api.map(({ name, start, end, transfer, requestStart, protocol }) => ({ name: name.slice(0, 90), start, end, transfer, requestStart, protocol })),
   };
   runs.push({ ...summary, res: data.res });
   console.log(JSON.stringify({ kind, readyMs, ttfb: summary.ttfb, dcl: summary.dcl, readyAt: summary.readyAt, jsCount: summary.jsCount,
@@ -68,7 +70,7 @@ async function profile(page, kind) {
 }
 
 for (let i = 0; i < 3; i++) {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 860 }, ignoreHTTPSErrors: base.startsWith("https:") });
   await context.addInitScript(() => localStorage.setItem("cookie_consent", "declined"));
   await context.addCookies([...cookies.map(({ name, value }) => ({ name, value, url: base, sameSite: "Lax" })),
     { name: "NEXT_LOCALE", value: "en", url: base }]);

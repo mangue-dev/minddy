@@ -29,7 +29,8 @@ export async function openFixture() {
   assert.equal(signedIn.data.user.email, EMAIL);
   assert.equal(signedIn.data.user.id, fixture.userId);
   assert.equal(signedIn.data.user.user_metadata.performance_fixture, MARKER);
-  const client = await request.newContext({ baseURL: base,
+  // The optional local HTTP/2 proxy (h2-proxy.mjs) uses a self-signed localhost certificate.
+  const client = await request.newContext({ baseURL: base, ignoreHTTPSErrors: base.startsWith("https:"),
     extraHTTPHeaders: { Cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; ") } });
   async function api(url, method = "GET", data) {
     const response = await client.fetch(url, { method, ...(data === undefined ? {} : { data }) });
