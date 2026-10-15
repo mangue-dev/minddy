@@ -15,6 +15,8 @@ const { base, cookies, fixture } = session;
 const secondary = JSON.parse(await readFile(secondaryManifestPath, "utf8"));
 const project = fixture.projects[0];
 const post = secondary.entities.feedback[0].id;
+// The project icon route answers from Storage for the fixture's one project with an uploaded icon.
+const iconProject = (await session.api("/api/projects")).find((entry) => entry.icon_storage_path)?.id;
 const routes = [
   "/api/routines",
   `/api/projects/${project}/views`,
@@ -25,6 +27,7 @@ const routes = [
   "/api/assistant/models",
   "/api/notifications",
   "/api/agent-runs",
+  ...(iconProject ? [`/api/projects/${iconProject}/icon/content`] : []),
 ];
 const headers = { Cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; "), "Accept-Encoding": "br" };
 // Certificate validation stays on: the local HTTP/2 proxy's self-signed certificate is trusted explicitly.
