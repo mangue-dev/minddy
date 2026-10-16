@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import createNextIntlPlugin from "next-intl/plugin";
@@ -5,6 +6,7 @@ import { commitsSinceVersion } from "./scripts/commits-since-version.mjs";
 import { documentationRoots } from "./lib/documentation-core.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
+const appVersion = JSON.parse(readFileSync(path.join(dir, "package.json"), "utf8")).version;
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
@@ -355,7 +357,10 @@ const nextConfig = {
     // Measured HERE because this is the only time the repository is there: runtime
     // Vercel sees neither `.git` nor the history. See the module for measurement,
     // and for the `VERCEL_DEEP_CLONE=1` that she requests from Vercel.
-    NEXT_PUBLIC_VERSION_COMMITS: String(commitsSinceVersion()),
+    NEXT_PUBLIC_VERSION_COMMITS: String(commitsSinceVersion(appVersion)),
+    // Only the version string reaches client code: importing package.json from
+    // a client module would serialize the whole manifest into its chunk.
+    NEXT_PUBLIC_APP_VERSION: appVersion,
   },
   async redirects() {
     return [
