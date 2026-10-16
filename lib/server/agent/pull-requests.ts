@@ -457,6 +457,40 @@ export async function findPullRequestForIssue(
   return chosen ? decodeStoredPr(chosen) : null;
 }
 
+/**
+ * EVERY pull request linked to each of these issues, decoded, most recently
+ * updated first — the copied issue prompts (MIN-719) list them all so the
+ * agent can tell live work from history. Same contract as
+ * `findPullRequestForIssue`: the caller has already verified its access to
+ * the issues. An issue without links is absent from the map.
+ */
+export async function listPullRequestsForIssues(
+  issueIds: readonly string[],
+): Promise<Map<string, PullRequestRow[]>> {
+  const byIssue = new Map<string, PullRequestRow[]>();
+  if (issueIds.length === 0) return byIssue;
+  const { data, error } = await getServiceClient()
+    .from("pull_request_issues")
+    .select(`issue_id, pull_request:pull_requests(${PR_COLUMNS})`)
+    .in("issue_id", [...issueIds]);
+  if (error) throw new Error(error.message);
+  const links = (data ?? []) as unknown as {
+    issue_id: string;
+    pull_request: PullRequestRow | null;
+  }[];
+  const decoded = await Promise.all(links.flatMap((link) =>
+    link.pull_request
+      ? [decodeStoredPr(link.pull_request).then((pr) => ({ issueId: link.issue_id, pr }))]
+      : []));
+  for (const { issueId, pr } of decoded) {
+    byIssue.set(issueId, [...(byIssue.get(issueId) ?? []), pr]);
+  }
+  for (const rows of byIssue.values()) {
+    rows.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  }
+  return byIssue;
+}
+
 // ── Rattachement au ticket ───────────────────────────────────────────────────
 
 export interface RepoProject {

@@ -69,7 +69,7 @@ function promptContext(rows?: ChipRelation[], objectives = objectiveMap) {
 }
 
 describe.each(["kanban-board.tsx", "global-kanban-board.tsx"])("%s copied prompt relations", (file) => {
-  it.each(["copyPrompt", "copyPlanPrompt", "copyVerifyPrompt", "runCustomPrompt"])("includes objective and hidden issue targets in %s", async (handlerName) => {
+  it.each(["copyPrompt", "copyPlanPrompt", "copyVerifyPrompt", "runCustomPrompt"])("includes objective, hidden issue and pull request context in %s", async (handlerName) => {
     const rows = boardRelations(file);
     expect(rows).toHaveLength(4);
     expect(rows.filter((row) => row.otherType === "objective")).toHaveLength(3);
@@ -78,6 +78,10 @@ describe.each(["kanban-board.tsx", "global-kanban-board.tsx"])("%s copied prompt
       issue, projectId: "project", projectKey: "MIN", issueHasPlan: false,
       promptContext: promptContext(rows), buildIssuePrompt, buildIssuePlanPrompt,
       buildIssueVerifyPrompt, buildIssueCustomPrompt,
+      loadOneIssuePromptContext: async (id: string) => {
+        expect(id).toBe(issue.id);
+        return { pullRequests: [{ number: 12, state: "open", headBranch: "feature/keys" }], repository: null };
+      },
       resolvePromptCopyAutoStart: () => false,
       shouldAutoStartOnPromptCopy: () => false, user: null,
       navigator: { clipboard: { writeText } }, toast: { success: vi.fn() },
@@ -90,6 +94,7 @@ describe.each(["kanban-board.tsx", "global-kanban-board.tsx"])("%s copied prompt
     }
     expect(prompt).toContain("<identifier>MIN-7</identifier>\n      <title>Command palette</title>");
     expect(prompt).toContain("<category>UI</category>");
+    expect(prompt).toContain('<pull_request number="12" state="open">\n      <head_branch>feature/keys</head_branch>');
     expect(prompt).not.toContain("MIN-0");
   });
 

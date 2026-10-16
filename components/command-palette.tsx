@@ -61,6 +61,7 @@ import { useBulkPaletteMode } from "@/lib/use-bulk-palette-mode";
 import { displayName } from "@/lib/display-name";
 import { fetchIssueApi, updateIssueApi } from "@/lib/issues-api";
 import { buildIssuePrompt } from "@/lib/issue-prompt";
+import { loadOneIssuePromptContext } from "@/lib/issue-prompt-context";
 import {
   issueWrites,
   mergeServerIssue,
@@ -718,6 +719,7 @@ export function CommandPalette({
               categories: promptCategories,
               // Unresolved relationships here (board data) — block omitted from prompt
               resourceCount: full.resource_count,
+              ...(await loadOneIssuePromptContext(full.id)),
             });
             await navigator.clipboard.writeText(prompt);
             if (autoStart) {

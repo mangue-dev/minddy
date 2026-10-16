@@ -69,6 +69,7 @@ import {
   buildIssuePrompt,
   buildIssueVerifyPrompt,
 } from "@/lib/issue-prompt";
+import { loadOneIssuePromptContext } from "@/lib/issue-prompt-context";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import {
   resolvePromptCopyAutoStart,
@@ -466,6 +467,7 @@ export function IssueSidePanel({
     const promptIssue = autoStart
       ? { ...issue, status: "in_progress" as const }
       : issue;
+    const forge = await loadOneIssuePromptContext(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePrompt({
         issue: promptIssue,
@@ -474,6 +476,7 @@ export function IssueSidePanel({
         categories: promptContext.categories,
         relations: promptContext.relations,
         resourceCount: issue.resource_count,
+        ...forge,
       })
     );
     if (autoStart) {
@@ -493,6 +496,7 @@ export function IssueSidePanel({
   // automatic here: planning is not starting the work.
   const copyPlanPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
+    const forge = await loadOneIssuePromptContext(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
         issue,
@@ -501,6 +505,7 @@ export function IssueSidePanel({
         categories: promptContext.categories,
         relations: promptContext.relations,
         resourceCount: issue.resource_count,
+        ...forge,
       })
     );
     toast.success(
@@ -514,6 +519,7 @@ export function IssueSidePanel({
   // work already done, we are not starting it.
   const copyVerifyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
+    const forge = await loadOneIssuePromptContext(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
         issue,
@@ -522,6 +528,7 @@ export function IssueSidePanel({
         categories: promptContext.categories,
         relations: promptContext.relations,
         resourceCount: issue.resource_count,
+        ...forge,
       })
     );
     toast.success(t("verifyPromptCopied"));
@@ -542,6 +549,7 @@ export function IssueSidePanel({
         );
         return;
       }
+      const forge = await loadOneIssuePromptContext(issue.id);
       await navigator.clipboard.writeText(
         buildIssueCustomPrompt(
           {
@@ -551,6 +559,7 @@ export function IssueSidePanel({
             categories: promptContext.categories,
             relations: promptContext.relations,
             resourceCount: issue.resource_count,
+            ...forge,
           },
           instructions
         )

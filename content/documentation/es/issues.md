@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-680)",
     "editions": [
@@ -91,14 +91,16 @@
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-680-file-preview.md",
       "components/file-viewer.tsx",
-      "components/image-viewer.tsx"
+      "components/image-viewer.tsx",
+      "lib/issue-prompt.ts",
+      "lib/server/issue-prompt-context.ts"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
-    "language": "agent:/root (es changed-text and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 11,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence)",
+    "language": "agent:/root (es new copied-prompt section, translation and retained-meaning self-review)",
+    "date": "2026-10-16"
   },
   "related": [
     "feedback",
@@ -143,7 +145,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar con título, descripción y propiedades que se pueden elegir manualmente.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -159,7 +161,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,7 +177,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -191,7 +193,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -207,7 +209,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -223,7 +225,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -239,7 +241,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -255,7 +257,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -271,7 +273,7 @@
       "src": "/documentation/es/work-bulk-actions.png",
       "alt": "Menú de acciones para dos incidencias de demostración seleccionadas.",
       "caption": "El menú actúa sobre las incidencias seleccionadas. En esta captura no se envió ningún cambio conjunto.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -287,7 +289,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -304,7 +306,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Eliminar.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -467,6 +469,14 @@ El plan utiliza líneas de tareas Markdown: `- [ ]` para pendientes, `- [~]` par
 Amplía o modifica el plan existente en lugar de sustituirlo por una copia nueva sin marcar. Conserva los pasos completados y las explicaciones de los cambios de alcance. Antes de guardar una reescritura importante, compárala con el plan más reciente si otro miembro o agente ha trabajado en la incidencia.
 
 Puedes entregar un plan escrito a Numo para implementarlo cuando estén disponibles el trabajo con repositorios y su entorno aislado configurado. Cuando ya exista trabajo completado, la interfaz también ofrece verificar la implementación. Estas acciones inician trabajo; una casilla marcada no demuestra por sí sola que el código pase las pruebas. Lee el resultado, los cambios y las comprobaciones antes de marcar la incidencia como hecha.
+
+### Copiar un prompt para otro agente de código {#copy-issue-prompt}
+
+Para encargar una incidencia a un agente de código fuera de Minddy, como Claude Code, Codex o Cursor, abre el menú de acciones de la incidencia, elige **Copiar como prompt** y luego **Generar un plan** (o **Revisar el plan** si ya existe), **Implementar la incidencia**, **Verificar la implementación** o **Personalizado…**. Con varias incidencias seleccionadas, **Copiar el prompt combinado** las reúne en un solo prompt. Copiar no ejecuta ningún modelo de IA ni consume tu cuota de IA: Minddy reúne lo que ya tiene guardado y el agente explora el repositorio por su cuenta.
+
+El prompt incluye los campos de la incidencia, sus categorías, sus relaciones, el número de recursos adjuntos y el progreso del plan, pero no el texto del plan, que el agente lee a través del servidor MCP de Minddy o te pide. También indica el repositorio vinculado al proyecto y cada pull request vinculada a la incidencia, con su estado y sus ramas cuando se conocen. El agente continúa una pull request abierta en su rama y trata las fusionadas o cerradas como historial. Sin una pull request abierta, el prompt sugiere un nombre de rama formado por el identificador de la incidencia y un título corto, por ejemplo `min-42-keyboard-navigation`. Es solo una sugerencia: el agente revisa primero las ramas existentes y sigue la convención de nombres del repositorio. Mantener el identificador en el nombre de la rama, el título de la pull request o una línea `Fixes MIN-42` permite a Minddy vincular la pull request a la incidencia cuando el repositorio está vinculado.
+
+Si no se puede cargar la información de las pull requests, el prompt lo indica en lugar de afirmar que no hay ninguna. Los prompts de plan y de revisión del plan piden al agente que se detenga antes de implementar. Un prompt personalizado conserva tu petición y su alcance tal como los escribiste. El contenido de la incidencia y tu petición conservan su idioma original; las instrucciones que los rodean están en inglés.
 
 ## Repetir una incidencia después de completarla {#recurring-issues}
 
