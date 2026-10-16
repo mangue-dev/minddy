@@ -15,7 +15,9 @@ import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
 import { createRetainedBoardData } from "@/lib/retained-board-data";
-import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
+import { refreshRetainedBoard, retainedBoardReadFailure, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
+import { readFailureKind } from "@/lib/read-failure";
+import { ReadFailureNotice } from "./read-failure-notice";
 import { useTranslations } from "next-intl";
 import { QueryReadBoundary } from "./query-read-boundary";
 import { retainPageDocuments, retainedPageDocumentCost } from "@/lib/retained-page-documents";
@@ -31,6 +33,13 @@ const Triage = dynamic(appTabSurfaceLoaders.triage);
 const Home = dynamic(appTabSurfaceLoaders.home);
 const Routines = dynamic(appTabSurfaceLoaders.routines);
 const Objectives = dynamic(appTabSurfaceLoaders.objectives);
+
+function BoardReadFailure({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const t = useTranslations("Board");
+  const kind = readFailureKind(error);
+  return <ReadFailureNotice error={error} className="h-full" onRetry={onRetry} retryLabel={t("readRetry")}
+    message={kind === "forbidden" ? t("readErrorForbidden") : kind === "notFound" ? t("readErrorNotFound") : t("readError")} />;
+}
 
 const RetainedBoard = memo(function RetainedBoard({ view, active, roots }: { view: RetainedAppView; active: boolean; roots: Map<string, HTMLElement> }) {
   // Prepared public code can render synchronously. Fix the renderer at mount:
@@ -72,12 +81,13 @@ const RetainedBoard = memo(function RetainedBoard({ view, active, roots }: { vie
     <Activity mode={active ? "visible" : "hidden"}>
     <RetainedBoardTitle view={view} />
     <QueryReadBoundary phase={readState} keepContentWhileRefreshing={isBoard} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
-      readState === "error" || readState === "paused" ? (
+      readState === "error" ? (
+        <BoardReadFailure error={retainedBoardReadFailure(client, view)} onRetry={() => void refreshRetainedBoard(client, view)} />
+      ) : readState === "paused" ? (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
-          <p>{t(readState === "error" ? "readError" : "readPaused")}</p>
-          <button type="button" className="underline" onClick={() => {
-            for (const queryKey of retainedBoardKeys(view)) void client.refetchQueries({ queryKey, exact: true });
-          }}>{t("readRetry")}</button>
+          <p>{t("readPaused")}</p>
+          {/* Join pending reads and retry only failed or stale prerequisites. */}
+          <button type="button" className="underline" onClick={() => void refreshRetainedBoard(client, view)}>{t("readRetry")}</button>
         </div>
       ) : <BoardLoadingSkeleton />
     }>

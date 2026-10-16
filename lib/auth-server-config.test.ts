@@ -15,7 +15,7 @@ describe("Auth server configuration", () => {
   });
 
   it("bounds refresh-backed session lifetime", () => {
-    expect(config).toContain('[auth.sessions]\ntimebox = "720h"');
-    expect(config).toContain('inactivity_timeout = "168h"');
+    expect(config).toContain('[auth.sessions]\ntimebox = "8760h"');
+    expect(config).toContain('inactivity_timeout = "720h"');
   });
 });

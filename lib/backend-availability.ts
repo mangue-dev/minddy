@@ -44,12 +44,40 @@ export function sanitizeBackendRetryPath(
   }
 }
 
+/**
+ * API code of a 401 caused by the caller's minddy session itself (missing,
+ * invalid or no longer live), as opposed to a forge or relay credential.
+ * Only this code may end the browser session (MIN-691).
+ */
+export const SESSION_INVALID_CODE = "sessionInvalid";
+
 /** An HTTP failure that keeps its status after a client API response is parsed. */
 export class HttpResponseError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message);
     this.name = "HttpResponseError";
   }
+}
+
+/** The stable `code` of an API error body, when it has one. */
+export function apiErrorCode(body: unknown): string | undefined {
+  const code = (body as { code?: unknown } | null)?.code;
+  return typeof code === "string" ? code : undefined;
+}
+
+/**
+ * A read failure that withdraws already-loaded content: the session, access
+ * or the resource itself is gone. Timeouts, network and 5xx failures only make
+ * the content stale, so screens keep showing it instead of an error.
+ */
+export function isDefinitiveReadError(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  return status === 401 || status === 403 || status === 404;
+}
+
+/** Default query retry: one more attempt, except for failures a replay cannot fix. */
+export function retryTemporaryReadFailure(failureCount: number, error: unknown): boolean {
+  return failureCount < 1 && !isDefinitiveReadError(error);
 }
 
 /** True for temporary transport and upstream failures, not normal auth errors. */

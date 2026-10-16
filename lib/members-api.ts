@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchClientRead } from "./client-read";
+import { apiErrorCode, HttpResponseError } from "./backend-availability";
 
 import type { MembersResponse } from "./types";
 import { trackEvent } from "./analytics";
@@ -16,7 +17,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const message =
       (data as { error?: string } | null)?.error || text.trim() || "Request failed";
-    throw new Error(message);
+    throw new HttpResponseError(message, response.status, apiErrorCode(data));
   }
   return data as T;
 }

@@ -1261,8 +1261,21 @@ SELECT is(
   true,
   'the server recognizes a current session belonging to the user'
 );
+-- MIN-691: a session in use for more than 30 days stays live.
 UPDATE auth.sessions
-SET created_at = now() - interval '721 hours',
+SET created_at = now() - interval '960 hours',
+    refreshed_at = now() - interval '1 hour'
+WHERE id = '71100000-0000-4000-8000-000000000001';
+SELECT is(
+  public.is_auth_session_active(
+    '71000000-0000-4000-8000-000000000001',
+    '71100000-0000-4000-8000-000000000001'
+  ),
+  true,
+  'a session in regular use stays live beyond 30 days'
+);
+UPDATE auth.sessions
+SET created_at = now() - interval '8761 hours',
     refreshed_at = now()
 WHERE id = '71100000-0000-4000-8000-000000000001';
 SELECT is(
@@ -1271,11 +1284,11 @@ SELECT is(
     '71100000-0000-4000-8000-000000000001'
   ),
   false,
-  'the live session helper enforces the configured 720-hour timebox'
+  'the live session helper enforces the configured one-year timebox'
 );
 UPDATE auth.sessions
-SET created_at = now() - interval '200 hours',
-    refreshed_at = now() - interval '169 hours'
+SET created_at = now() - interval '960 hours',
+    refreshed_at = now() - interval '721 hours'
 WHERE id = '71100000-0000-4000-8000-000000000001';
 SELECT is(
   public.is_auth_session_active(
@@ -1283,13 +1296,13 @@ SELECT is(
     '71100000-0000-4000-8000-000000000001'
   ),
   false,
-  'the live session helper enforces the configured 168-hour inactivity limit'
+  'the live session helper enforces the configured 30-day inactivity limit'
 );
 UPDATE auth.sessions
 SET refreshed_at = NULL
 WHERE id = '71100000-0000-4000-8000-000000000001';
 UPDATE auth.refresh_tokens
-SET updated_at = now() - interval '169 hours'
+SET updated_at = now() - interval '721 hours'
 WHERE session_id = '71100000-0000-4000-8000-000000000001';
 SELECT is(
   public.is_auth_session_active(

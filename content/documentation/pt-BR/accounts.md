@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -58,14 +58,15 @@
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-691-session-expiry.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 9,
+    "fact": "agent:/root (MIN-691 session-expiry claim source review; hosted Auth limits read back; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (pt-BR changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-16"
   },
   "related": [
     "choose-an-instance",
@@ -97,7 +98,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -114,7 +115,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Controles do perfil para avatar, nome de usuário e email somente leitura.",
       "caption": "Salve as alterações do perfil após a validação; o endereço de email permanece somente leitura.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,7 +132,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma e controles de tema claro, escuro e do sistema.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -148,7 +149,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -185,6 +186,8 @@ Volte à aplicação desejada e entre. Uma conta recém-autenticada pode criar s
 ### Sair e verificar mensagens que não chegaram {#session-and-mail}
 
 Abra o menu da conta, escolha sair e confirme. No aplicativo desktop, fechar uma aba ou janela não é o mesmo que sair da conta. Use o menu da conta quando quiser encerrar a sessão.
+
+Uma sessão fica conectada enquanto você usa o minddy, por até um ano, e termina após 30 dias sem uso. Quando ela termina, ou é encerrada em outro dispositivo, o minddy volta à tela de entrada com uma mensagem informando que sua sessão expirou. Entre novamente para continuar de onde parou.
 
 Se a mensagem não chegar, confira o endereço, a pasta de spam e a identidade da instância. O operador de uma instância auto-hospedada precisa ter configurado um envio de e-mail funcional para o Auth; os e-mails opcionais de notificação da aplicação e a confirmação do Auth são funções distintas. Uma página de confirmação expirada permite voltar à entrada para solicitar um novo link. Não encaminhe links de confirmação ou recuperação como evidência para diagnóstico: eles autorizam acesso à conta.
 

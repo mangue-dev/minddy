@@ -3817,7 +3817,7 @@
       "functionReferences": []
     },
     "is_auth_session_active(uuid,uuid)": {
-      "sha256": "b030104ac7f7fbd8676efec4914cac017726cf660f2b5a24fd43f67869f57545",
+      "sha256": "30233c7aa85fb1d651981860f536a149cf257e0986b56c038232ddfb26062932",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\"",

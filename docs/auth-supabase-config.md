@@ -132,11 +132,19 @@ PKCE verifier belongs to that browser origin.
   depending on the version of GoTrue, at the end of a reset link, where it would be
   a second email for the same proof. To deal with the word change of
   happens *from settings*, not here.
-- `sessions_timebox` = 30 days and `sessions_inactivity_timeout` = 7 days:
-  refresh-backed sessions have an absolute lifetime and an inactivity limit.
-  Next.js APIs, PostgREST, GraphQL, Storage, and new Realtime joins check the
-  live session immediately. A private Realtime channel that was already joined
-  can remain connected until its access token expires, for at most one hour.
+- `sessions_timebox` = `8760` and `sessions_inactivity_timeout` = `720` (the
+  Management API counts hours: one year and 30 days). A session stays signed in
+  while it is used and ends after 30 days without use; the one-year cap bounds
+  a forgotten device. Next.js APIs, PostgREST, GraphQL, Storage, and new
+  Realtime joins check the live session immediately through
+  `public.is_auth_session_active`, which hard-codes the same limits. Change the
+  SQL function first and the Auth settings second, so the API is never
+  stricter than the Auth server. A private Realtime channel that was already
+  joined can remain connected until its access token expires, for at most one
+  hour. Until 2026-10-16 the hosted project left both at `0` (disabled) while
+  the SQL enforced 30 days and 7 days: GoTrue kept refreshing older sessions
+  that every API refused with 401 (MIN-691). The limits were then raised to
+  one year and 30 days so active members are no longer signed out monthly.
 - `security_captcha_enabled` = `false`: see above.
 - `disable_signup` = `false`, `mailer_autoconfirm` = `false`: registration is
   open and the address must be confirmed. That's what we want.

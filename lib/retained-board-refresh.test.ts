@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { retainedBoardKeys } from "./retained-board-read-state";
+import { HttpResponseError } from "./backend-availability";
 import type { RetainedAppView } from "./retained-app-views";
 
 const navigation = vi.hoisted(() => ({ pathname: "/all", boardPathname: "/all", projectId: null as string | null, dialogKey: null as readonly unknown[] | null }));
@@ -100,7 +101,7 @@ it.each(boards)("keeps $kind cards interactive during resume and activation refr
   } finally { await act(() => root.unmount()); container.remove(); client.clear(); }
 });
 
-it.each(boards)("retains the $kind initial skeleton and conceals rows after failed or paused reads", async (view) => {
+it.each(boards)("retains the $kind initial skeleton, keeps rows through transient failures and conceals them after withdrawn access or paused reads", async (view) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   navigation.pathname = navigation.boardPathname = view.route.pathname;
   navigation.projectId = view.route.projectId;
@@ -113,12 +114,27 @@ it.each(boards)("retains the $kind initial skeleton and conceals rows after fail
     await act(async () => { for (const key of retainedBoardKeys(view)) client.setQueryData(key, ["Loaded card"]); await vi.advanceTimersByTimeAsync(0); });
     expect(container.querySelector("[data-skeleton]")).toBeNull();
     const card = container.querySelector("button")!;
+    // MIN-691: a temporary refresh failure leaves the loaded board usable.
     await act(async () => {
-      await client.fetchQuery({ queryKey: retainedBoardKeys(view)[0], queryFn: () => { throw new Error("Authorization failed"); } }).catch(() => {});
+      await client.fetchQuery({ queryKey: retainedBoardKeys(view)[0], queryFn: () => { throw new HttpResponseError("Bad gateway", 503); } }).catch(() => {});
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(getComputedStyle(card).visibility).not.toBe("hidden");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    let denied = true;
+    const read = vi.fn(async () => { if (denied) throw new HttpResponseError("Forbidden", 403); return ["Loaded card"]; });
+    await act(async () => {
+      await client.fetchQuery({ queryKey: retainedBoardKeys(view)[0], queryFn: read }).catch(() => {});
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(getComputedStyle(card).visibility).toBe("hidden");
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("readError");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("readErrorForbidden");
+    // Retry rereads the failed prerequisite and restores the board without a reload.
+    denied = false; read.mockClear();
+    await act(async () => { container.querySelector<HTMLButtonElement>('[role="alert"] button')!.click(); await vi.advanceTimersByTimeAsync(0); });
+    expect(read).toHaveBeenCalledOnce();
+    expect(getComputedStyle(card).visibility).not.toBe("hidden");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
     await act(async () => { client.getQueryCache().find({ queryKey: retainedBoardKeys(view)[0], exact: true })!.setState({ fetchStatus: "paused" }); await vi.advanceTimersByTimeAsync(0); });
     expect(getComputedStyle(card).visibility).toBe("hidden");
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("readPaused");

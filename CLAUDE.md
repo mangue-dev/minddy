@@ -1,7 +1,8 @@
-# Minddy development conventions
+# Minddy agent rules and development conventions
 
-Read [AGENTS.md](AGENTS.md) for repository policy. This guide adds the architecture
-and implementation conventions used by the current source and CI configuration.
+`AGENTS.md` and `CLAUDE.md` are identical copies of this guide, so every coding
+agent reads the same rules. Edit both files together;
+`scripts/agent-instructions.test.mjs` fails when they differ.
 
 ## Architecture and entry points
 
@@ -40,44 +41,68 @@ See [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 
 ## Language policy: English-owned prose
 
-Comments, docstrings, test descriptions, internal documentation, configuration
-prose, and developer-facing CLI messages use idiomatic English. Preserve runtime
-translations in every supported catalog, intentional locale fixtures and
-branches, proper names, legal credits, identifiers, URLs, and API values.
+- All new comments, docstrings, test descriptions, internal documentation,
+  configuration prose, and developer-facing CLI messages must be written in
+  idiomatic English.
+- Do not add French prose to application code, tests, documentation, scripts, or
+  configuration. French runtime copy belongs in `messages/fr.json`; official
+  reader documentation and its assets use their declared locale under
+  `content/documentation/<locale>/` and `public/documentation/<locale>/`.
+- Preserve intentional runtime translations in every supported catalog,
+  language-specific test fixtures, locale branches, proper names, legal credits,
+  identifiers, URLs, API values, and behavior. Do not translate those into
+  English copies.
+- When editing existing French prose, translate it as part of the same change
+  unless it is one of the intentional runtime or language-fixture exceptions.
+  Do not change runtime translations or test semantics to satisfy the language
+  policy.
 
-Translate existing French owned prose when editing it. Do not change runtime
-translations or test semantics to satisfy the language policy. Run
-`npm run check:owned-english` and `git diff --check` after changing owned prose.
+### Translation-task boundary
 
-Official reader documentation in `content/documentation/<locale>/` and its
-assets in `public/documentation/<locale>/` use the declared reader language.
+Translate comments and documentation without changing code, identifiers, URLs,
+configuration keys, migration behavior, or test semantics. If a French string
+is required to test localization or to serve the French locale, keep it and
+make the exception obvious from its surrounding code or fixture path.
+
+## Verification
+
+- Run `npm run check:owned-english` after changing comments, documentation,
+  tests, scripts, or configuration prose.
+- Run the smallest relevant test or lint command after source/configuration
+  changes (see [Lint and tests](#lint-and-tests)).
+- Review `git diff --check` and confirm that excluded paths are untouched.
 
 ## Keep documentation current
 
-Review documentation impact for every code change. Edit documentation only
-when the change affects documented behavior, controls, configuration or
-contributor workflows. Small fixes, refactors, formatting and test-only PRs
-that leave documentation accurate need no documentation edit, new illustration
-or article review record. Add guides for new features, update changed
-behavior and remove retired instructions and figures in the same PR. Review
-affected public articles, technical references and internal instructions; do
-not leave documentation work for later.
-
-Follow the [maintenance contract](content/documentation/README.md#release-maintenance)
-and [editorial guide](docs/documentation-editorial-guide.md). Keep all six public
-locales complete, including examples, UI labels, captions, alt text, screenshots
-and responsive diagrams. Respect the existing illustration and capture rules.
-Internal contributor instructions remain English.
-
-Before freezing a desktop release candidate, review the release delta against
-the manual and update affected content, visuals, compatibility and verified
-review evidence. Run `npm run check:documentation`, `npm run check:knowledge`,
-`npm run check:owned-english` and `git diff --check`; require
-`npm run check:documentation:release` before publication. Report affected
-article/workflow/figure IDs when documentation changes. A brief note suffices
-for a PR with no documentation impact; it needs no release-wide checks.
-An accurate manual may need no prose edit, but it always needs an impact review.
-Do not invent review evidence or mark work complete with unresolved gaps.
+- Always review documentation impact when modifying code. Add documentation
+  for new features, correct it when behavior changes, and remove obsolete
+  instructions and illustrations when a feature is removed. Complete affected
+  public guides, technical references and internal instructions in the same PR;
+  do not defer documentation to a later release or separate task.
+- Documentation edits are required only when the change affects documented
+  behavior, controls, configuration or contributor workflows. A small fix,
+  refactor, formatting change or test-only PR that leaves documentation accurate
+  needs no documentation edit, new illustration or article review record. An
+  accurate manual may need no prose edit, but it always needs an impact review.
+- Follow the [documentation maintenance contract](content/documentation/README.md#release-maintenance)
+  and [editorial guide](docs/documentation-editorial-guide.md), including their
+  writing, technical inline-code, factual review, illustration and capture rules.
+- Keep the public manual equally complete in `en`, `fr`, `de`, `es`, `it`, and
+  `pt-BR`. Update full translations, localized UI labels, examples, captions,
+  alt text, screenshots and responsive diagrams together. Internal contributor
+  documentation remains English.
+- Every release that changes the desktop version requires a documentation
+  review against the release delta and intended version before freezing the
+  candidate. Update affected articles, illustrations, compatibility and actual
+  review evidence; a version bump or changelog entry alone is insufficient.
+- Run `npm run check:documentation`, `npm run check:knowledge`,
+  `npm run check:owned-english` and `git diff --check` for documentation
+  changes, and require `npm run check:documentation:release` before
+  publication. Record affected article/workflow/figure IDs and checks when
+  documentation changes. For a PR with no documentation impact, a brief note is
+  sufficient; do not require article IDs or release-wide checks. Avoid cosmetic
+  edits or invented review dates. Unresolved documentation gaps caused by the
+  change block completion.
 
 ## Internationalization: catalog and call-site contract
 
@@ -269,9 +294,11 @@ apply them to another project.
 - Run `npm run work:pr -- "Short title" -m "Complete description"` to create
   the pull request. The `-m` flag may be repeated for several paragraphs.
 - If the pull request already exists, the command pushes the new commits but
-  keeps its title and description: never retitle or rewrite the description
-  of an existing pull request. A deliberate rewrite needs the explicit
-  `--replace` flag of `work:pr` (or a manual `gh pr edit`).
+  keeps its title and description, including manual edits. Use `npm run work:pr`
+  for follow-up commits; supplying another title or description also succeeds
+  without replacing either field. Never retitle or rewrite the description
+  of an existing pull request unless explicitly requested. A deliberate rewrite
+  needs the explicit `--replace` flag of `work:pr` (or a manual `gh pr edit`).
 - After confirming the pull request is merged, run `npm run work:done`.
 - Run `npm run deploy` only when the user explicitly asks for a production
   deployment.
@@ -295,10 +322,10 @@ apply them to another project.
 
 ## DCO sign-offs
 
-- Every commit Codex creates or amends must include a `Signed-off-by` trailer
-  that exactly matches the commit author's name and email. Use
+- Every commit an agent creates or amends must include a `Signed-off-by`
+  trailer that exactly matches the commit author's name and email. Use
   `git commit --signoff`, including when amending a commit.
-- Never use a generic Codex identity for the sign-off when the commit has a
+- Never use a generic agent identity for the sign-off when the commit has a
   different author. Before pushing or updating a pull request, verify every
   non-merge commit in its range has the matching trailer and repair the
   history when necessary.

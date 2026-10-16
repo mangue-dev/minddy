@@ -1,9 +1,10 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SESSION_EXPIRED_PARAM, SESSION_EXPIRED_VALUE } from "@/lib/signed-out-redirect";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, Input, Spinner, toast } from "mangue-ui";
@@ -92,7 +93,9 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   // /login indefinitely (MIN-681). Explicit sign-in and error URLs stay here.
   const modeParam = searchParams.get("mode");
   const errorParam = searchParams.get("error");
-  const shouldAutoSignup = inDesktopApp && !user && modeParam !== "signin" && !errorParam;
+  // A session that ended on its own belongs to an existing account (MIN-691).
+  const sessionExpired = searchParams.get(SESSION_EXPIRED_PARAM) === SESSION_EXPIRED_VALUE;
+  const shouldAutoSignup = inDesktopApp && !user && modeParam !== "signin" && !errorParam && !sessionExpired;
   const [redirectingToSignup, setRedirectingToSignup] = useState(false);
   useEffect(() => {
     if (authLoading || !shouldAutoSignup) return;
@@ -223,6 +226,13 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
                   {t("inviteBannerBody", { email: invite.invitedEmail })}
                 </p>
               </div>
+            </div>
+          )}
+
+          {sessionExpired && !invite && (
+            <div className="flex gap-3 rounded-lg border border-border bg-card p-3.5" role="status">
+              <HugeiconsIcon icon={Clock01Icon} className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <p className="text-sm leading-snug">{t("sessionExpired")}</p>
             </div>
           )}
 

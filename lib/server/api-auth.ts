@@ -20,6 +20,7 @@ import {
 import {
   BACKEND_REQUEST_TIMEOUT_MS,
   isBackendUnavailableError,
+  SESSION_INVALID_CODE,
 } from "@/lib/backend-availability";
 import { getServiceClient } from "@/lib/supabase-service";
 import { noteVerifiedSigningKey, verificationJwks } from "@/lib/server/auth-jwks";
@@ -240,7 +241,7 @@ async function verifySessionClaims(
     if (isBackendUnavailableError(error)) return serviceUnavailableResult();
     return {
       ok: false,
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json({ error: "Unauthorized", code: SESSION_INVALID_CODE }, { status: 401 }),
     };
   }
   const sessionId =
@@ -248,7 +249,7 @@ async function verifySessionClaims(
   if (!UUID_PATTERN.test(sessionId)) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json({ error: "Unauthorized", code: SESSION_INVALID_CODE }, { status: 401 }),
     };
   }
   return { ok: true, claims, sessionId };
@@ -291,7 +292,7 @@ async function authorizeVerifiedSession(
   if (!liveState.sessionActive) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json({ error: "Unauthorized", code: SESSION_INVALID_CODE }, { status: 401 }),
     };
   }
   if (!liveState.mfaAllowed) {

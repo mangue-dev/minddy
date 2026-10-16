@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { ApiError, fetchPullRequestApi } from "./agent-api";
+import { isDefinitiveReadError } from "./backend-availability";
 import { pullRequestRefetchInterval } from "./pr-readiness-actions";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 
@@ -7,12 +8,21 @@ type ReadQuotaState = { error: unknown; errorUpdatedAt: number; data?: unknown }
 const partialQuotaErrors = new WeakMap<object, ApiError>();
 const accountQuotaErrors = new WeakMap<QueryClient, ApiError>();
 
+/**
+ * Only a 429, or a 403 carrying Retry-After, is a forge quota. A plain 403
+ * (permission, MFA, missing forge authorization) belongs to its own query:
+ * sharing it paused every pull request read and kept the pause alive for as
+ * long as the forbidden resource was polled (MIN-691).
+ */
+function isQuotaError(error: ApiError): boolean {
+  return error.status === 429 || (error.status === 403 && error.retryAt !== undefined);
+}
+
 function stateQuotaError(state: ReadQuotaState | undefined): ApiError | undefined {
-  let error = state?.error instanceof ApiError ? state.error : undefined;
+  let error = state?.error instanceof ApiError && isQuotaError(state.error) ? state.error : undefined;
   // Propagating the same account error to another query must not restart its
   // fallback pause and indefinitely prevent recovery without Retry-After.
-  if (error && error.retryAt === undefined && [403, 429].includes(error.status ?? 0))
-    error.retryAt = state!.errorUpdatedAt + 60_000;
+  if (error && error.retryAt === undefined) error.retryAt = state!.errorUpdatedAt + 60_000;
   const data = state?.data;
   if (data && typeof data === "object") {
     const partial = data as { retryStatus?: unknown; retryAt?: unknown };
@@ -107,4 +117,21 @@ export function pullRequestReadState(
   if (query.isPending) return "loading";
   if (pullRequestReadPrecedesActivation(query.data, activationSequence)) return "refreshing";
   return "fresh";
+}
+
+/**
+ * What the detail screen shows. Loaded data from this page session stays on
+ * screen through routine polling, temporary failures and quota pauses, since a
+ * pull request is polled continuously and any blip used to replace it with an
+ * error (MIN-691). Withdrawn access or a missing pull request still conceal it.
+ * Writes keep following `pullRequestReadState`.
+ */
+export function pullRequestDisplayReadState(
+  query: Parameters<typeof pullRequestReadState>[0] & { error: unknown },
+  activationSequence: number,
+): PullRequestReadState {
+  const keepsContent = !query.isError ||
+    (query.error instanceof ApiError && isQuotaError(query.error)) || !isDefinitiveReadError(query.error);
+  return keepsContent && query.fetchStatus !== "paused" && query.data?.readSession === readActivationSession
+    ? "fresh" : pullRequestReadState(query, activationSequence);
 }

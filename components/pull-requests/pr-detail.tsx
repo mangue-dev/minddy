@@ -134,6 +134,8 @@ import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import type { AssistantPageContext } from "@/lib/assistant-types";
 import { parseForgeLogin, prIdentifier } from "@/lib/repo-providers";
+import { ReadFailureNotice } from "@/components/read-failure-notice";
+import { pullRequestReadFailureMessage } from "./pr-read-failure";
 import {
   Tooltip,
   TooltipContent,
@@ -662,6 +664,7 @@ export function PrDetail({
     loading,
     readState,
     displayReadState,
+    readError,
     refetch: refetchPr,
   } = usePullRequestQuery(item.prId, true);
   const {
@@ -1736,9 +1739,12 @@ export function PrDetail({
       reviewThreadActions={reviewThreadActions}
     >
     <QueryReadBoundary phase={displayReadState} className="h-full min-h-0" contentClassName="h-full min-h-0" fallback={
-      readState === "error" || readState === "paused" ? (
+      readState === "error" ? (
+        <ReadFailureNotice error={readError} className="h-full" retryLabel={t("readRetry")} onRetry={() => void refetchPr()}
+          message={pullRequestReadFailureMessage(t, readError, "detail")} />
+      ) : readState === "paused" ? (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
-          <p>{t(readState === "error" ? "readFailed" : "readPaused")}</p>
+          <p>{t("readPaused")}</p>
           <Button variant="ghost" size="sm" onClick={() => void refetchPr()}>{t("readRetry")}</Button>
         </div>
       ) : <div className="flex h-full min-h-0 flex-col">

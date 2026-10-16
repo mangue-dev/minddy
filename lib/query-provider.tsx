@@ -7,6 +7,7 @@ import { createQueryStorage, subscribeToQueryPersistence } from "./query-persist
 import { invalidateLocalSnapshotWrites } from "./local-snapshots";
 import { configurePayloadRetention, isMemoryOnlyPayload } from "./query-retention";
 import { observePageReadFailures } from "./page-read-receipts";
+import { retryTemporaryReadFailure } from "./backend-availability";
 import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
 
 /**
@@ -202,7 +203,7 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
             // Healthy caches are kept fresh by realtime. Failed reads need a
             // recovery opportunity even after a brief window or tab switch.
             refetchOnWindowFocus: (query) => query.state.status === "error",
-            retry: 1,
+            retry: retryTemporaryReadFailure,
           },
         },
       });

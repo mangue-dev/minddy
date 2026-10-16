@@ -18,6 +18,7 @@ import { beginDesktopAuthTurn } from "./desktop/auth-turn";
 import type { DesktopAuthLink } from "./desktop/auth-link";
 import { clearPersistedQueryCache } from "./query-provider";
 import { clearAppTabsWindowState } from "./app-tabs-storage";
+import { leaveProtectedScreenAfterSignOut } from "./signed-out-redirect";
 import { readInterfaceLocale } from "./interface-locale";
 import { useAnalytics } from "./use-analytics";
 import { browserRuntimeConfig } from "./runtime-config-provider";
@@ -148,6 +149,7 @@ export function AuthProvider({
   discoverOAuthProviders?: boolean;
 }) {
   const [user, setUser] = useState<User | null>(null);
+  const explicitSignOut = useRef(false);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([]);
@@ -301,6 +303,10 @@ export function AuthProvider({
         clearAppTabsWindowState();
         track("user_signed_out", {});
         reset();
+        // The session ended on its own (revoked, expired, refused refresh):
+        // leave the protected screen instead of polling into 401s (MIN-691).
+        // An explicit sign-out navigates by itself.
+        if (!explicitSignOut.current) leaveProtectedScreenAfterSignOut();
       }
     };
 
@@ -493,13 +499,17 @@ export function AuthProvider({
   }, []);
 
   const signOut = useCallback(async () => {
+    explicitSignOut.current = true;
     // `scope: "local"` — WITHOUT it, supabase-js goes GLOBAL in scope and revokes
     // tokens from ALL devices in the account. Disconnect from your workstation
     // dev therefore also closed production, telephone and preview. Close one
     // session closes ONE session; cutting off others is a distinct gesture, and it
     // already has its call (`signOutOtherSessions`, upon activation of 2FA).
     const { error } = await getSupabase().auth.signOut({ scope: "local" });
-    if (error) throw error;
+    if (error) {
+      explicitSignOut.current = false;
+      throw error;
+    }
     // The React Query cache is persisted on disk (MIN-89): without purging, the
     // next account on this machine would rehydrate the data of this one
     // before his own requests are successful.

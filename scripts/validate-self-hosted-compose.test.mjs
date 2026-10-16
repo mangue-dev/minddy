@@ -46,8 +46,8 @@ test("the full profile enforces the application password policy and leaked-passw
   );
   assert.match(profile, /GOTRUE_PASSWORD_HIBP_ENABLED: "true"/);
   assert.match(profile, /GOTRUE_PASSWORD_HIBP_FAIL_CLOSED: "true"/);
-  assert.match(profile, /GOTRUE_SESSIONS_TIMEBOX: "720h"/);
-  assert.match(profile, /GOTRUE_SESSIONS_INACTIVITY_TIMEOUT: "168h"/);
+  assert.match(profile, /GOTRUE_SESSIONS_TIMEBOX: "8760h"/);
+  assert.match(profile, /GOTRUE_SESSIONS_INACTIVITY_TIMEOUT: "720h"/);
 });
 
 test("every public self-hosted endpoint receives a one-year HSTS policy", () => {

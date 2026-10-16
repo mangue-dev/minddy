@@ -239,7 +239,7 @@ describe("desktop login routing", () => {
     expect(state.router.replace).not.toHaveBeenCalled();
   });
 
-  it.each(["mode=signin", "error=oauth_denied"])(
+  it.each(["mode=signin", "error=oauth_denied", "redirect=%2Fhome&session=expired"])(
     "preserves the login screen for %s", async (query) => {
       state.loading = false;
       state.params = new URLSearchParams(query);
@@ -249,6 +249,16 @@ describe("desktop login routing", () => {
       expect(host.querySelector("#email")).not.toBeNull();
     },
   );
+
+  it("explains an expired session only when the app sent the user here for it", async () => {
+    state.desktop = false;
+    state.loading = false;
+    await render();
+    expect(host.textContent).not.toContain(messages.Auth.sessionExpired);
+    state.params = new URLSearchParams("redirect=%2Fhome&session=expired");
+    await render();
+    expect(host.querySelector('[role="status"]')?.textContent).toBe(messages.Auth.sessionExpired);
+  });
 
   it("keeps signed-out web visitors on the login screen", async () => {
     state.desktop = false;

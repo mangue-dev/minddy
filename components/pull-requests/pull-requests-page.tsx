@@ -22,6 +22,8 @@ import {
 } from "mangue-ui";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
+import { ReadFailureNotice } from "@/components/read-failure-notice";
+import { pullRequestReadFailureMessage } from "./pr-read-failure";
 import { GitLogin } from "@/components/git/git-login";
 import { UserAvatar } from "@/components/user-avatar";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
@@ -125,6 +127,13 @@ function PrSectionIcon({ section, className = "size-4 shrink-0 text-muted-foregr
 }
 
 /** Sections are independent toggles; changing one keeps the menu open. */
+/** A failed list read is not an empty account: never answer it with "link a repository". */
+function PrListReadFailed({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const t = useTranslations("PullRequests");
+  return <ReadFailureNotice error={error} className="px-4 py-10" retryLabel={t("readRetry")} onRetry={onRetry}
+    message={pullRequestReadFailureMessage(t, error, "list")} />;
+}
+
 function PrFilterMenu({
   sections,
   onToggle,
@@ -448,7 +457,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
   const active = useAllPullRequestsQuery("open", limit, pin);
   const completed = useCompletedPullRequestsQuery(sections.has("completed"));
-  const { hasMore, repoCount, anyPr, loading } = active;
+  const { hasMore, repoCount, anyPr, loading, readFailed } = active;
   const fetching = active.fetching || completed.isFetching;
   const truncated = active.truncated || completed.data?.pages.some((page) => page.truncated);
   const pullRequests = useMemo(() => [...new Map([
@@ -724,6 +733,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           <div aria-busy="true" data-testid="pr-sidebar-loading">
             <PrListSkeleton />
           </div>
+        ) : readFailed ? (
+          <PrListReadFailed error={active.readError} onRetry={() => void active.refetch()} />
         ) : groups.length === 0 ? (
           <EmptyScene
             size="compact"
@@ -800,6 +811,14 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   );
 
   if (browse) return sidebar;
+
+  if (!loading && readFailed) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+        <PrListReadFailed error={active.readError} onRetry={() => void active.refetch()} />
+      </div>
+    );
+  }
 
   if (!loading && !projectsLoading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
     return (
