@@ -16,13 +16,17 @@ import { prepareDecisionEvaluation, shouldProtectDecisionEvaluations } from
  * The shadow comparison of the decision layer (MIN-567) — the quality
  * metric behind the calibration of `jev_confidence_floor`.
  *
- * Principle: shadow sampling. After a CONFIDENT Jev decision on real
- * traffic, the LLM pass is replayed on a small sample (`jev_shadow_sample_rate`)
- * and the agreement is written to `ai_decision_evaluations`. The LLM is the
- * reference — the implementation proven before MIN-557 — so the shadow
- * ALWAYS replays the real LLM adapter (`runLlmDecision`), never a second
- * Jev call, and the row NEVER feeds back into the decision it shadows:
- * the caller's outcome was already returned.
+ * Principle: shadow sampling. After a CONFIDENT decision-model decision on
+ * real traffic, the LLM pass is replayed on a small sample
+ * (`jev_shadow_sample_rate`) and the agreement is written to
+ * `ai_decision_evaluations`, together with the versioned decision model that
+ * answered (`decision_model`, MIN-694) so the metrics of each model stay
+ * separable after the admin switches it. The LLM is the reference — the
+ * implementation proven before MIN-557 — so the shadow ALWAYS replays the
+ * real LLM adapter (`runLlmDecision`), never a second decision-model call,
+ * and the row NEVER feeds back into the decision it shadows: the caller's
+ * outcome was already returned. The `jev_*` column names are historical and
+ * hold the configured model's half, whichever model it is.
  *
  * Everything here runs in the background (`afterOrNow`, scheduled by the
  * runner) and is best-effort: a failed replay or a failed write costs a
@@ -32,12 +36,14 @@ import { prepareDecisionEvaluation, shouldProtectDecisionEvaluations } from
 /** What the runner hands to the comparison when it samples a decision. */
 export interface ShadowComparisonInput {
   spec: DecisionSpec;
-  /** What Jev answered — the trusted outcome of the primary decision. */
-  jevAnswers: DecisionAnswers;
-  /** The global confidence the runner trusted Jev on. */
-  jevConfidence: number;
-  /** End-to-end duration of the Jev leg, measured by the runner. */
-  jevLatencyMs: number;
+  /** The versioned decision model that answered the primary decision. */
+  model: string;
+  /** What the decision model answered — the trusted outcome of the primary decision. */
+  modelAnswers: DecisionAnswers;
+  /** The global confidence the runner trusted the decision model on. */
+  modelConfidence: number;
+  /** End-to-end duration of the decision-model leg, measured by the runner. */
+  modelLatencyMs: number;
   /** The decision's own billing — the replay bills the same payer, under
    * the `jev_shadow` feature, so the delta stays one readable line. */
   billTo: AiUsageBillTo;
@@ -59,7 +65,7 @@ function sameAnswerValue(a: DecisionAnswer["value"], b: DecisionAnswer["value"])
 
 /**
  * Agreement of two engines on one spec, computed over the questions BOTH
- * answered. Jev's parsing is strict (every question answered or the adapter
+ * answered. The decision model's parsing is strict (every question answered or the adapter
  * fails), so the intersection is bounded by what the LLM pass answered — a
  * missing LLM answer reads "the reference said nothing", never a
  * disagreement. `null` when nothing is comparable: the replay failed, or it
@@ -68,17 +74,17 @@ function sameAnswerValue(a: DecisionAnswer["value"], b: DecisionAnswer["value"])
  */
 export function compareDecisionAnswers(
   spec: DecisionSpec,
-  jev: DecisionAnswers,
+  model: DecisionAnswers,
   llm: DecisionAnswers
 ): boolean | null {
   let compared = 0;
   let agree = true;
   for (const question of spec.questions) {
-    const jevAnswer = jev[question.key];
+    const modelAnswer = model[question.key];
     const llmAnswer = llm[question.key];
-    if (!jevAnswer || !llmAnswer) continue;
+    if (!modelAnswer || !llmAnswer) continue;
     compared += 1;
-    if (!sameAnswerValue(jevAnswer.value, llmAnswer.value)) agree = false;
+    if (!sameAnswerValue(modelAnswer.value, llmAnswer.value)) agree = false;
   }
   return compared > 0 ? agree : null;
 }
@@ -106,6 +112,7 @@ function declaredLlmConfidence(spec: DecisionSpec, answers: DecisionAnswers): nu
 /** The one row shape `ai_decision_evaluations` accepts. */
 interface EvaluationRow {
   use_case: string;
+  decision_model: string;
   subject_id: string | null;
   jev_answers: DecisionAnswers;
   jev_confidence: number;
@@ -151,7 +158,7 @@ export async function runShadowComparison(input: ShadowComparisonInput): Promise
     });
     const llmLatencyMs = Math.round(performance.now() - startedAt);
     const agree = llmAnswers
-      ? compareDecisionAnswers(input.spec, input.jevAnswers, llmAnswers)
+      ? compareDecisionAnswers(input.spec, input.modelAnswers, llmAnswers)
       : null;
     const llmConfidence = llmAnswers ? declaredLlmConfidence(input.spec, llmAnswers) : null;
     // The replay already wrote its line (a call = one ledger line): reading
@@ -160,13 +167,14 @@ export async function runShadowComparison(input: ShadowComparisonInput): Promise
     const llmCost = await spentFromLedger(runId);
     await writeEvaluation({
       use_case: input.spec.useCase,
+      decision_model: input.model,
       subject_id: input.subjectId,
-      jev_answers: input.jevAnswers,
-      jev_confidence: input.jevConfidence,
+      jev_answers: input.modelAnswers,
+      jev_confidence: input.modelConfidence,
       llm_answers: llmAnswers,
       llm_confidence: llmConfidence,
       agree,
-      jev_latency_ms: Math.round(input.jevLatencyMs),
+      jev_latency_ms: Math.round(input.modelLatencyMs),
       // The latency of a FAILED replay is real waiting time: it counts in
       // the weekly latency comparison (timeouts included), while the
       // agreement stays out of it — `replay_failed` is the failure marker.

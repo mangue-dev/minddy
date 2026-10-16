@@ -4485,12 +4485,12 @@
         "label": "Model for generated merge commits"
       },
       "jev_decisions_enabled": {
-        "label": "Jev decisions",
+        "label": "AI decisions",
         "desc": "Turns the AI decision layer on or off everywhere at once. Off, every decision call falls back to its LLM pass. Incident kill-switch, not a product setting."
       },
       "jev_model": {
-        "label": "Jev decisions model",
-        "desc": "The System One model answering structured questions (categories, triage, review). Reached through OpenRouter's decisions endpoint, priced on input tokens only."
+        "label": "Decision model",
+        "desc": "The one model answering every AI decision of the instance: Smart Fill, Smart Assign and the feedback review. Only decision models are listed, and each choice is test-called before it is saved. The confidence threshold was calibrated on Jev: another model may fall back to the LLM more or less often."
       },
       "faq_ask_enabled": {
         "label": "FAQ question box",
@@ -4500,6 +4500,11 @@
         "label": "FAQ question box model",
         "desc": "Answers a visitor's question from the page FAQ and the product documentation. Someone is waiting on it, and it runs all day on the public site: pick a fast, cheap model."
       }
+    },
+    "decisionModelErrors": {
+      "catalog_unavailable": "The decision model catalog is unavailable. The current model was kept.",
+      "not_a_decision_model": "This model is not a decision model. The current model was kept.",
+      "compatibility_check_failed": "This model failed the test decision (refused, invalid or slower than 5 seconds). The current model was kept."
     },
     "finance": {
       "title": "Finances",
@@ -4580,8 +4585,8 @@
         "import_map": "Import column matching",
         "brief_split": "Brief breakdown",
         "landing_demo": "Public dictation demo",
-        "jev_decision": "Jev decisions",
-        "jev_shadow": "Jev shadow"
+        "jev_decision": "AI decisions",
+        "jev_shadow": "Decision checks"
       },
       "stripeHidden": "Stripe revenue is hidden: billing is not connected on this instance."
     },

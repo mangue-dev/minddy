@@ -4485,12 +4485,12 @@
         "label": "Modello per i commit di unione generati"
       },
       "jev_decisions_enabled": {
-        "label": "Decisioni Jev",
-        "desc": "Attiva o spegne il livello di decisione IA ovunque in una volta. Spento, ogni chiamata di decisione ricade sul suo passaggio LLM. Kill-switch d'incidente, non un'impostazione di prodotto."
+        "label": "Decisioni IA",
+        "desc": "Attiva o disattiva ovunque in una volta il livello di decisione IA. Disattivato, ogni chiamata di decisione ripiega sul suo passaggio LLM. Interruttore per gli incidenti, non un'impostazione di prodotto."
       },
       "jev_model": {
-        "label": "Modello di decisioni Jev",
-        "desc": "Il modello System One che risponde a domande strutturate (categorie, triaggio, revisione). Raggiunto tramite l'endpoint decisions di OpenRouter, fatturato solo sui token di input."
+        "label": "Modello di decisione",
+        "desc": "L'unico modello che risponde a tutte le decisioni IA dell'istanza: Smart Fill, Smart Assign e la revisione dei feedback. Vengono proposti solo modelli di decisione, e ogni scelta viene provata con una chiamata prima di essere salvata. La soglia di confidenza è stata calibrata su Jev: un altro modello può ripiegare sull'LLM più o meno spesso."
       },
       "faq_ask_enabled": {
         "label": "Riquadro domande FAQ",
@@ -4500,6 +4500,11 @@
         "label": "Modello del riquadro FAQ",
         "desc": "Risponde alla domanda di un visitatore a partire dalle FAQ della pagina e dalla documentazione del prodotto. Qualcuno aspetta la risposta, e il riquadro funziona tutto il giorno sul sito pubblico: scegli un modello veloce ed economico."
       }
+    },
+    "decisionModelErrors": {
+      "catalog_unavailable": "Il catalogo dei modelli di decisione non è disponibile. Il modello attuale è stato mantenuto.",
+      "not_a_decision_model": "Questo modello non è un modello di decisione. Il modello attuale è stato mantenuto.",
+      "compatibility_check_failed": "Questo modello non ha superato la decisione di prova (rifiutata, non valida o più lenta di 5 secondi). Il modello attuale è stato mantenuto."
     },
     "finance": {
       "title": "Finanze",
@@ -4580,8 +4585,8 @@
         "import_map": "Importare corrispondenza di colonna",
         "brief_split": "Breve ripartizione",
         "landing_demo": "Demo pubblica della dettatura",
-        "jev_decision": "Decisioni Jev",
-        "jev_shadow": "Ombra Jev"
+        "jev_decision": "Decisioni IA",
+        "jev_shadow": "Verifiche delle decisioni"
       },
       "stripeHidden": "Il ricavo di Stripe è nascosto: la fatturazione non è collegata in questa istanza."
     },

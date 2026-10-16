@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * The two engine adapters are doubles, exactly like `runner.test.ts` mocks
  * them: what is pinned here is the AGREEMENT — the spec carries the team
- * (names, owner mark, rules) and the real member ids; a confident Jev
- * decides alone; Jev down or unsure replays the `choose_assignee` LLM pass;
+ * (names, owner mark, rules) and the real member ids; a confident decision model
+ * decides alone; the decision model down or unsure replays the `choose_assignee` LLM pass;
  * both failing claims the owner with no AI flag. The deterministic shortcuts
  * (single member, no rule) never reach the layer at all.
  *
@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   getAppConfigValuesMock,
   canUseSmartAssignMock,
-  runJevDecisionMock,
+  runModelDecisionMock,
   runLlmDecisionMock,
   insertEventsMock,
   insertNotificationsMock,
@@ -27,7 +27,7 @@ const {
 } = vi.hoisted(() => ({
   getAppConfigValuesMock: vi.fn<() => Promise<Record<string, string | null>>>(),
   canUseSmartAssignMock: vi.fn<(ownerId: string) => Promise<boolean>>(),
-  runJevDecisionMock: vi.fn<
+  runModelDecisionMock: vi.fn<
     (
       spec: unknown,
       ctx: { runId: string; seq?: number; billTo: unknown; projectId?: string | null }
@@ -52,8 +52,8 @@ vi.mock("@/lib/server/app-config", () => ({
 vi.mock("@/lib/server/entitlements", () => ({
   canUseSmartAssign: canUseSmartAssignMock,
 }));
-vi.mock("@/lib/server/decisions/jev", () => ({
-  runJevDecision: runJevDecisionMock,
+vi.mock("@/lib/server/decisions/decision-model", () => ({
+  runModelDecision: runModelDecisionMock,
 }));
 vi.mock("@/lib/server/decisions/llm", () => ({
   runLlmDecision: runLlmDecisionMock,
@@ -158,7 +158,7 @@ function wireAuthUsers() {
   }));
 }
 
-const jevAnswer = (userId: string, confidence: number): DecisionAnswers => ({
+const modelAnswer = (userId: string, confidence: number): DecisionAnswers => ({
   user_id: { value: userId, probability: confidence, confidence },
 });
 const llmAnswer = (userId: string): DecisionAnswers => ({
@@ -179,12 +179,18 @@ const sweepRun = () =>
     trigger: "sweep",
   });
 
+
+/** A decision-model result: the answers and the versioned model that gave them. */
+function answered<T>(answers: T) {
+  return { answers, model: "typesafe/jev-1.13-20260917" };
+}
+
 describe("runSmartAssign — decision layer", () => {
   beforeEach(() => {
     updatePayloads.length = 0;
     getAppConfigValuesMock.mockReset().mockResolvedValue({});
     canUseSmartAssignMock.mockReset().mockResolvedValue(true);
-    runJevDecisionMock.mockReset().mockResolvedValue(null);
+    runModelDecisionMock.mockReset().mockResolvedValue(null);
     runLlmDecisionMock.mockReset().mockResolvedValue(null);
     insertEventsMock.mockReset().mockResolvedValue(null);
     insertNotificationsMock.mockReset().mockResolvedValue(null);
@@ -200,8 +206,8 @@ describe("runSmartAssign — decision layer", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
-  it("claims a confident JEV answer with the AI flag, and never calls the LLM", async () => {
-    runJevDecisionMock.mockResolvedValue(jevAnswer("user-qa", 0.8));
+  it("claims a confident decision-model answer with the AI flag, and never calls the LLM", async () => {
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer("user-qa", 0.8)));
     await expect(sweepRun()).resolves.toBe("user-qa");
     expect(runLlmDecisionMock).not.toHaveBeenCalled();
     expect(updatePayloads).toContainEqual({ assignee_id: "user-qa" });
@@ -229,11 +235,11 @@ describe("runSmartAssign — decision layer", () => {
     ]);
   });
 
-  it("falls back to the LLM when Jev is unsure, and claims ITS answer", async () => {
-    runJevDecisionMock.mockResolvedValue(jevAnswer("user-qa", 0.3));
+  it("falls back to the LLM when the decision model is unsure, and claims ITS answer", async () => {
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer("user-qa", 0.3)));
     runLlmDecisionMock.mockResolvedValue(llmAnswer("user-dev"));
     await expect(sweepRun()).resolves.toBe("user-dev");
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(runLlmDecisionMock).toHaveBeenCalledTimes(1);
     expect(updatePayloads).toContainEqual({ assignee_id: "user-dev" });
     expect(insertEventsMock).toHaveBeenCalledWith(expect.anything(), [
@@ -241,11 +247,11 @@ describe("runSmartAssign — decision layer", () => {
     ]);
   });
 
-  it("falls back to the LLM when Jev is unavailable, never retrying it", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+  it("falls back to the LLM when the decision model is unavailable, never retrying it", async () => {
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue(llmAnswer("user-dev"));
     await expect(sweepRun()).resolves.toBe("user-dev");
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(updatePayloads).toContainEqual({ assignee_id: "user-dev" });
   });
 
@@ -258,7 +264,7 @@ describe("runSmartAssign — decision layer", () => {
   });
 
   it("claims the owner when the outcome carries no usable answer", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue({});
     await expect(sweepRun()).resolves.toBe("user-owner");
     expect(insertEventsMock).toHaveBeenCalledWith(expect.anything(), [
@@ -267,10 +273,10 @@ describe("runSmartAssign — decision layer", () => {
   });
 
   it("bills BOTH engines to the project owner, on ONE run", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue(llmAnswer("user-dev"));
     await sweepRun();
-    const [jevSpec, jevCtx] = runJevDecisionMock.mock.calls[0] as [
+    const [modelSpec, modelCtx] = runModelDecisionMock.mock.calls[0] as [
       Record<string, unknown>,
       { runId: string; seq?: number; billTo: unknown; projectId?: string | null },
     ];
@@ -278,15 +284,15 @@ describe("runSmartAssign — decision layer", () => {
       unknown,
       { runId: string; seq?: number; billTo: unknown; projectId?: string | null },
     ];
-    expect(jevCtx.billTo).toEqual({ projectOwner: "project-1" });
-    expect(jevCtx.projectId).toBe("project-1");
-    expect(llmCtx.runId).toBe(jevCtx.runId);
-    expect(jevCtx.seq).toBe(0);
+    expect(modelCtx.billTo).toEqual({ projectOwner: "project-1" });
+    expect(modelCtx.projectId).toBe("project-1");
+    expect(llmCtx.runId).toBe(modelCtx.runId);
+    expect(modelCtx.seq).toBe(0);
     expect(llmCtx.seq).toBe(1);
     // And the spec rides the whole team, rules included — the same world
     // both engines decide on.
-    expect(jevSpec.useCase).toBe("smart_assign");
-    expect(jevSpec.state).toMatchObject({
+    expect(modelSpec.useCase).toBe("smart_assign");
+    expect(modelSpec.state).toMatchObject({
       project: "minddy",
       issue: { title: "Fix the login crash", categories: "Bug, Technique" },
       members: [
@@ -298,12 +304,12 @@ describe("runSmartAssign — decision layer", () => {
   });
 
   it("offers exactly the real member ids to both engines", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue(llmAnswer("user-dev"));
     await sweepRun();
-    const [jevSpec] = runJevDecisionMock.mock.calls[0] as [Record<string, unknown>, unknown];
+    const [modelSpec] = runModelDecisionMock.mock.calls[0] as [Record<string, unknown>, unknown];
     const [llmSpec] = runLlmDecisionMock.mock.calls[0] as [Record<string, unknown>, unknown];
-    const question = (jevSpec.questions as { key: string; options?: { value: string }[] }[])[0];
+    const question = (modelSpec.questions as { key: string; options?: { value: string }[] }[])[0];
     expect(question.key).toBe("user_id");
     expect(question.options?.map((o) => o.value)).toEqual([
       "user-owner",
@@ -323,7 +329,7 @@ describe("runSmartAssign — decision layer", () => {
     try {
       await expect(sweepRun()).resolves.toBe("user-owner");
       expect(canUseSmartAssignMock).not.toHaveBeenCalled();
-      expect(runJevDecisionMock).not.toHaveBeenCalled();
+      expect(runModelDecisionMock).not.toHaveBeenCalled();
       expect(runLlmDecisionMock).not.toHaveBeenCalled();
       expect(insertEventsMock).toHaveBeenCalledWith(expect.anything(), [
         expect.objectContaining({ to_value: "user-owner", smart_assign_ai: false }),
@@ -338,7 +344,7 @@ describe("runSmartAssign — decision layer", () => {
     try {
       await expect(sweepRun()).resolves.toBe("user-owner");
       expect(canUseSmartAssignMock).not.toHaveBeenCalled();
-      expect(runJevDecisionMock).not.toHaveBeenCalled();
+      expect(runModelDecisionMock).not.toHaveBeenCalled();
       expect(runLlmDecisionMock).not.toHaveBeenCalled();
     } finally {
       DB.project.smart_assign_rules = { "user-dev": "All things backend" };
@@ -350,7 +356,7 @@ describe("runSmartAssign — decision layer", () => {
     try {
       await expect(sweepRun()).resolves.toBeNull();
       expect(updatePayloads).toEqual([]);
-      expect(runJevDecisionMock).not.toHaveBeenCalled();
+      expect(runModelDecisionMock).not.toHaveBeenCalled();
 
       DB.project.smart_assign_enabled = true;
       DB.issue.assignee_id = "user-dev";
@@ -360,7 +366,7 @@ describe("runSmartAssign — decision layer", () => {
       DB.issue.assignee_id = null;
       DB.issue.status = "triage";
       await expect(sweepRun()).resolves.toBeNull();
-      expect(runJevDecisionMock).not.toHaveBeenCalled();
+      expect(runModelDecisionMock).not.toHaveBeenCalled();
       expect(updatePayloads).toEqual([]);
     } finally {
       DB.issue.status = "todo";
@@ -370,7 +376,7 @@ describe("runSmartAssign — decision layer", () => {
   it("keeps the deterministic contract on a dry budget: owner, no engine", async () => {
     canUseSmartAssignMock.mockResolvedValue(false);
     await expect(sweepRun()).resolves.toBe("user-owner");
-    expect(runJevDecisionMock).not.toHaveBeenCalled();
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
     expect(runLlmDecisionMock).not.toHaveBeenCalled();
     expect(insertEventsMock).toHaveBeenCalledWith(expect.anything(), [
       expect.objectContaining({ to_value: "user-owner", smart_assign_ai: false }),
@@ -378,7 +384,7 @@ describe("runSmartAssign — decision layer", () => {
   });
 
   it("defers the decision for a creation, and writes nothing before the response", async () => {
-    runJevDecisionMock.mockResolvedValue(jevAnswer("user-qa", 0.8));
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer("user-qa", 0.8)));
     await expect(
       runSmartAssign({
         issueId: "issue-1",
@@ -412,7 +418,7 @@ describe("sweepUnassignedIssues", () => {
     updatePayloads.length = 0;
     getAppConfigValuesMock.mockReset().mockResolvedValue({});
     canUseSmartAssignMock.mockReset().mockResolvedValue(true);
-    runJevDecisionMock.mockReset().mockResolvedValue(jevAnswer("user-dev", 0.8));
+    runModelDecisionMock.mockReset().mockResolvedValue(answered(modelAnswer("user-dev", 0.8)));
     runLlmDecisionMock.mockReset().mockResolvedValue(null);
     insertEventsMock.mockReset().mockResolvedValue(null);
     insertNotificationsMock.mockReset().mockResolvedValue(null);
@@ -459,7 +465,7 @@ describe("smartAssignPickFrom", () => {
     expect(
       smartAssignPickFrom(
         {
-          engine: "jev",
+          engine: "model",
           answers: { user_id: { value: "user-dev", probability: 0.8, confidence: 0.8 } },
           confidence: 0.8,
           fallbackReason: null,

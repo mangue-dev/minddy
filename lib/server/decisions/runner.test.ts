@@ -4,15 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * The runner's decision table, with both adapters mocked — this is the
  * file that pins the ONE contract of the layer:
  *
- *   Jev, once (never retried) → under the floor or unavailable → the LLM,
+ *   the configured decision model, once (never retried) → under the floor or unavailable → the LLM,
  *   verbatim → both failed → null, and the use case degrades ITSELF.
  *
  * The billing shape is asserted too: one run id per decision, one line per
- * engine (Jev seq 0, LLM seq 1) — a mixed decision reads as one gesture
+ * engine (decision model seq 0, LLM seq 1) — a mixed decision reads as one gesture
  * with two lines, never a double imputation.
  *
  * The shadow sampling (MIN-567) is pinned here as well, on a deterministic
- * roll: a CONFIDENT Jev decision schedules the comparison in the
+ * roll: a CONFIDENT decision-model decision schedules the comparison in the
  * background (`afterOrNow`, captured, never awaited on the decision path),
  * a roll over the rate schedules nothing, and a decision that already fell
  * back to the LLM is never sampled — the LLM decided for real, there is
@@ -22,7 +22,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   getAppConfigValuesMock,
   afterOrNowMock,
-  runJevDecisionMock,
+  runModelDecisionMock,
   runLlmDecisionMock,
   runShadowComparisonMock,
 } = vi.hoisted(() => {
@@ -38,7 +38,7 @@ const {
   return {
     getAppConfigValuesMock,
     afterOrNowMock,
-    runJevDecisionMock: mkAdapter(),
+    runModelDecisionMock: mkAdapter(),
     runLlmDecisionMock: mkAdapter(),
     runShadowComparisonMock: vi.fn<(input: unknown) => Promise<void>>(),
   };
@@ -50,8 +50,8 @@ vi.mock("@/lib/server/app-config", () => ({
 vi.mock("@/lib/server/after-safe", () => ({
   afterOrNow: afterOrNowMock,
 }));
-vi.mock("@/lib/server/decisions/jev", () => ({
-  runJevDecision: runJevDecisionMock,
+vi.mock("@/lib/server/decisions/decision-model", () => ({
+  runModelDecision: runModelDecisionMock,
 }));
 const warmLlmDecisionMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/server/decisions/llm", () => ({
@@ -62,7 +62,7 @@ vi.mock("@/lib/server/decisions/shadow", () => ({
   runShadowComparison: runShadowComparisonMock,
 }));
 
-const { runDecision, loadJevDecisionSettings, shouldShadowSample } = await import("./runner");
+const { runDecision, loadDecisionModelSettings, shouldShadowSample } = await import("./runner");
 import type { DecisionSpec } from "./types";
 
 const BILL_TO = { userId: "user-1" } as const;
@@ -85,10 +85,18 @@ const CONFIDENT_ANSWERS = {
   priority: { value: "high", probability: 0.9, confidence: 0.9 },
 };
 
+/** The versioned id the decisions endpoint reports for the configured model. */
+const MODEL = "liquid/d1-20260930";
+
+/** A decision-model result: the answers and the model that gave them. */
+function answered<T>(answers: T) {
+  return { answers, model: MODEL };
+}
+
 beforeEach(() => {
   getAppConfigValuesMock.mockReset().mockResolvedValue({});
   afterOrNowMock.mockReset().mockImplementation(() => {});
-  runJevDecisionMock.mockReset();
+  runModelDecisionMock.mockReset();
   runLlmDecisionMock.mockReset();
   warmLlmDecisionMock.mockReset();
   vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -101,37 +109,38 @@ function roll(value: number) {
 }
 
 describe("runDecision", () => {
-  it("trusts a confident Jev: one Jev call, ZERO LLM call", async () => {
-    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+  it("trusts a confident decision model: one decision-model call, ZERO LLM call", async () => {
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(runLlmDecisionMock).not.toHaveBeenCalled();
     expect(outcome).toMatchObject({
-      engine: "jev",
+      engine: "model",
+      model: MODEL,
       answers: CONFIDENT_ANSWERS,
       confidence: 0.9,
       fallbackReason: null,
     });
   });
 
-  it("falls back to the LLM when Jev is unavailable, and NEVER retries Jev", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+  it("falls back to the LLM when the decision model is unavailable, and NEVER retries the decision model", async () => {
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue({
       priority: { value: "high", probability: null, confidence: null },
     });
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(runLlmDecisionMock).toHaveBeenCalledTimes(1);
     expect(outcome).toMatchObject({
       engine: "llm",
-      fallbackReason: "jev_unavailable",
+      fallbackReason: "model_unavailable",
     });
   });
 
-  it("falls back to the LLM when Jev is under the confidence floor, discarding its answers", async () => {
-    runJevDecisionMock.mockResolvedValue({
+  it("falls back to the LLM when the decision model is under the confidence floor, discarding its answers", async () => {
+    runModelDecisionMock.mockResolvedValue(answered({
       priority: { value: "high", probability: 0.3, confidence: 0.3 },
-    });
+    }));
     runLlmDecisionMock.mockResolvedValue({
       priority: { value: "high", probability: null, confidence: null },
     });
@@ -139,18 +148,18 @@ describe("runDecision", () => {
     expect(outcome).toMatchObject({
       engine: "llm",
       answers: { priority: { value: "high" } },
-      fallbackReason: "jev_low_confidence",
+      fallbackReason: "model_low_confidence",
     });
   });
 
   it("returns null when both engines fail — the use case applies its own degradation", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue(null);
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
     expect(outcome).toBeNull();
   });
 
-  describe("when the LLM fallback fails after a low-confidence Jev (MIN-687)", () => {
+  describe("when the LLM fallback fails after a low-confidence decision model (MIN-687)", () => {
     const TWO_QUESTION_SPEC: DecisionSpec = {
       ...SPEC,
       questions: [
@@ -163,68 +172,69 @@ describe("runDecision", () => {
         },
       ],
     };
-    const MIXED_JEV = {
+    const MIXED_ANSWERS = {
       priority: { value: "high", probability: 0.8, confidence: 0.8 },
       effort: { value: "m", probability: 0.3, confidence: 0.3 },
     };
 
-    it("keeps only the Jev answers that meet the floor on their own, when opted in", async () => {
-      runJevDecisionMock.mockResolvedValue(MIXED_JEV);
+    it("keeps only the decision-model answers that meet the floor on their own, when opted in", async () => {
+      runModelDecisionMock.mockResolvedValue(answered(MIXED_ANSWERS));
       runLlmDecisionMock.mockResolvedValue(null);
       const outcome = await runDecision(TWO_QUESTION_SPEC, {
         billTo: BILL_TO,
-        keepConfidentJevAnswers: true,
+        keepConfidentModelAnswers: true,
       });
       expect(outcome).toEqual({
-        engine: "jev",
-        answers: { priority: MIXED_JEV.priority },
+        engine: "model",
+        model: MODEL,
+        answers: { priority: MIXED_ANSWERS.priority },
         confidence: 0.8,
-        fallbackReason: "jev_low_confidence",
+        fallbackReason: "model_low_confidence",
         partial: true,
       });
     });
 
     it("still returns null without the opt-in, so other use cases keep their degradation", async () => {
-      runJevDecisionMock.mockResolvedValue(MIXED_JEV);
+      runModelDecisionMock.mockResolvedValue(answered(MIXED_ANSWERS));
       runLlmDecisionMock.mockResolvedValue(null);
       expect(await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO })).toBeNull();
     });
 
-    it("returns null when no single Jev answer meets the floor", async () => {
-      runJevDecisionMock.mockResolvedValue({ effort: MIXED_JEV.effort });
+    it("returns null when no single decision-model answer meets the floor", async () => {
+      runModelDecisionMock.mockResolvedValue(answered({ effort: MIXED_ANSWERS.effort }));
       runLlmDecisionMock.mockResolvedValue(null);
       expect(
-        await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO, keepConfidentJevAnswers: true })
+        await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO, keepConfidentModelAnswers: true })
       ).toBeNull();
     });
 
     it("logs a correlated reason code with field names, never answer values", async () => {
-      runJevDecisionMock.mockResolvedValue(MIXED_JEV);
+      runModelDecisionMock.mockResolvedValue(answered(MIXED_ANSWERS));
       runLlmDecisionMock.mockResolvedValue(null);
-      await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO, keepConfidentJevAnswers: true });
-      const runId = runJevDecisionMock.mock.calls[0][1].runId;
+      await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO, keepConfidentModelAnswers: true });
+      const runId = runModelDecisionMock.mock.calls[0][1].runId;
       const logged = vi.mocked(console.warn).mock.calls.map((c) => c.join(" ")).join("\n");
       expect(logged).toContain(
-        `[decisions] smart_fill llm_failed after=jev_low_confidence run=${runId} kept=priority`
+        `[decisions] smart_fill llm_failed after=model_low_confidence run=${runId} kept=priority`
       );
       expect(logged).not.toContain("high");
     });
 
-    it("warms the LLM fallback while Jev answers", async () => {
-      runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    it("warms the LLM fallback while the decision model answers", async () => {
+      runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
       await runDecision(SPEC, { billTo: BILL_TO });
       expect(warmLlmDecisionMock).toHaveBeenCalledWith(SPEC);
     });
   });
 
-  it("runs the LLM directly when the kill-switch is off, without touching Jev", async () => {
+  it("runs the LLM directly when the kill-switch is off, without touching the decision model", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
     runLlmDecisionMock.mockResolvedValue({
       priority: { value: "high", probability: null, confidence: null },
     });
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
-    expect(runJevDecisionMock).not.toHaveBeenCalled();
-    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "jev_disabled" });
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "model_disabled" });
   });
 
   it("refuses a malformed spec without calling any engine", async () => {
@@ -233,26 +243,26 @@ describe("runDecision", () => {
       { billTo: BILL_TO }
     );
     expect(outcome).toBeNull();
-    expect(runJevDecisionMock).not.toHaveBeenCalled();
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
     expect(runLlmDecisionMock).not.toHaveBeenCalled();
   });
 
   it("bills a mixed decision as ONE run with one line per engine, in order", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue({
       priority: { value: "high", probability: null, confidence: null },
     });
     await runDecision(SPEC, { billTo: BILL_TO, projectId: "project-1" });
-    const jevCtx = runJevDecisionMock.mock.calls[0][1];
+    const modelCtx = runModelDecisionMock.mock.calls[0][1];
     const llmCtx = runLlmDecisionMock.mock.calls[0][1];
-    expect(jevCtx.runId).toBe(llmCtx.runId);
-    expect(jevCtx.seq).toBe(0);
+    expect(modelCtx.runId).toBe(llmCtx.runId);
+    expect(modelCtx.seq).toBe(0);
     expect(llmCtx.seq).toBe(1);
-    expect(jevCtx.billTo).toEqual(BILL_TO);
+    expect(modelCtx.billTo).toEqual(BILL_TO);
     expect(llmCtx.projectId).toBe("project-1");
   });
 
-  it("carries seq 0 to the LLM when it runs directly (no Jev line before it)", async () => {
+  it("carries seq 0 to the LLM when it runs directly (no decision-model line before it)", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
     runLlmDecisionMock.mockResolvedValue({
       priority: { value: "high", probability: null, confidence: null },
@@ -263,9 +273,9 @@ describe("runDecision", () => {
 });
 
 describe("shadow sampling (MIN-567)", () => {
-  it("samples a confident Jev decision on a roll under the rate, AFTER the response", async () => {
+  it("samples a confident decision-model decision on a roll under the rate, AFTER the response", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "0.05" });
-    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
     roll(0.04);
     const outcome = await runDecision(SPEC, {
       billTo: BILL_TO,
@@ -274,7 +284,7 @@ describe("shadow sampling (MIN-567)", () => {
     });
     // The decision is final BEFORE the comparison runs: the shadow measures,
     // it never decides.
-    expect(outcome).toMatchObject({ engine: "jev", fallbackReason: null });
+    expect(outcome).toMatchObject({ engine: "model", fallbackReason: null });
     expect(afterOrNowMock).toHaveBeenCalledTimes(1);
     expect(runShadowComparisonMock).not.toHaveBeenCalled();
     const [work] = afterOrNowMock.mock.calls[0] as [() => Promise<void>];
@@ -282,19 +292,20 @@ describe("shadow sampling (MIN-567)", () => {
     expect(runShadowComparisonMock).toHaveBeenCalledWith(
       expect.objectContaining({
         spec: SPEC,
-        jevAnswers: CONFIDENT_ANSWERS,
-        jevConfidence: 0.9,
+        model: MODEL,
+        modelAnswers: CONFIDENT_ANSWERS,
+        modelConfidence: 0.9,
         billTo: BILL_TO,
         projectId: "project-1",
         subjectId: "issue-1",
-        jevLatencyMs: expect.any(Number),
+        modelLatencyMs: expect.any(Number),
       })
     );
   });
 
   it("never samples on a roll over the rate", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "0.05" });
-    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
     roll(0.06);
     await runDecision(SPEC, { billTo: BILL_TO });
     expect(afterOrNowMock).not.toHaveBeenCalled();
@@ -302,7 +313,7 @@ describe("shadow sampling (MIN-567)", () => {
 
   it("never samples at rate 0, whatever the roll", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "0" });
-    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
     roll(0);
     await runDecision(SPEC, { billTo: BILL_TO });
     expect(afterOrNowMock).not.toHaveBeenCalled();
@@ -312,7 +323,7 @@ describe("shadow sampling (MIN-567)", () => {
     // Unavailable, under the floor, switched off: whatever the reason, the
     // LLM decided for real — there is nothing left to compare against.
     getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "1" });
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     runLlmDecisionMock.mockResolvedValue({
       priority: { value: "high", probability: null, confidence: null },
     });
@@ -323,9 +334,9 @@ describe("shadow sampling (MIN-567)", () => {
       jev_shadow_sample_rate: "1",
       jev_confidence_floor: "0.99",
     });
-    runJevDecisionMock.mockResolvedValue({
+    runModelDecisionMock.mockResolvedValue(answered({
       priority: { value: "high", probability: 0.3, confidence: 0.3 },
-    });
+    }));
     await runDecision(SPEC, { billTo: BILL_TO });
     expect(afterOrNowMock).not.toHaveBeenCalled();
     getAppConfigValuesMock.mockResolvedValue({
@@ -338,7 +349,7 @@ describe("shadow sampling (MIN-567)", () => {
 
   it("samples each confident decision independently", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "1" });
-    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
     roll(0);
     await runDecision(SPEC, { billTo: BILL_TO });
     await runDecision(SPEC, { billTo: BILL_TO });
@@ -347,7 +358,7 @@ describe("shadow sampling (MIN-567)", () => {
 });
 
 describe("LLM-first switch (MIN-567)", () => {
-  it("sends a listed use case straight to the LLM, without touching Jev", async () => {
+  it("sends a listed use case straight to the LLM, without touching the decision model", async () => {
     getAppConfigValuesMock.mockResolvedValue({
       jev_llm_first: "smart_fill",
       jev_shadow_sample_rate: "1",
@@ -357,27 +368,27 @@ describe("LLM-first switch (MIN-567)", () => {
       priority: { value: "high", probability: null, confidence: null },
     });
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
-    expect(runJevDecisionMock).not.toHaveBeenCalled();
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
     expect(runLlmDecisionMock).toHaveBeenCalledTimes(1);
     expect(runLlmDecisionMock.mock.calls[0][1].seq).toBe(0);
-    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "jev_llm_first" });
+    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "llm_first" });
     // LLM-first is NOT shadowed the other way round: the LLM decided for
-    // real, and the LLM is the reference — there is no Jev side to compare.
+    // real, and the LLM is the reference — there is no decision-model side to compare.
     expect(afterOrNowMock).not.toHaveBeenCalled();
   });
 
-  it("keeps other use cases on Jev while one is LLM-first", async () => {
+  it("keeps other use cases on the decision model while one is LLM-first", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "smart_assign" });
-    runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
-    expect(outcome).toMatchObject({ engine: "jev", fallbackReason: null });
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
+    expect(outcome).toMatchObject({ engine: "model", fallbackReason: null });
   });
 });
 
-describe("loadJevDecisionSettings", () => {
+describe("loadDecisionModelSettings", () => {
   it("defaults to enabled, floor 0.55, shadow rate 0.05, no LLM-first use case", async () => {
-    await expect(loadJevDecisionSettings()).resolves.toEqual({
+    await expect(loadDecisionModelSettings()).resolves.toEqual({
       enabled: true,
       confidenceFloor: 0.55,
       shadowSampleRate: 0.05,
@@ -390,7 +401,7 @@ describe("loadJevDecisionSettings", () => {
       jev_confidence_floor: "0.7",
       jev_shadow_sample_rate: "0.5",
     });
-    await expect(loadJevDecisionSettings()).resolves.toEqual({
+    await expect(loadDecisionModelSettings()).resolves.toEqual({
       enabled: true,
       confidenceFloor: 0.7,
       shadowSampleRate: 0.5,
@@ -400,7 +411,7 @@ describe("loadJevDecisionSettings", () => {
       jev_confidence_floor: "12",
       jev_shadow_sample_rate: "-3",
     });
-    await expect(loadJevDecisionSettings()).resolves.toEqual({
+    await expect(loadDecisionModelSettings()).resolves.toEqual({
       enabled: true,
       confidenceFloor: 1,
       shadowSampleRate: 0,
@@ -412,20 +423,20 @@ describe("loadJevDecisionSettings", () => {
     getAppConfigValuesMock.mockResolvedValue({
       jev_llm_first: " Smart_Fill ,unknown_use_case,SMART-TRIAGE , smart_assign ",
     });
-    await expect(loadJevDecisionSettings()).resolves.toMatchObject({
+    await expect(loadDecisionModelSettings()).resolves.toMatchObject({
       llmFirstUseCases: ["smart_fill", "smart_assign"],
     });
     getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "" });
-    await expect(loadJevDecisionSettings()).resolves.toMatchObject({
+    await expect(loadDecisionModelSettings()).resolves.toMatchObject({
       llmFirstUseCases: [],
     });
   });
 
   it("reads anything but exactly 'false' as enabled", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
-    expect((await loadJevDecisionSettings()).enabled).toBe(false);
+    expect((await loadDecisionModelSettings()).enabled).toBe(false);
     getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: " false " });
-    expect((await loadJevDecisionSettings()).enabled).toBe(false);
+    expect((await loadDecisionModelSettings()).enabled).toBe(false);
   });
 });
 

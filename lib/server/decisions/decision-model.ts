@@ -16,29 +16,35 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/decisions/types";
 
 /**
- * The Jev adapter of the decision layer (MIN-562) — transport to
- * `typesafe/jev-1.13` through OpenRouter's dedicated decisions endpoint, as
- * verified live in MIN-561 (see docs/plans/min-561-jev-prerequisites.md).
+ * The decision-model adapter of the decision layer (MIN-562, generalized by
+ * MIN-694) — transport to the ONE decision model configured for the whole
+ * instance (`jev_model`, the historical key name kept so existing choices and
+ * encrypted `app_config` rows carry over) through OpenRouter's dedicated
+ * decisions endpoint. Jev (`typesafe/jev-1.13`) stays the default; any model
+ * OpenRouter publishes with the `decisions` output modality AND that passes
+ * the compatibility check on save (`probeDecisionModel`) can replace it. See
+ * docs/plans/min-694-decision-model-selection.md for the verified models.
  *
- * The endpoint is NOT chat/completions: the body is the native TypeSafe
+ * The endpoint is NOT chat/completions: the body is the System One
  * `{ state, model, questions }` and the URL is the origin of the resolved
  * base URL + `/api/alpha/decisions`. The same Bearer key applies, the same
  * SSRF-validated fetch (`fetchAiProvider`) carries it, and the response
- * already reports a computed `usage.cost` (input tokens only — output is
- * free) plus a `gen-dec-…` generation id usable as ledger idempotency.
+ * reports a computed `usage.cost` plus a `gen-dec-…` generation id usable as
+ * ledger idempotency, and the versioned model that actually answered.
  *
  * Contract: ONE call, no retry ever (the runner's fallback REPLACES the
  * retry), short timeout. Every answer is parsed and validated against the
  * spec — a response that is malformed, incomplete or carries an unknown
- * value makes the adapter return `null`, which the runner reads as "Jev
- * unavailable" and falls back to the LLM. Jev is never trusted blindly, not
- * even when the JSON happens to type-check.
+ * value makes the adapter fail, which the runner reads as "decision model
+ * unavailable" and falls back to the LLM. A decision model is never trusted
+ * blindly, not even when the JSON happens to type-check.
  */
 
-/** Someone may be waiting in front of their screen: announced latency is
- * 70–500 ms, the ceiling absorbs a cold start without ever resembling a
- * retry window. */
-const JEV_TIMEOUT_MS = 5_000;
+/** Someone may be waiting in front of their screen: Jev's announced latency
+ * is 70–500 ms, the ceiling absorbs a cold start without ever resembling a
+ * retry window. The same budget applies to every decision model, and the
+ * compatibility check refuses a model that cannot answer within it. */
+export const DECISION_MODEL_TIMEOUT_MS = 5_000;
 
 /** The decisions path, resolved from the configured base URL's origin —
  * `chatCompletionsUrl()` appends `/chat/completions` and must NOT be reused. */
@@ -54,27 +60,29 @@ export function decisionsUrl(baseUrl: string): string {
 export interface DecisionCallContext {
   /** One decision = one ledger run: the runner mints it, both engines use it. */
   runId: string;
-  /** Position of this call in the run (Jev first, LLM second on fallback). */
+  /** Position of this call in the run (decision model first, LLM second on fallback). */
   seq?: number;
   billTo: AiUsageBillTo;
   projectId?: string | null;
   /**
    * Ledger feature of THIS call, when it must not read as the use case's
-   * pass — the shadow replay (MIN-567) bills under `jev_shadow`, so the
-   * sampling delta stays separable from the real LLM passes in finance.
+   * pass — the shadow replay (MIN-567) bills under `jev_shadow` (historical
+   * ledger id of the decision check), so the sampling delta stays separable
+   * from the real LLM passes in finance.
    */
   feature?: AiFeature;
 }
 
 /**
  * Who pays decides whose key carries the call, as everywhere else
- * (`forcedToolCall`). Jev only exists on OpenRouter, so an OpenRouter BYOK
- * key serves the decision when the payer has one; every other case (no BYOK,
- * a native-provider BYOK that cannot reach the decisions endpoint) falls to
- * the platform key. The MODEL is never a per-surface choice: the runner
- * reads `jev_model`.
+ * (`forcedToolCall`). Decision models only exist on OpenRouter, so an
+ * OpenRouter BYOK key serves the decision when the payer has one; every other
+ * case (no BYOK, a native-provider BYOK that cannot reach the decisions
+ * endpoint, a platform-paid call) falls to the platform key. The MODEL is
+ * never a per-surface, per-project or per-user choice: every call reads the
+ * one global `jev_model` setting.
  */
-async function resolveJevApiKey(billTo: AiUsageBillTo): Promise<{
+async function resolveDecisionApiKey(billTo: AiUsageBillTo): Promise<{
   apiKey: string;
   baseUrl: string;
   keyMode: "platform" | "byok";
@@ -105,7 +113,7 @@ async function resolveJevApiKey(billTo: AiUsageBillTo): Promise<{
 
 // ── Wire mapping: DecisionQuestion → native questions, and back ──────────────
 
-type JevQuestion =
+type WireQuestion =
   | { type: "choice"; criteria: Record<string, string>; instructions: string }
   | { type: "noul"; instructions: string }
   | { type: "score"; criteria: { value: number; label: string }[]; instructions: string };
@@ -117,14 +125,14 @@ type JevQuestion =
  * what it asks. `label` already is that statement ("Short human-readable
  * statement of what the question asks"), so it rides as-is.
  *
- * Multi-choice does not exist natively: Jev evaluates every question
- * independently against the same state, so a multi_choice becomes ONE
+ * Multi-choice does not exist natively: a decision model evaluates every
+ * question independently against the same state, so a multi_choice becomes ONE
  * `noul` per option, keyed `<key>:<value>`. The option values are
  * guaranteed separator-free (`validateDecisionSpec`), so the prefix split
  * on the way back is unambiguous.
  */
-export function expandJevQuestions(spec: DecisionSpec): Record<string, JevQuestion> {
-  const questions: Record<string, JevQuestion> = {};
+export function expandDecisionQuestions(spec: DecisionSpec): Record<string, WireQuestion> {
+  const questions: Record<string, WireQuestion> = {};
   const describe = (label: string, description?: string): string =>
     description ? `${label} — ${description}` : label;
   for (const question of spec.questions) {
@@ -175,7 +183,7 @@ function noulConfidence(p: number): number {
 /** The wire answers, keyed like the questions we sent (multi_choice spread
  * over its `<key>:<value>` noul questions). Parsed tolerantly on the
  * envelope, strictly on every value. */
-export function parseJevAnswers(
+export function parseDecisionAnswers(
   spec: DecisionSpec,
   data: unknown
 ): { answers: DecisionAnswers } | { error: string } {
@@ -321,6 +329,10 @@ function parseScoreAnswer(
   // the criteria's indices (`probabilities`) and a `legend` mapping each
   // index back onto its {value, label}. The chosen level is the argmax
   // index, resolved through the legend and checked against the spec.
+  // Providers echo the legend differently (MIN-694): an object (TypeSafe,
+  // Perplexity), the criterion re-serialized as a JSON string (Liquid,
+  // OpenAI) or as free text (Nace). An entry that yields no value falls back
+  // to the level at that index — the criteria were sent in the spec's order.
   const probabilities =
     record.probabilities && typeof record.probabilities === "object"
       ? (record.probabilities as Record<string, unknown>)
@@ -340,30 +352,78 @@ function parseScoreAnswer(
     }
   }
   if (bestIndex === null) return null;
-  const chosen = (legend[bestIndex] ?? null) as Record<string, unknown> | number | null;
-  const chosenValue =
-    typeof chosen === "object" && chosen !== null ? chosen.value : chosen;
-  const value =
-    typeof chosenValue === "number"
-      ? chosenValue
-      : Number.parseFloat(String(chosenValue));
-  if (!Number.isFinite(value) || !allowed.includes(value)) return null;
+  let value = legendValue(legend[bestIndex]);
+  if (value === null) {
+    const index = Number.parseInt(bestIndex, 10);
+    value = Number.isInteger(index) && index >= 0 ? (allowed[index] ?? null) : null;
+  }
+  if (value === null || !allowed.includes(value)) return null;
   return { value, probability: bestProbability, confidence: confidence ?? 0 };
 }
 
+/** The numeric value a legend entry carries, `null` when it yields none. */
+function legendValue(entry: unknown): number | null {
+  let resolved: unknown = entry;
+  if (typeof resolved === "string") {
+    try {
+      resolved = JSON.parse(resolved);
+    } catch {
+      return null;
+    }
+  }
+  if (resolved && typeof resolved === "object" && !Array.isArray(resolved)) {
+    resolved = (resolved as Record<string, unknown>).value;
+  }
+  if (typeof resolved === "number") return Number.isFinite(resolved) ? resolved : null;
+  if (typeof resolved === "string" && resolved.trim() !== "") {
+    const parsed = Number.parseFloat(resolved);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/** Why a decision-model call produced no usable answers. */
+export type DecisionModelFailure =
+  /** No OpenRouter key can carry the call (no BYOK, managed AI off). */
+  | "no_key"
+  /** The endpoint answered an error status (unknown model, refused body…). */
+  | "http"
+  /** No answer within `DECISION_MODEL_TIMEOUT_MS`. */
+  | "timeout"
+  /** The request never completed (DNS, TLS, reset). */
+  | "network"
+  /** An answer came back but failed the spec's strict validation. */
+  | "invalid_response";
+
+export type DecisionModelCall =
+  | {
+      ok: true;
+      answers: DecisionAnswers;
+      /** The versioned model that actually answered, as the endpoint reports it. */
+      model: string;
+    }
+  | { ok: false; reason: DecisionModelFailure; status?: number };
+
+/** What a decision produced: the answers and the model that gave them. */
+export interface DecisionModelResult {
+  answers: DecisionAnswers;
+  model: string;
+}
+
 /**
- * One Jev decision: resolve `jev_model`, build the native body, call,
- * validate, record. `null` on every failure — missing key, HTTP error,
- * timeout, crooked JSON, one answer missing or out of vocabulary — never an
- * exception, never a retry.
+ * One decision-model call: resolve the configured model (or the candidate a
+ * compatibility check passes in), build the System One body, call, record,
+ * validate. Never throws, never retries; the failure reason is a fixed code.
+ * Logs carry the model id and the reason — never the state or the answers.
  */
-export async function runJevDecision(
+export async function callDecisionModel(
   spec: DecisionSpec,
-  ctx: DecisionCallContext
-): Promise<DecisionAnswers | null> {
-  const key = await resolveJevApiKey(ctx.billTo);
-  if (!key) return null;
-  const { model } = await resolveConfiguredModel("jev_model");
+  ctx: DecisionCallContext,
+  options: { model?: string } = {}
+): Promise<DecisionModelCall> {
+  const key = await resolveDecisionApiKey(ctx.billTo);
+  if (!key) return { ok: false, reason: "no_key" };
+  const model = options.model ?? (await resolveConfiguredModel("jev_model")).model;
   try {
     const response = await fetchAiProvider("openrouter", decisionsUrl(key.baseUrl), {
       method: "POST",
@@ -374,28 +434,38 @@ export async function runJevDecision(
       body: JSON.stringify({
         model,
         state: spec.state,
-        questions: expandJevQuestions(spec),
+        questions: expandDecisionQuestions(spec),
       }),
-      signal: AbortSignal.timeout(JEV_TIMEOUT_MS),
+      signal: AbortSignal.timeout(DECISION_MODEL_TIMEOUT_MS),
     });
     if (!response.ok) {
       const detail = await response.text();
-      console.error(`[decisions-jev] HTTP ${response.status}: ${detail.slice(0, 200)}`);
-      return null;
+      // Constant format string: the model id comes from an admin request on
+      // the save probe, and the provider body is third-party text.
+      console.error(
+        "[decisions-model] %s HTTP %d: %s",
+        model,
+        response.status,
+        detail.slice(0, 200)
+      );
+      return { ok: false, reason: "http", status: response.status };
     }
     const data = (await response.json()) as {
       model?: string;
       id?: string;
       usage?: OpenRouterUsage;
     };
+    const answeredBy = typeof data.model === "string" && data.model ? data.model : model;
     const u = parseOpenRouterUsage(data.usage);
     await recordAiUsage({
       runId: ctx.runId,
       seq: ctx.seq ?? 0,
+      // Historical ledger id of every decision-model call, whatever the model:
+      // finance and usage history keep reading the rows written before MIN-694.
       feature: "jev_decision",
       provider: "openrouter",
       keyMode: key.keyMode,
-      model: data.model ?? model,
+      model: answeredBy,
       generationId: data.id ?? null,
       promptTokens: u.promptTokens,
       completionTokens: u.completionTokens,
@@ -404,14 +474,107 @@ export async function runJevDecision(
       billTo: ctx.billTo,
       projectId: ctx.projectId ?? null,
     });
-    const parsed = parseJevAnswers(spec, data);
+    const parsed = parseDecisionAnswers(spec, data);
     if ("error" in parsed) {
-      console.error(`[decisions-jev] invalid response: ${parsed.error}`);
-      return null;
+      console.error("[decisions-model] %s invalid response: %s", answeredBy, parsed.error);
+      return { ok: false, reason: "invalid_response" };
     }
-    return parsed.answers;
+    return { ok: true, answers: parsed.answers, model: answeredBy };
   } catch (err) {
-    console.error(`[decisions-jev] call failed:`, (err as Error).message);
-    return null;
+    const error = err as Error;
+    const reason: DecisionModelFailure =
+      error.name === "TimeoutError" || error.name === "AbortError"
+        ? "timeout"
+        : // A 200 whose body is not JSON is the provider's answer, not the network.
+          err instanceof SyntaxError
+          ? "invalid_response"
+          : "network";
+    console.error("[decisions-model] %s call failed (%s): %s", model, reason, error.message);
+    return { ok: false, reason };
   }
+}
+
+/**
+ * One decision with the configured model. `null` on every failure — missing
+ * key, HTTP error, timeout, crooked JSON, one answer missing or out of
+ * vocabulary — which the runner reads as "decision model unavailable".
+ */
+export async function runModelDecision(
+  spec: DecisionSpec,
+  ctx: DecisionCallContext
+): Promise<DecisionModelResult | null> {
+  const call = await callDecisionModel(spec, ctx);
+  return call.ok ? { answers: call.answers, model: call.model } : null;
+}
+
+/**
+ * The compatibility probe the admin save runs on a candidate decision model
+ * (MIN-694). Publishing the `decisions` modality only says a model speaks the
+ * endpoint; it does not say it accepts Minddy's state (some providers require
+ * a conversation transcript or a document), answers every question kind the
+ * use cases send (choice, multi-choice spread over yes/no questions, yes/no),
+ * or answers inside the latency budget. The probe asks exactly that, once,
+ * through the real adapter, so a model that passes is a model the runtime can
+ * parse. Platform-paid (the admin configures the instance, not a project) and
+ * recorded in the ledger like any decision call.
+ */
+export const DECISION_MODEL_PROBE_SPEC: DecisionSpec = {
+  useCase: "smart_fill",
+  state: {
+    project: "An issue tracker for a software team",
+    issue: {
+      title: "Sign-in page crashes on Safari when a password manager autofills",
+      description:
+        "Safari users report a blank screen right after the password manager fills the form. Nobody on Safari can sign in.",
+    },
+  },
+  questions: [
+    {
+      key: "priority",
+      kind: "single_choice",
+      label: "How urgent does this issue read?",
+      options: ["none", "low", "medium", "high", "urgent"].map((value) => ({
+        value,
+        label: value,
+      })),
+    },
+    {
+      key: "category_ids",
+      kind: "multi_choice",
+      label: "Which of this project's categories does the issue belong to?",
+      options: [
+        { value: "bug", label: "Bug" },
+        { value: "feature", label: "Feature request" },
+        { value: "docs", label: "Documentation" },
+      ],
+      maxSelections: 2,
+    },
+    {
+      key: "objective_id",
+      kind: "single_choice",
+      label: "Which objective does the issue plainly belong to?",
+      options: [
+        { value: "auth", label: "Reliable authentication" },
+        { value: "billing", label: "Billing revamp" },
+        { value: "__none__", label: "No objective" },
+      ],
+    },
+    {
+      key: "is_junk",
+      kind: "boolean",
+      label: "Is this post spam, gibberish, an empty test, an ad, or abuse with no real product signal?",
+    },
+  ],
+  llm: { toolName: "probe", parameters: {}, systemPrompt: "", userMessage: "" },
+};
+
+export async function probeDecisionModel(
+  model: string,
+  runId: string
+): Promise<DecisionModelCall> {
+  return callDecisionModel(
+    DECISION_MODEL_PROBE_SPEC,
+    { runId, seq: 0, billTo: { platform: "decision model compatibility check" } },
+    { model }
+  );
 }

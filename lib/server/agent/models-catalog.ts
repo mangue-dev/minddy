@@ -33,7 +33,10 @@ import {
 import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
-import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+import type {
+  AdminCatalogCapability,
+  ModelCatalogCapability,
+} from "@/lib/model-catalog-capability";
 import { providerSupportsModelCapability } from "@/lib/model-catalog-capability";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 
@@ -161,8 +164,14 @@ function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
  */
 function supportsCatalogCapability(
   model: Awaited<ReturnType<typeof listOpenRouterIndex>>[number],
-  capability: ModelCatalogCapability,
+  capability: AdminCatalogCapability,
 ): boolean {
+  // Decision models publish `decisions` as their output modality and are
+  // only callable on `/api/alpha/decisions` (MIN-561, MIN-694). The modality
+  // is the capability: chat, embedding and transcription models never carry it.
+  if (capability === "decision") {
+    return model.outputModalities.includes("decisions");
+  }
   if (capability === "transcription") {
     return model.outputModalities.includes("transcription");
   }
@@ -174,7 +183,7 @@ function supportsCatalogCapability(
 
 async function listOpenRouter(
   apiKey?: string,
-  capability: ModelCatalogCapability = "text",
+  capability: AdminCatalogCapability = "text",
 ): Promise<AgentModelEntry[]> {
   const index = await listOpenRouterIndex(apiKey);
   if (index.length === 0) throw new Error("empty index");
@@ -576,7 +585,7 @@ export async function getActiveByokModelCatalog(
  * rather than choosing a model for a billed user run.
  */
 export async function getAdminModelCatalog(
-  capability: ModelCatalogCapability = "text",
+  capability: AdminCatalogCapability = "text",
 ): Promise<AgentModelsCatalog> {
   const models = await getPlatformModelCatalog(capability);
   if (capability !== "text") {
@@ -597,7 +606,7 @@ export async function getAdminModelCatalog(
 }
 
 export async function getPlatformModelCatalog(
-  capability: ModelCatalogCapability = "text",
+  capability: AdminCatalogCapability = "text",
 ): Promise<AgentModelEntry[]> {
   if (!isManagedAiEnabled()) return [];
   const baseUrl = normalizeBaseUrl(

@@ -66,6 +66,20 @@ const INDEX: OpenRouterModelInfo[] = [
   }),
   // No tool-calling: the exclusion that already existed.
   entry({ id: "some/no-tools", tools: false }),
+  // Decision models (MIN-694): `decisions` output, no tool-calling declared.
+  entry({
+    id: "typesafe/jev-1.13",
+    outputModalities: ["decisions"],
+    textOutput: false,
+    tools: true,
+  }),
+  entry({ id: "liquid/d1", outputModalities: ["decisions"], textOutput: false }),
+  entry({
+    id: "~typesafe/jev-latest",
+    outputModalities: ["decisions"],
+    textOutput: false,
+    router: true,
+  }),
 ];
 
 async function freshCatalog(
@@ -426,6 +440,20 @@ describe("getAdminModelCatalog", () => {
     const { getAdminModelCatalog } = await freshCatalog();
     const catalog = await getAdminModelCatalog("transcription");
     expect(catalog.models.map((model) => model.id)).toEqual(["openai/whisper-large-v3"]);
+  });
+
+  it("offers only decision models to the decision picker, without routing aliases", async () => {
+    const { getAdminModelCatalog } = await freshCatalog();
+    const catalog = await getAdminModelCatalog("decision");
+    expect(catalog.models.map((model) => model.id)).toEqual(["liquid/d1", "typesafe/jev-1.13"]);
+    expect(catalog.models[0]?.multiplier).toBeUndefined();
+  });
+
+  it("never offers a decision model to a text picker", async () => {
+    const { getAdminModelCatalog } = await freshCatalog();
+    const ids = (await getAdminModelCatalog("text")).models.map((model) => model.id);
+    expect(ids).not.toContain("typesafe/jev-1.13");
+    expect(ids).not.toContain("liquid/d1");
   });
 
   it("offers only embedding models to an embedding picker", async () => {

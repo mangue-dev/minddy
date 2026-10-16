@@ -19,6 +19,14 @@ import {
 import { parseSubagentFavorites } from "@/lib/subagent-favorites";
 import { parseRecommendedModels } from "@/lib/recommended-models";
 import { isReasoningLevel, REASONING_LEVELS } from "@/lib/agent-reasoning";
+import { validateDecisionModelChoice } from "@/lib/server/decisions/model-validation";
+
+/** Error text per decision-model refusal; the dashboard localizes by `code`. */
+const DECISION_MODEL_ERRORS = {
+  catalog_unavailable: "The decision model catalog is unavailable; the setting was not changed",
+  not_a_decision_model: "Model is not a decision model of the platform catalog",
+  compatibility_check_failed: "Model failed the decision compatibility check",
+} as const;
 
 /**
  * Admin gate for the app-config endpoints: authenticate the request (JWT via
@@ -124,6 +132,24 @@ export async function PATCH(request: NextRequest) {
       { error: "Recommended models must be a JSON array with at least one model id" },
       { status: 400 }
     );
+  }
+
+  // The global decision model (MIN-694) is checked against the decision
+  // catalog and probed before it is written: a refused choice must never be
+  // stored, or every decision would silently fall back to the LLM. Clearing
+  // the row (the registry default) needs no check.
+  if (getAiConfigField(key)?.catalogCapability === "decision" && trimmed) {
+    const check = await validateDecisionModelChoice(trimmed);
+    if (!check.ok) {
+      return NextResponse.json(
+        {
+          error: DECISION_MODEL_ERRORS[check.code],
+          code: check.code,
+          ...(check.reason ? { reason: check.reason } : {}),
+        },
+        { status: check.status }
+      );
+    }
   }
 
   try {

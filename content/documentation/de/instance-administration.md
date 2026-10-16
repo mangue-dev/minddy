@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate with the global decision model (MIN-694)",
     "editions": [
       "self-hosted"
     ],
@@ -35,14 +35,18 @@
       "components/admin/admin-dashboard.tsx",
       "lib/admin-tabs.ts",
       "lib/server/admin.ts",
-      "docs/self-hosting-auth.md"
+      "docs/self-hosting-auth.md",
+      "lib/ai-model-config.ts",
+      "app/api/admin/app-config/route.ts",
+      "lib/server/decisions/model-validation.ts",
+      "docs/plans/min-694-decision-model-selection.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-694 decision model selector, save validation and fallback source and test review; live decision probes recorded in docs/plans/min-694-decision-model-selection.md; existing figures unchanged)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-694 six-locale decision model section meaning review; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "authentication-and-email",
@@ -59,7 +63,7 @@
       "src": "/documentation/de/instance-administration-overview.png",
       "alt": "Admin-Übersicht mit zusammengefassten Konto-, Einführungs- und Inhaltskennzahlen.",
       "caption": "Übersicht zeigt zusammengefasste Kennzahlen der Instanz. Finanzen fehlt in diesem Demoprofil, weil kein verwalteter OpenRouter-Schlüssel eingerichtet ist.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,7 +79,7 @@
       "src": "/documentation/de/instance-administration-models.png",
       "alt": "KI-Modell- und Reasoning-Einstellungen der Instanz.",
       "caption": "Modelle legt Standardwerte und besondere Verwendungszwecke fest. Die Aufnahme zeigt die vorhandene Konfiguration; keine Modell- oder Anbietereinstellung wurde geändert.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,6 +108,12 @@ Instanzadministration ist von Projekteigentum getrennt. `ADMIN_EMAILS` im Server
 ## Vorhandene Funktionen verwenden {#panels}
 
 Die Konsole enthält Übersicht, Benutzer, Modelle und bedingt Finanzen. Finanzen fehlt ohne konfigurierte verwaltete OpenRouter-Funktion; Planvergabe hängt von eingerichteter Abrechnung oder bestehendem Override ab. Selbsthosting ohne kommerzielle Anbieter erhält durch Öffnen der Konsole keine Cloud-Abrechnung. Prüfen Sie Modelle, Standardwerte und Nutzer-/Quotenkontrollen in der tatsächlich installierten Version vor Änderungen. Administration betrifft die Instanz, nicht ein einzelnes Projekt. Testen Sie mit Demokonten.
+
+## KI-Entscheidungsmodell wählen {#decision-model}
+
+Unter **Modelle**, Abschnitt **Automatisierungen**, legt **Entscheidungsmodell** das eine Entscheidungsmodell fest, das alle KI-Entscheidungen der Instanz beantwortet: Smart Fill, Smart Assign und die Prüfung von Feedback. Es gibt keine Auswahl pro Projekt, Benutzer oder Funktion. Die Auswahl zeigt nur OpenRouter-Modelle, die die Entscheidungsfähigkeit veröffentlichen; Chat-, Embedding- und Transkriptionsmodelle erscheinen nie. Beim Speichern wird der Kandidat mit einer repräsentativen Entscheidung testweise aufgerufen. Ein Modell, das kein Entscheidungsmodell ist, die Anfrage ablehnt, eine ungültige Antwort liefert oder länger als 5 Sekunden braucht, wird abgelehnt, und das aktuelle Modell bleibt in Gebrauch. Lässt sich der Katalog nicht laden, wird jede Änderung abgelehnt. Selbst gehostete Instanzen ohne verwaltete KI haben keinen Plattformkatalog und behalten den Standard, Jev.
+
+Neue Entscheidungen verwenden das gespeicherte Modell nach etwa einer Minute auf jedem Serverprozess. Scheitert das Modell oder antwortet es unter der Konfidenzschwelle, fällt die Entscheidung wie bisher auf das eigene LLM-Modell der Funktion zurück. **KI-Entscheidungen** bleibt der Notschalter, der alle Entscheidungen an dieses LLM-Modell schickt. Die Schwelle wurde auf Jev kalibriert, und andere Entscheidungsmodelle verteilen ihre Konfidenz anders: Prüfen Sie nach einem Wechsel die Übereinstimmung pro Modell in der Datenbankansicht `ai_decision_evaluations_weekly`. Nutzungszeilen erfassen das Modell, das geantwortet hat.
 
 ## Betreiberpflichten erfüllen {#responsibilities}
 

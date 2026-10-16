@@ -929,6 +929,7 @@
         "encryption_version"
       ],
       "operational_configuration": [
+        "decision_model",
         "use_case"
       ],
       "routing_identity": [

@@ -22,7 +22,7 @@ import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
 import {
   modelCatalogCapabilityForKey,
   providerSupportsModelKey,
-  type ModelCatalogCapability,
+  type AdminCatalogCapability,
 } from "@/lib/model-catalog-capability";
 
 /**
@@ -59,8 +59,11 @@ export interface AiConfigField {
   fallback: string;
   /** Section the field is grouped under in the dashboard. */
   group: AiConfigGroup;
-  /** Restricts the admin picker to models usable by this runtime call. */
-  catalogCapability?: ModelCatalogCapability;
+  /**
+   * Restricts the admin picker to models usable by this runtime call. A
+   * `decision` field is also validated on save (`/api/admin/app-config`).
+   */
+  catalogCapability?: AdminCatalogCapability;
   /**
  * Trims the OpenRouter suffix (MIN-263) on a `model` field that would otherwise accept one. See `MODEL_SUFFIXES` for the reason for each exclusion.
  */
@@ -94,6 +97,9 @@ export function isModelSuffix(value: string): value is ModelSuffix {
 }
 
 export const ASSISTANT_REASONING_CONFIG_KEY = "assistant_reasoning_level";
+
+/** The global decision model (MIN-694); historical key name, see the registry entry. */
+export const DECISION_MODEL_CONFIG_KEY = "jev_model";
 
 export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // Numo assistant and text helpers.
@@ -132,20 +138,27 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // the start of a new project then falls on import and manual entry.
   { key: "brief_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
-  // AI decision layer (MIN-557): Jev, the System One model that answers typed
-  // questions over a structured state, reached through OpenRouter's decisions
-  // endpoint (see docs/plans/min-561-jev-prerequisites.md for the verified
-  // access path). The flag is an incident kill-switch, NOT a product setting —
+  // AI decision layer (MIN-557, MIN-694): ONE decision model for the whole
+  // instance — Smart Fill, Smart Assign and the feedback review all read it,
+  // nothing selects a model per project, user or use case. A decision model
+  // answers typed questions over a structured state on OpenRouter's decisions
+  // endpoint (docs/plans/min-561-jev-prerequisites.md for the access path,
+  // docs/plans/min-694-decision-model-selection.md for the verified models).
+  // The picker lists only models publishing the `decisions` output modality,
+  // and the save probes the candidate before writing it. The `jev_*` key
+  // names are historical, kept so existing rows carry over; Jev stays the
+  // default. The flag is an incident kill-switch, NOT a product setting —
   // per MIN-557 there is no “fast/normal” switch in the UI; the callers fall
   // back to their LLM pass when it is off. No suffix (MIN-263): the chat
   // routing shortcuts mean nothing on the decisions endpoint, and a failed
   // decision replays as a NEW call, never as a variant id.
   { key: "jev_decisions_enabled", kind: "flag", fallback: "true", group: "automations" },
   {
-    key: "jev_model",
+    key: DECISION_MODEL_CONFIG_KEY,
     kind: "model",
     fallback: "typesafe/jev-1.13",
     group: "automations",
+    catalogCapability: "decision",
     noSuffix: true,
   },
   // Web search (tool `web_search` from Numo and agents): the model that reads

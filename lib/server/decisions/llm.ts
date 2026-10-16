@@ -7,7 +7,7 @@ import { loadOpenRouterIndex } from "@/lib/server/agent/openrouter-index";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/decisions/types";
-import type { DecisionCallContext } from "@/lib/server/decisions/jev";
+import type { DecisionCallContext } from "@/lib/server/decisions/decision-model";
 
 /**
  * The LLM adapter of the decision layer (MIN-562): the fallback pass, built
@@ -16,7 +16,7 @@ import type { DecisionCallContext } from "@/lib/server/decisions/jev";
  * in the spec, produced verbatim by the builders of `prepare.ts` — MIN-562
  * changes nothing to them, so a fallback decision behaves exactly like the
  * pass it replaces. Aligning them later on the System One question format
- * (for fair Jev/LLM comparisons in MIN-567) is an open option.
+ * (for fair model/LLM comparisons in MIN-567) is an open option.
  *
  * The mapping is strict, as in the passes today: a value outside the spec's
  * options is dropped, a missing argument simply produces no answer — the
@@ -163,7 +163,7 @@ export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>):
 }
 
 /**
- * Start loading the model catalog while Jev answers (MIN-687), so a
+ * Start loading the model catalog while the decision model answers (MIN-687), so a
  * fallback on a fresh instance already knows whether reasoning can be
  * disabled. Fire-and-forget: `forcedToolCall` shares the in-flight load and
  * bounds any remaining wait itself.

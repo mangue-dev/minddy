@@ -44,7 +44,8 @@ import {
  * fails because a help failed, no.
  *
  * **One pass, two engines (MIN-563).** The judgment runs through the decision
- * layer ([decisions/runner.ts](decisions/runner.ts)): Jev answers on the
+ * layer ([decisions/runner.ts](decisions/runner.ts)): the configured decision
+ * model (MIN-694) answers on the
  * structured state first, and the LLM pass below (`buildSmartFillPrompt`,
  * `fillParameters`) is replayed verbatim as the fallback. `sanitizeSmartFill`
  * stays the single door every answer walks through, whichever engine said it.
@@ -365,7 +366,7 @@ export function smartFillAnswersToRaw(answers: DecisionAnswers): Record<string, 
  * an EMPTY patch — never an exception, never a failed creation.
  *
  * Since MIN-563 the pass runs through the decision layer
- * ([runner.ts](decisions/runner.ts)): Jev first (one fast call on the same
+ * ([runner.ts](decisions/runner.ts)): the decision model first (one fast call on the same
  * structured state), the existing LLM pass as fallback — unchanged, replayed
  * verbatim by the spec's recipe — and the empty patch when BOTH engines fail,
  * the same degradation as before. The gates stay here: the flag, the budget
@@ -407,12 +408,12 @@ export async function runSmartFill({
       return {};
     }
     const spec = buildSmartFillSpec({ projectName, title, description, ctx });
-    // A failed LLM fallback keeps the Jev fields that met the floor on their
+    // A failed LLM fallback keeps the decision-model fields that met the floor on their
     // own (MIN-687): a partly filled ticket beats an empty one.
     const outcome = await runDecision(spec, {
       billTo: { userId: billToUserId },
       projectId,
-      keepConfidentJevAnswers: true,
+      keepConfidentModelAnswers: true,
     });
     // `null` (both engines down) and an outcome without answers land on the
     // same empty patch: the ticket is born as it was written.

@@ -9,7 +9,7 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import type { AgentExecutionBackend } from "@/lib/capabilities";
-import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+import type { AdminCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Model catalog for the picker (MIN-46). `staleTime` long: the catalog
@@ -89,7 +89,7 @@ interface AgentModelsResult {
 
 export async function fetchAgentModels(
   scope: AgentModelsScope,
-  capability: ModelCatalogCapability,
+  capability: AdminCatalogCapability,
 ): Promise<AgentModelsResult> {
   const empty = {
     provider: DEFAULT_AGENT_PROVIDER,
@@ -162,7 +162,7 @@ export async function fetchAgentModels(
 
 export function useAgentModelsQuery(
   scope: AgentModelsScope = "user",
-  capability: ModelCatalogCapability = "text",
+  capability: AdminCatalogCapability = "text",
 ) {
   const { data, isPending } = useQuery({
     // One scope = one catalog: the two should never share a cache.

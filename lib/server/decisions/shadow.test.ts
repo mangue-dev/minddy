@@ -66,7 +66,7 @@ const SPEC: DecisionSpec = {
   llm: { toolName: "fill_issue", parameters: {}, systemPrompt: "s", userMessage: "u" },
 };
 
-const JEV_ANSWERS = {
+const MODEL_ANSWERS = {
   priority: { value: "high", probability: 0.9, confidence: 0.9 },
   category_ids: { value: ["cat-1", "cat-2"], probability: null, confidence: 0.8 },
 };
@@ -90,15 +90,15 @@ describe("compareDecisionAnswers", () => {
       priority: { value: "high", probability: null, confidence: null },
       category_ids: { value: ["cat-2", "cat-1"], probability: null, confidence: null },
     };
-    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, llm)).toBe(true);
+    expect(compareDecisionAnswers(SPEC, MODEL_ANSWERS, llm)).toBe(true);
   });
 
   it("compares multi-choice answers as SETS, not lists", () => {
     const reordered = {
-      ...JEV_ANSWERS,
+      ...MODEL_ANSWERS,
       category_ids: { value: ["cat-2", "cat-1"], probability: null, confidence: null },
     };
-    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, reordered)).toBe(true);
+    expect(compareDecisionAnswers(SPEC, MODEL_ANSWERS, reordered)).toBe(true);
   });
 
   it("disagrees on a different pick", () => {
@@ -106,34 +106,34 @@ describe("compareDecisionAnswers", () => {
       priority: { value: "low", probability: null, confidence: null },
       category_ids: { value: ["cat-1"], probability: null, confidence: null },
     };
-    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, llm)).toBe(false);
+    expect(compareDecisionAnswers(SPEC, MODEL_ANSWERS, llm)).toBe(false);
   });
 
   it("skips the questions the reference did not answer — silence is not dissent", () => {
     const llm = {
       priority: { value: "high", probability: null, confidence: null },
     };
-    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, llm)).toBe(true);
+    expect(compareDecisionAnswers(SPEC, MODEL_ANSWERS, llm)).toBe(true);
   });
 
   it("reads an EMPTY multi-choice verdict as a real answer, not silence", () => {
     // The LLM tool schema requires category_ids: `[]` is a judged "nothing
-    // fits". Against a Jev answer that picked categories, it must DISAGREE —
+    // fits". Against a decision-model answer that picked categories, it must DISAGREE —
     // skipping it would inflate the agreement metric.
     const empty = {
       priority: { value: "high", probability: null, confidence: null },
       category_ids: { value: [], probability: null, confidence: null },
     };
-    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, empty)).toBe(false);
+    expect(compareDecisionAnswers(SPEC, MODEL_ANSWERS, empty)).toBe(false);
     const jevEmpty = {
-      ...JEV_ANSWERS,
+      ...MODEL_ANSWERS,
       category_ids: { value: [], probability: null, confidence: null },
     };
     expect(compareDecisionAnswers(SPEC, jevEmpty, empty)).toBe(true);
   });
 
   it("returns null when nothing is comparable (the reference answered nothing)", () => {
-    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, {})).toBeNull();
+    expect(compareDecisionAnswers(SPEC, MODEL_ANSWERS, {})).toBeNull();
   });
 
   it("reads a type mismatch (value vs list) as a disagreement", () => {
@@ -141,16 +141,17 @@ describe("compareDecisionAnswers", () => {
       priority: { value: "high", probability: null, confidence: null },
       category_ids: { value: "cat-1", probability: null, confidence: null },
     };
-    expect(compareDecisionAnswers(SPEC, JEV_ANSWERS, llm)).toBe(false);
+    expect(compareDecisionAnswers(SPEC, MODEL_ANSWERS, llm)).toBe(false);
   });
 });
 
 describe("runShadowComparison", () => {
   const INPUT = {
     spec: SPEC,
-    jevAnswers: JEV_ANSWERS,
-    jevConfidence: 0.9,
-    jevLatencyMs: 421.6,
+    model: "liquid/d1-20260930",
+    modelAnswers: MODEL_ANSWERS,
+    modelConfidence: 0.9,
+    modelLatencyMs: 421.6,
     billTo: BILL_TO,
     projectId: "project-1",
     subjectId: "issue-1",
@@ -176,14 +177,17 @@ describe("runShadowComparison", () => {
     // The replay NEVER bills as the use case's pass: the sampling delta
     // must stay one readable line (`jev_shadow`) in the ledger.
     expect(ctx.feature).toBe("jev_shadow");
-    // The Jev answers are NEVER re-asked: one Jev call happened on the real
+    // The decision-model answers are NEVER re-asked: one decision-model call happened on the real
     // decision, the shadow replays only the LLM.
     expect(fromMock).toHaveBeenCalledWith("ai_decision_evaluations");
     const row = insert.mock.calls[0][0] as Record<string, unknown>;
     expect(row).toMatchObject({
       use_case: "smart_fill",
+      // The model that answered rides with the sample (MIN-694), so each
+      // model's agreement reads separately after a switch.
+      decision_model: "liquid/d1-20260930",
       subject_id: "issue-1",
-      jev_answers: JEV_ANSWERS,
+      jev_answers: MODEL_ANSWERS,
       jev_confidence: 0.9,
       agree: true,
       llm_cost: 0.002,

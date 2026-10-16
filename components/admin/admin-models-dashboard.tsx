@@ -15,6 +15,7 @@ import {ByokModelCombobox} from "@/components/admin/byok-model-combobox";
 import {formatModelName} from "@/lib/model-display";
 import {getAgentProvider} from "@/lib/agent-providers";
 import {byokProviderFromConfigKey, modelKeyFromByokConfigKey} from "@/lib/byok-model-catalog";
+import {isModelCatalogCapability} from "@/lib/model-catalog-capability";
 import type {ByokCatalogProvider} from "@/lib/byok-model-catalog";
 import {AI_MODEL_CONFIG_FIELDS, AI_MODEL_CONFIG_GROUPS, isSuffixableField, modelSuffixKey, MODEL_SUFFIXES} from "@/lib/ai-model-config";
 import type {AiConfigField, AiConfigGroup, ModelSuffix} from "@/lib/ai-model-config";
@@ -33,6 +34,13 @@ type ConfigValues = Record<string, string | null>;
  * be explicitly cast there (convention: cf. lib/i18n-keys.ts). */
 type AdminKey = MessageKey<"Admin">;
 
+/** A refused save; `code` names a refusal the dashboard can localize. */
+class ConfigSaveError extends Error {
+  constructor(message: string, readonly code: string | null) {
+    super(message);
+  }
+}
+
 async function patchConfig(key: string, value: string): Promise<void> {
   const res = await fetch("/api/admin/app-config", {
     method: "PATCH",
@@ -40,10 +48,17 @@ async function patchConfig(key: string, value: string): Promise<void> {
     body: JSON.stringify({ key, value }),
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `HTTP ${res.status}`);
+    const body = (await res.json().catch(() => null)) as { error?: string; code?: string } | null;
+    throw new ConfigSaveError(body?.error ?? `HTTP ${res.status}`, body?.code ?? null);
   }
 }
+
+/** Decision-model refusals (MIN-694) — typed table, no key assembled at runtime. */
+const DECISION_MODEL_ERROR_KEYS: Record<string, AdminKey> = {
+  catalog_unavailable: "decisionModelErrors.catalog_unavailable",
+  not_a_decision_model: "decisionModelErrors.not_a_decision_model",
+  compatibility_check_failed: "decisionModelErrors.compatibility_check_failed",
+};
 
 /**
  * Admin-only dashboard to edit the AI models minddy runs from `app_config`.
@@ -323,7 +338,8 @@ function ByokModelRow({
         <div className="flex min-w-0 items-center gap-2 sm:w-72">
           <ByokModelCombobox
             provider={provider}
-            capability={field.catalogCapability ?? "text"}
+            // BYOK rows only carry account capabilities; `decision` is platform-only.
+            capability={isModelCatalogCapability(field.catalogCapability) ? field.catalogCapability : "text"}
             value={saved}
             defaultLabel={defaultLabel}
             onChange={(next) => void select(next)}
@@ -491,16 +507,23 @@ function ModelRow({
   const tAgent = useTranslations("Agent");
   const saved = value ?? "";
   const [busy, setBusy] = useState(false);
+  // The decision model is validated against its catalog on save (MIN-694):
+  // free entry would only ever offer a value the server refuses.
+  const isDecision = field.catalogCapability === "decision";
 
   const select = async (next: string) => {
     if (busy || next === saved) return;
     setBusy(true);
     try {
       await patchConfig(field.key, next);
+      // Only a save the server accepted moves the picker: a refused model is
+      // never displayed as the one in use.
       onSaved(field.key, next);
       toast.success(t("saved"));
     } catch (e) {
-      toast.error((e as Error).message);
+      const code = e instanceof ConfigSaveError ? e.code : null;
+      const key = code ? DECISION_MODEL_ERROR_KEYS[code] : undefined;
+      toast.error(key ? t(key) : (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -527,7 +550,9 @@ function ModelRow({
               placeholder={tAgent("modelSearchPlaceholder")}
               emptyLabel={tAgent("modelSearchEmpty")}
               loadingLabel={tAgent("modelSearchLoading")}
-              freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
+              freeTextLabel={
+                isDecision ? undefined : (query) => tAgent("modelUseCustom", { model: query })
+              }
             />
             {busy ? <Spinner className="shrink-0" /> : null}
           </div>

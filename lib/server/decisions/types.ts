@@ -4,13 +4,14 @@
  * Every AI decision of the first lot (Smart Fill, Smart Assign, feedback AI
  * review) flows through ONE shape: the use case prepares
  * its data as a `DecisionSpec` (pure builder, `prepare.ts`), the runner
- * (`runner.ts`) asks Jev first and falls back to the existing LLM pass
+ * (`runner.ts`) asks the configured decision model first (Jev by default,
+ * MIN-694) and falls back to the existing LLM pass
  * (`llm.ts`), and the use case applies its own degradation when the runner
  * returns `null` — never blocking the user.
  *
  * Two kinds of modules meet here and nothing else: PURE code (this file,
  * `prepare.ts`, the parsing/validation halves of the adapters) and the two
- * network transports (`jev.ts`, `llm.ts`). The per-use-case policies that
+ * network transports (`decision-model.ts`, `llm.ts`). The per-use-case policies that
  * consume the answers (`sanitizeSmartFill`, `decideFeedbackReview`, the
  * Smart Assign owner fallback) stay where they are — they are the common
  * exit door of every engine.
@@ -29,25 +30,29 @@ export const DECISION_USE_CASES: DecisionUseCase[] = [
   "feedback_review",
 ];
 
-/** Which engine produced the answers of a decision. */
-export type DecisionEngine = "jev" | "llm";
+/**
+ * Which engine produced the answers of a decision: the instance's configured
+ * decision model (`jev_model`, Jev by default) or the use case's LLM pass.
+ */
+export type DecisionEngine = "model" | "llm";
 
 /**
- * Why the runner left Jev, when it did. `null` = Jev answered and was
- * trusted. The reason is informational (logs, later the MIN-567 metrics);
- * the caller never branches on it — the answers are the contract.
+ * Why the runner left the decision model, when it did. `null` = the model
+ * answered and was trusted. The reason is informational (logs, later the
+ * MIN-567 metrics); the caller never branches on it — the answers are the
+ * contract.
  */
 export type DecisionFallbackReason =
-  | "jev_disabled"
-  | "jev_unavailable"
-  | "jev_low_confidence"
+  | "model_disabled"
+  | "model_unavailable"
+  | "model_low_confidence"
   /**
    * The use case is calibrated LLM-first (MIN-567): listed in the
-   * `jev_llm_first` `app_config` key, it skips Jev entirely. A use case ends
-   * up here only when the shadow comparison showed it structurally bad at
-   * Jev — the switch is a config edit, never a deploy.
+   * `jev_llm_first` `app_config` key, it skips the decision model entirely.
+   * A use case ends up here only when the shadow comparison showed it
+   * structurally bad at decision models — a config edit, never a deploy.
    */
-  | "jev_llm_first";
+  | "llm_first";
 
 /**
  * Hard ceiling of the choices engine, taken from the decisions API (MIN-561
@@ -102,7 +107,7 @@ export interface DecisionMultiChoiceQuestion extends DecisionQuestionBase {
   maxSelections: number;
 }
 
-/** A yes/no question (Jev `noul`). */
+/** A yes/no question (System One `noul`). */
 export interface DecisionBooleanQuestion extends DecisionQuestionBase {
   kind: "boolean";
 }
@@ -138,7 +143,7 @@ export interface DecisionSpec {
   useCase: DecisionUseCase;
   /**
    * Dense structured state, System One style — the assembled facts the
-   * questions are evaluated against. NEVER empty: Jev answers confidently
+   * questions are evaluated against. NEVER empty: a decision model answers confidently
    * on a "nothing fits" option when the state says nothing (MIN-561), and a
    * confident answer on no information is worth nothing. The runner refuses
    * to call with an empty state.
@@ -174,16 +179,18 @@ export type DecisionAnswers = Record<string, DecisionAnswer>;
 /** The result of a decision the caller can act on. */
 export interface DecisionOutcome {
   engine: DecisionEngine;
+  /** The versioned decision model that answered, when `engine` is `model`. */
+  model?: string;
   answers: DecisionAnswers;
   /**
    * Global confidence, 0–1: the weakest per-question confidence of the
    * answers (1 when no answer carries a confidence — the neutral value for
-   * the floor check, which only ever gates Jev anyway).
+   * the floor check, which only ever gates the decision model anyway).
    */
   confidence: number;
   fallbackReason: DecisionFallbackReason | null;
   /**
-   * The LLM fallback failed and only Jev answers that individually met the
+   * The LLM fallback failed and only model answers that individually met the
    * confidence floor were kept (MIN-687). Opt-in per caller.
    */
   partial?: boolean;
@@ -200,7 +207,7 @@ export function clamp01(value: unknown): number | null {
  * The answers whose own confidence (or probability, when the engine gave no
  * confidence) meets the floor. An answer carrying neither is not kept:
  * unknown confidence is not confidence. Pure; the runner uses it to salvage
- * a low-confidence Jev decision when the LLM fallback fails.
+ * a low-confidence model decision when the LLM fallback fails.
  */
 export function confidentAnswers(answers: DecisionAnswers, floor: number): DecisionAnswers {
   const kept: DecisionAnswers = {};
@@ -241,9 +248,9 @@ export function decisionConfidence(spec: DecisionSpec, answers: DecisionAnswers)
  * Checks the invariants the builders are responsible for: known use case,
  * unique question keys, non-empty state, options within the API cardinality
  * (and non-empty for single choice — a choice without options is a question
- * Jev can only answer wrongly), bounded multi_selection, non-empty score
- * levels, and option values without the `:` separator (it encodes
- * multi-choice sub-questions on the wire, `jev.ts`).
+ * a decision model can only answer wrongly), bounded multi_selection,
+ * non-empty score levels, and option values without the `:` separator (it
+ * encodes multi-choice sub-questions on the wire, `decision-model.ts`).
  */
 export function validateDecisionSpec(spec: DecisionSpec): boolean {
   if (!spec.state || typeof spec.state !== "object" || Array.isArray(spec.state)) return false;

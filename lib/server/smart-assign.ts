@@ -28,7 +28,8 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  * - Multi-member with no rule written for anyone: deterministic too, the owner —
  *   with no rule the model has nothing but names to compare.
  * - Multi-member with rules: one structured decision through the decision
- *   layer (`lib/server/decisions/runner.ts`, MIN-563) — Jev answers on the
+ *   layer (`lib/server/decisions/runner.ts`, MIN-563) — the configured
+ *   decision model (MIN-694) answers on the
  *   structured state first, the existing `choose_assignee` LLM pass is
  *   replayed verbatim as the fallback, and any failure of both falls back to
  *   the owner so the run always assigns someone.
@@ -53,7 +54,7 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  * Hence the cut:
  * - the DETERMINIST case (single member, or no rule) written before the response.
  * This is an update; waiting for it costs less than losing it;
- * - only the DECISION (Jev, and the LLM pass behind it) remains deferred —
+ * - only the DECISION (the decision model, and the LLM pass behind it) remains deferred —
  *   several seconds of latency have nothing to do in a POST — and it is that
  *   alone that the budget keeps;
  * - `sweepUnassignedIssues` (cron) catches up with what the latter `after()` loses.
@@ -210,7 +211,7 @@ export async function runSmartAssign(
         authUsers,
         categoryNames: (decodedCategories ?? []).map((row) => row.name as string),
       });
-      // One decision, two engines: Jev first on the structured state, the
+      // One decision, two engines: the decision model first on the structured state, the
       // `choose_assignee` LLM pass replayed verbatim as the fallback, one
       // ledger run across both — billed to the project owner, like the pass
       // it replaces.

@@ -21,7 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
+import type { AdminCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
  * Agent Searchable Model Picker (MIN-46). Catalog search
@@ -91,8 +91,12 @@ export function ModelCombobox({
   placeholder: string;
   emptyLabel: string;
   loadingLabel: string;
-  /** Wording of the “use as is” option (free entry). */
-  freeTextLabel: (query: string) => string;
+  /**
+   * Wording of the “use as is” option (free entry). Omitted, the picker only
+   * offers catalog entries: a field whose server validation accepts nothing
+   * outside the catalog (the decision model) must not suggest otherwise.
+   */
+  freeTextLabel?: (query: string) => string;
   disabled?: boolean;
   /**
    * Tooltip displayed when the picker is locked (variant `compact`): the model
@@ -118,7 +122,7 @@ export function ModelCombobox({
    */
   scope?: AgentModelsScope;
   /** Runtime capability used to filter the platform admin catalog. */
-  capability?: ModelCatalogCapability;
+  capability?: AdminCatalogCapability;
 }) {
   const { provider, models, maxMultiplier, planId, recommended, loading } =
     useAgentModelsQuery(scope, capability);
@@ -169,7 +173,8 @@ export function ModelCombobox({
     );
 
   const trimmed = query.trim();
-  const showFreeText = trimmed.length > 0 && !models.some((m) => m.id === trimmed);
+  const showFreeText =
+    !!freeTextLabel && trimmed.length > 0 && !models.some((m) => m.id === trimmed);
 
   // The ceiling is only displayed if the catalog returns one AND at least one
   // model is located above: on a list without price (illegible index), a
@@ -383,7 +388,7 @@ export function ModelCombobox({
             {showFreeText ? (
               <CommandItem value={`__free__${trimmed}`} onSelect={() => select(trimmed)}>
                 {logoFor(trimmed)}
-                <span className="flex-1 truncate">{freeTextLabel(trimmed)}</span>
+                <span className="flex-1 truncate">{freeTextLabel?.(trimmed)}</span>
                 <HugeiconsIcon icon={CheckIcon} className={cn("size-4 shrink-0", value === trimmed ? "opacity-100" : "opacity-0")} />
               </CommandItem>
             ) : null}
