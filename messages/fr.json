@@ -2610,7 +2610,13 @@
     "signOutOthersConfirmTitle": "Déconnecter les autres appareils ?",
     "signOutOthersConfirmDescription": "Chaque autre navigateur et chaque app de bureau connectés à ce compte reviennent à l’écran de connexion. Cet appareil reste connecté.",
     "signOutOthersToast": "Les autres appareils sont déconnectés.",
-    "signOutOthersError": "Impossible de déconnecter les autres appareils. Ils restent connectés ; réessayez."
+    "signOutOthersError": "Impossible de déconnecter les autres appareils. Ils restent connectés ; réessayez.",
+    "sessionDevice": "{browser} sur {platform}",
+    "sessionUnknownDevice": "Appareil inconnu",
+    "sessionCurrent": "Cet appareil",
+    "sessionLastActive": "Dernière activité {date}",
+    "sessionSignedIn": "Connecté le {date}",
+    "sessionsLoadError": "Impossible de charger vos sessions."
   },
   "Agent": {
     "engineWorking": "{agent} travaille…",

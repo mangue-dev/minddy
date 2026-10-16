@@ -2610,7 +2610,13 @@
     "signOutOthersConfirmTitle": "Sign out other devices?",
     "signOutOthersConfirmDescription": "Every other browser and desktop app signed in to this account returns to the sign-in screen. This device stays signed in.",
     "signOutOthersToast": "Other devices are signed out.",
-    "signOutOthersError": "Couldn't sign out other devices. They are still signed in; try again."
+    "signOutOthersError": "Couldn't sign out other devices. They are still signed in; try again.",
+    "sessionDevice": "{browser} on {platform}",
+    "sessionUnknownDevice": "Unknown device",
+    "sessionCurrent": "This device",
+    "sessionLastActive": "Last active {date}",
+    "sessionSignedIn": "Signed in {date}",
+    "sessionsLoadError": "Couldn't load your sessions."
   },
   "Agent": {
     "engineWorking": "{agent} is working…",

@@ -1,17 +1,20 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Download01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { CheckIcon, ComputerIcon, Copy01Icon, Download01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import {useState} from "react";
-import {useTranslations} from "next-intl";
+import {useFormatter, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
 import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Button, Checkbox, Spinner, toast} from "mangue-ui";
 import {useAuth} from "@/lib/auth-context";
-import {SettingsGroup, SettingsEmpty, SettingsRow} from "@/components/settings/settings-ui";
+import {SettingsGroup, SettingsEmpty, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {mfaStatusQueryKey, useMfaStatusQuery} from "@/lib/use-mfa-status";
 import {mfaVerifyErrorKey} from "@/lib/mfa";
 import {OtpInput} from "@/components/otp-input";
+import {isMobileDeviceLabel} from "@/lib/device-label";
+import {authSessionsQueryKey, useAuthSessionsQuery} from "@/lib/use-auth-sessions-query";
+import type {AuthSessionSummary} from "@/lib/types";
 
 /**
  * Account settings → “Second factor” (MIN-132).
@@ -43,10 +46,11 @@ import {OtpInput} from "@/components/otp-input";
  * ## Sessions
  *
  * A session lasts up to a year while it is used, and signing out only ends the
- * session of this device (`scope: "local"`). The “Sessions” group is therefore
- * the one explicit gesture that ends every other session of the account, apart
- * from the automatic cut when two-factor authentication is turned on. This
- * device stays signed in: `scope: "others"` keeps the current refresh token.
+ * session of this device (`scope: "local"`). The “Sessions” group lists the
+ * account's live sessions (`/api/account/sessions`) and carries the one explicit
+ * gesture that ends every other one, apart from the automatic cut when
+ * two-factor authentication is turned on. This device stays signed in:
+ * `scope: "others"` keeps the current refresh token.
  */
 
 type Stage = "idle" | "enrolling" | "codes";
@@ -54,6 +58,7 @@ type Stage = "idle" | "enrolling" | "codes";
 export function AccountSecuritySection() {
   const t = useTranslations("AccountSecurity");
   const tc = useTranslations("Common");
+  const format = useFormatter();
   const { user, enrollTotp, verifyTotp, unenrollTotp, refreshUser, signOutOtherSessions } =
     useAuth();
   const queryClient = useQueryClient();
@@ -80,6 +85,11 @@ export function AccountSecuritySection() {
   const [signOutOthersOpen, setSignOutOthersOpen] = useState(false);
   const [signingOutOthers, setSigningOutOthers] = useState(false);
   const [signOutOthersError, setSignOutOthersError] = useState<string | null>(null);
+  const {
+    sessions,
+    loading: sessionsLoading,
+    failed: sessionsFailed,
+  } = useAuthSessionsQuery();
 
   const provider = (user?.app_metadata?.provider as string | undefined) ?? "email";
   const providerLabel = provider === "google" ? "Google" : provider === "github" ? "GitHub" : null;
@@ -205,12 +215,38 @@ export function AccountSecuritySection() {
     }
   };
 
+  // Only the list proves there is nothing to end; while it loads or fails,
+  // the gesture stays available.
+  const noOtherSession =
+    !sessionsLoading && !sessionsFailed && sessions.every((session) => session.current);
+
+  const sessionName = (session: AuthSessionSummary) =>
+    session.browser && session.platform
+      ? t("sessionDevice", { browser: session.browser, platform: session.platform })
+      : (session.browser ?? session.platform ?? t("sessionUnknownDevice"));
+
+  const sessionSubtitle = (session: AuthSessionSummary) => {
+    const signedIn = t("sessionSignedIn", {
+      date: format.dateTime(new Date(session.created_at), { dateStyle: "medium" }),
+    });
+    const activity = session.current
+      ? t("sessionCurrent")
+      : t("sessionLastActive", {
+          date: format.dateTime(new Date(session.last_active_at), {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        });
+    return `${activity} · ${signedIn}`;
+  };
+
   const signOutOthers = async () => {
     setSigningOutOthers(true);
     setSignOutOthersError(null);
     try {
       await signOutOtherSessions();
       toast.success(t("signOutOthersToast"));
+      void queryClient.invalidateQueries({ queryKey: authSessionsQueryKey });
     } catch {
       // GoTrue's message is English and technical; the row keeps a localized
       // failure in place so the person knows the other devices are still open.
@@ -423,14 +459,28 @@ export function AccountSecuritySection() {
         anchor={SETTINGS_SECTIONS.accountSessions}
         title={t("sessionsTitle")}
       >
+        {sessionsLoading ? (
+          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+        ) : sessionsFailed ? (
+          <SettingsEmpty>{t("sessionsLoadError")}</SettingsEmpty>
+        ) : (
+          sessions.map((session) => (
+            <SettingsListRow
+              key={session.id}
+              icon={isMobileDeviceLabel(session.platform) ? SmartPhone01Icon : ComputerIcon}
+              title={sessionName(session)}
+              subtitle={sessionSubtitle(session)}
+            />
+          ))
+        )}
         <SettingsRow
           label={t("signOutOthersLabel")}
           hint={t("signOutOthersHint")}
           control={
             <Button
-              variant="outline"
+              variant="destructive"
               size="sm"
-              disabled={signingOutOthers}
+              disabled={signingOutOthers || noOtherSession}
               onClick={() => setSignOutOthersOpen(true)}
             >
               {signingOutOthers && <Spinner />}

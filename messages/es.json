@@ -2610,7 +2610,13 @@
     "signOutOthersConfirmTitle": "¿Cerrar sesión en otros dispositivos?",
     "signOutOthersConfirmDescription": "Todos los demás navegadores y apps de escritorio conectados a esta cuenta vuelven a la pantalla de inicio de sesión. Este dispositivo sigue conectado.",
     "signOutOthersToast": "Se cerró la sesión en los otros dispositivos.",
-    "signOutOthersError": "No se pudo cerrar la sesión en los otros dispositivos. Siguen conectados; inténtalo de nuevo."
+    "signOutOthersError": "No se pudo cerrar la sesión en los otros dispositivos. Siguen conectados; inténtalo de nuevo.",
+    "sessionDevice": "{browser} en {platform}",
+    "sessionUnknownDevice": "Dispositivo desconocido",
+    "sessionCurrent": "Este dispositivo",
+    "sessionLastActive": "Última actividad {date}",
+    "sessionSignedIn": "Sesión iniciada el {date}",
+    "sessionsLoadError": "No se pudieron cargar tus sesiones."
   },
   "Agent": {
     "engineWorking": "{agent} está trabajando…",

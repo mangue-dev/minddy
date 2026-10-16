@@ -2610,7 +2610,13 @@
     "signOutOthersConfirmTitle": "Disconnettere gli altri dispositivi?",
     "signOutOthersConfirmDescription": "Ogni altro browser e app desktop connessi a questo account torna alla schermata di accesso. Questo dispositivo resta connesso.",
     "signOutOthersToast": "Gli altri dispositivi sono stati disconnessi.",
-    "signOutOthersError": "Impossibile disconnettere gli altri dispositivi. Sono ancora connessi; riprova."
+    "signOutOthersError": "Impossibile disconnettere gli altri dispositivi. Sono ancora connessi; riprova.",
+    "sessionDevice": "{browser} su {platform}",
+    "sessionUnknownDevice": "Dispositivo sconosciuto",
+    "sessionCurrent": "Questo dispositivo",
+    "sessionLastActive": "Ultima attività {date}",
+    "sessionSignedIn": "Accesso il {date}",
+    "sessionsLoadError": "Impossibile caricare le sessioni."
   },
   "Agent": {
     "engineWorking": "{agent} sta lavorando…",

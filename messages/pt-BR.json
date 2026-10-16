@@ -2610,7 +2610,13 @@
     "signOutOthersConfirmTitle": "Sair dos outros dispositivos?",
     "signOutOthersConfirmDescription": "Todos os outros navegadores e apps de desktop conectados a esta conta voltam para a tela de login. Este dispositivo continua conectado.",
     "signOutOthersToast": "Você saiu dos outros dispositivos.",
-    "signOutOthersError": "Não foi possível sair dos outros dispositivos. Eles continuam conectados; tente de novo."
+    "signOutOthersError": "Não foi possível sair dos outros dispositivos. Eles continuam conectados; tente de novo.",
+    "sessionDevice": "{browser} no {platform}",
+    "sessionUnknownDevice": "Dispositivo desconhecido",
+    "sessionCurrent": "Este dispositivo",
+    "sessionLastActive": "Última atividade {date}",
+    "sessionSignedIn": "Entrou em {date}",
+    "sessionsLoadError": "Não foi possível carregar suas sessões."
   },
   "Agent": {
     "engineWorking": "{agent} está trabalhando…",

@@ -60,12 +60,13 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-691-session-expiry.md",
+      "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root (sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
+    "fact": "agent:/root (session list and sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (pt-BR changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -190,7 +191,7 @@ Abra o menu da conta, escolha sair e confirme. No aplicativo desktop, fechar uma
 
 Uma sessão fica conectada enquanto você usa o minddy, por até um ano, e termina após 30 dias sem uso. Quando ela termina, ou é encerrada em outro dispositivo, o minddy volta à tela de entrada com uma mensagem informando que sua sessão expirou. Entre novamente para continuar de onde parou.
 
-Para encerrar todas as outras sessões, por exemplo em um notebook perdido ou um computador compartilhado, abra a aba **Segurança** das configurações da conta, escolha **Sair dos outros dispositivos** no grupo **Sessões** e confirme. Todos os outros navegadores e apps de desktop conectados à sua conta voltam para a tela de entrada; o dispositivo que você está usando continua conectado. Os aplicativos que você autorizou em **MCP do minddy** → **Aplicativos conectados** mantêm o acesso até que você o revogue lá.
+O grupo **Sessões** da aba **Segurança** das configurações da conta lista os navegadores e apps de desktop conectados à sua conta, marca o dispositivo que você está usando e mostra quando cada um dos outros esteve ativo pela última vez. Para encerrar todas as outras sessões, por exemplo em um notebook perdido ou um computador compartilhado, escolha **Sair dos outros dispositivos** ali e confirme. Todos os outros navegadores e apps de desktop conectados à sua conta voltam para a tela de entrada; o dispositivo que você está usando continua conectado. Os aplicativos que você autorizou em **MCP do minddy** → **Aplicativos conectados** mantêm o acesso até que você o revogue lá.
 
 Se a mensagem não chegar, confira o endereço, a pasta de spam e a identidade da instância. O operador de uma instância auto-hospedada precisa ter configurado um envio de e-mail funcional para o Auth; os e-mails opcionais de notificação da aplicação e a confirmação do Auth são funções distintas. Uma página de confirmação expirada permite voltar à entrada para solicitar um novo link. Não encaminhe links de confirmação ou recuperação como evidência para diagnóstico: eles autorizam acesso à conta.
 

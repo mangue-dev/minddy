@@ -2610,7 +2610,13 @@
     "signOutOthersConfirmTitle": "Andere Geräte abmelden?",
     "signOutOthersConfirmDescription": "Jeder andere Browser und jede Desktop-App, die bei diesem Konto angemeldet sind, kehren zum Anmeldebildschirm zurück. Dieses Gerät bleibt angemeldet.",
     "signOutOthersToast": "Andere Geräte sind abgemeldet.",
-    "signOutOthersError": "Andere Geräte konnten nicht abgemeldet werden. Sie sind weiterhin angemeldet; versuche es erneut."
+    "signOutOthersError": "Andere Geräte konnten nicht abgemeldet werden. Sie sind weiterhin angemeldet; versuche es erneut.",
+    "sessionDevice": "{browser} auf {platform}",
+    "sessionUnknownDevice": "Unbekanntes Gerät",
+    "sessionCurrent": "Dieses Gerät",
+    "sessionLastActive": "Zuletzt aktiv {date}",
+    "sessionSignedIn": "Angemeldet am {date}",
+    "sessionsLoadError": "Deine Sitzungen konnten nicht geladen werden."
   },
   "Agent": {
     "engineWorking": "{agent} arbeitet…",

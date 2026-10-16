@@ -35,6 +35,22 @@ const PLATFORMS: readonly { name: string; test: RegExp }[] = [
   { name: "Linux", test: /\bLinux\b|\bX11\b/i },
 ];
 
+/**
+ * The browser and platform names, each `null` when the user-agent does not say.
+ * The account sessions list composes them through its own translated message
+ * instead of the stored label below.
+ */
+export function deviceFromUserAgent(ua: string | null | undefined): {
+  browser: string | null;
+  platform: string | null;
+} {
+  if (!ua || !ua.trim()) return { browser: null, platform: null };
+  return {
+    browser: BROWSERS.find((b) => b.test.test(ua))?.name ?? null,
+    platform: PLATFORMS.find((p) => p.test.test(ua))?.name ?? null,
+  };
+}
+
 /** What we display when the user-agent says nothing usable. Voluntarily
  * in English: the list of devices is translated, but this wording is
  * STORED, once, and the language of the subscription is not that of which the
@@ -47,9 +63,7 @@ export const UNKNOWN_DEVICE_LABEL = "Unknown device";
  * stored: it's a label, not an interface phrase.
  */
 export function deviceLabelFromUserAgent(ua: string | null | undefined): string {
-  if (!ua || !ua.trim()) return UNKNOWN_DEVICE_LABEL;
-  const browser = BROWSERS.find((b) => b.test.test(ua))?.name ?? null;
-  const platform = PLATFORMS.find((p) => p.test.test(ua))?.name ?? null;
+  const { browser, platform } = deviceFromUserAgent(ua);
   if (browser && platform) return `${browser} sur ${platform}`;
   return browser ?? platform ?? UNKNOWN_DEVICE_LABEL;
 }

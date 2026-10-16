@@ -60,12 +60,13 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-691-session-expiry.md",
+      "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root (sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
+    "fact": "agent:/root (session list and sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (en changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -194,7 +195,7 @@ Open the account menu, choose sign out and confirm. In the desktop app, closing 
 
 A session stays signed in while you use minddy, for up to one year, and ends after 30 days without use. When it ends, or is closed from another device, minddy returns to the sign-in screen with a message that your session has expired. Sign in again to continue where you were.
 
-To end every other session, for example on a lost laptop or a shared computer, open account settings' **Security** tab and choose **Sign out other devices** in the **Sessions** group, then confirm. Every other browser and desktop app signed in to your account returns to the sign-in screen; the device you use stays signed in. Apps you authorized under **minddy MCP** → **Connected apps** keep their access until you revoke them there.
+The **Sessions** group in account settings' **Security** tab lists the browsers and desktop apps signed in to your account, with the device you use marked and when each other one was last active. To end every other session, for example on a lost laptop or a shared computer, choose **Sign out other devices** there and confirm. Every other browser and desktop app signed in to your account returns to the sign-in screen; the device you use stays signed in. Apps you authorized under **minddy MCP** → **Connected apps** keep their access until you revoke them there.
 
 If mail does not arrive, check the address, spam folder and instance identity. A self-hosted operator must have configured working Auth email delivery; optional application notification email and Auth confirmation are separate concerns. An expired confirmation page provides a route back to login to request a new link. Do not forward confirmation or recovery links as diagnostic evidence: they authorize account access.
 

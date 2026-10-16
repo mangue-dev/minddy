@@ -60,12 +60,13 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-691-session-expiry.md",
+      "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root (sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
+    "fact": "agent:/root (session list and sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (de changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -188,7 +189,7 @@ Kehre zur vorgesehenen Anwendung zurück und melde dich an. Ein neu angemeldetes
 
 Eine Sitzung bleibt angemeldet, solange du minddy nutzt, höchstens ein Jahr, und endet nach 30 Tagen ohne Nutzung. Endet sie oder wird sie auf einem anderen Gerät beendet, kehrt minddy mit dem Hinweis, dass deine Sitzung abgelaufen ist, zur Anmeldung zurück. Melde dich erneut an, um dort weiterzumachen, wo du warst.
 
-Um alle anderen Sitzungen zu beenden, etwa auf einem verlorenen Laptop oder einem gemeinsam genutzten Computer, öffne in den Kontoeinstellungen den Tab **Sicherheit**, wähle in der Gruppe **Sitzungen** die Option **Andere Geräte abmelden** und bestätige. Jeder andere Browser und jede Desktop-App, die bei deinem Konto angemeldet sind, kehren zur Anmeldung zurück; das Gerät, das du gerade nutzt, bleibt angemeldet. Apps, die du unter **minddy-MCP** → **Verbundene Apps** autorisiert hast, behalten ihren Zugriff, bis du ihn dort widerrufst.
+Die Gruppe **Sitzungen** im Tab **Sicherheit** der Kontoeinstellungen listet die Browser und Desktop-Apps auf, die bei deinem Konto angemeldet sind, markiert das Gerät, das du gerade nutzt, und zeigt, wann jedes andere zuletzt aktiv war. Um alle anderen Sitzungen zu beenden, etwa auf einem verlorenen Laptop oder einem gemeinsam genutzten Computer, wähle dort **Andere Geräte abmelden** und bestätige. Jeder andere Browser und jede Desktop-App, die bei deinem Konto angemeldet sind, kehren zur Anmeldung zurück; das Gerät, das du gerade nutzt, bleibt angemeldet. Apps, die du unter **minddy-MCP** → **Verbundene Apps** autorisiert hast, behalten ihren Zugriff, bis du ihn dort widerrufst.
 
 Kommt keine E-Mail an, prüfe Adresse, Spamordner und die Identität der Instanz. Bei Selbsthosting muss der Betreiber einen funktionierenden E-Mail-Versand für Auth eingerichtet haben; optionale Benachrichtigungs-E-Mails der Anwendung und die Auth-Bestätigung sind getrennte Funktionen. Eine abgelaufene Bestätigungsseite führt zurück zur Anmeldung, um einen neuen Link anzufordern. Leite Bestätigungs- oder Wiederherstellungslinks nicht zur Fehlerdiagnose weiter: Sie ermöglichen den Kontozugriff.
 

@@ -60,12 +60,13 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-691-session-expiry.md",
+      "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root (sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
+    "fact": "agent:/root (session list and sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (es changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -188,7 +189,7 @@ Abre el menú de la cuenta, elige cerrar sesión y confirma. En la aplicación d
 
 Una sesión permanece iniciada mientras uses minddy, hasta un año, y termina tras 30 días sin uso. Cuando termina, o se cierra desde otro dispositivo, minddy vuelve a la pantalla de inicio de sesión con un mensaje que indica que tu sesión ha caducado. Vuelve a iniciar sesión para continuar donde estabas.
 
-Para cerrar todas las demás sesiones, por ejemplo en un portátil perdido o un ordenador compartido, abre la pestaña **Seguridad** de los ajustes de la cuenta, elige **Cerrar sesión en otros dispositivos** en el grupo **Sesiones** y confirma. Todos los demás navegadores y apps de escritorio conectados a tu cuenta vuelven a la pantalla de inicio de sesión; el dispositivo que usas sigue conectado. Las aplicaciones que autorizaste en **MCP de minddy** → **Aplicaciones conectadas** conservan su acceso hasta que lo revoques allí.
+El grupo **Sesiones** de la pestaña **Seguridad** de los ajustes de la cuenta muestra los navegadores y apps de escritorio conectados a tu cuenta, marca el dispositivo que usas e indica cuándo estuvo activo por última vez cada uno de los demás. Para cerrar todas las demás sesiones, por ejemplo en un portátil perdido o un ordenador compartido, elige allí **Cerrar sesión en otros dispositivos** y confirma. Todos los demás navegadores y apps de escritorio conectados a tu cuenta vuelven a la pantalla de inicio de sesión; el dispositivo que usas sigue conectado. Las aplicaciones que autorizaste en **MCP de minddy** → **Aplicaciones conectadas** conservan su acceso hasta que lo revoques allí.
 
 Si el correo no llega, comprueba la dirección, la carpeta de spam y la identidad de la instancia. El operador de una instancia autoalojada debe haber configurado un envío de correo de Auth que funcione; el correo opcional de notificaciones de la aplicación y la confirmación de Auth son funciones distintas. Una página de confirmación caducada permite volver al inicio de sesión para solicitar un enlace nuevo. No reenvíes enlaces de confirmación o recuperación como prueba para diagnosticar un problema: autorizan el acceso a la cuenta.
 

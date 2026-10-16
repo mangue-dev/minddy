@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
+import type { AuthSessionSummary } from "@/lib/types";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AccountSecuritySection } from "./account-security-section";
 
@@ -14,6 +15,9 @@ const h = vi.hoisted(() => ({
   leaveProtectedScreen: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
+  invalidate: vi.fn(),
+  sessions: [] as AuthSessionSummary[],
+  sessionsFailed: false,
 }));
 // The real AuthProvider runs, so the assertion reaches the SDK call itself.
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => ({ auth: {
@@ -32,7 +36,11 @@ vi.mock("@/lib/runtime-config-provider", () => ({ browserRuntimeConfig: () => ({
 }) }));
 vi.mock("@/lib/interface-locale", () => ({ readInterfaceLocale: () => "en" }));
 vi.mock("@/lib/signed-out-redirect", () => ({ leaveProtectedScreenAfterSignOut: h.leaveProtectedScreen }));
-vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
+vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: h.invalidate }) }));
+vi.mock("@/lib/use-auth-sessions-query", () => ({
+  authSessionsQueryKey: ["auth-sessions"],
+  useAuthSessionsQuery: () => ({ sessions: h.sessions, loading: false, failed: h.sessionsFailed }),
+}));
 vi.mock("@/lib/use-mfa-status", () => ({
   mfaStatusQueryKey: ["mfa-status"],
   useMfaStatusQuery: () => ({ status: { enabled: false, unusedRecoveryCodes: 0 } }),
@@ -43,6 +51,7 @@ vi.mock("@/components/settings/settings-ui", () => ({
   SettingsRow: ({ label, hint, control, children }: { label: ReactNode; hint: ReactNode; control: ReactNode; children: ReactNode }) =>
     <article>{label}{hint}{control}{children}</article>,
   SettingsEmpty: ({ children }: { children: ReactNode }) => <p>{children}</p>,
+  SettingsListRow: ({ title, subtitle }: { title: ReactNode; subtitle: ReactNode }) => <li>{title} — {subtitle}</li>,
 }));
 vi.mock("mangue-ui", () => {
   const Dialog = createContext<(open: boolean) => void>(() => {});
@@ -69,6 +78,11 @@ const currentSession = {
   user: { id: "owner", aud: "authenticated", created_at: "2026-01-01T00:00:00Z", user_metadata: { locale: "en" }, app_metadata: {} },
 } satisfies Session;
 
+const session = (fields: Partial<AuthSessionSummary> & { id: string }): AuthSessionSummary => ({
+  current: false, browser: null, platform: null,
+  created_at: "2026-10-01T09:00:00Z", last_active_at: "2026-10-15T18:30:00Z", ...fields,
+});
+
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let token: string | null;
@@ -82,6 +96,11 @@ beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ external: {} })));
   h.signOut.mockResolvedValue({ error: null });
+  h.sessionsFailed = false;
+  h.sessions = [
+    session({ id: "current", current: true, browser: "Chrome", platform: "macOS" }),
+    session({ id: "laptop", browser: "Firefox", platform: "Windows" }),
+  ];
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -107,6 +126,38 @@ const dialog = () => host.querySelector<HTMLElement>("[role=alertdialog]");
 async function click(target: HTMLElement) {
   await act(async () => { target.click(); });
 }
+async function rerender() {
+  await act(async () => root.render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <AuthProvider><SessionProbe /><AccountSecuritySection /></AuthProvider>
+    </NextIntlClientProvider>,
+  ));
+}
+
+it("lists the live sessions and marks this device", async () => {
+  h.sessions = [...h.sessions, session({ id: "unknown" })];
+  await rerender();
+  const rows = [...host.querySelectorAll("li")].map(li => li.textContent ?? "");
+
+  expect(rows).toHaveLength(3);
+  expect(rows[0]).toMatch(/^Chrome on macOS — This device · Signed in /);
+  expect(rows[1]).toMatch(/^Firefox on Windows — Last active .+ · Signed in /);
+  expect(rows[2]).toMatch(/^Unknown device — /);
+});
+
+it("disables the action when this device is the only session", async () => {
+  h.sessions = [session({ id: "current", current: true })];
+  await rerender();
+  expect(button("Sign out").disabled).toBe(true);
+});
+
+it("keeps the action available when the list cannot be loaded", async () => {
+  h.sessions = [];
+  h.sessionsFailed = true;
+  await rerender();
+  expect(host.textContent).toContain(messages.AccountSecurity.sessionsLoadError);
+  expect(button("Sign out").disabled).toBe(false);
+});
 
 it("signs out the other sessions once, after confirmation, and keeps this one", async () => {
   await click(button("Sign out"));
@@ -119,6 +170,7 @@ it("signs out the other sessions once, after confirmation, and keeps this one", 
   expect(h.signOut).toHaveBeenCalledWith({ scope: "others" });
   expect(h.toastSuccess).toHaveBeenCalledWith(messages.AccountSecurity.signOutOthersToast);
   expect(dialog()).toBeNull();
+  expect(h.invalidate).toHaveBeenCalledWith({ queryKey: ["auth-sessions"] });
   expect(token).toBe("token-current");
   expect(h.leaveProtectedScreen).not.toHaveBeenCalled();
 });
