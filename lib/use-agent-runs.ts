@@ -7,8 +7,8 @@ import { prCommentsQueryOptions, prCommitsQueryOptions, prReviewCommentsQueryOpt
 
 import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
-import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
+import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestDisplayReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
+import { nextReadActivationSequence } from "./read-activation-sequence";
 import {
   fetchAgentRunApi,
   fetchAgentRunDiffApi,
@@ -192,9 +192,7 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     loading: enabled && isPending,
     readState: pullRequestReadState(query, activationSequence),
     // Loaded session data stays visible during revalidation; writes still use readState.
-    displayReadState: !query.isError && query.fetchStatus !== "paused" &&
-      data?.readSession === readActivationSession
-      ? "fresh" as const : pullRequestReadState(query, activationSequence),
+    displayReadState: pullRequestDisplayReadState(query, activationSequence),
     refetch,
   };
 }
@@ -390,7 +388,7 @@ export function useAllPullRequestsQuery(
 ) {
   const client = useQueryClient();
   const settledPage = useRef({ state, limit });
-  const { data, isPending, isFetching, isPlaceholderData, refetch } = useQuery({
+  const { data, isPending, isError, isFetching, isPlaceholderData, refetch } = useQuery({
     ...allPullRequestsQueryOptions(state, limit, pin),
     placeholderData: (previous) => previous ?? cachedPullRequestListForPin(client, state, limit, pin),
     refetchOnMount: "always",
@@ -409,6 +407,8 @@ export function useAllPullRequestsQuery(
     loadingMore: isFetching && isPlaceholderData && state === settledPage.current.state && limit > settledPage.current.limit,
     repoCount: data?.repoCount ?? 0,
     anyPr: data?.anyPr ?? false,
+    /** A failed read with nothing to show: not the same as "no linked repository". */
+    readFailed: isError && !data,
     loading: isPending,
     fetching: isFetching,
     refetch,

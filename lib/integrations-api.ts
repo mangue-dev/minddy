@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchClientRead } from "./client-read";
+import { HttpResponseError } from "./backend-availability";
 
 import type {
   Integration,
@@ -23,7 +24,7 @@ async function parseJson<T>(response: Response): Promise<T> {
       (data as { error?: string } | null)?.error ||
       text.trim() ||
       "Request failed";
-    throw new Error(message);
+    throw new HttpResponseError(message, response.status);
   }
   return data as T;
 }

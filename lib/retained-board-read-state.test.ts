@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "./retained-board-read-state";
 import type { RetainedAppView } from "./retained-app-views";
+import { HttpResponseError } from "./backend-availability";
 const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } };
 
 it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("defers $kind notifications while keeping activation snapshots current and ignoring unrelated queries", async (board) => {
@@ -112,10 +113,43 @@ it("waits for invalidated or pending board reads and exposes paused or failed re
   expect(retainedBoardReadState(client, view)).toBe("refreshing");
   finish({ issues: ["exact"] }); await pending;
   expect(retainedBoardReadState(client, view)).toBe("fresh");
-  await client.fetchQuery({ queryKey: ["me", "board"], queryFn: () => { throw new Error("Authorization failed"); } }).catch(() => {});
+  await client.fetchQuery({ queryKey: ["me", "board"], queryFn: () => { throw new HttpResponseError("Unauthorized", 401); } }).catch(() => {});
   expect(retainedBoardReadState(client, view)).toBe("error");
   expect(client.getQueryData(["me", "board"])).toEqual({ issues: ["exact"] });
   client.getQueryCache().find({ queryKey: ["me", "board"] })!.setState({ fetchStatus: "paused" });
   expect(retainedBoardReadState(client, view)).toBe("paused");
   client.clear();
+});
+
+it.each([
+  ["timeout", Object.assign(new Error("Request timed out"), { name: "TimeoutError" })],
+  ["server error", new HttpResponseError("Bad gateway", 503)],
+  ["network failure", new TypeError("Failed to fetch")],
+])("keeps a loaded board visible when a background refresh fails with a %s, then recovers on activation", async (_label, failure) => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 300_000 } } });
+  try {
+    for (const key of retainedBoardKeys(view)) await client.fetchQuery({ queryKey: key, queryFn: async () => ["Cached rows"] });
+    let failing = true;
+    const read = vi.fn(async () => { if (failing) throw failure; return ["Current rows"]; });
+    await client.fetchQuery({ queryKey: ["projects"], queryFn: read, staleTime: 0 }).catch(() => {});
+    expect(retainedBoardReadState(client, view)).toBe("refreshing");
+    expect(client.getQueryData(["projects"])).toEqual(["Cached rows"]);
+    failing = false; read.mockClear();
+    await refreshRetainedBoard(client, view);
+    expect(read).toHaveBeenCalledOnce();
+    expect(retainedBoardReadState(client, view)).toBe("fresh");
+  } finally { client.clear(); }
+});
+
+it.each([401, 403, 404])("withdraws a loaded board after a %s refresh and blocks a first load that fails", async (status) => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  try {
+    for (const key of retainedBoardKeys(view)) client.setQueryData(key, ["Cached rows"]);
+    await client.fetchQuery({ queryKey: ["views", "global"], queryFn: () => { throw new HttpResponseError("Denied", status); } }).catch(() => {});
+    expect(retainedBoardReadState(client, view)).toBe("error");
+    client.clear();
+    for (const key of retainedBoardKeys(view).slice(1)) client.setQueryData(key, []);
+    await client.fetchQuery({ queryKey: ["me", "board"], queryFn: () => { throw new HttpResponseError("Bad gateway", 503); } }).catch(() => {});
+    expect(retainedBoardReadState(client, view)).toBe("error");
+  } finally { client.clear(); }
 });

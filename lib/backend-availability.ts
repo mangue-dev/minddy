@@ -52,6 +52,21 @@ export class HttpResponseError extends Error {
   }
 }
 
+/**
+ * A read failure that withdraws already-loaded content: the session, access
+ * or the resource itself is gone. Timeouts, network and 5xx failures only make
+ * the content stale, so screens keep showing it instead of an error.
+ */
+export function isDefinitiveReadError(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  return status === 401 || status === 403 || status === 404;
+}
+
+/** Default query retry: one more attempt, except for failures a replay cannot fix. */
+export function retryTemporaryReadFailure(failureCount: number, error: unknown): boolean {
+  return failureCount < 1 && !isDefinitiveReadError(error);
+}
+
 /** True for temporary transport and upstream failures, not normal auth errors. */
 export function isBackendUnavailableError(error: unknown, depth = 0): boolean {
   if (!error || depth > 2) return false;

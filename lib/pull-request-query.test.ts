@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
 } }) }));
-import { assertPullRequestReadBudget, pullRequestQueryOptions, pullRequestReadState, pullRequestReadRetry, pullRequestReadRetryAt } from "./pull-request-query";
+import { assertPullRequestReadBudget, pullRequestDisplayReadState, pullRequestQueryOptions, pullRequestReadState, pullRequestReadRetry, pullRequestReadRetryAt } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 
@@ -42,11 +42,24 @@ describe("pull request activation authority", () => {
   });
 
   it("does not prolong fallback rate pauses when another surface inherits the error", () => {
-    const error = new ApiError("Forbidden"); error.status = 403;
+    const error = new ApiError("Too many requests"); error.status = 429;
     const first = pullRequestReadRetryAt({ error, errorUpdatedAt: 1000 });
     expect(first).toBe(61_000);
     expect(pullRequestReadRetryAt({ error, errorUpdatedAt: 40_000 })).toBe(first);
     expect(pullRequestReadRetryAt({ error, errorUpdatedAt: 80_000 })).toBeLessThan(80_000);
+  });
+
+  it.each(["permissionDenied", "mfaRequired", "noAccount"])("keeps a plain 403 (%s) local to its query", async (code) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const error = new ApiError("Forbidden", code); error.status = 403;
+    await client.fetchQuery({ queryKey: ["pr-review-comments", "pr-a"], queryFn: async () => { throw error; } }).catch(() => {});
+    expect(pullRequestReadRetryAt(client.getQueryState(["pr-review-comments", "pr-a"]))).toBe(0);
+    expect(() => assertPullRequestReadBudget(client)).not.toThrow();
+    const fetch = vi.fn(async () => Response.json({ pr: { headSha: "pr-b" }, files: [] }));
+    vi.stubGlobal("fetch", fetch);
+    await expect(client.fetchQuery(pullRequestQueryOptions("pr-b"))).resolves.toMatchObject({ pr: { headSha: "pr-b" } });
+    expect(fetch).toHaveBeenCalledOnce();
+    client.clear();
   });
 
   it("refreshes a completed preparation even with a recent account cache", async () => {
@@ -93,6 +106,19 @@ describe("pull request activation authority", () => {
     expect(pullRequestReadState({ ...previous, isError: true }, 10)).toBe("error");
     expect(pullRequestReadState({ ...previous, fetchStatus: "paused" }, 10)).toBe("paused");
     expect(pullRequestReadState({ ...previous, isPending: true, data: undefined }, 10)).toBe("loading");
+  });
+
+  it("keeps a loaded pull request on screen through temporary and quota failures but not withdrawn access", () => {
+    const loaded = { isPending: false, isError: true, fetchStatus: "idle" as const, data: { readSequence: 11, readSession: readActivationSession } };
+    const failure = (status: number, retryAt?: number) => Object.assign(new ApiError("Failed"), { status, retryAt });
+    for (const error of [new Error("Request timed out"), new TypeError("Failed to fetch"), failure(502), failure(429), failure(403, Date.now() + 60_000)]) {
+      expect(pullRequestDisplayReadState({ ...loaded, error }, 10)).toBe("fresh");
+      expect(pullRequestReadState(loaded, 10)).toBe("error");
+    }
+    for (const status of [401, 403, 404]) expect(pullRequestDisplayReadState({ ...loaded, error: failure(status) }, 10)).toBe("error");
+    expect(pullRequestDisplayReadState({ ...loaded, data: undefined, isPending: true, error: failure(502) }, 10)).toBe("error");
+    expect(pullRequestDisplayReadState({ ...loaded, data: { readSequence: 11, readSession: "previous-page-load" }, error: failure(502) }, 10)).toBe("error");
+    expect(pullRequestDisplayReadState({ ...loaded, isError: false, fetchStatus: "paused", error: null }, 10)).toBe("paused");
   });
 
   it.each(["pr-comments", "pr-commits", "pr-review-comments", "pull-request-readiness", "pull-requests"])("shares Retry-After from %s with detail and other foreground surfaces", async (key) => {

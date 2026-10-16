@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   HttpResponseError,
   isBackendUnavailableError,
+  retryTemporaryReadFailure,
   sanitizeBackendRetryPath,
 } from "./backend-availability";
 
@@ -41,5 +42,18 @@ describe("isBackendUnavailableError", () => {
       false,
     );
     expect(isBackendUnavailableError(new Error("Invalid refresh token"))).toBe(false);
+  });
+});
+
+describe("retryTemporaryReadFailure", () => {
+  it("retries a temporary failure once", () => {
+    for (const error of [new HttpResponseError("Bad gateway", 503), new TypeError("Failed to fetch"), new Error("Request timed out")]) {
+      expect(retryTemporaryReadFailure(0, error)).toBe(true);
+      expect(retryTemporaryReadFailure(1, error)).toBe(false);
+    }
+  });
+
+  it.each([401, 403, 404])("does not replay a %s", (status) => {
+    expect(retryTemporaryReadFailure(0, new HttpResponseError("Denied", status))).toBe(false);
   });
 });

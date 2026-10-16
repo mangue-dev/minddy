@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchClientRead } from "./client-read";
+import { HttpResponseError } from "./backend-availability";
 
 import type { QueryClient } from "@tanstack/react-query";
 import { applyPendingRelations } from "./optimistic/relation-writes";
@@ -18,7 +19,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const message =
       (data as { error?: string } | null)?.error || text.trim() || "Request failed";
-    throw new Error(message);
+    throw new HttpResponseError(message, response.status);
   }
   if (data == null) throw new Error("Empty response");
   return data as T;

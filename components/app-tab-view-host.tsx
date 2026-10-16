@@ -15,7 +15,7 @@ import { BoardLoadingSkeleton } from "./board-loading-skeleton";
 import { useRetainedBoardScroll } from "@/lib/use-retained-board-scroll";
 import { useColdBoardPrefetch } from "@/lib/use-cold-board-prefetch";
 import { createRetainedBoardData } from "@/lib/retained-board-data";
-import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
+import { refreshRetainedBoard, retainedBoardReadState, subscribeRetainedBoardReadState } from "@/lib/retained-board-read-state";
 import { useTranslations } from "next-intl";
 import { QueryReadBoundary } from "./query-read-boundary";
 import { retainPageDocuments, retainedPageDocumentCost } from "@/lib/retained-page-documents";
@@ -75,9 +75,8 @@ const RetainedBoard = memo(function RetainedBoard({ view, active, roots }: { vie
       readState === "error" || readState === "paused" ? (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground" role="alert">
           <p>{t(readState === "error" ? "readError" : "readPaused")}</p>
-          <button type="button" className="underline" onClick={() => {
-            for (const queryKey of retainedBoardKeys(view)) void client.refetchQueries({ queryKey, exact: true });
-          }}>{t("readRetry")}</button>
+          {/* Join pending reads and retry only failed or stale prerequisites. */}
+          <button type="button" className="underline" onClick={() => void refreshRetainedBoard(client, view)}>{t("readRetry")}</button>
         </div>
       ) : <BoardLoadingSkeleton />
     }>

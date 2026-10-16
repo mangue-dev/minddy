@@ -11,7 +11,7 @@ import type { SearchMenuProps } from "@/components/search-menu";
 import { AppTabRouteProvider } from "./app-tab-route-context";
 import { nextReadActivationSequence } from "./read-activation-sequence";
 import { allPullRequestsQueryKey, PULL_REQUESTS_PAGE, useCompletedPullRequestsQuery } from "./use-agent-runs";
-import type { PullRequestListItem, PullRequestListResponse } from "./agent-api";
+import { ApiError, type PullRequestListItem, type PullRequestListResponse } from "./agent-api";
 import en from "@/messages/en.json";
 
 const h = vi.hoisted(() => ({
@@ -298,5 +298,29 @@ describe("Pull Requests completed filter", () => {
     });
     expectCompleted(false);
     expect(container.querySelector('[data-navigation-href="/pull-requests?pr=other"]')).not.toBeNull();
+  });
+});
+
+describe("Pull Requests list read failure", () => {
+  it("reports a failed read instead of asking to link a repository, then recovers on retry", async () => {
+    const failure = Object.assign(new ApiError("Forbidden", "permissionDenied"), { status: 403 });
+    const list = h.fetchList.getMockImplementation()!;
+    h.fetchList.mockImplementation(async () => { throw failure; });
+    await render();
+    await flush();
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain(en.PullRequests.listReadFailed);
+    });
+    expect(container.textContent).not.toContain(en.PullRequests.emptyNoRepo);
+    h.fetchList.mockImplementation(list);
+    const retry = [...container.querySelectorAll("button")].find((button) => button.textContent === en.PullRequests.readRetry)!;
+    await act(() => retry.click());
+    await flush();
+    await vi.waitFor(async () => {
+      await act(async () => {});
+      expect(container.querySelector('[data-navigation-href="/pull-requests?pr=pr"]')).not.toBeNull();
+    });
+    expect(container.textContent).not.toContain(en.PullRequests.listReadFailed);
   });
 });

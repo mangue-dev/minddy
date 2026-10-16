@@ -3752,6 +3752,7 @@
     "filterSectionsLabel": "Abschnitte",
     "emptySections": "Keine Pull Requests in diesen Abschnitten",
     "readFailed": "Dieser Pull Request konnte nicht aktualisiert werden. Versuche es erneut.",
+    "listReadFailed": "Pull Requests konnten nicht geladen werden. Versuchen Sie es erneut.",
     "readPaused": "Du bist offline. Stelle die Verbindung wieder her, um diesen Pull Request zu laden.",
     "readRetry": "Erneut versuchen",
     "title": "Code-Review",

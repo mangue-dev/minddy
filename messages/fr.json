@@ -3752,6 +3752,7 @@
     "filterSectionsLabel": "Sections",
     "emptySections": "Aucune pull request dans ces sections",
     "readFailed": "Impossible d’actualiser cette pull request. Réessayez.",
+    "listReadFailed": "Impossible de charger les pull requests. Réessayez.",
     "readPaused": "Vous êtes hors ligne. Reconnectez-vous pour charger cette pull request.",
     "readRetry": "Réessayer",
     "title": "Code review",

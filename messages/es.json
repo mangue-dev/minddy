@@ -3752,6 +3752,7 @@
     "filterSectionsLabel": "Secciones",
     "emptySections": "No hay pull requests en estas secciones",
     "readFailed": "No se pudo actualizar esta pull request. Inténtalo de nuevo.",
+    "listReadFailed": "No se pudieron cargar las pull requests. Inténtalo de nuevo.",
     "readPaused": "Estás sin conexión. Vuelve a conectarte para cargar esta pull request.",
     "readRetry": "Volver a intentar",
     "title": "Revisión de código",
