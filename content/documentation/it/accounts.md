@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -58,14 +58,15 @@
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-691-session-expiry.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 9,
+    "fact": "agent:/root (MIN-691 session-expiry claim source review; hosted Auth limits read back; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (it changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-16"
   },
   "related": [
     "choose-an-instance",
@@ -97,7 +98,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -114,7 +115,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Controlli del profilo per avatar, nome utente ed email di sola lettura.",
       "caption": "Salva le modifiche al profilo dopo la validazione; l’indirizzo email rimane di sola lettura.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,7 +132,7 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua e controlli del tema chiaro, scuro e di sistema.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -148,7 +149,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -185,6 +186,8 @@ Torna all’applicazione prevista e accedi. Un account appena autenticato può c
 ### Uscire e controllare le email mancanti {#session-and-mail}
 
 Apri il menu dell’account, scegli di uscire e conferma. Nell’app desktop, chiudere una scheda o una finestra non equivale a uscire dall’account. Usa il menu dell’account se vuoi terminare la sessione.
+
+Una sessione resta attiva al massimo 30 giorni e termina dopo 7 giorni di inutilizzo. Quando termina, o viene chiusa da un altro dispositivo, minddy torna alla schermata di accesso con un messaggio che indica che la sessione è scaduta. Accedi di nuovo per riprendere da dove eri rimasto.
 
 Se l’email non arriva, controlla indirizzo, cartella dello spam e identità dell’istanza. L’operatore di un’istanza autonoma deve aver configurato un invio email funzionante per Auth; le notifiche email opzionali dell’applicazione e la conferma di Auth sono funzioni distinte. Una pagina di conferma scaduta permette di tornare all’accesso per richiedere un nuovo collegamento. Non inoltrare collegamenti di conferma o recupero come prova diagnostica: autorizzano l’accesso all’account.
 

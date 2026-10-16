@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -58,14 +58,15 @@
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-691-session-expiry.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 changed-claim source review; unchanged controls retain prior capture evidence)",
+    "revision": 9,
+    "fact": "agent:/root (MIN-691 session-expiry claim source review; hosted Auth limits read back; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (en changed-text and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "date": "2026-10-16"
   },
   "related": [
     "choose-an-instance",
@@ -97,7 +98,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -114,7 +115,7 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile controls for avatar, username and read-only email.",
       "caption": "Save profile edits after validation; the email address remains read-only.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,7 +132,7 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector and light, dark and system theme controls.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -148,7 +149,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -189,6 +190,8 @@ Return to the intended application and sign in. A newly authenticated account ca
 ### Sign out and handle missing mail {#session-and-mail}
 
 Open the account menu, choose sign out and confirm. In the desktop app, closing a tab or window leaves your session active.
+
+A session stays signed in for at most 30 days and ends after 7 days without use. When it ends, or is closed from another device, minddy returns to the sign-in screen with a message that your session has expired. Sign in again to continue where you were.
 
 If mail does not arrive, check the address, spam folder and instance identity. A self-hosted operator must have configured working Auth email delivery; optional application notification email and Auth confirmation are separate concerns. An expired confirmation page provides a route back to login to request a new link. Do not forward confirmation or recovery links as diagnostic evidence: they authorize account access.
 
