@@ -163,9 +163,10 @@ describe("forcedToolCall optional reasoning", () => {
   });
 
   it.each([
-    ["cold", null, { effort: "low", exclude: false }],
-    ["stale", { reasoning: { mandatory: false, efforts: ["high"] } }, { enabled: false }],
-  ])("preserves generation time during a slow %s catalog refresh", async (_state, info, reasoning) => {
+    // A cold cache waits at most COLD_CATALOG_WAIT_MS, then keeps its effort.
+    ["cold", null, { effort: "low", exclude: false }, 1_500],
+    ["stale", { reasoning: { mandatory: false, efforts: ["high"] } }, { enabled: false }, 0],
+  ])("preserves generation time during a slow %s catalog refresh", async (_state, info, reasoning, startMs) => {
     vi.useFakeTimers();
     modelInfoMock.mockReturnValue(info);
     const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(ms => {
@@ -186,11 +187,34 @@ describe("forcedToolCall optional reasoning", () => {
     });
     await vi.advanceTimersByTimeAsync(0);
     expect(refreshIndexMock).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledTimes(1);
     expect(timeout).toHaveBeenCalledWith(20_000);
+    if (startMs > 0) {
+      expect(fetch).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(startMs);
+    }
+    expect(fetch).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(15_000);
     expect(await pending).toEqual({ model: "model" });
     expect(console.error).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("disables optional reasoning once a cold catalog loads within the wait (MIN-687)", async () => {
+    // Fresh instance: nothing cached until the in-flight load lands.
+    let loaded = false;
+    modelInfoMock.mockImplementation(() =>
+      loaded ? { reasoning: { mandatory: false, efforts: ["high"] } } : null);
+    refreshIndexMock.mockImplementation(async () => { loaded = true; });
+    let reasoning: unknown;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      reasoning = JSON.parse(init!.body as string).reasoning;
+      return okResponse("deepseek/deepseek-v4-flash");
+    });
+    await forcedToolCall("deepseek/deepseek-v4-flash", "system", "user", "pick", {}, {
+      preferNonReasoning: true, reasoning: "low", logPrefix: "[test]",
+    });
+    expect(reasoning).toEqual({ enabled: false });
+    expect(console.warn).not.toHaveBeenCalledWith("[test] reasoning_metadata_unavailable");
   });
 
   it("uses cached optional reasoning while catalog refresh is stalled", async () => {
@@ -213,9 +237,11 @@ describe("forcedToolCall optional reasoning", () => {
       return okResponse("model");
     });
     expect(await forcedToolCall("model", "system", "user", "pick", {}, {
-      preferNonReasoning: true, reasoning: "low",
+      preferNonReasoning: true, reasoning: "low", logPrefix: "[test]",
     })).toEqual({ model: "model" });
     expect(console.error).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith("[test] reasoning_metadata_unavailable");
+    expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain("Private catalog detail");
   });
 });
 

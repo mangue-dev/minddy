@@ -53,8 +53,10 @@ vi.mock("@/lib/server/after-safe", () => ({
 vi.mock("@/lib/server/decisions/jev", () => ({
   runJevDecision: runJevDecisionMock,
 }));
+const warmLlmDecisionMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/server/decisions/llm", () => ({
   runLlmDecision: runLlmDecisionMock,
+  warmLlmDecision: warmLlmDecisionMock,
 }));
 vi.mock("@/lib/server/decisions/shadow", () => ({
   runShadowComparison: runShadowComparisonMock,
@@ -88,6 +90,8 @@ beforeEach(() => {
   afterOrNowMock.mockReset().mockImplementation(() => {});
   runJevDecisionMock.mockReset();
   runLlmDecisionMock.mockReset();
+  warmLlmDecisionMock.mockReset();
+  vi.spyOn(console, "warn").mockImplementation(() => {});
   runShadowComparisonMock.mockReset().mockResolvedValue(undefined);
 });
 
@@ -144,6 +148,73 @@ describe("runDecision", () => {
     runLlmDecisionMock.mockResolvedValue(null);
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
     expect(outcome).toBeNull();
+  });
+
+  describe("when the LLM fallback fails after a low-confidence Jev (MIN-687)", () => {
+    const TWO_QUESTION_SPEC: DecisionSpec = {
+      ...SPEC,
+      questions: [
+        ...SPEC.questions,
+        {
+          key: "effort",
+          kind: "single_choice",
+          label: "effort",
+          options: [{ value: "m", label: "m" }],
+        },
+      ],
+    };
+    const MIXED_JEV = {
+      priority: { value: "high", probability: 0.8, confidence: 0.8 },
+      effort: { value: "m", probability: 0.3, confidence: 0.3 },
+    };
+
+    it("keeps only the Jev answers that meet the floor on their own, when opted in", async () => {
+      runJevDecisionMock.mockResolvedValue(MIXED_JEV);
+      runLlmDecisionMock.mockResolvedValue(null);
+      const outcome = await runDecision(TWO_QUESTION_SPEC, {
+        billTo: BILL_TO,
+        keepConfidentJevAnswers: true,
+      });
+      expect(outcome).toEqual({
+        engine: "jev",
+        answers: { priority: MIXED_JEV.priority },
+        confidence: 0.8,
+        fallbackReason: "jev_low_confidence",
+        partial: true,
+      });
+    });
+
+    it("still returns null without the opt-in, so other use cases keep their degradation", async () => {
+      runJevDecisionMock.mockResolvedValue(MIXED_JEV);
+      runLlmDecisionMock.mockResolvedValue(null);
+      expect(await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO })).toBeNull();
+    });
+
+    it("returns null when no single Jev answer meets the floor", async () => {
+      runJevDecisionMock.mockResolvedValue({ effort: MIXED_JEV.effort });
+      runLlmDecisionMock.mockResolvedValue(null);
+      expect(
+        await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO, keepConfidentJevAnswers: true })
+      ).toBeNull();
+    });
+
+    it("logs a correlated reason code with field names, never answer values", async () => {
+      runJevDecisionMock.mockResolvedValue(MIXED_JEV);
+      runLlmDecisionMock.mockResolvedValue(null);
+      await runDecision(TWO_QUESTION_SPEC, { billTo: BILL_TO, keepConfidentJevAnswers: true });
+      const runId = runJevDecisionMock.mock.calls[0][1].runId;
+      const logged = vi.mocked(console.warn).mock.calls.map((c) => c.join(" ")).join("\n");
+      expect(logged).toContain(
+        `[decisions] smart_fill llm_failed after=jev_low_confidence run=${runId} kept=priority`
+      );
+      expect(logged).not.toContain("high");
+    });
+
+    it("warms the LLM fallback while Jev answers", async () => {
+      runJevDecisionMock.mockResolvedValue(CONFIDENT_ANSWERS);
+      await runDecision(SPEC, { billTo: BILL_TO });
+      expect(warmLlmDecisionMock).toHaveBeenCalledWith(SPEC);
+    });
   });
 
   it("runs the LLM directly when the kill-switch is off, without touching Jev", async () => {

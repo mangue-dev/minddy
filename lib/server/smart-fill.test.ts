@@ -316,7 +316,32 @@ describe("runSmartFill — decision layer", () => {
       categories: DB_CATEGORIES.map(({ id, name }) => ({ id, name })),
       objectives: DB_OBJECTIVES.map(({ id, name, status }) => ({ id, name, status })),
     });
-    expect(input).toEqual({ billTo: { userId: "user-1" }, projectId: "project-1" });
+    expect(input).toEqual({
+      billTo: { userId: "user-1" },
+      projectId: "project-1",
+      keepConfidentJevAnswers: true,
+    });
+  });
+
+  it("fills the confident Jev fields kept after a failed LLM fallback, and says so (MIN-687)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    runDecisionMock.mockResolvedValue({
+      engine: "jev",
+      answers: { priority: { value: "high", probability: 0.8, confidence: 0.8 } },
+      confidence: 0.8,
+      fallbackReason: "jev_low_confidence",
+      partial: true,
+    });
+    await expect(run()).resolves.toEqual({ priority: "high" });
+    expect(warn).toHaveBeenCalledWith("[smart-fill] outcome: jev_partial fields=priority");
+  });
+
+  it("logs a fixed code when no engine decides, without the issue text", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    runDecisionMock.mockResolvedValue(null);
+    await run();
+    expect(warn).toHaveBeenCalledWith("[smart-fill] outcome: no_decision fields=none");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("flaky");
   });
 
   it("leaves the patch empty when BOTH engines fail — the ticket is born as it was written", async () => {

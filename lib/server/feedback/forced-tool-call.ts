@@ -57,11 +57,44 @@ export interface ForcedToolCallRecord {
   routineId?: string | null;
 }
 
-/** Use available metadata immediately; catalog refresh must not delay generation. */
-function canDisableReasoning(model: string): boolean {
-  const info = getCachedOpenRouterModelInfo(model);
-  void loadOpenRouterIndex().catch(() => {});
-  return info?.reasoning?.mandatory === false;
+/**
+ * Longest wait for a COLD catalog before generation starts (MIN-687). The
+ * catalog is cached per function instance, and Smart Fill mostly runs on
+ * fresh instances: without metadata the request kept low-effort reasoning,
+ * which took 4–19 s instead of ~2 s and hit the 20-second deadline. The
+ * fetch usually completes well within this bound; a slower one still leaves
+ * the generation most of its budget.
+ */
+export const COLD_CATALOG_WAIT_MS = 1_500;
+
+/**
+ * Use available metadata immediately, including stale entries; a refresh
+ * never delays generation. Only an empty cache waits, bounded by
+ * `COLD_CATALOG_WAIT_MS` and the request signal.
+ */
+async function canDisableReasoning(
+  model: string,
+  signal: AbortSignal,
+): Promise<boolean | null> {
+  let info = getCachedOpenRouterModelInfo(model);
+  const refresh = loadOpenRouterIndex().catch(() => {});
+  if (!info) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    await Promise.race([
+      refresh,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, COLD_CATALOG_WAIT_MS);
+        onAbort = resolve;
+        signal.addEventListener("abort", onAbort, { once: true });
+      }),
+    ]);
+    clearTimeout(timer);
+    if (onAbort) signal.removeEventListener("abort", onAbort);
+    info = getCachedOpenRouterModelInfo(model);
+  }
+  // `null`: no metadata at all, so the caller keeps its requested effort.
+  return info ? info.reasoning?.mandatory === false : null;
 }
 
 export async function forcedToolCall(
@@ -153,9 +186,14 @@ export async function forcedToolCall(
   };
 
   try {
-    const disableReasoning = options?.preferNonReasoning && provider === "openrouter"
-      ? canDisableReasoning(resolvedModel)
+    const reasoningOptional = options?.preferNonReasoning && provider === "openrouter"
+      ? await canDisableReasoning(resolvedModel, signal)
       : false;
+    // A fixed code, so a slow reasoning generation can be traced to a missing catalog.
+    if (reasoningOptional === null && !signal.aborted) {
+      console.warn(`${logPrefix} reasoning_metadata_unavailable`);
+    }
+    const disableReasoning = reasoningOptional === true;
     if (signal.aborted) {
       logRequestFailure();
       return null;

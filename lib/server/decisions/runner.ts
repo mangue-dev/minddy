@@ -6,15 +6,17 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import {
   DECISION_USE_CASES,
+  confidentAnswers,
   decisionConfidence,
   validateDecisionSpec,
+  type DecisionAnswers,
   type DecisionFallbackReason,
   type DecisionOutcome,
   type DecisionSpec,
   type DecisionUseCase,
 } from "@/lib/server/decisions/types";
 import { runJevDecision, type DecisionCallContext } from "@/lib/server/decisions/jev";
-import { runLlmDecision } from "@/lib/server/decisions/llm";
+import { runLlmDecision, warmLlmDecision } from "@/lib/server/decisions/llm";
 import { runShadowComparison } from "@/lib/server/decisions/shadow";
 
 /**
@@ -126,6 +128,13 @@ export interface DecisionRunInput {
    * issue exists, Smart Triage scores a whole column.
    */
   subjectId?: string | null;
+  /**
+   * When the LLM fallback fails after a LOW-CONFIDENCE Jev decision, keep
+   * the Jev answers that individually meet the floor instead of returning
+   * `null` (MIN-687). Only for use cases whose policy accepts a partial
+   * answer — Smart Fill fills the fields it got and leaves the others empty.
+   */
+  keepConfidentJevAnswers?: boolean;
 }
 
 /**
@@ -153,12 +162,15 @@ export async function runDecision(
 
   let fallbackReason: DecisionFallbackReason;
   let jevRan = false;
+  let discardedJevAnswers: DecisionAnswers | null = null;
   if (!settings.enabled) {
     fallbackReason = "jev_disabled";
   } else if (settings.llmFirstUseCases.includes(spec.useCase)) {
     fallbackReason = "jev_llm_first";
   } else {
     jevRan = true;
+    // The catalog loads while Jev answers, so a fallback is ready to start.
+    warmLlmDecision(spec);
     const jevStartedAt = performance.now();
     const jevAnswers = await runJevDecision(spec, { ...ctx, seq: 0 });
     const jevLatencyMs = Math.round(performance.now() - jevStartedAt);
@@ -187,6 +199,7 @@ export async function runDecision(
       // Confident about the wrong thing is still under the floor: the LLM
       // re-decides, the Jev answers are discarded, not merged.
       fallbackReason = "jev_low_confidence";
+      discardedJevAnswers = jevAnswers;
     } else {
       fallbackReason = "jev_unavailable";
     }
@@ -194,7 +207,27 @@ export async function runDecision(
 
   // The fallback REPLACES the retry: one LLM pass, on the same run.
   const llmAnswers = await runLlmDecision(spec, { ...ctx, seq: jevRan ? 1 : 0 });
-  if (!llmAnswers) return null;
+  if (!llmAnswers) {
+    const kept =
+      input.keepConfidentJevAnswers && discardedJevAnswers
+        ? confidentAnswers(discardedJevAnswers, settings.confidenceFloor)
+        : {};
+    const keptKeys = Object.keys(kept);
+    // Identifiers, fixed codes and field names only: never answers or text.
+    console.warn(
+      `[decisions] ${spec.useCase} llm_failed after=${fallbackReason} run=${runId} kept=${
+        keptKeys.join(",") || "none"
+      }`
+    );
+    if (keptKeys.length === 0) return null;
+    return {
+      engine: "jev",
+      answers: kept,
+      confidence: decisionConfidence(spec, kept),
+      fallbackReason,
+      partial: true,
+    };
+  }
   return {
     engine: "llm",
     answers: llmAnswers,
