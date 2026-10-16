@@ -1,6 +1,7 @@
 {
   "name": "minddy",
   "version": "0.11.1",
+  "packageManager": "pnpm@10.28.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {
@@ -75,10 +76,7 @@
     "ip-address": "^10.4.0",
     "hono": "^4.12.34",
     "dompurify": "^3.4.16",
-    "markdown-it@^14.0.0": "^14.3.1",
-    "mangue-ui": {
-      "framer-motion": "$framer-motion"
-    }
+    "markdown-it@^14.0.0": "^14.3.1"
   },
   "pnpm": {
     "overrides": {
@@ -91,13 +89,29 @@
       "ip-address": "^10.4.0",
       "hono": "^4.12.34",
       "dompurify": "^3.4.16",
-      "markdown-it@^14.0.0": "^14.3.1",
-      "mangue-ui>framer-motion": "$framer-motion"
+      "markdown-it@^14.0.0": "^14.3.1"
     },
     "packageExtensions": {
       "streamdown": {
         "dependencies": {
           "shiki": "^3.19.0"
+        }
+      },
+      "@lobehub/icons": {
+        "peerDependenciesMeta": {
+          "@lobehub/ui": {
+            "optional": true
+          },
+          "antd": {
+            "optional": true
+          }
+        }
+      },
+      "antd-style": {
+        "peerDependenciesMeta": {
+          "antd": {
+            "optional": true
+          }
         }
       }
     },
@@ -105,8 +119,7 @@
       "esbuild"
     ],
     "patchedDependencies": {
-      "web-push@3.6.7": "patches/web-push@3.6.7.patch",
-      "mangue-ui@0.8.0": "patches/mangue-ui@0.8.0.patch"
+      "web-push@3.6.7": "patches/web-push@3.6.7.patch"
     }
   },
   "dependencies": {
@@ -163,7 +176,7 @@
     "jose": "6.2.12",
     "jsdom": "^26.1.0",
     "lowlight": "^3.3.0",
-    "mangue-ui": "^0.8.0",
+    "mangue-ui": "^0.9.0",
     "mcp-handler": "^2.3.0",
     "next": "^16.4.0",
     "next-intl": "^4.14.9",
