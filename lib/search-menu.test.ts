@@ -94,3 +94,19 @@ it("keeps a deferred trigger's DOM and focus through keyboard opening and Escape
   expect(document.activeElement).toBe(trigger);
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
 });
+
+it("anchors pointer menus at the viewport point inside a transformed ancestor", async () => {
+  // Board cards are dnd-kit items: a transform on an ancestor turns an in-place
+  // `position: fixed` anchor into one relative to the card, far from the cursor.
+  host.style.transform = "translate3d(0, 0, 0)";
+  await act(() => root.render(React.createElement(SearchMenu, {
+    open: true, onOpenChange: vi.fn(), position: { x: 300, y: 200 },
+    children: React.createElement("div", null, "Candidate"),
+  })));
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  const wrapper = document.querySelector<HTMLElement>("[data-radix-popper-content-wrapper]")!;
+  // jsdom does not parse `transform` into the style object; read the attribute.
+  const [, x, y] = wrapper.getAttribute("style")!.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)/)!;
+  expect(Number(x)).toBe(300);
+  expect(Math.abs(Number(y) - 200)).toBeLessThan(10);
+});

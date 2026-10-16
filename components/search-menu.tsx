@@ -14,6 +14,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Command, CommandEmpty, CommandSeparator, cn } from "mangue-ui";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { Kbd } from "@/components/ui/kbd";
+import { PointerAnchor } from "@/components/pointer-anchor";
 import {
   Tooltip,
   TooltipContent,
@@ -138,17 +139,12 @@ export function SearchMenu({
     </PopoverContent>
   );
 
-  // Pointer-anchored mode: a zero-size anchor pinned at the viewport point.
+  // Pointer-anchored mode: a virtual anchor at the viewport point.
   if (position !== undefined) {
     if (!position) return null;
     return (
       <Popover open={open} onOpenChange={onOpenChange} modal={modal}>
-        <PopoverAnchor asChild>
-          <span
-            aria-hidden
-            style={{ position: "fixed", left: position.x, top: position.y }}
-          />
-        </PopoverAnchor>
+        <PointerAnchor position={position} />
         {content}
       </Popover>
     );
