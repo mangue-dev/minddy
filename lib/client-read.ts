@@ -1,5 +1,6 @@
 import { HttpResponseError } from "./backend-availability";
 import { withClientRequestDeadline } from "./client-request-deadline";
+import { confirmSessionAfterUnauthorized } from "./session-revocation";
 import { getSupabase } from "./supabase";
 
 export const CLIENT_READ_TIMEOUT_MS = 30_000;
@@ -38,6 +39,7 @@ export function fetchClientRead(
     signal.throwIfAborted();
     if (await prepare() !== owner) throw new Error("Local account changed");
     signal.throwIfAborted();
+    if (response.status === 401) void confirmSessionAfterUnauthorized();
     return new Response(response.status === 204 || response.status === 304 ? null : body, {
       status: response.status, statusText: response.statusText, headers: response.headers,
     });

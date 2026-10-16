@@ -14,9 +14,12 @@ const h = vi.hoisted(() => ({
   clearCache: vi.fn(),
   clearTabs: vi.fn(),
   sdk: null as SupabaseClient | null,
+  signOut: vi.fn(),
+  leaveProtectedScreen: vi.fn(),
 }));
 vi.mock("./supabase", () => ({ getSupabase: () => h.sdk ?? ({ auth: {
   getSession: h.getSession,
+  signOut: h.signOut,
   onAuthStateChange: (callback: typeof h.callback) => {
     h.callback = callback;
     return { data: { subscription: { unsubscribe: h.unsubscribe } } };
@@ -29,6 +32,7 @@ vi.mock("./runtime-config-provider", () => ({ browserRuntimeConfig: () => ({
   supabaseUrl: "https://synthetic.supabase.co", supabaseAnonKey: "public",
 }) }));
 vi.mock("./interface-locale", () => ({ readInterfaceLocale: () => "en" }));
+vi.mock("./signed-out-redirect", () => ({ leaveProtectedScreenAfterSignOut: h.leaveProtectedScreen }));
 
 const savedSession = (id = "owner") => ({
   access_token: `token-${id}`, refresh_token: "retained-refresh", expires_in: 3_600, token_type: "bearer",
@@ -42,8 +46,10 @@ let mounted: boolean;
 let providers: string[];
 let renders: number;
 let lastUser: unknown;
+let explicitSignOut: () => Promise<void>;
 function Snapshot() {
-  const { user, session, loading, oauthProviders } = useAuth();
+  const { user, session, loading, oauthProviders, signOut } = useAuth();
+  explicitSignOut = signOut;
   providers = oauthProviders;
   renders++;
   lastUser = user;
@@ -66,6 +72,7 @@ beforeEach(async () => {
   h.getSession.mockReset().mockResolvedValue(result());
   h.sdk = null;
   h.clearCache.mockClear(); h.clearTabs.mockClear(); h.unsubscribe.mockClear();
+  h.signOut.mockReset(); h.leaveProtectedScreen.mockClear();
   renders = 0;
   host = document.createElement("div"); document.body.append(host);
   root = createRoot(host); mounted = true;
@@ -315,6 +322,21 @@ describe("browser session recovery", () => {
     expect(snapshot().owner).toBe("other");
     await emit("SIGNED_OUT", null);
     expect(lastUser).toBeNull();
+  });
+
+  it("leaves a protected screen when the session ends on its own, not after an explicit sign-out", async () => {
+    await emit("INITIAL_SESSION", savedSession());
+    await emit("SIGNED_OUT", null);
+    expect(h.leaveProtectedScreen).toHaveBeenCalledOnce();
+
+    h.leaveProtectedScreen.mockClear();
+    await emit("SIGNED_IN", savedSession());
+    h.signOut.mockImplementation(async () => { h.callback!("SIGNED_OUT", null); return { error: null }; });
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    await act(async () => { await explicitSignOut(); });
+    errors.mockRestore();
+    expect(h.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(h.leaveProtectedScreen).not.toHaveBeenCalled();
   });
 
   it("skips provider discovery when the shell does not show provider buttons", async () => {
