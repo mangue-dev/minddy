@@ -1,4 +1,3 @@
-import { filterLinkedIssueRuns } from "./activity";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
@@ -313,67 +312,6 @@ export async function repoForProject(
   return repoFromLink(data);
 }
 
-/** Deposit (provider + full name) of a run, via its link — or null. */
-export async function repoForRun(run: {
-  repo_link_id: string | null;
-  project_id: string;
-}): Promise<RepoRef | null> {
-  // `repo_link_id` is ON DELETE SET NULL: after an unlink, the run keeps its PR
-  // but no longer its link — we then fall back on the CURRENT link of the project.
-  if (!run.repo_link_id) return repoForProject(run.project_id);
-  const { data } = await getServiceClient()
-    .from("project_git_links")
-    .select("provider, repo_full_name")
-    .eq("id", run.repo_link_id)
-    .maybeSingle();
-  return repoFromLink(data);
-}
-
-/**
- * PR of a run, created on the fly if it is still missing.
- *
- * The normal path creates it on opening (`registerPr`) then keeps it updated by
- * webhook. The catch-up still counts: without a deployed webhook (dev), or for
- * a run prior to this table for which the backfill was unable to do anything, the facades
- * `agent-runs/[runId]/pr/*` must serve the PR all the same — otherwise a
- * deep-link `?run=` would fall on a 404 for a PR which exists.
- */
-export async function resolvePrForRun(run: {
-  id: string;
-  repo_link_id: string | null;
-  project_id: string;
-  issue_id: string | null;
-  pr_number: number | null;
-  pr_url: string | null;
-  pr_state: PullRequestState | null;
-  branch_name: string | null;
-  base_branch: string | null;
-}): Promise<PullRequestRow | null> {
-  if (run.pr_number == null) return null;
-  const repo = await repoForRun(run);
-  if (!repo) return null;
-  const existing = await findPullRequestByNumber({
-    ...repo,
-    number: run.pr_number,
-  });
-  if (existing) return existing;
-  const { decodeAgentWorkBranch } = await import("./run-work-branch-content");
-  const { decodeAgentBaseBranch } = await import("./run-base-branch-content");
-  const { decodeAgentPrUrl } = await import("./run-pr-url-content");
-  const clearRun = await decodeAgentPrUrl(await decodeAgentWorkBranch(
-    await decodeAgentBaseBranch(run)));
-  return upsertPullRequest({
-    provider: repo.provider,
-    repoFullName: repo.repoFullName,
-    number: run.pr_number,
-    state: run.pr_state ?? "open",
-    url: clearRun.pr_url,
-    headBranch: clearRun.branch_name,
-    baseBranch: clearRun.base_branch,
-    issueId: run.issue_id,
-  });
-}
-
 /** Atomically append an issue without replacing any existing association. */
 export async function setPullRequestIssue(
   prId: string,
@@ -560,18 +498,15 @@ export async function resolveIssueForPr(opts: {
 
 /**
  * Replays, on A PR whose state has drifted, what the webhook would have done if it
- * had arrived (MIN-164): `agent_runs.pr_state` failed, ticket status aligned.
+ * had arrived (MIN-164): the status of every linked ticket is aligned.
  *
- * Exactly the shape of the two receivers — the runs first, the Human PR
- * then — because it’s the same fact that we catch up with. What we DO NOT replay
- * NOT: activity and notifications. We notice a state, we did not see the
- * gesture; writing “so and so merged” hours after the fact, without knowing who or
- * when, would say more than what we know.
+ * What we DO NOT replay: activity and notifications. We notice a state, we did
+ * not see the gesture; writing “so and so merged” hours after the fact, without
+ * knowing who or when, would say more than what we know.
  *
  * `applyForgePrToIssue` arrives by DYNAMIC import: `pr-activity` imports this
- * module (`findPullRequestByNumber`), and the static cycle would break the evaluation
- * order. Scanning is not a hot path — it only goes to the
- * catch-up.
+ * module (`findPullRequestByNumber`), and the static cycle would break the
+ * evaluation order. Scanning is not a hot path — it only serves the catch-up.
  */
 async function reconcileDriftedPr(
   provider: RepoProviderId,
@@ -580,40 +515,17 @@ async function reconcileDriftedPr(
   state: PullRequestState,
 ): Promise<void> {
   try {
-    const { syncPrState } = await import("./runs");
-    const prRuns = await syncPrState({
+    const linkedPr = await findPullRequestByNumber({ provider, repoFullName, number });
+    const { applyForgePrToIssue } = await import("./pr-activity");
+    await applyForgePrToIssue({
+      provider,
       repoFullName,
       prNumber: number,
-      prState: state,
-      provider,
+      prState: linkedPr?.state ?? state,
+      actionType: null,
+      accountId: null,
+      login: null,
     });
-    const linkedPr = await findPullRequestByNumber({ provider, repoFullName, number });
-    const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
-    const currentState = linkedPr?.state ?? prRuns[0]?.prState ?? state;
-    {
-      const { applyForgePrToIssue } = await import("./pr-activity");
-      await applyForgePrToIssue({
-        excludeIssueIds: runs.map((run) => run.issueId),
-        provider,
-        repoFullName,
-        prNumber: number,
-        prState: currentState,
-        actionType: null,
-        accountId: null,
-        login: null,
-      });
-    }
-    const { syncIssueStatusFromPr } = await import("./issue-status-sync");
-    for (const run of runs) {
-      // `issueId` null = run notebook (MIN-84): no issue to align.
-      if (run.createdBy && run.issueId) {
-        await syncIssueStatusFromPr({
-          issueId: run.issueId,
-          actorId: run.createdBy,
-          prState: currentState,
-        });
-      }
-    }
   } catch {
     console.error("[pull-requests] state_reconcile_failed");
   }

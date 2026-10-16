@@ -149,12 +149,6 @@ export async function serveFixture(page) {
       });
     },
   );
-  // Rereading by Numo (MIN-168): no session on this PR, therefore nothing to
-  // announce in the thread. The hook stops polling as soon as `working` is false.
-  await on(
-    (p) => under("/ai-review").test(p),
-    (r) => json(r, { run: null, reviewedHeadSha: null, model: null }),
-  );
 
   return { served, unexpected };
 }

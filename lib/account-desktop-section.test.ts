@@ -72,28 +72,24 @@ type BridgeMocks = {
   bridge: DesktopBridge;
   openServerPicker: ReturnType<typeof vi.fn>;
   checkForUpdates: ReturnType<typeof vi.fn>;
-  copyDiagnosticReport: ReturnType<typeof vi.fn>;
   setChannel: ReturnType<typeof vi.fn>;
 };
 
 function currentBridge(): BridgeMocks {
   const openServerPicker = vi.fn();
   const checkForUpdates = vi.fn().mockResolvedValue(undefined);
-  const copyDiagnosticReport = vi.fn().mockResolvedValue(true);
   const setChannel = vi.fn();
   const bridge = {
     version: "1.2.3",
     platform: "win32",
     openServerPicker,
     checkForUpdates,
-    copyDiagnosticReport,
     setChannel,
   } as unknown as DesktopBridge;
   return {
     bridge,
     openServerPicker,
     checkForUpdates,
-    copyDiagnosticReport,
     setChannel,
   };
 }
@@ -164,15 +160,10 @@ describe("AccountDesktopSection", () => {
     act(() => button("Change…").click());
     expect(mocks.openServerPicker).toHaveBeenCalledWith();
     expect(mocks.checkForUpdates).not.toHaveBeenCalled();
-    expect(mocks.copyDiagnosticReport).not.toHaveBeenCalled();
 
     await act(async () => button("Check for updates…").click());
     expect(mocks.checkForUpdates).toHaveBeenCalledWith();
-    expect(mocks.copyDiagnosticReport).not.toHaveBeenCalled();
-
-    await act(async () => button("Copy report…").click());
-    expect(mocks.copyDiagnosticReport).toHaveBeenCalledWith();
-    expect(container.textContent).toContain("Copied");
+    expect(container.textContent).not.toContain("Copy report…");
 
     const previewSwitch = container.querySelector<HTMLButtonElement>(
       'button[role="switch"]',
@@ -199,6 +190,5 @@ describe("AccountDesktopSection", () => {
     expect(container.textContent).toContain("Preview the latest features");
     expect(container.textContent).not.toContain("Change…");
     expect(container.textContent).not.toContain("Check for updates…");
-    expect(container.textContent).not.toContain("Copy report…");
   });
 });

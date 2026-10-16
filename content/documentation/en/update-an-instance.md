@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (en runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/en/update-an-instance-flow.svg",
       "alt": "Diagram: Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.",
       "caption": "Read the stages in order. Stop writes and scheduled work. Seal a complete pre-update backup. Target migrations, then target application. Verify recovery and reopen access.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -97,9 +97,9 @@ Upgrade one published release at a time. Inspect release notes, migration differ
 
 ## Update the full reference profile {#full}
 
-Use the [installed full-profile Compose context](/docs/backups-and-restoration#context). Stop public ingress, all writes, workers and scheduler, then make the complete sealed backup. Copy the current environment mode `0600` to `TARGET_ENV_FILE` and change only `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` and `MINDDY_ENV_FILE` for the verified target. Preserve URLs, credentials, encryption keys and feature choices. Run the sequence below from the installed context. It starts only backend dependencies, applies target migrations and checks application/runner readiness while scheduler and Caddy remain stopped.
+Use the [installed full-profile Compose context](/docs/backups-and-restoration#context). Stop public ingress, all writes, workers and scheduler, then make the complete sealed backup. Copy the current environment mode `0600` to `TARGET_ENV_FILE` and change only `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` and `MINDDY_ENV_FILE` for the verified target. Preserve URLs, credentials, encryption keys and feature choices. Delete `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` and `AGENT_CONTROL_ORIGIN` if an earlier release left them: the application no longer reads them, and `--remove-orphans` removes the retired `agent-runner` container. Run the sequence below from the installed context. It starts only backend dependencies, applies target migrations and checks application readiness while scheduler and Caddy remain stopped.
 
-For the v0.10.30 to v0.11.0 update, the target introduces `MINDDY_DATA_ROOT_KEY`. Add it only when the existing configuration has no root; preserve every existing credential-encryption secret. The command below writes a new 32-byte root directly to the protected target file without displaying it and refuses to replace an invalid saved value. A root alone does not enable workspace-content encryption. Before starting this target, apply the [pinned runner and offline-function adaptations](/docs/installation#runner-workaround) and retain `RUNNER_FIX_OVERRIDE` in every Compose operation. This is an explicitly adapted profile, not a successful installation of the unchanged historical tag.
+For the v0.10.30 to v0.11.0 update, the target introduces `MINDDY_DATA_ROOT_KEY`. Add it only when the existing configuration has no root; preserve every existing credential-encryption secret. The command below writes a new 32-byte root directly to the protected target file without displaying it and refuses to replace an invalid saved value. A root alone does not enable workspace-content encryption.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -136,8 +136,8 @@ export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
 export MINDDY_ENV_FILE="$TARGET_ENV_FILE"
 node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
-compose pull minddy agent-runner
-compose up -d --wait minddy agent-runner
+compose pull minddy
+compose up -d --wait --remove-orphans minddy
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network --maintenance
 compose up -d --wait

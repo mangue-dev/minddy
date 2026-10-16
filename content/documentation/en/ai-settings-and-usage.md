@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; multi-provider settings and persistent personal Numo defaults",
+    "version": "0.11.1 candidate; multi-provider settings and persistent personal Numo defaults; MIN-721 removal of code agents, sandboxes and code-work usage",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -34,13 +34,10 @@
     "evidence": [
       "content/knowledge/plans-and-billing.md",
       "components/settings/account-ai-keys-section.tsx",
-      "components/settings/account-sandbox-section.tsx",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "lib/server/agent/model.ts",
       "lib/server/ai-runtime.ts",
-      "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
-      "lib/server/agent/execute.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
@@ -55,29 +52,24 @@
       "components/assistant/chat-input.tsx",
       "components/routines/routine-prompt-field.tsx",
       "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
-      "components/settings/native-agent-connections.tsx",
-      "components/settings/native-agent-connections.test.tsx",
       "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md",
-      "app/api/account/agent-preferences/route.ts",
       "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
-      "components/agent/agent-engine-badge.tsx",
-      "lib/server/assistant/account-worker-context.ts",
       "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
       "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
-      "lib/native-agent-models.ts",
-      "components/settings/native-agent-model-preferences.tsx",
       "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
       "content/documentation/reviews/min-676-review-fixes-2026-10-11.md",
       "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md",
-      "components/settings/native-agent-login-wizard.tsx",
-      "content/documentation/reviews/min-676-native-login-wizard-2026-10-11.md"
+      "content/documentation/reviews/min-676-native-login-wizard-2026-10-11.md",
+      "lib/ai-surfaces.ts",
+      "components/billing/usage-segment-ui.tsx",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference); agent:/root (guided connection source, behavior fixtures and local visual review; no live provider authentication)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance); agent:/root (six-locale wizard procedure equivalence; no human acceptance)",
-    "date": "2026-10-11"
+    "revision": 16,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference); agent:/root (guided connection source, behavior fixtures and local visual review; no live provider authentication); agent:/root/min721_docs (MIN-721 source review: Code agent settings, native connections, sandbox region and size, code-work usage and its segment removed; usage page screenshot removed because it showed the retired segment; no provider or billing rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance); agent:/root (six-locale wizard procedure equivalence; no human acceptance); agent:/root/min721_docs (en removal edits and retained meaning; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "scheduled-routines"
@@ -98,7 +90,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, capability routing and a personal Numo model are separate settings.",
       "caption": "Several providers can stay connected. Routing chooses the provider for each capability; the Numo default is saved per account and provider.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -124,94 +116,46 @@
           }
         ]
       }
-    },
-    {
-      "id": "plans-and-ai-usage-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/plans-and-ai-usage-workflow.png",
-      "alt": "AI usage page for the demonstration account.",
-      "caption": "AI usage page for the demonstration account. The current budget, usage categories and history are read from the account; no purchase or paid run was triggered.",
-      "revision": 15,
-      "reviewed": true,
-      "capturedAt": "2026-10-09",
-      "viewport": [
-        1154,
-        1016
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
-    "ai-keys-and-models-workflow",
-    "plans-and-ai-usage-workflow"
+    "ai-keys-and-models-workflow"
   ]
 }
 ---
 
-Account AI settings choose the providers, personal keys and defaults used by supported features. Check model routing before starting work, then use the Cloud usage sections to distinguish provider billing, included AI allowance, sandbox compute and routine limits.
+Account AI settings choose the providers, personal keys and defaults used by supported features. Check model routing before starting work, then use the Cloud usage sections to distinguish provider billing, included AI allowance and routine limits.
 
-Account AI settings separate **Minddy AI** from **Code agent**. Minddy AI configures API providers for Numo conversations, automations, voice and feedback. Coding subscriptions apply only to repository workers; they do not fund general Minddy AI.
+The **Minddy AI** section of account AI settings configures the API providers used by Numo conversations, routines, automations, voice and feedback. Coding agents you run yourself, connected through minddy MCP, use their own subscription or API account and do not consume Minddy AI usage.
 
 ## Configure personal AI keys and model defaults {#ai-keys-and-models}
 
 In account AI settings, **AI provider** selects the text-model provider from Minddy Cloud or your connected compatible providers. **Connected providers** keeps the full list visible. Choose **Add provider**, select a provider, enter its API key and any required base URL, then save. You can connect several providers; adding or selecting one does not delete the others. Never paste a key into a conversation or screenshot.
 
-Assign text, transcription and embedding families independently. Each family uses one provider at a time. Per-provider usage switches determine whether Numo, automations, voice and feedback use that key or managed Minddy usage. For example, you can keep text on OpenRouter and transcription on OpenAI. Selecting a text provider does not enable a previously disabled Numo usage switch. OpenCode funding and model settings remain in **Code agent**.
+Assign text, transcription and embedding families independently. Each family uses one provider at a time. Per-provider usage switches determine whether Numo, automations, voice and feedback use that key or managed Minddy usage. For example, you can keep text on OpenRouter and transcription on OpenAI. Selecting a text provider does not enable a previously disabled Numo usage switch.
 
 Under **Default Numo model**, choose **App default** or a specific model from the active Numo provider. This choice is saved for your account and separately for each provider, across reloads and new sessions. App default follows the application’s configured model for that provider. An explicit conversation model takes precedence; conversations following your default pick up subsequent account changes. Already admitted turns retain their frozen model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or App default. Account export/import includes these model preferences, without provider credentials.
 
-An unconfirmed or unreachable key may leave supported general AI calls on managed Minddy usage when managed AI is configured. Your provider bills calls made with its key. Sandbox compute is recorded separately; validated personal keys and Minddy-funded work follow the [budget rules below](#consumption).
+An unconfirmed or unreachable key may leave supported general AI calls on managed Minddy usage when managed AI is configured. Your provider bills calls made with its key. Validated personal keys and Minddy-funded work follow the [budget rules below](#consumption).
 
 ![Connected providers, capability routing and a personal Numo model are separate settings.](/documentation/en/ai-providers-and-numo-defaults-flow.svg)
 
-### Choose the code agent {#native-agent-preview}
+### Local models {#models}
 
-**Claude Code is Experimental.** It needs a plan that includes Claude Code; a Free account is not sufficient. Its live subscription execution and session renewal remain unvalidated. Connecting an account does not establish that its plan can run the selected model.
-
-After reconnecting, explicitly continue the previous worker from Numo. Sending a new message in its historical code conversation opens Numo with your request and the previous worker as context. Minddy creates a new run using the new connection, retaining the original engine, model, thinking, branch and available bounded conversation context. The previous run keeps its recorded connection generation; active workers are never rebound.
-
-In **Code agent**, choose **OpenCode (Minddy Cloud)** or OpenCode with the text-model provider configured above. Its **AI provider** control chooses the funding source for code work independently of other API surfaces. Configure the OpenCode model and reasoning here. Region and sandbox size are in the same section and apply to hosted code workers.
-
-Choose **Codex** or **Claude Code** first to display only that agent’s connection controls. Selecting an agent does not connect it or start work. The current Codex device-login controls describe the historical technical prototype; do not use them in hosted Minddy until an authorized integration replaces this mechanism. **Disconnect** removes Minddy’s saved access; it does not cancel the subscription or prove remote OAuth revocation.
-
-Connection uses a guided wizard. **Connect Codex** or **Connect Claude Code** opens preparation without starting login; **Start connection** begins approval. In the private Codex prototype, **Copy code** copies the displayed code exactly and **Open browser** opens the official page in a new tab or the desktop browser. Enter the code there; confirmation advances automatically. For Claude, open the official page, authorize, choose **I have the code**, paste the return code in the masked field and choose **Complete connection**. **Done** closes the confirmation. Closing the wizard or choosing **Cancel connection** stops pending approval; an expired attempt offers **Try again**. This connection applies only to code agents, not Numo. Saved access survives sandbox replacement. Claude remains experimental and paid execution is untested.
-
-Hosted Codex subscription authentication is not available for general use. OpenAI explicitly excludes app-server authentication from hosted services and directs remotely hosted apps to its Sign in with ChatGPT program. Minddy must use an authorized integration before rollout. Restricted technical tests do not establish provider permission or natural expired-token recovery. Paid Claude Code execution remains untested. Removing interface badges does not change these availability conditions. [OpenAI app-server](https://learn.chatgpt.com/docs/app-server#auth-endpoints), [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source).
-
-Native worker conversations show the saved engine, selected model and thinking, or the agent’s default when no override was chosen. Native workers do not expose OpenCode API controls or image attachments. OpenCode conversations retain their API controls.
-
-Before delegation, Numo receives the current account selection and the selected adapter’s capabilities. Once a worker is launched, its saved engine and capabilities take precedence for that run, including after account settings change. Numo names that worker when explaining delegated work. If account selection cannot be read, it checks the settings rather than guessing.
-
-The native adapter exposes guarded Minddy tools through MCP. Provider-native built-in tools, image input and subagents are unavailable in these adapters. Numo mediates worker questions using reliable conversation context, or asks you when a decision is missing. Numo can use its own supported tools within your authorization; it does not invent unsupported harness operations.
-
-A missing connection, expired access or provider limit stops native work. Minddy does not switch to OpenCode, another API provider or another payer automatically. Choose **OpenCode** explicitly to use the API path. Hosted Codex must wait for the authorized integration; a new device login is not a permitted recovery route. For Claude, reconnect the selected account when access is available. Disconnecting or losing access keeps the saved choice visible until you change it. Existing workers retain their recorded engine.
-
-Native subscriptions fund code model usage only; Numo API calls and sandbox compute remain separately accounted.
-
-### Models and execution location {#models}
-
-**OpenCode:** Code-model choices are tied to their provider. After changing, disabling or losing a personal key, the previous choice may no longer match the active provider. A new worker then refuses to start until you choose a compatible code model in account AI settings; it does not silently select a cheaper model or a platform default. An already frozen BYOK run does not switch payer when its key becomes unavailable.
-
-In **Code agent**, choose the code model and thinking for new workers. **Automatic** lets the selected agent choose its default. Codex’s **Refresh models** reads the catalog from the connected Codex CLI, including supported thinking levels. It does not use OpenRouter’s API model list. Refresh after a connection change or when you want current choices. A model listed by Codex can still be restricted by your account; actual execution confirms access. Claude Code offers **Sonnet**, **Opus** and **Haiku** aliases, which follow the installed CLI’s model recommendations. Its paid execution remains untested. Model refresh briefly starts and destroys a sandbox; its compute is recorded separately from subscription model usage.
-
-With Codex or Claude Code, changing the model resets thinking to **Automatic** so the previous model’s unsupported level is not carried over. Choose a supported level afterwards. Preferences are separate for OpenCode, Codex and Claude Code. Existing workers keep the engine, model and thinking saved at launch, including when resumed. These choices do not change Numo’s conversation model. Region and sandbox size remain in the same code-agent section.
-
-Local Ollama or OpenAI-compatible endpoints can serve conversations through the desktop bridge when configured. They cannot serve delegated code work or routines running in the server sandbox. Use a server-reachable provider for those surfaces. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
+Local Ollama or OpenAI-compatible endpoints can serve conversations through the desktop bridge when configured. Routines run on the server and cannot reach a model on your computer. Use a server-reachable provider for them. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
 
 
 ## Understand Cloud plans and AI consumption {#plans-and-ai-usage}
 
-Cloud offers Free, Go and Pro. All include MCP, Numo conversations, contextual actions, code work and routines. Capacity, included AI, models and storage differ. Open Billing for your current allowance and usage, and compare the public pricing page before choosing a plan; the figures shown there are the current reference.
+Cloud offers Free, Go and Pro. All include MCP, Numo conversations, contextual actions and routines. Capacity, included AI, models and storage differ. Open Billing for your current allowance and usage, and compare the public pricing page before choosing a plan; the figures shown there are the current reference.
 
 Use the offered checkout or subscription-management action for your account. Review the amount, billing period and provider confirmation before accepting. A successful plan change should appear in account billing; verify that rather than treating a closed checkout window as proof.
 
 ### What consumes budget {#consumption}
 
-Included AI usage covers reasoning, minddy tool calls, automation, worker model calls and server-sandbox compute. The monthly included-AI limit applies to work funded by minddy. A routine’s per-run cap is a separate limit that can pause its execution; completed work stays in the conversation. These limits do not authorize automatic overage charges. Inspect the limit card and reset date when available.
+Included AI usage covers Numo reasoning and tool calls, routines, automations, voice dictation and feedback processing. The monthly included-AI limit applies to work funded by minddy. A routine’s per-run cap is a separate limit that can pause its execution; completed work stays in the conversation. These limits do not authorize automatic overage charges. Inspect the limit card and reset date when available.
 
-Compatible personal keys bill model calls to their provider instead of included AI usage. A worker using a validated BYOK key bypasses the account’s plan quota and compute cap. Sandbox compute still has a real cost and is recorded in usage; recording that cost does not mean the monthly plan cap is applied to that BYOK run. Unassigned families or surfaces that use minddy-funded calls remain subject to their minddy allowance. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core.
+Compatible personal keys bill model calls to their provider instead of included AI usage. Unassigned families or surfaces that use minddy-funded calls remain subject to their minddy allowance. Self-hosting has infrastructure and optional-provider costs determined by your installation; it does not become a Cloud subscription merely by running the same core.
 
 ### Candidate capacity reference {#plan-capacities}
 
@@ -223,7 +167,7 @@ These defaults describe the identified 0.11.1 candidate. Verify the live pricing
 | Go | Unlimited | Unlimited | Unlimited | 20 GiB | 5 |
 | Pro | Unlimited | Unlimited | Unlimited | 100 GiB | 15 |
 
-![AI usage page for the demonstration account.](/documentation/en/plans-and-ai-usage-workflow.png)
+Billing shows the remaining AI budget and its next reset, **Budget over time**, and **What uses your budget?**, which splits consumption into **Routines**, **Numo**, **Voice dictation**, **Feedback** and **Automations** as a percentage of the included budget. **Usage history** lists the actions of the current period and their share of the budget.
 
 ## Dictate text and edits {#voice-dictation}
 

@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -36,14 +36,15 @@
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-677-editor-captures.json"
+      "content/documentation/reviews/min-677-editor-captures.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (de translation, label and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; de translation of removal edits; no operational rerun)",
+    "language": "agent:/root (de translation, label and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -57,7 +58,7 @@
       "src": "/documentation/de/scheduled-routines-workflow.png",
       "alt": "Modi „Geplant“ und „Ereignis“, eine Bedingungsgruppe, App-Symbole und dezente Informationsschaltflächen.",
       "caption": "Lokale Demonstration des tatsächlichen Auslösereditors. Keine Routine wurde gespeichert oder ausgeführt.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -77,7 +78,7 @@
 
 ## Eine Routine erstellen {#scheduled-routines}
 
-Nur der Projekteigentümer kann Routinen erstellen, bearbeiten oder aktivieren. Öffnen Sie Routinen, wählen Sie ein eigenes Projekt und formulieren Sie die Anweisung für Numo. Erwähnen Sie relevante Tickets, Seiten oder Ziele. Jede Ausführung besitzt eine private Numo-Konversation, einen Verlauf, Minddy-Werkzeuge und bei Bedarf delegierte Codearbeit. Code-Worker verwenden die Kontovorgaben des Eigentümers; ein Repository ist nur für Repository-Arbeit erforderlich.
+Nur der Projekteigentümer kann Routinen erstellen, bearbeiten oder aktivieren. Öffnen Sie Routinen, wählen Sie ein eigenes Projekt und formulieren Sie die Anweisung für Numo. Erwähnen Sie relevante Tickets, Seiten oder Ziele. Jede Ausführung besitzt eine private Numo-Konversation, einen Verlauf und Minddy-Werkzeuge. Routinen organisieren und verfolgen Arbeit, etwa eine wöchentliche Triage, eine Prüfung liegengebliebener Tickets oder eine Wochenzusammenfassung; sie ändern keinen Repository-Code.
 
 Wählen Sie **Geplant** oder **Ereignis**. Datenbankeingänge sind eine Option in der Ereignisliste.
 
@@ -104,7 +105,7 @@ Ein Eintrag ohne erforderliche Eigenschaft wartet auf eine passende Bearbeitung.
 
 Öffnen Sie die Routine, um wartende Bedingungen zu prüfen, Anweisung oder Auslöser zu ändern, zu pausieren oder Ausführungen zu lesen. Pausieren, Löschen und Konfigurationsänderungen verwerfen wartende Einträge. Eine erneute Aktivierung wartet auf künftige Ereignisse ohne alte Eingänge zu wiederholen. Ein manueller Start funktioniert mit jedem Auslöser ohne dessen Ereignis und verbraucht ebenfalls Budget.
 
-Jede Ausführung verwendet das KI-Budget des Eigentümers, standardmäßig mit einer Obergrenze von 15 % des Monatsbudgets einschließlich Numo und delegierter Worker. Öffnen Sie ihre Konversation für Quelle, Ergebnis, Prüfungen, Fragen und delegierte Arbeit. Antworten Sie bei erforderlicher Eingabe in derselben Konversation; das verbleibende Ausführungsbudget bleibt erhalten. Prüfen Sie gespeicherte Ergebnisse, bevor Sie ein Limit ändern oder erneut starten. Nach einem Eigentümerwechsel kann die Routine des vorherigen Eigentümers keine neue Arbeit starten; erstellen Sie eine Routine als aktueller Eigentümer.
+Jede Ausführung verwendet das KI-Budget des Eigentümers, standardmäßig mit einer Obergrenze von 15 % des Monatsbudgets einschließlich aller Numo-Aufrufe dieser Ausführung. Öffnen Sie ihre Konversation für Quelle, Ergebnis und Fragen. Antworten Sie bei erforderlicher Eingabe in derselben Konversation; das verbleibende Ausführungsbudget bleibt erhalten. Prüfen Sie gespeicherte Ergebnisse, bevor Sie ein Limit ändern oder erneut starten. Nach einem Eigentümerwechsel kann die Routine des vorherigen Eigentümers keine neue Arbeit starten; erstellen Sie eine Routine als aktueller Eigentümer.
 
 Archivierte Projektautomatisierungen erscheinen als pausierte Vorschläge, wenn ihr Eigentümer Routinen öffnet. Lesen Sie vor der Aktivierung den [Übergangsleitfaden](/docs/automation-settings).
 

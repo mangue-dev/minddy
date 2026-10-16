@@ -7,12 +7,8 @@ DO $$ BEGIN
 END $$;
 DO $test$
 DECLARE legacy uuid := gen_random_uuid(); fresh uuid := gen_random_uuid();
-  actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
-  conversation uuid := gen_random_uuid(); connection uuid := gen_random_uuid();
-  link uuid := gen_random_uuid(); run uuid := gen_random_uuid();
   legacy_url text := 'https://example.invalid/private/repo/pull/11';
   encoded text := 'mdyq3:1:eyJmb3JtYXQiOjMsImtleVZlcnNpb24iOjF9';
-  run_cipher text := 'mdyp3:1:eyJmb3JtYXQiOjMsImtleVZlcnNpb24iOjF9';
   result jsonb; rejected boolean;
 BEGIN
   INSERT INTO public.pull_requests(id,provider,repo_full_name,number,url)
@@ -76,49 +72,6 @@ BEGIN
       'updated_at',(now() + interval '2 hour')::text));
   EXCEPTION WHEN check_violation THEN rejected := true; END;
   IF NOT rejected THEN RAISE EXCEPTION 'Obsolete RPC writer accepted'; END IF;
-  INSERT INTO auth.users(id) VALUES(actor);
-  INSERT INTO public.projects(id,owner_id,name,key)
-    VALUES(project,actor,'PR URL fixture','SHURL');
-  INSERT INTO public.git_connections(id,user_id,provider)
-    VALUES(connection,actor,'github');
-  INSERT INTO public.project_git_links(id,project_id,connection_id,provider,
-    external_repo_id,repo_full_name) VALUES(link,project,connection,'github',
-      'shared-pr-url-fixture','private/repo');
-  INSERT INTO public.agent_conversations(id,project_id,owner_id)
-    VALUES(conversation,project,actor);
-  INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
-    repo_link_id,connection_id,repo_provider,repo_external_id,pr_number)
-    VALUES(run,project,conversation,actor,link,connection,'github',
-      'shared-pr-url-fixture',12);
-  IF NOT public.sync_agent_run_pr_url(fresh,
-      (SELECT updated_at FROM public.pull_requests WHERE id=fresh),encoded,
-      run,NULL,run_cipher) THEN
-    RAISE EXCEPTION 'Bound run URL CAS failed';
-  END IF;
-  IF EXISTS (SELECT 1 FROM public.agent_runs WHERE id=run AND
-      pr_url LIKE '%private/repo%') OR
-     EXISTS (SELECT 1 FROM public.agent_artifacts WHERE run_id=run AND
-      url LIKE '%private/repo%') OR
-     EXISTS (SELECT 1 FROM public.numo_artifacts WHERE run_id=run AND
-      url LIKE '%private/repo%') OR
-     NOT EXISTS (SELECT 1 FROM public.agent_artifacts WHERE run_id=run AND
-      url=run_cipher AND url_bound_run_id=run) THEN
-    RAISE EXCEPTION 'Shared PR URL copy or projection is clear or unbound';
-  END IF;
-  IF public.sync_agent_run_pr_url(fresh,now() - interval '1 day',encoded,
-      run,run_cipher,run_cipher) THEN
-    RAISE EXCEPTION 'Stale forge URL observation accepted';
-  END IF;
-  PERFORM public.sync_agent_runs_from_pull_request('github','private/repo',12);
-  IF (SELECT pr_url FROM public.agent_runs WHERE id=run) IS DISTINCT FROM
-      run_cipher THEN
-    RAISE EXCEPTION 'SQL state sync copied an incompatible forge cipher';
-  END IF;
-  rejected := false;
-  BEGIN
-    UPDATE public.agent_runs SET pr_url=legacy_url WHERE id=run;
-  EXCEPTION WHEN check_violation THEN rejected := true; END;
-  IF NOT rejected THEN RAISE EXCEPTION 'Obsolete run URL writer accepted'; END IF;
   IF has_function_privilege('authenticated',
       'public.migrate_pull_request_url(uuid,text,text,boolean)','EXECUTE') THEN
     RAISE EXCEPTION 'Migration has client execute privilege';
@@ -128,11 +81,6 @@ BEGIN
       WHERE id=legacy) OR
      public.migrate_pull_request_url(legacy,encoded,p_verified=>true) THEN
     RAISE EXCEPTION 'Changed PR URL retained stale verification';
-  END IF;
-  IF has_function_privilege('authenticated',
-      'public.sync_agent_run_pr_url(uuid,timestamptz,text,uuid,text,text)',
-      'EXECUTE') THEN
-    RAISE EXCEPTION 'Run URL sync has client execute privilege';
   END IF;
 END;
 $test$;

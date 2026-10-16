@@ -2,8 +2,6 @@
 
 import type { RepoProviderId } from "./repo-providers";
 import type {
-  AgentBranchesResponse,
-  BranchDeletionResult,
   CandidateRepo,
   GitConnection,
   GitIdentity,
@@ -136,37 +134,6 @@ export async function setGitIssueSyncApi(
       body: JSON.stringify({ action: "issue_sync", enabled }),
     }),
   );
-}
-
-/**
- * All branches that minddy pushed to the linked repository and which still exist
- * (MIN-102), with their status. The server recalculates this list when deleting: what is displayed here is only a proposal, not an authorization.
- */
-export async function fetchAgentBranchesApi(
-  projectId: string,
-): Promise<AgentBranchesResponse> {
-  return parseJson(await fetch(`/api/projects/${projectId}/git-link/agent-branches`));
-}
-
-export async function deleteAgentBranchesApi(
-  projectId: string,
-  branches: string[],
-  provider: RepoProviderId,
-): Promise<{ results: BranchDeletionResult[] }> {
-  const res = await parseJson<{ results: BranchDeletionResult[] }>(
-    await fetch(`/api/projects/${projectId}/git-link/agent-branches`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ branches }),
-    }),
-  );
-  const deleted = res.results.filter((r) => r.ok).length;
-  trackEvent("project_git_branches_cleaned", {
-    provider,
-    deleted,
-    failed: res.results.length - deleted,
-  });
-  return res;
 }
 
 export async function unlinkGitRepoApi(projectId: string): Promise<void> {

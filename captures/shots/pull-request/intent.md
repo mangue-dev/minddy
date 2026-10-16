@@ -39,8 +39,8 @@ are provided by the script.
 pill **“Prête à fusionner”** — the merge affordance, one click away.
 - The title of the ticket, the badge **Numo**, `main → numo/aur-2-palette-shortcuts`
 and the **+58 −7** total.
-- The **status cards row**: “2 checks réussis” (green, 1 min 32 s) and
-“Faire vérifier par Numo” — CI and the agent, side by side.
+- The **status cards row**: “2 checks réussis” (green, 1 min 32 s). The
+former “Faire vérifier par Numo” card was removed with the code agent (MIN-721).
 - The **Fichiers modifiés** tab, with the **three files** and their colored diff:
   `lib/palette/actions.ts` (+6 −1), `components/palette/row.tsx` (+14 −2),
   `components/palette/provider.tsx` (+38 −4), the unified/side-by-side toggle,

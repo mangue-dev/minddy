@@ -1,7 +1,6 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { decodeAgentBranchPrefix, saveAgentPreferences } from "./agent/branch-prefix-content";
 import { locales, type Locale } from "@/i18n/config";
 import {
   resolveNumoDefaultStatus,
@@ -40,12 +39,6 @@ import {
   resolveNotificationPrefs,
   type NotificationPrefs,
 } from "@/lib/notification-prefs";
-import { normalizeNativeModelPreferences, type NativeModelPreferences } from "@/lib/native-agent-models";
-import { isReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
-import { isLiveAgentEngine, type LiveAgentEngine } from "@/lib/agent-engines";
-import { agentHarnessCapabilities, describeAgentHarnessCapabilities } from "@/lib/agent-harness-capabilities";
-import { nativePrototypeEnabledFor } from "./agent/native-prototype/access";
-import { listNativeConnections } from "./agent/native-agent-credentials";
 import {
   ACCOUNT_THEME_META_KEY,
   isAccountTheme,
@@ -54,23 +47,12 @@ import {
 } from "@/lib/account-theme";
 import { emailLocalPart } from "@/lib/display-name";
 import {
-  DEFAULT_AGENT_BRANCH_PREFIX,
-  normalizeAgentBranchPrefix,
-} from "@/lib/server/agent/branch-name";
-import {
   SEND_MODE_META_KEY,
   isSendMode,
   resolveSendMode,
   type SendMode,
 } from "@/lib/keyboard/send-shortcut";
 import { ANALYTICS_CONSENT_META_KEY, resolveAnalyticsConsent } from "@/lib/cookie-consent";
-import {
-  isSandboxRegion,
-  isSandboxSize,
-  resolveSandboxPreferences,
-  type SandboxRegion,
-  type SandboxSize,
-} from "@/lib/agent-sandbox-config";
 
 /**
  * The requesting user's own account settings, mirroring Account → Profile /
@@ -104,27 +86,6 @@ export interface AccountSettings {
   analytics_consent: "accepted" | "declined" | null;
   /** Inbox (MIN-82) — one toggle per trigger family. */
   notifications: NotificationPrefs;
-  /** Code Agent Preferences (MIN-46 / MIN-122). The only account setting block
- * which does NOT live in `user_metadata` but in `user_agent_preferences` —
- * hence its separate reading. */
-  agent: AgentPrefs;
-}
-
-export interface AgentPrefs {
-  default_engine: LiveAgentEngine;
-  native_agents_enabled: boolean;
-  /** Status only: no profile, approval, runtime or lease capabilities reach Numo. */
-  native_connection: "not_selected" | "unavailable" | "disconnected" | "connected" | "busy" | "reconnect_required";
-  harness_capabilities: ReturnType<typeof agentHarnessCapabilities>;
-  harness_description: string;
-  default_model: string | null;
-  default_reasoning_level: ReasoningLevel | null;
-  native_model_preferences: NativeModelPreferences;
-  branch_prefix: string;
-  /** Where the server sandbox spins up (eu | us) and how big it is
-      (standard | performance) — the same `user_agent_preferences` row. */
-  sandbox_region: SandboxRegion;
-  sandbox_size: SandboxSize;
 }
 
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -132,78 +93,9 @@ function metaString(meta: Record<string, unknown>, key: string): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-/**
- * The agent preferences of the account, read in `user_agent_preferences`.
- *
- * NO LINE AND READ FAILURE ARE NOT THE SAME THING. An account that
- * has never touched these settings has no line — this is the common case, and
- * it is worth "no preference". A basic error goes back: making it
- * like "no preference" would make Numo say "you don't have a model by
- * default" to someone who does, and making a valid but false state is
- * worse than failing.
- */
-export async function readAccountAgentPreferences(
-  userId: string
-): Promise<{ ok: true; prefs: AgentPrefs } | { ok: false; error: string }> {
-  const service = getServiceClient();
-  const { data, error } = await service
-    .from("user_agent_preferences")
-    .select(
-      "default_engine, native_model_preferences, default_model, default_reasoning_level, branch_prefix, sandbox_region, sandbox_size"
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) {
-    console.error("[account-settings] agent prefs read failed:", error.message);
-    return { ok: false, error: error.message };
-  }
-  const sandbox = resolveSandboxPreferences(data);
-  const storedEngine = (data as { default_engine?: unknown } | null)?.default_engine;
-  if (storedEngine != null && !isLiveAgentEngine(storedEngine)) {
-    return { ok: false, error: "Could not read the selected code agent." };
-  }
-  const engine = storedEngine ?? "opencode";
-  const enabled = nativePrototypeEnabledFor(userId);
-  let connection: AgentPrefs["native_connection"] = "not_selected";
-  if (engine !== "opencode") {
-    connection = "unavailable";
-    if (enabled) {
-      try {
-        const metadata = (await listNativeConnections(userId)).find((item) => item.engine === engine);
-        connection = !metadata || metadata.status === "disconnected" ? "disconnected"
-          : metadata.stopRequired ? "reconnect_required" : metadata.busy ? "busy" : "connected";
-      } catch {
-        return { ok: false, error: "Could not read native connection status." };
-      }
-    }
-  }
-  return {
-    ok: true,
-    prefs: {
-      default_engine: engine,
-      native_agents_enabled: enabled,
-      native_connection: connection,
-      harness_capabilities: agentHarnessCapabilities(engine),
-      harness_description: describeAgentHarnessCapabilities(engine),
-      native_model_preferences: normalizeNativeModelPreferences(data?.native_model_preferences),
-      default_model: (data as { default_model?: string | null } | null)?.default_model ?? null,
-      default_reasoning_level: isReasoningLevel(
-        (data as { default_reasoning_level?: string | null } | null)?.default_reasoning_level
-      )
-        ? ((data as { default_reasoning_level: string }).default_reasoning_level as ReasoningLevel)
-        : null,
-      branch_prefix: await decodeAgentBranchPrefix(userId,
-        (data as { branch_prefix?: string | null } | null)?.branch_prefix ?? null),
-      sandbox_region: sandbox.sandbox_region,
-      sandbox_size: sandbox.sandbox_size,
-    },
-  };
-}
-
 function toSettings(
   meta: Record<string, unknown>,
   email: string | null,
-  agent: AgentPrefs
 ): AccountSettings {
   const rawLocale = meta.locale;
   const locale: Locale = locales.includes(rawLocale as Locale)
@@ -230,7 +122,6 @@ function toSettings(
     cycles: resolveCyclePrefs(meta),
     analytics_consent: resolveAnalyticsConsent(meta),
     notifications: resolveNotificationPrefs(meta),
-    agent,
   };
 }
 
@@ -242,18 +133,14 @@ export async function getAccountSettings({
   { ok: true; settings: AccountSettings } | { ok: false; error: string }
 > {
   const service = getServiceClient();
-  const [{ data, error }, agent] = await Promise.all([
-    service.auth.admin.getUserById(userId),
-    readAccountAgentPreferences(userId),
-  ]);
+  const { data, error } = await service.auth.admin.getUserById(userId);
   if (error || !data.user) {
     return { ok: false, error: error?.message ?? "Account not found." };
   }
-  if (!agent.ok) return { ok: false, error: agent.error };
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
   return {
     ok: true,
-    settings: toSettings(meta, data.user.email ?? null, agent.prefs),
+    settings: toSettings(meta, data.user.email ?? null),
   };
 }
 
@@ -277,18 +164,6 @@ export async function updateAccountSettings({
     return { ok: false, error: "Project automations were replaced by routines. Configure a routine instead." };
   }
   const next: Record<string, unknown> = { ...meta };
-
-  // Numo may read and explain code-worker settings, but only the authenticated
-  // Account settings route may change them. Keep this check here as a
-  // server-side boundary even when a caller forges fields absent from the tool
-  // schema.
-  if ("default_engine" in input || "default_model" in input || "default_reasoning_level" in input) {
-    return {
-      ok: false,
-      error:
-        "Code-agent engine, model and reasoning can only be changed in Account settings.",
-    };
-  }
 
   if ("display_name" in input) {
     const name = typeof input.display_name === "string" ? input.display_name.trim() : "";
@@ -432,36 +307,6 @@ export async function updateAccountSettings({
     next[CYCLE_UPCOMING_COUNT_META_KEY] = n;
   }
 
-  // Agent preferences outside user_metadata. Numo may still change the branch
-  // prefix, which is unrelated to the worker's model configuration.
-  const agentPatch: Record<string, unknown> = {};
-  if ("branch_prefix" in input) {
-    const prefix =
-      input.branch_prefix === null
-        ? DEFAULT_AGENT_BRANCH_PREFIX
-        : normalizeAgentBranchPrefix(input.branch_prefix);
-    if (!prefix) {
-      return { ok: false, error: "branch_prefix is not a valid Git branch prefix." };
-    }
-    agentPatch.branch_prefix = prefix;
-  }
-
-  // Sandbox preferences (MIN-46 family): same `user_agent_preferences` row as
-  // the branch prefix, same writer contract. Each field is validated alone so
-  // a two-field patch that carries one bad value changes nothing at all.
-  if ("sandbox_region" in input) {
-    if (!isSandboxRegion(input.sandbox_region)) {
-      return { ok: false, error: "sandbox_region must be one of: eu, us." };
-    }
-    agentPatch.sandbox_region = input.sandbox_region;
-  }
-  if ("sandbox_size" in input) {
-    if (!isSandboxSize(input.sandbox_size)) {
-      return { ok: false, error: "sandbox_size must be one of: standard, performance." };
-    }
-    agentPatch.sandbox_size = input.sandbox_size;
-  }
-
   // Nothing recognised to change.
   const CHANGEABLE = [
     "display_name",
@@ -488,27 +333,16 @@ export async function updateAccountSettings({
     CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY,
   ];
   const metaChanged = CHANGEABLE.some((k) => k in input);
-  if (!metaChanged && Object.keys(agentPatch).length === 0) {
+  if (!metaChanged) {
     return { ok: false, error: "No account settings to update." };
   }
 
-  if (Object.keys(agentPatch).length > 0) {
-    try {
-      await saveAgentPreferences(userId, agentPatch, service);
-    } catch {
-      console.error("[account-settings] agent prefs update failed");
-      return { ok: false, error: "Could not save agent preferences" };
-    }
-  }
-
-  if (metaChanged) {
-    const { error: writeErr } = await service.auth.admin.updateUserById(userId, {
-      user_metadata: next,
-    });
-    if (writeErr) {
-      console.error("[account-settings] update failed:", writeErr.message);
-      return { ok: false, error: writeErr.message };
-    }
+  const { error: writeErr } = await service.auth.admin.updateUserById(userId, {
+    user_metadata: next,
+  });
+  if (writeErr) {
+    console.error("[account-settings] update failed:", writeErr.message);
+    return { ok: false, error: writeErr.message };
   }
 
   // ONLY one path to construct the rendered state, regardless of what moved —

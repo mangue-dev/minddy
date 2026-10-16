@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { locales } from "@/i18n/config";
 import { MARKDOWN_LOCALE_COPY } from "@/lib/markdown-locale-copy";
-import { signReviewBody } from "@/lib/server/agent/pr-tools";
+import { signReviewBody } from "@/lib/server/agent/review-signature";
 import { reviewFallbackPrefix } from "@/lib/server/agent/review-copy";
 import {
   commentFallbackDone,

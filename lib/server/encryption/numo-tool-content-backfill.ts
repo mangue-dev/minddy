@@ -19,7 +19,7 @@ type Operation = { turn_id: string; tool_call_id: string; tool_name: string;
   arguments: unknown; result: unknown; model_result: unknown;
   arguments_version: number; result_version: number;
   model_result_version: number; arguments_digest: string | null;
-  status: string; success: boolean | null; result_run_id: string | null;
+  status: string; success: boolean | null;
   turn: { user_id: string } | { user_id: string }[] };
 
 function owner(join: { user_id: string } | { user_id: string }[]) {
@@ -44,9 +44,6 @@ function checkpointFresh(value: Record<string, unknown>, version: number) {
 
 function normalizeSafeCheckpoint(value: Record<string, unknown>) {
   const fields: Record<string, string[]> = {
-    worker_result:["phase","worker_event"],
-    worker_input_wait:["phase","worker_event","input_request"],
-    worker_wait:["phase","active_run_id"],
     user_wait:["phase"],done:["phase"],
   };
   const allowed = fields[String(value.phase)] ?? [];
@@ -238,7 +235,7 @@ export async function backfillNumoToolContentBatch(limit = 30,
     }
   }
   const operations = await service.from("numo_tool_operations")
-    .select("turn_id,tool_call_id,tool_name,arguments,result,model_result,arguments_version,result_version,model_result_version,arguments_digest,status,success,result_run_id,turn:numo_assistant_turns!inner(user_id)")
+    .select("turn_id,tool_call_id,tool_name,arguments,result,model_result,arguments_version,result_version,model_result_version,arguments_digest,status,success,turn:numo_assistant_turns!inner(user_id)")
     .order("encryption_attempted_at",{ ascending:true,nullsFirst:true })
     .order("turn_id",{ ascending:true })
     .order("tool_call_id",{ ascending:true }).limit(limit);
@@ -278,10 +275,6 @@ export async function backfillNumoToolContentBatch(limit = 30,
           throw new Error("Numo tool operation conversion mismatch");
         }
       }
-      const runId = operation.tool_name === "launch_code_agent" &&
-        operation.success && clear[1] && typeof clear[1] === "object" &&
-        !Array.isArray(clear[1])
-        ? uuid((clear[1] as Record<string,unknown>).run_id) : null;
       const write = await service.rpc("migrate_numo_tool_operation",{
         p_turn_id:operation.turn_id,p_tool_call_id:operation.tool_call_id,
         p_old_arguments:operation.arguments,p_old_result:operation.result,
@@ -295,7 +288,7 @@ export async function backfillNumoToolContentBatch(limit = 30,
         p_new_arguments_version:sealed[0].version,
         p_new_result_version:sealed[1].version,
         p_new_model_result_version:sealed[2].version,
-        p_new_digest:digest,p_result_run_id:runId,
+        p_new_digest:digest,
       });
       if (write.error) throw new Error("Unable to migrate Numo tool operation");
       if (!write.data) {

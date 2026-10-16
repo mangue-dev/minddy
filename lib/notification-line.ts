@@ -26,8 +26,6 @@ export interface NotificationLabels {
   somePageFallback: string;
   /** `Inbox.someIssueFallback`, already formatted with the word “ticket” / “issue”. */
   someIssueFallback: string;
-  /** A general conversation from Numo about which the titler has not written anything. */
-  someAgentConversationFallback: string;
 }
 
 /**
@@ -63,9 +61,6 @@ export function notificationTitle(
   // A pull request: its title, preceded by its number by the reference
   // displayed next to it — it does not necessarily have a ticket to name.
   if (n.pull_request_id) return n.pull_request_title ?? "";
-  if (n.agent_conversation_id && !n.issue_id) {
-    return n.agent_conversation_title || labels.someAgentConversationFallback;
-  }
   // A PAGE from the wiki (MIN-278): its title, and the explicit fallback when it
   // doesn't have one — a line without a title no longer says what we're talking about.
   if (n.page_id) return n.page_title || labels.somePageFallback;

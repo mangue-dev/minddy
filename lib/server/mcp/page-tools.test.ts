@@ -908,28 +908,20 @@ it("returns database schemas, option identities, and direct entry values to page
   expect(entryRead.payload.markdown).toBe("Entry body");
 });
 
-it.each(["mcp", "agent"])("creates an empty database and full-page entries through %s", async (surface) => {
-  const { executePageTool } = await import("@/lib/server/agent/page-tools");
-  const create = async (args: Record<string, unknown>) => {
-    if (surface === "mcp") return call("minddy_create_page", { project_id: PROJECT, ...args });
-    const result = await executePageTool({ projectId: PROJECT, actorId: ACTOR }, "create_page", args);
-    return { ok: result.success, payload: result.result as Record<string, unknown> };
-  };
+it("creates an empty database and full-page entries through MCP", async () => {
+  const create = (args: Record<string, unknown>) =>
+    call("minddy_create_page", { project_id: PROJECT, ...args });
   const database = await create({ title: "Journal", markdown: "", database: true });
   expect(database).toMatchObject({ ok: true, payload: { database_schema: [] } });
   const entry = await create({ title: "Daily report", markdown: "", parent_page_id: database.payload.page_id });
   expect(entry).toMatchObject({ ok: true, payload: { parent_page_id: database.payload.page_id } });
   const stored = h.rows.find(row => row.id === entry.payload.page_id)!;
   expect(stored.updated_kind).toBe("agent");
-  expect(stored.updated_api_key_id ?? null).toBe(surface === "mcp" ? "key-1" : null);
+  expect(stored.updated_api_key_id).toBe("key-1");
   const updateArgs = { page_id: entry.payload.page_id, title: "Revised report" };
-  if (surface === "mcp") {
-    expect(await call("minddy_update_page", { project_id: PROJECT, ...updateArgs })).toMatchObject({ ok: true });
-  } else {
-    expect(await executePageTool({ projectId: PROJECT, actorId: ACTOR }, "update_page", updateArgs)).toMatchObject({ success: true });
-  }
+  expect(await call("minddy_update_page", { project_id: PROJECT, ...updateArgs })).toMatchObject({ ok: true });
   expect(stored.title).toBe("Revised report");
-  expect(stored.updated_api_key_id ?? null).toBe(surface === "mcp" ? "key-1" : null);
+  expect(stored.updated_api_key_id).toBe("key-1");
   const read = await call("minddy_get_page", { project_id: PROJECT, page_id: database.payload.page_id });
   expect(read).toMatchObject({ ok: true, payload: { database_schema: [], subpages: [{ page_id: entry.payload.page_id }] } });
 });

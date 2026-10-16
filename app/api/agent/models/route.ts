@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { capability } from "@/lib/server/capabilities";
-import { resolveAgentExecutionBackend } from "@/lib/capabilities";
 
 /**
  * Model index for agent picker (MIN-46), resolved according to provider
@@ -21,8 +20,6 @@ export async function GET(request: NextRequest) {
   const catalog = await getAgentModelsForUser(auth.user.id);
   return NextResponse.json({
     ...catalog,
-    cloudExecutionConfigured: capability("agentExecution").configured,
-    executionBackend: resolveAgentExecutionBackend(process.env),
     routineEventProcessingConfigured: capability("scheduler").configured,
     routineSchedulingConfigured: capability("scheduler").configured,
   });

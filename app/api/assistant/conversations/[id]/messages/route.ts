@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { publicSkillsMetadata } from "@/lib/server/assistant/skills";
-import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
 import { hydrateNumoFinalMessages } from "@/lib/server/numo/final-content";
 import { hydrateNumoToolMessages } from "@/lib/server/numo/tool-content";
@@ -30,12 +29,6 @@ export async function GET(
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  // 409 instead of a partial history: a worker conversation only reads whole
-  // in the common timeline, never in the legacy assistant renderer.
-  if (conversation.source !== "assistant") {
-    return Response.json({ error: "Open work detail" }, { status: 409 });
-  }
-
   const { data, error } = await supabase
     .from("numo_messages")
     .select("*")
@@ -48,11 +41,10 @@ export async function GET(
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  const hydrated = await hydrateWorkerParentCopies(supabase,
-    await hydrateNumoToolMessages(supabase,
+  const hydrated = await hydrateNumoToolMessages(supabase,
     await hydrateNumoFinalMessages(supabase,
       await hydrateNumoUserMessages(supabase, data ?? [], auth.user.id),
-      auth.user.id), auth.user.id), auth.user.id);
+      auth.user.id), auth.user.id);
   return Response.json(
     hydrated.map((message) => ({
       ...message,

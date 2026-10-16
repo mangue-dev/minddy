@@ -36,7 +36,6 @@ import {
 } from "@/components/ui/tooltip";
 import { notificationActor, notificationTitle } from "@/lib/notification-line";
 import { useNotifications } from "@/lib/use-notifications";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 import {
   notificationLineKey,
@@ -162,7 +161,6 @@ function ActionTooltip({
 
 export default function InboxContent({ onNavigate }: { onNavigate: () => void }) {
   const router = useAppRouter();
-  const openAssistant = useAssistantPanelActions().open;
   const t = useTranslations("Inbox");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
@@ -176,7 +174,6 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
     someone: t("someone"),
     mcpFallback: tTimeline("mcpFallback"),
     somePageFallback: t("somePageFallback"),
-    someAgentConversationFallback: t("someAgentConversationFallback"),
     someIssueFallback: t("someIssueFallback", {
       entity: tIssue("entity").toLowerCase(),
     }),
@@ -259,15 +256,6 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
 
   const open = (notification: MyNotification) => {
     if (!notification.read_at) act(markRead([notification.id]));
-    // A Numo conversation has no page any more: its rows open the FAB directly
-    // on the conversation, which no URL can express.
-    const conversationId =
-      notification.numo_conversation_id ?? notification.agent_conversation_id;
-    if (conversationId) {
-      onNavigate();
-      openAssistant({ conversationId, projectId: notification.project_id });
-      return;
-    }
     const path = notificationTargetPath(notification);
     if (path) {
       onNavigate();

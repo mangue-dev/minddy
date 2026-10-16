@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (it runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "instance-configuration",
@@ -57,7 +57,7 @@
 
 ## Diagnosticare un’installazione self-hosted {#self-hosted-diagnostics}
 
-Esegui il doctor di sola lettura dalla release installata con il suo ambiente protetto. Per `--mode full` passa il Compose upstream; per managed fornisci la connessione del provider. Il doctor controlla compatibilità, configurazione, container, DNS, TLS, applicazione, disco, scheduler e runner. Le verifiche di database, migrazioni e Storage richiedono una connessione. Il rapporto oscura i segreti, ma devi comunque controllarlo prima di condividerlo. La salute dei servizi non prova consegna email, decifratura o recupero dei file.
+Esegui il doctor di sola lettura dalla release installata con il suo ambiente protetto. Per `--mode full` passa il Compose upstream; per managed fornisci la connessione del provider. Il doctor controlla compatibilità, configurazione, container, DNS, TLS, applicazione, disco e scheduler. Le verifiche di database, migrazioni e Storage richiedono una connessione. Il rapporto oscura i segreti, ma devi comunque controllarlo prima di condividerlo. La salute dei servizi non prova consegna email, decifratura o recupero dei file.
 
 ```bash
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
@@ -79,4 +79,4 @@ Se il primo download si interrompe con un lungo log di avanzamento e senza error
 Se la compilazione offline segnala una versione `jose` diversa dopo l’installazione bloccata, fermati: la release richiede 6.2.3, mentre la dipendenza diretta bloccata risolve 6.2.12. Ottieni una combinazione corretta di release e strumenti prima di accettare l’installazione standard; non allentare silenziosamente il controllo d’identità.
 
 
-Anche il runner OCI v0.11.0 non si avvia: `agent-runner-storage.mjs` manca dall’immagine runtime. Il `Dockerfile` corrente ora include questa dipendenza. La prova di ingegneria usa e getta ha fornito il file dello stesso tag con un mount di sola lettura. È un profilo esplicitamente modificato, non l’accettazione dell’immagine firmata invariata. Non pubblicare la porta del runner né rimuoverne l’isolamento per aggirare un errore di avvio.
+Anche il runner OCI v0.11.0 non si avvia: `agent-runner-storage.mjs` manca dall’immagine runtime, quindi l’applicazione non diventa mai integra. Le release successive rimuovono questo runner e le sue sandbox di codice. Aggiorna a una di queste release invece di montare file del runner o indebolire l’isolamento dei container.

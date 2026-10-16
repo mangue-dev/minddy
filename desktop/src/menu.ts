@@ -1,30 +1,10 @@
-import { Menu, app, clipboard, dialog, type BrowserWindow } from "electron";
+import { Menu, app, type BrowserWindow } from "electron";
 
 import type { DesktopChannel } from "@/lib/desktop/channel";
 import { DESKTOP_STABLE_ORIGIN } from "@/lib/desktop/config";
 import { hideWindow } from "./hide-window";
 import { openDesktopExternal } from "./open-external";
-import { diagnosticReport } from "./run-log";
 import { checkForUpdatesManually } from "./updater";
-
-/** Confirm locally before copying a report that can contain machine paths. */
-export async function copyDiagnosticReportWithConfirmation(
-  window: BrowserWindow,
-): Promise<boolean> {
-  const { response } = await dialog.showMessageBox(window, {
-    type: "warning",
-    message: "Copy the diagnostic report?",
-    detail:
-      "The report can contain local folder paths and user names. Review it before sharing it with support.",
-    buttons: ["Copy Report", "Cancel"],
-    defaultId: 1,
-    cancelId: 1,
-    noLink: true,
-  });
-  if (response !== 0) return false;
-  clipboard.writeText(diagnosticReport());
-  return true;
-}
 
 /**
  * The application menu (MIN-291).
@@ -163,25 +143,6 @@ export function buildAppMenu(
     {
       role: "help",
       submenu: [
-        {
-          /**
- * THE DIAGNOSTIC REPORT (MIN-363), and it goes to the CLIPBOARD.
- *
- * This is the gesture that makes the first support ticket from
- * the local agent soluble: when a turn misses before the harness has spoken,
- * nothing was published on the server side — the process log is the only thing that speaks ([run-log.ts](run-log.ts)).
- *
- * **Never automatically sent.** The report carries a deposit path,
- * therefore a user name and the tree structure of a machine: it's
- * exactly what we don't ship without someone having proofread it.
- * Here, in Help, rather than in the settings: this is where we look for it
- * when the app is going bad, and the menu remains accessible even if the
- * page does not load — the very reason for which channel is there.
-          */
-          label: "Copy Diagnostic Report",
-          click: () => void copyDiagnosticReportWithConfirmation(window),
-        },
-        { type: "separator" },
         {
           // The SITE, not the active origin: this link leads to the showcase, which has no
           // no channel — and a preview of the landing interests no one.

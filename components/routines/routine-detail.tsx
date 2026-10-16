@@ -5,11 +5,10 @@ import type { RoutineTrigger } from "@/lib/routine-triggers";
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, GitPullRequestIcon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon, PauseCircleIcon, Edit04Icon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
-import { useAppRouter } from "@/lib/use-app-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -25,18 +24,12 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { AgentConversation } from "@/components/agent/agent-conversation";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
 import { AppContentHeader } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";
 import { Markdown } from "@/components/markdown";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import {
-  PR_STATE_STYLES,
-  PrStateBadge,
-} from "@/components/pull-requests/pr-state-badge";
-import { agentSessionStatusKey } from "@/components/agents/agent-session-status";
 import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { SettingsRow } from "@/components/settings/settings-ui";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
@@ -68,6 +61,7 @@ import {
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
 import type { RoutineRunSummary } from "@/lib/routines-api";
+import type { MessageKey } from "@/lib/i18n-keys";
 import { formatRoutineRunDuration } from "@/lib/routine-run-metrics";
 import {
   Tooltip,
@@ -82,12 +76,10 @@ import {
  * conversations, otherwise a daily routine would take up all the space.
  *
  * **Two levels, not one.** The routine shows the LIST of its passages — one
- * full width line per pass, its date and the status of its pull request. Open
- * a line opens the REAL conversation of this run (`AgentConversation`, this one
- * same as the Conversations tab serves): the thread, the diff, the pull request, and
- * dial him to respond. A routine run is not a degraded mode —
- * it continues like any session, simply from the tab
- * Routines.
+ * full width line per pass, its date and its outcome. Opening a line opens the
+ * REAL Numo conversation of this occurrence, with its composer to respond. A
+ * routine run is not a degraded mode — it continues like any conversation,
+ * simply from the Routines tab.
  *
  * The header follows what we are looking at: the title of the routine and its settings on
  * the list, the DATE of the passage and a return to the conversation. The rest of the
@@ -131,10 +123,8 @@ export function RoutineDetail({
   onDeleted: () => void;
 }) {
   const t = useTranslations("Routines");
-  const tAgents = useTranslations("Agents");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
-  const router = useAppRouter();
   const queryClient = useQueryClient();
   const {
     routineSchedulingConfigured,
@@ -322,12 +312,8 @@ export function RoutineDetail({
    * passages, and the DATE of it in place of the title. Neither switch nor
    * menu — you don't set a cadence by reading what a passage produced.
    *
-   * On the right, the conversation itself poses the DIFF; the pull request, she,
-   * comes from the host (`headerActions`), exactly like on the Agents page:
-   * `AgentConversation` can only offer to CREATE one, never to open
-   * the one that exists — it is up to the part that receives it to know where it is read.
    */
-  if (openRun) {
+  if (openRun?.numo_conversation_id) {
     const headerTitle = (
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <Button
@@ -354,36 +340,18 @@ export function RoutineDetail({
       </div>
     );
 
-    if (openRun.kind === "numo" && openRun.numo_conversation_id) {
-      return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <AppContentHeader contentClassName="gap-2">
-            {headerTitle}
-            <div className="ml-auto flex shrink-0 items-center">
-              <PrHeaderAction run={openRun} />
-            </div>
-          </AppContentHeader>
-          <div className="min-h-0 flex-1">
-            <AssistantShell
-              projectId={routine.project_id}
-              compact
-              embeddedConversationId={openRun.numo_conversation_id}
-            />
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <AgentConversation
-          key={openRun.id}
-          noteRunId={openRun.id}
-          projectId={project?.id ?? null}
-          active
-          headerTitle={headerTitle}
-          headerActions={<PrHeaderAction run={openRun} />}
-        />
+        <AppContentHeader contentClassName="gap-2">
+          {headerTitle}
+        </AppContentHeader>
+        <div className="min-h-0 flex-1">
+          <AssistantShell
+            projectId={routine.project_id}
+            compact
+            embeddedConversationId={openRun.numo_conversation_id}
+          />
+        </div>
       </div>
     );
   }
@@ -669,41 +637,15 @@ export function RoutineDetail({
                                 </td>
                                 <td className="relative px-3 py-2.5">
                                   <div className="flex min-w-0 items-center justify-between gap-2">
-                                    {/* A pull request is its own destination; otherwise
-                                        the status describes the run opened by the row. */}
-                                    {run.pr_state ? (
-                                      <button
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          router.push(
-                                            `/pull-requests?run=${run.work_run_id ?? run.id}`,
-                                          );
-                                        }}
-                                        className="relative z-10 shrink-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                      >
-                                        <PrStateBadge
-                                          state={run.pr_state}
-                                          icon
-                                        />
-                                      </button>
-                                    ) : (
-                                      <span className="pointer-events-none relative min-w-0 truncate text-xs text-muted-foreground">
-                                        {run.awaiting_input
-                                          ? t("runWaitingInput")
-                                          : run.error_message
-                                            ? run.error_message
-                                            : run.outcome
-                                              ? run.outcome
-                                              : tAgents(
-                                                  agentSessionStatusKey({
-                                                    status: run.status,
-                                                    prNumber: run.pr_number,
-                                                    prState: run.pr_state,
-                                                  }),
-                                                )}
-                                      </span>
-                                    )}
+                                    <span className="pointer-events-none relative min-w-0 truncate text-xs text-muted-foreground">
+                                      {run.awaiting_input
+                                        ? t("runWaitingInput")
+                                        : run.error_message
+                                          ? run.error_message
+                                          : run.outcome
+                                            ? run.outcome
+                                            : t(runStatusKey(run.status))}
+                                    </span>
                                     <HugeiconsIcon icon={ArrowRight01Icon} className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
                                   </div>
                                 </td>
@@ -934,41 +876,14 @@ function formatRunUsagePercent(
   });
 }
 
-/**
- * What the header of a passage shows about its pull request — same rule as on
- * the Agents page: a LIVING PR is an action (“Open pull request”),
- * a FINISHED PR is a state (the badge, clickable - the PR can still be consulted).
- * No PR: nothing, and the conversation then suggests creating one.
- */
-function PrHeaderAction({ run }: { run: RoutineRunSummary }) {
-  const t = useTranslations("Agents");
-  const router = useAppRouter();
-  if (run.pr_number == null) return null;
-  const closed =
-    run.pr_state === "merged" || run.pr_state === "closed"
-      ? run.pr_state
-      : null;
-  const open = () => router.push(`/pull-requests?run=${run.work_run_id ?? run.id}`);
-  return closed ? (
-    <button
-      type="button"
-      onClick={open}
-      className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <PrStateBadge state={closed} icon />
-    </button>
-  ) : (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onClick={open}
-      className={cn(run.pr_state === "open" && PR_STATE_STYLES.open)}
-    >
-      <HugeiconsIcon icon={GitPullRequestIcon} className="size-3.5" />
-      {t("openPullRequest")}
-    </Button>
-  );
+/** The status of an occurrence in one word, when it has no outcome to show. */
+function runStatusKey(
+  status: RoutineRunSummary["status"],
+): MessageKey<"Routines"> {
+  if (status === "queued" || status === "running") return "runStatusWorking";
+  if (status === "failed") return "runStatusFailed";
+  if (status === "canceled") return "runStatusCanceled";
+  return "runStatusIdle";
 }
 
 /**
@@ -1012,20 +927,10 @@ function routineErrorLabel(
   switch (code) {
     case "quota":
       return t("lastError_quota");
-    case "noRepo":
-      return t("lastError_noRepo" as "lastError_quota");
-    case "alreadyRunning":
-      return t("lastError_alreadyRunning" as "lastError_quota");
-    case "noModelForProvider":
-      return t("lastError_noModelForProvider" as "lastError_quota");
-    case "modelAbovePlan":
-      return t("lastError_modelAbovePlan" as "lastError_quota");
     case "managedServiceUnavailable":
       return t("lastError_managedServiceUnavailable" as "lastError_quota");
-    case "executionBackendUnavailable":
-      return t("lastError_executionBackendUnavailable" as "lastError_quota");
-    case "providerEndpointUnavailableFromSandbox":
-      return t("lastError_providerEndpointUnavailableFromSandbox" as "lastError_quota");
+    // Codes of the retired code agent (MIN-721) still stored on a routine read
+    // as a launch failure until its next occurrence clears them.
     default:
       return t("lastError_launchFailed" as "lastError_quota");
   }

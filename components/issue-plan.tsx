@@ -15,7 +15,6 @@ import {
   Progress,
 } from "mangue-ui";
 import { Markdown } from "@/components/markdown";
-import { NumoIcon } from "@/components/numo-icon";
 import { TaskRow } from "@/components/plan-task-row";
 import {
   parsePlan,
@@ -38,44 +37,26 @@ import {
  * half-edited plan). The markdown is the single source of truth — every task
  * interaction rewrites one line and commits the full document (lib/plan.ts).
  *
- * Empty shot: three ways to fill it — let a Numo agent frame it,
- * copy the prompt for an external agent (MCP), or write it by hand. Both
- * first are optional: the panel only passes them when they have a
- * meaning (authorized agents + linked deposit for Numo).
+ * Empty plan: two ways to fill it — copy the prompt for an external agent
+ * (MCP), or write it by hand.
  *
- * Completed plan: the plan is written, the next step is to IMPLEMENT it — that’s the
- * main button, at the head of the tab. Below, the two ways to
- * take it again first: have it checked point by point by Numo, or copy a
- * prompt for an external agent (choice: implement, or verify the plan).
- *
- * Work started (at least one task checked): the main button becomes
- * “Check the implementation” — reread what was done against the plan and
- * comments, fix real bugs. The prompt menu does not replace
- * nothing: he gains an entry, so that a half-made plan still leaves room for copying
- * the implementation prompt.
+ * Written plan: the actions copy a prompt for the user's own coding agent —
+ * implement the ticket, check the implementation once a task is checked, or
+ * resume the plan itself.
  */
 export function IssuePlan({
   plan,
   onCommit,
-  onWriteWithAgent,
   onCopyPrompt,
-  onImplementWithAgent,
   onCopyImplementPrompt,
-  onVerifyWithAgent,
   onCopyVerifyPrompt,
 }: {
   plan: string | null;
   onCommit: (plan: string | null) => void;
-  /** Opens the agent composer with a “write/verify plan” prompt. */
-  onWriteWithAgent?: () => void;
   /** Copies the “write/verify plan” prompt to an external agent. */
   onCopyPrompt?: () => void;
-  /** Opens the agent composer with the prompt “implements ticket”. */
-  onImplementWithAgent?: () => void;
   /** Copies the “implement ticket” prompt to an external agent. */
   onCopyImplementPrompt?: () => void;
-  /** Opens the agent composer with the "check implementation" prompt. */
-  onVerifyWithAgent?: () => void;
   /** Copies the "check implementation" prompt for an external agent. */
   onCopyVerifyPrompt?: () => void;
 }) {
@@ -153,16 +134,10 @@ export function IssuePlan({
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
         <p className="text-sm font-medium">{t("emptyTitle")}</p>
-        {/* The two ways of having the plan written, then - behind - the one
- which consists of writing it yourself. */}
-        {(onWriteWithAgent || onCopyPrompt) && (
+        {/* Having the plan written by your own agent, then — behind — writing
+            it yourself. */}
+        {onCopyPrompt && (
           <div className="flex flex-wrap items-center justify-center gap-2">
-            {onWriteWithAgent && (
-              <Button size="sm" onClick={onWriteWithAgent}>
-                <NumoIcon animated={false} className="size-4" />
-                {t("writeWithNumo")}
-              </Button>
-            )}
             {onCopyPrompt && (
               // The wording does not say WHICH prompt: the tooltip says so.
               <Tooltip>
@@ -180,7 +155,7 @@ export function IssuePlan({
           </div>
         )}
         <Button
-          variant={onWriteWithAgent || onCopyPrompt ? "ghost" : "outline"}
+          variant={onCopyPrompt ? "ghost" : "outline"}
           size="sm"
           onClick={startEditing}
         >
@@ -213,47 +188,14 @@ export function IssuePlan({
         </Button>
       </div>
 
-      {/* What you do with a written plan. Implementing it is the expected action —
- only full button, replaced by “Check implementation” as soon as a
- task is checked: the work has started, what we then want is to re-read it; below, the two ways to resume the plan itself.
- Numo only appears where it can work (the panel only passes its
- callbacks in this case); Copyable prompts serve
- external agents and always remain there. */}
-      {(onImplementWithAgent ||
-        onVerifyWithAgent ||
-        onWriteWithAgent ||
-        onCopyPrompt ||
+      {/* What you do with a written plan: copy a prompt for your own coding
+          agent — implement it, check the implementation once a task is
+          checked, or resume the plan itself. */}
+      {(onCopyPrompt ||
         onCopyImplementPrompt ||
         onCopyVerifyPrompt) && (
         <div className="mb-4 flex flex-col gap-2">
-          {started && onVerifyWithAgent ? (
-            <Button className="w-full" onClick={onVerifyWithAgent}>
-              <NumoIcon animated={false} className="size-4" />
-              {t("verifyWithNumo")}
-            </Button>
-          ) : (
-            onImplementWithAgent && (
-              <Button className="w-full" onClick={onImplementWithAgent}>
-                <NumoIcon animated={false} className="size-4" />
-                {t("implementWithNumo")}
-              </Button>
-            )
-          )}
           <div className="flex flex-wrap gap-2">
-            {onWriteWithAgent && (
-              <Button
-                variant="outline"
-                // `grow basis-*` rather than `flex-1`: the buttons share the
-                // line when it is wide enough, without ever trimming their
-                // label (the component is `shrink-0`) — otherwise they go to the
-                // line, each across the entire width.
-                className="grow basis-40"
-                onClick={onWriteWithAgent}
-              >
-                <NumoIcon animated={false} className="size-4" />
-                {t(reviewing ? "reviewWithNumo" : "writeWithNumo")}
-              </Button>
-            )}
             {(onCopyPrompt ||
               onCopyImplementPrompt ||
               (started && onCopyVerifyPrompt)) && (

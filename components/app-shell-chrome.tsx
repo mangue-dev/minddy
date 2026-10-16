@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { ContentToaster } from "@/components/content-toaster";
-import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, BrushIcon, BubbleChatDelayIcon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, BubbleChatDelayIcon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
   useCallback,
@@ -87,10 +87,8 @@ import {
 } from "@/lib/settings-sections";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
-import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
 import { useCommandPaletteLauncher } from "@/lib/use-command-palette-launcher";
 import type {
-  BranchCleanupTarget,
   Project,
   SearchIndexIssue,
   SearchIndexObjective,
@@ -143,14 +141,6 @@ function GlobalIssuePanelHost() {
     />
   );
 }
-
-const BranchCleanupDialog = dynamic(
-  () =>
-    import("@/components/settings/git-branch-cleanup").then(
-      (m) => m.BranchCleanupDialog,
-    ),
-  { ssr: false },
-);
 
 /** Right-aligned project tag shown on palette rows (orb + name), AutoKap-style. */
 function projectChip(project: Project) {
@@ -373,20 +363,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     () => new Map(projects.map((p) => [p.id, p])),
     [projects]
   );
-  // Cleaning agent branches (MIN-102), offered in the SIN palette
-  // ANYWHERE: one line per eligible project (owner + linked deposit +
-  // branches pushed by the agent), not just for the project page.
-  // A single request covers all my projects — cf. use-branch-cleanup-targets.
-  const branchCleanupTargets = useBranchCleanupTargets();
-  // The target SURVIVES closing (the dialogue plays its exit animation);
-  // it is `branchCleanupOpen` which opens and closes.
-  const [branchCleanup, setBranchCleanup] = useState<BranchCleanupTarget | null>(null);
-  const [branchCleanupOpen, setBranchCleanupOpen] = useState(false);
-  const openBranchCleanup = useCallback((target: BranchCleanupTarget) => {
-    setBranchCleanup(target);
-    setBranchCleanupOpen(true);
-  }, []);
-
   // CSV export: only one pallet line, never per project — this is the
   // dialogue which requires scope, because “one project or all” is precisely
   // the question we ask ourselves when clicking. As for cleaning the branches, the
@@ -943,37 +919,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         );
       }
 
-      // Housekeeping of agent branches (MIN-102) — an action, not a page, but
-      // per project like the rest of the group, and reachable from anywhere: a
-      // line per eligible project, with its chip, because a deletion of
-      // branches must say which deposit it relates to.
-      for (const target of branchCleanupTargets) {
-        const p = projectById.get(target.project_id);
-        if (!p) continue;
-        pageItems.push({
-          key: `pg-clean-branches-${p.id}`,
-          label: tSettings("gitCleanBranches"),
-          icon: BrushIcon,
-          keywords: [
-            p.name,
-            p.key,
-            "git",
-            "branches",
-            "github",
-            "gitlab",
-            "nettoyer",
-            "clean",
-            "cleanup",
-            "pull request",
-            ...(target.repo_full_name ? [target.repo_full_name] : []),
-          ],
-          meta: projectChip(p),
-          metaText: target.repo_full_name ?? p.name,
-          contextId: p.id,
-          onSelect: () => openBranchCleanup(target),
-        });
-      }
-
       // “Go to” and not “Pages”: since MIN-270, a Page is an object of the
       // product (the wiki of a project). Keep this word for the SCREENS group
       // would put two different things under the same title, in the same list.
@@ -981,7 +926,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     }
 
     return groups;
-  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
+  }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, openAssistant, agentsAllowed, projectLimitReached, openExport, locale, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
   // ── Settings: one line per CARD, not per tab ───────────────────────
   // A settings tab is a column of cards; “Cadence”, “Zone
@@ -1596,19 +1541,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />
       <GlobalIssuePanelHost />
-      {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
- dialog as the settings button, mounted here to be reachable
- from any page, on any of my projects. The key
- moves the dialog from one project to another, so its preview reloads. */}
-      {branchCleanup && (
-        <BranchCleanupDialog
-          key={branchCleanup.project_id}
-          projectId={branchCleanup.project_id}
-          provider={branchCleanup.provider}
-          open={branchCleanupOpen}
-          onOpenChange={setBranchCleanupOpen}
-        />
-      )}
       {/* CSV export opened from the palette — mounted here for the same reason:
  it starts from any page, and takes the tickets from any
  any of my projects. The draft page is just a blemish. */}

@@ -67,8 +67,6 @@ vi.mock("@/lib/supabase-service", () => ({
 
 const { encodePullRequestUrl } = await import("@/lib/server/agent/pull-request-url-content");
 const { encodePullRequestContent } = await import("@/lib/server/agent/pull-request-content");
-const { encodeAgentCheckpoint } = await import("@/lib/server/agent/run-checkpoint-content");
-const { encryptJournal, journalEncodedRow } = await import("@/lib/server/agent/encrypted-journal");
 const { encodeOAuthClientContent } = await import("@/lib/server/oauth/client-content");
 const { encodeOAuthCodeContent } = await import("@/lib/server/oauth/code-content");
 const { encodeApiKeyContent } = await import("@/lib/server/api-key-content");
@@ -172,64 +170,31 @@ describe("critical backfill readiness", () => {
     expect(state.databaseWrites).toBe(0);
   });
   it("authenticates each source even when its checked timestamp is set", async () => {
-    const pr = "pr-1", run = "run-1", project = "project-1", conversation = "conversation-1";
-    const checkpoint = { messages: [{ role: "user", content: "Private checkpoint" }] };
-    const runCipher = await encodeAgentCheckpoint(project, run, checkpoint as never);
-    const runtimeCipher = await store.encrypt(checkpoint, {
-      scope: { kind: "project", id: project }, table: "agent_runtime_sessions",
-      column: "checkpoint", rowId: "orphan-1",
-    });
-    const journal = await encryptJournal(project, {
-      ...journalEncodedRow(run, "session-1", [{ seq: 1, output: "Private output" }]),
-      id: 1, encryption_version: 0,
-    });
+    const pr = "pr-1";
     state.tables = {
       pull_requests: [{ id: pr, url: await encodePullRequestUrl(pr, "https://private.invalid"),
         title: await encodePullRequestContent(pr, "title", "Private title"),
         head_branch: null, base_branch: null,
         url_encryption_checked_at: "checked", content_encryption_checked_at: "checked" }],
-      agent_runs: [{ id: run, project_id: project, conversation_id: conversation,
-        ...runCipher,
-        checkpoint_encryption_checked_at: "checked" }],
-      agent_runtime_sessions: [
-        { conversation_id: conversation, current_run_id: run,
-          conversation: { project_id: project }, checkpoint: null,
-          checkpoint_ciphertext: runCipher.checkpoint_ciphertext,
-          checkpoint_encryption_version: 1,
-          checkpoint_encryption_checked_at: null },
-        { conversation_id: "orphan-1", current_run_id: null,
-          conversation: { project_id: project }, checkpoint: null,
-          checkpoint_ciphertext: runtimeCipher, checkpoint_encryption_version: 1,
-          checkpoint_encryption_checked_at: "checked" },
-      ],
-      agent_run_journal: [{ ...journal, run: { project_id: project },
-        encryption_checked_at: "checked" }],
     };
     expect(await verifyCriticalBackfillReadiness()).toMatchObject({
-      ready: true, blocked: { pullRequests: 0, runCheckpoints: 0,
-        runtimeCheckpoints: 0, journals: 0 },
+      ready: true, blocked: { pullRequests: 0 },
     });
     expect(state.currentKeyWrites).toBe(0);
     expect(state.databaseWrites).toBe(0);
-    state.tables.agent_runtime_sessions[0].checkpoint_ciphertext = runtimeCipher;
-    expect(await verifyCriticalBackfillReadiness()).toMatchObject({
-      ready: false, blocked: { runtimeCheckpoints: 1 },
-    });
-    state.tables.agent_runtime_sessions[0].checkpoint_ciphertext =
-      runCipher.checkpoint_ciphertext;
     const source = state.tables.pull_requests[0];
+    const authentic = source.url;
     const wrapper = String(source.url).split(":");
     const envelope = JSON.parse(Buffer.from(wrapper[2], "base64url").toString("utf8"));
     envelope.tag = (envelope.tag[0] === "A" ? "B" : "A") + envelope.tag.slice(1);
     source.url = `${wrapper[0]}:${wrapper[1]}:${Buffer.from(JSON.stringify(envelope)).toString("base64url")}`;
     expect(await verifyCriticalBackfillReadiness()).toMatchObject({
-      ready: false, blocked: { pullRequests: 1, runCheckpoints: 0,
-        runtimeCheckpoints: 0, journals: 0 },
+      ready: false, blocked: { pullRequests: 1 },
     });
+    source.url = authentic;
     state.root = 8;
     expect(await verifyCriticalBackfillReadiness()).toMatchObject({
-      ready: false, blocked: { pullRequests: 1, runCheckpoints: 1,
-        runtimeCheckpoints: 2, journals: 1 },
+      ready: false, blocked: { pullRequests: 1 },
     });
   });
 

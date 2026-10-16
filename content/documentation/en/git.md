@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,15 @@
       "docs/managed-forge-relay-plan.md",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "docs/github-issue-sync.md",
-      "content/documentation/reviews/forge-controls-capture-candidates.json"
+      "content/documentation/reviews/forge-controls-capture-candidates.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/min721_docs (MIN-721 source review: server-side code work removed from repository linking; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "api-and-webhooks"
@@ -67,7 +68,7 @@
       "src": "/documentation/en/git-connection-flow.svg",
       "alt": "A personal account connection and a project repository link are separate steps.",
       "caption": "Authorize the account first, then link a repository as the project owner.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +101,7 @@
       "src": "/documentation/en/forge-issue-sync-mapping.svg",
       "alt": "GitHub sync flow through owner setup, incoming-event checks, import and state mirroring.",
       "caption": "GitHub events preserve newer edits and avoid duplicate deliveries. GitLab field mappings need their own verification.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +139,7 @@
       "src": "/documentation/en/forge-issue-sync-workflow.png",
       "alt": "Linked demonstration GitHub repository with issue synchronization disabled.",
       "caption": "The demonstration repository is linked to GitHub. Issue synchronization is still off; inspect scope and existing backlog before enabling it. This capture does not prove a synchronized import.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +164,7 @@ Connecting a personal Git account, linking a project repository and synchronizin
 
 In account Git settings, connect GitHub or GitLab and complete the browser authorization. Grant access only to the repositories needed. In desktop, follow the browser return to the app. The account connection can be reused across projects; it does not automatically link every repository.
 
-The project owner opens project settings' Git section, chooses an available repository and confirms the link. Check its provider, full repository name and displayed acting account. Members cannot replace the owner-only link. Linking enables repository context and server-side code work; issue synchronization is a separate switch.
+The project owner opens project settings' Git section, chooses an available repository and confirms the link. Check its provider, full repository name and displayed acting account. Members cannot replace the owner-only link. Linking enables repository context, pull request tracking and repository skills; issue synchronization is a separate switch.
 
 ![A personal account connection and a project repository link are separate steps.](/documentation/en/git-connection-flow.svg)
 

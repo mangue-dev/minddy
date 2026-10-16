@@ -97,8 +97,7 @@ const GROUPS: ReadonlyArray<Group> = [
       { key: "mcp", hint: true, value: EVERYWHERE },
       { key: "plan", hint: true, value: EVERYWHERE },
       { key: "agent", hint: true, value: (plan) => plan.allowAgents },
-      // A PR only exists in minddy carried by an agent run
-      // (`app/api/pull-requests` reads `agent_runs`): same guard as the agent.
+      // Pull requests follow the same plan guard as agents.
       { key: "pr", hint: true, value: (plan) => plan.allowAgents },
       // Provider keys cover compatible AI calls; cloud execution remains metered.
       { key: "byok", hint: true, value: (plan) => plan.allowAgents },

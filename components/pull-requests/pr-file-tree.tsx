@@ -27,9 +27,9 @@ import {
  * diff, the panel can be 380 px and show the paths in full, for the time
  * you choose.
  *
- * **A `Popover`, and not another modal panel.** Two of the three surfaces which
- * render `PrDiff` already live in a `SidePanel` (the diff of a commit and that
- * of an agent run): nesting a second modal would make two overlays, two focus
+ * **A `Popover`, and not another modal panel.** A surface which renders
+ * `PrDiff` already lives in a `SidePanel` (the diff of a commit): nesting a
+ * second modal would make two overlays, two focus
  * traps and two Escapes that argue. A single gesture everywhere, therefore,
  * and no mobile bifurcation to write or check.
  */

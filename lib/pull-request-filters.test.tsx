@@ -85,8 +85,7 @@ function item(state: PullRequestListItem["pr_state"] = "open", prId = "pr"): Pul
   return {
     prId, pr_number: 1, pr_url: null, pr_state: state, provider: "github",
     title: prId, author: null, head_branch: "feature", created_at: "2026-10-01", updated_at: "2026-10-01",
-    issue: null, project: null, runId: "run", runIds: ["run"], numoOpened: true,
-    activeRunId: null, busyRunId: null, createdByMe: true,
+    issue: null, project: null, createdByMe: true,
   };
 }
 function response(pullRequests: PullRequestListItem[]): PullRequestListResponse {
@@ -154,7 +153,7 @@ beforeEach(() => {
   h.fetchList.mockImplementation(async ({ state, pin }) => response(
     rows.filter((pr) => state === "completed"
       ? ["merged", "closed"].includes(pr.pr_state)
-      : ["open", "draft"].includes(pr.pr_state) || pr.prId === pin?.pr || pr.runIds.includes(pin?.run)),
+      : ["open", "draft"].includes(pr.pr_state) || pr.prId === pin?.pr),
   ));
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   container = document.createElement("div");
@@ -177,7 +176,7 @@ function PreparedDetail() {
 describe("prepared pull request renderer", () => {
   it("mounts prepared detail directly and keeps its draft and DOM across tab returns", async () => {
     h.prepared.mockReturnValue(PreparedDetail);
-    client.setQueryData(allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr", run: null }), response(rows));
+    client.setQueryData(allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr" }), response(rows));
     await render(); await flush();
     const input = container.querySelector<HTMLInputElement>("[data-prepared-detail] input")!;
     expect(input).not.toBeNull();
@@ -190,7 +189,7 @@ describe("prepared pull request renderer", () => {
   });
 
   it("keeps a mounted dynamic detail when preparation finishes later", async () => {
-    client.setQueryData(allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr", run: null }), response(rows));
+    client.setQueryData(allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr" }), response(rows));
     await render(); await flush();
     const input = container.querySelector<HTMLInputElement>("[data-dynamic-detail] input")!;
     expect(input).not.toBeNull();
@@ -204,8 +203,7 @@ describe("prepared pull request renderer", () => {
 });
 
 describe("Pull Requests completed filter", () => {
-  it.each(["pr=pr", "run=run"])("keeps completed off after merging and returning to a retained %s tab", async (link) => {
-    search = link;
+  it("keeps completed off after merging and returning to a retained link tab", async () => {
     let confirm!: () => void;
     h.merge.mockImplementation(() => new Promise<void>((resolve) => { confirm = resolve; }));
     await render();
@@ -216,7 +214,7 @@ describe("Pull Requests completed filter", () => {
     expect(merge).toBeDefined();
     await act(() => merge.click());
     expect(client.getQueryData<PullRequestListResponse>(
-      allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: search.startsWith("pr") ? "pr" : null, run: search.startsWith("run") ? "run" : null }),
+      allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr" }),
     )?.pullRequests).toEqual([]);
     await render(false);
     rows = [item("merged")];
@@ -237,11 +235,7 @@ describe("Pull Requests completed filter", () => {
     expectCompleted(false);
   });
 
-  it.each([
-    ["pr=pr", "merged"], ["pr=pr", "closed"],
-    ["run=run", "merged"], ["run=run", "closed"],
-  ] as const)("requires manual activation for %s pointing to a %s PR", async (link, state) => {
-    search = link;
+  it.each(["merged", "closed"] as const)("requires manual activation for a link pointing to a %s PR", async (state) => {
     rows = [item(state)];
     await render();
     await flush();

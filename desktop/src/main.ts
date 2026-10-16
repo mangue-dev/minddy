@@ -104,8 +104,7 @@ import {
   localSkills,
   localSkill,
 } from "./local-repo";
-import { readLocalRunDiff } from "./local-run-diff";
-import { buildAppMenu, copyDiagnosticReportWithConfirmation } from "./menu";
+import { buildAppMenu } from "./menu";
 import { openServerPicker } from "./server-picker";
 import {
   LOCAL_SELF_HOST_ORIGIN,
@@ -1064,10 +1063,6 @@ function registerIpc(): void {
 
   ipcMain.handle("minddy:update:check", () => checkForUpdatesManually());
 
-  ipcMain.handle("minddy:diagnostics:copy", () =>
-    mainWindow ? copyDiagnosticReportWithConfirmation(mainWindow) : false,
-  );
-
   ipcMain.on("minddy:set-badge", (_event, count: unknown) => {
     const n = typeof count === "number" && Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
     if (notificationCapabilities.badge === "dock") {
@@ -1297,10 +1292,6 @@ function registerIpc(): void {
         )
       : null;
   });
-
-  ipcMain.handle("minddy:local-run-diff:read", (_event, input: unknown) =>
-    readLocalRunDiff(input),
-  );
 
   // A remote page does not receive a network proxy through the Electron bridge. She
   // can only request this bounded discovery: `local-models.ts` accepts

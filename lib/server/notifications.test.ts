@@ -190,15 +190,6 @@ const pullRequestOpenedRow = (userId: string) => ({
   actor_id: null,
 });
 
-const conversationRow = (userId: string) => ({
-  user_id: userId,
-  project_id: "p1",
-  type: "agent_done" as const,
-  issue_id: null,
-  agent_conversation_id: "conversation-1",
-  actor_id: null,
-});
-
 const routineRow = (userId: string) => ({
   user_id: userId,
   project_id: "p1",
@@ -340,15 +331,6 @@ describe("insertNotifications — volet push (MIN-183)", () => {
 
   it.each([
     {
-      name: "agent conversation",
-      row: conversationRow(ALICE),
-      tables: {
-        agent_conversations: [
-          { id: "conversation-1", project_id: "p2" },
-        ],
-      },
-    },
-    {
       name: "routine",
       row: routineRow(ALICE),
       tables: {
@@ -422,13 +404,13 @@ describe("notification failure diagnostics", () => {
   it.each([false, true])("logs a constraint refusal once without replay or push (upsert: %s)", async (upsert) => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const { service, inserted, upserted } = stubService({ insertError: {
-      code: "23514", message: 'new row violates check constraint "notifications_numo_work_pair_check"',
+      code: "23514", message: 'new row violates check constraint "notifications_type_check"',
       details: "Private notification row",
     } });
     await insertNotifications(service, [routineRow(ALICE)], { deduplicatePullRequestOpened: upsert });
     expect(log).toHaveBeenCalledWith("[notifications] insert_failed", expect.objectContaining({
       correlation_id: expect.any(String), code: "23514", kind: "database_constraint",
-      constraint: "notifications_numo_work_pair_check", row_count: 1,
+      constraint: "notifications_type_check", row_count: 1,
       routine_ids: ["routine-1"], notification_types: ["routine_done"],
     }));
     expect(inserted.length + upserted.length).toBe(1);

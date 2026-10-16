@@ -47,7 +47,6 @@ Storage, and Realtime.
 | Auth email | SMTP configured in Supabase/GoTrue | Recommended for a public service |
 | Application email | Resend, explicitly configured, or no provider; `console` is development-only | No |
 | AI | Per-user provider reachable from the server, or managed AI in the cloud edition | No |
-| Numo code work | Built-in self-hosted Docker sandboxes or Vercel Sandbox | Yes in the reference server installation |
 | GitHub, GitLab, application email, Web Push, scheduled routines | Operator-owned accounts and explicit configuration | No |
 
 GitHub integration targets `github.com` and GitLab integration targets
@@ -87,14 +86,14 @@ This table is the short operational classification.
 | Class | Variables | How to obtain them |
 | --- | --- | --- |
 | Required to run a deployed instance | `MINDDY_PUBLIC_APP_URL`, `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Set the selected public HTTPS or private HTTP origin. Copy the Supabase API URL, anon key, and service-role key from Supabase Cloud or the selected stack. Never expose the service-role key to a browser. |
-| Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET`, `AGENT_RUNNER_SECRET` | The guided installers write missing values without replacing existing ones. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
+| Generated bootstrap secrets | `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET` | The guided installers write missing values without replacing existing ones. Generate a replacement with `openssl rand -hex 32`; rotate it deliberately and preserve the old value when encrypted existing data requires it. |
 | Recommended instance identity | `MINDDY_PUBLIC_SITE_NAME`, `MINDDY_PUBLIC_CONTACT_EMAIL`, `ADMIN_EMAILS`, `OAUTH_ISSUER` | Choose operator-owned public values. `OAUTH_ISSUER` is normally empty and is only needed when OAuth/MCP is intentionally published at an origin different from the app origin. |
 | Optional product feedback | `MINDDY_FEEDBACK_KEY`, `MINDDY_DOCUMENTATION_FEEDBACK_KEY` | Use separate server-only feedback integration keys for general app feedback and documentation error reports. Select the Documentation objective on the documentation integration. Reports require sign-in; their article metadata is appended by the server after submission. The documentation report button is disabled when its key is absent. |
 | Optional capability settings | `EMAIL_PROVIDER`, Resend sender/key variables, GitHub/GitLab variables, PostHog pairs, `MINDDY_PUBLIC_ERROR_TRACKING`, VAPID/APNs/WNS variables, `OPENROUTER_API_KEY`, and the matching integration secrets | Configure the complete set for the capability, following the comments in `.env.example`. An incomplete set is reported as disabled or incomplete rather than using an implicit provider. Error tracking additionally requires the explicit `MINDDY_PUBLIC_ERROR_TRACKING=1` opt-in (see [docs/error-tracking.md](error-tracking.md)). |
 | Cloud-reserved settings | `MINDDY_MANAGED_AI`, `MINDDY_MANAGED_BILLING`, `MINDDY_MANAGED_FORGE`, Stripe price/key variables, `MINDDY_DESKTOP_FEED_URL`, `BLOB_READ_WRITE_TOKEN`, `APPLE_KEYCHAIN_PROFILE` | Leave absent or set the managed flags to `0` when self-hosting. They are for Minddy-operated managed services, release distribution, or build infrastructure—not prerequisites for the open-source core. |
 
 `SUPABASE_SERVICE_ROLE_KEY` is required when `NODE_ENV=production`. The
-server installer always creates the AI-key, feedback-SSO, runner, and scheduler
+server installer always creates the AI-key, feedback-SSO, and scheduler
 secrets. Git provider credentials are optional and remain operator-owned.
 Secrets
 must be at least 32 characters where the application validates them.
@@ -116,41 +115,25 @@ analytics, Edge Functions, image transformation, the pooler, and other unused
 containers. Database, attachments, and backup storage grow over time; keep
 restorable backups on separate storage.
 
-### Numo conversations, code work, and routines
+### Numo conversations and routines
 
-The reference server installation includes interactive Numo conversations,
-delegated code work, and scheduled routines. A request from the Numo page, the
-contextual floating button, an in-product action, or a due routine enters the same
-conversation path. Numo uses Minddy tools directly and asks the built-in runner
-to open one restricted Docker sandbox on the server only when repository work is
-needed:
+The reference server installation includes interactive Numo conversations and
+scheduled routines. A request from the Numo page, the contextual floating
+button, an in-product action, or a due routine enters the same conversation
+path, and Numo answers with Minddy tools and the connected forges. Numo does not
+run code: the reference profiles contain no container runner, and no service
+receives the Docker socket.
 
-```dotenv
-AGENT_EXECUTION_BACKEND=self-hosted
-AGENT_RUNNER_URL=http://agent-runner:6464
-AGENT_CONTROL_ORIGIN=http://minddy:3000
-```
+The installer generates `CRON_SECRET`; the bundled scheduler uses it to call the
+authenticated cron routes. Starting Numo from either the web or desktop app uses
+the same server path, and no desktop application needs to stay online for
+scheduled work.
 
-The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`; the operator
-does not configure a separate execution service or keep a desktop app online.
-Starting Numo from either the web or desktop app therefore uses the same server
-execution path. No desktop application needs to stay online for scheduled work.
-The runner has access to the Docker socket so it can create sandboxes. The
-sandbox containers do not receive that socket, the Supabase network, or instance
-secrets. They receive CPU, memory, process, capability, and filesystem limits.
-Only the trusted runner container has host-level Docker authority, so protect
-the server and never expose port 6464.
-
-`AGENT_EXECUTION_BACKEND=vercel` remains available for deployments that
-deliberately use an operator-owned Vercel Sandbox project. It requires a valid
-`MINDDY_DATA_ROOT_KEY` (64 hexadecimal characters) to protect sandbox credential
-refresh policies, even when `MINDDY_CONTENT_ENCRYPTION_ENABLED=false`. This
-prerequisite also applies when the application runs on Vercel. Keep the existing
-root key if one is already configured; otherwise generate it once with
-`openssl rand -hex 32` and back it up separately from the database. Incomplete
-configuration blocks agent execution before sandbox allocation. Desktop-local code
-execution is retired; `AGENT_EXECUTION_BACKEND` accepts only `self-hosted` or
-`vercel`.
+An environment created by an earlier release may still contain
+`AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, and
+`AGENT_CONTROL_ORIGIN`, or the Vercel Sandbox variables `VERCEL_TOKEN`,
+`VERCEL_TEAM_ID`, and `VERCEL_PROJECT_ID`. The application ignores them; delete
+them when you next edit the environment file.
 
 For a public service, set `MINDDY_PUBLIC_APP_URL` to one absolute HTTPS origin with
 no path or trailing slash. It is used for invitation links, OAuth/MCP metadata,
@@ -208,8 +191,8 @@ procedure for a running instance.
 
 ### Guided reference-profile installation
 
-For the published v0.11.0 OCI image, both `managed` and `full` profiles have a
-missing runner helper. Generate configuration with `--skip-start` and follow the
+For the published v0.11.0 OCI image, both `managed` and `full` profiles fail to
+start their agent runner. Generate configuration with `--skip-start` and follow the
 [known distribution checks](#known-v0110-distribution-checks) before attempting
 startup. The examples below require a corrected, matching release/tooling
 combination for a complete installation; the retained full-profile engineering
@@ -285,8 +268,8 @@ installer never replaces an existing `.env` or changes its image pin. A later
 invocation reuses that file and safely repeats Compose pulls, `up`, migrations,
 and bucket reconciliation; it does not rotate data-encryption or cron secrets. Public
 DNS, firewall ports 80 and 443, Supabase provisioning, and a restorable
-backup policy remain operator responsibilities. The scheduler and agent runner
-start as core services; managed AI, billing, analytics, email, Git hosting, and
+backup policy remain operator responsibilities. The scheduler starts as a core
+service; managed AI, billing, analytics, email, Git hosting, and
 other external integrations remain off unless configured deliberately.
 
 The guided page and installer expose only two optional self-host choices:
@@ -301,7 +284,7 @@ initial self-host options.
 
 Run the read-only diagnostic after installation and after maintenance. It
 redacts credentials while checking configuration, compatibility, containers,
-DNS/TLS, app health, scheduler and agent-runner state, disk space, and—when a database
+DNS/TLS, app health, scheduler state, disk space, and—when a database
 URL is supplied—migrations and Storage.
 
 ```bash
@@ -385,8 +368,7 @@ into two supported deployment paths:
 
 - `compose.managed.yml` runs minddy behind Caddy with an operator-provided
   Supabase project; and
-- `compose.full.yml` overlays minddy, Caddy, scheduled jobs, and the built-in
-  agent runner on the
+- `compose.full.yml` overlays minddy, Caddy, and scheduled jobs on the
   exact official Supabase Docker revision recorded in the compatibility matrix.
 
 The full profile does not copy Supabase into this repository. Fetch its pinned
@@ -547,33 +529,16 @@ buffer. Registry and signature failures still require their own remedy.
 
 The released offline function compiler expects jose 6.2.3 while the frozen direct
 dependency resolves to 6.2.12. The current source pin now matches that frozen
-dependency. The released OCI runner also lacks `agent-runner-storage.mjs`; the
-current Dockerfile includes it. The disposable engineering rehearsal used the
-locked 6.2.3 dependency and a read-only mount of the tagged helper. Those are
-explicit adaptations, not acceptance of the unchanged published release. Obtain
-a corrected release/tooling combination before accepting the standard deployment.
-Never bypass identity checks or remove runner isolation.
+dependency. The disposable engineering rehearsal used the locked 6.2.3
+dependency; that is an explicit adaptation, not acceptance of the unchanged
+published release. Obtain a corrected release/tooling combination before
+accepting the standard deployment. Never bypass identity checks.
+
+The v0.11.0 profiles also contain an `agent-runner` service whose image lacks
+`agent-runner-storage.mjs`. Later releases remove that runner and its code
+sandboxes entirely. Do not adapt or mount runner files on a v0.11.0 instance;
+upgrade to a release without the runner and start it with `--remove-orphans`.
 
 The v0.11.0 scheduler does not include `/api/cron/numo-turns`; the current candidate
 scheduler now calls it every minute. A candidate package version does not create
 a published compatibility row.
-
-The published runner also rejects allocation-suffixed sandbox names, transfers
-base64 file chunks above Linux's per-environment-value limit, and initializes a
-UID-10001 mode-0700 temporary store as root with every capability dropped. The
-unverified initialization result can leave `/vercel/sandbox` absent, so a healthy
-runner endpoint does not establish working repository cloning. Current candidate
-fixes must be exercised with a fresh sandbox, a large file round trip and a real
-code-workflow acceptance check. The local engineering rehearsal mounts the current
-runner and storage helper read-only on the immutable v0.11.0 image; it is not an
-acceptance of the untouched release or a newly published compatibility row.
-
-### Pinned runner engineering workaround
-
-For the published v0.11.0 image, the following explicit tooling variant also supplies the Basic authentication challenge required by Git HTTP clients. It is a workaround pinned to source commit 89ab340cb10ec729948fc6e596fb7ab0326fc470, not a newly published image or compatibility row. Use it only after completing the base installation. The two files must stay together, at their verified hashes, on persistent storage. These commands expose no runner port. The complete public [procedure](https://www.minddy.app/docs/install-a-server#runner-workaround) includes both verified download URLs, checksums, persistent mounts and operational limitations.
-
-The published application image includes Node.js and Git but deliberately removes npm, npx and Corepack. The reference Compose profile also selects that image for workers through AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE. This is insufficient for a fresh code worker: the OpenCode bootstrap uses npm to install its pinned runtime and plugin, even for a repository with no project dependencies. Without npm, execution stops at bootstrap; no project edit or test success can be inferred from the conversation. Use an operator-built and verified dedicated worker image with Node.js 24, npm, Git and the project’s required tools, selected by overriding AGENT_RUNNER_SANDBOX_IMAGE in the runner service. Keep the runner’s isolation constraints. Verify bootstrap, repository cloning, actual tests and the resulting diff before enabling code delegation. Fixing the runner files alone does not supply this worker toolchain.
-
-This procedure also builds a separate code-worker image. The base is pinned, but Debian packages are resolved at build time; inspect the resulting Docker image ID and retain that exact image with the backup. Never substitute the application image after a restore. Building requires access to the base registry and Debian package repositories; fresh OpenCode bootstrap also needs the npm registry. The recipe supplies the bootstrap tools, not every project’s dependencies. Additional build tools require an explicitly maintained variant. The Compose overlay below sets the runner service’s image environment directly because the historical reference Compose file ignores a standalone AGENT_RUNNER_SANDBOX_IMAGE value in the protected file. The inline recipe and overlay are included in the linked public installation article.
-
-The pinned storage helper also makes the sandbox workspace executable. Docker otherwise mounts this tmpfs with noexec, preventing the native OpenCode binary from starting and potentially surfacing a misleading musl-package fallback error. The correction retains nosuid, nodev, UID/GID 10001, mode 0700, read-only root filesystem, dropped capabilities and the disposable per-sandbox store. It does not grant executable access to host data or make the application image a suitable worker image.

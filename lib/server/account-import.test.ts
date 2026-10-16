@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AccountTransferDocument } from "@/lib/account-transfer";
+import { validateAccountTransfer, type AccountTransferDocument } from "@/lib/account-transfer";
 import { EncryptedStore } from "./encryption/store";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 
@@ -111,10 +111,9 @@ const OBJECTIVE = "77777777-7777-4777-8777-777777777777";
 
 function transfer(overrides: Partial<AccountTransferDocument> = {}): AccountTransferDocument {
   return {
-    format_version: 3,
+    format_version: 4,
     exported_at: "2026-08-25T12:00:00.000Z",
     account: { id: SOURCE_USER },
-    preferences: null,
     owned_projects: [],
     memberships: [],
     issues: [],
@@ -129,7 +128,6 @@ function transfer(overrides: Partial<AccountTransferDocument> = {}): AccountTran
     cycles: [],
     scratchpad: null,
     assistant_conversations: [],
-    code_agent_conversations: [],
     notifications: [],
     push_devices: [],
     statistics: [],
@@ -334,6 +332,49 @@ describe("account import tenant isolation", () => {
     });
     database.crypto = null;
     await expect(buildAccountExport(USER)).rejects.toThrow("Test key wrapper unavailable");
+  });
+
+  it("imports a v3 file while ignoring its retired code-agent sections", async () => {
+    const CONVERSATION = "88888888-8888-4888-8888-888888888888";
+    const AGENT_NOTIFICATION = "99999999-9999-4999-8999-999999999999";
+    const ISSUE_NOTIFICATION = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const validated = validateAccountTransfer({
+      ...transfer(),
+      format_version: 3,
+      owned_projects: [{ id: OWNED_PROJECT, owner_id: SOURCE_USER, key: "OLD", name: "Owned" }],
+      preferences: { user_id: SOURCE_USER, default_model: "legacy/model", branch_prefix: "agent/" },
+      code_agent_conversations: [{
+        id: CONVERSATION, project_id: OWNED_PROJECT, title: "Legacy code work",
+        turns: [{ id: OBJECTIVE, status: "completed", outcome: "Done" }],
+        messages: [{ role: "user", content: "Fix the build", turn_id: OBJECTIVE }],
+        contexts: [{ kind: "issue", resource_id: ISSUE, snapshot: {} }],
+      }],
+      notifications: [
+        { id: AGENT_NOTIFICATION, type: "agent_run_completed", agent_conversation_id: CONVERSATION,
+          project_id: OWNED_PROJECT, created_at: "2026-08-25T12:00:00.000Z" },
+        { id: ISSUE_NOTIFICATION, type: "assigned", agent_conversation_id: null,
+          project_id: OWNED_PROJECT, created_at: "2026-08-25T12:00:00.000Z" },
+      ],
+    });
+    expect(validated.ok).toBe(true);
+    if (!validated.ok) return;
+
+    const result = await importAccountTransfer(validated.document, USER);
+
+    expect(result.projects).toBe(1);
+    expect(database.writes.map((write) => write.table)).toEqual(["projects", "notifications"]);
+    expect(database.writes[1].rows).toEqual([expect.objectContaining({ id: ISSUE_NOTIFICATION, user_id: USER })]);
+    expect(database.writes[1].rows[0]).not.toHaveProperty("agent_conversation_id");
+    expect(JSON.stringify(database.writes)).not.toContain("Legacy code work");
+  });
+
+  it("exports the current format without the retired code-agent sections", async () => {
+    database.rows.notifications = [{ id: ISSUE, user_id: USER, type: "assigned" }];
+    const exported = await buildAccountExport(USER);
+    expect(exported.format_version).toBe(4);
+    expect(exported).not.toHaveProperty("preferences");
+    expect(exported).not.toHaveProperty("code_agent_conversations");
+    expect(validateAccountTransfer(JSON.parse(JSON.stringify(exported))).ok).toBe(true);
   });
 
   it("rejects an oversized imported notebook rather than silently truncating it", async () => {

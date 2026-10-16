@@ -122,7 +122,7 @@ must be checked before a column is declared migrated.
 | `feedback_posts` | Private `title`, `body`, submitted and translated text, moderation explanation, embeddings if reversibility or membership leakage is possible | IDs, status, counts, visibility, classification and timestamps. Public posts require a separate publication projection. |
 | `project_invitations` | `invited_email` with an HMAC equality index; purge ciphertext and index when accepted, rejected, cancelled or expired | IDs, inviter/invitee references, status and dates. `token` is a bearer secret and needs a one-way digest, not reversible encryption. |
 | `feedback_users` | `email`, private `name`, `external_id` if it identifies a person; equality needs scoped blind indexes | ID, project ID, verification state and dates. Public pseudonyms remain clear only when published by design. |
-| `agent_messages`, `assistant_messages`, `conversations`, `agent_conversations` | Message bodies, tool payloads, context, titles and error text that may echo user content | IDs, roles, state, routing references and timestamps. |
+| `assistant_messages`, `conversations` | Message bodies, tool payloads, context, titles and error text that may echo user content | IDs, roles, state, routing references and timestamps. |
 | `project_drafts`, `user_scratchpad`, `views`, `saved_views`, `categories` | User-authored names, bodies, filters, links and drafts | IDs, ownership references, type, position, flags and timestamps. |
 | `attachments`, `page_files` and storage objects | User file names, user-supplied URLs, extracted text and object bytes | IDs, references, MIME type, size and dates. Object storage needs its own envelope and migration. |
 | Credential tables | Existing encrypted blobs need a key migration plan; never copy decrypted secrets into SQL literals | IDs, owner references, key hashes/prefixes, provider and dates. |
@@ -233,7 +233,7 @@ Task numbers below follow the displayed plan
 
 | Task | Review result |
 | --- | --- |
-| 1. Column and consumer audit | Incomplete. The inventory above covers the main content tables, not every column or consumer. For example, `agent_run_events.payload`, `agent_run_journal.events`, and `agent_run_messages.content` are also content-bearing copies in the baseline. Later schema changes and SQL consumers still need a complete audit. Reopened. |
+| 1. Column and consumer audit | Incomplete. The inventory above covers the main content tables, not every column or consumer. For example, the baseline also held content-bearing Agent run event, journal and message copies; MIN-721 dropped those tables. Later schema changes and SQL consumers still need a complete audit. Reopened. |
 | 2. Server crypto store | Implemented: branded ciphertext, AES-GCM with row/column/scope AAD, explicit key versions, separate HMAC keys, local root-key wrapper, coalesced loads and bounded cache lifetime. Concurrent cache eviction and initial-key cleanup were corrected in this review. |
 | 3. Schema and privileges | Partially implemented: the key registry and invitation state/index/privilege migration exist, but other target content tables have no encryption columns. Vault view privileges are revoked; credential migration and statement-log configuration remain open. Reopened. |
 | 4. Repository conversion | Invitations use server paths; issue, page, comment, file, search and history paths remain plaintext. Keep in progress. |

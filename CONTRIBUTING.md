@@ -36,7 +36,7 @@ Repository code executes during common development commands:
 | --- | --- |
 | `pnpm install` or `npm install` | Approved dependency installation scripts |
 | `pnpm test` | Test setup, including `scripts/build-pages-md.mjs` |
-| `pnpm dev` or `pnpm build` | `predev`/`prebuild`, agent VM, and page Markdown builders |
+| `pnpm dev` or `pnpm build` | `predev`/`prebuild` and the page Markdown builder |
 
 Do not execute an untrusted pull request in a checkout that contains production
 credentials. Review changes to `scripts/`, package manifests, lockfiles,

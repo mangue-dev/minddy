@@ -62,13 +62,12 @@ test("the installer creates a readable self-hosted configuration with integratio
     SECRET_KEY_BASE: "base", VAULT_ENC_KEY: "vault", PG_META_CRYPTO_KEY: "meta", LOGFLARE_PUBLIC_ACCESS_TOKEN: "public",
     LOGFLARE_PRIVATE_ACCESS_TOKEN: "private", S3_PROTOCOL_ACCESS_KEY_ID: "access", S3_PROTOCOL_ACCESS_KEY_SECRET: "storage",
   });
-  const rendered = renderEnvironment("MINDDY_IMAGE=ghcr.io/mangue-dev/minddy:v0.10.19\nMINDDY_HOST=tickets.example.com\nADMIN_EMAILS=ops@example.com\nMINDDY_MANAGED_AI=1\nMINDDY_MANAGED_BILLING=1\nAGENT_EXECUTION_BACKEND=cloud\n", values);
+  const rendered = renderEnvironment("MINDDY_IMAGE=ghcr.io/mangue-dev/minddy:v0.10.19\nMINDDY_HOST=tickets.example.com\nADMIN_EMAILS=ops@example.com\nMINDDY_MANAGED_AI=1\nMINDDY_MANAGED_BILLING=1\n", values);
   const parsed = parseEnvironment(rendered);
   assert.equal(parsed.MINDDY_HOST, "tickets.example.test");
   assert.equal(parsed.ADMIN_EMAILS, "ops@example.test");
   assert.equal(parsed.MINDDY_MANAGED_AI, "0");
   assert.equal(parsed.MINDDY_MANAGED_BILLING, "0");
-  assert.equal(parsed.AGENT_EXECUTION_BACKEND, "self-hosted");
   assert.equal(parsed.MINDDY_IMAGE, `ghcr.io/mangue-dev/minddy@sha256:${"b".repeat(64)}`);
 });
 
@@ -83,15 +82,15 @@ test("the installer scopes generated configuration to selected useful features",
   const generated = generatedValues(options.capabilities);
   const values = environmentValues(options, generated);
   assert.equal(values.EMAIL_PROVIDER, "resend");
-  assert.equal(values.AGENT_EXECUTION_BACKEND, "self-hosted");
-  assert.equal(values.AGENT_RUNNER_URL, "http://agent-runner:6464");
+  assert.equal(values.AGENT_EXECUTION_BACKEND, undefined);
+  assert.equal(values.AGENT_RUNNER_URL, undefined);
   assert.equal(values.VAPID_SUBJECT, "mailto:ops@example.test");
   assert.ok(values.MINDDY_PUBLIC_VAPID_PUBLIC_KEY);
   assert.ok(values.VAPID_PRIVATE_KEY);
   assert.ok(values.GIT_STATE_SECRET);
   assert.ok(values.GIT_TOKEN_ENCRYPTION_SECRET);
   assert.ok(values.CRON_SECRET);
-  assert.ok(values.AGENT_RUNNER_SECRET);
+  assert.equal(values.AGENT_RUNNER_SECRET, undefined);
   assert.equal(values.MINDDY_CONTENT_ENCRYPTION_ENABLED, "true");
   assert.match(values.MINDDY_DATA_ROOT_KEY, /^[a-f0-9]{64}$/);
   assert.notEqual(values.MINDDY_DATA_ROOT_KEY, values.AI_KEY_ENCRYPTION_SECRET);
@@ -217,7 +216,7 @@ test("the complete profile includes upstream defaults and derives a loopback boo
 test("the doctor reports only keys and redacts connection passwords", () => {
   assert.deepEqual(configFindings({ MINDDY_HOST: "host" }), [
     "MINDDY_PUBLIC_APP_URL", "MINDDY_PUBLIC_SUPABASE_URL", "MINDDY_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "ADMIN_EMAILS",
-    "AGENT_EXECUTION_BACKEND", "AGENT_RUNNER_URL", "AGENT_RUNNER_SECRET", "CRON_SECRET",
+    "CRON_SECRET",
   ]);
   assert.ok(disabledCapabilities({ MINDDY_MANAGED_AI: "0", STRIPE_SECRET_KEY: "" }).includes("MINDDY_MANAGED_AI"));
   assert.doesNotMatch(redact("postgresql://postgres:private@example.test/db Bearer abc.def"), /private|abc\.def/);

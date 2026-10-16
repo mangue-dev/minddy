@@ -17,7 +17,6 @@ import {
   toast,
 } from "mangue-ui";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { NumoIcon } from "@/components/numo-icon";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
 import { useAuth } from "@/lib/auth-context";
@@ -26,7 +25,6 @@ import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
 import { ScratchpadEditor } from "@/components/scratchpad/scratchpad-editor";
 import { SLASH_MENU_ATTR } from "@/components/scratchpad/slash-command";
-import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import {
   Tooltip,
@@ -122,10 +120,9 @@ function ScratchpadBody() {
     else toast(t("noSettled"));
   };
 
-  // Entrusting work to an agent means starting it — on the line (MIN-20/46,
-  // cf. scratchpad-task.tsx), to the section, and here to the entire notebook: both
-  // header buttons skip "in progress" everything that remained to be done. Copy
-  // follows the account option, launching an agent always starts.
+  // Copying work for an agent starts it when the account option is on (MIN-20)
+  // — on the line (cf. task-item-view.tsx), the section, and here the entire
+  // notebook: everything that remained to be done moves to "in progress".
   const startOnCopy = resolvePromptCopyAutoStart(user?.user_metadata);
   const liveMarkdown = () => (markdownRef.current?.() ?? content).trim();
 
@@ -150,25 +147,6 @@ function ScratchpadBody() {
         ? t("copiedSectionMovedToast", { count: moved })
         : t("copiedSectionToast")
     );
-  };
-
-  // “Launch an agent” (MIN-84): the note is packaged in the SAME prompt as
-  // copy it (the hook takes care of it, cf. use-launch-agent-note.ts) to the
-  // compose from the Agents page, which makes you choose project / model / branch before
-  // l'envoi.
-  const launchNote = useLaunchAgentNote();
-  // A SECTION is named as such in the prompt (“the following section of
-  // my working notes”), exactly like its copy just above.
-  const launchSection = (markdown: string) => launchNote(markdown, { section: true });
-  const launchAll = () => {
-    if (!liveMarkdown()) {
-      toast(t("emptyCopyToast"));
-      return;
-    }
-    // BEFORE `launchNote`: he closes the notebook, and it is this disassembly that flushes
-    // autosave (scratchpad-editor.tsx) — started tasks leave with it.
-    startAllRef.current?.();
-    launchNote(liveMarkdown());
   };
 
   const showSaveState = !isLoading && (isSaving || content.trim() !== "");
@@ -217,10 +195,6 @@ function ScratchpadBody() {
               <TooltipContent>{t("actions")}</TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={launchAll}>
-                <NumoIcon animated={false} className="size-4" />
-                {t("launchAgentAll")}
-              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void copyAll()}>
                 <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                 {t("copyAll")}
@@ -265,11 +239,9 @@ function ScratchpadBody() {
               initialValue={content}
               onChange={save}
               onCopySection={copySection}
-              onLaunchSection={launchSection}
               startOnCopy={startOnCopy}
               placeholder={t("placeholder")}
               copySectionLabel={t("copySection")}
-              launchSectionLabel={t("launchAgentSection")}
               markdownRef={markdownRef}
               applyExternalRef={applyRef}
               removeSettledRef={removeSettledRef}

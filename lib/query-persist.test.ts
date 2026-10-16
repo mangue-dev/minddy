@@ -3,24 +3,14 @@ import { authSessionsQueryKey } from "./use-auth-sessions-query";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { isPersistableKey, wasRestoredBeforeMount } from "./query-provider";
-import {
-  agentRunDiffQueryKey,
-  agentRunDiffStatQueryKey,
-  agentRunQueryKey,
-  allAgentSessionsQueryKey,
-  issueAgentRunsQueryKey,
-} from "./use-agent-runs";
-import { agentActivityQueryKey } from "@/components/agent/agent-activity-context";
+import { issuePullRequestQueryKey } from "./use-agent-runs";
+import { issuePrQueryKey } from "@/components/issue-pr-context";
 import { pullRequestQueryOptions } from "./pull-request-query";
 
 // The persistence filter decides what goes to disk (MIN-89). A false positive
-// either saturates localStorage with the palette index or restores a completed
-// agent run as active after reload.
+// either saturates localStorage with the palette index or restores a stale
+// pull request state after reload.
 describe("isPersistableKey", () => {
-  it("does not restore native subscription model catalogs from disk", () => {
-    expect(isPersistableKey(["native-agent-models", "codex"])).toBe(false);
-    expect(isPersistableKey(["native-agent-models", "claude_code"])).toBe(false);
-  });
   it("keeps unbounded application tabs out of the shared disk snapshot", () => {
     expect(isPersistableKey(appTabsQueryKey("owner"))).toBe(false);
   });
@@ -36,32 +26,17 @@ describe("isPersistableKey", () => {
     expect(isPersistableKey(["me", "search-index"])).toBe(false);
   });
 
-  // The keys below come from lib/use-agent-runs.ts. A guessed exclusion
-  // (agent-runs instead of agent-sessions, for example) filters nothing while
-  // appearing to work. Importing the real keys keeps the contract honest.
-  it("excludes agent streams because they expire within seconds", () => {
-    expect(isPersistableKey(issueAgentRunsQueryKey("i1"))).toBe(false);
-    expect(isPersistableKey(agentRunQueryKey("r1"))).toBe(false);
-    expect(isPersistableKey(["agent-run-events", "r1"])).toBe(false);
-    expect(isPersistableKey(agentRunDiffQueryKey("r1"))).toBe(false);
-    // DISTINCT segment of ["agent-run-diff"]: the comparison is done segment
-    // per segment, so the diff prefix didn't catch it (MIN-303).
-    expect(isPersistableKey(agentRunDiffStatQueryKey("r1"))).toBe(false);
-    expect(isPersistableKey(allAgentSessionsQueryKey)).toBe(false);
-  });
-
-  // The activity poll runs every 4 s while an agent is working. It used to be
-  // serialized on every tick because the filter targeted a key that no query
-  // used (MIN-303). Import the key instead of copying it.
-  it("excludes agent activity polling under its real key", () => {
-    expect(isPersistableKey(agentActivityQueryKey("p1"))).toBe(false);
-    expect(isPersistableKey(agentActivityQueryKey(null))).toBe(false);
+  // Import the real keys instead of copying them: a guessed exclusion filters
+  // nothing while appearing to work (MIN-303).
+  it("excludes the issue pull request caches under their real keys", () => {
+    expect(isPersistableKey(issuePrQueryKey("p1"))).toBe(false);
+    expect(isPersistableKey(issuePrQueryKey(null))).toBe(false);
+    expect(isPersistableKey(issuePullRequestQueryKey("i1"))).toBe(false);
   });
 
   it("excludes pull requests and their comments", () => {
     expect(isPersistableKey(pullRequestQueryOptions("pr").queryKey)).toBe(false);
     expect(isPersistableKey(["pr-commit-diff", "pr", "sha"])).toBe(false);
-    expect(isPersistableKey(["desktop-agent-run-diff", "run", "live"])).toBe(false);
     expect(isPersistableKey(["pull-requests", "all"])).toBe(false);
     expect(isPersistableKey(["pr-comments", "r1"])).toBe(false);
     expect(isPersistableKey(["pr-review-comments", "r1"])).toBe(false);

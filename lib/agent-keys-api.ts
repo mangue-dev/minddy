@@ -1,19 +1,13 @@
 "use client";
 
-import type { SandboxPreferences } from "./agent-sandbox-config";
-import type { ReasoningLevel } from "./agent-reasoning";
 import type { AiSurface, ByokFeatureModels } from "./ai-surfaces";
 import type { ModelCatalogCapability } from "./model-catalog-capability";
 import type { AgentProviderId } from "./agent-providers";
 import { trackEvent } from "./analytics";
-import { NativePrototypeRequestError, safeNativeErrorCode } from "./native-agent-prototype-api";
-import type { NativeModelPreferences } from "./native-agent-models";
-import type { LiveAgentEngine } from "./agent-engines";
 
 /**
- * Code Agent Client Fetchers (MIN-46): BYOK OpenRouter keys of the account,
- * default model, default reasoning level (MIN-122), and branch prefix of the
- * user. The plaintext key is never returned.
+ * AI key client fetchers (MIN-46): the account's BYOK keys and their routing.
+ * The plaintext key is never returned.
  */
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -118,64 +112,6 @@ export async function assignAiCapabilityApi(
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ capability, assigned_key_id: keyId }),
-    }),
-  );
-}
-
-export type AccountAgentEngine = LiveAgentEngine;
-
-export interface AgentPreferences extends SandboxPreferences {
-  default_engine: AccountAgentEngine;
-  /** Read-only account eligibility for the private native worker preview. */
-  native_agents_enabled: boolean;
-  native_model_preferences: NativeModelPreferences;
-  default_model: string | null;
-  /** null = `off` (MIN-122). */
-  default_reasoning_level: ReasoningLevel | null;
-  branch_prefix: string;
-}
-
-export type AgentPreferencesPatch = Partial<
-  Omit<AgentPreferences, "branch_prefix" | "native_agents_enabled" | "native_model_preferences"> & { branch_prefix: string | null; native_model_preferences: Partial<NativeModelPreferences> }
->;
-
-export async function fetchAgentPreferencesApi(): Promise<AgentPreferences> {
-  return parseJson(await fetch("/api/account/agent-preferences", { cache: "no-store" }));
-}
-
-/** Save only the worker engine; native errors never expose provider transcripts. */
-export async function saveAgentEnginePreferenceApi(
-  engine: AccountAgentEngine,
-): Promise<AgentPreferences> {
-  const response = await fetch("/api/account/agent-preferences", {
-    method: "PUT",
-    cache: "no-store",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ default_engine: engine }),
-  });
-  if (!response.ok) {
-    const data: unknown = await response.json().catch(() => null);
-    const code = data !== null && typeof data === "object" && "errorCode" in data
-      ? safeNativeErrorCode(data.errorCode) : null;
-    throw new NativePrototypeRequestError(code);
-  }
-  return response.json() as Promise<AgentPreferences>;
-}
-
-/**
- * PARTIAL write: only passed fields are sent (the PUT only writes
- * what it receives) — the settings share a row, so one must not clear the
- * others.
- */
-export async function saveAgentPreferencesApi(
-  patch: AgentPreferencesPatch,
-): Promise<AgentPreferences> {
-  return parseJson(
-    await fetch("/api/account/agent-preferences", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
     }),
   );
 }

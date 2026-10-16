@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -39,10 +39,10 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/second_operations (de added installation and recovery safeguards, full retained meaning)",
-    "date": "2026-10-10"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/second_operations (managed runner blocker and key-volume recovery source review; existing helper evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/second_operations (de added installation and recovery safeguards, full retained meaning); agent:/root/min-721 (de runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "update-an-instance"
@@ -65,7 +65,7 @@
       "src": "/documentation/de/restore-and-roll-back-flow.svg",
       "alt": "Diagramm: Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Geprüftes vollständiges externes Backup. Leeres isoliertes Ziel mit passenden Versionen. Datenbank, Bytes und Schlüssel gemeinsam. Konto, Inhalte und Bytes vor Öffnung prüfen.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -124,9 +124,6 @@ compose() {
   if [ -n "${RESTORE_OVERRIDE:-}" ]; then
     files+=(-f "$RESTORE_OVERRIDE")
   fi
-  if [ -n "${RUNNER_FIX_OVERRIDE:-}" ]; then
-    files+=(-f "$RUNNER_FIX_OVERRIDE")
-  fi
   docker compose --env-file "$MINDDY_ENV_FILE" "${files[@]}" "$@"
 }
 compose ps
@@ -170,13 +167,6 @@ tar -C "$CURRENT_RELEASE_DIR" -czf "$BACKUP_DIR/deployment.tar.gz" deploy/self-h
 if [ -n "${RESTORE_OVERRIDE:-}" ]; then
   install -m 0600 "$RESTORE_OVERRIDE" "$BACKUP_DIR/source-volume-override.yml"
 fi
-if [ -n "${RUNNER_FIX_OVERRIDE:-}" ]; then
-  test -n "${RUNNER_FIX_DIR:-}"
-  install -m 0600 "$RUNNER_FIX_OVERRIDE" "$BACKUP_DIR/runner-fix-override.yml"
-  tar -C "$RUNNER_FIX_DIR" -czf "$BACKUP_DIR/runner-fix-files.tar.gz" \
-    agent-runner.mjs agent-runner-storage.mjs SHA256SUMS Dockerfile.agent-sandbox sandbox-image.txt functions-bundle.json functions-bundle.tagged.json
-  docker image save "$(cat "$RUNNER_FIX_DIR/sandbox-image.txt")" | gzip > "$BACKUP_DIR/runner-sandbox-image.tar.gz"
-fi
 sudo chown "$(id -u):$(id -g)" "$BACKUP_DIR/supabase-docker.tar.gz"
 (
   cd "$BACKUP_DIR"
@@ -188,8 +178,6 @@ sudo chown "$(id -u):$(id -g)" "$BACKUP_DIR/supabase-docker.tar.gz"
 ### Ergebnis überprüfen {#verify}
 
 Kopieren Sie den versiegelten Satz auf unabhängige Platte oder Host und prüfen Sie `SHA256SUMS` dort. Eine zweite Kopie auf demselben Host schützt nicht vor Hostverlust. Erhalten Sie TLS-Zertifikatsspeicher separat, falls die Richtlinie es verlangt. Bei reiner Sicherung starten Sie nach Prüfung mit `compose up -d --wait` neu. Bevor das Backup als nutzbar gilt, stellen Sie es auf leerem isoliertem Ziel wieder her, melden sich einschließlich MFA an, prüfen erhaltene Tickets und Anhänge mit gleichem SHA-256. Erhalten Sie passende historische Schlüssel.
-
-Wenn die Instanz den gepinnten Runner-Workaround verwendet, behalten Sie `RUNNER_FIX_OVERRIDE` und `RUNNER_FIX_DIR` neben einem vorhandenen Wiederherstellungs-Override bei. Diese Dateien gehören zum zusammengehörigen Wiederherstellungssatz. Stellen Sie ihre absoluten Pfade wieder her oder passen Sie beide Mounts ausdrücklich an den neuen Ort an, bevor Sie den Runner starten.
 
 Der Befehl für die kalte Sicherung erkennt auch ein benanntes Dateisystem-Storage-Volume und archiviert dessen Bytes getrennt. Ein Bind-Mount ist weiterhin durch `supabase-docker.tar.gz` abgedeckt. Beide Fälle schließen ein S3- oder Anbieter-Backend aus.
 
@@ -311,7 +299,7 @@ Wiederherstellung überschreibt ihr Ziel und führt keine Daten zusammen. Holen 
 
 ### full-Dateisystem wiederherstellen {#physical}
 
-Nutzen Sie die vollständige physische Sequenz mit neuen Pfaden und Volumenamen. Sie entfernt gestoppte Quellcontainer ohne Volumenlöschung, stellt kaltes PostgreSQL und Storage zusammen wieder her, restauriert `db-config` mit gesichertem Image und vergleicht dieses vor Datenbankstart. Ändern Sie in der geschützten Umgebung nur Zielpfade, öffentliche Origins und Auth-Weiterleitungen. Erhalten Sie JWT, Passwörter, Vault-/Anwendungsschlüssel und Release-/Imageidentität. `RESTORE_OVERRIDE` muss bei jeder weiteren Operation bleiben; Weglassen kann Quellvolumes auswählen. Kompilieren Sie die Offline-Hauptfunktion, starten Sie Abhängigkeiten und Anwendung/Runner und prüfen Sie Wartungsbereitschaft vor Öffnung.
+Nutzen Sie die vollständige physische Sequenz mit neuen Pfaden und Volumenamen. Sie entfernt gestoppte Quellcontainer ohne Volumenlöschung, stellt kaltes PostgreSQL und Storage zusammen wieder her, restauriert `db-config` mit gesichertem Image und vergleicht dieses vor Datenbankstart. Ändern Sie in der geschützten Umgebung nur Zielpfade, öffentliche Origins und Auth-Weiterleitungen. Erhalten Sie JWT, Passwörter, Vault-/Anwendungsschlüssel und Release-/Imageidentität. `RESTORE_OVERRIDE` muss bei jeder weiteren Operation bleiben; Weglassen kann Quellvolumes auswählen. Kompilieren Sie die Offline-Hauptfunktion, starten Sie Abhängigkeiten und Anwendung und prüfen Sie Wartungsbereitschaft vor Öffnung.
 
 
 Definieren Sie vor dem ersten `compose down` den [installierten Compose-Kontext der Quellinstanz](/de/dokumentation/backups-and-restoration#context) einschließlich ihres vorhandenen Overrides.
@@ -335,30 +323,6 @@ fi
 sudo tar --numeric-owner --acls --xattrs -xzf "$BACKUP_DIR/supabase-docker.tar.gz" \
   -C "$SUPABASE_DIR"
 install -m 0600 "$BACKUP_DIR/instance.env" "$MINDDY_ENV_FILE"
-if [ -f "$BACKUP_DIR/runner-fix-files.tar.gz" ]; then
-  : "${RUNNER_FIX_DIR:?Set the new absolute restore runner tooling directory}"
-  : "${RUNNER_FIX_OVERRIDE:?Set its new absolute restore runner override path}"
-  test "$RUNNER_FIX_OVERRIDE" = "$RUNNER_FIX_DIR/compose.runner-fix.yml"
-  test ! -e "$RUNNER_FIX_DIR"
-  sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" "$RUNNER_FIX_DIR"
-  tar -xzf "$BACKUP_DIR/runner-fix-files.tar.gz" -C "$RUNNER_FIX_DIR"
-  (cd "$RUNNER_FIX_DIR"; sha256sum --check SHA256SUMS)
-  gzip -dc "$BACKUP_DIR/runner-sandbox-image.tar.gz" | docker image load
-  export RUNNER_SANDBOX_IMAGE="$(cat "$RUNNER_FIX_DIR/sandbox-image.txt")"
-  docker image inspect "$RUNNER_SANDBOX_IMAGE" >/dev/null
-  install -m 0600 "$BACKUP_DIR/runner-fix-override.yml" \
-    "$RUNNER_FIX_DIR/compose.runner-fix.source.yml"
-  cat > "$RUNNER_FIX_OVERRIDE" <<EOF
-services:
-  agent-runner:
-    environment:
-      AGENT_RUNNER_SANDBOX_IMAGE: $RUNNER_SANDBOX_IMAGE
-    volumes:
-      - $RUNNER_FIX_DIR/agent-runner.mjs:/app/agent-runner.mjs:ro
-      - $RUNNER_FIX_DIR/agent-runner-storage.mjs:/app/agent-runner-storage.mjs:ro
-EOF
-  chmod 0600 "$RUNNER_FIX_OVERRIDE"
-fi
 cat > "$RESTORE_OVERRIDE" <<EOF
 volumes:
   db-config:
@@ -376,9 +340,6 @@ compose() {
     -f "$CURRENT_RELEASE_DIR/deploy/self-hosted/compose.full.yml"
     -f "$RESTORE_OVERRIDE"
   )
-  if [ -n "${RUNNER_FIX_OVERRIDE:-}" ]; then
-    files+=(-f "$RUNNER_FIX_OVERRIDE")
-  fi
   docker compose --env-file "$MINDDY_ENV_FILE" "${files[@]}" "$@"
 }
 BACKUP_HELPER_IMAGE="$(cat "$BACKUP_DIR/postgres-image-id.txt")"
@@ -412,14 +373,10 @@ test "$(docker inspect "$(compose ps --all -q db)" --format '{{.Image}}')" = \
   "$BACKUP_HELPER_IMAGE"
 cd "$CURRENT_RELEASE_DIR"
 pnpm install --frozen-lockfile
-if [ -f "$BACKUP_DIR/runner-fix-files.tar.gz" ]; then
-  install -m 0644 "$RUNNER_FIX_DIR/functions-bundle.json" \
-    "$CURRENT_RELEASE_DIR/deploy/self-hosted/functions-bundle.json"
-fi
 node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
 compose up -d --wait db database-access kong auth rest storage imgproxy
-compose up -d --wait minddy agent-runner
+compose up -d --wait minddy
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network --maintenance
 compose up -d --wait

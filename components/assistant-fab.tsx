@@ -9,7 +9,6 @@ import { AgentBeam } from "@/components/agent-beam";
 import { ScratchpadTrigger } from "@/components/scratchpad/scratchpad-trigger";
 import { useAssistantPanelActions, useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantBusy, useAssistantUnreadResponseConversationId } from "@/lib/assistant-chat-context";
-import { useAgentSessionsQuery } from "@/lib/use-agent-runs";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import {
@@ -25,12 +24,6 @@ import {
  * AssistantChatProvider): the Numo button then carries the shared animated border of the app
  * while it works. A completed, unread response adds a static blue dot to the
  * icon until the conversation is displayed again.
- *
- * The border must survive navigation and delegation alike: a Numo answer OR a
- * delegated code run keeps it on. The sessions list is the global, cached signal
- * for runs — the same query the sidebar spinner reads — so navigation and a
- * full reload (refetchOnMount: always) re-light the border from real state
- * instead of losing it with the in-memory chat flag.
  */
 
 export function AssistantFab() {
@@ -40,14 +33,11 @@ export function AssistantFab() {
   // to read a value that only moves twice per revolution.
   const chatBusy = useAssistantBusy();
   const unreadConversationId = useAssistantUnreadResponseConversationId();
-  // Same cache as the sidebar: no extra request, and the 5 s poll of a
-  // working session keeps the border honest for the whole run.
-  const { sessions } = useAgentSessionsQuery();
   const { isOpen } = useAssistantPanel();
   // The beam is a "Numo is working, look over here" signal for a shell the
   // user is NOT looking at. Panel open → the activity is already on screen;
   // the border would only re-signal what the user is watching.
-  const beamActive = (chatBusy || sessions.some((session) => session.working)) && !isOpen;
+  const beamActive = chatBusy && !isOpen;
   const unread = !!unreadConversationId && !isOpen && !beamActive;
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");

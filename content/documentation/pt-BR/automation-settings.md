@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -33,18 +33,17 @@
       "components/settings/smart-assign-section.tsx",
       "content/knowledge/settings-and-data.md",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
-      "lib/server/agent/execute.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (pt-BR translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; no operational rerun)",
+    "language": "agent:/root (pt-BR translation, label and retained-meaning self-review); agent:/root/min721_docs (pt-BR translation of the MIN-721 removal edit; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -60,7 +59,7 @@
 
 Os interruptores de automação do projeto e os presets, filtros de esforço e espera inicial da conta foram substituídos por [Rotinas](/docs/scheduled-routines). Abra Rotinas como proprietário do projeto. As regras ativas arquivadas são propostas uma vez como rotinas pausadas; abrir a lista não as ativa nem consome orçamento de execução.
 
-Revise instruções, status do gatilho, condições, espera e limite de gasto de cada proposta. O fluxo original permanece nas instruções para comparação. Confira as validações humanas e referências indisponíveis antes de ativar. As propostas pedem a resposta do proprietário nos pontos de validação humana e limitam cada execução a 15 % do orçamento mensal por padrão. Elas não continuam silenciosamente a cadeia anterior. Cadeias pendentes ou aguardando uma pessoa param; o código em execução pode terminar ou ser interrompido na conversa, sem uma etapa seguinte da cadeia. O histórico de atividades e os backups da conta mantêm o arquivo.
+Revise instruções, status do gatilho, condições, espera e limite de gasto de cada proposta. O fluxo original permanece nas instruções para comparação. Confira as validações humanas e referências indisponíveis antes de ativar. As propostas pedem a resposta do proprietário nos pontos de validação humana e limitam cada execução a 15 % do orçamento mensal por padrão. Elas não continuam silenciosamente a cadeia anterior. Cadeias pendentes ou aguardando uma pessoa param, sem uma etapa seguinte da cadeia. O histórico de atividades e os backups da conta mantêm o arquivo.
 
 ## Distinguir outras ferramentas do projeto {#mechanisms}
 

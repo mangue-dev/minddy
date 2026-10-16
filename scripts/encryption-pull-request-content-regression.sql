@@ -7,8 +7,7 @@ DO $$ BEGIN
 END $$;
 DO $test$
 DECLARE actor uuid := gen_random_uuid(); project uuid := gen_random_uuid();
-  pr uuid := gen_random_uuid(); conversation uuid := gen_random_uuid();
-  run uuid := gen_random_uuid(); connection uuid := gen_random_uuid();
+  pr uuid := gen_random_uuid(); connection uuid := gen_random_uuid();
   link uuid := gen_random_uuid();
   old_title text := 'Private issue-derived PR title';
   head text := 'private/issue-591'; base text := 'private/base';
@@ -32,12 +31,6 @@ BEGIN
        content_encryption_checked_at IS NOT NULL FROM public.pull_requests WHERE id=pr) THEN
     RAISE EXCEPTION 'PR content attempt was incorrectly verified';
   END IF;
-  INSERT INTO public.agent_conversations(id,project_id,owner_id)
-    VALUES(conversation,project,actor);
-  INSERT INTO public.agent_runs(id,project_id,conversation_id,created_by,
-    repo_link_id,connection_id,repo_provider,repo_external_id,
-    pull_request_id,pr_number) VALUES(run,project,conversation,actor,
-      link,connection,'github','pr-content-fixture',pr,1);
   IF NOT public.migrate_pull_request_content(pr,old_title,head,base,
       cipher,cipher,cipher) OR
      public.migrate_pull_request_content(pr,old_title,head,base,
@@ -48,10 +41,6 @@ BEGIN
       (title LIKE '%Private issue%' OR head_branch LIKE '%private/issue%'
        OR base_branch LIKE '%private/base%')) THEN
     RAISE EXCEPTION 'PR source content remains clear';
-  END IF;
-  IF EXISTS (SELECT 1 FROM public.numo_conversation_history
-      WHERE legacy_id=conversation AND title=cipher) THEN
-    RAISE EXCEPTION 'Numo history projected a PR ciphertext as a title';
   END IF;
   rejected := false;
   BEGIN

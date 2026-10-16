@@ -38,7 +38,7 @@ describe("complete locale messages", () => {
     [de, ["ApiErrors.nameRequired", "Projects.invitationRejected", "ToolCall.viewCreated"]],
     [ptBr, ["FeedbackBoard.postTitlePlaceholder", "Privacy.dataAI", "Changelog.metaTitle"]],
     [itMessages, ["PullRequests.commitDiffTitle", "Pricing.row_scratchpad", "SelfHostingInstall.domainLabel"]],
-    [es, ["Agents.pinSession", "PullRequests.commitDiffTitle"]],
+    [es, ["PullRequests.commitDiffTitle"]],
   ] as const)("does not retain proven English copy", (catalog, keys) => {
     for (const key of keys) {
       expect(catalogValue(catalog, key)).not.toBe(catalogValue(en, key));

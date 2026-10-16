@@ -22,13 +22,12 @@ export function cachedPullRequestListForPin(
   client: QueryClient,
   state: string,
   limit: number,
-  pin: { pr?: string | null; run?: string | null } | undefined,
+  pin: { pr?: string | null } | undefined,
 ): PullRequestListResponse | undefined {
-  if (!pin?.pr && !pin?.run) return;
-  const cached = client.getQueryState<PullRequestListResponse>([...ALL_PULL_REQUESTS_QUERY_KEY, state, limit, null, null]);
+  if (!pin?.pr) return;
+  const cached = client.getQueryState<PullRequestListResponse>([...ALL_PULL_REQUESTS_QUERY_KEY, state, limit, null]);
   if (cached?.status !== "success" || cached.isInvalidated) return;
-  return cached.data?.pullRequests.some((item) => pin.pr ? item.prId === pin.pr
-    : item.runId === pin.run || item.runIds.includes(pin.run!)) ? cached.data : undefined;
+  return cached.data?.pullRequests.some((item) => item.prId === pin.pr) ? cached.data : undefined;
 }
 
 /** `open` understands drafts, like the filter served by the API. */

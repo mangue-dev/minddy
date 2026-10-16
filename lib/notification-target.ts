@@ -16,19 +16,13 @@ import type { MessageKey } from "./i18n-keys";
 export interface NotificationTarget {
   project_id: string | null;
   issue_id: string | null;
-  /** Conversation de l'agent de code, independante de ses contextes. */
-  agent_conversation_id?: string | null;
-  /** Parent Numo conversation for a delegated worker notification retained from an older client. */
-  numo_conversation_id?: string | null;
-  /** Delegated run to reveal when opening the parent conversation. */
-  numo_work_id?: string | null;
   objective_id?: string | null;
   feedback_post_id?: string | null;
   /** A ROUTINE (MIN-185): its executions are read in the routine, and
  nowhere else — hence its own destination. */
   routine_id?: string | null;
   /** A PULL REQUEST: it is read on the Pull requests page, which is global
- like the Agents view — and it does not necessarily have a ticket. */
+ — and it does not necessarily have a ticket. */
   pull_request_id?: string | null;
   /** A PAGE from the wiki (MIN-278). */
   page_id?: string | null;
@@ -45,13 +39,6 @@ export interface NotificationTarget {
  * THE ORDER counts and is not arbitrary: a line only carries one target, but
  * nothing in the schema requires it, and the goal comes before the ticket because
  * a goal notification can carry a context `issue_id`.
- *
- * Numo conversations have NO path of their own any more (the FAB hosts the
- * whole conversation): a row that carries one falls through to the parent
- * context it names — ticket, objective, PR, routine… — and leads nowhere
- * (`null`) when the conversation alone was the target. The inbox intercepts
- * those rows and opens the Numo panel directly; only the native push payload
- * keeps no URL for them.
  */
 export function notificationTargetPath(n: NotificationTarget): string | null {
   // The routine passes BEFORE the project test: its screen is global (the view

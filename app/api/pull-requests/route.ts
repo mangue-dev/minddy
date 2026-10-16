@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createRepositoryNameDecoder } from "@/lib/server/git/repository-name-content";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -12,7 +11,6 @@ import {
   needsRepoSync,
   readRepoSyncStates,
   repoSyncKey,
-  resolvePrForRun,
   rowProvider,
   type PullRequestState,
   type PullRequestWithIssue,
@@ -22,17 +20,12 @@ import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
 import { listUserIdentities } from "@/lib/server/git/user-identities";
 import { readReviewQueue } from "@/lib/server/agent/pull-request-review-queue";
 import { COMPLETED_PULL_REQUESTS_PAGE } from "@/lib/pull-request-sections";
-import { getRun } from "@/lib/server/agent/runs";
 
 /**
  * GLOBAL list of pull requests from linked repositories, all projects accessible
  * combined (MIN-66, expanded by MIN-143).
  *
- * It started from `agent_runs` and therefore only showed Numo's PRs — half
- * of the deposit, without saying it. It now starts from `pull_requests`, where a PR is
- * a line: those of Numo are there, those of humans too. The run is no more
- * the wearer, he is a DECORATION (“Numo reworks”, “relaunch Numo”),
- * attached when one exists.
+ * It lists `pull_requests`, where a PR is a row whoever opened it.
  *
  * Access: RLS of `project_git_links` (the client cookie is enough) to know
  * which repositories are visible, then RLS of `pull_requests` for the rows.
@@ -47,22 +40,8 @@ export const maxDuration = 120;
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
 
-// “Numo rework” = the agent WORKS (queued/running). A REST run is not
-// NOT reworking the PR — otherwise the PR would remain “in progress” for
-// always and merge/reject actions would be blocked indefinitely.
-const WORKING_STATUSES = ["queued", "running"];
-
-interface RunRow {
-  id: string;
-  status: string;
-  created_by: string | null;
-  pr_number: number | null;
-  created_at: string;
-  repo_link: { provider: string; repo_full_name: string | null } | null;
-}
-
 export interface PullRequestListItem {
-  /** Item identity — the PR, plus the run that opened it (MIN-143). */
+  /** Item identity — the PR (MIN-143). */
   prId: string;
   createdByMe: boolean;
   reviewRequestedForMe: boolean;
@@ -72,7 +51,7 @@ export interface PullRequestListItem {
   /** Repository Provider — controls PR/MR vocabulary and links (MIN-69). */
   provider: RepoProviderId;
   title: string | null;
-  /** Who opened the PR — what distinguishes a Numo PR from a human PR. */
+  /** Who opened the PR at the forge. */
   author: { login: string; avatar_url: string | null } | null;
   head_branch: string | null;
   created_at: string;
@@ -86,25 +65,6 @@ export interface PullRequestListItem {
     icon_url: string | null;
     orb_seed: string | null;
   } | null;
-  /**
-   * CANONICAL run of the PR (oldest), or null: a human PR has none
-   * none. It is he who carries the historical `?run=` deep-links.
-   */
-  runId: string | null;
-  /**
-   * A Numo run OPENED this PR at the forge — not merely worked on it. It is
-   * what says “Numo” as the author and feeds the “opened by Numo” filter:
-   * the forge login depends on the installation (app account or linked
-   * account), and a fix session requested on a human PR bears the number
-   * without having opened it.
-   */
-  numoOpened: boolean;
-  /** A run that WORKS (queued/running) on ​​this PR = “Numo is working again”. */
-  activeRunId: string | null;
-  /** An ACTIVE run occupies the issue → no new change request (MIN-68). */
-  busyRunId: string | null;
-  /** ALL runs that carry this PR — a deep-link `?run=` matches any one. */
-  runIds: string[];
 }
 
 /** States served by the filter. `open` includes drafts (they are). */
@@ -116,8 +76,8 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
 };
 
 /**
- * PR targeted by a deep-link (direct `?pr=`, historical `?run=`) when the page
- * does not contain it — the list is limited, a link is not.
+ * PR targeted by a `?pr=` deep-link when the page does not contain it — the
+ * list is limited, a link is not.
  *
  * It is read in service key, so access is rechecked here: the PR must
  * belong to a repository that this user sees. Returns null if it is already
@@ -130,15 +90,9 @@ async function pinnedRow(
   page: PullRequestWithIssue[],
 ): Promise<PullRequestWithIssue | null> {
   const prId = params.get("pr");
-  const runId = params.get("run");
-  if (!prId && !runId) return null;
+  if (!prId) return null;
 
-  let pr = prId ? await findPullRequest(prId) : null;
-  if (!pr && runId) {
-    const run = await getRun(runId, { decode: false });
-    pr = run && repos.some((repo) => repo.project.id === run.project_id)
-      ? await resolvePrForRun(run) : null;
-  }
+  const pr = await findPullRequest(prId);
   if (!pr) return null;
   const found = pr;
   if (page.some((row) => row.id === found.id)) return null;
@@ -241,55 +195,6 @@ export async function GET(request: NextRequest) {
   const pinned = await pinnedRow(auth.supabase, params, repos, page);
   if (pinned) page.unshift(pinned);
 
-  // ── Runs, as decoration ─────────────────────── ────────────────────────
-  // RLS `agent_runs` = can_access_project: we only see ours. Restricted
-  // to the numbers on THIS page — the list of runs for an active account is long,
-  // and we only need those who decorate what we display.
-  const numbers = [...new Set(page.map((p) => p.number))];
-  const runsByPr = new Map<string, RunRow[]>();
-  if (numbers.length > 0) {
-    const { data } = await auth.supabase
-      .from("agent_runs")
-      .select("id, status, pr_number, created_by, created_at, repo_link:project_git_links(provider, repo_full_name)")
-      .in("pr_number", numbers)
-      .order("created_at", { ascending: true });
-    const runs = (data ?? []) as unknown as RunRow[];
-    const decodeName = createRepositoryNameDecoder(auth.user.id);
-    const names = await Promise.all(runs.map((run) => run.repo_link?.repo_full_name
-      ? decodeName(run.repo_link.provider, run.repo_link.repo_full_name) : null));
-    for (const [index, run] of runs.entries()) {
-      const link = run.repo_link;
-      if (!link?.repo_full_name || run.pr_number == null) continue;
-      const clearName = names[index];
-      const key = `${link.provider}:${clearName}:${run.pr_number}`;
-      const list = runsByPr.get(key);
-      if (list) list.push(run);
-      else runsByPr.set(key, [run]);
-    }
-  }
-
-  // ── Which PRs Numo OPENED ────────────────────────────────────────────────
-  // A run BEARING the PR is not a run that OPENED it: a fix session requested
-  // on a human PR inherits its number, and reading the author on `runId`
-  // would impersonate Numo on a PR a human opened. The fact lives in the
-  // `pr_opened` event of the run that created the PR at the forge
-  // (`registerPr` emits it on the real opening only — a session that lands
-  // on an existing PR traces `pr_committed`, and the webhook says the rest).
-  const openedRunIds = new Set<string>();
-  const allRunIds = [
-    ...new Set([...runsByPr.values()].flatMap((runs) => runs.map((r) => r.id))),
-  ];
-  if (allRunIds.length > 0) {
-    const { data } = await auth.supabase
-      .from("agent_run_events")
-      .select("run_id")
-      .in("run_id", allRunIds)
-      .eq("type", "pr_opened");
-    for (const row of (data ?? []) as unknown as Array<{ run_id: string }>) {
-      openedRunIds.add(row.run_id);
-    }
-  }
-
   const projectById = new Map(repos.map((r) => [r.project.id, r.project]));
   const projectByRepo = new Map(
     repos.map((r) => [repoSyncKey(r.provider, r.repoFullName), r.project]),
@@ -320,12 +225,8 @@ export async function GET(request: NextRequest) {
 
   const pullRequests: PullRequestListItem[] = page.map((row) => {
     const provider = rowProvider(row);
-    const runs = runsByPr.get(`${provider}:${row.repo_full_name}:${row.number}`) ?? [];
-    const working = runs.filter((r) => WORKING_STATUSES.includes(r.status));
-    const numoOpened = runs.some((run) => openedRunIds.has(run.id));
-    const createdByMe = numoOpened
-      ? runs.some((run) => run.created_by === auth.user.id && openedRunIds.has(run.id))
-      : !!viewerLogins.get(provider) && row.author_login?.toLowerCase() === viewerLogins.get(provider);
+    const createdByMe = !!viewerLogins.get(provider) &&
+      row.author_login?.toLowerCase() === viewerLogins.get(provider);
     // `issue_id` entered but zero nested resource = ticket in the trash
     // (MIN-133). RA remains in the list, simply DETACHED: it exists
     // at the forge, and hiding it would again show half the deposit.
@@ -352,11 +253,6 @@ export async function GET(request: NextRequest) {
         (issue ? projectById.get(issue.project_id) : null) ??
         projectByRepo.get(repoSyncKey(provider, row.repo_full_name)) ??
         null,
-      runId: runs[0]?.id ?? null,
-      numoOpened,
-      activeRunId: working[0]?.id ?? null,
-      busyRunId: working[0]?.id ?? null,
-      runIds: runs.map((r) => r.id),
     };
   });
 

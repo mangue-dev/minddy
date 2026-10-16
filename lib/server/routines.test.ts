@@ -49,15 +49,10 @@ const world = {
   routines: [] as RoutineRow[],
   /** Does the requested model exceed the plan ceiling? */
   modelAbovePlan: false,
-  /** Owner quota — `cap` is the plan's monthly budget (GB: $5). */
-  quota: {
-    allowed: true,
-    unlimited: false,
-    mode: "platform" as "platform" | "byok",
-    cap: 5 as number | undefined,
-    remaining: 5 as number | undefined,
-  },
-  quotaSurfaces: [] as string[],
+  /** The owner's plan budget (GB: $5) and whether they run on their own key. */
+  includedUsageUsd: 5,
+  byok: false,
+  byokSurfaces: [] as string[],
 };
 
 function makeRoutine(over: Partial<RoutineRow> = {}): RoutineRow {
@@ -183,11 +178,18 @@ vi.mock("@/lib/supabase-service", () => {
   return { getServiceClient: () => ({ from }) };
 });
 
-vi.mock("@/lib/server/agent/quota", () => ({
-  checkAgentQuota: async (_userId: string, surface: string) => {
-    world.quotaSurfaces.push(surface);
-    return world.quota;
+vi.mock("@/lib/server/agent/model", () => ({
+  userHasByokKey: async (_userId: string, surface: string) => {
+    world.byokSurfaces.push(surface);
+    return world.byok;
   },
+}));
+vi.mock("@/lib/server/billing-accounts", () => ({
+  getResolvedBilling: async () => ({ plan: { includedUsageUsd: world.includedUsageUsd } }),
+}));
+vi.mock("@/lib/managed-services", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/managed-services")>()),
+  isManagedAiEnabled: () => true,
 }));
 
 // The little model that NAMES the routine: we don't really call it, but
@@ -231,14 +233,9 @@ const { restoreItem } = await import("./trash");
 beforeEach(() => {
   world.routines = [];
   world.modelAbovePlan = false;
-  world.quota = {
-    allowed: true,
-    unlimited: false,
-    mode: "platform",
-    cap: 5,
-    remaining: 5,
-  };
-  world.quotaSurfaces = [];
+  world.includedUsageUsd = 5;
+  world.byok = false;
+  world.byokSurfaces = [];
   titleCalls.length = 0;
 });
 
@@ -305,17 +302,6 @@ describe("createRoutine", () => {
   it("refuse un fuseau inconnu au lieu de partir en UTC", async () => {
     const result = await createRoutine(validInput({ timezone: "Europe/Pariss" }) as never);
     expect(result).toMatchObject({ ok: false, errorKey: "unknownTimezone" });
-  });
-
-  it("rejects a caller-supplied worker model", async () => {
-    const result = await createRoutine(
-      validInput({ model: "anthropic/claude-opus-5" }) as never,
-    );
-    expect(result).toMatchObject({
-      ok: false,
-      status: 400,
-      errorKey: "workerConfigurationManagedInSettings",
-    });
   });
 
   it("n'arme pas d'échéance sur une routine créée désactivée", async () => {
@@ -455,9 +441,8 @@ describe("updateRoutine", () => {
 /**
  * The TRASH of routines (MIN-201) — what deletion no longer destroys.
  *
- * It was a dry `delete`: the line left, and its passages with it
- * (`agent_runs.routine_id` cascade), therefore the conversations, the diffs and the
- * pull requests that read there. What is being tested here is exactly what
+ * It was a dry `delete`: the line left, and its occurrences with it
+ * (`numo_routine_occurrences.routine_id` cascade). What is being tested here is exactly what
  * makes the return possible: the line REMAINS, marked, with whatever it
  * carried, and it still comes out of the list AND the cron scan — a trashed
  * routine that restarts on Monday morning would spend the budget of
@@ -478,7 +463,7 @@ describe("deleteRoutine", () => {
     const result = await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
     expect(result).toEqual({ ok: true });
     // The line is there, marked: nothing that the routine carried has moved,
-    // and its `agent_runs` therefore did not cascade.
+    // and its occurrences therefore did not cascade.
     expect(world.routines).toHaveLength(1);
     expect(world.routines[0].deleted_at).toBeTruthy();
     expect(world.routines[0].deleted_by).toBe(OWNER_ID);
@@ -566,23 +551,22 @@ describe("plafond de dépense", () => {
     expect(titleCalls).toHaveLength(0);
   });
 
-  it("vaut une part du budget du PLAN, pas du restant du mois", async () => {
+  it("is a share of the PLAN budget, not of what remains this month", async () => {
     // A ceiling that would melt with consumption would make routine work
     // less and less far as the month progresses, without its setting
     // moved. What limits the remainder is the quota — the other half of the
     // `min()` of the loop.
-    world.quota.remaining = 1;
     const budget = await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }));
     expect(budget).toBeCloseTo(2.5, 6);
-    expect(world.quotaSurfaces).toEqual(["agent"]);
+    expect(world.byokSurfaces).toEqual(["assistant"]);
   });
 
-  it("ne pose AUCUN plafond à 100 % ni en BYOK", async () => {
+  it("sets NO cap at 100% or on a BYOK key", async () => {
     expect(await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 100 }))).toBeNull();
     // In BYOK the user pays for his tokens: the budget of the plan is no longer limited
     // nothing, and a percentage of this budget would put a ceiling on it that it does not have
     // request. Same doctrine as the model cap.
-    world.quota = { allowed: true, unlimited: true, mode: "byok", cap: undefined, remaining: undefined };
+    world.byok = true;
     expect(await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }))).toBeNull();
   });
 });
@@ -642,7 +626,6 @@ describe("claimRoutine", () => {
     expect(next - Date.now()).toBeLessThanOrEqual(25 * 3600_000);
   });
 });
-
 
 describe("event routine factory", () => {
   const eventInput = () => ({ projectId: PROJECT_ID, actorId: OWNER_ID, prompt: "Review each new issue", timezone: "Europe/Paris", trigger: { type: "event" as const, event: "issue.created" as const } });

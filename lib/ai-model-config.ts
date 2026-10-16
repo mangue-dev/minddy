@@ -168,10 +168,7 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // Cloud Code Agent (MIN-46) — pricing baseline and suggested initial value.
   // Each account stores its explicit provider-bound worker choice separately;
   // launches never use this platform setting as an autonomous fallback.
-  // No suffix (MIN-263): the model of a run is written on its line
-  // `agent_runs` and returns for dozens of rounds, sometimes from the
-  // microVM — the fallback “replay without the `:`” would mean rewriting the
-  // model of the run in flight, which is another project.
+  // No suffix (MIN-263).
   {
     key: "agent_model",
     kind: "model",

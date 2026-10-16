@@ -1,4 +1,3 @@
-import { filterLinkedIssueRuns } from "./activity";
 import { pullRequestIssueIds } from "./pull-requests";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
@@ -7,7 +6,6 @@ import { hasMatchingIssueEvent } from "@/lib/server/issue-event-store";
 import { getServiceClient } from "@/lib/supabase-service";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { insertEvents } from "@/lib/server/issue-events";
-import { insertNotifications } from "@/lib/server/notifications";
 import { normalizeForgeInstant } from "@/lib/forge-time";
 import {
   collapsesInBurst,
@@ -17,10 +15,7 @@ import {
   type PrActionEventType,
 } from "@/lib/pr-events";
 import { syncIssueStatusFromPr } from "./issue-status-sync";
-import { findPullRequestByNumber } from "./pull-requests";
-import { findRunsForPr } from "./runs";
-import type { NotificationType } from "@/lib/types";
-import type { AgentRun, SyncedPrRun } from "./runs";
+import { findPullRequestByNumber, type PullRequestState } from "./pull-requests";
 
 /**
  * Window during which an identical gesture ALREADY drawn is echoed. The hook
@@ -255,110 +250,6 @@ async function withoutBurstDuplicates(opts: {
 }
 
 /**
- * Activity emitter for PR/MR actions performed DIRECTLY on the provider
- * (GitHub AND GitLab webhooks — MIN-69, extracted from the GitHub webhook). One
- * event per issue (multiple runs can share the same PR). The actor is the
- * provider user, not a minddy user (`actor_id` null); their login is stored in
- * `from_value` (prefixed with `gitlab:` for GitLab — see `forgeActorValue`), and
- * the PR/MR number in `to_value`. In-app actions go through the routes with the
- * member as actor.
- */
-export async function recordForgePrActionEvents(opts: {
-  runs: SyncedPrRun[];
-  type: PrActionEventType;
-  prNumber: number;
-  provider: ForgeProvider;
-  login: string | null;
-  /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
-  occurredAt?: string | null;
-}): Promise<void> {
-  // CARNET runs (MIN-84) have no issue, so there is nothing to record for them.
-  const issueIds = [
-    ...new Set(opts.runs.map((r) => r.issueId).filter((id): id is string => id != null)),
-  ];
-  if (issueIds.length === 0) return;
-  const fromValue = forgeActorValue(opts.provider, opts.login);
-  const targets = await withoutBurstDuplicates({
-    issueIds,
-    type: opts.type,
-    prNumber: opts.prNumber,
-    fromValue,
-    at: opts.occurredAt,
-  });
-  if (targets.length === 0) return;
-  const occurredAt = occurredAtOf(opts.occurredAt);
-  await insertEvents(
-    getServiceClient(),
-    targets.map((issueId) => ({
-      issue_id: issueId,
-      actor_id: null,
-      type: opts.type,
-      from_value: fromValue,
-      to_value: String(opts.prNumber),
-      // THE TIME OF THE GESTURE, when the forge said it (see `occurredAtOf`).
-      ...(occurredAt ? { created_at: occurredAt } : {}),
-    })),
-  );
-}
-
-/** Forge action → notification type (null = nothing to announce: rejecting a
-    PR is already visible in the ticket when it returns to “to do”). */
-function notificationTypeFor(type: PrActionEventType): NotificationType | null {
-  if (type === "pr_accepted") return "pr_merged";
-  if (type === "pr_approved" || type === "pr_changes_requested") return "pr_reviewed";
-  return null;
-}
-
-/**
- * Inbox (MIN-138): notify the run AUTHOR when someone approves, requests
- * changes, or merges THEIR pull request directly on the forge. Otherwise they
- * only learn about it by opening the page.
- *
- * Called immediately after `recordForgePrActionEvents`, behind the SAME echo
- * guards (GitHub bot / GitLab service account): an action performed from minddy
- * is already known to the person who performed it.
- *
- * **Without `replaceUnread`**, unlike agent notifications: the sibling types
- * of `insertNotifications` cover only the agent family, and two successive
- * reviews are two distinct FACTS, not the state of a run being rewritten. Best
- * effort, like everything else in this module.
- */
-export async function notifyForgePrAction(opts: {
-  runs: SyncedPrRun[];
-  type: PrActionEventType;
-  actorLogin: string | null;
-}): Promise<void> {
-  const notificationType = notificationTypeFor(opts.type);
-  if (!notificationType) return;
-  // A CARNET run has no issue to notify, and an imported run has no author.
-  // Deduplicated by (recipient, issue): multiple runs can share a PR.
-  const seen = new Set<string>();
-  const rows = opts.runs
-    .filter((r) => r.createdBy && r.issueId)
-    .filter((r) => {
-      const key = `${r.createdBy}:${r.issueId}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .map((r) => ({
-      user_id: r.createdBy as string,
-      project_id: r.projectId,
-      type: notificationType,
-      issue_id: r.issueId,
-      // The actor is a forge account, not a minddy user: the inbox falls back to
-      // the type icon, as it does for a return from the public board.
-      actor_id: null,
-    }));
-  if (rows.length === 0) return;
-  try {
-    await insertNotifications(getServiceClient(), rows);
-  } catch {
-    console.error("[pr-activity] notify_failed");
-  }
-}
-
-/**
  * The member on whose behalf to write to the ticket for a PR without a run
  * (MIN-143): the one who LINKED the repository to that ticket's project.
  *
@@ -396,16 +287,14 @@ async function repoWriteActor(opts: {
 }
 
 /**
- * “Ticket” effects of a forge event on a PR/MR with NO run (MIN-143): align the
- * status and record the action.
+ * “Ticket” effects of a forge event on a PR/MR (MIN-143): align the status of
+ * every linked ticket and record the action.
  *
  * Without this, the same gesture has two outcomes depending on where it is
- * performed: merging a human PR FROM minddy moves its ticket to done (the routes
- * read `pull_requests.issue_id`), while merging it on GitHub did nothing — the
- * entire webhook path started from runs, which a human PR does not have.
+ * performed: merging a PR FROM minddy moves its ticket to done (the routes read
+ * the PR's linked tickets), while merging it on the forge would do nothing.
  *
- * Deliberately excluded: the NOTIFICATION. `notifyForgePrAction` notifies the
- * run author; a human PR has none, and determining which minddy member owns
+ * Deliberately excluded: the NOTIFICATION. Determining which minddy member owns
  * which forge account is the identity work that MIN-143 defers.
  *
  * Best effort end to end, like the rest of this module.
@@ -415,7 +304,7 @@ export async function applyForgePrToIssue(opts: {
   repoFullName: string;
   prNumber: number;
   /** New PR state, or null if the event describes none. */
-  prState: AgentRun["pr_state"] | null;
+  prState: PullRequestState | null;
   /** Action to record, or null (unrecorded action, or an echo of an in-app gesture). */
   actionType: PrActionEventType | null;
   /** Forge account ID of the actor — used to recognize echoes (MIN-154). */
@@ -424,8 +313,6 @@ export async function applyForgePrToIssue(opts: {
   login: string | null;
   /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
   occurredAt?: string | null;
-  /** Worker-owned issues keep their existing activity and notification path. */
-  excludeIssueIds?: (string | null)[];
 }): Promise<void> {
   if (!opts.prState && !opts.actionType) return;
 
@@ -437,8 +324,6 @@ export async function applyForgePrToIssue(opts: {
   // No linked ticket: this is NORMAL for a human PR, not a failure.
   if (!pr) return;
   for (const issueId of await pullRequestIssueIds(pr.id)) {
-    if (opts.excludeIssueIds?.includes(issueId)) continue;
-
     if (opts.prState) {
       const actorId = await repoWriteActor({
         provider: opts.provider,
@@ -499,14 +384,7 @@ export async function applyForgePrToIssue(opts: {
 /**
  * Record a forge gesture with NO state effect on a PR's ticket(s) — a review,
  * thread comment, or line comment. This is the counterpart, for gestures that
- * do not change the PR itself, to what `handlePullRequest` does around
- * `syncPrState`.
- *
- * One rule to remember: Numo's PR goes through its RUNS (they carry the ticket,
- * and the run author deserves the notification), while a human PR goes through
- * the PR itself (MIN-143, `applyForgePrToIssue`). The `runs.length === 0` guard
- * was missing from the review path: approving a human PR on GitHub left no trace
- * on its ticket, while merging it did.
+ * do not change the PR itself, of the state path in the webhook receivers.
  *
  * Best effort end to end, like the rest of this module.
  */
@@ -522,37 +400,5 @@ export async function recordForgePrGesture(opts: {
   /** Forge instant of the gesture (see `occurredAtOf`) — null keeps capture time. */
   occurredAt?: string | null;
 }): Promise<void> {
-  const prRuns = await findRunsForPr({
-    repoFullName: opts.repoFullName,
-    prNumber: opts.prNumber,
-    provider: opts.provider,
-  });
-  const linkedPr = await findPullRequestByNumber({
-    provider: opts.provider, repoFullName: opts.repoFullName, number: opts.prNumber,
-  });
-  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
-  await applyForgePrToIssue({
-    ...opts, prState: null, actionType: opts.type,
-    excludeIssueIds: runs.map((run) => run.issueId),
-  });
-  if (runs.length === 0) return;
-  const echo = await isPrActionEcho({
-    issueIds: runs.map((r) => r.issueId),
-    type: opts.type,
-    prNumber: opts.prNumber,
-    provider: opts.provider,
-    accountId: opts.accountId,
-    login: opts.login,
-  });
-  if (echo) return;
-  await recordForgePrActionEvents({
-    runs,
-    type: opts.type,
-    prNumber: opts.prNumber,
-    provider: opts.provider,
-    login: opts.login,
-    occurredAt: opts.occurredAt,
-  });
-  // Inbox: without an associated notification type (comments), this is a no-op.
-  await notifyForgePrAction({ runs, type: opts.type, actorLogin: opts.login });
+  await applyForgePrToIssue({ ...opts, prState: null, actionType: opts.type });
 }

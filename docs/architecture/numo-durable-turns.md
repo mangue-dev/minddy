@@ -8,8 +8,8 @@ state is `numo_assistant_turns`; activity is replayed from
 ## State model
 
 A new intent enters `queued`, then a compare-and-swap claim moves it to
-`running`. A turn can finish as `completed`, suspend as `waiting_input` or
-`waiting_work`, or stop through `stopping` and `stopped`. Infrastructure
+`running`. A turn can finish as `completed`, suspend as `waiting_input`, or stop
+through `stopping` and `stopped`. Infrastructure
 failure is `retryable`; a deterministic failure is `failed`.
 
 `reconciling` is deliberately separate from failure. It means a mutating tool
@@ -34,36 +34,23 @@ An unfinished read may be retried; an unfinished mutation becomes
 `reconciling`. Tool result messages are unique per turn and tool-call ID.
 The assistant tool-call message and the checkpoint that authorizes tool
 execution commit atomically, so recovery cannot observe an orphaned call.
-Stopping Numo retires only its turn and execution claim. Admitted workers,
-including queued runs, keep their independent authority, queued steering and
-pending questions. Stale-stop recovery has the same scope. New worker admission
-still requires a live parent; an insertion that completes after that authority
-is revoked is interrupted before execution. Explicit worker Stop interrupts only
-that worker and retires its parent to suppress automatic retries; admitted
-siblings remain individually controllable.
+Stopping Numo retires its turn and execution claim. Stale-stop recovery has the
+same scope.
 
-The checkpoint records the safe round boundary and any worker event used to
-continue. It contains no credentials. Live-only tool secrets are not written to
+The checkpoint records the safe round boundary used to continue. It contains no credentials. Live-only tool secrets are not written to
 the activity journal and remain subject to the existing message redaction.
 
-## Worker continuation
+## Retired worker continuation
 
-A successful code-worker launch moves the parent to `waiting_work` with the run
-ID it is waiting for. The existing terminal run transition emits a deterministic
-parent event. `resume_numo_turn_from_worker` appends that event and queues the
-parent in one transaction only when the run is still current.
-
-Duplicate event IDs return `duplicate`. Late or reordered events for an old run
-return `ignored`. Results also leave stopped parents terminal. Therefore they cannot replay a completed mutation or create a
-second task. Recovery also joins waiting parents to durable terminal worker
-rows, covering both an interrupted post-commit callback and a worker that
-finished before its parent entered `waiting_work`.
+Until MIN-721, a successful code-worker launch moved the parent to a
+`waiting_work` state until the worker finished. Numo no longer launches
+workers. Migration `20270109200049_drop_code_agent_schema.sql` stopped the turns
+still waiting, removed the state from the status check, and dropped the worker
+tables, functions and columns.
 
 ## Recovery and projections
 
-The Numo drain resumes queued worker continuations without a browser. It also
-moves stale initial work to the explicit retry path rather than leaving the
-conversation generating forever. An interrupted worker-result continuation is
-safe to return to the queue because background continuations cannot invoke
-tools. A reconnect reads persisted messages and events after its last sequence;
+The Numo drain recovers pending routine occurrences and stale turns without a
+browser. It moves stale initial work to the explicit retry path rather than
+leaving the conversation generating forever. A reconnect reads persisted messages and events after its last sequence;
 SSE is only the lower-latency projection of the same activity.

@@ -78,9 +78,6 @@ export function configFindings(values) {
     "MINDDY_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "ADMIN_EMAILS",
-    "AGENT_EXECUTION_BACKEND",
-    "AGENT_RUNNER_URL",
-    "AGENT_RUNNER_SECRET",
     "CRON_SECRET",
   ];
   return required.filter((key) => !values[key] || values[key].startsWith("replace-with"));
@@ -309,8 +306,6 @@ export async function diagnose(options) {
   findings.push({ name: "Container health", state: status.ok ? "pass" : "fail", detail: status.detail });
   findings.push(verificationFinding(options, values));
   findings.push(schedulerFinding(status.records, options.maintenance));
-  const runnerEnabled = Boolean(status.records?.some((record) => /agent-runner/.test(record.Service ?? record.Name ?? "")));
-  findings.push({ name: "Agent runner", state: runnerEnabled ? "pass" : "fail", detail: runnerEnabled ? "server sandbox runner container is running." : "server sandbox runner container is missing." });
   findings.push(diskFinding(options.deployDir));
   findings.push(forgeAccessFinding(values));
   findings.push({ name: "Optional capabilities", state: "pass", detail: `${disabledCapabilities(values).join(", ")} disabled or unconfigured.` });

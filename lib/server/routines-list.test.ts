@@ -3,12 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 /**
  * Round trips of the Routines list. The page renders only once this read
  * returns, so each owned project must not add its own serial row read and the
- * independent ownership and membership reads must start together. Archived
- * automations still become a paused proposal listed in the same response.
+ * independent ownership and membership reads must start together.
  */
 
 const OWNER_ID = "22222222-2222-4222-8222-222222222222";
-const ARCHIVED_PROJECT = "project-archived";
 
 type Row = Record<string, unknown>;
 
@@ -74,10 +72,7 @@ vi.mock("@/lib/supabase-service", () => {
   };
 });
 
-const decodeProject = vi.fn(async (row: Row) => {
-  const { encrypted_content: _cipher, ...plain } = row;
-  return { ...plain, automations: row.id === ARCHIVED_PROJECT ? row.archived : [] };
-});
+const decodeProject = vi.fn();
 vi.mock("@/lib/server/project-content", () => ({ decodeProject }));
 
 vi.mock("@/lib/server/routine-content", async (importOriginal) => ({
@@ -85,32 +80,12 @@ vi.mock("@/lib/server/routine-content", async (importOriginal) => ({
   decodeRoutine: async (row: Row) => ({ ...row, trigger: { type: "schedule" } }),
 }));
 
-const createRoutine = vi.fn(async (input: { projectId: string; legacySourceKey: string }) => {
-  world.routines.push({
-    id: `routine-${world.routines.length + 1}`,
-    project_id: input.projectId,
-    legacy_source_key: input.legacySourceKey,
-    deleted_at: null,
-  });
-  return { ok: true as const };
-});
-vi.mock("@/lib/server/routines", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./routines")>()),
-  createRoutine,
-}));
-
-// Loaded here first: when the original `routines` module imports it lazily,
-// its own import of `routines` would otherwise bypass the `createRoutine` mock.
-await import("@/lib/server/legacy-routine-proposals");
 const { listRoutinesForUser } = await import("@/lib/server/routines");
 
 const ownedProject = (id: string): Row => ({
   id,
   owner_id: OWNER_ID,
   deleted_at: null,
-  automations_enabled: false,
-  automations: [],
-  encrypted_content: "sealed",
 });
 
 beforeEach(() => {
@@ -121,7 +96,6 @@ beforeEach(() => {
   world.hold = new Set();
   world.release = [];
   decodeProject.mockClear();
-  createRoutine.mockClear();
 });
 
 describe("listRoutinesForUser", () => {
@@ -134,33 +108,7 @@ describe("listRoutinesForUser", () => {
     for (const release of world.release) release();
     expect(await listing).toEqual([]);
     expect(world.started.filter((table) => table === "projects")).toHaveLength(1);
-    expect(decodeProject).toHaveBeenCalledTimes(6);
-  });
-
-  it("still lists a paused proposal created from archived automations in the same response", async () => {
-    world.projects.push({
-      ...ownedProject(ARCHIVED_PROJECT),
-      archived: [{
-        id: "archived-triage",
-        enabled: true,
-        when: { type: "status_changed", to: ["triage"] },
-        if: {},
-        then: [{ type: "await_human" }],
-      }],
-    });
-    const rows = await listRoutinesForUser(OWNER_ID);
-    expect(createRoutine).toHaveBeenCalledTimes(1);
-    expect(createRoutine.mock.calls[0][0]).toMatchObject({ projectId: ARCHIVED_PROJECT, enabled: false });
-    expect(rows.map((routine) => routine.project_id)).toEqual([ARCHIVED_PROJECT]);
-    expect(world.started.filter((table) => table === "projects")).toHaveLength(1);
-  });
-
-  it("never decodes a row of another owner or in the trash", async () => {
-    const { prepareLegacyRoutineProposals } = await import("@/lib/server/legacy-routine-proposals");
-    expect(await prepareLegacyRoutineProposals([
-      { ...ownedProject("foreign"), owner_id: "someone-else" },
-      { ...ownedProject("trashed"), deleted_at: "2026-01-01T00:00:00.000Z" },
-    ], OWNER_ID)).toBe(false);
     expect(decodeProject).not.toHaveBeenCalled();
   });
+
 });

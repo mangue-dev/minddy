@@ -62,15 +62,6 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  if ("model" in body || "reasoningLevel" in body) {
-    return NextResponse.json(
-      {
-        error: "workerConfigurationManagedInSettings",
-        code: "workerConfigurationManagedInSettings",
-      },
-      { status: 400 },
-    );
-  }
 
   const result = await updateRoutine({
     trigger: body.trigger,

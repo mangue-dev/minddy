@@ -14,11 +14,10 @@
 //    that has a name, what the agent must read.
 // - PROMOTE: the wording addressed to Numo names where the note comes from.
 //
-// Hence this context, and its form: three GESTUREs already decided, not three settings
-// that the view would have to recombine. The view calls `launchAgent(md)`; what he
-// what happens to the surface, what prompt we are packing and what project we are talking about
-// is none of its business — this is exactly what allows it to be the same
-// two sides.
+// Hence this context, and its form: two GESTUREs already decided, not settings
+// that the view would have to recombine. The view calls `copyPrompt(md)`; what
+// prompt the surface packs and what project it talks about is none of its
+// business — this is exactly what allows it to be the same on both sides.
 
 import { createContext, useContext, type ReactNode } from "react";
 
@@ -29,13 +28,6 @@ export interface TaskSurface {
  * its subtasks (see task-item-view.tsx).
  */
   copyPrompt: (markdown: string) => string;
-
-  /**
- * Entrust the task to an agent: leave the surface (by saving what
- * is lying around), start the agent page and navigate there. Receives the
- * same markdown as `copyPrompt`.
- */
-  launchAgent: (markdown: string) => void;
 
   /**
  * Promote the note to a ticket: leave the surface and open Numo with the

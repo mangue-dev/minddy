@@ -38,12 +38,9 @@ export function newRunId(): string {
 }
 
 /**
- * What a run spent, READ AT THE LEDGER (MIN-215) — all features combined,
- * `sandbox_compute` included.
- *
- * To be preferred to `agent_runs.cost_usd` wherever the answer must be true even
- * when a chunk is dead: the column is only written by healthy `executeAgentRun` * output paths, so a chunk that raises in the middle — or whose invocation is killed at the duration limit — NEVER bears its expense there. The
- * lines of the ledger are written call by call, before the accident.
+ * What a run spent, READ AT THE LEDGER (MIN-215) — all features combined.
+ * The ledger lines are written call by call, so the sum stays true even when
+ * the caller died halfway through.
  *
  * Returns `null` when the reading fails, never 0: a zero would be confused with
  * "this run has spent nothing" and would recharge the ceiling that we are trying to achieve hold.
@@ -191,8 +188,8 @@ function toRow(input: AiUsageInput) {
       : `${input.runId}:${input.feature}:${seq}`,
     // Preserve the original idempotency identity above when correcting the
     // display segment, so a retried search cannot create a second charge.
-    feature: input.routineId && ["agent_code", "numo_chat", "web_search", "sandbox_compute"].includes(input.feature)
-      ? input.feature === "sandbox_compute" ? "routine_compute" : "routine_code"
+    feature: input.routineId && ["numo_chat", "web_search"].includes(input.feature)
+      ? "routine_code"
       : input.feature,
     ...(input.provider ? { provider: input.provider } : {}),
     ...(input.keyMode ? { key_mode: input.keyMode } : {}),

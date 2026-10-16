@@ -9,7 +9,7 @@ import {
   type Forge,
   type MergeMethod,
 } from "@/lib/server/agent/forge";
-import { signReviewBody } from "@/lib/server/agent/pr-tools";
+import { signReviewBody } from "@/lib/server/agent/review-signature";
 import { getGithubAppSlug } from "@/lib/server/git/github-app";
 import { broadcastPrChanged } from "@/lib/server/agent/pr-live";
 import {
@@ -20,21 +20,17 @@ import {
   upsertPullRequest,
   type PullRequestRow,
 } from "@/lib/server/agent/pull-requests";
-import { syncPrState } from "@/lib/server/agent/runs";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 
 /**
  * Direct PR-management gestures for Numo (MIN-550): merge, rename /
  * re-describe, post a conversation comment, edit a comment Numo posted
- * itself, resolve (or reopen) review conversations. Everything CODE remains
- * delegated to the code agent (`launch_code_agent`) — these tools only touch
- * PR metadata and thread.
+ * itself, resolve (or reopen) review conversations. These tools only touch
+ * PR metadata and thread, never the code.
  *
  * They reuse the provider-agnostic `Forge` surface and the `pull_requests`
- * table, exactly like the code agent's own PR family
- * (`lib/server/agent/project-pr-tools.ts`), under the SAME identity: the
- * installation token, i.e. the minddy account (see the identity table in
+ * table under the installation token, i.e. the minddy account (see the identity table in
  * `forge.ts`). A PR merged through the conversation therefore does not
  * borrow the hand of the member who asked.
  *
@@ -93,8 +89,7 @@ type Resolved = {
 /**
  * Resolves the PR a gesture targets: exactly one of issue_id /
  * pull_request_id (same contract as `read_pull_request`), the row from
- * `pull_requests` — source of truth since MIN-143 — with the `agent_runs`
- * fallback for the rows older than the table, then the project's repo target,
+ * `pull_requests` — source of truth since MIN-143 — then the project's repo target,
  * refusing a PR that does not belong to it. `read_pull_request` reuses it so
  * the two surfaces never drift apart.
  */
@@ -131,20 +126,7 @@ export async function resolvePullRequest(
   ) {
     return { error: "The selected pull request is not available in this project." };
   }
-  let number = row?.number ?? null;
-  if (number == null && issueId) {
-    // Same fallback as `read_pull_request`: LIVE PR first, otherwise the most
-    // recent — an old issue can carry several runs with a PR.
-    const { data: runs } = await ctx.supabase
-      .from("agent_runs")
-      .select("pr_number, pr_state")
-      .eq("issue_id", issueId)
-      .not("pr_number", "is", null)
-      .order("created_at", { ascending: false });
-    const rows = (runs ?? []) as { pr_number: number; pr_state: string | null }[];
-    const live = rows.find((r) => r.pr_state === "draft" || r.pr_state === "open");
-    number = (live ?? rows[0])?.pr_number ?? null;
-  }
+  const number = row?.number ?? null;
   if (number == null) {
     return {
       error: pullRequestId
@@ -169,7 +151,7 @@ function int(v: unknown): number | null {
 /**
  * A FORGE refusal rendered as a tool error, never as an exception: the model
  * can correct a 422 when it reads what the forge said. `hint` says what to do
- * with it (same shape as the code agent family's helper).
+ * with it.
  */
 async function forgeCall(
   fn: () => Promise<PullRequestWriteOutcome>,
@@ -252,7 +234,7 @@ async function mergePullRequest(
       return {
         result: {
           error:
-            "The head branch conflicts with the base branch — resolve the conflicts before merging. Delegate the fix to the code agent if needed.",
+            "The head branch conflicts with the base branch — resolve the conflicts before merging.",
         },
         success: false,
       };
@@ -606,12 +588,6 @@ async function settleState(
       state,
       mergedAt: new Date().toISOString(),
       issueId: row?.issue_id ?? undefined,
-    });
-    await syncPrState({
-      repoFullName: target.repoFullName,
-      prNumber: number,
-      prState: state,
-      provider: target.provider,
     });
     const prId = updated?.id ?? row?.id;
     const issueIds = prId ? await pullRequestIssueIds(prId) : [];

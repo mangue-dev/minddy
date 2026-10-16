@@ -22,7 +22,8 @@ describe("Numo product knowledge", () => {
 
     expect(article?.title).toBe("Self-hosting minddy");
     expect(article?.content).toContain("PostgreSQL, Auth, Storage, and Realtime");
-    expect(article?.content).toContain("AGENT_EXECUTION_BACKEND=self-hosted");
+    expect(article?.content).toContain("CRON_SECRET");
+    expect(article?.content).not.toContain("AGENT_EXECUTION_BACKEND=self-hosted");
     expect(article?.content).toContain("pnpm self-host:local");
     expect(article?.content).toContain("MINDDY_PUBLIC_APP_URL");
   });
@@ -39,14 +40,13 @@ describe("Numo product knowledge", () => {
     expect(article?.content).toContain("pnpm self-host:restore");
   });
 
-  it("explains where server-sandbox repository skills come from", () => {
+  it("explains where Numo repository skills come from", () => {
     const article = getKnowledgeArticle("D'où viennent les skills de Numo ?");
 
     expect(article?.id).toBe("repository-skills");
     expect(getKnowledgeTopicList()).toContain("topic: `repository-skills`");
     expect(article?.content).toContain(".agents/skills");
     expect(article?.content).toContain("GitHub or GitLab");
-    expect(article?.content).toContain("server sandbox");
     expect(article?.content).toContain(
       "Files that exist only in a desktop checkout are not available",
     );

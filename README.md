@@ -22,17 +22,17 @@ GitLab, Stripe, and OpenRouter.
 
 ## Product tour
 
-### Hand work to Numo
+### Track work with Numo
 
-Start one Numo conversation from its page, the contextual floating button, or an
-issue action. Numo can answer with project context, update Minddy directly, or
-delegate repository work to a code worker in a server sandbox. Follow the work in
-the conversation, then review its linked pull request and diff without losing the
-context that started the request.
+Start one Numo conversation from its page or the contextual floating button.
+Numo answers with project context and updates Minddy directly: it creates and
+triages issues, fills cycles, writes pages, and runs scheduled routines. Coding
+stays with your own agent: copy an issue as a prompt, then review the linked pull
+request in Minddy.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="public/captures/workflowAgent-en-dark.webp">
-  <img src="public/captures/workflowAgent-en-light.webp" alt="A Numo conversation showing delegated code work on a minddy issue" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="public/captures/workflowIssue-en-dark.webp">
+  <img src="public/captures/workflowIssue-en-light.webp" alt="A minddy board with the new issue dialog open" width="100%">
 </picture>
 
 ### Keep durable knowledge beside the backlog
@@ -77,8 +77,8 @@ settings. At minimum, set `MINDDY_PUBLIC_SUPABASE_URL`,
 application that can access its data. Never commit `.env` or production
 credentials.
 
-The development command builds the agent-VM and page-markdown bundles before
-starting Next.js. See [CONTRIBUTING.md](CONTRIBUTING.md) before running code from
+The development command builds the page-markdown bundle before starting
+Next.js. See [CONTRIBUTING.md](CONTRIBUTING.md) before running code from
 an untrusted pull request: dependency installation, tests, and development
 commands execute repository code.
 
@@ -121,8 +121,8 @@ release branch, and no human writes directly to `production`.
 
 - **Web app:** Next.js App Router, React, Tailwind CSS, and `mangue-ui`.
 - **Data and auth:** Supabase Postgres, Auth, Storage, and Realtime.
-- **Numo and agent integration:** Unified Numo conversations, server-sandbox code
-  delegation, scheduled requests, and an OAuth 2.1 MCP endpoint for external agents.
+- **Numo and agent integration:** Unified Numo conversations, scheduled routines,
+  and an OAuth 2.1 MCP endpoint for external agents.
 - **Deployment:** `pnpm deploy` is the interactive maintainer entry point. It
   detects whether to release the public core, deploy the Minddy Cloud web app,
   and publish desktop applications for macOS, Linux, and Windows, with

@@ -15,8 +15,9 @@ const NUMO_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * in circulation — push payloads delivered before the retirement, saved views,
  * bookmarks, app builds not yet updated — and must not die in a 404. This
  * surface opens the panel on the conversation the link named, then lands on
- * home. `?issue=` links and unresolvable references open the panel on the live
- * thread: nothing better can be derived from them.
+ * home. `?issue=` links, retired `/agents?run=` links and unresolvable
+ * references open the panel on the live thread: nothing better can be derived
+ * from them.
  */
 export function NumoCompatRedirect({
   retired,
@@ -34,33 +35,10 @@ export function NumoCompatRedirect({
     if (consumed.current) return;
     consumed.current = true;
     void (async () => {
-      let conversationId: string | null = null;
-      if (retired === "numo") {
-        const conversation = searchParams.get("conversation");
-        if (conversation && NUMO_ID.test(conversation)) {
-          conversationId = conversation;
-        }
-      } else {
-        // `/agents?run=` carried either a worker conversation id or a run id.
-        // Ask the server for the common identity, best effort: a link that
-        // resolves to nothing still opens the panel rather than a 404.
-        const run = searchParams.get("run");
-        if (run && NUMO_ID.test(run)) {
-          for (const source of ["agent", "run"] as const) {
-            const res = await fetch(
-              `/api/numo/resolve?id=${encodeURIComponent(run)}&source=${source}`,
-            ).catch(() => null);
-            if (!res?.ok) continue;
-            const resolved = (await res.json().catch(() => null)) as {
-              conversationId?: string;
-            } | null;
-            if (resolved?.conversationId) {
-              conversationId = resolved.conversationId;
-              break;
-            }
-          }
-        }
-      }
+      // `/agents` links named retired code-worker runs, which no longer
+      // resolve to a conversation: they open the panel on the live thread.
+      const conversation = retired === "numo" ? searchParams.get("conversation") : null;
+      const conversationId = conversation && NUMO_ID.test(conversation) ? conversation : null;
       open({ conversationId });
       router.replace("/home");
     })();

@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,15 @@
       "docs/managed-forge-relay-plan.md",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "docs/github-issue-sync.md",
-      "content/documentation/reviews/forge-controls-capture-candidates.json"
+      "content/documentation/reviews/forge-controls-capture-candidates.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 4; es translation of removal edits; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "api-and-webhooks"
@@ -67,7 +68,7 @@
       "src": "/documentation/es/git-connection-flow.svg",
       "alt": "Conectar la cuenta personal y vincular un repositorio al proyecto son pasos distintos.",
       "caption": "Autoriza primero la cuenta y después vincula un repositorio como propietario del proyecto.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +101,7 @@
       "src": "/documentation/es/forge-issue-sync-mapping.svg",
       "alt": "Flujo de sincronización de GitHub con configuración, validación de eventos, importación y estados.",
       "caption": "Los eventos de GitHub conservan los cambios recientes y evitan entregas duplicadas. Las correspondencias de GitLab se verifican por separado.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +139,7 @@
       "src": "/documentation/es/forge-issue-sync-workflow.png",
       "alt": "Repositorio de demostración de GitHub vinculado, con la sincronización de incidencias desactivada.",
       "caption": "El repositorio de demostración está vinculado a GitHub. La sincronización de incidencias sigue desactivada; compruebe el alcance y el backlog existente antes de activarla. Esta captura no demuestra una importación sincronizada.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +164,7 @@ Conectar una cuenta Git personal, vincular un repositorio al proyecto y sincroni
 
 Conecte GitHub o GitLab en los ajustes Git de cuenta y complete la autorización en el navegador. Conceda solo los repositorios necesarios. En escritorio vuelva a la aplicación después. La conexión sirve para varios proyectos, sin vincular automáticamente todos los repositorios.
 
-El propietario abre Git en los ajustes del proyecto, elige un repositorio disponible y confirma. Compruebe proveedor, nombre completo y cuenta que actuará. Los miembros no pueden sustituir el vínculo reservado al propietario. El vínculo permite contexto y trabajo de código en servidor; la sincronización de incidencias es un interruptor separado.
+El propietario abre Git en los ajustes del proyecto, elige un repositorio disponible y confirma. Compruebe proveedor, nombre completo y cuenta que actuará. Los miembros no pueden sustituir el vínculo reservado al propietario. El vínculo permite el contexto del repositorio, el seguimiento de pull requests y las skills del repositorio; la sincronización de incidencias es un interruptor separado.
 
 ![Conectar la cuenta personal y vincular un repositorio al proyecto son pasos distintos.](/documentation/es/git-connection-flow.svg)
 

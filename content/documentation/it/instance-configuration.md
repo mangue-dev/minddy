@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -49,10 +49,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (it translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root (it translation, label and retained-meaning self-review); agent:/root/min-721 (it runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "workspace-encryption",
@@ -77,7 +77,7 @@
       "src": "/documentation/it/optional-providers-flow.svg",
       "alt": "Schema: Operatore sceglie capacità opzionale. Credenziali complete e condizioni. Destinazione dati esterna esplicita. Verificare comportamento e costi.",
       "caption": "Prima di attivare un’integrazione, verifica le credenziali, le condizioni e la destinazione dei dati.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,9 +107,9 @@
       "id": "proxy-network-and-jobs-flow",
       "kind": "diagram",
       "src": "/documentation/it/proxy-network-and-jobs-flow.svg",
-      "alt": "Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Runner, database e porte private. Job autenticati; fermi in manutenzione.",
+      "alt": "Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Database e porte interne private. Job autenticati; fermi in manutenzione.",
       "caption": "Il proxy espone le origini pubbliche e mantiene privati i servizi interni; durante la manutenzione ferma anche i job.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -127,7 +127,7 @@
             "title": "Origini app e Supabase pubbliche"
           },
           {
-            "title": "Runner, database e porte private"
+            "title": "Database e porte interne private"
           },
           {
             "title": "Job autenticati; fermi in manutenzione"
@@ -151,7 +151,7 @@ La configurazione dell’istanza definisce origini, segreti, provider opzionali 
 
 ### Conservare i segreti {#secrets}
 
-L’installer integra `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET` e `AGENT_RUNNER_SECRET` mancanti. La radice ha esattamente 64 caratteri esadecimali. Mantienila fuori PostgreSQL con copia di recupero protetta. Tutto l’ambiente resta `0600` e fuori Git. Non eseguirlo come shell e non stamparlo. Ripetere installazione non ruota segreti; perderli può rendere dati illeggibili. La rotazione deliberata richiede procedura corretta.
+L’installer integra `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, e `CRON_SECRET` mancanti. La radice ha esattamente 64 caratteri esadecimali. Mantienila fuori PostgreSQL con copia di recupero protetta. Tutto l’ambiente resta `0600` e fuori Git. Non eseguirlo come shell e non stamparlo. Ripetere installazione non ruota segreti; perderli può rendere dati illeggibili. La rotazione deliberata richiede procedura corretta.
 
 ### Applicare e controllare una modifica {#capabilities}
 
@@ -175,16 +175,13 @@ L’email dell’applicazione richiede `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`
 
 ### Collegare Git ed esecuzione del codice {#git-and-code}
 
-Sono supportati GitHub.com e GitLab.com, non GitHub Enterprise Server o GitLab autogestito. Le connessioni degli utenti possono usare il relay gestito; puoi escluderlo con `--no-forge-relay` o `MINDDY_FORGE_RELAY=0` e configurare app proprie. Le connessioni esistenti mantengono il proprio canale fino alla riconnessione. Il profilo server include il runner Docker fidato. Vercel Sandbox è un’alternativa esplicita che richiede credenziali e `MINDDY_DATA_ROOT_KEY` valida anche quando la cifratura dei contenuti è disattivata. L’esecuzione desktop locale è stata ritirata. Una configurazione mancante blocca la delega; non esegue il lavoro sul computer dell’utente.
-
-
-L’immagine pubblicata dell’applicazione include Node.js e Git, ma rimuove intenzionalmente `npm`, `npx` e Corepack. Il profilo Compose di riferimento sceglie questa immagine anche per i worker tramite `AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE`. Non basta per un nuovo worker di codice: il bootstrap OpenCode usa `npm` per installare il runtime e il plugin fissati, anche in un repository senza dipendenze di progetto. Senza `npm`, l’esecuzione si ferma al bootstrap; dalla conversazione non si può dedurre che un file del progetto sia stato modificato o che un test sia riuscito. Usa un’immagine dedicata ai worker, costruita e verificata dall’operatore, con Node.js 24, `npm`, Git e gli strumenti richiesti dal progetto, sovrascrivendo `AGENT_RUNNER_SANDBOX_IMAGE` nel servizio runner. Mantieni i vincoli di isolamento. Verifica bootstrap, clonazione, test effettivi e diff risultante prima di abilitare la delega di codice. Correggere i file del runner non fornisce questi strumenti al worker.
+Sono supportati GitHub.com e GitLab.com, non GitHub Enterprise Server o GitLab autogestito. Le connessioni degli utenti possono usare il relay gestito; puoi escluderlo con `--no-forge-relay` o `MINDDY_FORGE_RELAY=0` e configurare app proprie. Le connessioni esistenti mantengono il proprio canale fino alla riconnessione. Numo non esegue codice, quindi il server di riferimento non richiede alcun runner di codice né sandbox, e nessun servizio riceve il socket Docker. Le impostazioni lasciate da una release precedente, come `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` e le credenziali di Vercel Sandbox, vengono ignorate; rimuovile dall’ambiente protetto.
 
 ## Esporre origini e gestire i job pianificati {#proxy-network-and-jobs}
 
-Un servizio pubblico richiede un proxy TLS e il redirect da HTTP a HTTPS. Le origini minddy e Supabase, i redirect Auth, i callback OAuth e gli header devono concordare. Non esporre PostgreSQL, Studio, porte interne o runner. Nel profilo full il server usa `http://kong:8000` internamente, mentre browser e link mantengono l’origine pubblica di Supabase. HTTP privato richiede `localhost` o una rete IPv4 privata affidabile, senza inoltro delle porte del router.
+Un servizio pubblico richiede un proxy TLS e il redirect da HTTP a HTTPS. Le origini minddy e Supabase, i redirect Auth, i callback OAuth e gli header devono concordare. Non esporre PostgreSQL, Studio o porte interne. Nel profilo full il server usa `http://kong:8000` internamente, mentre browser e link mantengono l’origine pubblica di Supabase. HTTP privato richiede `localhost` o una rete IPv4 privata affidabile, senza inoltro delle porte del router.
 
-![Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Runner, database e porte private. Job autenticati; fermi in manutenzione.](/documentation/it/proxy-network-and-jobs-flow.svg)
+![Schema: Proxy HTTPS pubblico. Origini app e Supabase pubbliche. Database e porte interne private. Job autenticati; fermi in manutenzione.](/documentation/it/proxy-network-and-jobs-flow.svg)
 
 ### Fornire pianificazione autenticata {#schedules}
 

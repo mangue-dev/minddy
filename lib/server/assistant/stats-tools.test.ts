@@ -200,72 +200,31 @@ describe("readUserStatsTool", () => {
 });
 
 describe("readPlanUsageTool", () => {
-  function fakeSupabase(
-    runs: unknown[] | null,
-    error: { message: string } | null,
-  ) {
-    const query = {
-      select: () => query,
-      is: () => query,
-      eq: vi.fn(() => query),
-      order: () => query,
-      limit: () => Promise.resolve({ data: runs, error }),
-    };
-    return { from: vi.fn(() => query) } as unknown as SupabaseClient;
-  }
+  const usage = (byFeature: Record<string, number>) => ({
+    billing: {
+      planId: "free",
+      plan: { includedUsageUsd: 5 },
+      source: "default",
+      account: null,
+      stripeConfigured: false,
+    },
+    period: {
+      start: "2026-09-01T00:00:00.000Z",
+      end: "2026-10-01T00:00:00.000Z",
+    },
+    usedUsd: 1.5,
+    byFeature,
+  }) as unknown as Awaited<ReturnType<typeof getUserUsage>>;
 
-  it("returns plan budget, spend segments and recent runs", async () => {
+  it("returns plan budget and spend segments", async () => {
     vi.mocked(managedServices).mockReturnValue({
       billing: true,
       ai: true,
       forge: true,
     });
-    vi.mocked(getUserUsage).mockResolvedValue({
-      billing: {
-        planId: "free",
-        plan: { includedUsageUsd: 5 },
-        source: "default",
-        account: null,
-        stripeConfigured: false,
-      },
-      period: {
-        start: "2026-09-01T00:00:00.000Z",
-        end: "2026-10-01T00:00:00.000Z",
-      },
-      usedUsd: 1.5,
-      byFeature: { agent_code: 1, routine_code: 0.5 },
-    } as Awaited<ReturnType<typeof getUserUsage>>);
+    vi.mocked(getUserUsage).mockResolvedValue(usage({ numo_chat: 1, routine_code: 0.5 }));
 
-    const result = await readPlanUsageTool({
-      userId: "user-1",
-      supabase: fakeSupabase(
-        [
-          {
-            id: "run-1",
-            status: "completed",
-            routine_id: null,
-            title: "Fix the login bug",
-            created_at: "2026-09-13T10:00:00Z",
-            completed_at: "2026-09-13T10:05:00Z",
-            cost_usd: "0.250000",
-            issue: { number: 42 },
-            project: { key: "MDY" },
-          },
-          {
-            id: "run-2",
-            status: "failed",
-            routine_id: "routine-1",
-            title: null,
-            created_at: "2026-09-12T08:00:00Z",
-            completed_at: "2026-09-12T08:02:00Z",
-            cost_usd: null,
-            issue: null,
-            project: null,
-          },
-        ],
-        null,
-      ),
-    });
+    const result = await readPlanUsageTool({ userId: "user-1" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -278,66 +237,20 @@ describe("readPlanUsageTool", () => {
       nextResetAt: "2026-10-01T00:00:00.000Z",
     });
     expect(result.usage.segments).toEqual([
-      { id: "agents", usd: 1 },
       { id: "routines", usd: 0.5 },
+      { id: "numo", usd: 1 },
     ]);
-    expect(result.usage.recentRuns).toEqual([
-      {
-        kind: "agent",
-        status: "completed",
-        title: "Fix the login bug",
-        issueNumber: 42,
-        projectKey: "MDY",
-        costUsd: 0.25,
-        startedAt: "2026-09-13T10:00:00Z",
-        completedAt: "2026-09-13T10:05:00Z",
-      },
-      {
-        kind: "routine",
-        status: "failed",
-        title: null,
-        issueNumber: null,
-        projectKey: null,
-        costUsd: null,
-        startedAt: "2026-09-12T08:00:00Z",
-        completedAt: "2026-09-12T08:02:00Z",
-      },
-    ]);
-    // Teammates' project-visible runs must not leak into this user's
-    // execution summary (agent_runs_select is project-wide).
-    const query = fakeSupabase([], null);
-    await readPlanUsageTool({ userId: "user-9", supabase: query });
-    const runQuery = (query.from as ReturnType<typeof vi.fn>).mock.results[0]
-      .value as Record<string, ReturnType<typeof vi.fn>>;
-    expect(runQuery.eq).toHaveBeenCalledWith("created_by", "user-9");
   });
 
   it("reports zero usage and no segments when managed AI is off", async () => {
-    vi.mocked(getUserUsage).mockResolvedValue({
-      billing: {
-        planId: "free",
-        plan: { includedUsageUsd: 5 },
-        source: "default",
-        account: null,
-        stripeConfigured: false,
-      },
-      period: {
-        start: "2026-09-01T00:00:00.000Z",
-        end: "2026-10-01T00:00:00.000Z",
-      },
-      usedUsd: 1.5,
-      byFeature: { agent_code: 1.5 },
-    } as Awaited<ReturnType<typeof getUserUsage>>);
+    vi.mocked(getUserUsage).mockResolvedValue(usage({ numo_chat: 1.5 }));
     vi.mocked(managedServices).mockReturnValue({
       billing: true,
       ai: false,
       forge: true,
     });
 
-    const result = await readPlanUsageTool({
-      userId: "user-1",
-      supabase: fakeSupabase([], null),
-    });
+    const result = await readPlanUsageTool({ userId: "user-1" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -352,29 +265,12 @@ describe("readPlanUsageTool", () => {
     expect(result.usage.segments).toEqual([]);
   });
 
-  it("still answers when only one of the two halves fails", async () => {
+  it("fails when the usage read fails", async () => {
     vi.mocked(getUserUsage).mockRejectedValue(new Error("usage rpc missing"));
 
-    const result = await readPlanUsageTool({
-      userId: "user-1",
-      supabase: fakeSupabase([], null),
-    });
+    const result = await readPlanUsageTool({ userId: "user-1" });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.usage.plan).toBeUndefined();
-    expect(result.usage.recentRuns).toEqual([]);
-  });
-
-  it("fails when both halves fail", async () => {
-    vi.mocked(getUserUsage).mockRejectedValue(new Error("usage rpc missing"));
-
-    const result = await readPlanUsageTool({
-      userId: "user-1",
-      supabase: fakeSupabase(null, { message: "rls denied" }),
-    });
-
-    expect(result.ok).toBe(false);
+    expect(result).toEqual({ ok: false, error: "usage rpc missing" });
   });
 });
 

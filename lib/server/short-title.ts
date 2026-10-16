@@ -11,9 +11,7 @@ import { responseLanguageInstruction } from "@/lib/locale-language";
  * what the user has written. Two sidebars use it, for the same default —
  * display the truncated input text instead of a title:
  * • a chat conversation (`conversations.title`, first message);
- * • an agent conversation (`agent_runs.title`) — the launched task, and for a
- * ticket conversation, the ticket title followed by the instruction. One run is
- * one conversation, so the ticket title alone would give them all the same name.
+ * • a routine occurrence, from the routine's instructions.
  *
  * A SMALL model is enough, and it can be changed without redeployment through the
  * `conversation_title_model` admin key. The call never throws: on any failure it

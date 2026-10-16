@@ -78,7 +78,7 @@ const service = {
     if (name === "migrate_numo_tool_checkpoint" && state.conflictNext &&
         args.p_id === state.conflictId) {
       state.conflictNext = false;
-      sql(state.database, `UPDATE public.numo_assistant_turns SET checkpoint='{"phase":"worker_wait","active_run_id":null}'::jsonb
+      sql(state.database, `UPDATE public.numo_assistant_turns SET checkpoint='{"phase":"user_wait"}'::jsonb
         WHERE id=${quote(state.conflictId)};`);
     }
     let call: string;
@@ -105,9 +105,9 @@ vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 const { backfillNumoToolContentBatch } = await import("./numo-tool-content-backfill");
 const { decodeNumoCheckpoint, decodeNumoToolMessage } = await import("@/lib/server/numo/tool-content");
 
-describe.skipIf(!enabled)("Numo tool worker against isolated PostgreSQL", () => {
+describe.skipIf(!enabled)("Numo tool content backfill against isolated PostgreSQL", () => {
   beforeAll(() => {
-    state.database = `minddy_min591_numo_worker_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
+    state.database = `minddy_min591_numo_tool_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
     state.userId = randomUUID();
     state.turnId = randomUUID();
     state.messageId = randomUUID();

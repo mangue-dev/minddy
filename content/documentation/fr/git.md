@@ -17,12 +17,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,15 @@
       "docs/managed-forge-relay-plan.md",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "docs/github-issue-sync.md",
-      "content/documentation/reviews/forge-controls-capture-candidates.json"
+      "content/documentation/reviews/forge-controls-capture-candidates.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 4; fr translation of removal edits; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "api-and-webhooks"
@@ -67,7 +68,7 @@
       "src": "/documentation/fr/git-connection-flow.svg",
       "alt": "La connexion du compte personnel et le lien du dépôt au projet sont deux étapes distinctes.",
       "caption": "Autorisez d’abord le compte, puis reliez un dépôt en tant que propriétaire du projet.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -100,7 +101,7 @@
       "src": "/documentation/fr/forge-issue-sync-mapping.svg",
       "alt": "Parcours de synchronisation GitHub : configuration, contrôle des événements, import et états.",
       "caption": "Les événements GitHub préservent les modifications récentes et évitent les doublons de livraison. Les correspondances GitLab se vérifient séparément.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -138,7 +139,7 @@
       "src": "/documentation/fr/forge-issue-sync-workflow.png",
       "alt": "Dépôt GitHub de démonstration lié, avec la synchronisation des issues désactivée.",
       "caption": "Le dépôt de démonstration est lié à GitHub. La synchronisation des issues reste désactivée ; vérifiez la portée et le backlog existant avant de l’activer. Cette capture ne démontre pas un import synchronisé.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +164,7 @@ Connecter un compte Git personnel, lier un dépôt au projet et synchroniser les
 
 Dans les paramètres Git du compte, connectez GitHub ou GitLab et terminez l’autorisation dans le navigateur. Accordez seulement les dépôts nécessaires. Sur desktop, revenez à l’application après le navigateur. La connexion se réutilise entre projets, sans lier automatiquement tous les dépôts.
 
-Le propriétaire ouvre la section Git des paramètres du projet, sélectionne un dépôt disponible et confirme. Vérifiez fournisseur, nom complet du dépôt et compte d’action affiché. Les membres ne peuvent pas remplacer ce lien réservé au propriétaire. Il fournit le contexte du dépôt et le travail de code côté serveur ; la synchronisation des tickets a un interrupteur distinct.
+Le propriétaire ouvre la section Git des paramètres du projet, sélectionne un dépôt disponible et confirme. Vérifiez fournisseur, nom complet du dépôt et compte d’action affiché. Les membres ne peuvent pas remplacer ce lien réservé au propriétaire. Il fournit le contexte du dépôt, le suivi des pull requests et les skills du dépôt ; la synchronisation des tickets a un interrupteur distinct.
 
 ![La connexion du compte personnel et le lien du dépôt au projet sont deux étapes distinctes.](/documentation/fr/git-connection-flow.svg)
 

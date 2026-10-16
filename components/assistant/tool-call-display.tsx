@@ -1,17 +1,14 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, BotIcon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileRemoveIcon, FileSearchIcon, FileStackIcon as FileStack, FileSymlinkIcon as FileSymlink, FilterIcon, FolderTreeIcon as FolderTree, GitMergeIcon, GitPullRequestIcon, GlobeIcon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, MailReply01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, MessageProgrammingIcon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, TerminalIcon as Terminal, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import { AppIcon } from "@/components/icon";
 import { SeedProposalCard } from "./seed-proposal-card";
 import { liveSecretOf, SecretCallout } from "./secret-callout";
-import type { DelegatedWorkCall } from "./delegated-work-card";
-import { isDelegatedWorkToolCall } from "@/lib/delegated-work-state";
 import { useGroupedActions } from "./grouped-actions-context";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
@@ -24,11 +21,6 @@ export interface ToolCallItem {
   result?: unknown;
   success?: boolean;
 }
-
-const DelegatedWorkCard = dynamic(
-  () => import("./delegated-work-card").then((module) => module.DelegatedWorkCard),
-  { ssr: false },
-);
 
 interface ToolCallListProps {
   items: ToolCallItem[];
@@ -154,36 +146,6 @@ const FEEDBACK_READ_META: ToolMeta = {
     return success ? t("feedbackPostLoaded") : t("feedbackPostNotFound");
   },
 };
-
-/**
- * The number of the targeted pull request, as the thread of a run reads it: the
- * tools of the PROJECT pull requests (MIN-267) take it as an argument, and
- * `toolArgSummary` persists it. Absent (replay session, where the pull request
- * is that of the session): the line is said without a number.
- */
-function prNumber(args: Record<string, unknown>): number | null {
-  return typeof args.pull_request === "number" ? args.pull_request : null;
-}
-
-/** Reference of the ticket targeted when the tool carried one (otherwise: that of the run). */
-function targetIssue(args: Record<string, unknown>): string | null {
-  return typeof args.issue === "string" && args.issue.trim()
-    ? args.issue.trim()
-    : null;
-}
-
-/**
- * Number of files affected by a batch (`apply_edits`, `apply_patch`).
- * `changes` / `patch` only exist in raw template arguments; that
- * the thread of a relit run is the flat summary of `toolArgSummary`
- * (lib/server/agent/agent-loop.ts): `{ count, paths }`. Hence the three folds.
- */
-function batchFileCount(args: Record<string, unknown>): number {
-  if (Array.isArray(args.changes)) return args.changes.length;
-  if (typeof args.count === "number") return args.count;
-  if (Array.isArray(args.paths)) return args.paths.length;
-  return 0;
-}
 
 const TOOL_META: Record<string, ToolMeta> = {
   get_help: {
@@ -464,31 +426,6 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("objectiveUpdated") : t("updateObjectiveFailed");
     },
   },
-  // The two gestures that the code agent has in addition (MIN-287): open an objective
-  // and write on his thread. The name is read in the RESULT (the model was able to aim
-  // by name as by id) — like `create_objective` just above, and it
-  // therefore falls back on the wording without a name where the thread does not carry the
-  // results.
-  read_objective: {
-    icon: Target01Icon,
-    getLabel: (_args, result, success, status, t) => {
-      if (status === "running") return t("loadingObjective");
-      if (!success) return t("objectiveNotFound");
-      const objective = result?.objective as
-        Record<string, unknown> | undefined;
-      const name = typeof objective?.name === "string" ? objective.name : null;
-      return name
-        ? t("objectiveLoadedWithName", { name })
-        : t("objectiveLoaded");
-    },
-  },
-  comment_objective: {
-    icon: Message01Icon,
-    getLabel: (_args, _result, success, status, t) => {
-      if (status === "running") return t("commentingObjective");
-      return success ? t("objectiveCommented") : t("commentObjectiveFailed");
-    },
-  },
   create_category: {
     icon: Tag01Icon,
     getLabel: (_args, result, success, status, t) => {
@@ -682,29 +619,6 @@ const TOOL_META: Record<string, ToolMeta> = {
       return clearing ? t("feedbackResponseCleared") : t("feedbackResponded");
     },
   },
-  // ── Agent de code & pull requests ────────────────────────────────────
-  list_agent_models: {
-    icon: BotIcon,
-    getLabel: (_args, result, _success, status, t) => {
-      if (status === "running") return t("loadingAgentModels");
-      return t("foundAgentModels", { count: resultCount(result, "models") });
-    },
-  },
-  launch_code_agent: {
-    icon: SparklesIcon,
-    getLabel: (args, result, success, status, t) => {
-      if (status === "running") return t("launchingCodeAgent");
-      if (!success) return t("launchCodeAgentFailed");
-      // A run already in progress receives the message in CONTROL: say it, otherwise
-      // “agent launched” on a run that was already running astray.
-      if (result?.continued === true) return t("codeAgentSteered");
-      const mode = typeof args.mode === "string" ? args.mode : "";
-      if (mode === "plan") return t("codeAgentLaunchedPlan");
-      if (mode === "implement") return t("codeAgentLaunchedImplement");
-      if (mode === "verify") return t("codeAgentLaunchedVerify");
-      return t("codeAgentLaunched");
-    },
-  },
   // ── Routines (MIN-185) ───────────────────────────────────────────────
   create_routine: {
     icon: Calendar01Icon,
@@ -754,13 +668,10 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   read_pull_request: {
     icon: GitPullRequestIcon,
-    getLabel: (args, result, success, status, t) => {
+    getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("loadingPullRequest");
       if (!success) return t("pullRequestNotFound");
-      // The result for Numo, the arguments for the agent: the thread of a run does not
-      // NOT carry the results of the tools, only the summary of the arguments.
-      const number =
-        typeof result?.number === "number" ? result.number : prNumber(args);
+      const number = typeof result?.number === "number" ? result.number : null;
       return number != null
         ? t("pullRequestLoadedWithNumber", { number })
         : t("pullRequestLoaded");
@@ -828,16 +739,6 @@ const TOOL_META: Record<string, ToolMeta> = {
         return t("prConversationsAlreadyResolved", { count: unchanged });
       }
       return t("resolvePrConversationsFailed");
-    },
-  },
-  resolve_pull_request_thread: {
-    icon: CheckIcon,
-    getLabel: (_args, result, success, status, t) => {
-      if (status === "running") return t("resolvingPrConversation");
-      if (!success) return t("resolvePrConversationFailed");
-      return result?.resolved === false
-        ? t("prConversationReopened")
-        : t("prConversationResolved");
     },
   },
   // ── Corbeille (MIN-133) ──────────────────────────────────────────────
@@ -1049,281 +950,6 @@ const TOOL_META: Record<string, ToolMeta> = {
       return questions[0]?.question || t("questionAsked");
     },
   },
-  // ── Code agent (MIN-46): same tool-call lines as Numo. ──────────
-  read_file: {
-    icon: FileSearchIcon,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentReadFile", { path: (args.path as string) || "…" }),
-  },
-  list_dir: {
-    icon: FolderTree,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentListDir", { path: (args.path as string) || "…" }),
-  },
-  glob: {
-    icon: FileSearchIcon,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentGlob", { pattern: (args.pattern as string) || "…" }),
-  },
-  grep: {
-    icon: Search01Icon,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentGrep", { pattern: (args.pattern as string) || "…" }),
-  },
-  edit_file: {
-    icon: FilePen,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentEditFile", { path: (args.path as string) || "…" }),
-  },
-  write_file: {
-    icon: FilePlus2,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentWriteFile", { path: (args.path as string) || "…" }),
-  },
-  apply_edits: {
-    icon: FileStack,
-    // `changes` ONLY exists in raw template arguments. What the thread
-    // of a run relit, this is the flat summary written by `toolArgSummary`
-    // (lib/server/agent/agent-loop.ts) : `{ count, paths }`. Sans ces deux
-    // fallbacks, any multi-file batch was displayed “Editing 0 file(s)”,
-    // three lines above its own “3 files modified”.
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentApplyEdits", { count: batchFileCount(args) }),
-  },
-  apply_patch: {
-    icon: FileStack,
-    // Same fallback as `apply_edits`: `patch` is the raw string of the model, and this
-    // that the thread rereads is the flat summary of `toolArgSummary` — `{ count, paths }`.
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentApplyPatch", { count: batchFileCount(args) }),
-  },
-  move_file: {
-    icon: FileSymlink,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentMoveFile", {
-        from: (args.from as string) || "…",
-        to: (args.to as string) || "…",
-      }),
-  },
-  delete_file: {
-    icon: FileRemoveIcon,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentDeleteFile", { path: (args.path as string) || "…" }),
-  },
-  run_command: {
-    icon: Terminal,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentRunCommand", { command: (args.command as string) || "…" }),
-  },
-  // Tools minddy de l'agent (MIN-125). `search_issues`, `create_issue`,
-  // `add_scratchpad_tasks` and `set_scratchpad` reuse the entries as is
-  // from Numo above: same names, same forms of result.
-  read_issue: {
-    icon: FileSearchIcon,
-    getLabel: (args, _r, _s, _st, t) => {
-      const issue = targetIssue(args);
-      return issue ? t("agentReadIssueTarget", { issue }) : t("agentReadIssue");
-    },
-  },
-  read_resource: {
-    icon: FileSearchIcon,
-    getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
-  },
-  // The name before MIN-184: the runs already carried out carry it in their
-  // events, and a replay should not show an unlabeled call.
-  read_attachment: {
-    icon: FileSearchIcon,
-    getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
-  },
-  update_issue: {
-    icon: FilePen,
-    getLabel: (args, _r, _s, _st, t) => {
-      const issue = targetIssue(args);
-      return issue
-        ? t("agentUpdateIssueTarget", { issue })
-        : t("agentUpdateIssue");
-    },
-  },
-  write_issue_plan: {
-    icon: FilePen,
-    getLabel: (args, _r, _s, _st, t) => {
-      const issue = targetIssue(args);
-      return issue
-        ? t("agentWriteIssuePlanTarget", { issue })
-        : t("agentWriteIssuePlan");
-    },
-  },
-  read_scratchpad: {
-    icon: NotebookIcon,
-    getLabel: (_a, _r, _s, _st, t) => t("agentReadScratchpad"),
-  },
-  run_background: {
-    icon: Activity01Icon,
-    // One line per ACTION: “launch npm run dev” and “probe bg-1” do not tell
-    // not the same thing. `job_id` comes from template arguments (start doesn't have any
-    // again) or the result, which carries it for the three actions.
-    getLabel: (args, result, _s, _st, t) => {
-      const job = (args.job_id as string) || (result?.job_id as string) || "…";
-      if (args.action === "stop") return t("agentBackgroundStop", { job });
-      if (args.action === "check") return t("agentBackgroundCheck", { job });
-      return t("agentBackgroundStart", {
-        command: (args.command as string) || "…",
-      });
-    },
-  },
-  // Sous-agents (MIN-112). `toolArgSummary` persiste `{ mode, task, model,
-  // thinking_effort }`: the line says what was delegated and to whom, otherwise a turn
-  // who delegates only displays an anonymous “Processing…”.
-  spawn_agent: {
-    icon: BotIcon,
-    getLabel: (args, _result, success, status, t) => {
-      if (!success && status === "complete") return t("agentSpawnRefused");
-      const task = typeof args.task === "string" ? args.task.trim() : "";
-      const label = task.length > 60 ? `${task.slice(0, 60)}…` : task || "…";
-      return args.mode === "implement"
-        ? t("agentSpawnImplement", { task: label })
-        : t("agentSpawnExplore", { task: label });
-    },
-  },
-  agent_status: {
-    icon: Activity01Icon,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentSubagentStatus", { id: (args.id as string) || "…" }),
-  },
-  list_agents: {
-    icon: BotIcon,
-    // Worded WITHOUT consideration, deliberately. `list_agents` has no arguments, and the
-    // thread of an agent run does NOT carry the result of tools: `buildFeed`
-    // only keeps `{status, success}` per tool-call. Wording that would read
-    // `result.agents` would therefore display “No subagent” on a session which
-    // three — this is exactly the trap already documented for `apply_edits`
-    // above, and it was seen on screen before being corrected here.
-    getLabel: (_a, _r, _s, _st, t) => t("agentSubagentList"),
-  },
-  read_page: PAGE_READ_META,
-  read_feedback: FEEDBACK_READ_META,
-  // `webfetch` arrives under the name of opencode: it has no opposite house,
-  // so no name to translate ([opencode-events.ts](lib/server/agent/vm/opencode-events.ts)).
-  webfetch: {
-    icon: GlobeIcon,
-    getLabel: (args, _r, _s, _st, t) =>
-      t("agentWebFetch", { url: (args.url as string) || "…" }),
-  },
-  report_verdict: {
-    icon: ShieldCheck,
-    getLabel: (args, _r, _s, _st, t) =>
-      args.ok === true ? t("agentVerdictOk") : t("agentVerdictBlocked"),
-  },
-  // ── Pull requests de l'agent ─────────────────────────────────────────
-  //
-  // OPENING THE PULL REQUEST IS THE MOST VISIBLE ACT OF A RUN, and without entry
-  // here it was displayed “Processing…” then “Finished”, under the grid icon of the
-  // fallback — that is to say the only line of the thread which said nothing of what it
-  // was doing. The title comes from the arguments, which `toolArgSummary` persists; A
-  // failure (nothing to deliver, PR refused to reopen) is said, it cannot be guessed.
-  create_pr: {
-    icon: GitPullRequestIcon,
-    getLabel: (args, _result, success, status, t) => {
-      if (status === "complete" && !success) return t("agentCreatePrFailed");
-      const raw = typeof args.title === "string" ? args.title.trim() : "";
-      const title = raw.length > 60 ? `${raw.slice(0, 60)}…` : raw;
-      return title ? t("agentCreatePrTitled", { title }) : t("agentCreatePr");
-    },
-  },
-  validate_changes: {
-    icon: TaskDone01Icon,
-    getLabel: (_args, _result, success, status, t) => {
-      if (status === "running") return t("validatingChanges");
-      return success ? t("changesValidated") : t("validateChangesFailed");
-    },
-  },
-  // The three writings of a REREADING session (MIN-168): the pull request
-  // is that of the session, so never a number.
-  comment_pr: {
-    icon: Message01Icon,
-    getLabel: (_a, _r, success, status, t) =>
-      status === "complete" && !success
-        ? t("agentCommentPrFailed")
-        : t("agentCommentPr"),
-  },
-  comment_pr_line: {
-    icon: MessageProgrammingIcon,
-    getLabel: (args, _r, success, status, t) => {
-      if (status === "complete" && !success)
-        return t("agentCommentPrLineFailed");
-      return t("agentCommentPrLine", {
-        path: (args.path as string) || "…",
-        line: typeof args.line === "number" ? args.line : 0,
-      });
-    },
-  },
-  reply_pr_thread: {
-    icon: MailReply01Icon,
-    getLabel: (_a, _r, success, status, t) =>
-      status === "complete" && !success
-        ? t("agentReplyPrThreadFailed")
-        : t("agentReplyPrThread"),
-  },
-  // PROJECT pull requests (MIN-267): these have a number.
-  list_pull_requests: {
-    icon: GitPullRequestIcon,
-    getLabel: (_a, _r, _s, _st, t) => t("agentListPullRequests"),
-  },
-  comment_pull_request: {
-    icon: Message01Icon,
-    getLabel: (args, _r, success, status, t) => {
-      if (status === "complete" && !success) return t("agentCommentPrFailed");
-      const number = prNumber(args);
-      return number != null
-        ? t("agentCommentPrTarget", { number })
-        : t("agentCommentPr");
-    },
-  },
-  comment_pull_request_line: {
-    icon: MessageProgrammingIcon,
-    getLabel: (args, _r, success, status, t) => {
-      if (status === "complete" && !success)
-        return t("agentCommentPrLineFailed");
-      return t("agentCommentPrLine", {
-        path: (args.path as string) || "…",
-        line: typeof args.line === "number" ? args.line : 0,
-      });
-    },
-  },
-  reply_pull_request_thread: {
-    icon: MailReply01Icon,
-    getLabel: (_a, _r, success, status, t) =>
-      status === "complete" && !success
-        ? t("agentReplyPrThreadFailed")
-        : t("agentReplyPrThread"),
-  },
-  // The VERDICT carries the information: an approval and a request for
-  // modifications do not commit the same thing, and the forge records them.
-  review_pull_request: {
-    icon: TaskDone01Icon,
-    getLabel: (args, _r, success, status, t) => {
-      if (status === "complete" && !success) return t("agentReviewPrFailed");
-      const number = prNumber(args) ?? 0;
-      if (args.verdict === "approve")
-        return t("agentReviewPrApprove", { number });
-      if (args.verdict === "request_changes")
-        return t("agentReviewPrRequestChanges", { number });
-      return t("agentReviewPrComment", { number });
-    },
-  },
-  // Merging is irreversible: the line NAMES it rather than saying
-  // “pull request update”.
-  set_pull_request_state: {
-    icon: GitMergeIcon,
-    getLabel: (args, _r, success, status, t) => {
-      if (status === "complete" && !success) return t("agentSetPrStateFailed");
-      const number = prNumber(args) ?? 0;
-      if (args.state === "merged") return t("agentMergePr", { number });
-      if (args.state === "closed") return t("agentClosePr", { number });
-      if (args.state === "open") return t("agentReopenPr", { number });
-      return t("agentReadyPr", { number });
-    },
-  },
 };
 
 const DEFAULT_ICON = LayoutGridIcon;
@@ -1358,77 +984,34 @@ function getToolView(item: ToolCallItem, t: TranslateFn) {
 
 // ── Summary of a burst of actions ────────────────────── ──────────────────────
 //
-// A completed salvo is not told by its LAST action: “Execution of
-// npm test” says nothing of the seventeen above. It is told by this
-// what she did, per family — “Reading 4 files, executing
-// 3 commands, writing 2 files.” Families are voluntarily
-// coarse: the line fits on one line, and the detail is one click away.
+// A completed salvo is not told by its LAST action: it is told by what it
+// did, per family — “Looking up 4 items, updating 2 items, searching the web
+// once.” Families are voluntarily coarse: the line fits on one line, and the
+// detail is one click away.
 
-type ActionKind =
-  | "read"
-  | "search"
-  | "edit"
-  | "write"
-  | "command"
-  | "delegate"
-  | "lookup"
-  | "update"
-  | "other";
+type ActionKind = "search" | "lookup" | "update" | "other";
 
 /** Reading order of families in the sentence (chess brings up the rear). */
-const ACTION_ORDER: readonly ActionKind[] = [
-  "read",
-  "search",
-  "edit",
-  "write",
-  "command",
-  "delegate",
-  "lookup",
-  "update",
-  "other",
-];
+const ACTION_ORDER: readonly ActionKind[] = ["search", "lookup", "update", "other"];
 
 /** Messages in LOWER CASE: they are linked in a sentence of which only the first
  * letter is capitalized (see `summarizeActions`). */
 const SUMMARY_KEYS: Record<ActionKind, MessageKey<"ToolCall">> = {
-  read: "summaryRead",
   search: "summarySearch",
-  edit: "summaryEdit",
-  write: "summaryWrite",
-  command: "summaryCommand",
-  delegate: "summaryDelegate",
   lookup: "summaryLookup",
   update: "summaryUpdate",
   other: "summaryOther",
 };
 
 /** The tools whose family cannot be guessed by the name. Everything else goes through
- * rule of `actionKind`: a minddy tool that LIT is called `list_`/`get_`/
+ * rule of `actionKind`: a minddy tool that READS is called `list_`/`get_`/
  * `read_`/`search_`, the others write. */
 const ACTION_KIND: Record<string, ActionKind> = {
   call_mcp_tool: "other",
-  read_file: "read",
-  grep: "search",
-  glob: "search",
-  list_dir: "search",
   web_search: "search",
-  webfetch: "search",
-  edit_file: "edit",
-  apply_edits: "edit",
-  apply_patch: "edit",
-  move_file: "edit",
-  delete_file: "edit",
-  write_file: "write",
-  run_command: "command",
-  run_background: "command",
-  spawn_agent: "delegate",
-  launch_code_agent: "delegate",
-  agent_status: "lookup",
   // A seed proposal does not write anything: it waits for the user.
   propose_backlog: "other",
   ask_user: "other",
-  // Rendering a verdict doesn't change anything: that's what the LIT channel decides.
-  report_verdict: "other",
 };
 
 function actionKind(name: string): ActionKind {
@@ -1440,21 +1023,13 @@ function actionKind(name: string): ActionKind {
   return name in TOOL_META ? "update" : "other";
 }
 
-/** What the action weighs in its account: a multi-file batch counts its
- * files, not its call — otherwise “Editing 5 files” would be summarized as
- * “editing a file”. */
-function actionWeight(item: ToolCallItem): number {
-  if (item.name !== "apply_edits" && item.name !== "apply_patch") return 1;
-  return Math.max(1, batchFileCount(safeParseArgs(item.arguments)));
-}
-
-/** “Read 4 files, execute 3 commands, 1 failure”. */
+/** “Look up 4 items, update 2 items, 1 failure”. */
 export function summarizeToolCalls(items: ToolCallItem[], t: TranslateFn): string {
   const counts = new Map<ActionKind, number>();
   let failed = 0;
   for (const item of items) {
     const kind = actionKind(item.name);
-    counts.set(kind, (counts.get(kind) ?? 0) + actionWeight(item));
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
     if (item.success === false) failed++;
   }
 
@@ -1592,10 +1167,7 @@ export function ToolCallList({
   const calloutIds = new Set(
     [...askUserCallouts, ...seedCallouts].map((i) => i.id),
   );
-  const delegatedWork = items.filter(isDelegatedWorkToolCall);
-  const rowItems = items.filter(
-    (i) => !calloutIds.has(i.id) && !isDelegatedWorkToolCall(i),
-  );
+  const rowItems = items.filter((i) => !calloutIds.has(i.id));
 
   const renderRows = () => {
     if (rowItems.length === 0) return null;
@@ -1665,9 +1237,6 @@ export function ToolCallList({
   return (
     <div className="flex w-full flex-col gap-1.5">
       {renderRows()}
-      {delegatedWork.map((item) => (
-        <DelegatedWorkCard key={item.id} call={item as DelegatedWorkCall} />
-      ))}
       {!askUserHidden &&
         askUserCallouts.map((item) => (
           <AskUserSummaryRow

@@ -5,9 +5,9 @@ describe("full-window usage days", () => {
   it("fills inactive days without inventing future observations", () => {
     const days = buildUsageDays(
       [
-        { day: "2026-09-10", feature: "agent_code", cost: "1.5" },
-        { day: "2026-09-10", feature: "sandbox_compute", cost: 0.5 },
-        { day: "2026-09-12", feature: "routine_compute", cost: 0.7 },
+        { day: "2026-09-10", feature: "numo_chat", cost: "1.5" },
+        { day: "2026-09-10", feature: "web_search", cost: 0.5 },
+        { day: "2026-09-12", feature: "routine_code", cost: 0.7 },
         { day: "2026-09-15", feature: "numo_chat", cost: 99 },
       ],
       "2026-09-10T12:00:00Z",
@@ -20,7 +20,7 @@ describe("full-window usage days", () => {
       "2026-09-12",
     ]);
     expect(days.map((day) => day.usd)).toEqual([2, 0, 0.7]);
-    expect(days[0].segments.find((s) => s.id === "agents")?.usd).toBe(2);
+    expect(days[0].segments.find((s) => s.id === "numo")?.usd).toBe(2);
     expect(days[2].segments.find((s) => s.id === "routines")?.usd).toBe(0.7);
   });
 

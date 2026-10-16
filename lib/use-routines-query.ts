@@ -3,7 +3,6 @@
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 
 import { fetchRoutineRunsApi, fetchRoutinesApi, type Routine } from "./routines-api";
-import { isAgentRunWorking } from "./agent-api";
 import { refetchOnRevealWhenStale } from "./reveal-freshness";
 
 /**
@@ -77,7 +76,7 @@ export function useRoutineRunsQuery(routineId: string | null) {
     refetchOnMount: refetchOnRevealWhenStale,
     refetchInterval: (query) => {
       const runs = query.state.data?.runs ?? [];
-      if (runs.some((r) => isAgentRunWorking(r.status))) return 3000;
+      if (runs.some((r) => r.status === "queued" || r.status === "running")) return 3000;
       if (runs.length > 0) return 12000;
       return false;
     },

@@ -17,7 +17,6 @@ import {
   Button,
   CommandGroup,
   CommandItem,
-  Spinner,
   cn,
 } from "mangue-ui";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
@@ -28,7 +27,6 @@ import { GitLogin } from "@/components/git/git-login";
 import { UserAvatar } from "@/components/user-avatar";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
-import { NumoIcon } from "@/components/numo-icon";
 import { linkedIssues } from "./pr-linked-issues";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
@@ -205,7 +203,6 @@ function PrRow({
   dateLabel: string;
   onSelect: () => void;
 }) {
-  const t = useTranslations("PullRequests");
   // The PR identifier first — it's THIS line we're looking at; the ticket
   // linked is read on the right, behind a link icon that names the association.
   const identifier = prIdentifier(pr.provider, pr.pr_number);
@@ -249,7 +246,6 @@ function PrRow({
             </>
           ) : null}
         </span>
-        {pr.activeRunId ? <Spinner className="size-3 shrink-0" /> : null}
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           <PrStateBadge state={pr.pr_state} className="h-5 px-2 text-[10px]" />
           {showReadiness ? (
@@ -264,25 +260,15 @@ function PrRow({
         {pr.title ?? pr.issue?.title ?? identifier}
       </span>
       <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-        {/* THE AUTHOR: the forge's own, except for a PR Numo OPENED — there,
-            the forge login depends on the installation (app account or linked
-            account), and only the fact of the opening says Numo. A PR Numo
-            merely corrected (a fix session bears the number without having
-            opened it) keeps its human author. */}
+        {/* THE AUTHOR, as the forge reports it. */}
         <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
-          {pr.numoOpened ? (
-            <NumoIcon animated={false} className="size-3.5 shrink-0" />
-          ) : pr.author ? (
+          {pr.author ? (
             <ForgeUserAvatar
               user={pr.author}
               className="size-3.5 shrink-0"
             />
           ) : null}
-          {pr.numoOpened ? (
-            <span className="truncate">{t("numoAuthor")}</span>
-          ) : (
-            <GitLogin login={pr.author?.login} className="text-xs" />
-          )}
+          <GitLogin login={pr.author?.login} className="text-xs" />
         </span>
         <span className="ml-auto shrink-0 text-xs text-muted-foreground">{dateLabel}</span>
       </span>
@@ -348,11 +334,6 @@ function PrGroupRows({
       hiddenCount={prs.length - shown.length}
       onShowAll={onShowAll}
       showMoreLabel={tCommon("showMore")}
-      // Folded, the header keeps the only signal that does not wait: an agent
-      // working on one of these PRs.
-      collapsedBadge={
-        prs.some((p) => p.activeRunId) ? <Spinner className="size-3 shrink-0" /> : null
-      }
     >
       {shown.map((pr) => (
         <PrRow
@@ -396,14 +377,12 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const queryClient = useQueryClient();
 
-  // Deep-links: `?pr=<id>` (direct, MIN-143) and `?run=<id>` (historical — the
-  // issue sidebar and all links already in circulation speak in run).
-  // Both preselect the PR. A hidden active section is enabled once when the
-  // target resolves; completed PRs require an explicit filter choice.
+  // Deep-link: `?pr=<id>` (MIN-143) preselects the PR. A hidden active
+  // section is enabled once when the target resolves; completed PRs require
+  // an explicit filter choice.
   const { searchParams } = useAppTabRoute();
-  const runParam = searchParams.get("run");
   const prParam = searchParams.get("pr");
-  const deepLink = prParam ?? runParam;
+  const deepLink = prParam;
 
   /**
    * The deep link is CONSUMED, not kept. Its job — put the target on screen,
@@ -453,8 +432,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // even if it falls off the page (a PR from six months ago). Without that, the
   // link would fall to the first in the list — the PR of another ticket.
   // The pin lives only as long as the link does: once consumed, the address
-  // stops carrying `pr`/`run` and the lens decides who belongs to the list.
-  const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
+  // stops carrying `pr` and the lens decides who belongs to the list.
+  const pin = useMemo(() => ({ pr: prParam }), [prParam]);
   const active = useAllPullRequestsQuery("open", limit, pin);
   const completed = useCompletedPullRequestsQuery(sections.has("completed"));
   const { hasMore, repoCount, anyPr, loading, readFailed } = active;
@@ -474,27 +453,13 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     if (prParam) setSelectedPrId(prParam);
   }, [deepLink, prParam]);
 
-  // The HISTORICAL deep-link speaks in `run` (the “see pull request” links
-  // carry the most recent run): we resolve it to `prId` as soon as the list
-  // arrived. A PR is shared by ALL successive runs of its ticket
-  // (MIN-68) — we therefore match on any one, otherwise the link would fall to
-  // side and the lower guard effect would open the PR of another ticket.
-  const deepLinkedByRun = useMemo(
-    () =>
-      runParam && !prParam
-        ? (pullRequests.find((p) => p.runIds.includes(runParam)) ?? null)
-        : null,
-    [runParam, prParam, pullRequests],
-  );
-
   // The PR the deep link resolved to, kept in a ref: the confirmed-state
   // callback below recognizes it without being re-created on every list
   // update. The LAST resolved target survives — an optimistic state change
   // removes the row from the list before the forge confirms, and the ref
   // must still name the PR whose link is being fulfilled.
   const deepLinkTargetRef = useRef<string | null>(null);
-  const resolvedDeepLinkTarget = prParam ?? deepLinkedByRun?.prId ?? null;
-  if (resolvedDeepLinkTarget) deepLinkTargetRef.current = resolvedDeepLinkTarget;
+  if (prParam) deepLinkTargetRef.current = prParam;
 
   /**
    * Settle each resolved link once, even when its target is completed and
@@ -510,9 +475,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     }
     if (settledDeepLinkRef.current === deepLink) return;
     const isTarget = (pullRequest: PullRequestListItem) =>
-      prParam
-        ? pullRequest.prId === prParam
-        : !!runParam && pullRequest.runIds.includes(runParam);
+      pullRequest.prId === prParam;
     const decision = deepLinkLensDecision(
       pullRequests,
       isTarget,
@@ -527,7 +490,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         setSections((previous) => new Set([...previous, section]));
       }
     }
-  }, [deepLink, sections, prParam, pullRequests, runParam]);
+  }, [deepLink, sections, prParam, pullRequests]);
 
   // Forging actions are slow, but their state is known from the click: we
   // patches the list before the response, then reconciles with the server. THE
@@ -601,7 +564,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * It was: one effect resolved the deep-link, a second reset the
    * selection in the filter. Both were triggered at the same rendering — the one where
    * the list arrives — and the second overwrites the first, opening the FIRST PR
-   * of the list instead of that of the link. Measured: `?run=<PR #1 run>`
+   * of the list instead of that of the link. Measured: a link to PR #1
    * opened PR #17.
    *
    * The order below SAYS the rule, instead of making it emerge from a race:
@@ -622,10 +585,9 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // A background refetch should never close the panel: it was the source of the
   // flashing each time you return to the window. Only a deep connection yet
   // being resolved waits for its response before taking the first PR.
-  const waitingForDeepLink = !!deepLink && fetching && !deepLinkedByRun && !clicked;
+  const waitingForDeepLink = !!deepLink && fetching && !clicked;
   const selectedId =
     clicked ??
-    deepLinkedByRun?.prId ??
     (waitingForDeepLink ? null : (filtered[0]?.prId ?? null));
   const selected = filtered.find((p) => p.prId === selectedId) ?? null;
 
@@ -647,7 +609,6 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           prNumber: selected.pr_number,
           prState: selected.pr_state,
           prHeadRef: selected.head_branch ?? undefined,
-          prRunId: selected.runId ?? undefined,
           ...(selected.issue
             ? {
                 issueId: selected.issue.id,

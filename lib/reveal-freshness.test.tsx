@@ -6,17 +6,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openRealtimeCoverage, type RealtimeCoverageScope } from "./realtime-coverage";
 import { REVEAL_FRESHNESS_MS } from "./reveal-freshness";
 import { useRoutineRunsQuery, useRoutinesQuery } from "./use-routines-query";
-import { useIssueAgentRunsQuery } from "./use-agent-runs";
+import { useIssuePullRequestQuery } from "./use-agent-runs";
 
 const api = vi.hoisted(() => ({
   routines: vi.fn(async () => ({ routines: [] })),
   routineRuns: vi.fn(async () => ({ runs: [] })),
-  issueRuns: vi.fn(async () => ({ runs: [], pullRequest: null })),
+  issuePr: vi.fn(async () => ({ pullRequest: null })),
 }));
 vi.mock("./routines-api", () => ({ fetchRoutinesApi: api.routines, fetchRoutineRunsApi: api.routineRuns }));
 vi.mock("./agent-api", async (importOriginal) => ({
   ...await importOriginal<typeof import("./agent-api")>(),
-  fetchIssueAgentRunsApi: api.issueRuns,
+  fetchIssuePullRequestApi: api.issuePr,
 }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -39,7 +39,7 @@ afterEach(async () => {
 function RetainedViews() {
   useRoutinesQuery();
   useRoutineRunsQuery("routine-1");
-  useIssueAgentRunsQuery("issue-1");
+  useIssuePullRequestQuery("issue-1");
   return null;
 }
 async function render(mode: "visible" | "hidden") {
@@ -53,7 +53,7 @@ async function reveal(afterMs: number) {
   await act(async () => { vi.advanceTimersByTime(afterMs); });
   await render("visible");
 }
-const reads = () => [api.routines.mock.calls.length, api.routineRuns.mock.calls.length, api.issueRuns.mock.calls.length];
+const reads = () => [api.routines.mock.calls.length, api.routineRuns.mock.calls.length, api.issuePr.mock.calls.length];
 
 describe("reveal freshness of realtime-covered reads", () => {
   it("keeps a recent cache on reveal while realtime is joined", async () => {
@@ -74,7 +74,7 @@ describe("reveal freshness of realtime-covered reads", () => {
     await render("hidden");
     await act(async () => {
       await client.invalidateQueries({ queryKey: ["routines"] });
-      await client.invalidateQueries({ queryKey: ["agent-runs", "issue", "issue-1"] });
+      await client.invalidateQueries({ queryKey: ["issue-pull-request", "issue-1"] });
     });
     expect(reads()).toEqual([1, 1, 1]);
     await render("visible");

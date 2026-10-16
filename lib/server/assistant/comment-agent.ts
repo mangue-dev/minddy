@@ -25,12 +25,10 @@ import {
 import { commentDisplay, type CommentDisplay } from "./comment-live";
 import { startNumoIntent } from "@/lib/server/numo/start-intent";
 import { executeNumoTurn } from "@/lib/server/numo/turns";
-import { answerNumoWorkerInput } from "@/lib/server/numo/worker-mediation";
 import {
   bindNumoSurfaceEvent,
   ensureNumoSurfaceThread,
   failNumoSurfaceEvent,
-  pendingSurfaceWorkerInput,
   reserveNumoSurfaceEvent,
   setNumoSurfaceEventResponse,
   type NumoSurface,
@@ -220,37 +218,6 @@ async function runSharedSurfaceMention(input: {
       eventId,
       responseId: response.id,
     });
-
-    const pendingInput = await pendingSurfaceWorkerInput(
-      input.service,
-      thread.conversation_id,
-    );
-    if (pendingInput) {
-      const disposition = await answerNumoWorkerInput({
-        conversationId: thread.conversation_id,
-        userId: input.actorId,
-        correlation: {
-          parentTurnId: pendingInput.turnId,
-          runId: pendingInput.runId,
-          questionId: pendingInput.questionId,
-        },
-        answer: input.answer,
-        messageId: eventId,
-        persistParentMessage: true,
-      });
-      if (disposition.action === "answered" || disposition.action === "already") {
-        await bindNumoSurfaceEvent({
-          service: input.service,
-          eventId,
-          turnId: pendingInput.turnId,
-        });
-        return;
-      }
-      const reason = disposition.action === "refused"
-        ? disposition.reason
-        : disposition.action;
-      throw new Error(`Unable to resume surface worker input: ${reason}`);
-    }
 
     const started = await startNumoIntent({
       supabase: input.supabase,

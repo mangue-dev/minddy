@@ -17,7 +17,7 @@ import {
  * The PR panel loads four independent caches (`["pull-request", id]`,
  * `["pr-comments", id]`, `["pr-commits", id]`, `["pr-review-comments", …]`),
  * all served by the on-demand forge. None polluted: the thread of a PR only
- * moved when returning from a local gesture or at the end of a Numo run. A
+ * moved when returning from a local gesture. A
  * comment posted on github.com, an approval, a push commit, a thread
  * resolved: nothing was hitting the open panel before a reload.
  *
@@ -26,8 +26,8 @@ import {
  * reread. Nothing more: the content is read with the reader's token (MIN-144),
  * pushing what someone else has read would be wrong.
  *
- * Dedicated topic rather than the existing `project:{id}`, for the same reason
- * as `agent-run:{id}`: only tabs that VIEW this PR subscribe to it,
+ * Dedicated topic rather than the existing `project:{id}`: only tabs that
+ * VIEW this PR subscribe to it,
  * instead of hosing everyone in the project for a thread that no one else
  * has opened. The LIST goes through the project topic (the trigger for the
  * migration) — these are two different needs.

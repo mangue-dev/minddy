@@ -29,22 +29,6 @@ describe("durable Numo turns migration", () => {
     expect(message).toBeGreaterThan(turn);
   });
 
-  it("deduplicates worker events and only wakes the currently awaited run", () => {
-    const resume = sql.indexOf("create or replace function public.resume_numo_turn_from_worker");
-    expect(sql.slice(resume)).toContain("active_run_id = p_run_id and status = 'waiting_work'");
-    expect(sql.slice(resume)).toContain("perform public.append_numo_turn_event");
-    expect(sql).toContain("id uuid primary key");
-  });
-
-  it("recovers a terminal worker whose callback raced or was interrupted", () => {
-    const recovery = sql.indexOf("create or replace function public.recover_stale_numo_turns");
-    const operation = sql.slice(recovery);
-    expect(operation).toContain("join public.agent_runs r on r.id = t.active_run_id");
-    expect(operation).toContain("t.status = 'waiting_work'");
-    expect(operation).toContain("r.status in ('completed', 'failed', 'canceled')");
-    expect(operation).toContain("public.resume_numo_turn_from_worker");
-  });
-
   it("commits each assistant tool-call message with its replay checkpoint", () => {
     const checkpoint = sql.indexOf("create or replace function public.checkpoint_numo_tool_round");
     const stop = sql.indexOf("create or replace function public.request_numo_turn_stop", checkpoint);

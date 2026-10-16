@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -36,14 +36,15 @@
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-677-editor-captures.json"
+      "content/documentation/reviews/min-677-editor-captures.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (it translation, label and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; it translation of removal edits; no operational rerun)",
+    "language": "agent:/root (it translation, label and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -57,7 +58,7 @@
       "src": "/documentation/it/scheduled-routines-workflow.png",
       "alt": "Modalità Programmato ed Evento, un gruppo di condizioni, icone dell’app e pulsanti informativi discreti.",
       "caption": "Dimostrazione locale dell’editor effettivo degli attivatori. Nessuna routine è stata salvata o eseguita.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -77,7 +78,7 @@
 
 ## Creare una routine {#scheduled-routines}
 
-Solo il proprietario del progetto può creare, modificare o attivare una routine. Apri Routine, scegli un progetto di cui sei proprietario e scrivi le istruzioni per Numo. Menziona ticket, pagine o obiettivi pertinenti. Ogni esecuzione ha una conversazione Numo privata, una cronologia, gli strumenti Minddy e una delega di codice facoltativa. I worker usano le impostazioni del proprietario; il repository serve solo per lavorare sul codice.
+Solo il proprietario del progetto può creare, modificare o attivare una routine. Apri Routine, scegli un progetto di cui sei proprietario e scrivi le istruzioni per Numo. Menziona ticket, pagine o obiettivi pertinenti. Ogni esecuzione ha una conversazione Numo privata, una cronologia e gli strumenti Minddy. Le routine organizzano e seguono il lavoro, ad esempio un triage settimanale, una revisione dei ticket fermi o un riepilogo settimanale; non modificano il codice del repository.
 
 Scegli **Programmato** o **Evento**. Gli arrivi in un database sono un’opzione dell’elenco degli eventi.
 
@@ -104,7 +105,7 @@ Una voce senza la proprietà richiesta attende una modifica che soddisfi il filt
 
 Apri la routine per esaminare le attese, modificare istruzioni o attivatore, metterla in pausa o leggere le esecuzioni. Pausa, eliminazione e cambi di configurazione invalidano le attese. La riattivazione ascolta eventi futuri senza riprodurre vecchi arrivi. L’avvio manuale funziona con ogni attivatore senza attendere il suo evento e consuma budget.
 
-Ogni esecuzione usa il budget IA del proprietario con un limite predefinito del 15 % del budget mensile, comprendendo Numo e worker delegati. Apri la conversazione per leggere origine, risultato, verifiche, domande e lavoro delegato. Rispondi nella stessa conversazione quando è necessario il tuo intervento; il budget residuo resta disponibile. Esamina i risultati salvati prima di cambiare il limite o riprovare. Dopo un cambio di proprietario, la routine del precedente proprietario non può avviare nuovo lavoro; creane una come proprietario attuale.
+Ogni esecuzione usa il budget IA del proprietario con un limite predefinito del 15 % del budget mensile, comprendendo ogni chiamata a Numo di quell’esecuzione. Apri la conversazione per leggere origine, risultato e domande. Rispondi nella stessa conversazione quando è necessario il tuo intervento; il budget residuo resta disponibile. Esamina i risultati salvati prima di cambiare il limite o riprovare. Dopo un cambio di proprietario, la routine del precedente proprietario non può avviare nuovo lavoro; creane una come proprietario attuale.
 
 Le automazioni archiviate appaiono come proposte in pausa quando il proprietario apre Routine. Leggi la [guida alla transizione](/docs/automation-settings) prima di attivarle.
 

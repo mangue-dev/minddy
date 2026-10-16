@@ -6,31 +6,6 @@ import en from "@/messages/en.json";
 const P = "11111111-1111-1111-1111-111111111111";
 
 describe("notificationTargetPath", () => {
-  // A Numo conversation has no page of its own any more: the inbox intercepts
-  // its rows and opens the FAB directly. The path helper only ever names the
-  // parent context the row carries — here the parent ticket.
-  it("falls through to the parent ticket of a conversation row", () => {
-    expect(
-      notificationTargetPath({
-        project_id: P,
-        issue_id: "iss",
-        agent_conversation_id: "worker-conversation",
-        numo_conversation_id: "parent conversation",
-        numo_work_id: "run/1",
-      }),
-    ).toBe(`/projects/${P}?issue=iss`);
-  });
-
-  it("names no destination for a conversation-only row (the inbox opens the FAB)", () => {
-    expect(
-      notificationTargetPath({
-        project_id: P,
-        issue_id: null,
-        agent_conversation_id: "conv",
-      }),
-    ).toBeNull();
-  });
-
   it("ouvre l'objectif quand la ligne en porte un", () => {
     expect(
       notificationTargetPath({ project_id: P, issue_id: null, objective_id: "obj" })

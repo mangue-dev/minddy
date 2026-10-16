@@ -161,32 +161,18 @@ and rerun the same fixture and commands. This gate precedes a separately
 authorized production migration and activation. It does not require production
 measurements to validate the code PR.
 
-## Object, Agent and concurrent maintenance gate
+## Object and concurrent maintenance gate
 
 Use only an isolated staging deployment and its isolated PostgreSQL database.
 Set `MINDDY_CONTENT_ENCRYPTION_ENABLED=true` and configure `MINDDY_DATA_ROOT_KEY`
-there before invoking the authenticated maintenance route. The global switch
-also enables Agent journal and delegation-result encryption.
+there before invoking the authenticated maintenance route.
 Record the commit, flag values, schema version and batch response for each pass.
 Run enough bounded passes for the counters to stabilize, including a pass with
-no new forge upload. The final pass must report no failed object, Agent journal,
-Numo event or Numo checkpoint candidate and the SQL gate below must be true.
-The response field names are `forge_attachments`,
-`forge_attachment_rotation`, `agent_journal`, `numo_worker_events` and
-`numo_worker_checkpoints`.
-
-For a historical worker row without a run ID or parent association, do not
-infer the owner from `active_run_id`: that field can already point to worker B.
-In the isolated staging database, inspect the event/turn, candidate run,
-conversation and project associations and independent run history. Quarantine
-any row whose run cannot be established. After documenting the evidence in a
-review record, a service operator may call
-`register_numo_worker_legacy_binding('event', event_id, run_id,
-'review-record-id')` or its `'checkpoint'` form. The reference is only an audit
-pointer; registration does not prove the human inference. The RPC snapshots
-opaque source revisions and refuses inconsistent project/turn associations.
-Any subsequent event edit is refused and a checkpoint edit requires a fresh
-review. Require zero unresolved ambiguous rows before activation.
+no new forge upload. The final pass must report no failed object candidate
+and the SQL gate below must be true. The response field names are
+`forge_attachments` and `forge_attachment_rotation`. MIN-721 dropped the Agent
+journal and Numo worker copies with their tables, so they are no longer
+candidates.
 
 ```sh
 printf 'header = "Authorization: Bearer %s"\n' "$CRON_SECRET" |
@@ -195,15 +181,13 @@ printf 'header = "Authorization: Bearer %s"\n' "$CRON_SECRET" |
 ```
 
 While maintenance runs, use two independent authorized clients to create and
-read a published forge image and a historical image link, advance worker A then
-worker B on the same Numo turn, and rotate an Agent journal key with duplicate
+read a published forge image and a historical image link with duplicate
 batches. Repeat with a paused flag and an old writer in the isolated database.
 The published and historical links must return the original bytes through the
 authorized reader, their stored replacement objects must have opaque paths and
 verified encrypted metadata, and cleanup must leave no orphan registrations.
-Worker A's historical event and its checkpoint must migrate after B starts;
-the later valid Numo and journal rows must advance even if an earlier candidate
-fails. Concurrent writes must either commit under the protected guard or lose
+Later valid candidates must advance even if an earlier candidate fails.
+Concurrent writes must either commit under the protected guard or lose
 the documented CAS; no clear row, metadata object or old writer may be accepted.
 
 In the isolated database, collect the gate and candidate counts after the
@@ -216,17 +200,6 @@ SELECT public.forge_attachment_migration_complete() AS forge_complete;
 SELECT count(*) AS legacy_forge_objects FROM storage.objects
  WHERE bucket_id = 'forge-attachments'
    AND name !~ '^projects/[0-9a-f-]{36}/forge/[0-9a-f-]{36}/[0-9a-f-]{36}$';
-SELECT count(*) AS unverified_numo_events FROM public.numo_turn_events
- WHERE type IN ('worker_completed','worker_failed','worker_input')
-   AND (payload_encryption_checked_at IS NULL OR
-     NOT public.numo_worker_payload_verified(payload,'event',id));
-SELECT count(*) AS unverified_numo_checkpoints FROM public.numo_assistant_turns
- WHERE checkpoint ? 'worker_event'
-   AND (worker_checkpoint_encryption_checked_at IS NULL OR
-     NOT public.numo_worker_payload_verified(
-       checkpoint #> '{worker_event,payload}','checkpoint',id));
-SELECT count(*) AS unverified_agent_journal FROM public.agent_run_journal
- WHERE encryption_checked_at IS NULL;
 ```
 
 Run the SQL old-writer, race and rename regressions against a fresh local clone
@@ -237,22 +210,12 @@ The PostgreSQL oracle and final-schema restore suite are separate requirements:
 psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-forge-attachment-regression.sql
 psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-forge-attachment-isolation-regression.sql
 psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-forge-rename-attachment-regression.sql
-psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-min591-worker-feedback-regression.sql
+psql "$LOCAL_MIN591_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/encryption-min591-feedback-attempt-regression.sql
 MIN591_REQUIRE_PG_ORACLE=1 MIN591_PG_ORACLE_CONTAINER=supabase_db_minddy-encryption-test npx vitest run lib/server/pages-search-oracle.integration.test.ts
 MINDDY_ENCRYPTION_DB_TEST=true MINDDY_ENCRYPTION_FINAL_TEMPLATE=minddy_min591_security_final_20260927 npx vitest run lib/server/encryption/database-recovery.integration.test.ts
 ```
 
-For Realtime, use an isolated **pre-correction** schema clone. Compose the
-regression with the corrective migration inside its one transaction, then run
-it against that clone. The regression asserts an effective partition, a
-durable clear sentinel before migration, its purge, and old-writer refusal:
-
-```sh
-node -e 'const fs=require("fs");const marker="-- APPLY_AGENT_REALTIME_MIGRATION_HERE";const source=fs.readFileSync("scripts/encryption-agent-realtime-regression.sql","utf8");const migration=fs.readFileSync("supabase/migrations/20270108010000_agent_realtime_content_refusal.sql","utf8").replace(/^BEGIN;\s*/,"").replace(/\s*COMMIT;\s*$/,"");if(!source.includes(marker))throw Error("Realtime regression marker missing");fs.writeFileSync("/tmp/min591-realtime-regression.sql",source.replace(marker,()=>migration));'
-psql "$LOCAL_MIN591_PRE_REALTIME_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f /tmp/min591-realtime-regression.sql
-```
-
-The container and template names in the last two commands are local example
+The container and template names in the last two commands of the previous block are local example
 fixtures; create an equivalent isolated final-schema clone when using another
 host. The recorded PostgreSQL rank/order corpus runs in the ordinary test
 suite. `MIN591_REQUIRE_PG_ORACLE=1` makes the explicit container-backed command
@@ -283,8 +246,7 @@ SELECT count(*) AS unverified_tool_messages FROM public.assistant_messages
    AND tool_payload_checked_at IS NULL;
 ```
 
-For pull-request URLs/content, Agent run/runtime checkpoints and journals,
-OAuth clients/codes, API keys, integrations, push subscriptions and billing
+For pull-request URLs/content, OAuth clients/codes, API keys, integrations, push subscriptions and billing
 identities,
 `*_checked_at` is only a worker assertion. It cannot authenticate AES-GCM in
 SQL. After the bounded workers finish, quiesce staging writers and invoke the
@@ -309,38 +271,21 @@ Require the separate `forgeObjects` byte result too. SQL metadata completeness
 alone cannot authenticate Storage bytes. `globalReadiness: "not_assessed"`
 means every other target and retained copy still needs its own closure proof.
 
-Before this verifier, apply the additive OTP, authenticated-content and Agent
-erasure-fence migrations. Run the six bounded content workers until both
+Before this verifier, apply the additive OTP and authenticated-content
+migrations. Run the six bounded content workers until both
 `*_encryption_attempted_at` and `*_encryption_checked_at` inventories are
 understood; a conflict advances only the attempt cursor. Confirm that the
 system, project and user registry keys already exist. The verifier must not
-create keys, even if the scanned tables are empty. Exercise the complete Agent
-resume path after a stop and account/project deletion on a staging clone, then
-inventory historical Vercel snapshots, Docker volumes, desktop files and
-provider command telemetry using the Agent storage runbook.
+create keys, even if the scanned tables are empty. Inventory historical Vercel
+snapshots, Docker volumes, desktop files and provider command telemetry left by
+the retired code agent using the Agent storage runbook.
 
 Inventory effective Realtime comment partitions plus older backups, replica
 logs, analytics exports and external sinks under their retention policy. The
 active partition purge and old-writer guard do not erase prior backups or
-copies already delivered to another service. For Agent live, install the
-`agent_run_live_snapshots` schema and `set_agent_run_live_snapshot` RPC, and
-configure the same valid root key on every live writer before routing stream
-or diff traffic. Verify the endpoint returns 503 if any prerequisite is
-missing, then retest after it is restored.
-
-Live snapshots are current-state records, not an append-only transcript. Each
-stream or diff update replaces only that kind when its millisecond timestamp
-increases and its content-key version does not regress. A long-running run
-retains its latest snapshot across process restarts and key rotations; readers
-need the historical content-key versions until that snapshot is replaced.
-The row expires when the run leaves `running`, and run deletion cascades it.
-There is no age-based expiry while a run remains `running`, so operational
-cleanup must mark abandoned runs terminal. The isolated PostgreSQL
-dump/restore test covers a 45-day running row with two historical key versions,
-cold-cache reads, wrong-root refusal, stale-write refusal and terminal cleanup.
-Before activation, restore a live running snapshot and its key registry in
-staging, then finish the run and confirm no snapshot remains. Inventory any
-older database backups and Realtime sinks under their separate retention plan.
+copies already delivered to another service. MIN-721 dropped the Agent live
+snapshots with their run tables; older database backups and Realtime sinks
+that may hold them follow the same separate retention plan.
 
 For forge attachments, test backup and restore of the actual Storage service,
 including old PR-ID paths and current opaque objects. The simulated object

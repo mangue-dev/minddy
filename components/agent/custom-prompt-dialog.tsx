@@ -10,18 +10,10 @@ import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 
 /**
- * Where does the instruction written here go: the clipboard (“Copy the prompt” →
- * “Custom”) or compose it from Numo agent (“Launch Numo agent” →
- * “Custom”). Only the button and the subtitle depend on it: the text
- * entered is the same on both sides — what we want to see done on this ticket.
- */
-export type CustomPromptTarget = "copy" | "launch";
-
-/**
- * The dialog for the “Customized” entry of the two agent submenus of a ticket.
+ * The dialog for the “Custom” entry of a ticket's “Copy as prompt” submenu.
  * It ONLY asks for instructions: the context of the ticket (fields, plan,
- * comments) is provided by minddy around her — the prompt copied the inline
- * in its `<issue>` block, the Numo agent receives it when opening the session.
+ * comments) is provided by minddy around them, inline in the `<issue>` block
+ * of the copied prompt.
  *
  * Rendering inside a clickable AND draggable map: React events
  * go up the component tree DESPITE the portal, hence the `stopPropagation`
@@ -30,14 +22,13 @@ export type CustomPromptTarget = "copy" | "launch";
  * map drag sensor, which triggers at 6 px).
  */
 export function CustomPromptDialog({
-  target,
+  open,
   onOpenChange,
   onSubmit,
 }: {
-  /** Open target; `null` = dialog closed. */
-  target: CustomPromptTarget | null;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (instructions: string, target: CustomPromptTarget) => void;
+  onSubmit: (instructions: string) => void;
 }) {
   const t = useTranslations("Agent");
   const isSend = useIsSendShortcut();
@@ -45,37 +36,31 @@ export function CustomPromptDialog({
   const [instructions, setInstructions] = useState("");
 
   // Each opening starts from an empty field: an instruction is written for ONE
-  // launch, finding it at the next one would cause the old one to be restarted inadvertently.
+  // prompt, finding it at the next one would copy the old one inadvertently.
   useEffect(() => {
-    if (target) setInstructions("");
-  }, [target]);
-
-  const submitLabel = target === "launch" ? t("menuLaunch") : tIssueUI("copyAsPrompt");
+    if (open) setInstructions("");
+  }, [open]);
 
   const submit = () => {
     const trimmed = instructions.trim();
-    if (!trimmed || !target) return;
-    onSubmit(trimmed, target);
+    if (!trimmed) return;
+    onSubmit(trimmed);
     onOpenChange(false);
   };
 
   return (
     <FormDialog
-      open={!!target}
+      open={open}
       onOpenChange={onOpenChange}
       title={t("customPromptTitle")}
-      description={
-        target === "launch"
-          ? t("customPromptLaunchDescription")
-          : t("customPromptCopyDescription")
-      }
+      description={t("customPromptCopyDescription")}
       className="sm:max-w-lg"
       contentProps={{
         onClick: (e) => e.stopPropagation(),
         onMouseDown: (e) => e.stopPropagation(),
         onContextMenu: (e) => e.stopPropagation(),
       }}
-      submitLabel={submitLabel}
+      submitLabel={tIssueUI("copyAsPrompt")}
       submitDisabled={!instructions.trim()}
       onSubmit={submit}
       dictation={{

@@ -214,39 +214,3 @@ export async function failNumoSurfaceEvent(
     .eq("id", eventId);
   if (error) console.error("[numo-surface] event_status_write_failed", eventId);
 }
-
-export interface PendingSurfaceWorkerInput {
-  turnId: string;
-  runId: string;
-  questionId: string;
-}
-
-/** Find the exact durable worker question a reply on this projection answers. */
-export async function pendingSurfaceWorkerInput(
-  service: SupabaseClient,
-  conversationId: string,
-): Promise<PendingSurfaceWorkerInput | null> {
-  const { data, error } = await service
-    .from("numo_assistant_turns")
-    .select("id, checkpoint")
-    .eq("conversation_id", conversationId)
-    .eq("status", "waiting_input")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  const checkpoint = data?.checkpoint as {
-    phase?: string;
-    input_request?: { runId?: unknown; questionId?: unknown };
-  } | null;
-  if (
-    !data?.id || checkpoint?.phase !== "worker_input_wait"
-    || typeof checkpoint.input_request?.runId !== "string"
-    || typeof checkpoint.input_request?.questionId !== "string"
-  ) return null;
-  return {
-    turnId: data.id as string,
-    runId: checkpoint.input_request.runId,
-    questionId: checkpoint.input_request.questionId,
-  };
-}

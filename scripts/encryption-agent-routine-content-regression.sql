@@ -9,7 +9,7 @@ DO $test$
 DECLARE actor uuid:=gen_random_uuid(); project uuid:=gen_random_uuid();
   routine uuid:=gen_random_uuid(); old_revision bigint; changed integer;
   cipher text:='{"format":3,"keyVersion":1,"data":"opaque"}';
-  rejected boolean;
+  rejected boolean; expected jsonb; checked timestamptz;
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.projects(id,owner_id,name,key)
@@ -40,6 +40,32 @@ BEGIN
       (title IS NOT NULL OR prompt IS NOT NULL OR
        prompt_mentions IS NOT NULL OR base_branch IS NOT NULL)) THEN
     RAISE EXCEPTION 'Routine source or Realtime row retains clear content';
+  END IF;
+  SELECT to_jsonb(r)-'created_at',r.encryption_checked_at INTO expected,checked
+    FROM public.agent_routines r WHERE id=routine;
+  IF NOT public.mark_agent_backfill_attempt('agent_routines','id',routine,
+      'encryption_checked_at',expected) THEN
+    RAISE EXCEPTION 'Routine backfill attempt was not recorded';
+  END IF;
+  IF EXISTS(SELECT 1 FROM public.agent_routines WHERE id=routine AND
+      (encryption_attempted_at IS NULL OR
+       encryption_checked_at IS DISTINCT FROM checked)) THEN
+    RAISE EXCEPTION 'Routine backfill attempt was treated as verification';
+  END IF;
+  IF public.mark_agent_backfill_attempt('agent_routines','id',routine,
+      'encryption_checked_at',expected || '{"encrypted_content":"stale"}') THEN
+    RAISE EXCEPTION 'Stale routine backfill attempt reported a match';
+  END IF;
+  rejected:=false;
+  BEGIN
+    PERFORM public.mark_agent_backfill_attempt('issues','id',routine,
+      'encryption_checked_at',jsonb_build_object('id',routine,
+        'encrypted_content',cipher));
+  EXCEPTION WHEN invalid_parameter_value THEN rejected:=true; END;
+  IF NOT rejected THEN RAISE EXCEPTION 'Unlisted table accepted'; END IF;
+  IF has_function_privilege('authenticated',
+      'public.mark_agent_backfill_attempt(text,text,uuid,text,jsonb)','EXECUTE') THEN
+    RAISE EXCEPTION 'Client can record routine backfill attempts';
   END IF;
   IF NOT public.activate_agent_routine_content() THEN
     RAISE EXCEPTION 'Verified routines refused activation';

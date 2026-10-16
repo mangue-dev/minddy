@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -93,13 +93,14 @@
       "components/file-viewer.tsx",
       "components/image-viewer.tsx",
       "lib/issue-prompt.ts",
-      "lib/server/issue-prompt-context.ts"
+      "lib/server/issue-prompt-context.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence)",
-    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; de translation of removal edits; no operational rerun)",
+    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
     "date": "2026-10-16"
   },
   "related": [
@@ -145,7 +146,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf mit Titel, Beschreibung und manuell wählbaren Eigenschaften.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -161,7 +162,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +178,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -193,7 +194,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -209,7 +210,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -225,7 +226,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -241,7 +242,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -257,7 +258,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -268,28 +269,12 @@
       "padding": 24
     },
     {
-      "id": "bulk-issue-actions-steps",
-      "kind": "screenshot",
-      "src": "/documentation/de/work-bulk-actions.png",
-      "alt": "Aktionsmenü für zwei ausgewählte Demo-Tickets.",
-      "caption": "Das Menü wirkt auf die ausgewählten Tickets. In dieser Aufnahme wurde keine Sammeländerung gesendet.",
-      "revision": 11,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        788,
-        506
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "import-issues-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -306,7 +291,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Entfernen.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -327,7 +312,6 @@
     "sub-issues-steps",
     "implementation-plans-steps",
     "recurring-issues-steps",
-    "bulk-issue-actions-steps",
     "import-issues-workflow",
     "issue-file-preview"
   ]
@@ -468,11 +452,11 @@ Der Plan verwendet Markdown-Aufgabenzeilen: `- [ ]` für ausstehend, `- [~]` fü
 
 Erweitere oder ändere den bestehenden Plan gezielt, statt ihn durch eine neue unabgehakte Kopie zu ersetzen. Bewahre abgeschlossene Schritte und Erklärungen für geänderten Umfang. Vergleiche einen größeren Umbau vor dem Speichern mit dem neuesten Plan, wenn ein anderes Mitglied oder ein Agent am Problem gearbeitet hat.
 
-Ein geschriebener Plan lässt sich Numo zur Umsetzung übergeben, wenn Repository-Arbeit und die eingerichtete Sandbox verfügbar sind. Sobald abgeschlossene Arbeit vorliegt, bietet die Oberfläche außerdem eine Umsetzungsprüfung. Diese Aktionen starten Arbeit; ein abgehaktes Kontrollkästchen beweist nicht, dass der Code Tests besteht. Lies Ergebnis, Änderungen und Prüfungen, bevor du das Problem als fertig markierst.
+Um den Plan umsetzen zu lassen, kopieren Sie die Eingabeaufforderung des Tickets für Ihren eigenen Coding-Agenten, wie unten beschrieben. Eine abgehakte Aufgabe beweist nicht, dass der Code Tests besteht. Lies Ergebnis, Änderungen und Prüfungen, bevor du das Problem als fertig markierst.
 
 ### Eine Eingabeaufforderung für einen anderen Coding-Agenten kopieren {#copy-issue-prompt}
 
-Um ein Problem an einen Coding-Agenten außerhalb von Minddy zu übergeben, etwa Claude Code, Codex oder Cursor, öffnen Sie das Aktionsmenü des Problems, wählen **Als Eingabeaufforderung kopieren** und dann **Plan erstellen** (oder **Plan überprüfen**, wenn bereits einer existiert), **Problem umsetzen**, **Überprüfen Sie die Implementierung** oder **Benutzerdefiniert…**. Bei mehreren ausgewählten Problemen fasst **Kombinierte Eingabeaufforderung kopieren** sie in einer Eingabeaufforderung zusammen. Das Kopieren führt kein KI-Modell aus und verbraucht kein KI-Kontingent: Minddy stellt zusammen, was es bereits gespeichert hat, und der Agent erkundet das Repository selbst.
+Um ein Problem an einen Coding-Agenten außerhalb von Minddy zu übergeben, etwa Claude Code, Codex oder Cursor, öffnen Sie das Aktionsmenü des Problems, wählen **Als Eingabeaufforderung kopieren** und dann **Plan erstellen** (oder **Plan überprüfen**, wenn bereits einer existiert), **Problem umsetzen**, **Überprüfen Sie die Implementierung** oder **Benutzerdefiniert…**. Bei mehreren ausgewählten Problemen fasst **Kombinierte Eingabeaufforderung kopieren** sie in einer Eingabeaufforderung zusammen. Das Kopieren führt kein KI-Modell aus und verbraucht kein KI-Kontingent: Minddy stellt zusammen, was es bereits gespeichert hat, und der Agent erkundet das Repository selbst. Ist in den Kontoeinstellungen **Starten Sie das Problem oder die Aufgabe, wenn ich die Eingabeaufforderung kopiere.** aktiviert, startet das Kopieren außerdem ein noch nicht begonnenes Ticket. Den vollständigen Ablauf und die Prüfung von Pull Requests beschreibt [Code-Arbeit und Pull Requests](/docs/code-work).
 
 Die Eingabeaufforderung enthält die Felder des Problems, seine Kategorien, Beziehungen, die Anzahl angehängter Ressourcen und den Fortschritt des Plans, aber nicht den Plantext. Diesen liest der Agent über den MCP-Server von Minddy oder fragt Sie danach. Sie nennt außerdem das mit dem Projekt verknüpfte Repository und jeden mit dem Problem verknüpften Pull Request mit seinem Status und seinen Branches, sofern bekannt. Der Agent setzt einen offenen Pull Request auf dessen Branch fort und behandelt zusammengeführte oder geschlossene als Verlauf. Ohne offenen Pull Request schlägt die Eingabeaufforderung einen Branchnamen aus der Kennung des Problems und einem kurzen Titel vor, zum Beispiel `min-42-keyboard-navigation`. Das ist nur ein Vorschlag: Der Agent prüft zuerst vorhandene Branches und folgt der Namenskonvention des Repositorys. Bleibt die Kennung im Branchnamen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42` erhalten, kann Minddy den Pull Request dem Problem zuordnen, wenn das Repository verknüpft ist.
 
@@ -500,8 +484,6 @@ Eine Numo-Routine ist ein anderes Objekt: Sie plant ein Gespräch und kann das K
 Halte auf einem Board die Umschalttaste gedrückt und klicke auf jede Problemkarte, um sie aus- oder abzuwählen. Mit einer Maus kannst du außerdem von einer freien Boardfläche aus ein Auswahlrechteck ziehen. Umschalt, Command oder Strg ergänzt dabei die bestehende Auswahl. Das Auswahlrechteck ist kein Auswahlverfahren für Touchscreens. Prüfe die Anzahl und die sichtbaren Kennungen, bevor du die Sammelaktionen öffnest. Die Auswahl ist eine Arbeitsmenge für die Aktion, keine gespeicherte Ansicht und keine Berechtigungserteilung.
 
 Wähle Aktionen in der schwebenden Auswahlleiste, um die Befehlspalette zu öffnen. Wähle Status, Priorität, Aufwand oder zuständige Person, setze den Wert und bestätige das Inline-Formular. Die Zielaktion erscheint nur, wenn die Auswahl zu einem einzigen Projekt mit verfügbaren Zielen gehört. Andere Aktionen, etwa das Hinzufügen zu oder Entfernen aus einem Zyklus, das Verknüpfen zweier Probleme oder das Senden der Auswahl an Numo, erscheinen nur, wenn das aktuelle Board sie unterstützt. Prüfe anschließend die betroffenen Probleme. Auf einem reinen Touchgerät ohne unterstützte Mehrfachauswahl bearbeitest du jedes Problem im Detailpanel.
-
-![Aktionsmenü für zwei ausgewählte Demo-Tickets.](/documentation/de/work-bulk-actions.png)
 
 ### Teilergebnisse und destruktive Aktionen {#bulk-results}
 

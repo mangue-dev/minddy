@@ -21,6 +21,15 @@
 > login ([login-form.tsx](../components/auth/login-form.tsx)).
 > **Nothing has been measured**: none of the durations in this document are a probe, and
 > the places where it is missing are said at the end.
+>
+> **Status after MIN-721 (2026-10-16)**: Numo's code capability has been removed.
+> There is no code worker, server sandbox, Agent VM, self-hosted runner or
+> desktop-local execution any more, and the desktop app no longer ships the run
+> log, the local run diff reader or the **Copy Diagnostic Report** command. The
+> agent sections below (notably §4) are kept as the historical design record;
+> the files they link under `lib/server/agent/vm/`, `app/api/agent-vm/` and
+> `app/api/desktop/` no longer exist. The desktop app remains the vehicle for the
+> web workspace, native notifications, the server picker and the local runtime.
 
 ---
 
@@ -323,8 +332,8 @@ writes. Queries remain available in memory and load from the server after a
 restart. Separate draft storage is unaffected. The server's 8 MiB request limit
 alone cannot protect the renderer because it applies after serialization.
 
-`configurePayloadRetention` gives full PR details, commit/agent/local diffs,
-agent event streams and page bodies a one-minute inactive GC window. These
+`configurePayloadRetention` gives full PR details, commit diffs and page bodies
+a one-minute inactive GC window. These
 payloads are excluded from disk persistence; ordinary board caches keep their
 existing persistence window. Active query observers prevent GC. Tab labels
 subscribe to compact PR projections through `createPullRequestTabLabels`
@@ -501,8 +510,9 @@ key but a right to spend the budget for this run, which the user already has.
 This is exactly the doctrine that `run-key.ts` states for the VM, applied to a
 machine where the hypothesis of compromise is *stronger*.
 
-**Consequence not to be missed**: `run-key.ts` **degrades voluntarily** when
-`OPENROUTER_PROVISIONING_KEY` is missing — it falls on the platform key, without
+**Consequence not to be missed** (historical: `run-key.ts` and the
+`OPENROUTER_PROVISIONING_KEY` variable were removed with code work in MIN-721):
+`run-key.ts` **degraded voluntarily** when `OPENROUTER_PROVISIONING_KEY` was missing — it falls on the platform key, without
 ceiling. This degradation is reasonable in a disposable microVM; on the machine
 from a user it is unacceptable. **On the local path, the absence of mint
 must refuse the run**, not uncapped it. It's a line of code and it's the
@@ -574,18 +584,13 @@ formally depreciated but very much alive.
 
 ### 4.5 Retirement of desktop-local execution
 
-MIN-519 retired this execution path. New Numo workers now use the configured
-server sandbox on both web and desktop, and the composer no longer asks where
-to run them. The self-hosted server runner remains supported because it runs
-the same server worker contract; it is not a desktop-local launcher.
-
-The old `POST /api/desktop/local-turn` endpoint is now a compatibility
-tombstone. It returns an explicit transition response and cannot claim or
-start work. The desktop launcher and harness-download endpoints were removed,
-so stored local preferences cannot reactivate execution. Existing run folders
-are not deleted: the desktop bridge keeps a read-only, run-scoped diff reader
-for historical artifacts. A historical checkpoint is not presented as
-portable; continuing work means starting a new server-backed conversation.
+MIN-519 retired this execution path and moved Numo workers to the server
+sandbox. MIN-721 then removed Numo's code work altogether: the server sandbox,
+the self-hosted runner, the `POST /api/desktop/local-turn` compatibility
+tombstone, the desktop run log and the read-only local run diff reader are
+gone. Existing run folders on users' machines are not deleted, but nothing in
+the app reads them any more. Code is now written by the user's own coding
+agent, connected to minddy through MCP.
 
 The remainder of this section documents the retired design for historical
 context only. None of its launch behavior remains active.

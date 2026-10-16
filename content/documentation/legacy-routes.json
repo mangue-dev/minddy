@@ -456,10 +456,10 @@
   },
   "delegate-code-work": {
     "article": "code-work",
-    "section": "delegate-code-work",
+    "section": "external-coding-agents",
     "sections": {
-      "delegate-code-work": "delegate-code-work",
-      "continuation": "continuation"
+      "delegate-code-work": "external-coding-agents",
+      "continuation": "link-work"
     }
   },
   "review-pull-requests": {
@@ -552,7 +552,7 @@
       "self-hosted-compatibility": "self-hosted-compatibility",
       "verify-release": "verify-release",
       "support": "support",
-      "known-runner-limits": "known-runner-limits"
+      "known-runner-limits": "support"
     }
   },
   "install-a-server": {
@@ -562,9 +562,9 @@
       "install-a-server": "install-a-server",
       "install": "install",
       "accept": "accept",
-      "known-runner-limits": "install-a-server-known-runner-limits",
-      "runner-workaround": "runner-workaround",
-      "adapted-start": "adapted-start"
+      "known-runner-limits": "support",
+      "runner-workaround": "support",
+      "adapted-start": "install"
     }
   },
   "managed-or-source-installation": {

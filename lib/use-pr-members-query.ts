@@ -11,7 +11,7 @@ import { fetchPullRequestMembersApi, type PrEndpoint, type RepoMember } from "@/
  * response already carries its own HTTP cache.
  */
 export function usePrMembersQuery(
-  /** PR base: `/api/pull-requests/{id}` or facade `/api/agent-runs/{id}/pr`. */
+  /** PR base: `/api/pull-requests/{id}`. */
   endpoint: PrEndpoint | null,
   enabled: boolean,
 ): { members: RepoMember[]; loading: boolean } {

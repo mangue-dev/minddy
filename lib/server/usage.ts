@@ -2,7 +2,6 @@ import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import {
-  SANDBOX_USD_PER_MINUTE,
   USAGE_SEGMENTS,
   type BillableFeature,
   type UsageSegmentId,
@@ -14,11 +13,6 @@ import {
 } from "@/lib/server/billing-accounts";
 import { resolveUsageWindow } from "@/lib/billing-cycle";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
-import {
-  recordAiUsage,
-  type AiFeature,
-  type AiUsageBillTo,
-} from "@/lib/server/ai-usage";
 import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import { usesByokForSurface } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
@@ -258,47 +252,4 @@ export async function ownerHasUsageBudget(
     console.error("[usage] owner budget check failed:", (err as Error).message);
     return true;
   }
-}
-
-/**
- * Vercel Sandbox compute metering of a run agent: wall-clock × $/min, one
- * line in the ledger (provider 'vercel'). `seq` must be unique in the calling side
- * run (one line per drain slice).
- *
- * `feature` distinguishes the microVM of an agent run (`sandbox_compute`, the
- * default) from that of a run pass. ROUTINE (`routine_compute`, MIN-185) — the
- * two halves of a routine expense, tokens and minutes, fit under the
- * same segment or the separation means nothing.
- */
-export async function recordSandboxUsage(params: {
-  runId: string;
-  seq: number;
-  billTo: AiUsageBillTo;
-  feature?: Extract<AiFeature, "sandbox_compute" | "routine_compute">;
-  projectId: string | null;
-  conversationId?: string | null;
-  numoTurnId?: string | null;
-  routineId?: string | null;
-  durationMs: number;
-  /** Trusted rate persisted by the control plane; absent on legacy runs. */
-  usdPerMinute?: number | null;
-}): Promise<void> {
-  const minutes = params.durationMs / 60_000;
-  const rate = params.usdPerMinute ?? SANDBOX_USD_PER_MINUTE;
-  if (!Number.isFinite(rate) || rate <= 0) throw new Error("Invalid sandbox usage rate");
-  const cost = roundUsd(minutes * rate);
-  if (cost <= 0) return;
-  await recordAiUsage({
-    runId: params.runId,
-    seq: params.seq,
-    feature: params.feature ?? "sandbox_compute",
-    provider: "vercel",
-    model: "vercel/sandbox",
-    cost,
-    billTo: params.billTo,
-    projectId: params.projectId,
-    conversationId: params.conversationId ?? null,
-    numoTurnId: params.numoTurnId ?? null,
-    routineId: params.routineId ?? null,
-  });
 }

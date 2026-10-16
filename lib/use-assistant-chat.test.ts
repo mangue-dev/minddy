@@ -45,10 +45,6 @@ function message(
     tool_name: null,
     metadata: {},
     turn_id: null,
-    run_id: null,
-    worker_source: null,
-    legacy_queue_message_id: null,
-    legacy_event_id: null,
     created_at: createdAt,
     ...extra,
   };
@@ -62,15 +58,12 @@ function detail(): NumoConversationDetail {
       source: "assistant",
       legacy_id: conversationId,
       project_id: null,
-      access_project_id: null,
-      visibility: "private",
       title: null,
       status: "idle",
       error_message: null,
       archived_at: null,
       pinned_at: null,
       last_read_at: null,
-      latest_work_id: null,
       created_at: "2026-09-12T10:00:00.000Z",
       updated_at: "2026-09-12T10:00:00.000Z",
       model: "chosen-model",
@@ -93,9 +86,6 @@ function detail(): NumoConversationDetail {
         metadata: { success: true },
       }),
     ],
-    work: [],
-    contexts: [],
-    artifacts: [],
     turns: [],
   };
 }
@@ -124,70 +114,6 @@ afterEach(() => {
 });
 
 describe("Numo conversation settings", () => {
-  it("stops the known parent while a worker steering submission still awaits headers", async () => {
-    const parentTurnId = "51700000-0000-4000-8000-000000000002";
-    let finishSteering!: (response: Response) => void;
-    let stopBody!: Record<string, unknown>;
-    let requestId!: string;
-    let stopped = false;
-    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url === "/api/assistant/chat") {
-        requestId = JSON.parse(String(init?.body)).requestId;
-        return new Promise<Response>((resolve) => { finishSteering = resolve; });
-      }
-      if (url === "/api/assistant/turns/stop") {
-        stopBody = JSON.parse(String(init?.body));
-        stopped = true;
-        return Response.json({ turn_id: parentTurnId, status: "stopped" });
-      }
-      if (url.includes("/status")) return Response.json({
-        status: stopped ? "stopped" : "waiting_work", turn_id: parentTurnId, activity: [],
-      });
-      if (url.includes("/messages")) return Response.json([]);
-      throw new Error(`Unexpected request: ${url}`);
-    });
-    await act(async () => root.render(createElement(Probe)));
-    await act(async () => value.loadConversation(conversationId, null));
-    let sending!: Promise<void>;
-    await act(async () => { sending = value.sendMessage(null, "Steer the worker"); });
-    await act(async () => { value.abort(); });
-    expect(stopBody).toEqual({ requestId, conversationId, newConversation: false, turnId: parentTurnId });
-    await act(async () => {
-      finishSteering(new Response('event: done\ndata: {"status":"waiting_work"}\n\n', {
-        headers: { "X-Numo-Conversation-Id": conversationId, "X-Numo-Turn-Id": parentTurnId },
-      }));
-      await sending;
-    });
-    expect(value.state.status).toBe("idle");
-  });
-
-  it("uses the exact parent turn returned by a mediated worker submission", async () => {
-    const parentTurnId = "51700000-0000-4000-8000-000000000002";
-    let stopBody!: Record<string, unknown>;
-    let stopped = false;
-    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url === "/api/assistant/chat") return new Response(
-        'event: done\ndata: {"status":"waiting_work"}\n\n',
-        { headers: { "X-Numo-Conversation-Id": conversationId, "X-Numo-Turn-Id": parentTurnId } },
-      );
-      if (url === "/api/assistant/turns/stop") {
-        stopBody = JSON.parse(String(init?.body));
-        stopped = true;
-        return Response.json({ turn_id: parentTurnId, status: "stopped" });
-      }
-      if (url.includes("/status")) return Response.json({
-        status: stopped ? "stopped" : "idle", activity: [],
-      });
-      if (url.includes("/messages")) return Response.json([]);
-      throw new Error(`Unexpected request: ${url}`);
-    });
-    await act(async () => root.render(createElement(Probe)));
-    await act(async () => value.loadConversation(conversationId, null));
-    await act(async () => value.sendMessage(null, "Steer the worker"));
-    await act(async () => { value.abort(); });
-    expect(stopBody).toMatchObject({ conversationId, newConversation: false, turnId: parentTurnId });
-    expect(value.state.status).toBe("idle");
-  });
 
   it("records Stop by request identity before the first response headers without disconnecting its executor", async () => {
     let finishChat!: (response: Response) => void;
@@ -520,30 +446,6 @@ describe("Numo conversation settings", () => {
     expect(value.state.status).toBe("idle");
   });
 
-  it("restores the authoritative pending worker decision on reload", async () => {
-    h.webFetch.mockResolvedValue(Response.json({
-      status: "waiting_input",
-      error_message: null,
-      pending_input: {
-        parent_numo_turn_id: "51700000-0000-4000-8000-000000000002",
-        run_id: "51700000-0000-4000-8000-000000000003",
-        question_id: "question-1",
-        call_id: "call-question",
-        questions: [],
-        created_at: "2026-09-12T10:00:02.000Z",
-      },
-    }));
-    await act(async () => root.render(createElement(Probe)));
-
-    await act(async () => value.loadConversation(conversationId, null));
-
-    expect(value.state.pendingWorkerInput).toEqual({
-      parentTurnId: "51700000-0000-4000-8000-000000000002",
-      runId: "51700000-0000-4000-8000-000000000003",
-      questionId: "question-1",
-    });
-  });
-
   it("restores persisted settings and tool results from the unified detail", async () => {
     await act(async () => root.render(createElement(Probe)));
     await act(async () => value.loadConversation(conversationId, null));
@@ -585,25 +487,6 @@ describe("Numo conversation settings", () => {
     expect(body).toMatchObject({ model: null, reasoningLevel: null });
   });
 
-  it("sends the exact worker-question correlation with a card answer", async () => {
-    h.webFetch.mockResolvedValue(new Response(
-      'event: done\ndata: {"status":"waiting_work"}\n\n',
-      { headers: { "X-Numo-Conversation-Id": conversationId } },
-    ));
-    await act(async () => root.render(createElement(Probe)));
-    await act(async () => value.loadConversation(conversationId, null));
-    const workerInput = {
-      parentTurnId: "51700000-0000-4000-8000-000000000002",
-      runId: "51700000-0000-4000-8000-000000000003",
-      questionId: "question-1",
-    };
-
-    await act(async () => value.sendMessage(null, "Use the public API.", { workerInput }));
-
-    const request = h.webFetch.mock.calls.find(([url]) => url === "/api/assistant/chat")?.[1];
-    expect(JSON.parse(String(request?.body))).toMatchObject({ workerInput });
-  });
-
   it("rolls back simultaneous failed writes to the last server-confirmed settings", async () => {
     h.update.mockResolvedValue({ ok: false, error: "Unable to save" });
     await act(async () => root.render(createElement(Probe)));
@@ -620,56 +503,6 @@ describe("Numo conversation settings", () => {
       conversationReasoningLevel: "high",
       conversationConfigError: "Unable to save",
     });
-  });
-
-  it("reloads the launch tool result while a delegated worker runs", async () => {
-    // A replayed journal never re-emits `tool_result`, so while the turn is
-    // suspended on its worker the card can only learn the run id from the
-    // persisted history. The poll must reload it once per suspension.
-    let statusCalls = 0;
-    h.webFetch.mockImplementation(async (url: string) => {
-      if (String(url).includes("/status")) {
-        statusCalls += 1;
-        return Response.json({
-          status: statusCalls === 1 ? "waiting_work" : "idle",
-          error_message: null,
-          turn_id: "turn-1",
-          active_run_id: "run-1",
-          activity: [],
-        });
-      }
-      if (String(url).includes("/messages")) {
-        return Response.json([
-          message("assistant-call", "assistant", "2026-09-12T10:00:01.000Z", {
-            tool_calls: [{
-              id: "call-launch",
-              type: "function",
-              function: { name: "launch_code_agent", arguments: "{}" },
-            }],
-          }),
-          message("tool-result-launch", "tool", "2026-09-12T10:00:02.000Z", {
-            content: JSON.stringify({ run_id: "run-1" }),
-            tool_call_id: "call-launch",
-            tool_name: "launch_code_agent",
-            metadata: { success: true },
-          }),
-        ]);
-      }
-      return Response.json({ status: "idle", error_message: null });
-    });
-
-    await act(async () => root.render(createElement(Probe)));
-    await act(async () => value.loadConversation(conversationId, null));
-    await act(async () => { await vi.advanceTimersByTimeAsync(50); });
-
-    expect(value.state.toolCallResults.get("call-launch")).toMatchObject({
-      status: "complete",
-      result: { run_id: "run-1" },
-      success: true,
-    });
-    // The assistant handed the work to its agent: it reads as idle while the
-    // delegated card carries the live state, not as "Traitement en cours…".
-    expect(value.state.status).toBe("idle");
   });
 
   it("reconciles from durable state when the stream closes without a terminal event", async () => {
@@ -830,7 +663,6 @@ describe("Numo conversation settings", () => {
   });
 });
 
-
 describe("completed response notifications", () => {
   it.each(["completed", "waiting_input", "idle"])("marks a successful %s streamed answer ready", async (status) => {
     h.webFetch.mockResolvedValue(new Response(
@@ -885,7 +717,7 @@ describe("completed response notifications", () => {
     const answer = message("persisted-answer", "assistant", "2026-09-12T10:01:00.000Z", { content: "Final answer" });
     h.webFetch.mockImplementation(async (url: string) => {
       if (url === "/api/assistant/chat") {
-        return new Response(path === "poll" ? 'event: done\ndata: {"status":"waiting_work"}\n\n' : "", {
+        return new Response(path === "poll" ? 'event: done\ndata: {"status":"queued"}\n\n' : "", {
           headers: { "X-Numo-Conversation-Id": conversationId },
         });
       }

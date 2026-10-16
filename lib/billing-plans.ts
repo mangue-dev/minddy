@@ -167,12 +167,6 @@ export function annualMonthlyEquivalentEur(plan: BillingPlan): number {
   return Math.round((annualPriceEur(plan) / 12) * 100) / 100;
 }
 
-// ── Non-LLM costs ────────────────────────────── ──────────────────────────────
-
-/** Legacy rate for runs without a persisted sandbox allocation. New runs use
- * region and resources from the provider; see agent-sandbox-config.ts. */
-export const SANDBOX_USD_PER_MINUTE = 0.004;
-
 // ── Segments d'affichage de l'usage ─────────────────────────────────────────
 
 /**
@@ -199,14 +193,10 @@ export const BILLABLE_FEATURES = [
   "feedback_analyze",
   "feedback_voice",
   "embedding",
-  "agent_code",
-  "sandbox_compute",
   "web_search",
-  "pr_review",
-  // A ROUTINE (MIN-185): the same run as `agent_code`/`sandbox_compute`, on
-  // another invoice line. See the `routines` segment below.
+  // A ROUTINE (MIN-185): the same Numo calls as `numo_chat`, on another
+  // invoice line. See the `routines` segment below.
   "routine_code",
-  "routine_compute",
   // AI decisions (MIN-561, MIN-694): the decision-model calls of the AI
   // decision layer, whichever model the instance configured (historical
   // `jev_` id). Billed to the user like the automations it backs, so it
@@ -226,7 +216,6 @@ export const BILLABLE_FEATURES = [
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
 
 export type UsageSegmentId =
-  | "agents"
   | "routines"
   | "numo"
   | "dictation"
@@ -241,35 +230,21 @@ export interface UsageSegment {
 }
 
 /**
- * The typed grouping shown to the user (“5% on agents, 2% on
+ * The typed grouping shown to the user (“5% on routines, 2% on
  * dictation…”): the unified bar of the header and the page billing tiles these
  * segments in this order.
  */
 export const USAGE_SEGMENTS: UsageSegment[] = [
-  // LLM + compute sandbox of the same run: for the user, it is ONE agent.
-  // The review of a PR by Numo (MIN-141) joins them: it is the same Numo who
-  // reads the code, and storing it elsewhere would cause its expense to be found in the
-  // bad line — even if the trick is paid without microVM.
-  {
-    id: "agents",
-    features: ["agent_code", "sandbox_compute", "pr_review"],
-    barClass: "bg-violet-500",
-  },
-  // The ROUTINES (MIN-185), just after the agents — we give them to them
-  // compared. Technically it's the same run; in billing this is not the
-  // same expense: an agent run is a gesture that we made, a routine is a
-  // subscription that we let run, and “what ate my budget this
-  // month? » is only answered if the two are read separately. ET Tokens
-  // minutes of microVM, otherwise the separation would be half wrong.
-  // `web_search` triggered IN a routine remains stored with Numo, like
-  // that of an agent run: it's the same tool, at the same anecdotal price.
+  // The ROUTINES (MIN-185): technically the same Numo calls as a chat; in
+  // billing this is not the same expense — a chat is a gesture that we made,
+  // a routine is a subscription that we let run, and “what ate my budget this
+  // month?” is only answered if the two are read separately.
   {
     id: "routines",
-    features: ["routine_code", "routine_compute"],
+    features: ["routine_code"],
     barClass: "bg-sky-500",
   },
-  // Web search is a Numo tool (chat, comments) AND agents,
-  // but it remains anecdotal compared to the rest: we place it with Numo rather than
+  // Web search is a Numo tool (chat, comments), but it remains anecdotal compared to the rest: we place it with Numo rather than
   // to add a color to the bar for a few cents. (Routines,
   // the opposite, have deserved theirs: a recurring expense that we want to be able to
   // look alone, not a few pennies drowned.)

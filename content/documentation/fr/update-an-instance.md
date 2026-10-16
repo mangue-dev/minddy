@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (fr runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/fr/update-an-instance-flow.svg",
       "alt": "Schéma: Arrêter écritures et jobs. Sceller la sauvegarde complète avant update. Migrations cibles, puis application cible. Vérifier récupération et rouvrir.",
       "caption": "Lisez les étapes dans cet ordre. Arrêter écritures et jobs. Sceller la sauvegarde complète avant update. Migrations cibles, puis application cible. Vérifier récupération et rouvrir.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -97,9 +97,9 @@ Mettez à jour une version publiée à la fois. Examinez notes, différences de 
 
 ## Mettre à jour le profil full {#full}
 
-Reprenez le [contexte Compose full installé](/fr/documentation/backups-and-restoration#context). Arrêtez entrée publique, écritures, workers et planificateur, puis réalisez la sauvegarde complète scellée. Copiez l’environnement actuel en mode `0600` vers `TARGET_ENV_FILE` et changez uniquement `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` et `MINDDY_ENV_FILE` pour la cible vérifiée. Gardez URLs, identifiants, clés et choix de fonctionnalités. Exécutez la séquence ci-dessous dans le contexte installé. Elle démarre uniquement les dépendances backend, applique les migrations cibles et vérifie application/runner pendant que Caddy et le planificateur restent arrêtés.
+Reprenez le [contexte Compose full installé](/fr/documentation/backups-and-restoration#context). Arrêtez entrée publique, écritures, workers et planificateur, puis réalisez la sauvegarde complète scellée. Copiez l’environnement actuel en mode `0600` vers `TARGET_ENV_FILE` et changez uniquement `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` et `MINDDY_ENV_FILE` pour la cible vérifiée. Gardez URLs, identifiants, clés et choix de fonctionnalités. Supprimez `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` et `AGENT_CONTROL_ORIGIN` si une release antérieure les a laissés : l’application ne les lit plus, et `--remove-orphans` retire l’ancien conteneur `agent-runner`. Exécutez la séquence ci-dessous dans le contexte installé. Elle démarre uniquement les dépendances backend, applique les migrations cibles et vérifie l’application pendant que Caddy et le planificateur restent arrêtés.
 
-Pour la mise à niveau de v0.10.30 vers v0.11.0, la cible introduit `MINDDY_DATA_ROOT_KEY`. Ajoutez cette clé uniquement si la configuration existante ne contient aucune racine et conservez tous les secrets existants de chiffrement des identifiants. La commande ci-dessous écrit directement une nouvelle racine de 32 octets dans le fichier cible protégé, sans l’afficher, et refuse de remplacer une valeur enregistrée invalide. La racine seule n’active pas le chiffrement du contenu. Avant de démarrer cette cible, appliquez les [adaptations épinglées du runner et des fonctions hors ligne](/fr/documentation/installation#runner-workaround) et conservez `RUNNER_FIX_OVERRIDE` dans chaque opération Compose. Ce profil est explicitement adapté ; il ne constitue pas une installation réussie du tag historique inchangé.
+Pour la mise à niveau de v0.10.30 vers v0.11.0, la cible introduit `MINDDY_DATA_ROOT_KEY`. Ajoutez cette clé uniquement si la configuration existante ne contient aucune racine et conservez tous les secrets existants de chiffrement des identifiants. La commande ci-dessous écrit directement une nouvelle racine de 32 octets dans le fichier cible protégé, sans l’afficher, et refuse de remplacer une valeur enregistrée invalide. La racine seule n’active pas le chiffrement du contenu.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -136,8 +136,8 @@ export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
 export MINDDY_ENV_FILE="$TARGET_ENV_FILE"
 node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
-compose pull minddy agent-runner
-compose up -d --wait minddy agent-runner
+compose pull minddy
+compose up -d --wait --remove-orphans minddy
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network --maintenance
 compose up -d --wait

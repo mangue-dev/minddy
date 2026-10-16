@@ -26,11 +26,6 @@ export interface NotificationRow {
   project_id: string | null;
   type: NotificationType;
   issue_id: string | null;
-  /** Conversation de code visee, qu'elle ait ou non un ticket en contexte. */
-  agent_conversation_id?: string | null;
-  /** Parent Numo conversation and exact delegated run shown by this notification. */
-  numo_conversation_id?: string | null;
-  numo_work_id?: string | null;
   /** Set instead of issue_id when the notification points at an objective. */
   objective_id?: string | null;
   /** Set instead of issue_id/objective_id for a feedback-post notification. */
@@ -169,8 +164,7 @@ async function currentlyPushableRows(
       | "objectives"
       | "feedback_posts"
       | "agent_routines"
-      | "pages"
-      | "agent_conversations",
+      | "pages",
   ) =>
     ids.length && projectIds.length
       ? service
@@ -187,7 +181,6 @@ async function currentlyPushableRows(
     feedbackResult,
     routinesResult,
     pagesResult,
-    conversationsResult,
     pullRequestsResult,
     projectLinksResult,
   ] = await Promise.all([
@@ -203,10 +196,6 @@ async function currentlyPushableRows(
     targetQuery(feedbackIds, "feedback_posts"),
     targetQuery(idsOf(rows, (row) => row.routine_id), "agent_routines"),
     targetQuery(idsOf(rows, (row) => row.page_id), "pages"),
-    targetQuery(
-      idsOf(rows, (row) => row.agent_conversation_id),
-      "agent_conversations",
-    ),
     idsOf(rows, (row) => row.pull_request_id).length
       ? service
           .from("pull_requests")
@@ -231,7 +220,6 @@ async function currentlyPushableRows(
     feedbackResult.error,
     routinesResult.error,
     pagesResult.error,
-    conversationsResult.error,
     pullRequestsResult.error,
     projectLinksResult.error,
   ].flatMap((error) => (error ? [error.message] : []));
@@ -271,9 +259,6 @@ async function currentlyPushableRows(
   const feedback = scopeMap((feedbackResult.data ?? []) as ScopeRow[]);
   const routines = scopeMap((routinesResult.data ?? []) as ScopeRow[]);
   const pages = scopeMap((pagesResult.data ?? []) as ScopeRow[]);
-  const conversations = scopeMap(
-    (conversationsResult.data ?? []) as ScopeRow[],
-  );
   const commentMap = scopeMap(comments);
   const pullRequests = scopeMap(
     (pullRequestsResult.data ?? []) as ScopeRow[],
@@ -380,12 +365,6 @@ async function currentlyPushableRows(
         routines,
       ) &&
       directTargetMatches(row.page_id, row.project_id, pagesResult, pages) &&
-      directTargetMatches(
-        row.agent_conversation_id,
-        row.project_id,
-        conversationsResult,
-        conversations,
-      ) &&
       commentMatches &&
       pullRequestMatches;
     if (!targetsMatch) return [];
@@ -464,15 +443,6 @@ export async function insertNotifications(
           .in("type", siblingTypes(r.type) as string[])
           .is("read_at", null);
         del = r.issue_id ? del.eq("issue_id", r.issue_id) : del.is("issue_id", null);
-        del = r.agent_conversation_id
-          ? del.eq("agent_conversation_id", r.agent_conversation_id)
-          : del.is("agent_conversation_id", null);
-        del = r.numo_conversation_id
-          ? del.eq("numo_conversation_id", r.numo_conversation_id)
-          : del.is("numo_conversation_id", null);
-        del = r.numo_work_id
-          ? del.eq("numo_work_id", r.numo_work_id)
-          : del.is("numo_work_id", null);
         // A ROUTINE notification (MIN-185) has no ticket: without this
         // second filter, the `issue_id is null` above would move the line
         // of ALL routines in the account — two routines fail the same
@@ -527,8 +497,6 @@ export async function insertNotifications(
       row_count: kept.length,
       notification_types: [...new Set(kept.map((row) => row.type))],
       routine_ids: idsOf(kept, (row) => row.routine_id),
-      numo_conversation_ids: idsOf(kept, (row) => row.numo_conversation_id),
-      numo_work_ids: idsOf(kept, (row) => row.numo_work_id),
       ...failureDiagnostics(error),
       ...(status && status >= 400 && status <= 599 ? { status } : {}),
     });

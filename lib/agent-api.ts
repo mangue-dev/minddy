@@ -2,15 +2,8 @@
 
 import { fetchClientRead } from "./client-read";
 
-import { createUuid } from "@/lib/create-uuid";
-
 import type { RepoProviderId } from "@/lib/repo-providers";
-import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { ReviewThreadState } from "@/lib/pr-review-threads";
-import type {
-  PrReviewRunSummary,
-  PrReviewSession,
-} from "@/lib/pr-review-session";
 import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { CommitAuthor } from "@/lib/commit-authors";
 import type {
@@ -18,16 +11,11 @@ import type {
   ReviewReactionContent,
 } from "@/lib/pr-review-reactions";
 import { trackEvent } from "./analytics";
-import { lengthBucket } from "./analytics-sanitize";
-import type { AssistantMention } from "./assistant-types";
-import type { ResourceInput } from "./types";
 import type { PullRequestReadiness } from "./pr-readiness";
-import type { AgentDelegationResult } from "./server/agent/agent-contract";
-import type { AgentEngine } from "./agent-engines";
 
 /**
- * Code agent client fetchers (MIN-46): launch a run on an issue and
- * list your runs. (The live + events + stop details of a run arrive in Phase 7.)
+ * Pull request client fetchers (MIN-138, MIN-143): the PR list, its detail,
+ * review gestures, comments and the issue ↔ PR link.
  */
 
 /**
@@ -88,130 +76,6 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export type AgentRunStatus =
-  "queued" | "running" | "completed" | "failed" | "canceled";
-
-export interface AgentRunSummary {
-  id: string;
-  /** Frozen harness identity; absent on responses from older application versions. */
-  agent_engine?: AgentEngine | null;
-  status: AgentRunStatus;
-  /**
-   * Short conversation title written by the titler at launch
-   * (`agent_runs.title`). Optional: the light lists do not select it, and an
-   * empty title means the display cascade falls back to the issue's title.
-   */
-  title?: string | null;
-  /** Server-derived because checkpoints are intentionally never client-visible. */
-  resumable?: boolean;
-  model: string | null;
-  model_forced: boolean;
-  /** Level of reasoning FROZEN at launch (MIN-122): the selector of a run
-   * current displays it as read-only, such as model and branch. */
-  reasoning_level: ReasoningLevel;
-  /** Native CLI effort frozen at launch; unrelated to API reasoning settings. */
-  native_reasoning_effort?: string | null;
-  key_mode: "platform" | "byok" | "subscription";
-  triggered_by: "button" | "chat" | "mention";
-  /** Prompt launch (“original” conversation bubble). */
-  prompt: string | null;
-  prompt_mentions?: AssistantMention[] | null;
-  /** Non-zero = REREAD session (MIN-168): read only on the repository, therefore
-   * neither branch nor pull request to open from the conversation. */
-  pull_request_id: string | null;
-  /** Branch COPIED at launch (chosen in composition, otherwise the repository default).
-      Null until the first chunk stamps it on a run without inheritance. */
-  base_branch: string | null;
-  /** Working branch of the lineage (inheritance of cold runs is indexed to it). */
-  branch_name: string | null;
-  pr_number: number | null;
-  pr_url: string | null;
-  pr_state: "draft" | "open" | "merged" | "closed" | null;
-  continuations: number;
-  cost_usd: number;
-  outcome: string | null;
-  error_message: string | null;
-  /** First moment at which execution work actually started. */
-  started_at?: string | null;
-  created_at: string;
-  updated_at: string;
-  /**
-   * PRECISE moment of the last end of agent (transition to `completed`), stamped
-   * by DB trigger — insensitive to PR heartbeats / webhooks. `null` as long as the run
-   * never finished. Controls the blue “read/unread” bubble (compared to the last
-   * `last_read_at` of the session).
-   */
-  completed_at: string | null;
-  /** Share of the owner's included monthly usage spent by this run. */
-  usage_percent?: number | null;
-  /** The last round ended on an ask_user: the run WAITS for the response from
-   * the user → YELLOW point (same reading rules as unread). */
-  awaiting_input: boolean;
-  /** Validated handoff facts persisted for work delegated by Numo. */
-  delegation_result?: AgentDelegationResult | null;
-  /**
-   * The conversation turns to the user's MACHINE (MIN-359), not
-   * in a microVM. FROZEN at launch, such as the model, reasoning and
-   * branch: the composer chip is locked on it and the wire says so.
-   *
-   * Optional because runs before MIN-355 do not carry one and because
-   * light lists (Agents page) do not select it — absent is
-   * “in the cloud”, which is what all the runs have been so far.
-   */
-  local_exec?: boolean;
-  /** Local mode uses an isolated Git checkout for this conversation. */
-  local_worktree?: boolean;
-}
-
-/**
- * Statuses of a WORKING run (queued/running). The possible ticket is not
- * than a context: several conversations can work in parallel on
- * des branches distinctes.
- */
-export const ACTIVE_AGENT_STATUSES: AgentRunStatus[] = ["queued", "running"];
-
-export function isAgentRunActive(status: AgentRunStatus): boolean {
-  return ACTIVE_AGENT_STATUSES.includes(status);
-}
-
-/**
- * Is the agent WORKING? Controls the animated halo of the cards, the
- * polling of events, and the display of the “Interrupt” button in the conversation.
- * (Same as `isAgentRunActive` since the end of `needs_input` — kept for
- * the readability of call-sites: “works” vs “occupies the ticket”.)
- */
-export function isAgentRunWorking(status: AgentRunStatus): boolean {
-  return status === "queued" || status === "running";
-}
-
-/**
- * Can this specific run be resumed HOT (message in HIS conversation)? Yes
- * even when resting: its checkpoint and sandbox are preserved, so the next round
- * continues in the same context. A failed run relies on the server-derived flag
- * because its checkpoint intentionally remains private.
- * Reminder: only the LAST run of the outcome can be repeated (the runs share the
- * branch) — the server refuses the others (`supersededRun`).
- */
-export function isAgentRunResumable(
-  status: AgentRunStatus,
-  resumable?: boolean,
-): boolean {
-  return resumable ?? status !== "failed";
-}
-
-/**
- * Whether the latest run in a newest-first list can reopen its conversation.
- * Older checkpoints cannot be resumed after a newer run supersedes them.
- */
-export function isLatestAgentRunResumable(
-  runs: readonly Pick<AgentRunSummary, "status" | "resumable">[],
-): boolean {
-  const latestRun = runs[0];
-  return latestRun
-    ? isAgentRunResumable(latestRun.status, latestRun.resumable)
-    : false;
-}
-
 /**
  * The pull request for a ticket, as the cards and sign read it.
  *
@@ -234,211 +98,10 @@ export function isPrWorthShowing(pr: IssuePr | null): boolean {
   return !!pr && pr.state !== "closed";
 }
 
-export async function fetchIssueAgentRunsApi(
+export async function fetchIssuePullRequestApi(
   issueId: string,
-): Promise<{ runs: AgentRunSummary[]; pullRequest: IssuePr | null }> {
-  return parseJson(await fetchClientRead(`/api/issues/${issueId}/agent`));
-}
-
-/** Status of the automation chain of a ticket (MIN-147), customer view.
-    NEVER USD: `estimate.shareOfMonthlyBudget` is a part of the monthly budget
-    of the plan. A channel no longer has its own cap — it does not interrupt on
-    the expenditure, only the account quota limits (see lib/automations). */
-export async function fetchAgentRunApi(
-  runId: string,
-): Promise<{ run: AgentRunSummary }> {
-  return parseJson(await fetchClientRead(`/api/agent-runs/${runId}`));
-}
-
-/**
- * RENAME a conversation. Written `agent_runs.title`, that is to say the first
- * operation of the display cascade (`lib/agent-session-title.ts`): the name changes
- * everywhere at once. An empty title DELETES its own — the conversation then falls away
- * on the title of his ticket, and it's the way back from a renaming
- * malheureux.
- */
-export async function renameAgentRunApi(
-  runId: string,
-  title: string,
-): Promise<{ run: AgentRunSummary }> {
-  return parseJson(
-    await fetch(`/api/agent-runs/${runId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
-    }),
-  );
-}
-
-/** Pin or unpin the conversation for the current user. */
-export async function setAgentConversationPinnedApi(
-  runId: string,
-  pinned: boolean,
-): Promise<void> {
-  await parseJson(
-    await fetch(`/api/agent-runs/${runId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pinned }),
-    }),
-  );
-}
-
-/**
- * DELETE a conversation, regardless of its status. The server first cuts the
- * microVM and revokes the run key: otherwise, a conversation deleted in full
- * work would continue to run and cost, without anything left to say
- * laquelle.
- */
-export async function deleteAgentRunApi(runId: string): Promise<{ ok: true }> {
-  return parseJson(
-    await fetch(`/api/agent-runs/${runId}`, { method: "DELETE" }),
-  );
-}
-
-// ── Run detail / events / stop / PR ───────────────────── ─────────────────────
-
-export type AgentEventType =
-  | "status"
-  | "thinking"
-  | "tool_call"
-  | "tool_result"
-  | "commit"
-  | "pr_opened"
-  | "error"
-  | "summary"
-  | "user_message"
-  | "plan_update"
-  | "files_changed"
-  | "question"
-  | "needs_input"
-  /** Monthly usage budget exhausted during the run: the wire returns the card which says
-   * where the budget is and what we can do (make plans, wait, BYOK). */
-  | "quota_exhausted";
-
-export interface AgentRunEvent {
-  id: string;
-  seq: number;
-  type: AgentEventType;
-  payload: Record<string, unknown> | null;
-  created_at: string;
-}
-
-/** Nature d'un changement de fichier d'un tour (git name-status → 4 cas affichables). */
-export type AgentFileChangeStatus =
-  "added" | "modified" | "deleted" | "renamed";
-
-/**
- * A file changed during an agent turn (MIN-46, note “diff per turn”).
- * Emitted in the `files_changed` event at the end of the round, calculated on the server side by a
- * `git diff --numstat --name-status <previousSha> <currentSha>` in the sandbox (source
- * of truth — tool-calls are not enough: `apply_edits` and `run_command`
- * change files outside of their payload). `previousPath` is only present
- * for a rename (BEFORE path — the one that addresses the base version).
- */
-export interface AgentFileChange {
-  path: string;
-  status: AgentFileChangeStatus;
-  additions: number;
-  deletions: number;
-  previousPath?: string;
-}
-
-/** Result parsed with an event `files_changed`. `truncated`: the list has been limited (big turn). */
-export interface AgentFilesChangedPayload {
-  files: AgentFileChange[];
-  truncated: boolean;
-}
-
-/** Reads the payload of an event `files_changed` while tolerating partial forms. */
-export function parseFilesChangedPayload(
-  payload: Record<string, unknown> | null,
-): AgentFilesChangedPayload {
-  const rawFiles = Array.isArray(payload?.files)
-    ? (payload!.files as unknown[])
-    : [];
-  const files: AgentFileChange[] = [];
-  for (const raw of rawFiles) {
-    if (typeof raw !== "object" || raw === null) continue;
-    const r = raw as Record<string, unknown>;
-    const path = typeof r.path === "string" ? r.path : "";
-    if (!path) continue;
-    const status =
-      r.status === "added" || r.status === "deleted" || r.status === "renamed"
-        ? r.status
-        : "modified";
-    files.push({
-      path,
-      status,
-      additions: typeof r.additions === "number" ? r.additions : 0,
-      deletions: typeof r.deletions === "number" ? r.deletions : 0,
-      ...(typeof r.previousPath === "string"
-        ? { previousPath: r.previousPath }
-        : {}),
-    });
-  }
-  return { files, truncated: payload?.truncated === true };
-}
-
-export async function fetchAgentRunEventsApi(
-  runId: string,
-  after?: number,
-  signal?: AbortSignal,
-): Promise<{ events: AgentRunEvent[] }> {
-  const q = after != null ? `?after=${after}` : "";
-  return parseJson(await fetchClientRead(`/api/agent-runs/${runId}/events${q}`, { signal }));
-}
-
-/**
- * “Interrupt the current response”: asks the running chunk to suspend
- * cleanly the current LLM call and return to rest. DO NOT cancel the session,
- * does NOT clear the context, does NOT stop the sandbox — everything remains resumable.
- * (The endpoint remains /stop on the server side.)
- */
-export async function interruptAgentRunApi(runId: string): Promise<void> {
-  trackEvent("agent_stopped", {});
-  await parseJson(
-    await fetch(`/api/agent-runs/${runId}/stop`, { method: "POST" }),
-  );
-}
-
-/**
- * Heartbeat: refreshes the run's inactivity clock as long as the conversation
- * is open, so that the sandbox is not cut off while the user
- * reads or writes. Best-effort (ignores network errors).
- */
-export async function heartbeatAgentRunApi(runId: string): Promise<void> {
-  try {
-    await fetch(`/api/agent-runs/${runId}/heartbeat`, { method: "POST" });
-  } catch {
-    // best effort: the next heartbeat will catch up.
-  }
-}
-
-/**
- * Message to a session (MIN-46): directs the agent directly if it is working, or
- * continues the conversation (new turn) if the session is at rest.
- */
-export async function steerAgentRunApi(
-  runId: string,
-  message: string,
-  mentions: AssistantMention[] = [],
-  attachments: ResourceInput[] = [],
-  messageId = createUuid(),
-): Promise<{ ok: true; status: AgentRunStatus; messageId: string }> {
-  trackEvent("agent_steered", { length_bucket: lengthBucket(message) });
-  return parseJson(
-    await fetch(`/api/agent-runs/${runId}/steer`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        messageId,
-        ...(mentions.length ? { mentions } : {}),
-        ...(attachments.length ? { attachments } : {}),
-      }),
-    }),
-  );
+): Promise<{ pullRequest: IssuePr | null }> {
+  return parseJson(await fetchClientRead(`/api/issues/${issueId}/pull-request`));
 }
 
 export interface PullRequestRef {
@@ -628,49 +291,11 @@ export async function fetchPullRequestReadinessBatchApi(
     : data;
 }
 
-/**
- * Diff ALIVE of a run — the diff view IN the conversation, without waiting for the PR.
- * Two sources depending on what the run does: during the round, `git diff` read in the
- * microVM (including work not yet pushed); at rest, RA when it
- * exists, otherwise compares base...branch.
- *
- * `live` says the response comes from the sandbox: this diff contains work
- * which is not yet on the forge, and it is said on the screen.
- * `url`: the PR or the comparison page of the provider (“see on…” links).
- *
- * `stat` requests the same files WITHOUT their patches — enough to display two
- * numbers in the header without passing the entire diff every
- * quelques secondes.
- */
-export async function fetchAgentRunDiffApi(
-  runId: string,
-  opts?: { stat?: boolean },
-): Promise<{
-  files: PullRequestFile[];
-  truncated?: boolean;
-  provider?: RepoProviderId;
-  url: string | null;
-  live?: boolean;
-}> {
-  const query = opts?.stat ? "?stat=1" : "";
-  return parseJson(await fetchClientRead(`/api/agent-runs/${runId}/diff${query}`));
-}
-
-/**
- * Basis of routes for a pull request (MIN-143). Two families serve the same
- * gestures: the one indexed by the PR — the Pull Requests page, which also shows the
- * Human PR — and the facade indexed by the run, that the view diff from the
- * agent conversation is the only one to use (it only has one run to give, its
- * session sometimes having no PR).
- */
+/** Basis of routes for a pull request (MIN-143), indexed by the PR. */
 export type PrEndpoint = string;
 
 export function prEndpoint(prId: string): PrEndpoint {
   return `/api/pull-requests/${prId}`;
-}
-
-export function runPrEndpoint(runId: string): PrEndpoint {
-  return `/api/agent-runs/${runId}/pr`;
 }
 
 /**
@@ -795,9 +420,7 @@ export async function unlinkPullRequestIssueApi(
 export type ReviewVerdict = "approve" | "request_changes" | "comment";
 
 /**
- * Submits a review on PR (MIN-138). `relaunch` (on `request_changes`
- * only) launches IN ADDITION a cold run of Numo which iterates on this same PR,
- * with its own model (MIN-68).
+ * Submits a review on PR (MIN-138).
  *
  * `published: "comment"` in return = the forge refused to publish the verdict —
  * An App cannot approve its own pull request. The verdict is recorded
@@ -808,19 +431,12 @@ export async function submitPullRequestReviewApi(
   input: {
     verdict: ReviewVerdict;
     message: string;
-    relaunch?: boolean;
-    /** `false` = do not publish anything in the name of the person: the message is a
-     * instruction for Numo, not a verdict (“correct comments” mode).
-     * Default `true` — the historic gesture. */
-    postVerdict?: boolean;
   },
 ): Promise<{
   ok: true;
-  /** `none` = no verdict was given (desired), `comment` = the forge has it
-   * folded up due to not being able to carry it (self-review). */
-  published: "review" | "comment" | "none";
-  conversation?: { id: string };
-  turn?: { id: string };
+  /** `comment` = the forge folded the verdict up, being unable to carry it
+   * (self-review). */
+  published: "review" | "comment";
 }> {
   trackEvent("pr_review_submitted", { verdict: input.verdict });
   return parseJson(
@@ -840,55 +456,15 @@ export async function requestPullRequestReviewerApi(prId: string, login: string)
   }));
 }
 
-/**
- * “Have it checked by Numo” (MIN-141): a review pass on the diff, which
- * files a summary and up to five line comments on the PR.
- *
- * Available on ANY pull request — proofreading requires nothing other than a diff,
- * unlike "relaunch Numo", which needs a branch to inherit.
- * Manual by construction: nothing triggers it when opening a PR.
- *
- * Returns the SESSION, not the result: the pass is played in the background and is
- * look in the review panel (`usePrReviewSession`). If a pass turns
- * already on this PR, it's his that comes back - we don't open two.
- *
- */
-export async function requestPullRequestAiReviewApi(
-  prId: string,
-): Promise<{
-  ok: true;
-  conversation: { id: string };
-  turn: { id: string };
-}> {
-  trackEvent("pr_ai_review_requested");
-  return parseJson(
-    await fetch(prEndpoint(prId), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "ai_review",
-      }),
-    }),
-  );
-}
-
-export type { PrReviewRunSummary, PrReviewSession };
-
-export async function fetchPullRequestAiReviewApi(
-  prId: string,
-): Promise<PrReviewSession> {
-  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/ai-review`));
-}
-
 // ── Global Pull Requests page (MIN-66, expanded by MIN-143) ─────────────────
 
 /** List filtering state — served by the SERVER (`?state=`). */
 export type PullRequestStateFilter = "open" | "merged" | "closed" | "completed" | "all";
 
 export interface PullRequestListItem {
-  /** The item IS the PR. The run is no longer the carrier, just a decoration. */
+  /** The item IS the PR. */
   prId: string;
-  /** Authenticated viewer owns this PR, including PRs opened by their Numo run. */
+  /** Authenticated viewer authored this PR at the forge. */
   createdByMe?: boolean;
   /** The viewer has a pending review request at the forge. */
   reviewRequestedForMe?: boolean;
@@ -898,7 +474,7 @@ export interface PullRequestListItem {
   /** Linked Repository Provider — controls PR/MR vocabulary and links (MIN-69). */
   provider: RepoProviderId;
   title: string | null;
-  /** Who opened it — what distinguishes a Numo PR from a human PR. */
+  /** Who opened it at the forge. */
   author: { login: string; avatar_url: string | null } | null;
   head_branch: string | null;
   created_at: string;
@@ -912,22 +488,6 @@ export interface PullRequestListItem {
     icon_url: string | null;
     orb_seed: string | null;
   } | null;
-  /** PR canonical run, or null: a human PR has none. */
-  runId: string | null;
-  /**
-   * A Numo run OPENED this PR at the forge — not merely worked on it. It is
-   * what displays “Numo” as the author and feeds the “opened by Numo”
-   * filter: the forge login depends on the installation (app account or
-   * linked account), and a fix session requested on a human PR bears the
-   * number without having opened it.
-   */
-  numoOpened: boolean;
-  /** A run WORKS on this PR (queued/running) = “Numo is working again”. */
-  activeRunId: string | null;
-  /** Un run ACTIF occupe l'issue → « demander des changements » indisponible (MIN-68). */
-  busyRunId: string | null;
-  /** All runs carrying this PR — a deep-link `?run=` matches any. */
-  runIds: string[];
 }
 
 export interface PullRequestComment {
@@ -957,16 +517,14 @@ export interface PullRequestListResponse {
 }
 
 /**
- * `pin` PIN a PR in the answer even if it falls off the page — a
- * deep-link to an old PR should not depend on the depth of the
- * scrolling. `{ pr }` for a direct link, `{ run }` for historical links
- * of the app (the issue sidebar speaks in run).
+ * `pin` PINS a PR in the answer even if it falls off the page — a
+ * deep-link to an old PR should not depend on the depth of the scrolling.
  */
 export async function fetchAllPullRequestsApi(input: {
   state: PullRequestStateFilter;
   limit: number;
   offset?: number;
-  pin?: { pr?: string | null; run?: string | null };
+  pin?: { pr?: string | null };
 }, signal?: AbortSignal): Promise<PullRequestListResponse> {
   const params = new URLSearchParams({
     state: input.state,
@@ -974,7 +532,6 @@ export async function fetchAllPullRequestsApi(input: {
   });
   if (input.offset != null) params.set("offset", String(input.offset));
   if (input.pin?.pr) params.set("pr", input.pin.pr);
-  if (input.pin?.run) params.set("run", input.pin.run);
   return parseJson(await fetchClientRead(`/api/pull-requests?${params}`, { signal }));
 }
 
@@ -1255,144 +812,6 @@ export async function replyPrReviewCommentApi(
       body: JSON.stringify({ body: input.body, in_reply_to: input.inReplyTo }),
     }),
   );
-}
-
-// ── Page Agents (liste globale des sessions) ─────────────────────────────────
-
-/**
- * A CONVERSATION of the agent = ONE run, ticket or not: the successive runs of a
- * same ticket are separate conversations, listed side by side (there is no
- * no more session which groups them together, nor selector to go from one to
- * the other). Their title comes from the titler, written at launch.
- */
-export interface AgentSessionListItem {
-  /** Durable identity of the conversation. */
-  conversationId: string;
-  /** Current execution, used by the control plan. */
-  runId: string;
-  /** Frozen harness identity, independent of the account's current default. */
-  agent_engine?: AgentEngine | null;
-  status: AgentRunStatus;
-  model: string | null;
-  triggered_by: "button" | "chat" | "mention";
-  /** Title written at launch (PR title for proofreading). `null` when
-   * it is missing — cf. `agentSessionTitle` for fallbacks. */
-  title: string | null;
-  pr_number: number | null;
-  pr_url: string | null;
-  pr_state: "draft" | "open" | "merged" | "closed" | null;
-  created_at: string;
-  updated_at: string;
-  /** Null = conversation CARNET (MIN-84) ou de RELECTURE (MIN-168). */
-  issue: { id: string; number: number; title: string } | null;
-  issues?: Array<{ id: string; number: number; title: string; project_id: string; project_key: string }>;
-  /** The pull request that this conversation RELITS (MIN-168) — badge “Analysis of
-   * PR.” Distinct from `pr_number`, which is the PR that a code run has OPENED. */
-  pullRequest: {
-    id: string;
-    number: number;
-    title: string | null;
-    url: string | null;
-  } | null;
-  project: {
-    id: string;
-    key: string;
-    name: string;
-    icon_url: string | null;
-    orb_seed: string | null;
-  } | null;
-  /** CE run TRAVAILLE (queued/running) → spinner « Numo travaille ». */
-  working: boolean;
-  /** This conversation is pinned by the current user. */
-  pinned: boolean;
-  /**
-   * Agent end of this run, or `null` if it never finished. Compared to
-   * `last_read_at` of the user → blue bubble “finished, unread”.
-   */
-  lastCompletedAt: string | null;
-  /** This run is waiting for a response (ask_user) → YELLOW point. */
-  awaitingInput: boolean;
-}
-
-export async function fetchAgentSessionsApi(): Promise<{
-  sessions: AgentSessionListItem[];
-}> {
-  return parseJson(await fetchClientRead(`/api/agent-runs`));
-}
-
-// ── “Read” status of agent sessions (blue “completed, unread” bubble) ────────
-
-/**
- * Map { conversationId → last_read_at } of viewed conversations. A
- * session is UNREAD when its last completed run (`lastCompletedAt`) is
- * later than this timestamp (or absent from the card = never consulted).
- */
-export async function fetchAgentReadsApi(): Promise<{
-  reads: Record<string, string>;
-}> {
-  return parseJson(await fetchClientRead(`/api/agent-reads`));
-}
-
-/** Mark a conversation as read NOW. */
-export async function markAgentSessionReadApi(
-  conversationId: string,
-): Promise<void> {
-  await parseJson(
-    await fetch(`/api/agent-reads`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId }),
-    }),
-  );
-}
-
-/**
- * A session is UNREAD when its last agent end (`lastCompletedAt`) is
- * after the last `last_read_at` of the user (or never consulted), AND
- * that no run WORKS: during work it is the halo/spinner which takes precedence, the
- * “Done” bubble only appears once the agent is at rest.
- */
-export function isAgentSessionUnread(
-  session: Pick<
-    AgentSessionListItem,
-    "conversationId" | "working" | "lastCompletedAt"
-  >,
-  reads: Record<string, string>,
-): boolean {
-  if (session.working || !session.lastCompletedAt) return false;
-  const lastRead = reads[session.conversationId];
-  // NUMERICAL comparison: `completed_at` (Postgres, `…+00:00`) and `last_read_at`
-  // (client, `…Z`) do not have the same string format → a lexical `>` would be false.
-  if (!lastRead) return true;
-  return (
-    new Date(session.lastCompletedAt).getTime() > new Date(lastRead).getTime()
-  );
-}
-
-/**
- * A specific run is UNREAD: it finished (`completed_at`) after the last one
- * `last_read_at` of the session (or never consulted). Pilot the bubble in the
- * session selector (each run = “Session N”).
- */
-export function isAgentRunUnread(
-  run: Pick<AgentRunSummary, "completed_at">,
-  lastReadAt: string | null | undefined,
-): boolean {
-  if (!run.completed_at) return false;
-  // NUMERIC comparison (heterogeneous date formats — see isAgentSessionUnread).
-  if (!lastReadAt) return true;
-  return new Date(run.completed_at).getTime() > new Date(lastReadAt).getTime();
-}
-
-/**
- * The run is AT REST WAITING for a response from the user (round completed
- * on ask_user, MIN-86): the “unread” points turn YELLOW — the
- * conversation is blocked until the user responds.
- */
-export function isAgentRunAwaitingInput(
-  run: Pick<AgentRunSummary, "status" | "awaiting_input">,
-): boolean {
-  return run.status === "completed" && run.awaiting_input === true;
 }
 
 /**

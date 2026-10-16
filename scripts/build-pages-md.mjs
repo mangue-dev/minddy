@@ -17,10 +17,9 @@ import { fileURLToPath } from "node:url";
  * condition becomes constant, the function is reduced to an unconditional `throw`
  * — measured in `.next/server/chunks`: `function iQ(e){throw Error("[tiptap
  * error]: there is no window object available…")}`. Any markdown read
- * by an agent (MCP, Numo, code agent) fell there, regardless of the content.
+ * by an agent (MCP, Numo) fell there, regardless of the content.
  *
- * Hence this bundle, based on the already proven pattern of the microVM harness
- * (`scripts/build-agent-vm.mjs`): esbuild does not substitute `typeof window`, the
+ * Hence this bundle: esbuild does not substitute `typeof window`, the
  * guard remains a runtime test, and jsdom has already satisfied it when the
  * projection calls it (see `ensurePageDom`, lib/server/pages-projection.ts).
  *
@@ -43,8 +42,7 @@ const repo = path.resolve(dir, "..");
 /**
  * Where the bundle lands. OUTSIDE `lib/`, so that neither `tsc` nor vites
  * collect, and under a separate folder so that `outputFileTracingIncludes`
- * can take it on board with a single rule, for the same reason and in the same form as
- * `.agent-vm/`.
+ * can take it on board with a single rule.
  */
 const OUT_DIR = path.join(repo, ".pages-md");
 const OUT_FILE = path.join(OUT_DIR, "main.js");
@@ -76,7 +74,7 @@ const result = await build({
     // See both stubs for why. `server-only` out of caution (none
     // module of this graph does not matter today), `lucide-react` for good:
     // it weighs 971 KB of menu icons whose projection has no use.
-    "server-only": path.join(dir, "agent-vm-server-only-stub.js"),
+    "server-only": path.join(dir, "server-only-stub.js"),
     "lucide-react": path.join(dir, "pages-md-lucide-stub.js"),
   },
   logLevel: "warning",

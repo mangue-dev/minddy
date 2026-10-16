@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate with allowlisted private native preview (MIN-676); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; multi-provider settings and persistent personal Numo defaults",
+    "version": "0.11.1 candidate; multi-provider settings and persistent personal Numo defaults; MIN-721 removal of code agents, sandboxes and code-work usage",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -34,13 +34,10 @@
     "evidence": [
       "content/knowledge/plans-and-billing.md",
       "components/settings/account-ai-keys-section.tsx",
-      "components/settings/account-sandbox-section.tsx",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
       "lib/server/agent/model.ts",
       "lib/server/ai-runtime.ts",
-      "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
-      "lib/server/agent/execute.ts",
       "app/(app)/billing/page.tsx",
       "app/(marketing)/pricing/page.tsx",
       "lib/billing-plans.ts",
@@ -55,29 +52,24 @@
       "components/assistant/chat-input.tsx",
       "components/routines/routine-prompt-field.tsx",
       "content/documentation/reviews/pr397-review-fixes-2026-10-09.md",
-      "components/settings/native-agent-connections.tsx",
-      "components/settings/native-agent-connections.test.tsx",
       "content/documentation/reviews/min-676-private-native-preview-2026-10-10.md",
-      "app/api/account/agent-preferences/route.ts",
       "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
-      "components/agent/agent-engine-badge.tsx",
-      "lib/server/assistant/account-worker-context.ts",
       "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
       "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
-      "lib/native-agent-models.ts",
-      "components/settings/native-agent-model-preferences.tsx",
       "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
       "content/documentation/reviews/min-676-review-fixes-2026-10-11.md",
       "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md",
-      "components/settings/native-agent-login-wizard.tsx",
-      "content/documentation/reviews/min-676-native-login-wizard-2026-10-11.md"
+      "content/documentation/reviews/min-676-native-login-wizard-2026-10-11.md",
+      "lib/ai-surfaces.ts",
+      "components/billing/usage-segment-ui.tsx",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference); agent:/root (guided connection source, behavior fixtures and local visual review; no live provider authentication)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance); agent:/root (six-locale wizard procedure equivalence; no human acceptance)",
-    "date": "2026-10-11"
+    "revision": 16,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (PR #397 source review of voice/export additions; existing procedures and figures retained, no operational rerun); agent:/root/native_hosting_terms (private preview controls and limitations source/UI-test review; prior procedures retained, no native operational run); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (experimental Claude and explicit cold continuation source and fixture review; no live provider execution); agent:/root (provider routing, persistent Numo defaults and local Docker UI review; no provider inference); agent:/root (guided connection source, behavior fixtures and local visual review; no live provider authentication); agent:/root/min721_docs (MIN-721 source review inherited from en revision 16; it translation of removal edits; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (PR #397 localized additions and equivalent meaning review; no independent or human review claimed); agent:/root/native_hosting_terms (localized private preview additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale experimental and reconnect additions; agent review, not human acceptance); agent:/root (complete six-locale defaults and routing meaning review; no human acceptance); agent:/root (six-locale wizard procedure equivalence; no human acceptance); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "scheduled-routines"
@@ -99,7 +91,7 @@
       "src": "/documentation/it/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connessioni, assegnazione per capacità e modello Numo personale sono impostazioni separate.",
       "caption": "Più fornitori possono restare collegati. L’assegnazione sceglie per capacità; il predefinito Numo viene salvato per account e fornitore.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -125,94 +117,46 @@
           }
         ]
       }
-    },
-    {
-      "id": "plans-and-ai-usage-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/it/plans-and-ai-usage-workflow.png",
-      "alt": "Pagina di utilizzo IA dell’account dimostrativo.",
-      "caption": "Pagina di utilizzo IA dell’account dimostrativo. Budget, categorie e cronologia provengono dall’account; non sono stati avviati acquisti né esecuzioni a pagamento.",
-      "revision": 15,
-      "reviewed": true,
-      "capturedAt": "2026-10-09",
-      "viewport": [
-        1154,
-        1016
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
-    "ai-keys-and-models-workflow",
-    "plans-and-ai-usage-workflow"
+    "ai-keys-and-models-workflow"
   ]
 }
 ---
 
-Le impostazioni IA dell’account definiscono chiavi personali, ambiti e modelli predefiniti. Controlla l’instradamento dei modelli prima di avviare il lavoro. Su Cloud, usa la fatturazione per distinguere utilizzo incluso, chiamate con chiavi personali, calcolo nella sandbox e limiti delle routine. In self-hosted, disponibilità e costi dipendono dalla configurazione dell’istanza.
+Le impostazioni IA dell’account definiscono chiavi personali, ambiti e modelli predefiniti. Controlla l’instradamento dei modelli prima di avviare il lavoro. Su Cloud, usa la fatturazione per distinguere utilizzo incluso, chiamate con chiavi personali e limiti delle routine. In self-hosted, disponibilità e costi dipendono dalla configurazione dell’istanza.
 
-Le impostazioni IA separano **IA di Minddy** e **Agente di codice**. L’IA di Minddy configura i provider API per conversazioni Numo, automazioni, voce e feedback. Gli abbonamenti di programmazione si applicano solo agli agenti dei repository; non finanziano l’IA generale di Minddy.
+La sezione **IA di Minddy** delle impostazioni IA dell’account configura i provider API usati da conversazioni Numo, routine, automazioni, voce e feedback. Gli agenti di codice che esegui per conto tuo, collegati tramite minddy MCP, usano il proprio abbonamento o account API e non consumano l’utilizzo dell’IA di Minddy.
 
 ## Configurare chiavi IA personali e modelli {#ai-keys-and-models}
 
 Nelle impostazioni IA dell’account, **Fornitore IA** seleziona il fornitore di modelli di testo tra Minddy Cloud e i fornitori compatibili collegati. **Fornitori collegati** mostra l’elenco completo. Scegli **Aggiungi fornitore**, selezionalo, inserisci la chiave API e l’eventuale URL di base e salva. Puoi collegare più fornitori; aggiungerne o selezionarne uno non elimina gli altri. Non incollare mai una chiave in una conversazione o schermata.
 
-Assegna separatamente testo, trascrizione ed embeddings. Ogni famiglia usa un solo fornitore alla volta. Gli interruttori di utilizzo per fornitore stabiliscono se Numo, automazioni, voce e feedback usano quella chiave o la quota Minddy. Ad esempio, puoi mantenere il testo su OpenRouter e la trascrizione su OpenAI. Selezionare un fornitore di testo non riattiva un utilizzo Numo precedentemente disattivato. Il finanziamento e il modello OpenCode restano in **Agente di codice**.
+Assegna separatamente testo, trascrizione ed embeddings. Ogni famiglia usa un solo fornitore alla volta. Gli interruttori di utilizzo per fornitore stabiliscono se Numo, automazioni, voce e feedback usano quella chiave o la quota Minddy. Ad esempio, puoi mantenere il testo su OpenRouter e la trascrizione su OpenAI. Selezionare un fornitore di testo non riattiva un utilizzo Numo precedentemente disattivato.
 
 In **Modello predefinito di Numo**, scegli **Predefinito dell’app** o un modello specifico del fornitore attivo di Numo. La scelta viene salvata per il tuo account e separatamente per ogni fornitore, dopo i ricaricamenti e nelle nuove sessioni. Il valore dell’app segue il modello configurato dall’applicazione per quel fornitore. Il modello scelto esplicitamente in una conversazione ha la precedenza; le conversazioni che seguono il tuo predefinito ricevono le modifiche successive dell’account. I turni già ammessi mantengono il modello fissato. Un modello non più disponibile o oltre i limiti del piano viene rifiutato: scegli un altro modello o il predefinito dell’app. L’esportazione e importazione dell’account includono queste preferenze, senza credenziali dei fornitori.
 
-Una chiave non confermata o irraggiungibile può lasciare le chiamate IA generali supportate sul consumo Minddy quando l’IA gestita è configurata. Il fornitore fattura le chiamate effettuate con la sua chiave. Il calcolo delle sandbox viene registrato separatamente; le chiavi personali validate e il lavoro finanziato da Minddy seguono le [regole di budget qui sotto](#consumption).
+Una chiave non confermata o irraggiungibile può lasciare le chiamate IA generali supportate sul consumo Minddy quando l’IA gestita è configurata. Il fornitore fattura le chiamate effettuate con la sua chiave. Le chiavi personali validate e il lavoro finanziato da Minddy seguono le [regole di budget qui sotto](#consumption).
 
 ![Connessioni, assegnazione per capacità e modello Numo personale sono impostazioni separate.](/documentation/it/ai-providers-and-numo-defaults-flow.svg)
 
-### Scegliere l’agente di codice {#native-agent-preview}
+### Modelli locali {#models}
 
-**Claude Code è Sperimentale.** Richiede un piano che includa Claude Code; un account Free non basta. L’esecuzione reale con abbonamento e il rinnovo delle sessioni non sono ancora validati. Collegare un account non garantisce che il suo piano possa eseguire il modello selezionato.
-
-Dopo la riconnessione, chiedi esplicitamente a Numo di continuare il lavoro dell’agente precedente. Un nuovo messaggio nella sua precedente conversazione di codice apre Numo con la tua richiesta e il contesto di quell’agente. Minddy crea una nuova esecuzione con la nuova connessione, mantenendo motore, modello, ragionamento, ramo e contesto disponibile entro il limite di dimensione. L’esecuzione precedente conserva la generazione di connessione registrata; la connessione degli agenti attivi non viene mai sostituita.
-
-In **Agente di codice**, scegli **OpenCode (Minddy Cloud)** oppure OpenCode con il provider di modelli di testo configurato sopra. **Provider IA** sceglie il finanziamento del lavoro sul codice indipendentemente dalle altre funzioni API. Configura qui modello e ragionamento OpenCode. Regione e dimensioni della sandbox sono nella stessa sezione e si applicano agli agenti ospitati.
-
-Scegli prima **Codex** o **Claude Code** per mostrare solo i relativi controlli di connessione. La scelta non collega l’account e non avvia lavoro. I controlli attuali di accesso Codex descrivono il prototipo tecnico storico; non usarli in Minddy ospitato finché un’integrazione autorizzata non sostituisce questo meccanismo. **Disconnetti** rimuove l’accesso salvato da Minddy; non annulla l’abbonamento e non conferma la revoca OAuth remota.
-
-La connessione usa una procedura guidata. **Collega Codex** o **Collega Claude Code** apre la preparazione senza avviare l’accesso; **Avvia connessione** inizia l’autorizzazione. Nel prototipo privato Codex, **Copia codice** copia esattamente il codice mostrato e **Apri browser** apre la pagina ufficiale in una nuova scheda o nel browser desktop. Inserisci lì il codice; la conferma appare automaticamente. Per Claude, apri la pagina ufficiale, autorizza, scegli **Ho ricevuto il codice**, incolla il codice di ritorno nel campo mascherato e scegli **Completa connessione**. **Fine** chiude la conferma. Chiudere la procedura o scegliere **Annulla connessione** interrompe l’autorizzazione in attesa; un tentativo scaduto offre **Riprova**. Questa connessione riguarda solo gli agenti di codice, non Numo. L’accesso salvato sopravvive alla sostituzione delle sandbox. Claude resta sperimentale e l’esecuzione a pagamento non è stata testata.
-
-L’autenticazione Codex tramite abbonamento nei servizi ospitati non è disponibile per uso generale. OpenAI esclude esplicitamente l’autenticazione app-server da questi servizi e li indirizza a Sign in with ChatGPT. Minddy deve usare un’integrazione autorizzata prima del lancio. I test tecnici limitati non dimostrano l’autorizzazione del provider o il recupero dopo la scadenza naturale dei token. L’esecuzione a pagamento di Claude Code resta non testata. Rimuovere i badge dall’interfaccia non cambia queste condizioni. [OpenAI app-server](https://learn.chatgpt.com/docs/app-server#auth-endpoints), [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source).
-
-Le conversazioni degli agenti nativi mostrano motore, modello e ragionamento salvati, oppure i valori predefiniti senza una scelta esplicita. Non offrono controlli API OpenCode o allegati immagine. Le conversazioni OpenCode mantengono i controlli API.
-
-Prima di delegare, Numo riceve la scelta attuale dell’account e le capacità dell’adattatore selezionato. Una volta avviato l’agente, il suo motore e le sue capacità salvati hanno la precedenza per quella esecuzione, anche dopo modifiche alle impostazioni dell’account. Numo nomina questo agente quando spiega il lavoro delegato. Se non può leggere la scelta dell’account, controlla le impostazioni anziché indovinarla.
-
-L’adattatore nativo espone gli strumenti Minddy controllati tramite MCP. Strumenti integrati nativi del fornitore, immagini in ingresso e sottoagenti non sono disponibili in questi adattatori. Gestisce le domande dell’agente usando il contesto affidabile della conversazione oppure ti chiede una decisione mancante. Numo può usare i propri strumenti supportati entro la tua autorizzazione; non inventa operazioni non supportate dal motore.
-
-Una connessione mancante, un accesso scaduto o un limite del fornitore interrompe il lavoro nativo. Minddy non passa automaticamente a OpenCode, a un altro provider API o a un altro pagatore. Scegli esplicitamente **OpenCode** per usare il percorso API. Codex ospitato deve attendere l’integrazione autorizzata; un nuovo accesso tramite codice non è un recupero consentito. Per Claude, ricollega l’account selezionato quando l’accesso è disponibile. Disconnettere l’account o perdere l’accesso mantiene la scelta salvata finché non la cambi. Gli agenti esistenti mantengono il motore registrato.
-
-Gli abbonamenti nativi finanziano solo i modelli di codice; le chiamate API di Numo e il calcolo delle sandbox restano contabilizzati separatamente.
-
-### Modelli e luogo di esecuzione {#models}
-
-**OpenCode:** La scelta del modello di codice è legata al suo provider. Dopo la modifica, la disattivazione o la perdita di una chiave personale, la scelta precedente potrebbe non corrispondere più al provider attivo. Un nuovo worker rifiuta quindi di avviarsi finché non scegli un modello compatibile nelle impostazioni IA dell’account; non seleziona automaticamente un modello più economico o un valore predefinito della piattaforma. Un’esecuzione BYOK già fissata non cambia chi paga quando la sua chiave diventa indisponibile.
-
-In **Agente di codice**, scegli modello e ragionamento per i nuovi agenti. **Automatico** lascia all’agente selezionato il valore predefinito. **Aggiorna modelli** legge il catalogo della CLI Codex collegata, inclusi i livelli di ragionamento supportati. Non usa l’elenco API di OpenRouter. Aggiorna dopo un cambio di connessione o per vedere le opzioni attuali. Il tuo account può limitare un modello elencato da Codex; l’esecuzione ne conferma l’accesso. Claude Code offre gli alias **Sonnet**, **Opus** e **Haiku**, che seguono le raccomandazioni della CLI installata. L’esecuzione con un abbonamento Claude non è ancora stata testata. L’aggiornamento avvia brevemente una sandbox e poi la distrugge; il calcolo viene registrato separatamente dai modelli usati con l’abbonamento.
-
-Con Codex o Claude Code, cambiare modello reimposta il ragionamento su **Automatico** per non mantenere un livello incompatibile del modello precedente. Scegli poi un livello supportato. OpenCode, Codex e Claude Code conservano preferenze separate. Gli agenti esistenti mantengono motore, modello e ragionamento salvati all’avvio, anche alla ripresa. Queste scelte non cambiano il modello delle conversazioni Numo. Regione e dimensione della sandbox restano nella stessa sezione.
-
-Quando configurati, Ollama locale e gli endpoint compatibili con OpenAI possono gestire le conversazioni tramite il bridge desktop. Non possono gestire il lavoro sul codice delegato o le routine eseguite nella sandbox server. Per questi ambiti serve un provider raggiungibile dal server. Quando un provider non serve più, rimuovilo tramite il relativo comando di conferma e verifica l’instradamento risultante prima dell’esecuzione successiva.
+Quando configurati, Ollama locale e gli endpoint compatibili con OpenAI possono gestire le conversazioni tramite il bridge desktop. Le routine vengono eseguite sul server e non possono raggiungere un modello sul tuo computer. Per le routine serve un provider raggiungibile dal server. Quando un provider non serve più, rimuovilo tramite il relativo comando di conferma e verifica l’instradamento risultante prima dell’esecuzione successiva.
 
 
 ## Capire i piani Cloud e il consumo IA {#plans-and-ai-usage}
 
-Cloud offre i piani Free, Go e Pro. Tutti includono MCP, conversazioni Numo, azioni contestuali, lavoro sul codice e routine. Cambiano capacità, utilizzo IA incluso, modelli e spazio di archiviazione. Apri Fatturazione per vedere il budget e i consumi correnti e confronta la pagina pubblica dei prezzi prima di scegliere un piano; i dati pubblicati lì costituiscono il riferimento attuale.
+Cloud offre i piani Free, Go e Pro. Tutti includono MCP, conversazioni Numo, azioni contestuali e routine. Cambiano capacità, utilizzo IA incluso, modelli e spazio di archiviazione. Apri Fatturazione per vedere il budget e i consumi correnti e confronta la pagina pubblica dei prezzi prima di scegliere un piano; i dati pubblicati lì costituiscono il riferimento attuale.
 
 Usa il comando di acquisto o di gestione dell’abbonamento offerto al tuo account. Prima di accettare, controlla l’importo, il periodo di fatturazione e la conferma del provider. Un cambio di piano riuscito deve risultare nella fatturazione dell’account: verificalo, invece di considerare la chiusura della finestra di pagamento come una prova.
 
 ### Consumo del budget {#consumption}
 
-L’utilizzo IA incluso copre ragionamento, chiamate agli strumenti minddy, automazioni, chiamate al modello del worker e calcolo nella sandbox server. Il limite mensile dell’IA inclusa si applica al lavoro finanziato da minddy. Il tetto per esecuzione di una routine è un limite distinto che può mettere in pausa quell’esecuzione; il lavoro completato rimane nella conversazione. Questi limiti non autorizzano addebiti automatici per il superamento del budget. Controlla la scheda del limite e la data di ripristino del budget quando è disponibile.
+L’utilizzo IA incluso copre ragionamento e chiamate agli strumenti di Numo, routine, automazioni, dettatura vocale ed elaborazione dei feedback. Il limite mensile dell’IA inclusa si applica al lavoro finanziato da minddy. Il tetto per esecuzione di una routine è un limite distinto che può mettere in pausa quell’esecuzione; il lavoro completato rimane nella conversazione. Questi limiti non autorizzano addebiti automatici per il superamento del budget. Controlla la scheda del limite e la data di ripristino del budget quando è disponibile.
 
-Le chiavi personali compatibili fanno fatturare al provider le chiamate ai modelli anziché consumare l’utilizzo IA incluso. Un worker che usa una chiave BYOK convalidata non è soggetto alla quota del piano né al limite di calcolo dell’account. Il calcolo nella sandbox continua ad avere un costo reale e viene registrato nell’utilizzo; questa registrazione non significa che il limite mensile del piano si applichi a quell’esecuzione BYOK. Le famiglie o gli ambiti non assegnati le cui chiamate sono finanziate da minddy restano soggetti al rispettivo budget minddy. L’auto-hosting comporta costi d’infrastruttura e di provider opzionali determinati dall’installazione; eseguire lo stesso nucleo non lo trasforma in un abbonamento Cloud.
+Le chiavi personali compatibili fanno fatturare al provider le chiamate ai modelli anziché consumare l’utilizzo IA incluso. Le famiglie o gli ambiti non assegnati le cui chiamate sono finanziate da minddy restano soggetti al rispettivo budget minddy. L’auto-hosting comporta costi d’infrastruttura e di provider opzionali determinati dall’installazione; eseguire lo stesso nucleo non lo trasforma in un abbonamento Cloud.
 
 ### Capacità della versione candidata {#plan-capacities}
 
@@ -224,7 +168,7 @@ Questi valori predefiniti descrivono la versione candidata 0.11.1 identificata. 
 | Go | Illimitati | Illimitati | Illimitati | 20 GiB | 5 |
 | Pro | Illimitati | Illimitati | Illimitati | 100 GiB | 15 |
 
-![Pagina di utilizzo IA dell’account dimostrativo.](/documentation/it/plans-and-ai-usage-workflow.png)
+La fatturazione mostra il budget IA rimanente e il prossimo ripristino, **Andamento del budget** e **Cosa consuma il budget?**, che suddivide il consumo in **Routine**, **Numo**, **Dettatura vocale**, **Feedback** e **Automazioni** come percentuale del budget incluso. **Cronologia di utilizzo** elenca le azioni del periodo corrente e la loro quota del budget.
 
 ## Dettare testo e modifiche {#voice-dictation}
 

@@ -94,13 +94,13 @@ describe("one-time credentials in work accordions", () => {
     await render([
       integration(),
       {
-        id: "command-2",
-        name: "run_command",
-        arguments: JSON.stringify({ command: "npm test" }),
+        id: "search-2",
+        name: "web_search",
+        arguments: JSON.stringify({ query: "minddy" }),
         status: "complete",
       },
     ]);
-    expect(actionToggle().textContent).toContain("1 command run, 1 update");
+    expect(actionToggle().textContent).toContain("1 search, 1 update");
     expect(actionToggle().querySelector(".text-shimmer")).toBeNull();
   });
 

@@ -620,10 +620,8 @@ export interface EditTelemetryFailure {
 }
 
 /**
- * What ONE call from an editing tool made go through the cascade. Aggregated by
- * `exec-tool`, persisted by `agent-loop` in the event payload
- * `tool_result` — never returned to the model. The run model can be read next to it, on
- * `agent_runs.model`: this is what gives “by model and by path”.
+ * What ONE call from an editing tool made go through the cascade. It is
+ * diagnostic telemetry for the caller and is never returned to the model.
  */
 export interface EditTelemetry {
   tool: "edit_file" | "apply_edits" | "apply_patch";

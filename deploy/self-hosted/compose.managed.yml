@@ -8,12 +8,9 @@ services:
       - ${MINDDY_ENV_FILE:?Set MINDDY_ENV_FILE to the protected deployment environment file.}
     expose:
       - "3000"
-    depends_on:
-      agent-runner:
-        condition: service_healthy
     networks:
       - private
-      - agent_egress
+      - app_egress
     labels:
       org.opencontainers.image.version: ${MINDDY_RELEASE:?Set MINDDY_RELEASE from the matching compatibility row.}
     healthcheck:
@@ -69,37 +66,15 @@ services:
       timeout: 5s
       retries: 3
 
-  agent-runner:
-    image: ${MINDDY_IMAGE:?Set MINDDY_IMAGE from the matching compatibility row.}
-    restart: unless-stopped
-    user: "0:0"
-    read_only: true
-    command: ["node", "/app/agent-runner.mjs"]
-    environment:
-      AGENT_RUNNER_SECRET: ${AGENT_RUNNER_SECRET:?Set AGENT_RUNNER_SECRET.}
-      AGENT_RUNNER_SANDBOX_IMAGE: ${MINDDY_IMAGE:?Set MINDDY_IMAGE.}
-      AGENT_RUNNER_NETWORK: minddy-managed_agent_egress
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    tmpfs:
-      - /tmp:size=64m,mode=1777
-    networks:
-      - private
-      - agent_egress
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:6464/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-
 volumes:
   caddy_data:
   caddy_config:
 
 networks:
+  # Caddy alone joins `edge` for ingress and ACME. The application joins
+  # `app_egress` for Supabase and operator-selected AI and forge providers.
+  # The scheduler stays on the internal `private` network.
   edge:
   private:
     internal: true
-  agent_egress:
+  app_egress:

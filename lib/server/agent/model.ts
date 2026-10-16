@@ -14,17 +14,11 @@ import {
   type AgentProviderId,
 } from "@/lib/agent-providers";
 import {
-  isReasoningLevel,
-  DEFAULT_REASONING_LEVEL,
-  type ReasoningLevel,
-} from "@/lib/agent-reasoning";
-import {
   LOCAL_ENDPOINT_WITHOUT_API_KEY,
 } from "./byok-credentials";
 import { decodeUserAiKeyRow, type UserAiKeyRow } from
   "@/lib/server/user-ai-key-content";
 import { getOpenRouterModelInfo } from "./openrouter-index";
-import type { VmModelPricing } from "./vm/protocol";
 import {
   DEFAULT_BYOK_SURFACES,
   type AiSurface,
@@ -34,122 +28,19 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
 import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
- * Resolved code agent model and endpoint (MIN-46).
- *
- * MODEL — the account preference is the sole source for every new code
- * worker. Launch callers, conversations, routines, automations and PR reviews
- * cannot override it. The active provider is frozen separately on the run; if
- * the saved model belongs to another provider, the user must deliberately
- * choose a compatible model in Account settings.
+ * Resolved model endpoint (MIN-46).
  *
  * ENDPOINT — the BYOK credential assigned to the requested model capability,
  * if present (unlimited use, at own expense), otherwise the OpenRouter platform key
  * OPENROUTER_API_KEY (capped monthly, see quota.ts).
  */
 
-/** Root pricing baseline (admin), never a code-worker selection fallback. */
+/** Root pricing baseline (admin). */
 export async function getRootDefaultModel(): Promise<string> {
   return (
     (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() ||
     AGENT_ROOT_MODEL_FALLBACK
   );
-}
-
-interface StoredAgentModelPreference {
-  model: string | null;
-  provider: string | null;
-}
-
-/** User's personal code-worker model and the provider it was selected for. */
-export async function getUserDefaultModel(
-  userId: string,
-): Promise<StoredAgentModelPreference> {
-  const supabase = getServiceClient();
-  const { data } = await supabase
-    .from("user_agent_preferences")
-    .select("default_model, default_model_provider")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const row = data as {
-    default_model: string | null;
-    default_model_provider: string | null;
-  } | null;
-  return {
-    model: row?.default_model?.trim() || null,
-    provider: row?.default_model_provider ?? null,
-  };
-}
-
-/** User's reasoning fault, or null if they have not defined one. */
-export async function getUserDefaultReasoningLevel(
-  userId: string,
-): Promise<ReasoningLevel | null> {
-  const supabase = getServiceClient();
-  const { data } = await supabase
-    .from("user_agent_preferences")
-    .select("default_reasoning_level")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const raw = (data as { default_reasoning_level: string | null } | null)
-    ?.default_reasoning_level;
-  return isReasoningLevel(raw) ? raw : null;
-}
-
-/**
- * Resolve the account reasoning level to freeze on a new run (MIN-122).
- * Launch callers cannot override it.
- *
- * The four levels are open to ALL, minddy quota included: the subscription is
- * paid, it must be fully usable. What limits the expense is the budget
- * itself (`checkAgentQuota` at launch, and stopping mid-run when it
- * is exhausted), not a restriction on the level.
- */
-export async function resolveReasoningLevel(
-  userId: string,
-): Promise<ReasoningLevel> {
-  return (
-    (await getUserDefaultReasoningLevel(userId)) ?? DEFAULT_REASONING_LEVEL
-  );
-}
-
-/** Raised when the account has no model valid for its active worker provider. */
-export class AgentModelRequiredError extends Error {
-  code = "noModelForProvider" as const;
-  constructor(public provider: string) {
-    super(
-      `No account code-worker model is configured for provider ${provider}`,
-    );
-    this.name = "AgentModelRequiredError";
-  }
-}
-
-/** Model frozen on a run. */
-export interface ResolvedAgentModel {
-  model: string;
-  provider: AgentProviderId;
-  chosenByUser: true;
-}
-
-/**
- * Resolves the sole model that may be frozen on a new code-worker run.
- *
- * A preference is provider-bound. Changing, disabling or losing a BYOK key
- * therefore makes the old choice unavailable until the user selects a model
- * from Account settings. We never replace it with a cheaper platform or
- * provider default.
- */
-export async function resolveAgentModel(
-  userId: string,
-): Promise<ResolvedAgentModel> {
-  const [preference, byok] = await Promise.all([
-    getUserDefaultModel(userId),
-    getUserByok(userId, "agent"),
-  ]);
-  const provider = byok?.provider ?? DEFAULT_AGENT_PROVIDER;
-  if (!preference.model || preference.provider !== provider) {
-    throw new AgentModelRequiredError(provider);
-  }
-  return { model: preference.model, provider, chosenByUser: true };
 }
 
 // ── Endpoint (provider + base URL + key) ─────────────────────────────────────
@@ -348,15 +239,6 @@ export async function getUserByok(
   return resolveUserByok(userId, surface, { capability });
 }
 
-/** Resolve a frozen run from the provider recorded on that run, not current routing. */
-async function getUserByokForProvider(
-  userId: string,
-  surface: AiSurface,
-  provider: AgentProviderId,
-): Promise<UserByok | null> {
-  return resolveUserByok(userId, surface, { provider });
-}
-
 /** True if the user has a usable BYOK (→ unlimited use). */
 export async function userHasByokKey(
   userId: string,
@@ -404,36 +286,6 @@ export async function getModelInputPrice(
     (await getOpenRouterModelInfo(model, apiKey))?.pricing?.inputUsdPerMTok ??
     null
   );
-}
-
-/**
- * ALL model prices, cache included — what the microVM takes so that
- * the opencode harness calculates a cost that is OURS (MIN-286,
- * cf. `VmModelPricing`). Same source and same limits as the two functions
- * above: the OpenRouter index, therefore `null` in direct BYOK.
- *
- * `null` is not a benign detail here: a model declared without price makes
- * `cost: 0` to opencode. The caller must then write the usage in `estimated`,
- * never a zero in the ledger.
- */
-export async function getModelPricing(
-  model: string,
-  provider: AgentProviderId,
-  apiKey: string,
-): Promise<VmModelPricing | null> {
-  if (provider !== "openrouter") return null;
-  const info = await getOpenRouterModelInfo(model, apiKey);
-  if (!info?.pricing) return null;
-  return {
-    inputUsdPerMTok: info.pricing.inputUsdPerMTok,
-    outputUsdPerMTok: info.pricing.outputUsdPerMTok,
-    ...(info.cachePricing
-      ? {
-          cacheReadUsdPerMTok: info.cachePricing.readUsdPerMTok,
-          cacheWriteUsdPerMTok: info.cachePricing.writeUsdPerMTok,
-        }
-      : {}),
-  };
 }
 
 /**
@@ -518,44 +370,4 @@ export async function resolveAgentApiKey(
   }
   if (options.requireByok) throw new ByokCredentialUnavailableError();
   return resolvePlatformAgentEndpoint();
-}
-
-/** Resolve the endpoint frozen on a run without changing provider or payer. */
-export async function resolveAgentApiKeyForRun(
-  userId: string,
-  surface: Extract<AiSurface, "agent" | "automations">,
-  options: {
-    allowLocal?: boolean;
-    keyMode: AgentKeyMode;
-    provider?: AgentProviderId | null;
-  },
-): Promise<ResolvedAgentEndpoint> {
-  if (options.keyMode === "subscription") {
-    throw new Error("Native subscription workers have no API endpoint");
-  }
-  if (options.keyMode === "platform") {
-    if (options.provider && options.provider !== DEFAULT_AGENT_PROVIDER) {
-      throw new ByokCredentialUnavailableError();
-    }
-    // A platform run remains platform-funded even if the account adds BYOK
-    // while the worker is queued or between resumable chunks.
-    return resolvePlatformAgentEndpoint();
-  }
-
-  const byok = options.provider
-    ? await getUserByokForProvider(userId, surface, options.provider)
-    : await getUserByok(userId, surface);
-  if (!byok || (options.provider && byok.provider !== options.provider)) {
-    throw new ByokCredentialUnavailableError();
-  }
-  if (isLocalAgentProvider(byok.provider) && !options.allowLocal) {
-    throw new LocalEndpointRequiresLocalRunError();
-  }
-  return {
-    apiKey: byok.apiKey,
-    credentialVersion: byok.credentialVersion,
-    mode: "byok",
-    provider: byok.provider,
-    baseUrl: byok.baseUrl,
-  };
 }

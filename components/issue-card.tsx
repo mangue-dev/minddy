@@ -15,13 +15,9 @@ import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
 import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
-import { AgentBeam } from "@/components/agent-beam";
 import { useIssueMenuActionsWithNavigation } from "@/components/use-issue-menu-actions";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
-import {
-  CustomPromptDialog,
-  type CustomPromptTarget,
-} from "@/components/agent/custom-prompt-dialog";
+import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
 import {
   ALL_STATUSES,
   PRIORITIES,
@@ -44,17 +40,11 @@ import {
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
-import { useIssueActivity } from "@/components/agent/agent-activity-context";
+import { useIssuePr } from "@/components/issue-pr-context";
 import {
   isPrWorthShowing,
   type IssuePr,
 } from "@/lib/agent-api";
-import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
-import {
-  agentLaunchPromptVariant,
-  agentPlanPromptVariant,
-} from "@/lib/agent-launch-prompt";
 import type {
   Category,
   Issue,
@@ -970,19 +960,12 @@ const IssueCardContent = memo(function IssueCardContent({
   const t = useTranslations("IssueUI");
   const tAttach = useTranslations("Resources");
   const buildIssueMenuActions = useIssueMenuActionsWithNavigation(onNavigate);
-  const tAgent = useTranslations("Agent");
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { openIntent, open: openAssistant } = useAssistantPanelActions();
-  // One issue-scoped subscription drives the halo, resumable session, and PR.
-  const {
-    working: agentActive,
-    session: agentHasSession,
-    conversation: issueConversation,
-    pr,
-  } = useIssueActivity(issue.id);
+  // One issue-scoped subscription drives the pull request chip.
+  const pr = useIssuePr(issue.id);
 
   // Card bindings are made HERE rather than by the column (MIN-316).
   // The received props take the ticket as an argument and are therefore stable
@@ -1057,71 +1040,11 @@ const IssueCardContent = memo(function IssueCardContent({
   );
   // Confirmation before trash (the “Move to trash” entry).
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // “Custom”: the free-form prompt dialog, opened either to copy the external
-  // prompt or entrust the request to Numo (`null` = closed).
-  const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(
-    null,
-  );
-  // Reopening a prior session happens in the FAB, the only surface a Numo
-  // conversation lives in now: the card opens the conversation the newest run
-  // was delegated from. New work goes through Numo itself.
-  const openAgentSession = () => {
-    openAssistant({
-      conversationId: issueConversation,
-      projectId: issue.project_id,
-    });
-  };
-  const entrustToNumo = (
-    prompt: string,
-    action: NumoIntentAction = "implement",
-  ) => {
-    openIntent({
-      source: "issue",
-      action,
-      projectId: issue.project_id,
-      prompt,
-      pageContext: {
-        projectId: issue.project_id,
-        issueId: issue.id,
-        issueIdentifier: identifier,
-        issueTitle: issue.title,
-      },
-    });
-  };
-  const startNewAgentSession = () => {
-    // “Implement the ticket” ALWAYS arrives with its pre-written prompt
-    // (ticket context, adapted to its plan / effort) — like the other three
-    // ways of working in the same submenu. It used to be empty when the ticket
-    // already had a session, on the assumption that the context was inherited:
-    // from the user's perspective, the same menu entry filled the composer only
-    // every other time, without explaining the difference.
-    entrustToNumo(
-      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
-    );
-  };
+  // “Custom”: the free-form prompt dialog that copies the external prompt.
+  const [customPromptOpen, setCustomPromptOpen] = useState(false);
   // A plan already exists → the “plan” entries (⋯ menu, copied prompt, agent)
   // switch from “generate” to “verify”.
   const issueHasPlan = hasPlanTasks(issue.plan);
-  // Preserve the planning intent explicitly so Numo can answer, use issue
-  // tools, or delegate a repository-only planning task when needed.
-  const writePlanWithAgent = () => {
-    entrustToNumo(
-      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
-      "plan",
-    );
-  };
-  // Preserve verification as a distinct intent without moving the issue.
-  const verifyWithAgent = () => {
-    entrustToNumo(
-      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
-      "verify",
-    );
-  };
-  // ⇧A always starts a new common Numo request for this issue.
-  const launchAgent = () => {
-    startNewAgentSession();
-  };
-
   const relationCandidates = useMemo(() => {
     const candidateIssues = relationType ? getCandidateIssues?.() : undefined;
     if (!candidateIssues) return [];
@@ -1247,21 +1170,11 @@ const IssueCardContent = memo(function IssueCardContent({
     toast.success(t("verifyPromptCopied"));
   };
 
-  // “Customized”: the instruction entered in the dialog replaces the instruction
+  // “Custom”: the instruction entered in the dialog replaces the instruction
   // ready made — the context of the ticket remains provided by minddy (block
-  // <issue> of the copied prompt; session context on the Numo agent side). None
-  // automatic start: we do not know if this instruction is work.
-  const runCustomPrompt = async (
-    instructions: string,
-    target: CustomPromptTarget,
-  ) => {
-    if (target === "launch") {
-      entrustToNumo(
-        `${tAgent("launchPrompt.head", { identifier })}\n\n${instructions}`,
-        "custom",
-      );
-      return;
-    }
+  // <issue> of the copied prompt). No automatic start: we do not know if this
+  // instruction is work.
+  const runCustomPrompt = async (instructions: string) => {
     const forge = await loadOneIssuePromptContext(issue.id);
     await navigator.clipboard.writeText(
       buildIssueCustomPrompt(
@@ -1281,43 +1194,30 @@ const IssueCardContent = memo(function IssueCardContent({
 
   // ⚠ STABLE envelopes, not the handlers themselves (MIN-316).
   //
-  // `useAgentMenuActions` has its eleven parameters as dependencies of its `useMemo`.
-  // The handlers above are made in the component body: passed
-  // as is, the memo never got right and remanufactured ~20 objects
-  // action and ~16 JSX icons per card per render — for a CLOSED menu.
-  // `useStableCallback` freezes their identity without freezing what they do.
+  // `useAgentMenuActions` has its parameters as dependencies of its `useMemo`.
+  // The handlers above are made in the component body: passed as is, the memo
+  // never held and remade the action objects and JSX icons per card per render
+  // — for a CLOSED menu. `useStableCallback` freezes their identity without
+  // freezing what they do.
   const agentActions = useAgentMenuActions({
-    agentsEnabled: true,
-    // A session is only worth its menu entry when it can actually reopen:
-    // the card opens the conversation in the FAB, and runs that predate the
-    // shared identity name none — opening the live thread instead would be
-    // a lie about what the entry does.
-    hasSession: agentHasSession && issueConversation !== null,
     hasPlan: issueHasPlan,
     onCopyPrompt: useStableCallback(() => void copyPrompt()),
     onCopyPlanPrompt: useStableCallback(() => void copyPlanPrompt()),
     onCopyVerifyPrompt: useStableCallback(() => void copyVerifyPrompt()),
-    onCopyCustomPrompt: useStableCallback(() => setCustomTarget("copy")),
-    onImplementWithAgent: useStableCallback(() => startNewAgentSession()),
-    onWritePlanWithAgent: useStableCallback(() => writePlanWithAgent()),
-    onVerifyWithAgent: useStableCallback(() => verifyWithAgent()),
-    onCustomWithAgent: useStableCallback(() => setCustomTarget("launch")),
-    onOpenSession: useStableCallback(() => openAgentSession()),
+    onCopyCustomPrompt: useStableCallback(() => setCustomPromptOpen(true)),
   });
 
   // Keyboard shortcuts on hover: S/P/E/A/L/D/O open the picker on cursor,
-  // Space opens the ticket (like a click), Shift+P copies the prompt, Shift+A
-  // opens the agent (the last conversation of the ticket, or a blank dialer).
+  // Space opens the ticket (like a click), Shift+P copies the prompt.
   // The “Custom” dialog suspends them: it covers the card, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } =
-    useIssueFieldShortcuts(!dragging && !customTarget, {
+    useIssueFieldShortcuts(!dragging && !customPromptOpen, {
       " ": openIssue,
       "shift+p": () => void copyPrompt(),
-      "shift+a": launchAgent,
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
-  const interactionOpen = !!(menuPosition || relationType || confirmDelete || customTarget || menuState || uploads.pending.length);
+  const interactionOpen = !!(menuPosition || relationType || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
   useLayoutEffect(() => {
     onInteractionChange?.(issue.id, interactionOpen);
     // Activity disconnects effects while retaining dialog state and its owner.
@@ -1457,26 +1357,8 @@ const IssueCardContent = memo(function IssueCardContent({
             selected={selected}
           />
         );
-        // Current agent: animated border that runs along the edge (wrapper `AgentBeam`
-        // sharing). The wrapper has `overflow: hidden` → we transfer the shadow of
-        // the card, which he would otherwise trim. To be kept aligned with that of the body.
-        //
-        // `keepMounted` is NOT decorative here (MIN-302): without it, the type of
-        // the element rendered at this position changes with `agentActive`, and React
-        // does not reconcile two different types — it unmounts the subtree and
-        // get a new one. Now this subtree is the entire body of the map and
-        // its six pickers: at each shift of the halo, their local states
-        // die, an open picker clears without exit animation, and the
-        // focus falls back to <body>.
-        return (
-          <AgentBeam
-            active={agentActive}
-            keepMounted
-            className="rounded-xl shadow-xs"
-          >
-            {body}
-          </AgentBeam>
-        );
+        // The card's shadow lives on this wrapper; keep it aligned with the body.
+        return <div className="rounded-xl shadow-xs">{body}</div>;
       })()}
       <IssueContextMenu
         position={menuPosition}
@@ -1496,10 +1378,10 @@ const IssueCardContent = memo(function IssueCardContent({
         }}
       />
       <CustomPromptDialog
-        target={customTarget}
-        onOpenChange={(open) => !open && setCustomTarget(null)}
-        onSubmit={(instructions, target) => {
-          void runCustomPrompt(instructions, target);
+        open={customPromptOpen}
+        onOpenChange={setCustomPromptOpen}
+        onSubmit={(instructions) => {
+          void runCustomPrompt(instructions);
         }}
       />
       {/* Portalized too, therefore rendered in the React tree of the map: the

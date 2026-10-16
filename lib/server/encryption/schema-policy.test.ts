@@ -26,8 +26,7 @@ describe("encryption column policy", () => {
   });
 
   it("includes derived content, private identities and files", () => {
-    expect(policy.agent_run_events.encrypted).toContain("payload");
-    expect(policy.agent_run_journal.encrypted).toContain("events");
+    expect(policy.agent_routines.encrypted).toContain("prompt");
     expect(policy.numo_tool_operations.encrypted).toEqual(["arguments", "model_result", "result"]);
     expect(policy.stat_events.encrypted).toContain("issue_title");
     expect(policy.page_files.encrypted).toContain("file_name");

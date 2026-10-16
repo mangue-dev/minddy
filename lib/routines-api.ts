@@ -1,7 +1,7 @@
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
-import type { AgentRunSummary } from "./agent-api";
-import type { AssistantMention } from "./assistant-types";
+import type { AssistantMention, NumoTurnStatus } from "./assistant-types";
+import type { ReasoningLevel } from "./agent-reasoning";
 import { DEFAULT_MAX_SPEND_PERCENT } from "./routine-budget";
 import type { RoutineFrequency } from "./routine-schedule";
 
@@ -97,15 +97,32 @@ export interface RoutineInput {
   timezone: string;
 }
 
-export interface RoutineRunSummary extends Omit<
-  AgentRunSummary,
-  "reasoning_level" | "key_mode" | "triggered_by"
-> {
-  kind: "numo" | "legacy_agent";
-  reasoning_level: AgentRunSummary["reasoning_level"] | null;
-  key_mode: AgentRunSummary["key_mode"] | null;
+/** One occurrence of a routine — a Numo conversation — as the run list reads it. */
+export interface RoutineRunSummary {
+  id: string;
+  kind: "numo";
+  project_id: string;
+  issue_id: string | null;
+  status: "queued" | "running" | "completed" | "failed" | "canceled";
+  numo_status: NumoTurnStatus | null;
+  model: string | null;
+  model_forced: boolean;
+  reasoning_level: ReasoningLevel | null;
+  key_mode: null;
   triggered_by: "routine";
-  numo_status: import("./assistant-types").NumoTurnStatus | null;
+  prompt: string | null;
+  title?: string | null;
+  cost_usd: number;
+  outcome: string | null;
+  error_message: string | null;
+  started_at?: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  /** The occurrence paused on a question for its owner. */
+  awaiting_input: boolean;
+  /** Share of the owner's included monthly usage; owner-only. */
+  usage_percent?: number | null;
   numo_conversation_id: string | null;
   conversation_id?: string | null;
   origin: "scheduled" | "manual" | "event" | "database" | null;
@@ -113,7 +130,6 @@ export interface RoutineRunSummary extends Omit<
   subject_id?: string | null;
   subject_type?: "issue" | "page" | "feedback" | null;
   scheduled_for?: string | null;
-  work_run_id?: string | null;
 }
 
 export async function fetchRoutinesApi(): Promise<{ routines: Routine[] }> {

@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 5,
+  "revision": 7,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work",
     "editions": [
       "self-hosted"
     ],
@@ -44,14 +44,15 @@
       "app/api/oauth/register/route.ts",
       "lib/server/oauth/metadata.ts",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review)",
-    "date": "2026-10-10"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 6; pt-BR translation of removal edits; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root/min721_pt-BR (pt-BR translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "workspace-encryption",
@@ -68,7 +69,7 @@
       "src": "/documentation/pt-BR/install-locally-flow.svg",
       "alt": "Diagrama: Aplicativo desktop seleciona clone. Aplicação loopback: porta 6463. Supabase mínimo e dados duráveis. Sair encerra o aplicativo e o backend.",
       "caption": "O aplicativo desktop controla o início e o encerramento da instância local; os dados precisam ser preservados entre as execuções.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -100,7 +101,7 @@
       "src": "/documentation/pt-BR/install-locally-wizard.png",
       "alt": "Assistente público de instalação com o perfil deste computador selecionado.",
       "caption": "Escolha a instalação pessoal quando o aplicativo de desktop for gerenciar os serviços locais.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -153,7 +154,7 @@ Este perfil gerenciado pelo aplicativo desktop escuta apenas na interface de loo
 
 ## Recuperar após uma falha {#recover}
 
-Fechar uma janela mantém o aplicativo desktop ativo; use o comando para sair do aplicativo para parar também os serviços locais. Se não iniciar, copie o relatório pelo menu nativo de ajuda. Confira Docker, CLI, espaço e outros processos na 6463.
+Fechar uma janela mantém o aplicativo desktop ativo; use o comando para sair do aplicativo para parar também os serviços locais. Confira Docker, CLI, espaço e outros processos na 6463.
 
 `pnpm self-host:local` é uma alternativa de diagnóstico no terminal. Pare com Ctrl+C antes de devolver o controle ao aplicativo, que não assume processos alheios. Sair do aplicativo normalmente também para Supabase; `--keep-backend` muda isso explicitamente.
 

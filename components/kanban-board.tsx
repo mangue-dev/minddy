@@ -59,7 +59,7 @@ import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { KanbanColumn } from "@/components/kanban-column";
 import type { BoardLandingPreview } from "@/components/board-drop-indicator";
-import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
+import { IssuePrProvider } from "@/components/issue-pr-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import {
@@ -280,13 +280,11 @@ export const KanbanBoard = memo(function KanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, onAddRelation, clearSelection]);
-  // ⇧P/⇧A on the selection (MIN-539): ONE combined prompt for all the checked
+  // ⇧P on the selection (MIN-539): ONE combined prompt for all the checked
   // tickets, copied to the clipboard or handed to Numo. The selection
   // outranks the hovered card — the same precedence “@” follows.
   const bulkPromptActions = useBulkSelectionActions({
     selectedIssues,
-    projectId,
-    identifierOf: (issue) => issueIdentifier(projectKey, issue.number),
     buildInput: (issue) => ({
       issue,
       projectId,
@@ -487,7 +485,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   };
 
   return (
-    <AgentActivityProvider projectId={projectId}>
+    <IssuePrProvider projectId={projectId}>
       {/* “@” on card hover or selection opens Numo with the same context as
           the button on the selection pill (MIN-105). */}
       <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
@@ -523,7 +521,6 @@ export const KanbanBoard = memo(function KanbanBoard({
                 onClear={clearSelection}
                 onAskNumo={() => onAskNumo(selectedIssues)}
                 onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-                onLaunchAgent={bulkPromptActions.launchAgent}
                 cycle={bulkCycle}
                 // A project-board selection always belongs to one project, so
                 // all of that project's objectives are available.
@@ -614,6 +611,6 @@ export const KanbanBoard = memo(function KanbanBoard({
           </DragOverlay>
         </DndContext>
       </AskNumoProvider>
-    </AgentActivityProvider>
+    </IssuePrProvider>
   );
 });

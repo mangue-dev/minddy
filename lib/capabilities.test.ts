@@ -36,7 +36,6 @@ describe("resolveCapabilities", () => {
       MINDDY_EDITION: "cloud",
       MINDDY_MANAGED_AI: "1",
       MINDDY_MANAGED_BILLING: "1",
-      AGENT_EXECUTION_BACKEND: "vercel",
       EMAIL_PROVIDER: "resend",
       GITHUB_APP_ID: "1",
       GITLAB_OAUTH_CLIENT_ID: "1",
@@ -47,7 +46,6 @@ describe("resolveCapabilities", () => {
     for (const id of [
       "managedAi",
       "managedBilling",
-      "vercelSandbox",
       "transactionalEmail",
     ] as const) {
       expect(capabilities[id].state).toBe("incomplete");
@@ -59,7 +57,7 @@ describe("resolveCapabilities", () => {
     }
   });
 
-  it("requires an explicit choice before any Vercel Sandbox or Resend execution", () => {
+  it("requires an explicit choice before any Resend delivery", () => {
     const capabilities = resolveCapabilities({
       ...core,
       VERCEL: "1",
@@ -67,19 +65,18 @@ describe("resolveCapabilities", () => {
       FEEDBACK_EMAIL_FROM: "feedback@example.test",
       INVITATION_EMAIL_FROM: "invites@example.test",
     });
-    expect(capabilities.vercelSandbox.configured).toBe(false);
     expect(capabilities.transactionalEmail.configured).toBe(false);
   });
 
-  it("enables the built-in self-hosted agent runner without Vercel credentials", () => {
+  it("exposes no code-execution capability, whatever legacy runner settings remain", () => {
     const capabilities = resolveCapabilities({
       ...core,
       AGENT_EXECUTION_BACKEND: "self-hosted",
       AGENT_RUNNER_URL: "http://agent-runner:6464",
       AGENT_RUNNER_SECRET: "runner-secret",
     });
-    expect(capabilities.agentExecution.state).toBe("ready");
-    expect(capabilities.vercelSandbox.configured).toBe(false);
+    expect(Object.keys(capabilities)).not.toContain("agentExecution");
+    expect(Object.keys(capabilities)).not.toContain("vercelSandbox");
   });
 
   it("does not activate Cloud providers from deceptive host or Vercel metadata", () => {
@@ -108,7 +105,6 @@ describe("resolveCapabilities", () => {
     for (const id of [
       "managedBilling",
       "managedAi",
-      "vercelSandbox",
       "analytics",
       "transactionalEmail",
       "webPush",
@@ -158,63 +154,6 @@ describe("resolveCapabilities", () => {
     expect(capabilities.analytics.configured).toBe(false);
   });
 
-  it("requires the instance origin for Vercel Sandbox outside Vercel", () => {
-    const capabilities = resolveCapabilities({
-      ...core,
-      AGENT_EXECUTION_BACKEND: "vercel",
-      VERCEL_TOKEN: "token",
-      VERCEL_TEAM_ID: "team",
-      VERCEL_PROJECT_ID: "project",
-    });
-
-    expect(capabilities.vercelSandbox.state).toBe("incomplete");
-    expect(capabilities.vercelSandbox.missing).toContain("MINDDY_PUBLIC_APP_URL");
-  });
-
-  describe.each([
-    { deployment: "on Vercel", credentials: { VERCEL: "1" } },
-    { deployment: "outside Vercel", credentials: {
-      VERCEL_TOKEN: "token",
-      VERCEL_TEAM_ID: "team",
-      VERCEL_PROJECT_ID: "project",
-      MINDDY_PUBLIC_APP_URL: "https://minddy.example.test",
-    } },
-  ])("Vercel agent encryption prerequisites $deployment", ({ credentials }) => {
-    it.each([undefined, "", "a".repeat(63), "g".repeat(64), ` ${"a".repeat(64)}`])(
-      "rejects a missing or malformed root key even with content encryption disabled (%j)",
-      (rootKey) => {
-        const capabilities = resolveCapabilities({
-          ...core,
-          ...credentials,
-          AGENT_EXECUTION_BACKEND: "vercel",
-          MINDDY_CONTENT_ENCRYPTION_ENABLED: "false",
-          MINDDY_DATA_ROOT_KEY: rootKey,
-        });
-        for (const id of ["vercelSandbox", "agentExecution"] as const) {
-          expect(capabilities[id]).toMatchObject({
-            state: "incomplete",
-            configured: false,
-            missing: ["MINDDY_DATA_ROOT_KEY (64 hexadecimal characters)"],
-          });
-          expect(capabilities[id].diagnostic).toContain("Set: MINDDY_DATA_ROOT_KEY");
-        }
-      },
-    );
-
-    it.each(["ab".repeat(32), "AB".repeat(32)])("accepts a valid root key (%s)", (rootKey) => {
-      const capabilities = resolveCapabilities({
-        ...core,
-        ...credentials,
-        AGENT_EXECUTION_BACKEND: "vercel",
-        MINDDY_CONTENT_ENCRYPTION_ENABLED: "false",
-        MINDDY_DATA_ROOT_KEY: rootKey,
-      });
-      for (const id of ["vercelSandbox", "agentExecution"] as const) {
-        expect(capabilities[id]).toMatchObject({ state: "ready", configured: true, missing: [] });
-      }
-    });
-  });
-
   it("does not declare Web Push ready with an unusable VAPID subject", () => {
     const capabilities = resolveCapabilities({
       ...core,
@@ -227,9 +166,8 @@ describe("resolveCapabilities", () => {
     expect(capabilities.webPush.missing).toContain("VAPID_SUBJECT (mailto: or https:)");
   });
 
-  it("classifies workable replacements outside Vercel and Resend", () => {
+  it("classifies workable replacements outside Resend and the managed services", () => {
     const capabilities = resolveCapabilities(core);
-    expect(capabilities.vercelSandbox.requirement).toBe("replaceable");
     expect(capabilities.scheduler.requirement).toBe("replaceable");
     expect(capabilities.transactionalEmail.requirement).toBe("replaceable");
     expect(capabilities.managedAi.requirement).toBe("replaceable");

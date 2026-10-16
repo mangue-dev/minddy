@@ -1,7 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
-import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { decodePageProjection } from "@/lib/server/page-content";
@@ -111,9 +110,6 @@ export async function readInboxNotifications({
       ].filter(Boolean),
     ),
   ] as string[];
-  const conversationIds = [
-    ...new Set(readable.map((n) => n.agent_conversation_id).filter(Boolean)),
-  ] as string[];
   const objectiveIds = [
     ...new Set(
       [
@@ -177,7 +173,6 @@ export async function readInboxNotifications({
 
   const [
     { data: issues },
-    { data: agentConversations },
     { data: objectives, error: objectivesError },
     { data: feedbackPosts },
     { data: routines },
@@ -185,7 +180,6 @@ export async function readInboxNotifications({
     { data: pages },
     { data: projects },
     { data: projectLinks },
-    { data: delegatedWork },
     { data: actorMembers },
     { keyOwners, keyOwnerMembers },
   ] = await Promise.all([
@@ -201,21 +195,6 @@ export async function readInboxNotifications({
             number: number;
             title: string;
           }[],
-        }),
-    conversationIds.length && projectIds.length
-      ? (async () => {
-        const first = await service
-          .from("agent_conversations")
-          .select("id, project_id, title, title_ciphertext, title_encryption_version")
-          .in("id", conversationIds)
-          .in("project_id", projectIds);
-        return legacyAgentTitleSchema(first.error)
-          ? service.from("agent_conversations").select("id, project_id, title")
-              .in("id", conversationIds).in("project_id", projectIds)
-          : first;
-      })()
-      : Promise.resolve({
-          data: [] as { id: string; project_id: string; title: string | null }[],
         }),
     objectiveIds.length && projectIds.length
       ? objectiveStore(service)
@@ -289,31 +268,12 @@ export async function readInboxNotifications({
             repo_full_name: string;
           }[],
         }),
-    conversationIds.length
-      ? service
-          .from("numo_work")
-          .select("id, conversation_id, legacy_conversation_id, project_id, updated_at")
-          .in("legacy_conversation_id", conversationIds)
-          .order("updated_at", { ascending: false })
-      : Promise.resolve({
-          data: [] as {
-            id: string;
-            conversation_id: string;
-            legacy_conversation_id: string;
-            project_id: string;
-            updated_at: string;
-          }[],
-        }),
     readProjectMembers(candidateActorIds),
     readKeyAttribution(),
   ]);
   if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
 
   const issueMap = new Map((issues ?? []).map((item) => [item.id, item]));
-  const decodedConversations = await Promise.all((agentConversations ?? []).map((item) =>
-    decodeAgentTitle(item as { id: string; project_id: string; title: string | null;
-      title_ciphertext?: string | null; title_encryption_version?: number }, userId)));
-  const conversationMap = new Map(decodedConversations.map((item) => [item.id, item]));
   const objectiveMap = new Map(
     (objectives ?? []).map((item) => [item.id, item]),
   );
@@ -330,29 +290,12 @@ export async function readInboxNotifications({
     decodePageProjection(item, userId)))).map((item) => [item.id, item]));
   const projectMap = new Map((projects ?? []).map((item) => [item.id, item]));
   const commentMap = new Map((comments ?? []).map((item) => [item.id, item]));
-  const delegatedWorkMap = new Map<string, {
-    id: string;
-    conversation_id: string;
-    project_id: string;
-  }>();
-  for (const item of delegatedWork ?? []) {
-    if (!delegatedWorkMap.has(item.legacy_conversation_id)) {
-      delegatedWorkMap.set(item.legacy_conversation_id, item);
-    }
-  }
-
   const inProject = <T extends { project_id: string }>(
     item: T | undefined,
     projectId: unknown,
   ): item is T => !!item && item.project_id === projectId;
   const issueFor = (n: (typeof readable)[number]) => {
     const item = n.issue_id ? issueMap.get(n.issue_id) : undefined;
-    return inProject(item, n.project_id) ? item : undefined;
-  };
-  const conversationFor = (n: (typeof readable)[number]) => {
-    const item = n.agent_conversation_id
-      ? conversationMap.get(n.agent_conversation_id)
-      : undefined;
     return inProject(item, n.project_id) ? item : undefined;
   };
   const objectiveFor = (n: (typeof readable)[number]) => {
@@ -415,9 +358,6 @@ export async function readInboxNotifications({
   // target from the response.
   const targetAlive = (n: (typeof readable)[number]): boolean =>
     (!n.issue_id || issues === null || !!issueFor(n)) &&
-    (!n.agent_conversation_id ||
-      agentConversations === null ||
-      !!conversationFor(n)) &&
     (!n.objective_id || !!objectiveFor(n)) &&
     (!n.feedback_post_id || feedbackPosts === null || !!feedbackFor(n)) &&
     (!n.routine_id || routines === null || !!routineFor(n)) &&
@@ -486,18 +426,6 @@ export async function readInboxNotifications({
           : undefined;
       const comment = commentFor(n);
       const fromNumo = Boolean(n.via_assistant || comment?.via_assistant);
-      const delegated = n.agent_conversation_id
-        ? delegatedWorkMap.get(n.agent_conversation_id)
-        : undefined;
-      const delegatedTarget = delegated?.project_id === n.project_id
-        ? delegated
-        : undefined;
-      const numoConversationId = typeof n.numo_conversation_id === "string"
-        ? n.numo_conversation_id
-        : delegatedTarget?.conversation_id ?? null;
-      const numoWorkId = typeof n.numo_work_id === "string"
-        ? n.numo_work_id
-        : delegatedTarget?.id ?? null;
       const viaMcp = !fromNumo && Boolean(n.via_mcp || comment?.via_mcp);
       const keyActor = viaMcp && keyAllowedFor(n)
         ? keyActors.get(keyIdFor(n) as string)
@@ -509,10 +437,6 @@ export async function readInboxNotifications({
         read_at: n.read_at,
         created_at: n.created_at,
         issue_id: n.issue_id,
-        agent_conversation_id: n.agent_conversation_id ?? null,
-        agent_conversation_title: conversationFor(n)?.title ?? null,
-        numo_conversation_id: numoConversationId,
-        numo_work_id: numoWorkId,
         issue_number: issue?.number ?? null,
         issue_title: issue?.title ?? null,
         objective_id: n.objective_id ?? null,

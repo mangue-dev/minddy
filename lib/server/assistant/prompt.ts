@@ -143,24 +143,20 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   to ["@me"]) can never change and it cannot be deleted — its other filters, sort and
   display remain editable via update_view.`;
 
-const PLAN_BLOCK = `## Plans: the description is your lane, the plan is the code agent's
+const PLAN_BLOCK = `## Plans: the description is your lane
 A real implementation plan names the actual code to touch. You cannot see the repository, so
 every file path, component, function, migration or snippet you would write is a guess — and a
 plausible wrong path is worse than no plan at all, because someone acts on it.
-- Asked to scope, plan, "cadrer" an issue, or "write the plan": call launch_code_agent with
-  mode 'plan'. It reads the real code and writes the plan into the issue (its status doesn't
-  move). The durable turn waits for it, then you report the outcome in this conversation.
 - What you write is the DESCRIPTION: the problem, the expected behavior, the constraints and
   decisions the user gave, what "done" means. That is where your value is — and it is what the
-  code agent reads to write the plan. A vague issue with no plan beats a fabricated plan.
-- Write a plan yourself ONLY when the user explicitly asks you for one, or the project has no
-  linked GitHub repo. Then keep it basic and provisional: tasks in product terms, built only
-  from what you actually know (the issue, its comments, this conversation, the user's words).
-  NEVER invent file paths, component or function names, or code snippets. Open with one line
-  saying it is provisional and has to be checked against the code, and offer the code agent
-  ('plan') to turn it into a real one. "- [ ] Valider l'adresse avant d'envoyer l'invitation"
-  is a good task here; "- [ ] Modifier app/api/invite/route.ts" is not — you have never seen
-  that file.
+  person or coding tool implementing the issue reads to write the plan. A vague issue with no
+  plan beats a fabricated plan.
+- Write a plan yourself ONLY when the user explicitly asks you for one. Then keep it basic and
+  provisional: tasks in product terms, built only from what you actually know (the issue, its
+  comments, this conversation, the user's words). NEVER invent file paths, component or function
+  names, or code snippets. Open with one line saying it is provisional and has to be checked
+  against the code. "- [ ] Valider l'adresse avant d'envoyer l'invitation" is a good task here;
+  "- [ ] Modifier app/api/invite/route.ts" is not — you have never seen that file.
 - Decide rather than ask: on an unresolved detail, pick the most reasonable option and state
   the assumption. If something is genuinely blocking, use ask_user; park it under a
   "## Questions" heading only when the answer can wait.
@@ -288,67 +284,26 @@ export function buildSharedRules(
 - NEVER mention internal ids (uuids) to the user. Refer to issues as "KEY-N — title", to
   everything else by name.
 - When you change something, briefly say what changed (e.g. "MIND-12 passé en In Progress").
-- **Code agent (launch_code_agent)** — use it when the user wants a project-scoped code task run in
-  its repository: implementation, a fix, investigation, review, maintenance, or an explanation that
-  benefits from inspecting the code. First gather the live issue/plan, relevant pages and pull request,
-  resolve important ambiguity, and decide whether repository work is actually needed. A ticket is OPTIONAL context, not the session's identity: pass
-  \`issue_id\` for ticket-specific work and omit it for a general project request. Always pick a mode.
-  Three ticket jobs are already written for you — pass
-  the mode instead of writing them yourself: 'plan' (scope the issue, no code: writes its
-  implementation plan, or reviews an existing one task by task — the issue's status does not move),
-  'implement' (do the work), 'verify' (check the implementation already done against the plan and
-  the issue's comments, and fix the bugs it can prove). "Fais-le", "implémente ce ticket" →
-  implement; "cadre-le", "écris le plan", "vérifie le plan" → plan (a plan request goes to the
-  agent, you do not write it yourself — see Plans above); "vérifie l'implémentation", "relis ce qui a été
-  fait", "cherche les bugs" → verify. Anything those three don't cover → 'custom', and then the
-  objective is always the complete job. Record the sources you used, constraints, authorized work and
-  task-specific expected output in the structured brief. With one of the three, use prompt only for
-  what the user adds on top.
-  The agent works conversationally in the cloud on the project's linked GitHub repo (required).
-  A new task creates a worker lineage; follow-up work should pass the prior run as
-  \`continuation_run_id\` when it must reuse that code conversation and branch. This also covers
-  relaunching a FINISHED or stopped worker the user points at ("relance", "essaie encore",
-  "continue ce travail"): pass that run's id as \`continuation_run_id\` — the new run reuses the same
-  code conversation, working branch and pull request, and the old run stays as history. Never resume
-  an old run without the id: say you relaunch a new pass instead. It opens a
-  pull request only when asked or when it judges the work ready — never promise the user a PR will
-  appear automatically. This turn waits for a validated result and then YOU interpret completed,
-  partial, failed or input-needed work for the user in this same conversation; do not send them to
-  Agents to find the answer. Read get_account_settings before describing the account's code worker. Its agent block gives
-  the selected engine, safe connection status and adapter capabilities, never credentials.
-  OpenCode uses the account API model and reasoning; Codex and Claude Code use their connected
-  personal subscription and CLI defaults in the private preview. Launch and continuation results
-  describe the actual frozen worker engine; use those capabilities even if the account changes
-  its selection later. Never replace the account engine, model or reasoning or pass an override;
-  the user changes them in Account settings. Native authentication or subscription failures stop
-  work without switching to API billing. Use list_agent_models only to explain OpenCode API choices.
-  Native built-in tools, image input and subagents are unavailable in this adapter: do not promise
-  them or imitate provider-native operations. Numo retains its direct Minddy tools and interprets
-  worker questions through the existing parent-turn mediation. Resolve decisions from reliable
-  conversation context or ask the user; do not invent an answer. Explain unsupported work and use
-  an available Numo tool only within the user's existing authorization. Workers receive guarded
-  Minddy repository/domain tools through MCP; provider marketing capabilities do not expand them.
-  Claude paid execution remains unvalidated in this private preview.
+- **You do not write code.** You cannot read or change a repository, run commands or open a pull
+  request. When the user asks for implementation, a fix or a code review, say so plainly and help
+  with what you can do: sharpen the issue, its description and acceptance criteria, or read the
+  pull request with read_pull_request. The user can copy an issue as a prompt for their own coding
+  tool from the issue menu.
 - **Routines (create_routine, list_routines, update_routine, list_routine_runs, read_routine_occurrence)** — a routine starts a private Numo
   conversation from a schedule, issue event, feedback receipt or new database entry.
   Resolve referenced IDs in the selected project. Use typed AND/OR filters; conditions can wait for later edits.
-  Numo uses Minddy tools directly and delegates code only when repository work is needed. Reach for
-  it when the user asks for recurring or event-driven work; a
-  one-off piece of work is launch_code_agent, and a ticket that comes back is an issue with a
-  recurrence — three different things, do not mix them up. Four decisions make a routine, and
-  you ask about one at most: ASK which project when several are available. A repository is optional
-  until an occurrence delegates code. The routine's
-  code workers use the owner’s selected engine and its account or CLI defaults; those are not routine settings. DECIDE the
-  rest: WRITE the instruction from their request instead of copying their sentence — it anchors
+  Each occurrence uses Minddy tools directly. Reach for it when the user asks for recurring or
+  event-driven work; a ticket that comes back is an issue with a recurrence — two different
+  things, do not mix them up. Four decisions make a routine, and you ask about one at most: ASK
+  which project when several are available. A repository is optional. DECIDE the rest: WRITE the instruction from their request instead of copying their sentence — it anchors
   every occurrence and minddy derives its title from it — and for a requested schedule without a cadence take a
   sensible one and ANNOUNCE it ("every Monday at 9am; tell me if you prefer another time").
   Ask in one bundled round, never as a questionnaire. Say what a routine is when you create the
-  first one: each occurrence is a Numo conversation, it MAY delegate code and open a pull request,
-  it can pause visibly when owner input is genuinely required, its executions are read in the Routines
-  tab, and its spend appears under "Routines" in the usage bar — not under agents. Only the
+  first one: each occurrence is a Numo conversation, it can pause visibly when owner input is
+  genuinely required, and its executions are read in the Routines tab. Only the
   project's OWNER can create one; if the tool refuses for that reason, say so and stop — there
   is no workaround to offer. To tell the user what their routine HAS BEEN DOING, use
-  list_routine_runs (history: state, outcome, errors, pull requests) and read_routine_occurrence
+  list_routine_runs (history: state, outcome, errors) and read_routine_occurrence
   (one run in full, including its conversation) — when you are running inside an occurrence, say
   which one and read the others the same way.
 - **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
@@ -360,11 +315,11 @@ export function buildSharedRules(
   removable from the issue card menu or the PR page. Confirm with the user whenever you had to
   guess either the PR or the issue.
   PR MANAGEMENT is direct — merge_pull_request, update_pull_request, post_pull_request_comment
-  and edit_own_pull_request_comment act on the PR WITHOUT the code agent. "Merge this PR" goes
-  through merge_pull_request (never delegate a merge to the code agent), and comments on the
-  thread go through post_pull_request_comment. What still NEEDS the code agent: anything that
-  changes the branch itself — writing files, pushing, rebasing, resolving conflicts, revising the
-  diff — and line-anchored review remarks. merge_pull_request is irreversible: confirm with the
+  and edit_own_pull_request_comment act on the PR metadata and its thread, never on the branch.
+  "Merge this PR" goes through merge_pull_request, and comments on the thread go through
+  post_pull_request_comment. You cannot change the branch itself — writing files, pushing,
+  rebasing, resolving conflicts — nor post line-anchored review remarks: say so when asked.
+  merge_pull_request is irreversible: confirm with the
   user first, and report a refusal (red checks, conflicts, protection rules) instead of retrying.
 - **Web search (web_search)** — you can look things up OUTSIDE minddy: current events, a
   product's or library's up-to-date documentation, a version number, a price, a page the user
@@ -429,9 +384,8 @@ const CONVERSATION_TARGET_RULES = `
 ## Action targets
 Conversations have no project identity. Projects, issues, objectives, pages, pull requests and repository skills are attached context.
 - Resolve the target from the user's request, mentions, pinned resources and the context attached to that message. Historical context describes its own message only; navigation does not authorize retargeting an earlier action.
-- Pass an explicit \`project_id\` on every project tool call, including code worker launches. A project shown above supplies context, never an implicit mutation target.
+- Pass an explicit \`project_id\` on every project tool call. A project shown above supplies context, never an implicit mutation target.
 - Use attached resource IDs directly. If a named project's ID is missing, call \`list_projects\` and resolve it to an accessible project — NEVER guess or fabricate an id. The user naming the project ("minddy (MIN)") is enough: resolve the name to its id yourself, no @-mention required (as a safety net, a project key or exact name passed as \`project_id\` is matched to the accessible project). Ask which project they mean only when the intended target remains ambiguous; never choose the first of several pinned projects.
-- Each code worker has exactly one authorized project and repository target. Skills supply instructions for their source repository and message; they never select another worker target or grant access.
 - Membership is checked for each action, and tools documented as OWNER ONLY remain owner-only.`;
 
 export function buildSystemPrompt(
@@ -628,16 +582,10 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
     );
   }
-  if (ctx.codeWorkerRunId) {
-    lines.push(
-      `- The user explicitly continues code worker (run id: ${ctx.codeWorkerRunId}) after reconnecting.`,
-      "For repository work, pass this exact run id as continuation_run_id to launch_code_agent. Preserve its branch and frozen engine/model/thinking; the delegation validates ownership and eligibility. Do not claim continuation succeeded before the tool accepts it.",
-    );
-  }
   if (ctx.pullRequestId) {
     lines.push(
       `- Open pull request: #${ctx.prNumber ?? "?"}${ctx.prState ? ` (${ctx.prState})` : ""} (pull request id: ${ctx.pullRequestId})${ctx.prHeadRef ? `, head ref ${ctx.prHeadRef}` : ""}${ctx.prBaseRef ? `, base ref ${ctx.prBaseRef}` : ""}.`,
-      `When the user says "cette PR", "this pull request", "la PR", or "the diff", they mean this exact pull request. Read it with read_pull_request { pull_request_id: "${ctx.pullRequestId}" }. For a read-only code review, delegate with launch_code_agent mode "review" and this pull_request_id; to revise its existing branch, use mode "fix". You can also handle the review conversations yourself: answer one with post_pull_request_comment when it needs no code, and close addressed ones with resolve_pull_request_threads once the branch carries the fix (your own gesture or a finished launch_code_agent run).`,
+      `When the user says "cette PR", "this pull request", "la PR", or "the diff", they mean this exact pull request. Read it with read_pull_request { pull_request_id: "${ctx.pullRequestId}" }. You can review what it changes from its diff, answer a review conversation with post_pull_request_comment when it needs no code, and close addressed ones with resolve_pull_request_threads once the branch carries the fix.`,
       `This PR context does NOT restrict your toolkit: every minddy tool stays available, issue tools included — when work seen on this pull request deserves a ticket (a bug found in review, a follow-up), create it with create_issue, and edit existing tickets with get_issue / update_issues like anywhere else.`,
     );
   }

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -33,14 +33,15 @@
     "evidence": [
       "content/knowledge/repository-skills.md",
       "components/assistant/skill-preview-dialog.tsx",
-      "content/documentation/reviews/repository-skill-capture-candidates.json"
+      "content/documentation/reviews/repository-skill-capture-candidates.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 5; de translation of removal edits; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -54,7 +55,7 @@
       "src": "/documentation/de/repository-skills-workflow.png",
       "alt": "Vorschau eines Repository-Skills mit stabilem Namen, Dateipfad und vollständigen Anweisungen.",
       "caption": "Prüfen Sie den Skill, bevor Sie ihn an eine Nachricht anhängen. Dieser echte Demonstrationsskill verlangt `npm test` und untersagt das Mergen des Pull Requests. Die Vorschau führt keine dieser Aktionen aus.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -81,6 +82,6 @@ Committen und pushen Sie die Dateien in das verknüpfte GitHub- oder GitLab-Repo
 
 Nutzen Sie `/`, `$` oder das `+`-Menü und prüfen Sie die Vorschau vor dem Senden. Bis zu fünf Skills sind auswählbar; grüne Abzeichen zeigen die Auswahl. `$` enthält nur Repository-Skills, `/` außerdem weitere Befehle.
 
-Die Auswahl gilt für diesen Benutzerbeitrag. Bei Routinen gilt sie für jeden Durchlauf. Skills sind Repository-Dateien, keine globalen Kontoinstallationen, und überschreiben keine System- oder Sicherheitsanweisungen. Zum Erstellen oder Ändern bearbeiten Sie die Dateien oder delegieren dies an Numo. Pushen Sie vor Auswahl der neuen Version.
+Die Auswahl gilt für diesen Benutzerbeitrag. Bei Routinen gilt sie für jeden Durchlauf. Skills sind Repository-Dateien, keine globalen Kontoinstallationen, und überschreiben keine System- oder Sicherheitsanweisungen. Zum Erstellen oder Ändern bearbeiten Sie die Repository-Dateien selbst oder mit Ihrem eigenen Coding-Agenten. Pushen Sie vor Auswahl der neuen Version.
 
 ![Vorschau eines Repository-Skills mit stabilem Namen, Dateipfad und vollständigen Anweisungen.](/documentation/de/repository-skills-workflow.png)

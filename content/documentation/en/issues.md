@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -93,13 +93,14 @@
       "components/file-viewer.tsx",
       "components/image-viewer.tsx",
       "lib/issue-prompt.ts",
-      "lib/server/issue-prompt-context.ts"
+      "lib/server/issue-prompt-context.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence)",
-    "language": "agent:/root (en new copied-prompt section, translation and retained-meaning self-review)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review: Numo implementation and verification actions removed; copy-prompt submenu and auto-start preference verified; bulk-actions screenshot removed because it showed the retired Implement with Numo action; no operational rerun)",
+    "language": "agent:/root (en new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
     "date": "2026-10-16"
   },
   "related": [
@@ -145,7 +146,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft with a localized title and description and manually available properties.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -161,7 +162,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +178,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -193,7 +194,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -209,7 +210,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -225,7 +226,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -241,7 +242,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -257,7 +258,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -268,28 +269,12 @@
       "padding": 24
     },
     {
-      "id": "bulk-issue-actions-steps",
-      "kind": "screenshot",
-      "src": "/documentation/en/work-bulk-actions.png",
-      "alt": "Action menu for two selected demonstration issues.",
-      "caption": "The menu applies an action to the selected issues. No grouped change was submitted in this capture.",
-      "revision": 11,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        788,
-        506
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "import-issues-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -306,7 +291,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -327,7 +312,6 @@
     "sub-issues-steps",
     "implementation-plans-steps",
     "recurring-issues-steps",
-    "bulk-issue-actions-steps",
     "import-issues-workflow",
     "issue-file-preview"
   ]
@@ -475,11 +459,11 @@ The plan uses Markdown task lines: `- [ ]` for pending, `- [~]` for in progress,
 
 Extend or patch the existing plan instead of replacing it with a new unchecked copy. Retain completed steps and explanations of changed scope. Before saving a substantial rewrite, compare it with the latest plan if another member or agent has been working on the issue.
 
-A written plan can be handed to Numo for implementation when repository work and its configured sandbox are available. After completed work exists, the interface also offers implementation verification. Those actions launch work; the presence of a checked checkbox does not itself prove the code passes tests. Read the result, changes and checks before marking the issue done.
+To have the plan implemented, copy the issue's prompt for your own coding agent, as described below. A checked task does not itself prove the code passes tests. Read the result, changes and checks before marking the issue done.
 
 ### Copy a prompt for another coding agent {#copy-issue-prompt}
 
-To hand an issue to a coding agent outside Minddy, such as Claude Code, Codex or Cursor, open the issue's actions menu, choose **Copy as prompt**, then **Generate a plan** (or **Review the plan** when one exists), **Implement the issue**, **Verify the implementation** or **Custom…**. With several issues selected, **Copy the combined prompt** puts them in one prompt. Copying runs no AI model and uses no AI allowance: Minddy assembles what it already stores, and the agent explores the repository itself.
+To hand an issue to a coding agent outside Minddy, such as Claude Code, Codex or Cursor, open the issue's actions menu, choose **Copy as prompt**, then **Generate a plan** (or **Review the plan** when one exists), **Implement the issue**, **Verify the implementation** or **Custom…**. With several issues selected, **Copy the combined prompt** puts them in one prompt. Copying runs no AI model and uses no AI allowance: Minddy assembles what it already stores, and the agent explores the repository itself. If **Start the issue or task when I copy its prompt** is enabled in account preferences, copying also starts an issue that has not started yet. See [Code work and pull requests](/docs/code-work) for the complete workflow and pull request review.
 
 The prompt carries the issue's fields, categories, relations, the number of attached resources and the plan's progress, but not the plan text, which the agent reads through the Minddy MCP server or asks you for. It also lists the project's linked repository and every pull request linked to the issue, with its state and branches when known. The agent continues an open pull request on its branch and treats merged or closed ones as history. Without an open pull request, the prompt suggests a branch name made of the issue identifier and a short title, such as `min-42-keyboard-navigation`. This is only a suggestion: the agent checks existing branches and follows the repository's naming convention first. Keeping the identifier in the branch name, the pull request title or a `Fixes MIN-42` line lets Minddy attach the pull request to the issue when the repository is linked.
 
@@ -507,8 +491,6 @@ A Numo routine is a different object: it schedules a conversation and can use th
 On a board, hold Shift and click each issue card to toggle its selection. With a mouse, you can also drag a selection rectangle from empty board space; Shift, Command or Ctrl makes that gesture additive. The rectangle gesture is not a touch-screen selection mode. Check the selected count and visible identifiers before opening the bulk actions. Selection is a working set for the action, not a saved view and not a permission grant.
 
 Choose Actions in the floating selection bar to open the command palette. Choose status, priority, effort or assignee, set the value and confirm the inline form. The objective action appears only for a selection in one project with available objectives. Other actions, such as adding to or removing from a cycle, linking two issues or sending the selection to Numo, appear when the current board supports them. Inspect the affected issues afterward. On a touch-only device without a supported multi-selection gesture, edit each issue through its detail panel.
-
-![Action menu for two selected demonstration issues.](/documentation/en/work-bulk-actions.png)
 
 ### Partial results and destructive actions {#bulk-results}
 

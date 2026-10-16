@@ -29,7 +29,7 @@ INSERT INTO public.numo_assistant_turns (
 
 SELECT public.checkpoint_numo_tool_round(
   '63000000-0000-4000-8000-000000000003', '63000000-0000-4000-8000-000000000006', NULL,
-  '[{"id":"native-launch","type":"function","function":{"name":"launch_code_agent","arguments":"{}"}}]', NULL, 3
+  '[{"id":"native-search","type":"function","function":{"name":"search_issues","arguments":"{}"}}]', NULL, 3
 );
 SELECT pg_temp.assert_completion((
   SELECT checkpoint ->> 'completionRepairs' = '2'
@@ -47,7 +47,7 @@ SELECT pg_temp.assert_completion((
 SELECT pg_temp.assert_completion((
   SELECT count(*) = 0 FROM public.checkpoint_numo_tool_round(
     '63000000-0000-4000-8000-000000000003', '63000000-0000-4000-8000-000000000099', NULL,
-    '[{"id":"lost-claim","type":"function","function":{"name":"launch_code_agent","arguments":"{}"}}]', NULL, 4
+    '[{"id":"lost-claim","type":"function","function":{"name":"search_issues","arguments":"{}"}}]', NULL, 4
   )
 ), 'a lost claim cannot replace the completion checkpoint');
 UPDATE public.numo_assistant_turns SET status = 'stopping'
@@ -55,7 +55,7 @@ WHERE id = '63000000-0000-4000-8000-000000000003';
 SELECT pg_temp.assert_completion((
   SELECT count(*) = 0 FROM public.checkpoint_numo_tool_round(
     '63000000-0000-4000-8000-000000000003', '63000000-0000-4000-8000-000000000006', NULL,
-    '[{"id":"stopped-call","type":"function","function":{"name":"launch_code_agent","arguments":"{}"}}]', NULL, 4
+    '[{"id":"stopped-call","type":"function","function":{"name":"search_issues","arguments":"{}"}}]', NULL, 4
   )
 ), 'a pending stop prevents a new native tool checkpoint');
 SELECT pg_temp.assert_completion((

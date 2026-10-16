@@ -364,16 +364,16 @@ Stop the capture with Ctrl+C after the actions complete and record the end time
 with `date -u +%FT%TZ`. Do not add `-A`, `-X`, or a packet-file output: request
 payloads are unnecessary. Retain the capture summary, including dropped-packet
 counts. Repeat the address mapping after recreating containers because addresses
-can change. Map each observed source address to minddy, scheduler, runner, Auth,
+can change. Map each observed source address to minddy, scheduler, Auth,
 or another named service; use DNS replies to resolve destination addresses. Record
 unresolved addresses as unresolved, never as an allowed provider by assumption.
 
 If host-origin DNS traffic cannot be assigned to a service, observe the application
 namespaces directly on Linux. Run this in another deployment shell, exercise the
-browser during the five-minute window, and retain all three capture summaries:
+browser during the five-minute window, and retain both capture summaries:
 
 ```bash
-for SERVICE in minddy scheduler agent-runner; do
+for SERVICE in minddy scheduler; do
   CONTAINER="$(compose ps -q "$SERVICE")"
   test -n "$CONTAINER"
   PID="$(docker inspect "$CONTAINER" --format '{{.State.Pid}}')"
@@ -441,7 +441,7 @@ For the minimal scenario, only the application, selected Supabase hostname,
 and internal scheduler target are allowed. The full Compose profile additionally
 makes its default network internal. Caddy alone joins `edge`; the loopback
 maintenance bridge joins its own network, Auth has SMTP/password-check egress,
-and the application and agent runner have operator-provider egress. The pinned
+and the application has operator-provider egress through `app_egress`. The pinned
 Auth service calls `api.pwnedpasswords.com` for compromised-password checks;
 record this required platform traffic separately from application-provider
 traffic when capturing the full daemon. Stripe, PostHog, Vercel, OpenRouter, Resend, telemetry, feedback,

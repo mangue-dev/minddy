@@ -11,9 +11,7 @@ const h = vi.hoisted(() => ({
   messages: [] as Array<Record<string, unknown>>,
   queuedTurns: [] as Array<Record<string, unknown>>,
   claims: [] as Array<Record<string, unknown>>,
-  terminalWorkers: [] as Array<Record<string, unknown>>,
-  waitingWorkers: [] as Array<Record<string, unknown>>,
-  interruptions: [] as string[],
+  turnUpdates: [] as Array<Record<string, unknown>>,
   failActivity: false,
   managedAi: false,
   operationSpent: 0,
@@ -26,18 +24,15 @@ const h = vi.hoisted(() => ({
   processChat: vi.fn(),
   fetchModelIndex: vi.fn(),
   recordAiUsage: vi.fn(),
-  deliverAgentDelegationResult: vi.fn(),
-  buildAccountWorkerContext: vi.fn(),
 }));
 
 function queryFor(table: string) {
   let inserted: Record<string, unknown> | null = null;
-  let updated: Record<string, unknown> | null = null;
   const filters: Record<string, unknown> = {};
   const query = {
     select: () => query,
     update: (row: Record<string, unknown>) => {
-      updated = row;
+      if (table === "numo_assistant_turns") h.turnUpdates.push(row);
       return query;
     },
     insert: (row: Record<string, unknown>) => {
@@ -47,14 +42,6 @@ function queryFor(table: string) {
     },
     eq: (column: string, value: unknown) => {
       filters[column] = value;
-      // MIN-599: interrupts target the whole worker set of a turn
-      // (`parent_numo_turn_id`), while legacy single-run interrupts keep
-      // filtering on `id`.
-      if (table === "agent_runs" && updated?.interrupt_requested === true
-          && (column === "id" || column === "parent_numo_turn_id")
-          && typeof value === "string") {
-        h.interruptions.push(value);
-      }
       return query;
     },
     is: () => query,
@@ -77,10 +64,8 @@ function queryFor(table: string) {
       data: table === "assistant_messages"
         ? h.messages
         : table === "numo_assistant_turns"
-          ? filters.status === "waiting_work" ? h.waitingWorkers : h.queuedTurns
-          : table === "agent_runs"
-            ? h.terminalWorkers
-            : [],
+          ? h.queuedTurns
+          : [],
       error: null,
     }).then(resolve),
   };
@@ -107,7 +92,6 @@ const service = {
         ...h.turn,
         status: args.p_status,
         checkpoint: args.p_checkpoint,
-        active_run_id: args.p_active_run_id,
         error_message: args.p_error_message,
       };
       return { data: [h.turn], error: null };
@@ -149,9 +133,6 @@ const service = {
 } as unknown as SupabaseClient;
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
-vi.mock("@/lib/server/assistant/account-worker-context", () => ({
-  buildAccountWorkerContext: (...args: unknown[]) => h.buildAccountWorkerContext(...args),
-}));
 vi.mock("@/lib/server/ai-provider-request", () => ({
   fetchAiProviderBytes: (...args: unknown[]) => h.fetchModelIndex(...args),
 }));
@@ -175,19 +156,6 @@ vi.mock("@/lib/server/assistant/skills", () => ({
 vi.mock("@/lib/server/assistant/attachment-parts", () => ({ buildAttachmentParts: async () => [] }));
 vi.mock("@/lib/server/assistant/tools", () => ({
   CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }, { function: { name: "get_help" } }],
-  AUTOMATION_ASSISTANT_TOOLS: [
-    { function: { name: "get_issue" } },
-    { function: { name: "report_automation_outcome" } },
-  ],
-  AUTOMATION_WORKER_MEDIATION_ASSISTANT_TOOLS: [
-    { function: { name: "get_issue" } },
-    { function: { name: "report_automation_outcome" } },
-    { function: { name: "answer_code_worker" } },
-  ],
-  WORKER_MEDIATION_ASSISTANT_TOOLS: [
-    { function: { name: "ask_user" } },
-    { function: { name: "answer_code_worker" } },
-  ],
 }));
 vi.mock("@/lib/server/web-search", () => ({ withoutWebSearch: (tools: unknown) => tools }));
 vi.mock("@/lib/server/assistant/commands", () => ({ commandNote: () => "" }));
@@ -205,11 +173,7 @@ vi.mock("@/lib/managed-services", () => ({
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
 vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
-vi.mock("@/lib/server/agent/runs", async (importOriginal) => ({
-  ...await importOriginal<typeof import("@/lib/server/agent/runs")>(),
-  getRun: async (id: string) => h.terminalWorkers.find((run) => run.id === id) ?? null,
-  deliverAgentDelegationResult: (...args: unknown[]) => h.deliverAgentDelegationResult(...args),
-}));
+
 
 const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
 const { NumoCompletionError } = await import("@/lib/server/assistant/loop");
@@ -248,7 +212,6 @@ function turn(checkpoint: Record<string, unknown> = {}) {
     checkpoint,
     model: "model",
     reasoning_level: "medium",
-    active_run_id: null,
     attempts: 0,
     cost_usd: 0,
   };
@@ -261,9 +224,7 @@ beforeEach(() => {
   h.messages.length = 0;
   h.queuedTurns.length = 0;
   h.claims.length = 0;
-  h.terminalWorkers.length = 0;
-  h.waitingWorkers.length = 0;
-  h.interruptions.length = 0;
+  h.turnUpdates.length = 0;
   h.failActivity = false;
   h.managedAi = false;
   h.operationSpent = 0;
@@ -288,9 +249,6 @@ beforeEach(() => {
   h.fetchModelIndex.mockReset();
   h.fetchModelIndex.mockRejectedValue(new Error("Catalog unavailable"));
   h.recordAiUsage.mockReset();
-  h.deliverAgentDelegationResult.mockReset();
-  h.buildAccountWorkerContext.mockReset();
-  h.buildAccountWorkerContext.mockResolvedValue('\n## Account code-worker selection\n{"selected_engine":"codex","engine_name":"Codex"}');
   vi.mocked(resolveAiRuntime).mockResolvedValue(runtime as never);
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
@@ -312,12 +270,6 @@ describe("durable Numo execution", () => {
     expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_help"]);
     expect(context).toMatchObject({ documentationHelp: true, userId: h.turn.user_id });
     expect(resolveAiRuntime).toHaveBeenCalledWith(expect.objectContaining({ managedOnly: true }));
-    expect(h.buildAccountWorkerContext).not.toHaveBeenCalled();
-  });
-  it("injects current account worker identity before the first ordinary Numo response", async () => {
-    await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime });
-    expect(h.buildAccountWorkerContext).toHaveBeenCalledWith(h.turn!.user_id);
-    expect(h.processChat.mock.calls[0][0][0].content).toContain('"selected_engine":"codex"');
   });
   it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
     let releaseCatalog!: () => void;
@@ -373,7 +325,6 @@ describe("durable Numo execution", () => {
     expect(h.processChat).toHaveBeenCalledOnce();
     expect(h.checkpoints.at(-1)).toMatchObject({
       p_status: "completed",
-      p_active_run_id: null,
     });
     expect(h.messages).toContainEqual(expect.objectContaining({
       role: "assistant",
@@ -540,164 +491,6 @@ describe("durable Numo execution", () => {
     }));
   });
 
-  it("resumes a worker event in the background with code tools disabled", async () => {
-    h.turn = turn({
-      phase: "worker_result",
-      worker_event: {
-        type: "worker_completed",
-        payload: { status: "completed", outcome: "Tests pass", agent_engine: "claude_code" },
-      },
-    });
-    await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
-
-    expect(h.processChat.mock.calls[0][1]).toEqual([]);
-    const prompt = JSON.stringify(h.processChat.mock.calls[0][0]);
-    expect(prompt).toContain("worker_completed");
-    expect(prompt).toContain('\\"status\\":\\"completed\\"');
-    expect(prompt).toContain("Tests pass");
-    expect(prompt).toContain("Frozen worker harness");
-    expect(prompt).toContain('\\"selected_engine\\":\\"codex\\"');
-    expect(prompt).toContain('\\"engine\\":\\"claude_code\\"');
-    expect(prompt).toContain('\\"engine_name\\":\\"Claude Code\\"');
-    expect(prompt).toContain('\\"subagents\\":false');
-    expect(prompt).toContain("Paid Claude execution has not been validated");
-    expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
-  });
-
-  it("mediates a durable worker question and preserves its correlation across reloads", async () => {
-    const workerRunId = "51600000-0000-4000-8000-000000000006";
-    h.turn = {
-      ...turn({
-        phase: "worker_result",
-        worker_event: {
-          type: "worker_input",
-          payload: {
-            agent_engine: "codex",
-            result: {
-              version: 1,
-              status: "needs_input",
-              summary: "A source decision is required.",
-              changedFiles: [],
-              verificationPerformed: [],
-              artifacts: [],
-              unresolvedDecisions: ["Which API should be used?"],
-              inputRequest: {
-                parentTurnId: "51600000-0000-4000-8000-000000000001",
-                runId: workerRunId,
-                questionId: "question-1",
-                callId: "call-question",
-                questions: [{
-                  header: "Source",
-                  question: "Which API should be used?",
-                  options: [],
-                }],
-              },
-            },
-          },
-        },
-      }),
-      active_run_id: workerRunId,
-    };
-    h.processChat.mockResolvedValue({
-      fullContent: "",
-      finalReasoning: null,
-      allToolCalls: [],
-      generations: [],
-      suspension: { kind: "input" },
-    });
-
-    const result = await executeNumoTurn({
-      turnId: h.turn.id as string,
-      aiRuntime: runtime,
-    });
-
-    expect(result.status).toBe("waiting_input");
-    expect(h.processChat.mock.calls[0][1]).toEqual([
-      { function: { name: "ask_user" } },
-      { function: { name: "answer_code_worker" } },
-    ]);
-    expect(h.processChat.mock.calls[0][3]).toMatchObject({
-      workerInput: {
-        parentTurnId: h.turn.id,
-        runId: workerRunId,
-        questionId: "question-1",
-      },
-    });
-    expect(h.checkpoints.at(-1)).toMatchObject({
-      p_status: "waiting_input",
-      p_active_run_id: workerRunId,
-      p_checkpoint: {
-        phase: "worker_input_wait",
-        input_request: {
-          parentTurnId: h.turn.id,
-          runId: workerRunId,
-          questionId: "question-1",
-        },
-      },
-    });
-  });
-
-  it("mediates historical worker questions through the current owner-input tools", async () => {
-    const workerRunId = "51600000-0000-4000-8000-000000000006";
-    h.turn = {
-      ...turn({
-        phase: "worker_result",
-        worker_event: {
-          type: "worker_input",
-          payload: {
-            result: {
-              version: 1,
-              status: "needs_input",
-              summary: "A source decision is required.",
-              changedFiles: [],
-              verificationPerformed: [],
-              artifacts: [],
-              unresolvedDecisions: ["Which API should be used?"],
-              inputRequest: {
-                parentTurnId: "51600000-0000-4000-8000-000000000001",
-                runId: workerRunId,
-                questionId: "question-1",
-                callId: "call-question",
-                questions: [{
-                  header: "Source",
-                  question: "Which API should be used?",
-                  options: [],
-                }],
-              },
-            },
-          },
-        },
-      }),
-      active_run_id: workerRunId,
-      intent: {
-        ...turn({ phase: "model" }).intent,
-        automation: {
-          chainId: "chain-1",
-          step: 1,
-          ruleId: "rule-1",
-          preset: "loop-by-effort",
-          retries: 0,
-          mode: "implement",
-          issue: { id: "issue-1", identifier: "MIN-527", title: "Automate", plan: null },
-        },
-      },
-    };
-    h.processChat.mockResolvedValue({
-      fullContent: "",
-      finalReasoning: null,
-      allToolCalls: [],
-      generations: [],
-      suspension: null,
-    });
-
-    await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
-
-    expect(h.processChat.mock.calls[0][1]).toEqual([
-      { function: { name: "ask_user" } },
-      { function: { name: "answer_code_worker" } },
-    ]);
-  });
-
   it("moves interrupted initial work to retryable instead of leaving it running", async () => {
     h.turn = turn({ phase: "model" });
     const result = await executeNumoTurn({ turnId: h.turn.id as string, aiRuntime: runtime });
@@ -725,20 +518,6 @@ describe("durable Numo execution", () => {
     await expect(drainNumoTurns({ limit: 1 })).resolves.toEqual({ claimed: 1 });
     expect(h.claims.at(-1)).toMatchObject({ p_allow_retryable: true });
     expect(h.processChat).toHaveBeenCalled();
-  });
-
-  it("delivers terminal worker handoffs before recovering stale parent turns", async () => {
-    h.terminalWorkers.push({
-      id: "51600000-0000-4000-8000-000000000006",
-      status: "completed",
-      parent_numo_turn_id: h.turn!.id,
-      delegation_result: null,
-    });
-    h.waitingWorkers.push({ active_run_id: h.terminalWorkers[0].id });
-
-    await drainNumoTurns({ limit: 1 });
-
-    expect(h.deliverAgentDelegationResult).toHaveBeenCalledWith(h.terminalWorkers[0]);
   });
 
   it("preserves the latest tool checkpoint when execution fails", async () => {
@@ -825,40 +604,7 @@ describe("durable Numo execution", () => {
     });
   });
 
-  it("preserves a worker launched concurrently with a Numo stop request", async () => {
-    h.processChat.mockImplementation(async () => {
-      h.turn = {
-        ...h.turn,
-        status: "stopping",
-        active_run_id: "51600000-0000-4000-8000-000000000099",
-      };
-      return {
-        fullContent: "",
-        finalReasoning: null,
-        allToolCalls: [],
-        generations: [],
-        suspension: {
-          kind: "work" as const,
-          runId: "51600000-0000-4000-8000-000000000099",
-        },
-      };
-    });
-
-    const result = await executeNumoTurn({
-      turnId: h.turn!.id as string,
-      readClient: service,
-      aiRuntime: runtime,
-    });
-
-    expect(result.status).toBe("stopped");
-    expect(h.interruptions).toEqual([]);
-    expect(h.checkpoints.at(-1)).toMatchObject({
-      p_status: "stopped",
-      p_active_run_id: "51600000-0000-4000-8000-000000000099",
-    });
-  });
-
-  it("handles revoked tool checkpoint authority without interrupting admitted workers", async () => {
+  it("handles revoked tool checkpoint authority", async () => {
     h.processChat.mockImplementation(async (_messages, _tools, _emitter, context) => {
       h.turn = { ...h.turn, status: "stopping" };
       await context.persistToolRound({ assistantContent: "Preparing a tool", assistantReasoning: null,
@@ -868,11 +614,10 @@ describe("durable Numo execution", () => {
     const result = await executeNumoTurn({ turnId: h.turn!.id as string,
       readClient: service, aiRuntime: runtime });
     expect(result.status).toBe("stopped");
-    expect(h.interruptions).toEqual([]);
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "stopped" });
   });
 
-  it("finishes Numo stopping after an execution failure without interrupting workers", async () => {
+  it("finishes Numo stopping after an execution failure", async () => {
     h.processChat.mockImplementation(async () => {
       h.turn = { ...h.turn, status: "stopping" };
       throw new Error("Provider connection closed during Stop");
@@ -880,7 +625,6 @@ describe("durable Numo execution", () => {
     const result = await executeNumoTurn({ turnId: h.turn!.id as string,
       readClient: service, aiRuntime: runtime });
     expect(result.status).toBe("stopped");
-    expect(h.interruptions).toEqual([]);
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "stopped" });
   });
 

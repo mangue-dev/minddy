@@ -1,16 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-const mocks = vi.hoisted(() => ({ runs: [] as unknown[], opened: [] as unknown[], identities: vi.fn(), queue: vi.fn(), list: vi.fn(), syncs: vi.fn(), sweep: vi.fn(), repos: vi.fn() }));
-vi.mock("@/lib/server/git/repository-name-content", () => ({ createRepositoryNameDecoder: () => async (_provider: string, name: string) => name }));
-vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: async () => {
-  return { ok: true, user: { id: "owner" }, supabase: { from: (table: string) => {
-    const query = { select: () => query, in: () => query, order: () => query, eq: () => query,
-      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "agent_runs" ? mocks.runs : mocks.opened }).then(resolve) };
-    return query;
-  } } };
-} }));
+const mocks = vi.hoisted(() => ({ identities: vi.fn(), queue: vi.fn(), list: vi.fn(), syncs: vi.fn(), sweep: vi.fn(), repos: vi.fn() }));
+vi.mock("@/lib/server/api-auth", () => ({
+  getAuthedUser: async () => ({ ok: true, user: { id: "owner" }, supabase: {} }),
+}));
 vi.mock("@/lib/server/agent/pull-requests", () => ({
-  findPullRequest: vi.fn(), loadPullRequestIssues: vi.fn(), resolvePrForRun: vi.fn(),
+  findPullRequest: vi.fn(), loadPullRequestIssues: vi.fn(),
   listPullRequestsForUser: mocks.list, readRepoSyncStates: mocks.syncs,
   listVisibleRepos: mocks.repos,
   needsRepoSync: (state: { synced_at: string } | undefined) => !state || state.synced_at === "old",
@@ -20,14 +15,12 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
 vi.mock("@/lib/server/agent/pull-requests-sweep", () => ({ sweepRepo: mocks.sweep }));
 vi.mock("@/lib/server/git/user-identities", () => ({ listUserIdentities: mocks.identities }));
 vi.mock("@/lib/server/agent/pull-request-review-queue", () => ({ readReviewQueue: mocks.queue }));
-vi.mock("@/lib/server/agent/runs", () => ({ getRun: vi.fn() }));
 
 import { GET } from "@/app/api/pull-requests/route";
 const row = { id: "new-pr", number: 1, repo_full_name: "acme/app", provider: "github",
   state: "open", title: "New PR", issue: null, issues: [], updated_at: "2026-10-04T12:00:00Z" };
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.runs = []; mocks.opened = [];
   mocks.identities.mockResolvedValue([]);
   mocks.queue.mockResolvedValue(new Map());
   mocks.repos.mockResolvedValue([{ provider: "github", repoFullName: "acme/app",
@@ -125,19 +118,12 @@ it("keeps the cached PR list available when the forge review queue fails", async
 });
 
 
-it("counts Numo PRs as mine only when my run actually opened the PR", async () => {
-  mocks.identities.mockResolvedValue([{ provider: "github", account_login: "numo-bot" }]);
+it("counts a PR as mine when my forge login authored it", async () => {
+  mocks.identities.mockResolvedValue([{ provider: "github", account_login: "me" }]);
   mocks.syncs.mockResolvedValue(new Map([["github:acme/app", { synced_at: "fresh" }]]));
-  mocks.list.mockResolvedValue([row, { ...row, id: "fixed-pr", number: 2 }, { ...row, id: "other-pr", number: 3, author_login: "numo-bot" }]);
-  mocks.runs = [
-    { id: "my-opening", created_by: "owner", pr_number: 1, status: "completed", repo_link: { provider: "github", repo_full_name: "acme/app" } },
-    { id: "my-fix", created_by: "owner", pr_number: 2, status: "completed", repo_link: { provider: "github", repo_full_name: "acme/app" } },
-    { id: "their-opening", created_by: "other", pr_number: 3, status: "completed", repo_link: { provider: "github", repo_full_name: "acme/app" } },
-  ];
-  mocks.opened = [{ run_id: "my-opening" }, { run_id: "their-opening" }];
+  mocks.list.mockResolvedValue([{ ...row, author_login: "Me" }, { ...row, id: "other-pr", number: 2, author_login: "someone" }]);
   const body = await (await GET(new NextRequest("http://localhost/api/pull-requests"))).json();
-  expect(body.pullRequests.map((pr: { createdByMe: boolean; numoOpened: boolean }) => [pr.createdByMe, pr.numoOpened]))
-    .toEqual([[true, true], [false, false], [false, true]]);
+  expect(body.pullRequests.map((pr: { createdByMe: boolean }) => pr.createdByMe)).toEqual([true, false]);
 });
 
 it("caps completed PRs at ten and requests the next ten independently of open PRs", async () => {

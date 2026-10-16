@@ -295,7 +295,7 @@ describe("schema guardrail — the mistakes it catches", () => {
     // As written in 20261126090000 et seq.
     expect(
       policiesTargetARole(
-        later("create policy agent_runs_select on public.agent_runs for select using (true);")
+        later("create policy comments_select on public.comments for select using (true);")
       )
     ).toHaveLength(1);
     expect(policiesTargetARole(later("create policy p on public.t for select to anon using (true);")))

@@ -1,12 +1,5 @@
 [
   {
-    "file": "app/api/account/agent-preferences/route.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 44,
-    "storage": false
-  },
-  {
     "file": "app/api/account/ai-keys/route.ts",
     "operation": "from",
     "resource": "user_ai_keys",
@@ -245,69 +238,6 @@
     "storage": false
   },
   {
-    "file": "app/api/agent-activity/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 30,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-activity/route.ts",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 35,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-reads/route.ts",
-    "operation": "from",
-    "resource": "agent_conversation_reads",
-    "line": 25,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-reads/route.ts",
-    "operation": "from",
-    "resource": "agent_conversation_reads",
-    "line": 55,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-runs/[runId]/route.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 159,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-runs/[runId]/route.ts",
-    "operation": "from",
-    "resource": "agent_conversation_pins",
-    "line": 169,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-runs/[runId]/route.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 223,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-runs/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 152,
-    "storage": false
-  },
-  {
-    "file": "app/api/agent-runs/route.ts",
-    "operation": "from",
-    "resource": "agent_conversation_pins",
-    "line": 172,
-    "storage": false
-  },
-  {
     "file": "app/api/assistant/active-conversation/route.ts",
     "operation": "from",
     "resource": "assistant_active_conversation",
@@ -332,112 +262,91 @@
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 392,
+    "line": 357,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 419,
+    "line": 374,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 467,
+    "line": 438,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 626,
-    "storage": false
-  },
-  {
-    "file": "app/api/assistant/chat/route.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 647,
+    "line": 459,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 786,
+    "line": 598,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 843,
+    "line": 655,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 882,
+    "line": 694,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 897,
+    "line": 709,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/messages/route.ts",
     "operation": "from",
     "resource": "numo_conversation_history",
-    "line": 23,
+    "line": 22,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/messages/route.ts",
     "operation": "from",
     "resource": "numo_messages",
-    "line": 39,
+    "line": 32,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "numo_conversation_history",
-    "line": 23,
+    "line": 20,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 35,
+    "line": 30,
     "storage": false
   },
   {
     "file": "app/api/assistant/conversations/[id]/status/route.ts",
     "operation": "from",
     "resource": "numo_turn_events",
-    "line": 48,
-    "storage": false
-  },
-  {
-    "file": "app/api/assistant/conversations/[id]/status/route.ts",
-    "operation": "from",
-    "resource": "agent_run_input_requests",
-    "line": 56,
-    "storage": false
-  },
-  {
-    "file": "app/api/assistant/conversations/[id]/status/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 80,
+    "line": 43,
     "storage": false
   },
   {
@@ -528,14 +437,14 @@
     "file": "app/api/billing/usage-history/route.ts",
     "operation": "rpc",
     "resource": "get_user_usage_history",
-    "line": 40,
+    "line": 42,
     "storage": false
   },
   {
     "file": "app/api/billing/usage-history/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 64,
+    "line": 66,
     "storage": false
   },
   {
@@ -557,27 +466,6 @@
     "operation": "rpc",
     "resource": "delete_category_guarded",
     "line": 46,
-    "storage": false
-  },
-  {
-    "file": "app/api/cron/agent-drain/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 57,
-    "storage": false
-  },
-  {
-    "file": "app/api/cron/agent-drain/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 108,
-    "storage": false
-  },
-  {
-    "file": "app/api/cron/agent-drain/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 122,
     "storage": false
   },
   {
@@ -616,24 +504,10 @@
     "storage": false
   },
   {
-    "file": "app/api/issues/[id]/agent/route.ts",
+    "file": "app/api/issue-pull-requests/route.ts",
     "operation": "from",
-    "resource": "agent_runs",
-    "line": 63,
-    "storage": false
-  },
-  {
-    "file": "app/api/issues/[id]/agent/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 95,
-    "storage": false
-  },
-  {
-    "file": "app/api/issues/[id]/agent/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 103,
+    "resource": "project_git_links",
+    "line": 22,
     "storage": false
   },
   {
@@ -704,27 +578,6 @@
     "operation": "from",
     "resource": "integrations",
     "line": 141,
-    "storage": false
-  },
-  {
-    "file": "app/api/me/branch-cleanup-targets/route.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 34,
-    "storage": false
-  },
-  {
-    "file": "app/api/me/branch-cleanup-targets/route.ts",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 35,
-    "storage": false
-  },
-  {
-    "file": "app/api/me/branch-cleanup-targets/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 65,
     "storage": false
   },
   {
@@ -815,7 +668,7 @@
     "file": "app/api/numo/conversations/[id]/route.ts",
     "operation": "rpc",
     "resource": "update_numo_conversation",
-    "line": 91,
+    "line": 79,
     "storage": false
   },
   {
@@ -886,13 +739,6 @@
     "operation": "from",
     "resource": "project_drafts",
     "line": 25,
-    "storage": false
-  },
-  {
-    "file": "app/api/projects/[id]/agent-runs/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 33,
     "storage": false
   },
   {
@@ -1057,20 +903,6 @@
     "storage": false
   },
   {
-    "file": "app/api/pull-requests/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 251,
-    "storage": false
-  },
-  {
-    "file": "app/api/pull-requests/route.ts",
-    "operation": "from",
-    "resource": "agent_run_events",
-    "line": 283,
-    "storage": false
-  },
-  {
     "file": "app/api/relay/github/claim/route.ts",
     "operation": "from",
     "resource": "forge_relay_instances",
@@ -1158,14 +990,7 @@
     "file": "app/api/routines/[id]/runs/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 106,
-    "storage": false
-  },
-  {
-    "file": "app/api/routines/[id]/runs/route.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 116,
+    "line": 48,
     "storage": false
   },
   {
@@ -1221,14 +1046,14 @@
     "file": "app/api/webhooks/github/route.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 943,
+    "line": 871,
     "storage": false
   },
   {
     "file": "app/api/webhooks/gitlab/route.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 230,
+    "line": 220,
     "storage": false
   },
   {
@@ -1444,13 +1269,6 @@
   {
     "file": "captures/world/seed/008-agent.mjs",
     "operation": "from",
-    "resource": "agent_runs",
-    "line": 214,
-    "storage": false
-  },
-  {
-    "file": "captures/world/seed/008-agent.mjs",
-    "operation": "from",
     "resource": "conversations",
     "line": 306,
     "storage": false
@@ -1547,13 +1365,6 @@
     "storage": false
   },
   {
-    "file": "captures/world/seed/016-routines.mjs",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 173,
-    "storage": false
-  },
-  {
     "file": "captures/world/seed/017-cycle-recal.mjs",
     "operation": "from",
     "resource": "cycles",
@@ -1627,371 +1438,301 @@
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": null,
-    "line": 54,
+    "line": 47,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 83,
+    "line": 75,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 93,
+    "line": 85,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 99,
+    "line": 91,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": null,
-    "line": 153,
+    "line": 145,
     "storage": true
-  },
-  {
-    "file": "lib/server/account-deletion.ts",
-    "operation": "rpc",
-    "resource": "begin_agent_account_erasure",
-    "line": 171,
-    "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 182,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 210,
+    "line": 191,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "user_avatars",
-    "line": 257,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-deletion.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 299,
+    "line": 238,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 218,
+    "line": 208,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 236,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 271,
+    "line": 226,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 272,
+    "line": 260,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 288,
+    "line": 276,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 299,
+    "line": 287,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 311,
+    "line": 299,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 326,
+    "line": 314,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "saved_views",
-    "line": 327,
+    "line": 315,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 329,
+    "line": 317,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 331,
+    "line": 319,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 333,
+    "line": 321,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 338,
+    "line": 326,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 350,
+    "line": 338,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 356,
+    "line": 344,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 368,
+    "line": 356,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 376,
+    "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "oauth_grants",
-    "line": 381,
+    "line": 369,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 386,
+    "line": 374,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 393,
+    "line": 381,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 398,
+    "line": 386,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 412,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 437,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 441,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_messages",
-    "line": 455,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_turns",
-    "line": 460,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_conversation_contexts",
-    "line": 468,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "agent_conversation_contexts",
-    "line": 472,
+    "line": 400,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 538,
+    "line": 430,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 119,
+    "line": 115,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 324,
+    "line": 280,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": null,
-    "line": 414,
+    "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 435,
+    "line": 385,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 451,
+    "line": 401,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 476,
+    "line": 426,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 585,
+    "line": 535,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 593,
+    "line": 543,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 595,
+    "line": 545,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 601,
+    "line": 551,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 608,
+    "line": 558,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "categories",
-    "line": 610,
+    "line": 560,
     "storage": false
   },
   {
     "file": "lib/server/account-import.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 884,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-settings.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 149,
+    "line": 826,
     "storage": false
   },
   {
@@ -2023,181 +1764,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/agent/branch-prefix-content.ts",
-    "operation": "from",
-    "resource": "agent_branch_prefix_scope",
-    "line": 23,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/branch-prefix-content.ts",
-    "operation": "rpc",
-    "resource": "upsert_agent_preferences_partial",
-    "line": 78,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/branch-prefix-content.ts",
-    "operation": "rpc",
-    "resource": "upsert_agent_preferences_protected",
-    "line": 89,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/context-snapshot-content.ts",
-    "operation": "from",
-    "resource": "agent_context_encryption_scopes",
-    "line": 35,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/control-plane.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 437,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/control-plane.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 1509,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/control-plane.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 1580,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/control-plane.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 1625,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/delegation.ts",
-    "operation": "from",
-    "resource": "agent_artifacts",
-    "line": 227,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/delegation.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 260,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/delegation.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 267,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 78,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 100,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 127,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 136,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 220,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "rpc",
-    "resource": "claim_native_worker_recovery",
-    "line": 308,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 438,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 447,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/drain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 463,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/encrypted-journal.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 22,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/encrypted-journal.ts",
-    "operation": "from",
-    "resource": "agent_journal_encryption_scopes",
-    "line": 53,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/execute.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 305,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/execute.ts",
-    "operation": "from",
-    "resource": "attachments",
-    "line": 311,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/execute.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 374,
-    "storage": false
-  },
-  {
     "file": "lib/server/agent/forge-mention-guard.ts",
     "operation": "rpc",
     "resource": "claim_forge_mention_protected",
@@ -2219,255 +1785,122 @@
     "storage": false
   },
   {
-    "file": "lib/server/agent/issue-tools.ts",
-    "operation": "from",
-    "resource": "attachments",
-    "line": 465,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/launch.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 363,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/launch.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 732,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/launch.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 817,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/live-snapshot.ts",
-    "operation": "rpc",
-    "resource": "set_agent_run_live_snapshot",
-    "line": 43,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/live-snapshot.ts",
-    "operation": "from",
-    "resource": "agent_run_live_snapshots",
-    "line": 57,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/mcp-client.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 15,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/model.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 68,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/model.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 88,
-    "storage": false
-  },
-  {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 228,
+    "line": 119,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_capability_assignments",
-    "line": 256,
+    "line": 147,
     "storage": false
   },
   {
     "file": "lib/server/agent/model.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 265,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-agent-credentials.ts",
-    "operation": "rpc",
-    "resource": null,
-    "line": 110,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-agent-credentials.ts",
-    "operation": "from",
-    "resource": "native_agent_connections",
-    "line": 117,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-agent-credentials.ts",
-    "operation": "from",
-    "resource": "native_agent_connections",
-    "line": 139,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-agent-credentials.ts",
-    "operation": "from",
-    "resource": "native_agent_connections",
-    "line": 150,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-agent-credentials.ts",
-    "operation": "rpc",
-    "resource": "acquire_native_worker_connection",
-    "line": 167,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-agent-credentials.ts",
-    "operation": "rpc",
-    "resource": "get_native_worker_connection",
-    "line": 181,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-prototype/model-catalog.ts",
-    "operation": "from",
-    "resource": "native_agent_model_catalogs",
-    "line": 16,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-worker-connections.ts",
-    "operation": "rpc",
-    "resource": "get_native_worker_allocation",
-    "line": 93,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/native-worker-selection.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 27,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/objective-tools.ts",
-    "operation": "from",
-    "resource": "attachments",
-    "line": 260,
+    "line": 156,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "reserve_forge_attachment_publications",
-    "line": 1051,
+    "line": 994,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "finish_forge_attachment_publications",
-    "line": 1060,
+    "line": 1003,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "finish_forge_attachment_publications",
-    "line": 1064,
+    "line": 1007,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1166,
+    "line": 1109,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1803,
+    "line": 1719,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "activate_forge_attachment_encryption",
-    "line": 1811,
+    "line": 1727,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1815,
+    "line": 1731,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1825,
+    "line": 1741,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "forge_attachment_objects",
-    "line": 1832,
+    "line": 1748,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": null,
-    "line": 1839,
+    "line": 1755,
     "storage": true
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "rpc",
     "resource": "unlink_pull_request_from_issue_atomic",
-    "line": 2207,
+    "line": 2093,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-actions.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 2704,
+    "line": 2590,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-activity.ts",
     "operation": "from",
     "resource": null,
-    "line": 122,
+    "line": 117,
     "storage": false
   },
   {
     "file": "lib/server/agent/pr-activity.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 387,
+    "line": 278,
     "storage": false
   },
   {
@@ -2492,13 +1925,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-landing.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 257,
-    "storage": false
-  },
-  {
     "file": "lib/server/agent/pr-mention.ts",
     "operation": "from",
     "resource": "project_git_links",
@@ -2510,20 +1936,6 @@
     "operation": "from",
     "resource": "project_git_links",
     "line": 112,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/pr-run.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 87,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/project-pr-tools.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 224,
     "storage": false
   },
   {
@@ -2544,147 +1956,140 @@
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 182,
+    "line": 181,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "rpc",
     "resource": "upsert_pull_request_monotonic",
-    "line": 198,
+    "line": 197,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 229,
+    "line": 228,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 246,
+    "line": 245,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 273,
+    "line": 272,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 308,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/pull-requests.ts",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 324,
+    "line": 307,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "rpc",
     "resource": "link_pull_request_to_issue_atomic",
-    "line": 389,
+    "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 419,
+    "line": 357,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 444,
+    "line": 382,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 472,
+    "line": 410,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 508,
+    "line": 446,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 652,
+    "line": 564,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 692,
+    "line": 604,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 742,
+    "line": 654,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_syncs",
-    "line": 872,
+    "line": 784,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 929,
+    "line": 841,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 982,
+    "line": 894,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_request_issues",
-    "line": 1008,
+    "line": 920,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 1037,
+    "line": 949,
     "storage": false
   },
   {
     "file": "lib/server/agent/pull-requests.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 1089,
+    "line": 1001,
     "storage": false
   },
   {
@@ -2702,780 +2107,38 @@
     "storage": false
   },
   {
-    "file": "lib/server/agent/run-base-branch-content.ts",
-    "operation": "from",
-    "resource": "agent_base_branch_encryption_scopes",
-    "line": 36,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-checkpoint-content.ts",
-    "operation": "from",
-    "resource": "agent_checkpoint_encryption_scopes",
-    "line": 23,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-delegation-content.ts",
-    "operation": "from",
-    "resource": "agent_delegation_encryption_scopes",
-    "line": 27,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-delegation-result-content.ts",
-    "operation": "from",
-    "resource": "agent_result_encryption_scopes",
-    "line": 26,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-deployment-content.ts",
-    "operation": "from",
-    "resource": "agent_deployment_encryption_scopes",
-    "line": 43,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-event-store.ts",
-    "operation": "from",
-    "resource": "agent_event_encryption_scopes",
-    "line": 42,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-event-store.ts",
-    "operation": "from",
-    "resource": "agent_run_events",
-    "line": 107,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-event-store.ts",
-    "operation": "from",
-    "resource": "agent_run_events",
-    "line": 146,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-launch-content.ts",
-    "operation": "from",
-    "resource": "agent_launch_encryption_scopes",
-    "line": 42,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-launch-content.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 104,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-launch-content.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 110,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-launch-content.ts",
-    "operation": "from",
-    "resource": "agent_messages",
-    "line": 188,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-launch-content.ts",
-    "operation": "from",
-    "resource": "agent_messages",
-    "line": 194,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-pr-url-content.ts",
-    "operation": "from",
-    "resource": "agent_pr_url_encryption_scopes",
-    "line": 28,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-queue-content.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 57,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-queue-content.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 79,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-queue-content.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 83,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-summary-content.ts",
-    "operation": "from",
-    "resource": "agent_summary_encryption_scopes",
-    "line": 36,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-title-content.ts",
-    "operation": "from",
-    "resource": "agent_title_encryption_scopes",
-    "line": 31,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-verdict-content.ts",
-    "operation": "from",
-    "resource": "agent_verdict_encryption_scopes",
-    "line": 31,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/run-work-branch-content.ts",
-    "operation": "from",
-    "resource": "agent_work_branch_encryption_scopes",
-    "line": 60,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 113,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 171,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "create_agent_run_with_budget",
-    "line": 718,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 725,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 792,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "claim_agent_run",
-    "line": 803,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "claim_agent_run_rest",
-    "line": 832,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "claim_local_agent_run",
-    "line": 853,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 872,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 884,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "insert_latest_agent_run_message",
-    "line": 922,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "resume_latest_agent_run_with_message",
-    "line": 971,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "reserve_agent_pr_inline_comment",
-    "line": 1005,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "release_agent_pr_inline_comment",
-    "line": 1023,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 1077,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1123,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1157,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1195,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1232,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1243,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1271,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1289,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1312,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1335,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1356,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1379,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1398,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1439,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1485,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1509,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1519,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1538,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1570,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1728,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1744,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1761,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1778,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1795,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1813,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1831,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 2037,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2058,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "sync_agent_runs_from_pull_request",
-    "line": 2086,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2095,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 2100,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "sync_agent_run_pr_url",
-    "line": 2115,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 2141,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2169,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 2172,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 2179,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 2206,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2247,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 2278,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2299,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "request_numo_worker_stop",
-    "line": 2310,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2324,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "conversations",
-    "line": 2329,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 2335,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "conversations",
-    "line": 2348,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 2358,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2369,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 2382,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 2396,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_events",
-    "line": 2444,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_events",
-    "line": 2458,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 2521,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "rpc",
-    "resource": "agent_journal_legacy_batch_exists",
-    "line": 2527,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 2537,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/runs.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 2569,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/sandbox-allocation.ts",
-    "operation": "rpc",
-    "resource": null,
-    "line": 21,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/sandbox-erasure.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 24,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/sandbox-erasure.ts",
-    "operation": "rpc",
-    "resource": "begin_agent_project_erasure",
-    "line": 41,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/sandbox-preferences.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 7,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm-rest.ts",
-    "operation": "from",
-    "resource": "issues",
-    "line": 509,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "account/login/cancel",
-    "line": 125,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "initialize",
-    "line": 197,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "account/login/start",
-    "line": 209,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "account/read",
-    "line": 254,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "model/list",
-    "line": 287,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "thread/start",
-    "line": 311,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "mcpServerStatus/list",
-    "line": 314,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/vm/native-prototype/controller.ts",
-    "operation": "rpc",
-    "resource": "turn/start",
-    "line": 323,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/worker-parent-content.ts",
-    "operation": "from",
-    "resource": "assistant_messages",
-    "line": 73,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/worker-parent-content.ts",
-    "operation": "from",
-    "resource": "assistant_messages",
-    "line": 77,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/worker-parent-content.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 90,
-    "storage": false
-  },
-  {
     "file": "lib/server/ai-usage.ts",
     "operation": "rpc",
     "resource": "get_ai_run_spend",
-    "line": 58,
+    "line": 55,
     "storage": false
   },
   {
     "file": "lib/server/ai-usage.ts",
     "operation": "rpc",
     "resource": "get_numo_operation_spend",
-    "line": 78,
+    "line": 75,
     "storage": false
   },
   {
     "file": "lib/server/ai-usage.ts",
     "operation": "rpc",
     "resource": "get_numo_operation_platform_spend",
-    "line": 100,
+    "line": 97,
     "storage": false
   },
   {
     "file": "lib/server/ai-usage.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 250,
+    "line": 247,
     "storage": false
   },
   {
     "file": "lib/server/ai-usage.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 318,
+    "line": 315,
     "storage": false
   },
   {
@@ -3594,154 +2257,147 @@
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 297,
+    "line": 264,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 324,
+    "line": 291,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 425,
+    "line": 392,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 499,
+    "line": 466,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "feedback_posts",
-    "line": 594,
+    "line": 561,
     "storage": false
   },
   {
     "file": "lib/server/assistant/comment-agent.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 616,
+    "line": 583,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 24,
+    "line": 23,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 73,
+    "line": 72,
     "storage": false
   },
   {
     "file": "lib/server/assistant/conversation-attachments.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 94,
-    "storage": false
-  },
-  {
-    "file": "lib/server/assistant/execute-tool.ts",
-    "operation": "from",
-    "resource": "assistant_messages",
-    "line": 446,
+    "line": 92,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 693,
+    "line": 533,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 716,
+    "line": 556,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 746,
+    "line": 586,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 751,
+    "line": 591,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 764,
+    "line": 604,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 802,
+    "line": 642,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1260,
+    "line": 1028,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1309,
+    "line": 1077,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1872,
+    "line": 1640,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2329,
+    "line": 1812,
     "storage": false
   },
   {
     "file": "lib/server/assistant/loop.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 307,
+    "line": 299,
     "storage": false
   },
   {
     "file": "lib/server/assistant/loop.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 789,
+    "line": 766,
     "storage": false
   },
   {
@@ -3829,24 +2485,10 @@
     "storage": false
   },
   {
-    "file": "lib/server/assistant/pull-request-writes.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 138,
-    "storage": false
-  },
-  {
     "file": "lib/server/assistant/skills.ts",
     "operation": "from",
     "resource": "projects",
     "line": 112,
-    "storage": false
-  },
-  {
-    "file": "lib/server/assistant/stats-tools.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 154,
     "storage": false
   },
   {
@@ -4008,90 +2650,6 @@
     "operation": "rpc",
     "resource": "revoke_auth_session",
     "line": 49,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 96,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 129,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 143,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 155,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "numo_automation_operations",
-    "line": 167,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 181,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "numo_automation_operations",
-    "line": 196,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "numo_automation_operations",
-    "line": 209,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 239,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 248,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/chain.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 268,
-    "storage": false
-  },
-  {
-    "file": "lib/server/automations/operation-content.ts",
-    "operation": "from",
-    "resource": "numo_automation_content_scope",
-    "line": 41,
     "storage": false
   },
   {
@@ -4697,447 +3255,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/encryption/agent-base-branch-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 39,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-base-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_base_branch",
-    "line": 64,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-base-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_base_branch",
-    "line": 75,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-base-branch-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runtime_sessions",
-    "line": 95,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-base-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_orphan_agent_runtime_base_branch",
-    "line": 124,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-base-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_orphan_agent_runtime_base_branch",
-    "line": 137,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-branch-prefix-backfill.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 20,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-branch-prefix-backfill.ts",
-    "operation": "from",
-    "resource": "user_agent_preferences",
-    "line": 48,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-chain-code-backfill.ts",
-    "operation": "from",
-    "resource": "agent_chains",
-    "line": 17,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-chain-code-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_chain_codes",
-    "line": 34,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 24,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_checkpoint_ciphertext",
-    "line": 42,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_checkpoint_ciphertext",
-    "line": 47,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_checkpoint_ciphertext",
-    "line": 59,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_checkpoint_ciphertext",
-    "line": 74,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runtime_sessions",
-    "line": 84,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_orphan_agent_runtime_checkpoint",
-    "line": 109,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_orphan_agent_runtime_checkpoint",
-    "line": 135,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-checkpoint-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_orphan_agent_runtime_checkpoint",
-    "line": 153,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-context-backfill.ts",
-    "operation": "from",
-    "resource": "agent_conversation_contexts",
-    "line": 29,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-context-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_context_snapshot",
-    "line": 56,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-context-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_context_snapshot",
-    "line": 67,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-delegation-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 29,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-delegation-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_delegation_input",
-    "line": 70,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 30,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_delegation_result",
-    "line": 63,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-delegation-result-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_delegation_result",
-    "line": 75,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-deployment-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 24,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-deployment-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_deployment_url",
-    "line": 52,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-deployment-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_deployment_url",
-    "line": 66,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-event-backfill.ts",
-    "operation": "from",
-    "resource": "agent_run_events",
-    "line": 25,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-event-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_event_ciphertext",
-    "line": 52,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-event-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_event_ciphertext",
-    "line": 67,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-journal-backfill.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 28,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-journal-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_journal_ciphertext",
-    "line": 53,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-journal-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_journal_ciphertext",
-    "line": 64,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-journal-backfill.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 83,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-journal-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_journal_ciphertext",
-    "line": 97,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-launch-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 22,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-launch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_launch_ciphertext",
-    "line": 50,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-launch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_launch_ciphertext",
-    "line": 66,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "rpc",
-    "resource": "mark_numo_worker_payload_attempt",
-    "line": 41,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "rpc",
-    "resource": "lookup_numo_worker_legacy_binding",
-    "line": 53,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 63,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "from",
-    "resource": "conversations",
-    "line": 67,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "from",
-    "resource": "numo_turn_events",
-    "line": 115,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 125,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_numo_worker_event",
-    "line": 144,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_numo_worker_event",
-    "line": 158,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 181,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_numo_worker_checkpoint",
-    "line": 212,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-numo-worker-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_numo_worker_checkpoint",
-    "line": 229,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-pr-url-backfill.ts",
-    "operation": "from",
-    "resource": "agent_artifacts",
-    "line": 42,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-pr-url-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_artifact_url",
-    "line": 69,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-pr-url-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_artifact_url",
-    "line": 84,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-pr-url-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 100,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-pr-url-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_pr_url",
-    "line": 121,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-pr-url-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_pr_url",
-    "line": 134,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-queue-backfill.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 35,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-queue-backfill.ts",
-    "operation": "from",
-    "resource": "agent_run_input_requests",
-    "line": 56,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-queue-backfill.ts",
-    "operation": "from",
-    "resource": "assistant_messages",
-    "line": 59,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-queue-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_queue_bundle",
-    "line": 96,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-queue-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_queue_bundle",
-    "line": 130,
-    "storage": false
-  },
-  {
     "file": "lib/server/encryption/agent-routine-content-backfill.ts",
     "operation": "from",
     "resource": "agent_routines",
@@ -5149,181 +3266,6 @@
     "operation": "from",
     "resource": "agent_routines",
     "line": 61,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-run-summary-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 49,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-run-summary-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_summary",
-    "line": 69,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-run-summary-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_summary",
-    "line": 85,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-run-summary-backfill.ts",
-    "operation": "from",
-    "resource": "agent_turns",
-    "line": 102,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-run-summary-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_turn_summary",
-    "line": 130,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-run-summary-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_turn_summary",
-    "line": 151,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
-    "operation": "from",
-    "resource": "agent_messages",
-    "line": 25,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_standalone_message",
-    "line": 56,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-standalone-message-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_standalone_message",
-    "line": 69,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-title-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 37,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-title-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_title_ciphertext",
-    "line": 77,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-title-backfill.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 97,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-title-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_conversation_title_ciphertext",
-    "line": 120,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-verdict-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 27,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-verdict-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_verdict",
-    "line": 54,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-verdict-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_verdict",
-    "line": 65,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "from",
-    "resource": "agent_artifacts",
-    "line": 44,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_artifact_branch",
-    "line": 73,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_artifact_branch",
-    "line": 85,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 100,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_work_branch",
-    "line": 124,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_agent_run_work_branch",
-    "line": 135,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "from",
-    "resource": "agent_runtime_sessions",
-    "line": 154,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_orphan_agent_runtime_work_branch",
-    "line": 182,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/agent-work-branch-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_orphan_agent_runtime_work_branch",
-    "line": 195,
     "storage": false
   },
   {
@@ -5596,77 +3538,49 @@
     "file": "lib/server/encryption/critical-backfill-readiness.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 103,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/critical-backfill-readiness.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 131,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/critical-backfill-readiness.ts",
-    "operation": "from",
-    "resource": "agent_runtime_sessions",
-    "line": 148,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/critical-backfill-readiness.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 159,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/critical-backfill-readiness.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 188,
+    "line": 88,
     "storage": false
   },
   {
     "file": "lib/server/encryption/critical-backfill-readiness.ts",
     "operation": "from",
     "resource": "oauth_clients",
-    "line": 204,
+    "line": 116,
     "storage": false
   },
   {
     "file": "lib/server/encryption/critical-backfill-readiness.ts",
     "operation": "from",
     "resource": "oauth_authorization_codes",
-    "line": 215,
+    "line": 127,
     "storage": false
   },
   {
     "file": "lib/server/encryption/critical-backfill-readiness.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 226,
+    "line": 138,
     "storage": false
   },
   {
     "file": "lib/server/encryption/critical-backfill-readiness.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 237,
+    "line": 149,
     "storage": false
   },
   {
     "file": "lib/server/encryption/critical-backfill-readiness.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 254,
+    "line": 166,
     "storage": false
   },
   {
     "file": "lib/server/encryption/critical-backfill-readiness.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 265,
+    "line": 177,
     "storage": false
   },
   {
@@ -6335,20 +4249,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/encryption/numo-automation-content-backfill.ts",
-    "operation": "from",
-    "resource": "numo_automation_operations",
-    "line": 23,
-    "storage": false
-  },
-  {
-    "file": "lib/server/encryption/numo-automation-content-backfill.ts",
-    "operation": "rpc",
-    "resource": "migrate_numo_automation_content",
-    "line": 87,
-    "storage": false
-  },
-  {
     "file": "lib/server/encryption/numo-conversation-title-backfill.ts",
     "operation": "from",
     "resource": "conversations",
@@ -6436,63 +4336,63 @@
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 129,
+    "line": 126,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 147,
+    "line": 144,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_tool_message",
-    "line": 159,
+    "line": 156,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 188,
+    "line": 185,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 205,
+    "line": 202,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_tool_message",
-    "line": 216,
+    "line": 213,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_tool_checkpoint",
-    "line": 225,
+    "line": 222,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "from",
     "resource": "numo_tool_operations",
-    "line": 240,
+    "line": 237,
     "storage": false
   },
   {
     "file": "lib/server/encryption/numo-tool-content-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_numo_tool_operation",
-    "line": 285,
+    "line": 278,
     "storage": false
   },
   {
@@ -8148,20 +6048,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/git/branch-cleanup.ts",
-    "operation": "from",
-    "resource": "projects",
-    "line": 78,
-    "storage": false
-  },
-  {
-    "file": "lib/server/git/branch-cleanup.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 79,
-    "storage": false
-  },
-  {
     "file": "lib/server/git/comment-sync-url-content.ts",
     "operation": "from",
     "resource": "github_issue_comment_url_encryption_scopes",
@@ -8648,77 +6534,56 @@
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 54,
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 148,
+    "line": 144,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 167,
-    "storage": false
-  },
-  {
-    "file": "lib/server/inbox.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 207,
-    "storage": false
-  },
-  {
-    "file": "lib/server/inbox.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 213,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 240,
+    "line": 219,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 249,
+    "line": 228,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 263,
+    "line": 242,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 273,
+    "line": 252,
     "storage": false
   },
   {
     "file": "lib/server/inbox.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 281,
-    "storage": false
-  },
-  {
-    "file": "lib/server/inbox.ts",
-    "operation": "from",
-    "resource": "numo_work",
-    "line": 293,
+    "line": 260,
     "storage": false
   },
   {
@@ -9044,13 +6909,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/legacy-routine-proposals.ts",
-    "operation": "from",
-    "resource": "agent_routines",
-    "line": 59,
-    "storage": false
-  },
-  {
     "file": "lib/server/local-snapshot-access.ts",
     "operation": "from",
     "resource": "projects",
@@ -9159,70 +7017,63 @@
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 534,
+    "line": 518,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 914,
+    "line": 898,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 921,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mcp/tools.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 1177,
+    "line": 905,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1490,
+    "line": 1479,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1647,
+    "line": 1636,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2642,
+    "line": 2631,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 2801,
+    "line": 2790,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 4581,
+    "line": 4570,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 4595,
+    "line": 4584,
     "storage": false
   },
   {
@@ -9271,21 +7122,21 @@
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 464,
+    "line": 455,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 477,
+    "line": 468,
     "storage": false
   },
   {
     "file": "lib/server/members.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 498,
+    "line": 489,
     "storage": false
   },
   {
@@ -9334,77 +7185,77 @@
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 118,
+    "line": 113,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "api_keys",
-    "line": 126,
+    "line": 121,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": null,
-    "line": 176,
+    "line": 170,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 195,
+    "line": 188,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 211,
+    "line": 200,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 217,
+    "line": 206,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 460,
+    "line": 439,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 504,
+    "line": 474,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 515,
+    "line": 485,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 591,
+    "line": 559,
     "storage": false
   },
   {
     "file": "lib/server/notifications.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 592,
+    "line": 560,
     "storage": false
   },
   {
@@ -9417,127 +7268,36 @@
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
-    "resource": "agent_conversations",
-    "line": 55,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 59,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 79,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 94,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 122,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 126,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
     "resource": "numo_user_conversation_history",
-    "line": 155,
+    "line": 36,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_conversation_history",
-    "line": 168,
+    "line": 48,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 183,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "numo_work",
-    "line": 203,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "numo_work_origins",
-    "line": 209,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "numo_conversation_ids",
-    "line": 214,
+    "line": 62,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": null,
-    "line": 223,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_conversation_contexts",
-    "line": 239,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_conversation_contexts",
-    "line": 243,
+    "line": 77,
     "storage": false
   },
   {
     "file": "lib/server/numo/conversations.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 275,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_artifacts",
-    "line": 338,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/conversations.ts",
-    "operation": "from",
-    "resource": "agent_turns",
-    "line": 378,
+    "line": 95,
     "storage": false
   },
   {
@@ -9660,13 +7420,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/numo/surface-conversations.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 229,
-    "storage": false
-  },
-  {
     "file": "lib/server/numo/surface-destination-content.ts",
     "operation": "from",
     "resource": "numo_surface_destination_encryption_scope",
@@ -9677,42 +7430,42 @@
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 72,
+    "line": 71,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 94,
+    "line": 93,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 185,
+    "line": 184,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 203,
+    "line": 202,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 243,
+    "line": 242,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 284,
+    "line": 283,
     "storage": false
   },
   {
@@ -9747,294 +7500,259 @@
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "begin_numo_turn_with_budget",
-    "line": 361,
+    "line": 257,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "begin_numo_turn",
-    "line": 367,
+    "line": 263,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 443,
+    "line": 339,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "append_numo_turn_event",
-    "line": 452,
+    "line": 348,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 601,
+    "line": 491,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_tool_operation_protected",
-    "line": 738,
+    "line": 598,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_tool_operation",
-    "line": 746,
+    "line": 606,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "complete_numo_tool_operation_protected",
-    "line": 794,
+    "line": 648,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "complete_numo_tool_operation",
-    "line": 803,
+    "line": 657,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 831,
+    "line": 684,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_turn",
-    "line": 845,
+    "line": 698,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 852,
+    "line": 705,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 891,
+    "line": 743,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 907,
+    "line": 759,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 918,
+    "line": 770,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 931,
+    "line": 783,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "claim_numo_turn",
-    "line": 1005,
+    "line": 857,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 1060,
+    "line": 910,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 1069,
+    "line": 919,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_tool_round_protected",
-    "line": 1191,
+    "line": 1038,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "checkpoint_numo_tool_round",
-    "line": 1197,
+    "line": 1044,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1355,
+    "line": 1199,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1407,
+    "line": 1205,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1413,
+    "line": 1234,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1443,
+    "line": 1268,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1480,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "rpc",
-    "resource": "resume_numo_turn_from_worker",
-    "line": 1548,
+    "line": 1327,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1561,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 1571,
+    "line": 1337,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 1590,
+    "line": 1356,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1594,
+    "line": 1360,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1612,
+    "line": 1378,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1622,
+    "line": 1388,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1633,
+    "line": 1399,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1646,
+    "line": 1412,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 1654,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 1676,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 1681,
+    "line": 1420,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "retry_numo_turn",
-    "line": 1689,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/turns.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 1704,
+    "line": 1435,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "rpc",
     "resource": "recover_stale_numo_turns",
-    "line": 1718,
+    "line": 1450,
     "storage": false
   },
   {
     "file": "lib/server/numo/turns.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 1720,
+    "line": 1452,
     "storage": false
   },
   {
@@ -10049,48 +7767,6 @@
     "operation": "from",
     "resource": "assistant_messages",
     "line": 110,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/worker-input-cancel.ts",
-    "operation": "from",
-    "resource": "agent_run_input_requests",
-    "line": 7,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/worker-mediation.ts",
-    "operation": "from",
-    "resource": "agent_run_input_requests",
-    "line": 84,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/worker-mediation.ts",
-    "operation": "rpc",
-    "resource": "resume_numo_worker_input",
-    "line": 102,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/worker-mediation.ts",
-    "operation": "from",
-    "resource": "numo_assistant_turns",
-    "line": 153,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/worker-mediation.ts",
-    "operation": "rpc",
-    "resource": "steer_numo_worker",
-    "line": 178,
-    "storage": false
-  },
-  {
-    "file": "lib/server/numo/worker-mediation.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 318,
     "storage": false
   },
   {
@@ -11076,43 +8752,29 @@
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
-    "resource": "agent_conversations",
-    "line": 176,
-    "storage": false
-  },
-  {
-    "file": "lib/server/push/payload.ts",
-    "operation": "from",
-    "resource": "agent_conversations",
-    "line": 180,
-    "storage": false
-  },
-  {
-    "file": "lib/server/push/payload.ts",
-    "operation": "from",
     "resource": "agent_routines",
-    "line": 201,
+    "line": 184,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 209,
+    "line": 192,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 216,
+    "line": 199,
     "storage": false
   },
   {
     "file": "lib/server/push/payload.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 223,
+    "line": 206,
     "storage": false
   },
   {
@@ -11196,126 +8858,98 @@
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 173,
+    "line": 165,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 184,
-    "storage": false
-  },
-  {
-    "file": "lib/server/retention.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 203,
-    "storage": false
-  },
-  {
-    "file": "lib/server/retention.ts",
-    "operation": "from",
-    "resource": "agent_run_events",
-    "line": 215,
-    "storage": false
-  },
-  {
-    "file": "lib/server/retention.ts",
-    "operation": "from",
-    "resource": "agent_run_messages",
-    "line": 218,
-    "storage": false
-  },
-  {
-    "file": "lib/server/retention.ts",
-    "operation": "from",
-    "resource": "agent_run_journal",
-    "line": 224,
+    "line": 176,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "oauth_authorization_codes",
-    "line": 232,
+    "line": 187,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "feedback_sessions",
-    "line": 243,
+    "line": 198,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "feedback_otp_codes",
-    "line": 246,
+    "line": 201,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 248,
+    "line": 203,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "feedback_users",
-    "line": 253,
+    "line": 208,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "rpc",
     "resource": "purge_dormant_feedback_identities",
-    "line": 267,
+    "line": 222,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "stripe_webhook_events",
-    "line": 280,
+    "line": 235,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "forge_webhook_deliveries",
-    "line": 292,
+    "line": 247,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "page_versions",
-    "line": 312,
+    "line": 267,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": "page_versions",
-    "line": 322,
+    "line": 277,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": null,
-    "line": 373,
+    "line": 328,
     "storage": false
   },
   {
     "file": "lib/server/retention.ts",
     "operation": "from",
     "resource": null,
-    "line": 405,
+    "line": 356,
     "storage": false
   },
   {
@@ -11487,27 +9121,6 @@
     "storage": false
   },
   {
-    "file": "lib/server/routine-hooks.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 47,
-    "storage": false
-  },
-  {
-    "file": "lib/server/routine-hooks.ts",
-    "operation": "from",
-    "resource": "agent_routines",
-    "line": 119,
-    "storage": false
-  },
-  {
-    "file": "lib/server/routine-hooks.ts",
-    "operation": "from",
-    "resource": "agent_routines",
-    "line": 173,
-    "storage": false
-  },
-  {
     "file": "lib/server/routine-occurrences.ts",
     "operation": "rpc",
     "resource": "ensure_numo_routine_occurrence",
@@ -11595,28 +9208,21 @@
     "file": "lib/server/routine-runs.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 132,
-    "storage": false
-  },
-  {
-    "file": "lib/server/routine-runs.ts",
-    "operation": "from",
-    "resource": "agent_runs",
-    "line": 151,
+    "line": 123,
     "storage": false
   },
   {
     "file": "lib/server/routine-runs.ts",
     "operation": "from",
     "resource": "numo_conversation_ids",
-    "line": 207,
+    "line": 180,
     "storage": false
   },
   {
     "file": "lib/server/routine-runs.ts",
     "operation": "from",
     "resource": "numo_messages",
-    "line": 220,
+    "line": 193,
     "storage": false
   },
   {
@@ -11637,84 +9243,84 @@
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 313,
+    "line": 297,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 355,
+    "line": 339,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 463,
+    "line": 436,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "routine_armings",
-    "line": 517,
+    "line": 489,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 530,
+    "line": 502,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 553,
+    "line": 525,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 558,
+    "line": 530,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 569,
+    "line": 541,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 617,
+    "line": 582,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 661,
+    "line": 625,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 689,
+    "line": 653,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 705,
+    "line": 669,
     "storage": false
   },
   {
@@ -11994,91 +9600,91 @@
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 190,
+    "line": 189,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "rpc",
     "resource": "soft_delete_objective_guarded",
-    "line": 252,
+    "line": 251,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 272,
+    "line": 271,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 305,
+    "line": 297,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 337,
+    "line": 329,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 376,
+    "line": 368,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 407,
+    "line": 399,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 423,
+    "line": 415,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 613,
+    "line": 598,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 676,
+    "line": 661,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 683,
+    "line": 668,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": null,
-    "line": 700,
+    "line": 685,
     "storage": false
   },
   {
     "file": "lib/server/trash.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 773,
+    "line": 758,
     "storage": false
   },
   {
@@ -12148,21 +9754,21 @@
     "file": "lib/server/usage.ts",
     "operation": "from",
     "resource": "agent_quota_resets",
-    "line": 98,
+    "line": 92,
     "storage": false
   },
   {
     "file": "lib/server/usage.ts",
     "operation": "rpc",
     "resource": "get_user_usage_since",
-    "line": 153,
+    "line": 147,
     "storage": false
   },
   {
     "file": "lib/server/usage.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 249,
+    "line": 243,
     "storage": false
   },
   {

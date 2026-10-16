@@ -12,8 +12,6 @@ function notification(
     read_at: null,
     created_at: "2026-08-29T10:00:00.000Z",
     issue_id: null,
-    agent_conversation_id: null,
-    agent_conversation_title: null,
     issue_number: null,
     issue_title: null,
     objective_id: null,

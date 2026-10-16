@@ -196,13 +196,10 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     () => new Map(categories.map((c) => [c.id, c.name])),
     [categories]
   );
-  // ⇧P/⇧A on the selection: ONE combined prompt for the tickets taken
+  // ⇧P on the selection: ONE combined prompt for the tickets taken
   // together — copied to the clipboard or handed to Numo.
   const bulkPromptActions = useBulkSelectionActions({
     selectedIssues: bulkIssues,
-    projectId,
-    identifierOf: (issue) =>
-      project ? issueIdentifier(project.key, issue.number) : String(issue.number),
     buildInput: (issue) => ({
       issue,
       projectId,
@@ -747,7 +744,6 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
           onClear={clearBulk}
           onAskNumo={() => handleAskNumo(bulkIssues)}
           onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-          onLaunchAgent={bulkPromptActions.launchAgent}
           // Single-project screening: all of its objectives are possible. No
           // cycle line on the other hand — a triage ticket is not there
           // eligible (see CYCLE_INELIGIBLE_STATUSES).

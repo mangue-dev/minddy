@@ -34,7 +34,6 @@ export const ROUTINE_ERROR_STATUS: Record<RoutineErrorKey, number> = {
   invalidSchedule: 400,
   invalidTrigger: 400,
   unknownTimezone: 400,
-  workerConfigurationManagedInSettings: 400,
   noFieldsToUpdate: 400,
   databaseError: 500,
 };
@@ -97,15 +96,6 @@ export async function POST(request: NextRequest) {
   const projectId = str(body.projectId, 64);
   if (!projectId) {
     return NextResponse.json({ error: "projectId required" }, { status: 400 });
-  }
-  if ("model" in body || "reasoningLevel" in body) {
-    return NextResponse.json(
-      {
-        error: "workerConfigurationManagedInSettings",
-        code: "workerConfigurationManagedInSettings",
-      },
-      { status: 400 },
-    );
   }
 
   const result = await createRoutine({

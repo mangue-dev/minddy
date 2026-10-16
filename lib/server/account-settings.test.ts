@@ -1,11 +1,8 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-
-const native = vi.hoisted(() => ({ list: vi.fn() }));
-vi.mock("./agent/native-agent-credentials", () => ({ listNativeConnections: native.list }));
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 type Meta = Record<string, unknown>;
 
-function makeService({ meta, agentRow }: { meta: Meta; agentRow: Meta }) {
+function makeService({ meta }: { meta: Meta }) {
   const service = {
     auth: {
       admin: {
@@ -24,32 +21,8 @@ function makeService({ meta, agentRow }: { meta: Meta; agentRow: Meta }) {
         },
       },
     },
-    rpc: (name: string, args: { p_user_id: string; p_values: Meta }) => {
-      if (name !== "upsert_agent_preferences_partial") throw new Error(`unexpected RPC ${name}`);
-      return { single: async () => {
-        Object.assign(agentRow, { user_id: args.p_user_id }, args.p_values);
-        return { data: agentRow, error: null };
-      } };
-    },
     from: (table: string) => {
-      if (table === "agent_branch_prefix_scope") return {
-        select: () => ({ eq: () => ({ maybeSingle: async () =>
-          ({ data: null, error: { code: "42P01" } }) }) }),
-      };
-      if (table !== "user_agent_preferences") {
-        throw new Error(`unexpected table ${table}`);
-      }
-      return {
-        select: () => ({
-          eq: () => ({
-            maybeSingle: async () => ({ data: agentRow, error: null }),
-          }),
-        }),
-        upsert: async (row: Record<string, unknown>) => {
-          Object.assign(agentRow, row);
-          return { error: null };
-        },
-      };
+      throw new Error(`unexpected table ${table}`);
     },
   };
   return { service };
@@ -59,23 +32,18 @@ vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => h.service,
 }));
 
-import { getAccountSettings, updateAccountSettings } from "./account-settings";
-import {
-  AUTOMATION_EFFORTS_META_KEY,
-  AUTOMATION_START_DELAY_META_KEY,
-} from "@/lib/automations";
+import { updateAccountSettings } from "./account-settings";
 import { ANALYTICS_CONSENT_META_KEY } from "@/lib/cookie-consent";
 
 let h: { service: ReturnType<typeof makeService>["service"] };
 
-function setup({ meta = {} as Meta, agentRow = {} as Meta } = {}) {
-  const made = makeService({ meta, agentRow });
+function setup({ meta = {} as Meta } = {}) {
+  const made = makeService({ meta });
   h = made;
   return made;
 }
 
-beforeEach(() => { setup(); native.list.mockReset(); vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE", "false"); });
-afterEach(() => vi.unstubAllEnvs());
+beforeEach(() => { setup(); });
 
 describe("updateAccountSettings — the settings Numo could not reach before", () => {
   it("writes the keyboard send shortcut", async () => {
@@ -90,14 +58,14 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
   });
 
   it("writes the automation start delay and per-effort switches", async () => {
-    const meta: Meta = { [AUTOMATION_EFFORTS_META_KEY]: { xl: false } };
+    const meta: Meta = { automation_efforts: { xl: false } };
     setup({ meta });
     const r = await updateAccountSettings({
       userId: "user-1",
       input: { automation_start_delay_minutes: 10, automation_efforts: { s: false } },
     });
     expect(r).toEqual({ ok: false, error: "Project automations were replaced by routines. Configure a routine instead." });
-    expect(meta[AUTOMATION_START_DELAY_META_KEY]).not.toBe(10);
+    expect(meta.automation_start_delay_min).toBeUndefined();
 
   });
 
@@ -127,85 +95,5 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
     expect(cleared.ok).toBe(true);
     if (cleared.ok) expect(cleared.settings.analytics_consent).toBeNull();
     expect(meta[ANALYTICS_CONSENT_META_KEY]).toBeUndefined();
-  });
-
-  it("writes the sandbox region and size into user_agent_preferences", async () => {
-    const agentRow = { default_engine: "codex", default_model: "saved-api-model", branch_prefix: "team/" };
-    setup({ agentRow });
-    const r = await updateAccountSettings({
-      userId: "user-1",
-      input: { sandbox_region: "us", sandbox_size: "performance" },
-    });
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.settings.agent.sandbox_region).toBe("us");
-      expect(r.settings.agent.sandbox_size).toBe("performance");
-    }
-    expect(agentRow).toMatchObject({ default_engine: "codex", default_model: "saved-api-model", branch_prefix: "team/" });
-  });
-
-  it("refuses a bad sandbox value without touching the row", async () => {
-    const before = JSON.stringify(h);
-    expect(
-      (await updateAccountSettings({ userId: "user-1", input: { sandbox_region: "mars" } })).ok
-    ).toBe(false);
-    expect(
-      (await updateAccountSettings({ userId: "user-1", input: { sandbox_size: "gigantic" } })).ok
-    ).toBe(false);
-    expect(JSON.stringify(h)).toBe(before);
-  });
-
-  it("reads the sandbox defaults when the account has no preferences row", async () => {
-    const r = await updateAccountSettings({ userId: "user-1", input: { send_shortcut: "enter" } });
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.settings.agent.sandbox_region).toBe("eu");
-      expect(r.settings.agent.sandbox_size).toBe("standard");
-    }
-  });
-
-  it("keeps the code-worker model boundary", async () => {
-    const r = await updateAccountSettings({ userId: "user-1", input: { default_model: "gpt-x" } });
-    expect(r.ok).toBe(false);
-  });
-
-  it("rejects engine changes through Numo without changing account preferences", async () => {
-    const agentRow = { default_engine: "codex" };
-    setup({ agentRow });
-    const result = await updateAccountSettings({ userId: "user-1", input: { default_engine: "opencode" } });
-    expect(result).toMatchObject({ ok: false });
-    expect(agentRow).toEqual({ default_engine: "codex" });
-  });
-
-  it("returns safe native metadata and adapter limitations without authentication capabilities", async () => {
-    setup({ agentRow: { default_engine: "claude_code" } });
-    vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE", "true");
-    vi.stubEnv("MINDDY_NATIVE_AGENT_PROTOTYPE_USER_IDS", "other,user-1");
-    native.list.mockResolvedValue([{ engine: "claude_code", status: "connected", busy: true,
-      stopRequired: false, id: "secret-connection-id", generation: 9, revision: 4,
-      leaseId: "secret-lease", profile_ciphertext: "secret-profile" }]);
-    const result = await getAccountSettings({ userId: "user-1" });
-    expect(native.list).toHaveBeenCalledWith("user-1");
-    expect(result).toMatchObject({ ok: true, settings: { agent: {
-      default_engine: "claude_code", native_agents_enabled: true, native_connection: "busy",
-      harness_capabilities: { funding: "subscription", modelSelection: "native_account_model",
-        minddyTools: true, nativeBuiltinTools: false, subagents: false, imageInput: false,
-        paidExecutionValidated: false },
-    } } });
-    expect(JSON.stringify(result)).not.toMatch(/secret-|leaseId|profile_ciphertext|generation|revision/);
-  });
-
-  it("retains unavailable native selection without reading auth metadata or substituting OpenCode", async () => {
-    setup({ agentRow: { default_engine: "codex" } });
-    expect(await getAccountSettings({ userId: "user-1" })).toMatchObject({ ok: true, settings: {
-      agent: { default_engine: "codex", native_agents_enabled: false, native_connection: "unavailable" },
-    } });
-    expect(native.list).not.toHaveBeenCalled();
-  });
-
-  it("does not guess an engine when saved selection is invalid", async () => {
-    setup({ agentRow: { default_engine: "unknown-harness" } });
-    expect(await getAccountSettings({ userId: "user-1" })).toMatchObject({ ok: false });
-    expect(native.list).not.toHaveBeenCalled();
   });
 });

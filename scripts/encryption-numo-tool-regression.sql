@@ -28,7 +28,7 @@ BEGIN
     content,tool_calls) VALUES(clear_message,conversation,clear_turn,
       'assistant',cipher,'[{"id":"call-3"}]'::jsonb);
   UPDATE public.numo_assistant_turns SET checkpoint=
-    '{"phase":"worker_result","worker_event":{"type":"worker_completed"},"assistantContent":"Private stale copy"}'::jsonb
+    '{"phase":"user_wait","assistantContent":"Private stale copy"}'::jsonb
     WHERE id=clear_turn;
   sealed_checkpoint:=jsonb_build_object('phase','tools','encrypted_payload',cipher,
     'encryption_version',2);
@@ -58,7 +58,7 @@ BEGIN
     'ask_user',sealed,2,digest,'retry');
   IF response->>'action'<>'execute' THEN RAISE EXCEPTION 'claim failed'; END IF;
   IF NOT public.complete_numo_tool_operation_protected(turn,claim,'call-1',
-      true,sealed,2,sealed,2,NULL,false) THEN
+      true,sealed,2,sealed,2,false) THEN
     RAISE EXCEPTION 'completion failed';
   END IF;
   response:=public.claim_numo_tool_operation_protected(turn,claim,'call-1',
@@ -93,7 +93,7 @@ BEGIN
   BEGIN
     PERFORM public.checkpoint_numo_turn(turn,claim,'running',
       '{"phase":"model","messages":["Private"]}'::jsonb,
-      NULL,NULL,NULL,NULL);
+      NULL,NULL,NULL);
     RAISE EXCEPTION 'old checkpoint writer accepted';
   EXCEPTION WHEN check_violation THEN
     IF SQLERRM='old checkpoint writer accepted' THEN RAISE; END IF;
@@ -114,19 +114,19 @@ BEGIN
     request_id,run_id,status) VALUES(new_turn,conversation,actor,
       gen_random_uuid(),gen_random_uuid(),'queued');
   migrated:=public.migrate_numo_tool_checkpoint(clear_turn,
-      '{"phase":"worker_result","worker_event":{"type":"worker_completed"},"assistantContent":"Private stale copy"}'::jsonb,
-      '{"phase":"worker_result","worker_event":{"type":"worker_completed"}}'::jsonb);
+      '{"phase":"user_wait","assistantContent":"Private stale copy"}'::jsonb,
+      '{"phase":"user_wait"}'::jsonb);
   IF NOT migrated OR EXISTS(SELECT 1 FROM public.numo_assistant_turns WHERE id=clear_turn
        AND checkpoint::text LIKE '%Private%') THEN
     RAISE EXCEPTION 'stale checkpoint cleanup failed';
   END IF;
   BEGIN
     UPDATE public.numo_assistant_turns SET checkpoint=
-      '{"phase":"worker_result","assistantContent":"Private stale copy"}'::jsonb
+      '{"phase":"user_wait","assistantContent":"Private stale copy"}'::jsonb
       WHERE id=clear_turn;
-    RAISE EXCEPTION 'obsolete worker-result writer accepted';
+    RAISE EXCEPTION 'obsolete wait-checkpoint writer accepted';
   EXCEPTION WHEN check_violation THEN
-    IF SQLERRM='obsolete worker-result writer accepted' THEN RAISE; END IF;
+    IF SQLERRM='obsolete wait-checkpoint writer accepted' THEN RAISE; END IF;
   END;
   IF public.migrate_numo_tool_message(clear_message,'stale',
       '[{"id":"call-3"}]'::jsonb,NULL,'{}'::jsonb,0,cipher,2) OR

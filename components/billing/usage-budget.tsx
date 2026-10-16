@@ -16,7 +16,6 @@ export const SEGMENT_CHART_UI: Record<
   UsageSegmentId,
   { fill: string; progress: string }
 > = {
-  agents: { fill: "fill-violet-500", progress: "[&>div]:bg-violet-500" },
   routines: { fill: "fill-sky-500", progress: "[&>div]:bg-sky-500" },
   numo: { fill: "fill-blue-500", progress: "[&>div]:bg-blue-500" },
   dictation: { fill: "fill-amber-500", progress: "[&>div]:bg-amber-500" },

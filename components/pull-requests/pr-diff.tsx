@@ -95,8 +95,7 @@ import { AppTooltip } from "@/components/ui/app-tooltip";
  * Diff view of a PR (MIN-66, passed to `@pierre/diffs` in MIN-181): list of
  * collapsible files with +/− counters, unified ↔ side-by-side toggle, and
  * unfolding the hidden context between the hunks GitHub style. Consumed by the
- * detail panel of a PR (pre-detail), the diff panels of a commit and
- * of an agent run.
+ * detail panel of a PR (pr-detail) and the diff panel of a commit.
  *
  * GitHub returns one `patch` per file (a fragment of hunks): we reconstruct a
  * complete unified diff around, then we have it analyzed by the lib. The files

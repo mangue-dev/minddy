@@ -6,8 +6,6 @@ import { decodePullRequestContent, isEncryptedPullRequestContent,
   "@/lib/server/agent/pull-request-content";
 import { decodePullRequestUrl, isEncryptedPullRequestUrl,
   pullRequestUrlState } from "@/lib/server/agent/pull-request-url-content";
-import { decodeAgentCheckpoint } from "@/lib/server/agent/run-checkpoint-content";
-import { decodeJournal } from "@/lib/server/agent/encrypted-journal";
 import { decodeOAuthClientContent } from "@/lib/server/oauth/client-content";
 import { decodeOAuthCodeContent } from "@/lib/server/oauth/code-content";
 import { decodeApiKeyContent } from "@/lib/server/api-key-content";
@@ -15,30 +13,18 @@ import { decodeIntegrationField, integrationFieldVersion } from
   "@/lib/server/integration-content";
 import { openPush, pushVersion, type StoredPush } from "@/lib/server/push/content";
 import { billingFieldVersion, decodeBillingField } from "@/lib/server/billing-content";
-import { getContentKeys, getEncryptedStore } from "./registry";
+import { getContentKeys } from "./registry";
 
 const PAGE_SIZE = 100;
 const SYSTEM = { kind: "system" as const,
   id: "00000000-0000-0000-0000-000000000000" };
-type Family = "pullRequests" | "runCheckpoints" | "runtimeCheckpoints" |
-  "journals" | "oauthClients" | "oauthCodes" | "apiKeys" |
+type Family = "pullRequests" | "oauthClients" | "oauthCodes" | "apiKeys" |
   "integrations" | "pushSubscriptions" | "billingIdentities";
 type Counts = Record<Family, number>;
 type PrRow = { id: string; url: string | null; title: string | null;
   head_branch: string | null; base_branch: string | null;
   url_encryption_checked_at: string | null;
   content_encryption_checked_at: string | null };
-type RunRow = { id: string; project_id: string; checkpoint: unknown;
-  checkpoint_ciphertext: string | null; checkpoint_encryption_version: number;
-  checkpoint_encryption_checked_at: string | null };
-type RuntimeRow = { conversation_id: string; current_run_id: string | null;
-  checkpoint: unknown; checkpoint_ciphertext: string | null;
-  checkpoint_encryption_version: number;
-  checkpoint_encryption_checked_at: string | null;
-  conversation: { project_id: string } | Array<{ project_id: string }> | null };
-type JournalRow = Parameters<typeof decodeJournal>[1] & {
-  run: { project_id: string } | Array<{ project_id: string }> | null;
-  encryption_checked_at: string | null };
 type OAuthClientRow = Parameters<typeof decodeOAuthClientContent>[0] & {
   encrypted_content: string | null; encryption_version: number;
   encryption_checked_at: string | null };
@@ -59,8 +45,7 @@ type BillingRow = { user_id: string; email: string | null;
 
 /** Scan every current row and authenticate each encrypted source before activation. */
 export async function verifyCriticalBackfillReadiness() {
-  const scanned: Counts = { pullRequests: 0, runCheckpoints: 0,
-    runtimeCheckpoints: 0, journals: 0, oauthClients: 0,
+  const scanned: Counts = { pullRequests: 0, oauthClients: 0,
     oauthCodes: 0, apiKeys: 0, integrations: 0,
     pushSubscriptions: 0, billingIdentities: 0 };
   const blocked: Counts = { ...scanned };
@@ -125,79 +110,6 @@ export async function verifyCriticalBackfillReadiness() {
           pullRequestContentState(stored).format !== 3 ||
           !await decodePullRequestContent(row.id, field, stored))) return false;
     }
-    return true;
-  });
-  await scan<RunRow>("runCheckpoints", (after) => {
-    let query = service.from("agent_runs")
-      .select("id,project_id,checkpoint,checkpoint_ciphertext,checkpoint_encryption_version,checkpoint_encryption_checked_at");
-    if (after !== null) query = query.gt("id", after);
-    return query.order("id").limit(PAGE_SIZE);
-  }, (row) => row.id, async (row) => {
-    if (!row.checkpoint_encryption_checked_at) return false;
-    if (row.checkpoint === null && row.checkpoint_ciphertext === null &&
-        row.checkpoint_encryption_version === 0) return true;
-    if (!row.project_id || row.checkpoint_encryption_version !==
-        await currentVersion("project", row.project_id)) return false;
-    if (!row.checkpoint_ciphertext ||
-        getEncryptedStore().formatOf(
-          getEncryptedStore().fromDatabase(row.checkpoint_ciphertext)) !== 3) return false;
-    await decodeAgentCheckpoint(row as Parameters<typeof decodeAgentCheckpoint>[0]);
-    return true;
-  });
-  await scan<RuntimeRow>("runtimeCheckpoints", (after) => {
-    let query = service.from("agent_runtime_sessions")
-      .select("conversation_id,current_run_id,checkpoint,checkpoint_ciphertext,checkpoint_encryption_version,checkpoint_encryption_checked_at,conversation:agent_conversations(project_id)");
-    if (after !== null) query = query.gt("conversation_id", after);
-    return query.order("conversation_id").limit(PAGE_SIZE);
-  }, (row) => row.conversation_id, async (row) => {
-    if (row.current_run_id === null && !row.checkpoint_encryption_checked_at) return false;
-    const conversation = Array.isArray(row.conversation)
-      ? row.conversation[0] : row.conversation;
-    const projectId = conversation?.project_id;
-    if (!projectId) return false;
-    if (row.current_run_id !== null) {
-      const parent = await service.from("agent_runs")
-        .select("project_id,conversation_id,checkpoint,checkpoint_ciphertext,checkpoint_encryption_version,checkpoint_encryption_checked_at")
-        .eq("id", row.current_run_id).maybeSingle();
-      if (parent.error || !parent.data ||
-          parent.data.project_id !== projectId ||
-          parent.data.conversation_id !== row.conversation_id ||
-          !parent.data.checkpoint_encryption_checked_at ||
-          parent.data.checkpoint !== null ||
-          row.checkpoint !== null ||
-          parent.data.checkpoint_ciphertext !== row.checkpoint_ciphertext ||
-          parent.data.checkpoint_encryption_version !==
-            row.checkpoint_encryption_version) return false;
-    }
-    if (row.checkpoint === null && row.checkpoint_ciphertext === null &&
-        row.checkpoint_encryption_version === 0) return true;
-    if (!projectId || row.checkpoint !== null ||
-        row.checkpoint_encryption_version !==
-          await currentVersion("project", projectId) ||
-        !row.checkpoint_ciphertext) return false;
-    const store = getEncryptedStore();
-    const cipher = store.fromDatabase(row.checkpoint_ciphertext);
-    if (store.formatOf(cipher) !== 3 ||
-        store.versionOf(cipher) !== row.checkpoint_encryption_version) return false;
-    const plain = await store.decrypt(cipher, { scope: { kind: "project", id: projectId },
-      table: row.current_run_id === null ? "agent_runtime_sessions" : "agent_runs",
-      column: "checkpoint", rowId: row.current_run_id ?? row.conversation_id });
-    return !!plain && typeof plain === "object" && !Array.isArray(plain);
-  });
-  await scan<JournalRow>("journals", (after) => {
-    let query = service.from("agent_run_journal")
-      .select("*,run:agent_runs(project_id)");
-    if (after !== null) query = query.gt("id", after);
-    return query.order("id").limit(PAGE_SIZE);
-  }, (row) => row.id,
-  async (row) => {
-    const run = Array.isArray(row.run) ? row.run[0] : row.run;
-    const projectId = run?.project_id;
-    if (!projectId || !row.encryption_checked_at ||
-        row.encryption_version !== await currentVersion("project", projectId)) return false;
-    if (!row.payload || getEncryptedStore().formatOf(
-        getEncryptedStore().fromDatabase(row.payload)) !== 3) return false;
-    await decodeJournal(projectId, row);
     return true;
   });
   await scan<OAuthClientRow>("oauthClients", (after) => {

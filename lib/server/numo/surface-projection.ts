@@ -40,8 +40,7 @@ export function numoSurfaceProjectionDisposition(
   status: NumoTurn["status"],
 ): "wait" | "reply" | "fail" {
   if (
-    status === "queued" || status === "running" || status === "waiting_work"
-    || status === "retryable"
+    status === "queued" || status === "running" || status === "retryable"
   ) {
     return "wait";
   }

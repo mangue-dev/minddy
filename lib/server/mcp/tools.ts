@@ -113,6 +113,7 @@ import {
   type Routine,
 } from "@/lib/server/routines";
 import { forgeFor } from "@/lib/server/agent/forge";
+import { findPullRequestForIssue, rowProvider } from "@/lib/server/agent/pull-requests";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
@@ -392,15 +393,7 @@ function mcpRoutine(routine: Routine) {
 }
 
 /** Refusal of the routine factory → MCP error, with the code which is fine. */
-function routineFailure(r: {
-  errorKey: string;
-  modelLimit?: {
-    model: string;
-    multiplier: number;
-    limit: number;
-    planId: string;
-  };
-}): ToolResult {
+function routineFailure(r: { errorKey: string }): ToolResult {
   switch (r.errorKey) {
     case "ownerOnly":
       return fail(
@@ -431,15 +424,6 @@ function routineFailure(r: {
         "invalid_params",
         "The cadence does not hold together: 'weekly' takes at least one day in weekdays (0=Sunday…6=Saturday) and no days_of_month; 'monthly' takes at least one day in days_of_month (1–31) and no weekdays.",
       );
-    case "modelAbovePlan":
-      return fail(
-        "forbidden",
-        r.modelLimit
-          ? `The account worker model ${r.modelLimit.model} costs ${r.modelLimit.multiplier}x the baseline, above the ${r.modelLimit.limit}x ceiling of the ${r.modelLimit.planId} plan. The user must choose an eligible model in Account settings.`
-          : "The account worker model is above the plan ceiling. The user must change it in Account settings.",
-      );
-    case "workerConfigurationManagedInSettings":
-      return fail("invalid_params", "Worker model and reasoning are controlled in Account settings.");
     case "noFieldsToUpdate":
       return fail("invalid_params", "Pass at least one field to change.");
     default:
@@ -1147,7 +1131,8 @@ export function registerMinddyTools(
     {
       title: "Get pull request",
       description:
-        "Read the pull request the code agent opened for an issue: its number, url, " +
+        "Read the pull request linked to an issue (its live one, otherwise the most " +
+        "recently updated): its number, url, " +
         "state (open/merged/closed), whether it is still a draft, its CI checks " +
         "(aggregate state, how many pass, and the failing ones by name), " +
         "title, description, head/base branches, the " +
@@ -1161,8 +1146,8 @@ export function registerMinddyTools(
         "point is settled, read it for the decision it records rather than acting on " +
         "it again; 'resolved: false' also covers 'the forge did not say'. " +
         "Use it to review a PR, explain what it changes, or act on the review feedback. " +
-        "Fails if the issue has no agent-opened PR, or if the project has no linked " +
-        "GitHub repo.",
+        "Fails if the issue has no linked PR, or if the project has no linked " +
+        "repository.",
       inputSchema: z.object({ project_id: PROJECT_ID, issue: ISSUE_REF }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
@@ -1172,24 +1157,19 @@ export function registerMinddyTools(
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      // The PR of an issue is carried by its CANONICAL run — the oldest to
-      // have opened it; subsequent runs (change requests) share it.
-      const { data: run, error } = await getServiceClient()
-        .from("agent_runs")
-        .select("pr_number")
-        .eq("issue_id", ref.issue.id)
-        .not("pr_number", "is", null)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (error) return fail("database_error", error.message);
-      const prNumber = (run as { pr_number?: number } | null)?.pr_number;
-      if (prNumber == null) {
+      let linked;
+      try {
+        linked = await findPullRequestForIssue(ref.issue.id);
+      } catch (e) {
+        return fail("database_error", (e as Error).message);
+      }
+      if (!linked) {
         return fail(
           "pull_request_not_found",
-          `Issue '${ref.issue.identifier}' has no pull request opened by the code agent yet.`,
+          `Issue '${ref.issue.identifier}' has no pull request linked yet.`,
         );
       }
+      const prNumber = linked.number;
 
       let target;
       try {
@@ -1199,6 +1179,15 @@ export function registerMinddyTools(
       }
       if (!target) {
         return fail("no_repository", "This project has no linked repository.");
+      }
+      if (
+        target.provider !== rowProvider(linked) ||
+        target.repoFullName !== linked.repo_full_name
+      ) {
+        return fail(
+          "pull_request_not_found",
+          `The pull request of '${ref.issue.identifier}' is not in this project's repository.`,
+        );
       }
       const forge = forgeFor(target.provider);
 
@@ -4896,7 +4885,7 @@ export function registerMinddyTools(
       title: "List routines",
       description:
         "List the project's ROUTINES — scheduled or event-triggered Numo conversations that use " +
-        "Minddy tools directly and may delegate code when needed. Each one gives its id, title, the instruction it " +
+        "Minddy tools directly. Each one gives its id, title, the instruction it " +
         "runs, its trigger (schedule, issue/feedback event or database arrival, including conditions and delay), " +
         "cadence fields for schedules (frequency + hour/minute + weekdays or days_of_month + " +
         "IANA timezone), spending cap, whether it is enabled, when it last ran, when " +
@@ -4929,7 +4918,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "The instruction Numo receives at every occurrence, in the user's " +
-              "language. Numo may use Minddy tools, delegate code, or pause for owner input.",
+              "language. Numo may use Minddy tools or pause for owner input.",
           ),
         frequency: z
           .enum(["daily", "weekly", "monthly"]).optional()
@@ -4984,7 +4973,7 @@ export function registerMinddyTools(
           .max(100)
           .optional()
           .describe(
-            "Cap on what ONE occurrence, including Numo and delegated code work, may spend, as a percentage of the " +
+            "Cap on what ONE occurrence may spend, as a percentage of the " +
               "owner's monthly usage budget. OMIT unless the user asks for a cap: " +
               "the default (15) lets a routine run all month without eating the " +
               "budget, and 100 removes the cap. Raise it for a routine that runs " +
@@ -5060,7 +5049,7 @@ export function registerMinddyTools(
           .max(100)
           .optional()
           .describe(
-            "New cap on what ONE occurrence, including Numo and delegated code work, may spend, as a percentage of the owner's " +
+            "New cap on what ONE occurrence may spend, as a percentage of the owner's " +
               "monthly usage budget (100 = no cap of its own). This is what to " +
               "change when a run stopped on its cap and the user wants it to go " +
               "further — not the plan.",

@@ -83,7 +83,6 @@ import Link from "@/components/app-link";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { ReasoningBlock } from "@/components/agent/reasoning-block";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
-import { isDelegatedWorkToolCall } from "@/lib/delegated-work-state";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
@@ -347,7 +346,6 @@ export const AssistantShell = forwardRef<
       mentions: AssistantMention[] = [],
       command?: AssistantCommandId,
       skills: AssistantSkillSelection[] = [],
-      workerInput?: AssistantChatRequest["workerInput"],
       intent?: AssistantChatRequest["intent"],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
@@ -357,7 +355,6 @@ export const AssistantShell = forwardRef<
         mentions,
         command,
         skills,
-        workerInput,
         intent,
       });
     },
@@ -375,9 +372,9 @@ export const AssistantShell = forwardRef<
   // a normal user message — the tool result “awaiting_user_response” is
   // already in the history, the loop resumes with the response.
   const handleAnswer = useCallback(
-    (text: string, workerInput?: AssistantChatRequest["workerInput"]) => {
+    (text: string) => {
       if (!text.trim()) return;
-      handleSend(text, [], [], undefined, [], workerInput);
+      handleSend(text);
     },
     [handleSend]
   );
@@ -409,7 +406,6 @@ export const AssistantShell = forwardRef<
   const activeAskUser = useMemo((): {
     messageId: string;
     questions: AskUserQuestion[];
-    workerInput?: AssistantChatRequest["workerInput"];
   } | null => {
     if (isBusy) return null;
     for (let i = state.messages.length - 1; i >= 0; i--) {
@@ -425,33 +421,17 @@ export const AssistantShell = forwardRef<
         // Invalid LLM args → no card.
       }
       const questions = parseAskUserQuestions(args);
-      const rawWorkerInput = args._worker_input as Record<string, unknown> | undefined;
-      const workerInput = rawWorkerInput
-        && typeof rawWorkerInput.parent_turn_id === "string"
-        && typeof rawWorkerInput.run_id === "string"
-        && typeof rawWorkerInput.question_id === "string"
-        ? {
-            parentTurnId: rawWorkerInput.parent_turn_id,
-            runId: rawWorkerInput.run_id,
-            questionId: rawWorkerInput.question_id,
-          }
-        : undefined;
-      if (workerInput && state.pendingWorkerInput === null) return null;
-      if (workerInput && state.pendingWorkerInput && (
-        state.pendingWorkerInput.parentTurnId !== workerInput.parentTurnId
-        || state.pendingWorkerInput.runId !== workerInput.runId
-        || state.pendingWorkerInput.questionId !== workerInput.questionId
-      )) return null;
-      return questions.length > 0
-        ? { messageId: m.id, questions, ...(workerInput ? { workerInput } : {}) }
-        : null;
+      // A question a retired code worker asked (MIN-721) has no one left to
+      // answer it: it stays in the thread, inert.
+      if (args._worker_input) return null;
+      return questions.length > 0 ? { messageId: m.id, questions } : null;
     }
     return null;
-  }, [state.messages, state.pendingWorkerInput, isBusy]);
+  }, [state.messages, isBusy]);
 
   // Skip questions: Numo receives an explicit user message and resumes.
-  const handleSkipQuestions = useCallback((workerInput?: AssistantChatRequest["workerInput"]) => {
-    handleSend(tToolCall("skippedQuestions"), [], [], undefined, [], workerInput);
+  const handleSkipQuestions = useCallback(() => {
+    handleSend(tToolCall("skippedQuestions"));
   }, [handleSend, tToolCall]);
 
   // Active seed proposal (MIN-173): use the same rule as an open question.
@@ -898,8 +878,6 @@ export const AssistantShell = forwardRef<
                       block.summary,
                     );
                     const events: WorkEvent<ReactNode>[] = [];
-                    const delegatedWorkCards: ReactNode[] = [];
-                    const delegatedWorkCallIds = new Set<string>();
                     const addReasoning = (
                       key: string,
                       reasoning: ReturnType<typeof assistantMessageReasoning>,
@@ -923,24 +901,7 @@ export const AssistantShell = forwardRef<
                       const visibleCalls = (msg.tool_calls ?? []).filter((call) =>
                         !(call.function.name === "ask_user" && msg.id === activeAskUser?.messageId),
                       );
-                      const delegatedCalls = visibleCalls.filter((call) =>
-                        isDelegatedWorkToolCall({ name: call.function.name }),
-                      );
-                      if (delegatedCalls.length > 0) {
-                        for (const call of delegatedCalls) {
-                          delegatedWorkCallIds.add(call.id);
-                        }
-                        delegatedWorkCards.push(
-                          renderMessage({
-                            ...msg,
-                            content: null,
-                            tool_calls: delegatedCalls,
-                          }),
-                        );
-                      }
-                      const calls = visibleCalls.filter((call) =>
-                        !isDelegatedWorkToolCall({ name: call.function.name }),
-                      );
+                      const calls = visibleCalls;
                       if (calls.length > 0) {
                         const toolCalls = calls.map((call) => {
                           const result = state.toolCallResults.get(call.id);
@@ -991,23 +952,8 @@ export const AssistantShell = forwardRef<
                           content: <StreamingMessage content={state.streamingContent} activeToolCalls={[]} />,
                         });
                       }
-                      const delegatedCalls = state.activeToolCalls.filter((call) =>
-                        isDelegatedWorkToolCall(call) &&
-                        !delegatedWorkCallIds.has(call.id),
-                      );
-                      if (delegatedCalls.length > 0) {
-                        delegatedWorkCards.push(
-                          <StreamingMessage
-                            key="streaming-delegated-work"
-                            content=""
-                            activeToolCalls={delegatedCalls}
-                          />,
-                        );
-                      }
                       const calls = state.activeToolCalls.filter(
-                        (call) =>
-                          call.name !== "ask_user" &&
-                          !isDelegatedWorkToolCall(call),
+                        (call) => call.name !== "ask_user",
                       );
                       if (calls.length > 0) {
                         events.push({
@@ -1034,7 +980,6 @@ export const AssistantShell = forwardRef<
                             <WorkEvents events={events} />
                           </WorkAccordion>
                         )}
-                        {delegatedWorkCards}
                         {block.summary ? renderMessage(block.summary) : null}
                         {block.active &&
                         !streamingIsWork &&
@@ -1139,8 +1084,8 @@ export const AssistantShell = forwardRef<
                 <AskUserCard
                   key={activeAskUser.messageId}
                   questions={activeAskUser.questions}
-                  onAnswer={(answer) => handleAnswer(answer, activeAskUser.workerInput)}
-                  onSkip={() => handleSkipQuestions(activeAskUser.workerInput)}
+                  onAnswer={handleAnswer}
+                  onSkip={handleSkipQuestions}
                 />
               )}
               <div className={cn(activeAskUser && "hidden")}>

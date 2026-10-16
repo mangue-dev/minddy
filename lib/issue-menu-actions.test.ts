@@ -107,17 +107,16 @@ describe("shared issue menu actions", () => {
     function AgentSurface() {
       const handler = vi.fn();
       actions = useAgentMenuActions({
-        agentsEnabled: true, hasSession: true, hasPlan: false,
+        hasPlan: false,
         onCopyPrompt: handler, onCopyPlanPrompt: handler, onCopyVerifyPrompt: handler,
-        onCopyCustomPrompt: handler, onImplementWithAgent: handler, onWritePlanWithAgent: handler,
-        onVerifyWithAgent: handler, onCustomWithAgent: handler, onOpenSession: handler,
+        onCopyCustomPrompt: handler,
       });
       return null;
     }
     renderToString(createElement(AgentSurface));
     const leaves = actions.flatMap((item) => item.children ?? [item]);
     expect(leaves.filter((item) => item.transfersFocus).map((item) => item.id)).toEqual([
-      "copy-prompt-custom", "open-agent", "agent-plan", "agent-implement", "agent-verify", "agent-custom",
+      "copy-prompt-custom",
     ]);
   });
 

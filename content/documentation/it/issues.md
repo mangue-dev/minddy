@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -93,13 +93,14 @@
       "components/file-viewer.tsx",
       "components/image-viewer.tsx",
       "lib/issue-prompt.ts",
-      "lib/server/issue-prompt-context.ts"
+      "lib/server/issue-prompt-context.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence)",
-    "language": "agent:/root (it new copied-prompt section, translation and retained-meaning self-review)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; it translation of removal edits; no operational rerun)",
+    "language": "agent:/root (it new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
     "date": "2026-10-16"
   },
   "related": [
@@ -145,7 +146,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata con titolo, descrizione e proprietà selezionabili manualmente.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -161,7 +162,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +178,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -193,7 +194,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -209,7 +210,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -225,7 +226,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -241,7 +242,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -257,7 +258,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -268,28 +269,12 @@
       "padding": 24
     },
     {
-      "id": "bulk-issue-actions-steps",
-      "kind": "screenshot",
-      "src": "/documentation/it/work-bulk-actions.png",
-      "alt": "Menu delle azioni per due ticket dimostrativi selezionati.",
-      "caption": "Il menu agisce sui ticket selezionati. In questa schermata non è stata inviata alcuna modifica collettiva.",
-      "revision": 11,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        788,
-        506
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "import-issues-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -306,7 +291,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rimuovi.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -327,7 +312,6 @@
     "sub-issues-steps",
     "implementation-plans-steps",
     "recurring-issues-steps",
-    "bulk-issue-actions-steps",
     "import-issues-workflow",
     "issue-file-preview"
   ]
@@ -472,11 +456,11 @@ Il piano usa righe di attività Markdown: `- [ ]` per da fare, `- [~]` per in co
 
 Estendi o modifica il piano esistente invece di sostituirlo con una nuova copia non selezionata. Mantieni i passi completati e le spiegazioni dei cambiamenti di ambito. Prima di salvare una riscrittura importante, confrontala con il piano più recente se un altro membro o agente ha lavorato sul ticket.
 
-Un piano scritto può essere affidato a Numo per l’implementazione quando il lavoro sul repository e l’ambiente isolato configurato sono disponibili. Quando esiste lavoro completato, l’interfaccia offre anche la verifica dell’implementazione. Queste azioni avviano lavoro; una casella selezionata non dimostra da sola che il codice superi i test. Leggi risultato, modifiche e controlli prima di segnare il ticket come fatto.
+Per far implementare il piano, copia il prompt del ticket per il tuo agente di codice, come descritto qui sotto. Un’attività spuntata non dimostra da sola che il codice superi i test. Leggi risultato, modifiche e controlli prima di segnare il ticket come fatto.
 
 ### Copiare un prompt per un altro agente di codice {#copy-issue-prompt}
 
-Per affidare un ticket a un agente di codice esterno a Minddy, come Claude Code, Codex o Cursor, apri il menu delle azioni del ticket, scegli **Copia come prompt** e poi **Generare un piano** (o **Rivedere il piano** se esiste già), **Implementa il ticket**, **Verificare l'attuazione** o **Personalizzato...**. Con più ticket selezionati, **Copia il prompt combinato** li riunisce in un unico prompt. La copia non esegue alcun modello di IA e non consuma la tua quota di IA: Minddy raccoglie ciò che ha già memorizzato e l'agente esplora il repository da solo.
+Per affidare un ticket a un agente di codice esterno a Minddy, come Claude Code, Codex o Cursor, apri il menu delle azioni del ticket, scegli **Copia come prompt** e poi **Generare un piano** (o **Rivedere il piano** se esiste già), **Implementa il ticket**, **Verificare l'attuazione** o **Personalizzato...**. Con più ticket selezionati, **Copia il prompt combinato** li riunisce in un unico prompt. La copia non esegue alcun modello di IA e non consuma la tua quota di IA: Minddy raccoglie ciò che ha già memorizzato e l'agente esplora il repository da solo. Se nelle preferenze dell’account è attiva l’opzione **Avvia il ticket o l'attività quando copi il prompt**, la copia avvia anche un ticket non ancora iniziato. Consulta [Lavoro sul codice e pull request](/docs/code-work) per il flusso completo e la revisione delle pull request.
 
 Il prompt contiene i campi del ticket, le sue categorie, le relazioni, il numero di risorse allegate e l'avanzamento del piano, ma non il testo del piano, che l'agente legge tramite il server MCP di Minddy o ti chiede. Indica inoltre il repository collegato al progetto e ogni pull request collegata al ticket, con il suo stato e i suoi branch quando sono noti. L'agente prosegue una pull request aperta sul suo branch e considera quelle unite o chiuse come cronologia. Senza una pull request aperta, il prompt suggerisce un nome di branch composto dall'identificativo del ticket e da un titolo breve, ad esempio `min-42-keyboard-navigation`. È solo un suggerimento: l'agente controlla prima i branch esistenti e segue la convenzione di denominazione del repository. Mantenere l'identificativo nel nome del branch, nel titolo della pull request o in una riga `Fixes MIN-42` permette a Minddy di collegare la pull request al ticket quando il repository è collegato.
 
@@ -504,8 +488,6 @@ Una routine di Numo è un oggetto diverso: programma una conversazione e può us
 Sul tabellone, tieni premuto Maiusc e fai clic su ogni scheda per aggiungerla alla selezione o rimuoverla. Con il mouse puoi anche trascinare un rettangolo di selezione da uno spazio vuoto del tabellone. Maiusc, Command o Ctrl aggiungono gli elementi alla selezione esistente. Il rettangolo non è una modalità di selezione per schermi tattili. Controlla il numero selezionato e gli identificativi visibili prima di aprire le azioni collettive. La selezione è un insieme di lavoro per l’azione, non una vista salvata e non una concessione di permessi.
 
 Scegli Azioni nella barra mobile della selezione per aprire la palette dei comandi. Scegli stato, priorità, sforzo o assegnatario, imposta il valore e conferma il modulo integrato. L’azione dell’obiettivo appare solo per una selezione in un unico progetto con obiettivi disponibili. Altre azioni, come aggiungere o rimuovere elementi dal ciclo, collegare due ticket o inviare la selezione a Numo, appaiono quando il tabellone attuale le supporta. Controlla poi i ticket interessati. Su un dispositivo solo tattile senza un gesto di selezione multipla supportato, modifica ogni ticket nel suo pannello di dettaglio.
-
-![Menu delle azioni per due ticket dimostrativi selezionati.](/documentation/it/work-bulk-actions.png)
 
 ### Risultati parziali e azioni distruttive {#bulk-results}
 

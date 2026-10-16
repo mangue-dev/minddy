@@ -100,10 +100,6 @@ const bridge: DesktopBridge = {
     return ipcRenderer.invoke("minddy:update:check") as Promise<void>;
   },
 
-  copyDiagnosticReport() {
-    return ipcRenderer.invoke("minddy:diagnostics:copy") as Promise<boolean>;
-  },
-
   openExternal(url: string) {
     ipcRenderer.send("minddy:open-external", url);
   },
@@ -265,12 +261,6 @@ const bridge: DesktopBridge = {
   localRepoSkill(input) {
     return ipcRenderer.invoke("minddy:local-repo:skill", input) as Promise<
       Awaited<ReturnType<NonNullable<DesktopBridge["localRepoSkill"]>>>
-    >;
-  },
-
-  localRunDiff(input) {
-    return ipcRenderer.invoke("minddy:local-run-diff:read", input) as Promise<
-      Awaited<ReturnType<NonNullable<DesktopBridge["localRunDiff"]>>>
     >;
   },
 

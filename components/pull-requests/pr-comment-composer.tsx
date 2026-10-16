@@ -25,7 +25,7 @@
 //
 // A `PrEndpoint` and not a PR id: the diff view only knows it, and it is
 // which allows the row field to be THE SAME in the PR panel and in
-// the diff view of an agent session (the `agent-runs/[runId]/pr/*` facades).
+// the diff view of a commit.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";

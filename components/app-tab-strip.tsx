@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AlertCircleIcon, Home01Icon, LoaderCircleIcon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AlertCircleIcon, Home01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
@@ -36,12 +36,7 @@ import { useAppTabs } from "@/lib/app-tabs-context";
 import { useProjects } from "@/lib/projects-context";
 import { appTabRoute } from "@/lib/app-tab-location";
 import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
-import {
-  useAgentSessionsQuery,
-  useOpenPullRequestCountQuery,
-} from "@/lib/use-agent-runs";
-import { isAgentSessionUnread } from "@/lib/agent-api";
-import { useAgentReads } from "@/lib/use-agent-reads";
+import { useOpenPullRequestCountQuery } from "@/lib/use-agent-runs";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
 import { AppTabIcon } from "./app-tab-icon";
@@ -79,18 +74,10 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const { pageById, objectiveById, prById, routineById, issueById } = useAppTabMetadata(hrefs);
 
   // Notification badges on the tabs follow the same rules as the sidebar (same
-  // counters, same caching): open PRs on the PR tab, working/unread marks on
-  // the Agents/Numo tab. They sit ON the tab icon's top-right corner, drawn
+  // counter, same caching): open PRs on the PR tab. They sit ON the tab icon's top-right corner, drawn
   // plain — no pill, no ring — as if laid directly over the icon.
   const openPrCount = useOpenPullRequestCountQuery();
   const { agentsAllowed } = usePlanGates();
-  const { sessions: agentSessions } = useAgentSessionsQuery();
-  const { reads: agentReads } = useAgentReads();
-  const anyAgentWorking = agentSessions.some((sessionItem) => sessionItem.working);
-  const anyAgentAwaiting = agentSessions.some(
-    (sessionItem) => sessionItem.awaitingInput && isAgentSessionUnread(sessionItem, agentReads),
-  );
-  const anyAgentUnread = agentSessions.some((sessionItem) => isAgentSessionUnread(sessionItem, agentReads));
   const sectionBadges = (section: string): ReactNode => {
     if (section === "pull-requests") {
       if (!agentsAllowed || openPrCount <= 0) return null;
@@ -105,10 +92,6 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         </span>
       );
     }
-    if (!agentsAllowed || (section !== "numo" && section !== "agents")) return null;
-    if (anyAgentWorking) return <HugeiconsIcon icon={LoaderCircleIcon} className="size-3 shrink-0 animate-spin text-muted-foreground" />;
-    if (anyAgentAwaiting) return <span className="size-2 shrink-0 rounded-full bg-yellow-500" aria-label={nav("agentsAwaiting")} />;
-    if (anyAgentUnread) return <span className="size-2 shrink-0 rounded-full bg-blue-500" aria-label={nav("agentsUnread")} />;
     return null;
   };
 

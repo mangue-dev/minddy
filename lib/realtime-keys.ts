@@ -59,12 +59,10 @@ const SMART_ASSIGN_WARNINGS_KEY: QueryKey = ["me", "smart-assign-warnings"]; // 
 // sidebar, also read on all pages. lib/use-triage-counts-query.ts.
 const TRIAGE_COUNTS_KEY: QueryKey = ["me", "triage-counts"];
 const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", tz]
-// GLOBAL lists of the code agent: the sidebar reads them on all
-// pages, a run of any project moves them. lib/use-agent-runs.ts.
-const ALL_AGENT_SESSIONS_KEY: QueryKey = ["agent-sessions", "all"];
 const ALL_PULL_REQUESTS_KEY: QueryKey = ["pull-requests", "all"];
 const OPEN_PULL_REQUEST_COUNT_KEY: QueryKey = ["pull-requests", "open-count"];
-const AGENT_ACTIVITY_KEY: QueryKey = ["agent-active-issues"];
+// The board cards' pull request chips — components/issue-pr-context.tsx.
+const ISSUE_PRS_KEY: QueryKey = ["issue-pull-requests"];
 
 /**
  * Views DERIVED from a ticket: their list membership is calculated in SQL,
@@ -106,12 +104,6 @@ function issueIdOf(change: BroadcastChange): string | null {
   return typeof issueId === "string" ? issueId : null;
 }
 
-/** The ROUTINE of a broadcast run (MIN-185), when he wears one. */
-function routineIdOf(change: BroadcastChange): string | null {
-  const routineId = routingRecord(change)?.routine_id;
-  return typeof routineId === "string" ? routineId : null;
-}
-
 function objectiveIdOf(change: BroadcastChange): string | null {
   const objectiveId = routingRecord(change)?.objective_id;
   return typeof objectiveId === "string" ? objectiveId : null;
@@ -126,40 +118,6 @@ function feedbackPostIdOf(change: BroadcastChange): string | null {
 function pageIdOf(change: BroadcastChange): string | null {
   const pageId = routingRecord(change)?.page_id;
   return typeof pageId === "string" ? pageId : null;
-}
-
-/**
- * Code Agent Runs: “Numo is working” sidebar spinner,
- * Agents page list and PR counter. These caches only POLL if
- * a session is ALREADY working — without this event, a run launched outside the composer
- * (Numo assistant, @numo, other tab) only appeared on reload.
- *
- * TWO TOPICS since MIN-332, and it is the visibility of the run that decides : a
- * PERSONAL conversation arrives on `user:{id}` (its creator, sole subscriber),
- * a run of the PROJECT — routine, automation, PR rereading — on
- * `project:{id}`. The caches to be refreshed are the same on both sides:
- * hence this function, called by the two switchers.
- *
- * The trigger only broadcasts the visible transitions, and only pushes
- * the id, the ticket, the routine and the status (see the migration).
- */
-function keysForAgentRun(change: BroadcastChange): Invalidation[] {
-  const issueId = issueIdOf(change);
-  const routineId = routineIdOf(change);
-  // A passage from ROUTINE (MIN-185) is not a conversation: it comes out of
-  // list of sessions (`.is("routine_id", null)` on the road side), so invalidate it
-  // would not refresh anything — it is the list of EXECUTIONS of its routine which must
-  // move, and the list of routines itself (its `last_run_at` and its alert
-  // viennent de changer).
-  if (routineId) {
-    return [active(["routines", routineId, "runs"]), active(["routines"])];
-  }
-  return [
-    active(AGENT_ACTIVITY_KEY),
-    active(ALL_AGENT_SESSIONS_KEY),
-    active(ALL_PULL_REQUESTS_KEY),
-    ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
-  ];
 }
 
 // What an issue number reservation (next_issue_number) changes on its project:
@@ -224,10 +182,6 @@ export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
       return [active(["app-tabs"])];
     case "notifications":
       return [active(["notifications"])];
-    // My conversations with Numo (MIN-332): they only exist for me,
-    // so their echo goes through MY topic and not through that of the project.
-    case "agent_runs":
-      return keysForAgentRun(change);
     // These two tables are exactly what the Smart warning depends on
     // Assign (project setting, list of members): the sidebar brand
     // and the welcome banner are erased as soon as the rules are
@@ -540,44 +494,26 @@ export function keysForProjectEvent(
       const pageId = typeof record?.page_id === "string" ? record.page_id : null;
       return pageId ? [active(["page-backlinks", pageId])] : [];
     }
-    // Runs of the code agent — those of the PROJECT (routine, automation,
-    // PR proofreading). Personal conversations happen on the
-    // user topic: same treatment, other door (MIN-332).
-    case "agent_runs":
-      return keysForAgentRun(change);
     // Routine writes may come from Numo, MCP, another tab, or a teammate. The
     // broadcast deliberately carries identifiers only, so refetch the shared
     // list that feeds both the sidebar and the open routine detail.
     case "agent_routines":
       return [active(["routines"]), active(["app-tab-metadata"])];
-    // Automation chains (MIN-147). This is the only surface of the product where
-    // the expiration is CERTAIN: a chain advances on its own during
-    // several minutes, without anyone touching anything — without this
-    // event, its status bar is false from the second following its
-    // opening. The trigger only broadcasts visible transitions (status,
-    // step, expense, reason for stopping — see migration).
-    case "agent_chains": {
-      const issueId = issueIdOf(change);
-      return issueId
-        ? [active(["agent-runs", "issue", issueId])]
-        : [];
-    }
     // Pull requests (MIN-161). The trigger only broadcasts the VISIBLE columns
     // (state, title, url, head, ticket, merge — see migration): a scan
     // which restamps `synced_at` on an entire repository remains silent.
     //
-    // Three caches, and they are not the same readers: the LIST (Pull page
-    // Requests, sidebar counter), the HEADER of a panel whose
+    // Several caches, and they are not the same readers: the LIST (Pull page
+    // Requests, sidebar counter), the board chips, the HEADER of a panel whose
     // PR is not the one this reader is looking at — the topic `pull-request:{id}`
     // does not reach it, he is not subscribed to it —, and the TICKET panel, which
-    // read its PR and its state in `["agent-runs","issue",id]`
-    // (`useIssueAgentRunsQuery`).
+    // reads its PR in `["issue-pull-request",id]` (`useIssuePullRequestQuery`).
     case "pull_requests": {
       const record = change.record ?? change.old_record;
       const prId = typeof record?.id === "string" ? record.id : null;
       const issueId = issueIdOf(change);
       return [
-        active(AGENT_ACTIVITY_KEY),
+        active(ISSUE_PRS_KEY),
         active(ALL_PULL_REQUESTS_KEY),
         active(OPEN_PULL_REQUEST_COUNT_KEY),
         active(["app-tab-metadata"]),
@@ -587,7 +523,7 @@ export function keysForProjectEvent(
         // row that just settled stayed "checks running" up to its next tick.
         active(["pull-request-readiness"]),
         ...(prId ? [active(["pull-request", prId])] : []),
-        ...(issueId ? [active(["agent-runs", "issue", issueId])] : []),
+        ...(issueId ? [active(["issue-pull-request", issueId])] : []),
       ];
     }
     case "issue_events": {
@@ -621,13 +557,7 @@ export const USER_SCOPE_KEYS: QueryKey[] = [
   ["me", "scratchpad"],
   ["me", "triage-counts"],
   ["billing"],
-  // My conversations with Numo (MIN-332): their echo no longer passes through the topic
-  // of the project, so their recovery after interruption can no longer go through the
-  // his neither. As a prefix, as project side — `["agent-runs"]` covers
-  // `["agent-runs","issue",id]`.
-  ["agent-runs"],
-  AGENT_ACTIVITY_KEY,
-  ALL_AGENT_SESSIONS_KEY,
+  ISSUE_PRS_KEY,
   ALL_PULL_REQUESTS_KEY,
   OPEN_PULL_REQUEST_COUNT_KEY,
 ];
@@ -652,14 +582,11 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   ["feedback-count", projectId],
   ["feedback-comments", projectId],
   ["feedback-events", projectId],
-  ["agent-runs"],
-  AGENT_ACTIVITY_KEY,
+  ["issue-pull-request"],
+  ISSUE_PRS_KEY,
   // Routines can be edited while this tab is asleep. Their project broadcast
   // is ephemeral, so the persisted list needs the same resume catch-up.
   ["routines"],
-  // The automation chain of a ticket (MIN-147): in prefix, like the
-  // runs — a tab that slept while a chain was running should
-  // find your real stage, not the one before the cut.
   // The panel of a PR, its four surfaces (MIN-161). As a prefix, and the
   // four: messages in the `pull-request:{id}` topic are EPHEMERAL — one
   // sleeping tab doesn't replay them, it just didn't get them. It is therefore
@@ -697,7 +624,6 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   HOME_SUMMARY_KEY,
   STATS_KEY,
   TRIAGE_COUNTS_KEY,
-  ALL_AGENT_SESSIONS_KEY,
   ALL_PULL_REQUESTS_KEY,
   OPEN_PULL_REQUEST_COUNT_KEY,
 ];

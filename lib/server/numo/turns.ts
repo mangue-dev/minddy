@@ -1,6 +1,5 @@
 import { withRoutineCause } from "@/lib/server/supabase-fetch";
 import "server-only";
-import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -39,12 +38,8 @@ import { buildDocumentationHelpPrompt } from "@/lib/server/assistant/documentati
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   CONVERSATION_ASSISTANT_TOOLS,
-  WORKER_MEDIATION_ASSISTANT_TOOLS,
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
-import type { WorkerInputCorrelation } from "@/lib/server/numo/worker-mediation";
-import { workerHarnessContext } from "@/lib/server/assistant/worker-harness-context";
-import { buildAccountWorkerContext } from "@/lib/server/assistant/account-worker-context";
 import {
   AmbiguousToolExecutionError,
   NumoCompletionError,
@@ -57,14 +52,7 @@ import {
   type ToolExecutionLedger,
 } from "@/lib/server/assistant/loop";
 import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
-import { parseAgentDelegationResult } from "@/lib/server/agent/agent-contract";
-import {
-  deliverAgentDelegationResult,
-  getRun,
-  notifyDelegatedAgentRun,
-} from "@/lib/server/agent/runs";
 import { withoutWebSearch } from "@/lib/server/web-search";
-import { decodeWorkerEventPayload, encodeWorkerEventPayload } from "./worker-event-content";
 import { decodeNumoTurnIntent, encodeNumoTurnIntent,
   shouldProtectNumoTurnIntent } from "./turn-intent-content";
 import { encodeNumoUserMessage, hydrateNumoUserMessages,
@@ -92,7 +80,6 @@ import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
 export const NUMO_TURN_STATUSES = [
   "queued",
   "running",
-  "waiting_work",
   "waiting_input",
   "stopping",
   "stopped",
@@ -109,48 +96,21 @@ export interface NumoTurnIntent {
   timezone: string;
   numoDefaultStatus: NumoDefaultStatus;
   webSearchEnabled: boolean;
-  /** Preserve comment-origin semantics for delegated work and activity. */
+  /** Preserve comment-origin semantics for activity. */
   triggerSource?: "chat" | "mention";
   /** Routine operation identity; the turn id is the occurrence identity. */
   routineId?: string | null;
   routineOrigin?: "scheduled" | "manual" | "event" | "database" | null;
   routineProvenance?: { eventId: string; subjectId: string; subjectType: "issue" | "page" | "feedback"; causeRoutineIds?: string[] } | null;
   routineScheduledFor?: string | null;
-  /** Shared cap across parent generations and every delegated worker. */
+  /** Shared cap across every generation of the operation. */
   operationBudgetUsd?: number | null;
   /** User-facing percentage retained in the same unit as routine settings. */
   operationBudgetPercent?: number | null;
-  /** Durable automation operation whose result is interpreted by this turn. */
-  automation?: NumoAutomationContext | null;
-}
-
-export interface NumoAutomationContext {
-  chainId: string;
-  step: number;
-  ruleId: string;
-  preset: string | null;
-  retries: number;
-  mode: "plan" | "implement" | "verify" | "custom";
-  issue: {
-    id: string;
-    identifier: string;
-    title: string;
-    plan: string | null;
-  };
 }
 
 export type NumoTurnCheckpoint =
   | ProcessChatCheckpoint
-  | { phase: "worker_wait"; active_run_id: string }
-  | {
-      phase: "worker_result";
-      worker_event: { type: string; payload: Record<string, unknown> };
-    }
-  | {
-      phase: "worker_input_wait";
-      worker_event: { type: string; payload: Record<string, unknown> };
-      input_request: WorkerInputCorrelation;
-    }
   | { phase: "user_wait" | "done" };
 
 export interface NumoTurn {
@@ -164,7 +124,6 @@ export interface NumoTurn {
   checkpoint: NumoTurnCheckpoint;
   model: string | null;
   reasoning_level: ReasoningLevel | null;
-  active_run_id: string | null;
   claim_token: string | null;
   claimed_at: string | null;
   attempts: number;
@@ -256,69 +215,6 @@ export async function hydrateNumoTurn<T extends NumoTurn>(row: T,
 
 function checkpointRecord(checkpoint: NumoTurnCheckpoint): Record<string, unknown> {
   return checkpoint as unknown as Record<string, unknown>;
-}
-
-function workerDelegationResult(workerEvent: {
-  type: string;
-  payload: Record<string, unknown>;
-}) {
-  try {
-    return parseAgentDelegationResult(workerEvent.payload.result);
-  } catch {
-    if (Object.hasOwn(workerEvent.payload, "result")) {
-      return parseAgentDelegationResult({
-        version: 1,
-        status: "failed",
-        summary: "The code worker ended without a valid structured result.",
-        changedFiles: [],
-        verificationPerformed: [],
-        artifacts: [],
-        unresolvedDecisions: ["The code worker returned an invalid structured result."],
-      });
-    }
-
-    const status = workerEvent.payload.status;
-    const awaitingInput = workerEvent.payload.awaiting_input === true;
-    const outcome = typeof workerEvent.payload.outcome === "string"
-      ? workerEvent.payload.outcome.trim()
-      : "";
-    const errorMessage = typeof workerEvent.payload.error_message === "string"
-      ? workerEvent.payload.error_message.trim()
-      : "";
-    const prUrl = typeof workerEvent.payload.pr_url === "string"
-      ? workerEvent.payload.pr_url.trim()
-      : "";
-    const prNumber = typeof workerEvent.payload.pr_number === "number"
-      ? workerEvent.payload.pr_number
-      : null;
-    const failed = status === "failed" || status === "canceled"
-      || workerEvent.type === "worker_failed";
-    return parseAgentDelegationResult({
-      version: 1,
-      status: failed
-        ? "failed"
-        : awaitingInput || workerEvent.type === "worker_input"
-          ? "needs_input"
-          : errorMessage
-            ? "partial"
-            : "completed",
-      summary: outcome || errorMessage || "The code worker ended without a summary.",
-      changedFiles: [],
-      verificationPerformed: [],
-      artifacts: prUrl || prNumber != null
-        ? [{
-            kind: "pull_request",
-            ref: prNumber != null ? `#${prNumber}` : prUrl,
-            ...(prUrl ? { url: prUrl } : {}),
-          }]
-        : [],
-      unresolvedDecisions: awaitingInput && outcome
-        ? [outcome]
-        : failed && errorMessage
-          ? [errorMessage]
-          : [],
-    });
-  }
 }
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
@@ -560,11 +456,9 @@ async function buildExecutionInput(input: {
   readClient: SupabaseClient;
   service: SupabaseClient;
   runtime: ResolvedAiRuntime;
-  background: boolean;
 }): Promise<{
   messages: ChatMessage[];
   tools: AssistantToolDef[];
-  workerInput?: WorkerInputCorrelation;
 }> {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
@@ -583,7 +477,6 @@ async function buildExecutionInput(input: {
   } else {
     systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
   }
-  if (!intent.documentation) systemPrompt += await buildAccountWorkerContext(turn.user_id);
   if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
   if (intent.routineId) {
     const timing = intent.routineOrigin === "scheduled"
@@ -591,11 +484,8 @@ async function buildExecutionInput(input: {
       : intent.routineProvenance ? `triggered by ${intent.routineProvenance.subjectType} ${intent.routineProvenance.subjectId} (event ${intent.routineProvenance.eventId})` : "started manually";
     systemPrompt += `\n## Routine occurrence
 - This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
-- Complete the routine instruction as a Numo conversation. Use Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work that does not require a repository.
-- Delegate with launch_code_agent only when repository inspection or code changes are actually necessary. The worker uses the owner's selected Account engine and its API or connected subscription defaults; never ask for or choose a routine-specific worker engine or model.
-- If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.
-- When the instruction requests a pull request, set requires_pull_request: true and authorize manage_pull_request in the worker brief. Treat missing PR artifacts or partial worker results as incomplete delivery; finish the work or explain the concrete failure in the occurrence result.
-- A delegated worker result is intermediate. Interpret it and finish the occurrence in this conversation.`;
+- Complete the routine instruction as a Numo conversation, using Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work. You cannot change a repository; when the instruction asks for code work, say so in the occurrence result.
+- If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.`;
   }
 
   const { data, error } = await service
@@ -606,23 +496,20 @@ async function buildExecutionInput(input: {
     .order("id", { ascending: false })
     .limit(30);
   if (error) throw new Error(error.message);
-  const recentHistory = (await hydrateWorkerParentCopies(service,
-    await hydrateNumoToolMessages(service,
-      await hydrateNumoFinalMessages(service,
-        await hydrateNumoUserMessages(service,
-          (data ?? []) as StoredMessage[], turn.user_id), turn.user_id),
-      turn.user_id))).reverse();
+  const recentHistory = (await hydrateNumoToolMessages(service,
+    await hydrateNumoFinalMessages(service,
+      await hydrateNumoUserMessages(service,
+        (data ?? []) as StoredMessage[], turn.user_id), turn.user_id),
+    turn.user_id)).reverse();
   // The bounded window can begin inside an older parallel tool batch. OpenAI
   // rejects a tool result without its preceding assistant call, so start at the
   // first complete message boundary instead of sending a malformed history.
   const firstCompleteMessage = recentHistory.findIndex((message) => message.role !== "tool");
   const history = firstCompleteMessage < 0 ? [] : recentHistory.slice(firstCompleteMessage);
-  const historySkillNotes = input.background
-    ? history.map(() => "")
-    : await authorizedSkillsNotes(
-        readClient,
-        history.map((message) => message.role === "user" ? message.metadata : null),
-      );
+  const historySkillNotes = await authorizedSkillsNotes(
+    readClient,
+    history.map((message) => message.role === "user" ? message.metadata : null),
+  );
 
   const supportsCache = runtime.provider === "openrouter"
     && await modelSupportsCaching(runtime.model, runtime.apiKey);
@@ -690,37 +577,10 @@ async function buildExecutionInput(input: {
       name: message.tool_name ?? undefined,
     });
   }
-  const workerEvent = turn.checkpoint?.phase === "worker_result"
-    ? { ...turn.checkpoint.worker_event,
-        payload: await decodeWorkerEventPayload(turn.checkpoint.worker_event.payload,
-          turn.user_id, null, turn.active_run_id) }
-    : null;
-  let workerInput: WorkerInputCorrelation | undefined;
-  if (workerEvent) {
-    const durableResult = workerDelegationResult(workerEvent);
-    const harness = workerHarnessContext({ agent_engine: workerEvent.payload.agent_engine });
-    const request = durableResult.inputRequest;
-    if (durableResult.status === "needs_input" && request) {
-      workerInput = {
-        parentTurnId: request.parentTurnId,
-        runId: request.runId,
-        questionId: request.questionId,
-      };
-    }
-    messages.push({
-      role: "system",
-      content: workerInput
-        ? `[Validated durable code-worker input request]\n${JSON.stringify(durableResult)}\n[Frozen worker harness]\n${JSON.stringify(harness)}\nYou alone mediate this worker's interaction with the user. If the parent conversation already determines a reliable answer, call answer_code_worker with the exact supplied identifiers and a self-contained answer. Otherwise call ask_user with the minimum blocking questions; never expose or refer the user to a separate worker conversation. Do not present this as the final result while the worker is waiting. Respect these frozen adapter capabilities; do not promise unavailable native built-ins, images or subagents.`
-        : `[Validated durable code-worker result: ${workerEvent.type}]\n${JSON.stringify(durableResult)}\n[Frozen worker harness]\n${JSON.stringify(harness)}\nInterpret this result and answer the user's original request in this conversation. Report partial work, failure and unresolved decisions honestly. Do not tell the user to inspect another conversation for the answer. Respect these frozen adapter capabilities; do not promise unavailable native built-ins, images or subagents.`,
-    });
-  }
-
-  let tools: AssistantToolDef[] = input.background
-    ? workerInput ? WORKER_MEDIATION_ASSISTANT_TOOLS : []
-    : CONVERSATION_ASSISTANT_TOOLS;
+  let tools: AssistantToolDef[] = CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
-  return { messages, tools, ...(workerInput ? { workerInput } : {}) };
+  return { messages, tools };
 }
 
 function createToolLedger(
@@ -784,12 +644,6 @@ function createToolLedger(
         encodeNumoToolOperationValue(userId, turnId, input.toolCallId,
           "model_result", input.modelResult ?? null),
       ]) : [null, null];
-      const runId = input.success && input.result &&
-        typeof input.result === "object" && !Array.isArray(input.result) &&
-        typeof (input.result as Record<string, unknown>).run_id === "string" &&
-        /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(
-          (input.result as Record<string, unknown>).run_id as string)
-        ? (input.result as Record<string, unknown>).run_id as string : null;
       const { data, error } = protect
         ? await service.rpc("complete_numo_tool_operation_protected", {
             p_turn_id: turnId, p_claim_token: claimToken,
@@ -798,7 +652,7 @@ function createToolLedger(
             p_result_version: sealedResult!.version,
             p_model_result: sealedModel!.value,
             p_model_result_version: sealedModel!.version,
-            p_result_run_id: runId, p_pause: input.pause,
+            p_pause: input.pause,
           })
         : await service.rpc("complete_numo_tool_operation", {
             p_turn_id: turnId, p_claim_token: claimToken,
@@ -819,7 +673,6 @@ async function checkpointTurn(input: {
   claimToken: string;
   status: Exclude<NumoTurnStatus, "queued" | "stopping">;
   checkpoint?: Record<string, unknown>;
-  activeRunId?: string | null;
   errorMessage?: string | null;
   outcome?: string | null;
   userId?: string;
@@ -854,7 +707,6 @@ async function checkpointTurn(input: {
           .eq("id", input.turnId).single()).data?.user_id ?? "",
         input.turnId, input.checkpoint)
       : input.checkpoint ?? {},
-    p_active_run_id: input.activeRunId ?? null,
     p_error_message: errorMessage,
     p_conversation_error_message: conversationErrorMessage,
     p_outcome: input.outcome != null &&
@@ -965,7 +817,7 @@ async function ensureNumoOperationBudget(
 
   const operationCap = turn.intent.operationBudgetUsd;
   const spent = operationCap == null ? null : await spentFromNumoOperation(turn.id);
-  // Ledger reads fail open, like the existing account and worker budget checks.
+  // Ledger reads fail open, like the existing account budget checks.
   if (operationCap == null || spent == null || spent < operationCap) {
     if (runtime.mode === "platform" && turn.managed_budget_usd != null) {
       const platformSpent = await spentFromNumoOperationPlatform(turn.id);
@@ -1051,12 +903,10 @@ async function executeClaimedNumoTurn(input: {
   const claimed = input.turn;
   const executionStartedAt = performance.now();
   let latestCheckpoint = claimed.checkpoint;
-  let latestActiveRunId = claimed.active_run_id;
 
   const emitter = createDurableNumoEmitter(service, claimed.id, input.liveEmitter,
     claimed.user_id);
   emitter.emit("conversation_id", { conversationId: claimed.conversation_id, turnId: claimed.id });
-  const background = claimed.checkpoint?.phase === "worker_result";
   const firstFinal = await service.from("assistant_messages")
     .select("id,content,context,metadata,tool_call_id,tool_name,final_payload_version")
     .eq("turn_id", claimed.id)
@@ -1093,7 +943,7 @@ async function executeClaimedNumoTurn(input: {
     emitter.close();
     return { status: turn.status, turn };
   }
-  if (!input.readClient && !background) {
+  if (!input.readClient) {
     const turn = await checkpointTurn({
       service,
       turnId: claimed.id,
@@ -1128,7 +978,6 @@ async function executeClaimedNumoTurn(input: {
       readClient,
       service,
       runtime,
-      background,
     });
     console.info("[numo-chat] timing", { requestId: claimed.request_id,
       phase: "execution_prepared", executionElapsedMs: Math.round(performance.now() - executionStartedAt) });
@@ -1153,7 +1002,6 @@ async function executeClaimedNumoTurn(input: {
       operationBudgetUsd: claimed.intent.operationBudgetUsd ?? null,
       operationBudgetPercent: claimed.intent.operationBudgetPercent ?? null,
       routineId: claimed.intent.routineId ?? null,
-      triggerSource: claimed.intent.triggerSource ?? "chat",
       resumeCheckpoint: claimed.checkpoint?.phase === "model" || claimed.checkpoint?.phase === "tools"
         ? claimed.checkpoint
         : null,
@@ -1164,7 +1012,6 @@ async function executeClaimedNumoTurn(input: {
           claimToken,
           status: "running",
           checkpoint: checkpoint as unknown as Record<string, unknown>,
-          activeRunId: latestActiveRunId,
         });
         latestCheckpoint = persisted.checkpoint;
       },
@@ -1213,9 +1060,6 @@ async function executeClaimedNumoTurn(input: {
         if (!persistedMessageId) throw new Error("Assistant tool round checkpoint is incomplete");
         return persistedMessageId;
       },
-      registerActiveRun: (runId) => {
-        latestActiveRunId = runId;
-      },
       toolLedger: createToolLedger(service, claimed.id, claimToken,
         claimed.user_id),
       shouldStop: async () =>
@@ -1263,20 +1107,15 @@ async function executeClaimedNumoTurn(input: {
           routineId: claimed.intent.routineId ?? null,
         });
       },
-      ...(execution.workerInput ? { workerInput: execution.workerInput } : {}),
     }), claimed.intent.routineProvenance?.causeRoutineIds ?? []);
 
     if (input.isStopRequestedLocally() || await stopRequested(service, claimed.id, claimToken)) {
-      const activeRunId = result.suspension?.kind === "work"
-        ? result.suspension.runId
-        : claimed.active_run_id;
       const turn = await checkpointTurn({
         service,
         turnId: claimed.id,
         claimToken,
         status: "stopped",
         checkpoint: checkpointRecord(latestCheckpoint),
-        activeRunId,
       });
       emitter.emit("done", { status: "stopped" });
       await emitter.flush();
@@ -1296,24 +1135,12 @@ async function executeClaimedNumoTurn(input: {
       if (messageId) emitter.emit("message_complete", { message_id: messageId });
     }
 
-    const checkpoint = result.suspension?.kind === "work"
-      ? { phase: "worker_wait", active_run_id: result.suspension.runId }
-      : result.suspension?.kind === "input" && execution.workerInput
-        ? {
-            phase: "worker_input_wait",
-            worker_event: claimed.checkpoint?.phase === "worker_result"
-              ? claimed.checkpoint.worker_event
-              : { type: "worker_input", payload: {} },
-            input_request: execution.workerInput,
-          }
-      : result.suspension?.kind === "input"
-        ? { phase: "user_wait" }
-        : { phase: "done" };
-    const status: NumoTurnStatus = result.suspension?.kind === "work"
-      ? "waiting_work"
-      : result.suspension?.kind === "input"
-        ? "waiting_input"
-        : "completed";
+    const checkpoint = result.suspension?.kind === "input"
+      ? { phase: "user_wait" }
+      : { phase: "done" };
+    const status: NumoTurnStatus = result.suspension?.kind === "input"
+      ? "waiting_input"
+      : "completed";
     const recordedOperationCost = await spentFromNumoOperation(claimed.id);
     const fallbackCostUsd = result.generations.reduce(
       (total, generation) => total + Math.max(0, generation.cost ?? 0),
@@ -1325,44 +1152,10 @@ async function executeClaimedNumoTurn(input: {
       claimToken,
       status,
       checkpoint,
-      activeRunId: result.suspension?.kind === "work"
-        ? result.suspension.runId
-        : result.suspension?.kind === "input" && execution.workerInput
-          ? execution.workerInput.runId
-          : null,
       outcome: result.fullContent || null,
       userId: claimed.user_id,
       costUsd: recordedOperationCost ?? fallbackCostUsd,
     });
-    if (
-      claimed.active_run_id &&
-      (status === "completed" || status === "waiting_input")
-    ) {
-      const worker = await getRun(claimed.active_run_id, { decode: false });
-      if (worker?.parent_numo_turn_id === claimed.id) {
-        const notificationType = status === "waiting_input"
-          ? "agent_question"
-          : worker.status === "failed" || worker.status === "canceled"
-            ? "agent_failed"
-            : "agent_done";
-        await notifyDelegatedAgentRun(worker, notificationType);
-      }
-    }
-    if (status === "waiting_work" && result.suspension?.kind === "work") {
-      const worker = await getRun(result.suspension.runId, { decode: false });
-      if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
-        await deliverAgentDelegationResult(worker);
-        const { data: reconciled } = await service.from("numo_assistant_turns")
-          .select("*").eq("id", claimed.id).single();
-        if (reconciled) {
-          const latest = await hydrateNumoTurn(reconciled as NumoTurn);
-          emitter.emit("done", { status: latest.status });
-          await emitter.flush();
-          emitter.close();
-          return { status: latest.status, turn: latest };
-        }
-      }
-    }
     emitter.emit("done", { status });
     await emitter.flush();
     emitter.close();
@@ -1385,7 +1178,6 @@ async function executeClaimedNumoTurn(input: {
         claimToken,
         status: "completed",
         checkpoint: { phase: "done" },
-        activeRunId: claimed.active_run_id,
         outcome: null,
         costUsd: spent ?? claimed.cost_usd,
       });
@@ -1424,7 +1216,6 @@ async function executeClaimedNumoTurn(input: {
           claimToken,
           status: "stopped",
           checkpoint: checkpointRecord(current.checkpoint),
-          activeRunId: current.active_run_id,
         });
         emitter.emit("done", { status: "stopped" });
         await emitter.flush();
@@ -1442,7 +1233,7 @@ async function executeClaimedNumoTurn(input: {
       ? "failed" : claimed.attempts < 3 ? "retryable" : "failed";
     const { data: currentClaim, error: currentClaimError } = await service
       .from("numo_assistant_turns")
-      .select("checkpoint, active_run_id")
+      .select("checkpoint")
       .eq("id", claimed.id)
       .eq("claim_token", claimToken)
       .maybeSingle();
@@ -1462,8 +1253,6 @@ async function executeClaimedNumoTurn(input: {
           storedFailureCheckpoint as unknown as Record<string, unknown>) as
           unknown as NumoTurnCheckpoint
       : latestCheckpoint;
-    const failureActiveRunId = (currentClaim as { active_run_id?: string | null } | null)
-      ?.active_run_id ?? claimed.active_run_id;
     let turn: NumoTurn;
     try {
       turn = await checkpointTurn({
@@ -1472,7 +1261,6 @@ async function executeClaimedNumoTurn(input: {
         claimToken,
         status,
         checkpoint: checkpointRecord(failureCheckpoint),
-        activeRunId: failureActiveRunId,
         errorMessage: message,
       });
     } catch (checkpointError) {
@@ -1491,7 +1279,6 @@ async function executeClaimedNumoTurn(input: {
           claimToken,
           status: "stopped",
           checkpoint: checkpointRecord(turn.checkpoint),
-          activeRunId: turn.active_run_id,
         });
         emitter.emit("done", { status: "stopped" });
         await emitter.flush();
@@ -1535,32 +1322,11 @@ export async function executeNumoTurn(input: {
   }
 }
 
-export async function resumeNumoTurnFromWorker(input: {
-  runId: string;
-  projectId: string;
-  eventId: string;
-  type: "worker_completed" | "worker_failed" | "worker_input";
-  payload: Record<string, unknown>;
-  expectedRun?: { status: string; started_at: string | null; rest_claimed_at: string | null };
-}): Promise<"queued" | "duplicate" | "ignored"> {
-  const service = getServiceClient();
-  const payload = await encodeWorkerEventPayload(service, input);
-  const { data, error } = await service.rpc("resume_numo_turn_from_worker", {
-    p_run_id: input.runId,
-    p_event_id: input.eventId,
-    p_type: input.type,
-    p_payload: payload,
-    p_expected_run: input.expectedRun ?? null,
-  });
-  if (error) throw new Error(error.message);
-  return data as "queued" | "duplicate" | "ignored";
-}
-
 export async function requestNumoTurnStop(conversationId: string, userId: string) {
   const service = getServiceClient();
   const { data, error } = await service.from("numo_assistant_turns")
     .select("request_id").eq("conversation_id", conversationId).eq("user_id", userId)
-    .in("status", ["queued", "running", "stopping", "waiting_work", "waiting_input", "retryable", "reconciling"])
+    .in("status", ["queued", "running", "stopping", "waiting_input", "retryable", "reconciling"])
     .order("created_at", { ascending: false }).order("id", { ascending: false })
     .limit(1).maybeSingle();
   if (error) throw new Error(error.message);
@@ -1598,7 +1364,7 @@ export async function requestNumoRequestStop(input: {
         updated_at: new Date().toISOString(),
       }).eq("conversation_id", input.conversationId).eq("user_id", input.userId)
       .eq("request_id", input.requestId)
-      .in("status", ["queued", "running", "stopping", "waiting_work", "waiting_input", "retryable", "reconciling"])
+      .in("status", ["queued", "running", "stopping", "waiting_input", "retryable", "reconciling"])
       .select("id,status").maybeSingle();
     if (error) throw new Error("Unable to retire Numo execution authority");
     if (data) {
@@ -1665,26 +1431,6 @@ export async function requestNumoRequestStop(input: {
   return turn;
 }
 
-/** Finish a Stop that raced with a submission being routed into an existing worker. */
-export async function stopCanceledNumoMediation(input: {
-  conversationId: string;
-  requestId: string;
-  userId: string;
-  parentTurnId: string;
-}): Promise<{ id: string; status: NumoTurnStatus } | null> {
-  const service = getServiceClient();
-  const { data: receipt, error } = await service.from("numo_assistant_turns")
-    .select("id").eq("conversation_id", input.conversationId).eq("user_id", input.userId)
-    .eq("request_id", input.requestId).eq("status", "stopped").maybeSingle();
-  if (error) throw new Error("Unable to read mediated Numo submission authority");
-  if (!receipt) return null;
-  const { data: parent, error: parentError } = await service.from("numo_assistant_turns")
-    .select("request_id").eq("id", input.parentTurnId).eq("conversation_id", input.conversationId)
-    .eq("user_id", input.userId).single();
-  if (parentError || !parent) throw new Error("Unable to authorize canceled Numo mediation");
-  return requestNumoRequestStop({ ...input, requestId: parent.request_id as string });
-}
-
 export async function retryNumoTurn(conversationId: string, userId: string) {
   const { data, error } = await getServiceClient().rpc("retry_numo_turn", {
     p_conversation_id: conversationId,
@@ -1701,20 +1447,6 @@ export async function drainNumoTurns(options?: { limit?: number }) {
     "@/lib/server/routine-occurrences"
   );
   await recoverPendingRoutineOccurrences(options?.limit ?? 10);
-  const { data: waitingWorkers, error: waitingWorkersError } = await service
-    .from("numo_assistant_turns")
-    .select("active_run_id")
-    .eq("status", "waiting_work")
-    .not("active_run_id", "is", null)
-    .order("updated_at", { ascending: true })
-    .limit(options?.limit ?? 10);
-  if (waitingWorkersError) throw new Error(waitingWorkersError.message);
-  for (const waiting of waitingWorkers ?? []) {
-    const worker = await getRun(waiting.active_run_id as string);
-    if (worker && ["completed", "failed", "canceled"].includes(worker.status)) {
-      await deliverAgentDelegationResult(worker);
-    }
-  }
   const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);
   const { data, error } = await service.from("numo_assistant_turns")
@@ -1731,8 +1463,8 @@ export async function drainNumoTurns(options?: { limit?: number }) {
     // started server-side (PR review, routine, automation) there is no
     // interactive client to press "Retry", so the drain is the only thing
     // that can resume it. The service client is passed as the read client on
-    // purpose: without it, `executeNumoTurnCore` treats any non-worker-result
-    // resume as an interrupted request and flips the turn straight back to
+    // purpose: without it, `executeNumoTurnCore` treats any resume as an
+    // interrupted request and flips the turn straight back to
     // `retryable` without ever running it, leaving the claim to churn every
     // tick with `attempts` unbounded. The attempt ceiling still bounds a
     // poisoned turn once the real execution path records its failures.

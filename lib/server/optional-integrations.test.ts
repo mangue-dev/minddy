@@ -14,7 +14,6 @@ import {
   exchangeGitlabCode,
   isGitlabConfigured,
 } from "@/lib/server/git/gitlab-app";
-import { getOrCreateAgentSandbox } from "@/lib/server/agent/sandbox";
 import { createStripeCustomer } from "@/lib/server/stripe";
 
 beforeEach(() => {
@@ -76,7 +75,6 @@ describe("missing integrations", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-
   it("rejects partial configurations before any network call", async () => {
     vi.stubEnv("EMAIL_PROVIDER", "resend");
     vi.stubEnv("RESEND_API_KEY", "resend-key");
@@ -111,13 +109,6 @@ describe("missing integrations", () => {
       .toEqual({ status: 0, reason: "NotConfigured" });
     expect(isGithubAppConfigured()).toBe(false);
     expect(isGitlabConfigured()).toBe(false);
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("rejects Vercel Sandbox before calling the SDK", async () => {
-    await expect(
-      getOrCreateAgentSandbox({ name: "test", onCreate: async () => {} }),
-    ).rejects.toThrow(/AGENT_EXECUTION_BACKEND=vercel/);
     expect(fetch).not.toHaveBeenCalled();
   });
 

@@ -84,8 +84,8 @@ const history: UsageHistoryResponse = {
   entries: [
     {
       runId: "run-1",
-      segmentId: "agents",
-      feature: "agent_code",
+      segmentId: "numo",
+      feature: "numo_chat",
       at: "2026-10-02T12:00:00Z",
       projectName: "Loaded project",
       usd: 0.15,

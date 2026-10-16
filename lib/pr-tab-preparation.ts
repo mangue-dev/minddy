@@ -15,7 +15,7 @@ import { createProjectBootstrapPair, ProjectBootstrapLimitError } from "./projec
 
 const PASSIVE_SHELL_READS = new Set([
   ["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
-  ["me", "branch-cleanup-targets"], ["pull-requests", "open-count"],
+  ["pull-requests", "open-count"],
 ].map(hashKey));
 
 /** Only established shell summaries may reconcile alongside bounded scoped preparation. */

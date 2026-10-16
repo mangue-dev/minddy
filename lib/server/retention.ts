@@ -8,7 +8,6 @@ import {
   removeProjectSideBuckets,
 } from "@/lib/server/project-storage";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import { eraseAgentSandboxesForProject } from "@/lib/server/agent/sandbox-erasure";
 import {
   ORPHAN_ATTACHMENT_DAYS,
   removeStorageObjects,
@@ -49,13 +48,6 @@ export const RETENTION_DAYS = {
  * who has never joined the project is kept without purpose.
  */
   pendingInvitations: 30,
-  /**
- * Agent execution traces (events + control messages) after
- * the terminal state of the run. The recovery `checkpoint` is already set to
- * null at the end of the run (lib/server/agent/runs.ts). Then only the
- * metadata attached to the ticket remains: branch, pull request, status, cost.
- */
-  agentRunTrace: 30,
   /**
  * Raw payload of Stripe webhooks. The LINE remains beyond — its primary key
  * carries the idempotence guard, deleting it would reopen the door to the
@@ -189,43 +181,6 @@ async function purgePendingInvitations(service: Service, now: Date) {
   );
 }
 
-const TERMINAL_RUN_STATUSES = ["completed", "failed", "canceled"];
-
-/**
- * Traces of agent runs completed more than `agentRunTrace` days ago.
- *
- * Three tables (`agent_run_events`, `agent_run_messages`, `agent_run_journal`)
- * filtered on the same
- * list of runs: PostgREST does not know how to join in a DELETE, so we resolve
- * the identifiers first. The batch is finite — a daily sweep makes up for the remainder the next day, and an unlimited purge on a base that has accumulated months of runs would exceed the duration of the function.
- */
-async function purgeAgentRunTraces(service: Service, now: Date) {
-  const { data, error } = await service
-    .from("agent_runs")
-    .select("id")
-    .in("status", TERMINAL_RUN_STATUSES)
-    .lt("updated_at", cutoff(RETENTION_DAYS.agentRunTrace, now))
-    .limit(500);
-  if (error) throw error;
-
-  const ids = (data ?? []).map((r) => r.id as string);
-  if (ids.length === 0) return 0;
-
-  const events = counted(
-    await service.from("agent_run_events").delete({ count: "exact" }).in("run_id", ids)
-  );
-  const messages = counted(
-    await service.from("agent_run_messages").delete({ count: "exact" }).in("run_id", ids)
-  );
-  // The opencode log (MIN-286): this is by far the heaviest of the three — it
-  // carry the full output of each tool. Without this line, he would survive the
-  // fil qu'il accompagne.
-  const journal = counted(
-    await service.from("agent_run_journal").delete({ count: "exact" }).in("run_id", ids)
-  );
-  return events + messages + journal;
-}
-
 /** Expired OAuth authorization codes (one-time use, very short term). */
 async function purgeExpiredOauthCodes(service: Service, now: Date) {
   return counted(
@@ -356,9 +311,9 @@ const TRASH_TABLES: {
  * project first would take away lines that we would not have counted — the total
  * reported to the cron would lie. The storage objects do not cascade at all:
  * their paths are noted BEFORE the delete, then deleted once the lines
- * are gone. A routine does not have a file but carries its passages
- * (`agent_runs.routine_id` cascade): it is here, and only here, that
- * the history of a deleted routine really disappears.
+ * are gone. A routine does not have a file but carries its occurrences
+ * (`numo_routine_occurrences.routine_id` cascade): it is here, and only here,
+ * that the history of a deleted routine really disappears.
  *
  * Batch bounded by table: the next day's sweep picks up the rest, where a
  * unlimited purge on a backlog would exceed the duration of the function.
@@ -384,10 +339,6 @@ async function purgeTrash(service: Service, now: Date) {
 
     const ids = (data ?? []).map((r) => r.id as string);
     if (ids.length === 0) continue;
-
-    if (type === "project") {
-      for (const id of ids) await eraseAgentSandboxesForProject(id);
-    }
 
     const paths = await attachmentPaths(service, type, ids);
     // A project also carries its icon and comment attachments
@@ -421,7 +372,6 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
   const steps = [
     await step("read_notifications", () => purgeReadNotifications(service, now)),
     await step("pending_invitations", () => purgePendingInvitations(service, now)),
-    await step("agent_run_traces", () => purgeAgentRunTraces(service, now)),
     await step("oauth_authorization_codes", () => purgeExpiredOauthCodes(service, now)),
     await step("feedback_auth", () => purgeExpiredFeedbackAuth(service, now)),
     await step("feedback_dormant_identities", () =>

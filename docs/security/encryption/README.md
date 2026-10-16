@@ -21,6 +21,37 @@ the switch does not reverse activation or authorize a plaintext downgrade.
 Missing keys fail closed. The single switch does not waive the coordinated
 DB/Storage restore, retained-copy inventory or staging activation checks.
 
+## Retired Agent data after MIN-721
+
+MIN-721 removed Numo's code capability, the Agent VM, server sandboxes and the
+self-hosted agent runner. Migration
+`20270109200049_drop_code_agent_schema.sql` then dropped the code-agent schema:
+the run, event, journal, message, input-request, runtime, turn, artifact,
+conversation, chain, sandbox-allocation, erasure-fence, native-connection,
+automation-operation and preference tables, every `agent_*_encryption_scopes`
+activation table, the worker columns of `notifications`, `numo_conversation_ids`,
+`numo_assistant_turns`, `numo_tool_operations` and `assistant_messages`, the
+`numo_work`, `numo_work_origins`, `numo_contexts` and `numo_artifacts` views,
+and the SQL functions that served them. Their retained rows were deleted with
+the tables.
+
+The matching bounded backfills, `run-*` codecs, the encrypted journal codec,
+the readiness families for run checkpoints, runtime checkpoints and journals,
+and their regression fixtures were removed from the application at the same
+time. `mark_agent_backfill_attempt` now accepts only the
+`agent_routines` routine-content queue, and `mark_numo_content_attempt` no
+longer accepts the `automation` kind. The critical-family readiness scan now
+covers seven families: pull requests, OAuth clients, OAuth codes, API keys,
+integrations, push subscriptions and billing identities.
+
+Routines (`agent_routines` and `agent_routine_content_encryption_scope`) and
+the usage-budget watermark (`agent_quota_resets`) remain and stay classified in
+the data policy. The dated Agent checkpoints below, including the sandbox
+allocation, reservation and cleanup material, are historical evidence of
+retired behavior, not current inventory. Dropping the tables does not erase
+copies that older deployments may have left outside the database: see
+[Agent execution storage retirement](agent-ephemeral-storage.md).
+
 ## Current corrective checkpoint: review of `2ddcbbd4e`
 
 The current code and evidence are recorded in the
@@ -34,10 +65,11 @@ retiring a recoverable original, including resumed migrations. Rotation
 authenticates current objects too, and attempts cannot certify successful proof.
 Restored registrations lose their prior byte-proof marker. The application
 readiness endpoint includes a separate forge-byte scan and explicitly returns
-`globalReadiness: "not_assessed"`: ten critical families, even with forge objects,
+`globalReadiness: "not_assessed"`: the critical families (seven since MIN-721), even with forge objects,
 are not the whole application or its retained copies.
 
-Agent allocation uses a durable reservation, unique physical generation,
+Retired since MIN-721 (sandbox allocation no longer happens; the reservation
+rows are dormant): Agent allocation used a durable reservation, unique physical generation,
 revocation, current binding checks and provider-key intent before external calls.
 Account/project erasure cannot report success with unresolved reservations,
 including a late allocation after a provider 404. Unknown provider outcomes are
@@ -217,10 +249,10 @@ registrations; orphan cleanup then removes the object.
 The current source, copy, writer, reader, migration and proof status is tracked
 in [the closure matrix](closure-matrix.md).
 
-- `schema.json` records 199 application tables and 1,777 columns, their primary
+- `schema.json` records 164 application tables and 1,428 columns, their primary
   keys and foreign keys. It contains schema metadata, not application rows.
 - `../../../lib/server/encryption/data-policy.json` classifies every recorded
-  column exactly once. Its 172 encryption targets include the original content,
+  column exactly once. Its 137 encryption targets include the original content,
   derived copies, arbitrary user JSON, private identities, credentials and share
   tokens. The relay audit detail target was removed by an action-specific SQL
   guard and historical scrub; opaque attachment object paths replace two path
@@ -228,10 +260,10 @@ in [the closure matrix](closure-matrix.md).
   forge mention and provider-operation resource identities
   now use purpose-separated one-way equality digests. This is a target
   policy, not evidence that those columns are encrypted.
-- `consumers.json` records 1,757 TypeScript/JavaScript table, view, RPC and object-store
+- `consumers.json` records 1,429 TypeScript/JavaScript table, view, RPC and object-store
   access candidates. Dynamic table names remain explicit `null` entries requiring
   caller review. Array and Buffer constructors are excluded.
-- `sql-consumers.json` records 568 functions, ten views and 492 application triggers. Function
+- `sql-consumers.json` records 430 functions, six views and 369 application triggers. Function
   and view hashes pin the observed definitions without copying their bodies.
   Relation references are conservative text matches, not a SQL data-flow proof.
 - `migrations.json` pins migration inputs. CI rejects added or changed migrations
@@ -306,7 +338,7 @@ current source and copy status.
 | Surface | Required work and proof of completion |
 | --- | --- |
 | Projects, issues, pages and views | Project names, automation rules, smart-assignment rules, pages and their database cells now have converted repositories, authorized projections and activated old-writer guards. Review any remaining sensitive derived copies before global activation. Objectives and category names have converted repositories and bounded migrations; representative production-scale validation remains a pre-activation check. |
-| Histories and derived copies | Page versions, issue events, statistics, Agent journals/events/checkpoints, Numo conversation/tool content and their listed derived copies have protected repositories and bounded migration paths. Every current-format candidate still needs authenticated verification; the latest review records the corrected queues and the remaining staging gate. |
+| Histories and derived copies | Page versions, issue events, statistics, Numo conversation/tool content and their listed derived copies have protected repositories and bounded migration paths. The Agent journal, event and checkpoint copies were dropped by MIN-721. Every current-format candidate still needs authenticated verification; the latest review records the corrected queues and the remaining staging gate. |
 | SQL functions and views | The recorded SQL consumers remain review candidates. Content transformation and search use authorized repositories where the source is protected; SQL retains atomic claims, counters, revisions and guards. The Numo view replay and RLS regression pass on isolated PostgreSQL. A schema inventory alone cannot certify every consumer. |
 | Search and equality | Authorized application search and purpose-separated equality indexes are implemented for the classified targets. The PostgreSQL oracle tests ranking, excerpts and permissions; representative query/content parity and latency remain staging gates. Blind-index rotation requires a coordinated index rewrite. |
 | Forge data | Forge mention throttle identities and private repository names use stable system blind indexes. Names have a recoverable encrypted registry and guarded equality keys across linked copies. Default branches use project-bound envelopes. Relay instance configuration, singleton self-hosted provisioning, brokered user deliveries, persistent OAuth grants, repository hook secrets and personal MCP connections are sealed; the unused relay mirror secret copy is removed. Review remaining forge sidecars. The generic row codec deliberately refuses sensitive primary keys. |
@@ -2354,6 +2386,11 @@ checks before activation. No production migration, flag change or deployment
 is part of this follow-up.
 
 ## MIN-591 six-defect correction — 27 September 2026
+
+> Retired since MIN-721: server Agent sandboxes and the self-hosted runner were
+> removed. This checkpoint is kept as historical evidence; the retirement
+> procedure for leftover copies is in
+> [agent-ephemeral-storage.md](agent-ephemeral-storage.md).
 
 Server Agent sandboxes now discard their filesystem when stopped. Vercel uses a
 new run-name namespace without persistent snapshots or configured warm snapshots;

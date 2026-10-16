@@ -42,25 +42,6 @@ export function PageTaskSurface({
       copyPrompt: (markdown) =>
         buildPageTaskPrompt(markdown, { page: pageTitle }),
 
-      // Internal Numo requests omit the external MCP setup block.
-      launchAgent: (markdown) => {
-        const prompt = buildPageTaskPrompt(markdown, {
-          page: pageTitle,
-          mcp: false,
-        });
-        void flush()
-          .then(() =>
-            openIntent({
-              source: "page",
-              action: "custom",
-              projectId,
-              prompt,
-              pageContext: { projectId, pageId, pageTitle },
-            })
-          )
-          .catch(() => toast.error(t("saveFailed")));
-      },
-
       promote: (note) => {
         // The panel does not unmount the editor, but persist the new task state
         // before Numo rereads the page.

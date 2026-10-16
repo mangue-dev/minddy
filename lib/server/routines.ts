@@ -9,7 +9,9 @@ import { decodeRoutine, encodeRoutine, routineContentValues } from
   "@/lib/server/routine-content";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { softDeleteItem } from "@/lib/server/trash";
-import { checkAgentQuota } from "@/lib/server/agent/quota";
+import { userHasByokKey } from "@/lib/server/agent/model";
+import { getResolvedBilling } from "@/lib/server/billing-accounts";
+import { isManagedAiEnabled } from "@/lib/managed-services";
 import type { AssistantMention } from "@/lib/assistant-types";
 import {
   DEFAULT_MAX_SPEND_PERCENT,
@@ -80,13 +82,7 @@ export interface Routine {
 /** Missed passage reasons, written by the cron and translated by the UI. */
 export type RoutineErrorCode =
   | "quota"
-  | "noRepo"
-  | "alreadyRunning"
-  | "noModelForProvider"
-  | "modelAbovePlan"
   | "managedServiceUnavailable"
-  | "executionBackendUnavailable"
-  | "providerEndpointUnavailableFromSandbox"
   | "launchFailed";
 
 export type RoutineErrorKey =
@@ -98,7 +94,6 @@ export type RoutineErrorKey =
   | "invalidTrigger"
   | "invalidSchedule"
   | "unknownTimezone"
-  | "workerConfigurationManagedInSettings"
   | "noFieldsToUpdate"
   | "databaseError";
 
@@ -139,12 +134,12 @@ export async function routineRunBudgetUsd(routine: {
 }): Promise<number | null> {
   const percent = clampSpendPercent(routine.max_spend_percent);
   if (percent >= NO_SPEND_CAP_PERCENT) return null;
-  // Routine code workers use the same account provider as every other worker.
-  // Their helper calls may still use the automations surface, but that surface
-  // must not decide whether this run is platform-funded or BYOK.
-  const quota = await checkAgentQuota(routine.owner_id, "agent");
-  if (quota.unlimited || quota.cap == null) return null;
-  return (quota.cap * percent) / 100;
+  // An occurrence runs on the assistant surface: a validated BYOK key is not
+  // metered, and on a self-hosted instance the tokens belong to the operator.
+  if (await userHasByokKey(routine.owner_id, "assistant")) return null;
+  if (!isManagedAiEnabled()) return null;
+  const { plan } = await getResolvedBilling(routine.owner_id);
+  return (plan.includedUsageUsd * percent) / 100;
 }
 
 export interface CreateRoutineInput {
@@ -247,17 +242,6 @@ export async function createRoutine(
   // Guard BEFORE everything else: no need to validate a cadence that we are going to
   // refuse, and the refusal must be the same regardless of the door.
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
-  const supplied = input as CreateRoutineInput & {
-    model?: unknown;
-    reasoningLevel?: unknown;
-  };
-  if ("model" in supplied || "reasoningLevel" in supplied) {
-    return {
-      ok: false,
-      status: 400,
-      errorKey: "workerConfigurationManagedInSettings",
-    };
-  }
 
   const prompt = input.prompt?.trim() ?? "";
   if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
@@ -364,17 +348,6 @@ export async function updateRoutine(
   if (!access) return { ok: false, status: 404, errorKey: "routineNotFound" };
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
   const routine = await decodeRoutine(current, input.actorId) as unknown as Routine;
-  const supplied = input as UpdateRoutineInput & {
-    model?: unknown;
-    reasoningLevel?: unknown;
-  };
-  if ("model" in supplied || "reasoningLevel" in supplied) {
-    return {
-      ok: false,
-      status: 400,
-      errorKey: "workerConfigurationManagedInSettings",
-    };
-  }
 
   const updates: Record<string, unknown> = {};
   let trigger = routine.trigger ?? { type: "schedule" } as RoutineTrigger;
@@ -479,9 +452,8 @@ export async function updateRoutine(
 /**
  * Deletes a routine — in the TRASH (MIN-201), not for good.
  *
- * It was a dry `delete`, and it took all its passages with it
- * (`agent_runs.routine_id` cascade): the conversations, the diffs and the pull
- * requests that read there disappeared with a click, with no possible return. The
+ * It was a dry `delete`, and it took all its passages with it: the
+ * conversations that read there disappeared with a click, with no possible return. The
  * routine therefore leaves where the tickets, objectives, returns
  * and projects already leave: marked, exit from the app, restoreable for 30 days identically
  * — cadence, instruction, model, deadline and history unchanged, since nothing
@@ -552,7 +524,7 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
   const [{ data: owned }, { data: member }] = await Promise.all([
     service
       .from("projects")
-      .select("*")
+      .select("id")
       .eq("owner_id", userId)
       .is("deleted_at", null),
     service
@@ -579,14 +551,7 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
     .is("deleted_at", null)
     .in("project_id", [...ids])
     .order("created_at", { ascending: false });
-  const { prepareLegacyRoutineProposals } = await import("@/lib/server/legacy-routine-proposals");
-  // The list read does not wait for the proposal pass. It is repeated only
-  // when that pass created a routine, so a new proposal still appears here.
-  const [created, listed] = await Promise.all([
-    prepareLegacyRoutineProposals((owned ?? []) as Record<string, unknown>[], userId),
-    readRoutines(),
-  ]);
-  const { data } = created ? await readRoutines() : listed;
+  const { data } = await readRoutines();
   return Promise.all(((data ?? []) as Array<Routine & { projects?: unknown }>)
     .map(async ({ projects: _joined, ...routine }) =>
       await routineWaitingState(await decodeRoutine(routine, userId) as unknown as Routine)));
@@ -633,8 +598,7 @@ export async function dueRoutines(limit = 20): Promise<Routine[]> {
 /**
  * RESERVES a deadline: compare-and-set on `next_run_at`. This is the ONLY
  * lock against a double start — two overlapping crons read the same
- * routine, only one wins the write, the other leaves without casting anything. Same
- * doctrine that `claim_agent_run`.
+ * routine, only one wins the write, the other leaves without casting anything.
  *
  * We advance the deadline BEFORE launching, and we never make up for missed passages
  *: a routine left for three days without a budget starts again tomorrow, it does not

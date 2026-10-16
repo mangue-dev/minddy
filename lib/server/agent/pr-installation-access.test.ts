@@ -57,7 +57,6 @@ import { GET as detail } from "@/app/api/pull-requests/[prId]/route";
 import { GET as comments } from "@/app/api/pull-requests/[prId]/comments/route";
 import { GET as commits } from "@/app/api/pull-requests/[prId]/commits/route";
 import { GET as reviewComments } from "@/app/api/pull-requests/[prId]/review-comments/route";
-import { GET as aiReview } from "@/app/api/pull-requests/[prId]/ai-review/route";
 
 beforeEach(() => {
   h.connectionInstallationId = null;
@@ -71,7 +70,6 @@ describe("PR reads without a GitHub installation (MIN-648)", () => {
     ["comments", comments],
     ["commits", commits],
     ["review-comments", reviewComments],
-    ["ai-review", aiReview],
   ] as const)("returns a controlled denial for %s instead of an unhandled exception", async (_name, handler) => {
     const response = await handler(
       new NextRequest("https://minddy.example/api/pull-requests/pr-1"),

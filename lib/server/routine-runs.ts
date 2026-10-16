@@ -1,5 +1,4 @@
 import "server-only";
-import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
 import { decodeNumoError } from "@/lib/server/numo/error-content";
 import { decodeNumoTurnOutcome, hydrateNumoFinalMessages } from
   "@/lib/server/numo/final-content";
@@ -51,9 +50,6 @@ export interface RoutineRunSummary {
   started_at: string | null;
   completed_at: string | null;
   conversation_id: string;
-  pr_number: number | null;
-  pr_url: string | null;
-  pr_state: string | null;
 }
 
 export interface RoutineOccurrenceDetail {
@@ -86,17 +82,15 @@ function turnForConversation(
 
 interface OccurrenceContext {
   turns: Array<Record<string, unknown>>;
-  workers: Map<string, Record<string, unknown>>;
   spend: Map<string, RoutineOccurrenceSpend>;
 }
 
 function runSummary(
   occurrence: NumoRoutineOccurrence,
-  { turns, workers, spend }: OccurrenceContext,
+  { turns, spend }: OccurrenceContext,
 ): RoutineRunSummary {
   const turn = turnForConversation(turns, occurrence.conversation_id);
   const status = (turn?.status as NumoTurnStatus | undefined) ?? null;
-  const worker = workers.get(occurrence.conversation_id) ?? null;
   return {
     id: occurrence.id,
     origin: occurrence.origin,
@@ -116,9 +110,6 @@ function runSummary(
     started_at: (turn?.started_at as string | null) ?? null,
     completed_at: (turn?.completed_at as string | null) ?? null,
     conversation_id: occurrence.conversation_id,
-    pr_number: (worker?.pr_number as number | null) ?? null,
-    pr_url: (worker?.pr_url as string | null) ?? null,
-    pr_state: (worker?.pr_state as string | null) ?? null,
   };
 }
 
@@ -146,26 +137,8 @@ async function occurrenceContext(
       error_message: await decodeNumoError(ownerId, "numo_assistant_turns",
         turn.id as string, turn.error_message as string | null),
     })));
-  const turnIds = turns.map((turn) => turn.id as string);
-  const workerResult = turnIds.length
-    ? await service
-        .from("agent_runs")
-        .select("id, parent_numo_turn_id, pr_number, pr_url, pr_state")
-        .in("parent_numo_turn_id", turnIds)
-        .order("created_at", { ascending: true })
-    : { data: [], error: null };
-  if (workerResult.error) throw new Error(workerResult.error.message);
-  const turnConversation = new Map<string, string>();
-  for (const turn of turns) {
-    turnConversation.set(turn.id as string, turn.conversation_id as string);
-  }
-  const workers = new Map<string, Record<string, unknown>>();
-  for (const worker of (workerResult.data ?? []) as Array<Record<string, unknown>>) {
-    const conversationId = turnConversation.get(worker.parent_numo_turn_id as string);
-    if (conversationId) workers.set(conversationId, worker);
-  }
   const spend = await routineOccurrenceSpend(service, conversationIds);
-  return { turns, workers, spend };
+  return { turns, spend };
 }
 
 /** Run history of one routine, most recent first. Caller access is checked. */
@@ -193,7 +166,7 @@ function clampContent(content: unknown): string {
 /**
  * One occurrence in full. `transcript` comes from the caller's RLS client, so
  * it is present only when the routine's owner asks — for anyone else the tool
- * still exposes the run state, outcome and pull request.
+ * still exposes the run state and outcome.
  */
 export async function routineOccurrenceDetail(input: {
   routine: Routine;
@@ -226,13 +199,12 @@ export async function routineOccurrenceDetail(input: {
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
   if (error) throw new Error(error.message);
-  const rows = await hydrateWorkerParentCopies(input.readClient,
-    await hydrateNumoToolMessages(input.readClient,
-      await hydrateNumoFinalMessages(input.readClient,
-        await hydrateNumoUserMessages(input.readClient,
-          (data ?? []) as Array<Record<string, unknown>>,
-          input.routine.owner_id), input.routine.owner_id),
-      input.routine.owner_id));
+  const rows = await hydrateNumoToolMessages(input.readClient,
+    await hydrateNumoFinalMessages(input.readClient,
+      await hydrateNumoUserMessages(input.readClient,
+        (data ?? []) as Array<Record<string, unknown>>,
+        input.routine.owner_id), input.routine.owner_id),
+    input.routine.owner_id);
   const messages = rows
     .filter((row) => row.kind !== "action")
     .map((row) => ({

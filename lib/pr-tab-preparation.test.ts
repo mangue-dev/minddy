@@ -529,7 +529,7 @@ describe("account-owned PR preparation", () => {
     const prepared = setup();
     try {
       const keys = [["me", "summary"], ["me", "triage-counts"], ["me", "smart-assign-warnings"],
-        ["me", "branch-cleanup-targets"], ["pull-requests", "open-count"], ["app-tab-metadata", "owner", ["/projects/p/pages/a"]]];
+        ["pull-requests", "open-count"], ["app-tab-metadata", "owner", ["/projects/p/pages/a"]]];
       for (const key of keys) {
         prepared.client.setQueryData(key, []);
         const query = prepared.client.getQueryCache().find({ queryKey: key, exact: true })!;
@@ -621,7 +621,7 @@ describe("account-owned PR preparation", () => {
       prepared.preparation.visit(active, [active, "/projects/new"]);
       if (board === "settled") await prepared.client.fetchQuery({ queryKey: ["me", "board"], queryFn: async () => ({ issues: [] }) });
       if (board === "restored") prepared.client.setQueryData(["me", "board"], { issues: [] });
-      for (const queryKey of [["me", "board"], ["pull-requests", "all", "open", 100, null, null]]) {
+      for (const queryKey of [["me", "board"], ["pull-requests", "all", "open", 100, null]]) {
         stops.push(new QueryObserver(prepared.client, { queryKey, queryFn: () => new Promise(() => {}) }).subscribe(() => {}));
       }
       expect(prepared.client.isFetching()).toBe(2);
@@ -637,7 +637,7 @@ describe("account-owned PR preparation", () => {
     const prepared = setup(); let stop = () => {};
     prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
     try {
-      stop = new QueryObserver(prepared.client, { queryKey: ["pull-requests", "all", "open", 100, null, null],
+      stop = new QueryObserver(prepared.client, { queryKey: ["pull-requests", "all", "open", 100, null],
         queryFn: () => new Promise(() => {}) }).subscribe(() => {});
       prepared.preparation.visit("/home", ["/home", "/pull-requests?pr=one", "/projects/new"]);
       for (let step = 0; step < 8; step++) {

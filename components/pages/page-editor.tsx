@@ -130,7 +130,7 @@ const EDITOR_PROPS = {
   handleClick: (view: EditorView, pos: number, event: MouseEvent) =>
     handleNodeLinkClick(event) || handleMarkdownLinkClick(view, pos, event),
   // Writing expires the pointer: as long as you have not moved the mouse again, the
-  // task that it hovers no longer takes ⇧A/⇧P (see hover-keys.ts). Same rule
+  // task that it hovers no longer takes ⇧P (see hover-keys.ts). Same rule
   // than the notebook, and for the same reason — a page is editable from start to finish
   // bout, so “typing wins as long as you write” is the only thing that
   // separate the shortcut from the letter. The signal is the STRIKE, not the

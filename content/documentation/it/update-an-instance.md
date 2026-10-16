@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min-721 (it runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/it/update-an-instance-flow.svg",
       "alt": "Schema: Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
       "caption": "Segui le fasi in questo ordine. Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -96,9 +96,9 @@ Aggiorna una release pubblicata alla volta. Leggi note di release, migrazioni e 
 
 ## Aggiornare il profilo full {#full}
 
-Usa il contesto Compose full dell’articolo sul backup a freddo. Ferma ingressi, scritture, worker e scheduler, poi crea una copia sigillata completa. Copia l’ambiente con permessi `0600` in `TARGET_ENV_FILE` e modifica solo `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` e `MINDDY_ENV_FILE` secondo le identità verificate della destinazione. Conserva URL, credenziali, chiavi e scelte di funzionalità. La sequenza avvia il backend, applica le migrazioni e controlla applicazione e runner mentre Caddy e scheduler rimangono fermi.
+Usa il contesto Compose full dell’articolo sul backup a freddo. Ferma ingressi, scritture, worker e scheduler, poi crea una copia sigillata completa. Copia l’ambiente con permessi `0600` in `TARGET_ENV_FILE` e modifica solo `MINDDY_RELEASE`, `MINDDY_IMAGE`, `MINDDY_DEPLOY_DIR` e `MINDDY_ENV_FILE` secondo le identità verificate della destinazione. Conserva URL, credenziali, chiavi e scelte di funzionalità. Elimina `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET` e `AGENT_CONTROL_ORIGIN` se una release precedente li ha lasciati: l’applicazione non li legge più e `--remove-orphans` rimuove il container dismesso `agent-runner`. La sequenza avvia il backend, applica le migrazioni e controlla l’applicazione mentre Caddy e scheduler rimangono fermi.
 
-Nell’aggiornamento da v0.10.30 a v0.11.0, la versione di destinazione introduce `MINDDY_DATA_ROOT_KEY`. Aggiungi la chiave soltanto se la configurazione esistente non contiene una radice e conserva tutti i segreti già usati per cifrare le credenziali. Il comando seguente scrive una nuova radice di 32 byte direttamente nel file di destinazione protetto, senza mostrarla, e rifiuta di sostituire un valore salvato non valido. La sola radice non attiva la cifratura dei contenuti. Prima di avviare la destinazione, applica gli [adattamenti vincolati del runner e delle funzioni offline](/it/documentazione/installation#runner-workaround) e conserva `RUNNER_FIX_OVERRIDE` in ogni operazione Compose. Il profilo è esplicitamente adattato e non dimostra l’installazione riuscita del tag storico invariato.
+Nell’aggiornamento da v0.10.30 a v0.11.0, la versione di destinazione introduce `MINDDY_DATA_ROOT_KEY`. Aggiungi la chiave soltanto se la configurazione esistente non contiene una radice e conserva tutti i segreti già usati per cifrare le credenziali. Il comando seguente scrive una nuova radice di 32 byte direttamente nel file di destinazione protetto, senza mostrarla, e rifiuta di sostituire un valore salvato non valido. La sola radice non attiva la cifratura dei contenuti.
 
 ```bash
 export TARGET_RELEASE_DIR=/srv/minddy/releases/vX.Y.NEXT
@@ -135,8 +135,8 @@ export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
 export MINDDY_ENV_FILE="$TARGET_ENV_FILE"
 node scripts/prepare-self-hosted-functions.mjs --supabase-dir "$SUPABASE_DIR" \
   --env-file "$MINDDY_ENV_FILE"
-compose pull minddy agent-runner
-compose up -d --wait minddy agent-runner
+compose pull minddy
+compose up -d --wait --remove-orphans minddy
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
   --supabase-compose "$SUPABASE_DIR/docker/docker-compose.yml" --skip-network --maintenance
 compose up -d --wait

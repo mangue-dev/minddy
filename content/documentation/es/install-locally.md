@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work",
     "editions": [
       "self-hosted"
     ],
@@ -44,14 +44,15 @@
       "app/api/oauth/register/route.ts",
       "lib/server/oauth/metadata.ts",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 es network guidance and terminology review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 6; es translation of removal edits; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 es network guidance and terminology review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "workspace-encryption",
@@ -68,7 +69,7 @@
       "src": "/documentation/es/install-locally-flow.svg",
       "alt": "Diagrama: La aplicación de escritorio selecciona el clon. Aplicación loopback: puerto 6463. Supabase mínimo y datos duraderos. Salir detiene la aplicación y el backend.",
       "caption": "La aplicación de escritorio controla los servicios locales del clon elegido, cuyos datos se conservan de forma duradera.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +101,7 @@
       "src": "/documentation/es/install-locally-wizard.png",
       "alt": "Asistente público de instalación con el perfil de este ordenador seleccionado.",
       "caption": "Elija la instalación personal cuando la aplicación de escritorio deba gestionar los servicios locales.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -152,4 +153,4 @@ Este perfil gestionado por la aplicación de escritorio solo escucha en la inter
 
 ## Recuperarse de un fallo {#recover}
 
-Si el inicio falla, copie el informe de diagnóstico desde el menú nativo de ayuda. Compruebe Docker, la disponibilidad de la CLI, el espacio libre y si otro proceso ocupa el puerto 6463. Puede ejecutar `pnpm self-host:local` desde el terminal para diagnosticar el problema. Deténgalo con Ctrl+C antes de devolver el control a la aplicación, que no asume procesos ajenos. Salir por completo de la aplicación normalmente también detiene Supabase; cerrar una ventana no equivale a salir. La opción `--keep-backend` modifica ese comportamiento de forma explícita. No utilice `supabase db reset --local` como método de recuperación: destruye los datos de evaluación. Compruebe la creación de una cuenta, un proyecto, una incidencia y un archivo adjunto antes de confiar en la instancia.
+Compruebe Docker, la disponibilidad de la CLI, el espacio libre y si otro proceso ocupa el puerto 6463. Puede ejecutar `pnpm self-host:local` desde el terminal para diagnosticar el problema. Deténgalo con Ctrl+C antes de devolver el control a la aplicación, que no asume procesos ajenos. Salir por completo de la aplicación normalmente también detiene Supabase; cerrar una ventana no equivale a salir. La opción `--keep-backend` modifica ese comportamiento de forma explícita. No utilice `supabase db reset --local` como método de recuperación: destruye los datos de evaluación. Compruebe la creación de una cuenta, un proyecto, una incidencia y un archivo adjunto antes de confiar en la instancia.

@@ -45,18 +45,6 @@ function render(retired: "numo" | "agents") {
   );
 }
 
-/** `fetch` mock: resolve(id) answers for a given source, 404 for the other. */
-function mockResolve(source: "agent" | "run", conversationId?: string) {
-  return vi.fn(async (url: string) => {
-    const query = new URL(url, "http://x").searchParams;
-    const ok = query.get("source") === source && conversationId;
-    return new Response(
-      ok ? JSON.stringify({ conversationId }) : JSON.stringify({ error: "x" }),
-      { status: ok ? 200 : 404 },
-    );
-  });
-}
-
 describe("retired Numo page compat surface", () => {
   it("opens the panel on the named conversation and lands on home", async () => {
     h.searchParams.set("conversation", UUID);
@@ -71,28 +59,13 @@ describe("retired Numo page compat surface", () => {
     expect(h.open).toHaveBeenCalledExactlyOnceWith({ conversationId: null });
   });
 
-  it("resolves an old worker conversation id to the common identity", async () => {
-    const fetchMock = mockResolve("agent", UUID);
-    vi.stubGlobal("fetch", fetchMock);
-    h.searchParams.set("run", UUID);
-    await render("agents");
-    expect(h.open).toHaveBeenCalledExactlyOnceWith({ conversationId: UUID });
-  });
-
-  it("resolves an old run id when the worker conversation lookup misses", async () => {
-    const fetchMock = mockResolve("run", UUID);
-    vi.stubGlobal("fetch", fetchMock);
-    h.searchParams.set("run", UUID);
-    await render("agents");
-    expect(h.open).toHaveBeenCalledExactlyOnceWith({ conversationId: UUID });
-  });
-
-  it("still opens the panel when nothing resolves", async () => {
-    const fetchMock = mockResolve("agent");
+  it("opens the panel on the live thread for a retired run link", async () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     h.searchParams.set("run", UUID);
     await render("agents");
     expect(h.open).toHaveBeenCalledExactlyOnceWith({ conversationId: null });
     expect(h.router.replace).toHaveBeenCalledExactlyOnceWith("/home");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

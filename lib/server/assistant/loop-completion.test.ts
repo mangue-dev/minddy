@@ -14,14 +14,14 @@ vi.mock("@/lib/server/agent/openrouter-index", () => ({
 const { processChat, NumoCompletionError } = await import("./loop");
 
 // This French fixture reproduces the malformed tool protocol in the production i18n incident.
-const INCIDENT_TEXT = 'Je relance la correction.<tool_call>launch_code_agent<arg_key>objective</arg_key><arg_value>Corriger les traductions</arg_value></tool_call>';
+const INCIDENT_TEXT = 'Je relance la correction.<tool_call>create_issue<arg_key>title</arg_key><arg_value>Corriger les traductions</arg_value></tool_call>';
 const TOOL = {
   type: "function" as const,
-  function: { name: "launch_code_agent", description: "Launch a worker",
-    parameters: { type: "object" as const, properties: { objective: { type: "string" } } } },
+  function: { name: "create_issue", description: "Create an issue",
+    parameters: { type: "object" as const, properties: { title: { type: "string" } } } },
 };
-const CALL = { index: 0, id: "native-launch", function: {
-  name: "launch_code_agent", arguments: '{"objective":"Correct translations"}',
+const CALL = { index: 0, id: "native-call", function: {
+  name: "create_issue", arguments: '{"title":"Correct translations"}',
 } };
 
 function response(parts: Array<Record<string, unknown>>, done = true): Response {
@@ -68,46 +68,8 @@ describe("Numo completion contract", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.OPENROUTER_API_KEY = "test-key";
-    h.executeTool.mockResolvedValue({ success: true, result: { run_id: "worker" } });
+    h.executeTool.mockResolvedValue({ success: true, result: { id: "issue" } });
     h.modelInfo.mockResolvedValue(null);
-  });
-
-  it("repairs split incident XML into one native launch and a durable worker wait", async () => {
-    const cut = INCIDENT_TEXT.indexOf("<tool_call") + 5;
-    h.fetchModel.mockResolvedValueOnce({ model: "model", response: response([
-      { delta: { content: INCIDENT_TEXT.slice(0, cut) } },
-      { delta: { content: INCIDENT_TEXT.slice(cut) }, finish_reason: "stop" },
-    ]) }).mockResolvedValueOnce({ model: "model", response: response([
-      { delta: { tool_calls: [CALL] }, finish_reason: "tool_calls" },
-    ]) });
-    const ctx = context({ toolLedger: {
-      claim: vi.fn(async () => ({ action: "execute" as const })), complete: vi.fn(),
-    }, registerActiveRun: vi.fn() });
-    const emitter = { emit: vi.fn() };
-
-    const result = await run(ctx, emitter);
-
-    expect(result.fullContent).toBe("");
-    expect(result.suspension).toEqual({ kind: "work", runId: "worker" });
-    expect(h.executeTool).toHaveBeenCalledTimes(1);
-    expect(h.executeTool).toHaveBeenCalledWith("launch_code_agent",
-      { objective: "Correct translations" }, expect.any(Object));
-    expect(ctx.toolLedger!.complete).toHaveBeenCalledTimes(1);
-    expect(ctx.registerActiveRun).toHaveBeenCalledWith("worker");
-    expect(ctx.persistToolRound).toHaveBeenCalledWith(expect.objectContaining({
-      completionRepairs: 1, pendingToolCalls: [expect.objectContaining({ id: CALL.id })],
-    }));
-    expect(ctx.persistCheckpoint).toHaveBeenLastCalledWith(expect.objectContaining({
-      phase: "tools", completionRepairs: 1, completedToolCallIds: [CALL.id],
-    }));
-    expect(ctx.onGeneration).toHaveBeenCalledTimes(2);
-    expect(ctx.beforeGeneration).toHaveBeenCalledTimes(2);
-    const correctionRequest = h.fetchModel.mock.calls[1][2]("model");
-    expect(correctionRequest.tools).toEqual([TOOL]);
-    expect(JSON.stringify(correctionRequest.messages)).not.toContain("<tool_call");
-    const published = emitter.emit.mock.calls.filter(([name]) => name === "content_delta")
-      .map(([, payload]) => payload.delta).join("");
-    expect(published).not.toContain("<tool_call");
   });
 
   it("fails repeated serialized calls explicitly without executing their text", async () => {
@@ -144,7 +106,7 @@ describe("Numo completion contract", () => {
   });
 
   it("repairs a pending action after findings rather than accepting it as a final answer", async () => {
-    // The French text is an intentional fixture from the failing worker's final reply.
+    // The French text is an intentional fixture from the failing final reply.
     const incident = 'La ligne 37 : « Objectives » non traduit en allemand. Je génère les diffs de avec contexte de namespace.';
     h.fetchModel.mockResolvedValueOnce({ model: "model", response: textResponse(incident) })
       .mockResolvedValueOnce({ model: "model", response: textResponse("Three translations were corrected and verified.") });
@@ -166,17 +128,16 @@ describe("Numo completion contract", () => {
     expect(h.executeTool).not.toHaveBeenCalled();
   });
 
-  it("repairs a reasoning-only worker-result reply with optional reasoning disabled", async () => {
+  it("repairs a reasoning-only reply with optional reasoning disabled", async () => {
     h.modelInfo.mockResolvedValue({ reasoning: { mandatory: false } });
     h.fetchModel.mockResolvedValueOnce({ model: "model", response: response([
-      { delta: { reasoning: "The worker saved the plan; report its outcome." } },
+      { delta: { reasoning: "The plan was saved; report its outcome." } },
       { delta: { content: "\n" }, finish_reason: "stop" },
     ]) }).mockResolvedValueOnce({ model: "model", response: textResponse("The implementation plan was saved to MIN-677.") });
     const ctx = context();
     const emitter = { emit: vi.fn() };
     const result = await processChat([
       { role: "user", content: "Generate an implementation plan for MIN-677." },
-      { role: "system", content: "Validated durable code-worker result: the plan was saved to MIN-677." },
     ], [], emitter as never, ctx);
 
     expect(result.fullContent).toBe("The implementation plan was saved to MIN-677.");
@@ -321,9 +282,10 @@ describe("Numo completion contract", () => {
 
   it("executes a valid native call in the final SSE line without a trailing newline", async () => {
     const wire = `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [CALL] }, finish_reason: "tool_calls" }] })}`;
-    h.fetchModel.mockResolvedValueOnce({ model: "model", response: new Response(wire) });
+    h.fetchModel.mockResolvedValueOnce({ model: "model", response: new Response(wire) })
+      .mockResolvedValueOnce({ model: "model", response: textResponse("Created the issue.") });
     const result = await run();
-    expect(result.suspension).toEqual({ kind: "work", runId: "worker" });
+    expect(result.fullContent).toBe("Created the issue.");
     expect(h.executeTool).toHaveBeenCalledTimes(1);
   });
 
@@ -403,21 +365,6 @@ describe("Numo completion contract", () => {
     await expect(run(context({ resumeCheckpoint: { phase: "model", roundCount: 12 } })))
       .rejects.toThrow("execution round limit");
     expect(h.fetchModel).toHaveBeenCalledTimes(1);
-    expect(h.executeTool).not.toHaveBeenCalled();
-  });
-
-  it("reuses a durable native tool result without launching twice", async () => {
-    const checkpoint: ProcessChatCheckpoint = { phase: "tools", assistantMessageId: "saved-tool-round",
-      pendingToolCalls: [{ id: CALL.id, type: "function", function: CALL.function }],
-      completedToolCallIds: [], roundCount: 2, completionRepairs: 1 };
-    const ctx = context({ resumeCheckpoint: checkpoint, toolLedger: {
-      claim: vi.fn(async () => ({ action: "reuse" as const, execution: {
-        success: true, result: { run_id: "worker" },
-      } })), complete: vi.fn(),
-    } });
-    const result = await run(ctx);
-    expect(result.suspension).toEqual({ kind: "work", runId: "worker" });
-    expect(h.fetchModel).not.toHaveBeenCalled();
     expect(h.executeTool).not.toHaveBeenCalled();
   });
 

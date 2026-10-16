@@ -24,7 +24,6 @@ import {
 } from "@/lib/server/project-storage";
 import { restorePage, trashPage, type PageErrorKey } from "@/lib/server/pages";
 import type { PageWriteKind } from "@/lib/pages";
-import { eraseAgentSandboxesForProject } from "@/lib/server/agent/sandbox-erasure";
 
 /**
  * The basket (MIN-133).
@@ -280,13 +279,6 @@ export async function softDeleteItem(
   if (error) {
     console.error(`[trash] soft delete ${type} failed:`, error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
-  }
-  if (type === "project") {
-    try {
-      await eraseAgentSandboxesForProject(id);
-    } catch {
-      return { ok: false, status: 500, errorKey: "databaseError" };
-    }
   }
   // No updated line does NOT mean “not found”: the existence and
   // access have just been checked just above, so the only way to do
@@ -602,13 +594,6 @@ export async function restoreItem(
   const refusal = await authorize(service, type, id, actorId, true);
   if (refusal) return refusal;
 
-  if (type === "project") {
-    try {
-      await eraseAgentSandboxesForProject(id);
-    } catch {
-      return { ok: false, status: 500, errorKey: "databaseError" };
-    }
-  }
 
   const { data, error } = await service
     .from(TABLE[type])

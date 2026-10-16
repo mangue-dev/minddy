@@ -4,6 +4,7 @@ import {
   ACCOUNT_TRANSFER_FORMAT,
   ACCOUNT_TRANSFER_VERSION,
   CURRENT_ACCOUNT_EXPORT_VERSION,
+  RETIRED_ACCOUNT_TRANSFER_SECTIONS,
   validateAccountTransfer,
 } from "@/lib/account-transfer";
 
@@ -56,9 +57,11 @@ describe("account transfer compatibility", () => {
     expect(result.document.issue_categories).toEqual([]);
   });
 
-  it("accepts the explicit current transfer envelope", () => {
+  it("accepts the explicit current transfer envelope without the retired sections", () => {
+    const { preferences: _preferences, code_agent_conversations: _code, ...current } =
+      emptyDocument;
     const result = validateAccountTransfer({
-      ...emptyDocument,
+      ...current,
       format_version: CURRENT_ACCOUNT_EXPORT_VERSION,
       transfer_format: ACCOUNT_TRANSFER_FORMAT,
       transfer_version: ACCOUNT_TRANSFER_VERSION,
@@ -67,6 +70,30 @@ describe("account transfer compatibility", () => {
     });
 
     expect(result.ok).toBe(true);
+  });
+
+  it("accepts a v3 file with code-agent sections and leaves them out of the document", () => {
+    const result = validateAccountTransfer({
+      ...emptyDocument,
+      format_version: 3,
+      preferences: { default_model: "legacy/model", branch_prefix: "agent/" },
+      code_agent_conversations: [{ id: "conversation", turns: [], messages: [] }],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    for (const section of RETIRED_ACCOUNT_TRANSFER_SECTIONS) {
+      expect(result.document).not.toHaveProperty(section);
+    }
+  });
+
+  it("ignores malformed retired sections instead of rejecting the file", () => {
+    expect(validateAccountTransfer({
+      ...emptyDocument,
+      format_version: 3,
+      preferences: "legacy",
+      code_agent_conversations: "legacy",
+    })).toMatchObject({ ok: true });
   });
 
   it("rejects unknown versions and malformed collections", () => {

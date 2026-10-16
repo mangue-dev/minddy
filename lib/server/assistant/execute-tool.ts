@@ -3,9 +3,6 @@ import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
 import { abortableReadClient } from "./abortable-read-client";
-import { workerHarnessContext } from "./worker-harness-context";
-import { randomUUID } from "node:crypto";
-import { DatabaseOperationError, failureDiagnostics } from "@/lib/server/failure-diagnostics";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
@@ -14,8 +11,6 @@ import { decodeView } from "@/lib/server/view-content";
 import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
-import { hydrateWorkerParentCopies } from "@/lib/server/agent/worker-parent-content";
-import { hydrateNumoUserMessages } from "@/lib/server/numo/user-message-content";
 
 
 import { MCP_CLIENT_TOOL_NAMES, MCP_SETUP_TOOL_NAMES } from "@/lib/mcp-client-tools";
@@ -63,10 +58,6 @@ import {
 } from "@/lib/server/add-comment";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
-import {
-  answerNumoWorkerInput,
-  type WorkerInputCorrelation,
-} from "@/lib/server/numo/worker-mediation";
 import { attachmentOffset, listConversationAttachments, readConversationAttachment,
   copyConversationAttachment } from "./conversation-attachments";
 import { insertAttachments } from "@/lib/server/attachments";
@@ -192,23 +183,7 @@ import {
 } from "@/lib/server/feedback/promote";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { isStatus, type IssueStatusValue } from "@/lib/issue-validation";
-import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
-import { relaunchNumoWorkerRun } from "@/lib/server/numo/worker-mediation";
-import {
-  AGENT_DELEGATION_AUTHORIZATIONS,
-  AGENT_DELEGATION_SOURCE_KINDS,
-  type AgentDelegationAuthorization,
-  type AgentDelegationSourceReference,
-} from "@/lib/server/agent/agent-contract";
-import type { AttachmentInput, RelationEndpointType } from "@/lib/types";
-import {
-  buildAgentLaunchMessage,
-  intentForLaunchMode,
-  isAgentLaunchMode,
-  type LaunchMessageIssue,
-} from "@/lib/server/agent/launch-message";
-import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
-import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
+import type { RelationEndpointType } from "@/lib/types";
 import {
   linkPullRequestToIssue,
   resolveProjectPullRequest,
@@ -219,10 +194,6 @@ import {
   resolvePullRequest,
   type PullRequestWriteToolName,
 } from "@/lib/server/assistant/pull-request-writes";
-import {
-  findPullRequest,
-  rowProvider,
-} from "@/lib/server/agent/pull-requests";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import {
   runWebSearchTool,
@@ -272,8 +243,6 @@ export interface ToolContext {
   /** Landing status for issues Numo creates without an explicit status —
       the user's Account → Preferences choice. Defaults to 'triage'. */
   numoDefaultStatus?: IssueStatusValue;
-  /** Where a launch_code_agent call comes from (chat vs @numo comment). */
-  triggerSource?: "chat" | "mention";
   /**
    * Web search for the current tour: the run of the ledger to which to attach its lines
    * `web_search`, and the counter (MUTED) which caps searches for the same
@@ -290,9 +259,6 @@ export interface ToolContext {
   operationBudgetPercent?: number | null;
   routineId?: string | null;
   /** Automation chain that owns this parent Numo operation, if any. */
-
-  /** Exact pending worker decision available only during a mediation turn. */
-  workerInput?: WorkerInputCorrelation;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -359,132 +325,12 @@ const PR_LINK_REFUSALS: Record<PrLinkRefusal, string> = {
     "This issue belongs to a project that does not link the repository of that pull request.",
 };
 
-/** Readable message for a failed launch_code_agent (relayed to the user by Numo). */
-function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
-  switch (r.error) {
-    case "issueNotFound":
-      return "Issue not found.";
-    case "noRepo":
-      return "This project has no linked GitHub repository. Link one in the project's Git settings first.";
-    case "unsupportedProvider":
-      return "The code agent currently supports GitHub repositories only.";
-    case "alreadyRunning":
-      return "An agent run is already in progress on this issue.";
-    case "quotaExceeded":
-      return "Monthly code-agent usage limit reached. Add your own OpenRouter key (BYOK) in Account settings for unlimited usage.";
-    case "managedServiceUnavailable":
-      return "Managed AI is disabled on this instance. Configure a server-reachable BYOK provider before launching the code agent.";
-    case "executionBackendUnavailable":
-      return "No execution backend is configured on this instance. Ask the administrator to configure a server sandbox.";
-    case "providerEndpointUnavailableFromSandbox":
-      return "The configured model endpoint is reachable only through the retired desktop bridge. Ask the user to choose a provider reachable from the server sandbox in Account settings; Numo cannot switch providers or billing accounts.";
-    case "noModelForProvider":
-      return "No code-worker model is configured for the active provider. Ask the user to choose one in Account settings; Numo cannot substitute or change it.";
-    case "workerConfigurationManagedInSettings":
-      return "Code-agent engine, model and reasoning can only be changed by the user in Account settings.";
-    case "nativeConnectionRequired":
-      return "The selected native code agent needs its personal account connection. Ask the user to connect or reconnect it in Account settings → AI, or explicitly select OpenCode. Do not switch harness, provider or payer automatically.";
-    case "nativeAgentUnavailable":
-      return "The selected native code agent is unavailable or its connection is in use. Explain the refusal and check account AI settings. Do not switch harness, provider or payer automatically.";
-    case "continuationNotFound":
-      return "The requested worker continuation is not available in this repository or does not belong to this account.";
-    case "prNotFound":
-      return "The selected pull request is unavailable or is not linked to a project you can access.";
-    case "prIncomplete":
-      return "The selected pull request is missing the branch information required for this work.";
-    case "modelAbovePlan":
-      return r.modelLimit
-        ? `The account code-worker model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's baseline model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Ask the user to choose an eligible model in Account settings or upgrade their plan.`
-        : "The account code-worker model is above the usage ceiling of the user's plan. Ask the user to change it in Account settings or upgrade their plan.";
-    default:
-      return "Could not launch the code agent.";
-  }
-}
-
-function delegationStrings(raw: unknown, maxItems = 50): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.slice(0, maxItems).flatMap((value) =>
-    typeof value === "string" && value.trim()
-      ? [value.trim().slice(0, 1_000)]
-      : []
-  );
-}
-
-function delegationSources(raw: unknown): AgentDelegationSourceReference[] {
-  if (!Array.isArray(raw)) return [];
-  const kinds = new Set<string>(AGENT_DELEGATION_SOURCE_KINDS);
-  return raw.slice(0, 50).flatMap((value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-    const source = value as Record<string, unknown>;
-    if (typeof source.kind !== "string" || !kinds.has(source.kind)) return [];
-    if (typeof source.label !== "string" || !source.label.trim()) return [];
-    return [{
-      kind: source.kind as AgentDelegationSourceReference["kind"],
-      label: source.label.trim().slice(0, 300),
-      ...(typeof source.id === "string" && source.id.trim()
-        ? { id: source.id.trim().slice(0, 300) }
-        : {}),
-      ...(typeof source.url === "string" && source.url.trim()
-        ? { url: source.url.trim().slice(0, 2_000) }
-        : {}),
-      ...(typeof source.version === "string" && source.version.trim()
-        ? { version: source.version.trim().slice(0, 100) }
-        : {}),
-    }];
-  });
-}
-
-function delegationAuthorizations(raw: unknown): AgentDelegationAuthorization[] {
-  const allowed = new Set<string>(AGENT_DELEGATION_AUTHORIZATIONS);
-  return delegationStrings(raw, 20).filter(
-    (value): value is AgentDelegationAuthorization => allowed.has(value),
-  );
-}
-
-async function parentTurnAttachments(ctx: ToolContext): Promise<AttachmentInput[]> {
-  if (!ctx.turnId) return [];
-  const { data } = await ctx.service.from("assistant_messages")
-    .select("id,content,metadata")
-    .eq("turn_id", ctx.turnId)
-    .eq("role", "user")
-    .maybeSingle();
-  const hydrated = data ? (await hydrateWorkerParentCopies(ctx.service,
-    await hydrateNumoUserMessages(ctx.service, [data], ctx.userId)))[0] : null;
-  const raw = (hydrated?.metadata as { attachments?: unknown } | null)?.attachments;
-  if (!Array.isArray(raw)) return [];
-  return raw.slice(0, 20).flatMap((value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-    const file = value as Record<string, unknown>;
-    if (
-      typeof file.storage_path !== "string" || !file.storage_path
-      || typeof file.file_name !== "string" || !file.file_name
-      || typeof file.mime_type !== "string" || !file.mime_type
-      || typeof file.size_bytes !== "number"
-    ) return [];
-    return [{
-      kind: "file" as const,
-      storage_path: file.storage_path,
-      file_name: file.file_name,
-      mime_type: file.mime_type,
-      size_bytes: file.size_bytes,
-    }];
-  });
-}
-
 /**
  * Refusal of a routine write (MIN-185), told to Numo to relay them
  * rather than inventing a reason — or worse, looking for a workaround.
  * `ownerOnly` in particular: it's a rule, not a technical obstacle.
  */
-function routineErrorMessage(r: {
-  errorKey: string;
-  modelLimit?: {
-    model: string;
-    multiplier: number;
-    limit: number;
-    planId: string;
-  };
-}): string {
+function routineErrorMessage(r: { errorKey: string }): string {
   switch (r.errorKey) {
     case "ownerOnly":
       return "Only the project's OWNER can create or change a routine — it is their usage budget that runs every time. Tell the user plainly; there is no way around it, do not retry and do not offer one.";
@@ -500,12 +346,6 @@ function routineErrorMessage(r: {
       return "That timezone is not a valid IANA name. Pass the user's timezone exactly as it appears in your context (e.g. 'Europe/Paris'), never a guess and never an abbreviation.";
     case "invalidSchedule":
       return "The cadence does not hold together: 'weekly' needs at least one weekday in `weekdays` (0=Sunday…6=Saturday) and no days_of_month; 'monthly' needs at least one day in `days_of_month` (1–31) and no weekdays; hour is 0–23 and minute 0–59.";
-    case "modelAbovePlan":
-      return r.modelLimit
-        ? `The account code-worker model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the baseline usage, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Ask the user to choose an eligible model in Account settings.`
-        : "The account code-worker model is above the plan ceiling. Ask the user to change it in Account settings.";
-    case "workerConfigurationManagedInSettings":
-      return "Routine workers use the model and reasoning configured by the user in Account settings.";
     case "noFieldsToUpdate":
       return "Nothing to change — pass at least one field.";
     default:
@@ -879,7 +719,6 @@ export async function executeTool(
       service: abortableReadClient(ctx.service, ctx.readAbortSignal),
       supabase: abortableReadClient(ctx.supabase, ctx.readAbortSignal) };
   }
-  let launchStage = "prepare_launch";
   try {
     if (MCP_CLIENT_TOOL_NAMES.has(toolName)) {
       return executeMcpTool(ctx.userId, toolName, args);
@@ -902,42 +741,6 @@ export async function executeTool(
             success: false,
           };
     }
-    if (toolName === "answer_code_worker") {
-      const expected = ctx.workerInput;
-      const answer = typeof args.answer === "string" ? args.answer.trim() : "";
-      if (
-        !expected
-        || args.parent_turn_id !== expected.parentTurnId
-        || args.run_id !== expected.runId
-        || args.question_id !== expected.questionId
-        || !answer
-      ) {
-        return toolError("The worker answer does not match the pending decision.");
-      }
-      const disposition = await answerNumoWorkerInput({
-        conversationId: ctx.conversationId!,
-        userId: ctx.userId,
-        correlation: expected,
-        answer,
-        persistParentMessage: false,
-      });
-      if (disposition.action !== "answered" && disposition.action !== "already") {
-        const reason = disposition.action === "refused"
-          ? disposition.reason
-          : "pending input was not found";
-        return toolError(`The worker could not be resumed: ${reason}.`);
-      }
-      return {
-        result: {
-          status: disposition.action,
-          run_id: disposition.runId,
-          question_id: expected.questionId,
-        },
-        success: true,
-        pause: true,
-      };
-    }
-
     // ── Project discovery and global-only filter options ───────────────
     if (toolName === "list_projects") {
       const visible = await accessibleProjects(ctx);
@@ -1023,10 +826,7 @@ export async function executeTool(
         : toolError(r.error);
     }
     if (toolName === "get_plan_usage") {
-      const r = await readPlanUsageTool({
-        userId: ctx.userId,
-        supabase: ctx.supabase,
-      });
+      const r = await readPlanUsageTool({ userId: ctx.userId });
       return r.ok
         ? { result: { usage: r.usage }, success: true }
         : toolError(r.error);
@@ -1067,38 +867,6 @@ export async function executeTool(
       toolName === "restore_from_trash"
     ) {
       return executeTrashTool(toolName, args, ctx);
-    }
-
-    // ── Agent model catalog (per-account: resolved by the active provider) ──
-    if (toolName === "list_agent_models") {
-      const catalog = await getAgentModelsForUser(ctx.userId);
-      const q =
-        typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
-      const matched = q
-        ? catalog.models.filter(
-            (m) =>
-              m.id.toLowerCase().includes(q) ||
-              m.name.toLowerCase().includes(q),
-          )
-        : catalog.models;
-      // Keep Numo's context lean: a provider catalog can hold hundreds of ids.
-      const CAP = 40;
-      const truncated = matched.length > CAP;
-      return {
-        result: {
-          provider: catalog.provider,
-          default_model: catalog.defaultModel,
-          total_matched: matched.length,
-          truncated,
-          note: truncated
-            ? `Showing the first ${CAP} of ${matched.length} matches — pass a more specific query to narrow.`
-            : catalog.models.length === 0
-              ? "The provider returned no model list (a generic endpoint may not expose one); the user can still type any exact model id."
-              : undefined,
-          models: matched.slice(0, CAP),
-        },
-        success: true,
-      };
     }
 
     // ── Cycle tools (the user's personal cross-project cycle — MIN-32) ──
@@ -1928,288 +1696,8 @@ export async function executeTool(
         }
       }
 
-      case "launch_code_agent": {
-        if ("engine" in args || "default_engine" in args || "model" in args || "reasoning_level" in args) {
-          return toolError(
-            "Code-agent engine, model and reasoning are controlled in Account settings and cannot be overridden by Numo.",
-          );
-        }
-        const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
-        const pullRequestId =
-          typeof args.pull_request_id === "string" ? args.pull_request_id : "";
-        if (issueId) {
-          const scoped = await assertIssueInProject(
-            ctx.supabase,
-            issueId,
-            projectId,
-          );
-          if (!scoped.ok) return toolError(scoped.error);
-        }
-        const legacyPrompt =
-          typeof args.prompt === "string" && args.prompt.trim()
-            ? args.prompt.trim()
-            : undefined;
-        const objective =
-          typeof args.objective === "string" && args.objective.trim()
-            ? args.objective.trim()
-            : legacyPrompt;
-        const durableDelegation = !!(
-          ctx.conversationId && ctx.turnId && ctx.toolCallId
-        );
-        const sourceReferences = delegationSources(args.source_references);
-        const constraints = delegationStrings(args.constraints);
-        const authorizedWork = delegationAuthorizations(args.authorized_work);
-        const expectedOutput = delegationStrings(args.expected_output);
-        const requiresPullRequest = args.requires_pull_request === true
-          || (authorizedWork.includes("modify_repository") && authorizedWork.includes("manage_pull_request"));
-        if (durableDelegation && authorizedWork.includes("modify_repository") && !authorizedWork.includes("manage_pull_request")) {
-          return toolError("Implementation requires pull request delivery. Include manage_pull_request in authorized_work.");
-        }
-        if (requiresPullRequest && !authorizedWork.includes("manage_pull_request")) {
-          return toolError("PR delivery requires manage_pull_request authorization.");
-        }
-        if (durableDelegation && !objective) {
-          return toolError("A complete objective is required for delegated code work.");
-        }
-        if (durableDelegation && authorizedWork.length === 0) {
-          return toolError("authorized_work must explicitly describe what the code worker may do.");
-        }
-
-        // Three NATIVE modes (frame / implement / check implementation):
-        // the message sent is exactly that of the app buttons, constructed
-        // from the same i18n texts — the assistant does not have to rewrite the
-        // instruction, and its possible `prompt` specifies it at the end. THE
-        // fourth choice (`custom`, or any unknown mode) falls on the
-        // original behavior: the helper prompt IS the request.
-        const mode = isAgentLaunchMode(args.mode) ? args.mode : null;
-        const pullRequestMode =
-          args.mode === "review" || args.mode === "fix" ? args.mode : null;
-        if (mode && !issueId) {
-          return toolError(
-            "issue_id is required for plan, implement and verify.",
-          );
-        }
-        if (pullRequestMode && !pullRequestId) {
-          return toolError(
-            "pull_request_id is required for review and fix.",
-          );
-        }
-        if (pullRequestId && !pullRequestMode) {
-          return toolError(
-            "pull_request_id can only be used with review or fix.",
-          );
-        }
-        let message = durableDelegation ? undefined : objective;
-        let issueSource: { number: number; title: string; plan: string | null } | null = null;
-        let launchIssue: LaunchMessageIssue | null = null;
-        if (issueId) {
-          const { data: row } = await issueStore(ctx.supabase).select("number, title, plan, effort")
-            .is("deleted_at", null)
-            .eq("id", issueId)
-            .maybeSingle();
-          if (!row) return toolError("Issue not found in this project.");
-          launchIssue = row as LaunchMessageIssue;
-          issueSource = {
-            number: Number(row.number),
-            title: String(row.title ?? ""),
-            plan: typeof row.plan === "string" ? row.plan : null,
-          };
-        }
-        if (mode) {
-          message = await buildAgentLaunchMessage({
-            mode,
-            issue: launchIssue!,
-            projectKey: access.project.key,
-            locale: ctx.locale,
-            extra: durableDelegation ? legacyPrompt : objective,
-
-          });
-        }
-        if (issueSource) {
-          const identifier = `${access.project.key}-${issueSource.number}`;
-          if (!sourceReferences.some((source) => source.kind === "issue" && source.id === issueId)) {
-            sourceReferences.unshift({
-              kind: "issue",
-              id: issueId,
-              label: `${identifier}: ${issueSource.title}`,
-            });
-          }
-          if (
-            issueSource.plan?.trim()
-            && !sourceReferences.some((source) => source.kind === "plan" && source.id === issueId)
-          ) {
-            sourceReferences.push({
-              kind: "plan",
-              id: issueId,
-              label: `${identifier} implementation plan`,
-            });
-          }
-        }
-        let selectedPullRequestIssueId: string | null = null;
-        if (pullRequestId) {
-          const selectedPr = await findPullRequest(pullRequestId);
-          const target = await resolveRepoCloneTarget(projectId);
-          if (
-            !selectedPr ||
-            !target ||
-            target.provider !== rowProvider(selectedPr) ||
-            target.repoFullName !== selectedPr.repo_full_name
-          ) {
-            return toolError(
-              "The selected pull request is not available in this project.",
-            );
-          }
-          selectedPullRequestIssueId = selectedPr.issue_id;
-          if (
-            !sourceReferences.some(
-              (source) =>
-                source.kind === "pull_request" &&
-                source.id === pullRequestId,
-            )
-          ) {
-            sourceReferences.unshift({
-              kind: "pull_request",
-              id: pullRequestId,
-              label: `#${selectedPr.number}${selectedPr.title ? `: ${selectedPr.title}` : ""}`,
-              ...(selectedPr.url ? { url: selectedPr.url } : {}),
-            });
-          }
-        }
-        const attachments = durableDelegation
-          ? await parentTurnAttachments(ctx)
-          : [];
-        for (const attachment of attachments) {
-          if (!sourceReferences.some(
-            (source) => source.kind === "attachment" && source.id === attachment.storage_path,
-          )) {
-            sourceReferences.push({
-              kind: "attachment",
-              id: attachment.storage_path,
-              label: attachment.file_name,
-            });
-          }
-        }
-
-        // A fresh delegation opens a code conversation and branch. Explicit
-        // follow-up lineage reuses the selected conversation and branch/PR.
-        // HOT RESTART: when the continuation targets one of THIS
-        // conversation's own delegated workers at rest, we resume that run in
-        // place instead of cold-launching a superseding one — same code
-        // conversation, same branch, same sandbox snapshot. Refusals fall
-        // through to the cold launch below, whose guards know how to answer
-        // merged PRs and non-lineage targets.
-        const continuationRunId =
-          typeof args.continuation_run_id === "string"
-            ? args.continuation_run_id.trim()
-            : "";
-        // PR-required follow-ups use the lineage launcher so the new delivery
-        // contract is persisted before work resumes on the existing branch.
-        if (durableDelegation && continuationRunId && objective && !requiresPullRequest) {
-          launchStage = "resume_worker";
-          const relaunch = await relaunchNumoWorkerRun({
-            conversationId: ctx.conversationId!,
-            userId: ctx.userId,
-            runId: continuationRunId,
-            message: objective,
-            parentTurnId: ctx.turnId!,
-            parentToolCallId: ctx.toolCallId!,
-          });
-          if (relaunch.ok) {
-            return {
-              result: {
-                launched: true,
-                resumed: true,
-                run_id: relaunch.run.id,
-                conversation_id: relaunch.run.conversation_id,
-                status: relaunch.run.status,
-                model: relaunch.run.model,
-                reasoning_level: relaunch.run.reasoning_level,
-                ...workerHarnessContext(relaunch.run),
-                parent_turn_id: ctx.turnId,
-                contract_version: 1,
-              },
-              success: true,
-            };
-          }
-        }
-        launchStage = "launch_worker";
-        const result = await launchAgentRun({
-          ...(pullRequestMode === "review"
-            ? { pullRequestId }
-            : pullRequestMode === "fix"
-              ? {
-                  continuePullRequestId: pullRequestId,
-                  ...(issueId || selectedPullRequestIssueId
-                    ? { issueId: issueId || selectedPullRequestIssueId }
-                    : {}),
-                }
-              : issueId
-                ? { issueId }
-                : { projectId }),
-          userId: ctx.userId,
-          triggeredBy: ctx.triggerSource ?? "chat",
-          prompt: message,
-          continueRunId:
-            typeof args.continuation_run_id === "string"
-              ? args.continuation_run_id
-              : null,
-          ...(durableDelegation
-            ? {
-                delegation: {
-                  parentConversationId: ctx.conversationId!,
-                  parentTurnId: ctx.turnId!,
-                  toolCallId: ctx.toolCallId!,
-                  objective: objective!,
-                  sourceReferences,
-                  constraints,
-                  authorizedWork,
-                  requiresPullRequest,
-                  ...(expectedOutput.length ? { expectedOutput } : {}),
-                  attachments,
-                },
-              }
-            : {}),
-          budgetUsd: ctx.operationBudgetUsd ?? null,
-          routineId: ctx.routineId ?? null,
-
-          // Framing does not start the ticket; implement and check, yes.
-          ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
-        });
-        if (!result.ok) return {
-          result: { error: launchErrorMessage(result), error_code: result.error, retryable: false },
-          success: false,
-        };
-        return {
-          result: {
-            launched: true,
-            ...(mode || pullRequestMode
-              ? { mode: mode ?? pullRequestMode }
-              : {}),
-            run_id: result.run.id,
-            conversation_id: result.run.conversation_id,
-            status: result.run.status,
-            model: result.run.model,
-            reasoning_level: result.run.reasoning_level,
-            ...workerHarnessContext(result.run),
-            ...(durableDelegation
-              ? {
-                  parent_turn_id: ctx.turnId,
-                  contract_version: 1,
-                  continued_from_run_id: result.run.continued_from_run_id ?? null,
-                }
-              : {}),
-          },
-          success: true,
-        };
-      }
-
       // ── Routines (MIN-185) ──────────────────────────────────────────
       case "create_routine": {
-        if ("model" in args || "reasoning_level" in args) {
-          return toolError(
-            "Routine code workers use the owner's Account settings and cannot override model or reasoning.",
-          );
-        }
         const result = await createRoutine({
           projectId,
           actorId: ctx.userId,
@@ -2255,11 +1743,6 @@ export async function executeTool(
           typeof args.routine_id === "string" ? args.routine_id : "";
         if (!routineId)
           return toolError("routine_id is required (see list_routines).");
-        if ("model" in args || "reasoning_level" in args) {
-          return toolError(
-            "Routine code workers use the owner's Account settings and cannot override model or reasoning.",
-          );
-        }
         const result = await updateRoutine({
           trigger: args.trigger,          routineId,
           actorId: ctx.userId,
@@ -2359,9 +1842,8 @@ export async function executeTool(
 
       case "read_pull_request": {
         // Resolution shared with the PR write tools (MIN-550): the row from
-        // `pull_requests` (source of truth since MIN-143) with the
-        // `agent_runs` fallback for the rows older than the table, then the
-        // project's repo target.
+        // `pull_requests` (source of truth since MIN-143), then the project's
+        // repo target.
         const resolved = await resolvePullRequest(
           {
             projectId,
@@ -3178,35 +2660,7 @@ export async function executeTool(
       default:
         return toolError(`Unknown tool: ${toolName}`);
     }
-  } catch (error) {
-    if (toolName === "launch_code_agent") {
-      const correlationId = randomUUID();
-      const diagnostics = failureDiagnostics(error);
-      const stage = error instanceof DatabaseOperationError ? error.operation : launchStage;
-      console.error("[assistant] code_agent_launch_failed", {
-        correlation_id: correlationId,
-        tool_name: toolName,
-        stage,
-        conversation_id: ctx.conversationId ?? null,
-        turn_id: ctx.turnId ?? null,
-        tool_call_id: ctx.toolCallId ?? null,
-        routine_id: ctx.routineId ?? null,
-        ...diagnostics,
-      });
-      return {
-        result: {
-          error: diagnostics.kind === "database_constraint"
-            ? "The database rejected the code-worker launch. Report the diagnostic reference; repeating the same request will not fix it."
-            : "The code-worker launch could not be confirmed. Report the diagnostic reference and check the run state before trying again.",
-          error_code: "code_agent_launch_failed",
-          correlation_id: correlationId,
-          stage,
-          retryable: false,
-          failure: diagnostics,
-        },
-        success: false,
-      };
-    }
+  } catch {
     console.error("[assistant] tool_execution_failed");
     return toolError("Tool execution failed");
   }

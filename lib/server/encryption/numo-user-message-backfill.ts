@@ -20,7 +20,7 @@ export async function backfillNumoUserMessagesBatch(limit = 30,
   const service = getServiceClient();
   const { data, error } = await service.from("assistant_messages")
     .select("id,content,context,metadata,tool_calls,tool_call_id,tool_name,user_payload_version,conversation:conversations!inner(user_id)")
-    .eq("role", "user").eq("worker_content_encryption_version", 0)
+    .eq("role", "user")
     .order("user_payload_attempted_at", { ascending: true, nullsFirst: true })
     .order("id", { ascending: true }).limit(limit);
   if (error) throw new Error("Unable to scan Numo user messages");

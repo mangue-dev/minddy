@@ -30,7 +30,7 @@ BEGIN
     RAISE EXCEPTION 'Automatic discovery must honor secondary live associations';
   END IF;
   IF (SELECT issue_id FROM public.pull_requests WHERE id = '62500000-0000-4000-8000-000000000030') <> '62500000-0000-4000-8000-000000000020' THEN
-    RAISE EXCEPTION 'Appending must preserve the primary worker context';
+    RAISE EXCEPTION 'Appending must preserve the primary issue link';
   END IF;
 END;
 $$;

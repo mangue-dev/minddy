@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work and repository sandboxes",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,14 +38,15 @@
       "lib/server/capabilities.ts",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 5; it translation of removal edits; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "instance-configuration",
@@ -61,11 +62,11 @@
       "id": "architecture-and-data-flows-flow",
       "kind": "diagram",
       "src": "/documentation/it/architecture-and-data-flows-flow.svg",
-      "alt": "Schema: Browser e applicazione autenticata. Supabase: PostgreSQL, Auth, Storage, Realtime. Scheduler indipendente e runner fidato. Provider opzionali: destinazioni separate.",
+      "alt": "Schema: Browser e applicazione autenticata. Supabase: PostgreSQL, Auth, Storage, Realtime. Scheduler indipendente per i job in background. Provider opzionali: destinazioni separate.",
       "caption": "L’applicazione coordina i servizi interni e usa i provider esterni quando sono configurati.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-16",
       "viewport": [
         720,
         640
@@ -81,7 +82,7 @@
             "title": "Supabase: PostgreSQL, Auth, Storage, Realtime"
           },
           {
-            "title": "Scheduler indipendente e runner fidato"
+            "title": "Scheduler indipendente per i job in background"
           },
           {
             "title": "Provider opzionali: destinazioni separate"
@@ -100,11 +101,11 @@
 
 `Next.js` fornisce l’interfaccia e le API autorizzate. Supabase fornisce PostgreSQL, Auth, Storage e Realtime. PostgreSQL conserva i record dell’applicazione, gli account, i dati di piattaforma e i metadati dei file; Storage conserva i byte. La configurazione protetta contiene chiavi e impostazioni dei provider. I container possono essere ricreati, mentre volumi, byte e chiavi devono persistere. Un ripristino completo riunisce questi elementi allo stesso punto di recupero.
 
-![Schema: Browser e applicazione autenticata. Supabase: PostgreSQL, Auth, Storage, Realtime. Scheduler indipendente e runner fidato. Provider opzionali: destinazioni separate.](/documentation/it/architecture-and-data-flows-flow.svg)
+![Schema: Browser e applicazione autenticata. Supabase: PostgreSQL, Auth, Storage, Realtime. Scheduler indipendente per i job in background. Provider opzionali: destinazioni separate.](/documentation/it/architecture-and-data-flows-flow.svg)
 
 ## Seguire una richiesta {#requests}
 
-Il browser usa le origini pubbliche di minddy e Supabase. Auth crea la sessione; il server verifica l’attore e l’oggetto prima di eseguire un’operazione. Realtime propaga gli aggiornamenti. Nel profilo full il server usa Kong sulla rete interna senza cambiare le origini del browser o i link degli account. Lo scheduler invia richieste HTTP autenticate senza un browser. Quando Numo deve lavorare sul codice, il runner fidato crea sandbox ristrette per il repository collegato; le sandbox non ricevono i segreti dell’istanza né il socket Docker.
+Il browser usa le origini pubbliche di minddy e Supabase. Auth crea la sessione; il server verifica l’attore e l’oggetto prima di eseguire un’operazione. Realtime propaga gli aggiornamenti. Nel profilo full il server usa Kong sulla rete interna senza cambiare le origini del browser o i link degli account. Lo scheduler invia richieste HTTP autenticate senza un browser.
 
 ## Identificare destinazioni esterne {#providers}
 
