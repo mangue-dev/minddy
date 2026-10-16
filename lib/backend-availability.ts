@@ -44,6 +44,13 @@ export function sanitizeBackendRetryPath(
   }
 }
 
+/**
+ * API code of a 401 caused by the caller's minddy session itself (missing,
+ * invalid or no longer live), as opposed to a forge or relay credential.
+ * Only this code may end the browser session (MIN-691).
+ */
+export const SESSION_INVALID_CODE = "sessionInvalid";
+
 /** An HTTP failure that keeps its status after a client API response is parsed. */
 export class HttpResponseError extends Error {
   constructor(message: string, readonly status: number, readonly code?: string) {
