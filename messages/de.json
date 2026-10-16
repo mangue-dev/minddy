@@ -4485,12 +4485,12 @@
         "label": "Modell für generierte Merge-Commits"
       },
       "jev_decisions_enabled": {
-        "label": "Jev-Entscheidungen",
-        "desc": "Schaltet die KI-Entscheidungsschicht überall auf einmal ein oder aus. Aus: jeder Entscheidungsaufruf fällt auf seinen LLM-Durchlauf zurück. Not-Aus-Schalter, keine Produkteinstellung."
+        "label": "KI-Entscheidungen",
+        "desc": "Schaltet die KI-Entscheidungsschicht überall auf einmal ein oder aus. Ausgeschaltet fällt jeder Entscheidungsaufruf auf seinen LLM-Durchlauf zurück. Notschalter für Störungen, keine Produkteinstellung."
       },
       "jev_model": {
-        "label": "Jev-Entscheidungsmodell",
-        "desc": "Das System-One-Modell, das strukturierte Fragen beantwortet (Kategorien, Triage, Prüfung). Erreicht über den Decisions-Endpunkt von OpenRouter, abgerechnet nur nach Eingabe-Tokens."
+        "label": "Entscheidungsmodell",
+        "desc": "Das eine Modell, das alle KI-Entscheidungen der Instanz beantwortet: Smart Fill, Smart Assign und die Prüfung von Feedback. Es werden nur Entscheidungsmodelle angeboten, und jede Auswahl wird vor dem Speichern mit einem Testaufruf geprüft. Die Konfidenzschwelle wurde auf Jev kalibriert: Ein anderes Modell kann häufiger oder seltener auf das LLM zurückfallen."
       },
       "faq_ask_enabled": {
         "label": "FAQ-Fragenfeld",
@@ -4500,6 +4500,11 @@
         "label": "FAQ-Fragenfeld-Modell",
         "desc": "Beantwortet die Frage eines Besuchers aus der FAQ der Seite und der Produktdokumentation. Jemand wartet auf die Antwort, und das Feld läuft den ganzen Tag auf der öffentlichen Website: wähle ein schnelles, günstiges Modell."
       }
+    },
+    "decisionModelErrors": {
+      "catalog_unavailable": "Der Katalog der Entscheidungsmodelle ist nicht verfügbar. Das aktuelle Modell bleibt erhalten.",
+      "not_a_decision_model": "Dieses Modell ist kein Entscheidungsmodell. Das aktuelle Modell bleibt erhalten.",
+      "compatibility_check_failed": "Dieses Modell hat die Testentscheidung nicht bestanden (abgelehnt, ungültig oder langsamer als 5 Sekunden). Das aktuelle Modell bleibt erhalten."
     },
     "finance": {
       "title": "Finanzen",
@@ -4580,8 +4585,8 @@
         "import_map": "Importspaltenübereinstimmung",
         "brief_split": "Briefaufschlüsselung",
         "landing_demo": "Öffentliche Diktat-Demo",
-        "jev_decision": "Jev-Entscheidungen",
-        "jev_shadow": "Jev-Schatten"
+        "jev_decision": "KI-Entscheidungen",
+        "jev_shadow": "Entscheidungsprüfungen"
       },
       "stripeHidden": "Stripe Umsatz ist ausgeblendet: Abrechnung ist auf dieser Instanz nicht verbunden."
     },

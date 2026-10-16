@@ -207,16 +207,17 @@ export const BILLABLE_FEATURES = [
   // another invoice line. See the `routines` segment below.
   "routine_code",
   "routine_compute",
-  // Jev decisions (MIN-561): the System One calls of the AI decision layer,
-  // priced on input tokens only. Billed to the user like the automations it
-  // backs, so it joins their segment below.
+  // AI decisions (MIN-561, MIN-694): the decision-model calls of the AI
+  // decision layer, whichever model the instance configured (historical
+  // `jev_` id). Billed to the user like the automations it backs, so it
+  // joins their segment below.
   "jev_decision",
   // Smart Triage (MIN-566): the LLM scoring pass of a column reorder — the
-  // Jev half rides `jev_decision`, this is the fallback engine's own line.
+  // decision-model half rides `jev_decision`, this is the fallback engine's own line.
   // Same segment below, same gesture.
   "smart_triage",
   // The shadow comparison of the decision layer (MIN-567): the LLM pass
-  // replayed on a ~5% sample after a confident Jev decision. One line under
+  // replayed on a ~5% sample after a confident decision-model decision. One line under
   // its own feature so the sampling delta stays readable (and removable)
   // next to the decisions it measures.
   "jev_shadow",

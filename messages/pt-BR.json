@@ -4485,12 +4485,12 @@
         "label": "Modelo para commits de mesclagem gerados"
       },
       "jev_decisions_enabled": {
-        "label": "Decisões Jev",
-        "desc": "Ativa ou desliga a camada de decisão de IA em todos os lugares de uma vez. Desligada, cada chamada de decisão volta para sua passagem LLM. Interruptor de emergência, não uma configuração de produto."
+        "label": "Decisões de IA",
+        "desc": "Liga ou desliga a camada de decisão de IA em todos os lugares de uma vez. Desligada, cada chamada de decisão recorre à sua passada de LLM. Interruptor de incidentes, não uma configuração do produto."
       },
       "jev_model": {
-        "label": "Modelo de decisões Jev",
-        "desc": "O modelo System One que responde perguntas estruturadas (categorias, triagem, revisão). Acessado pelo endpoint decisions do OpenRouter, cobrado apenas pelos tokens de entrada."
+        "label": "Modelo de decisão",
+        "desc": "O único modelo que responde a todas as decisões de IA da instância: Smart Fill, Smart Assign e a revisão de feedback. Só modelos de decisão são oferecidos, e cada escolha é testada com uma chamada antes de ser salva. O limite de confiança foi calibrado no Jev: outro modelo pode recorrer ao LLM com mais ou menos frequência."
       },
       "faq_ask_enabled": {
         "label": "Quadro de perguntas FAQ",
@@ -4500,6 +4500,11 @@
         "label": "Modelo do quadro de perguntas FAQ",
         "desc": "Responde à pergunta de um visitante a partir das FAQ da página e da documentação do produto. Alguém espera pela resposta, e o quadro roda o dia todo no site público: escolha um modelo rápido e barato."
       }
+    },
+    "decisionModelErrors": {
+      "catalog_unavailable": "O catálogo de modelos de decisão está indisponível. O modelo atual foi mantido.",
+      "not_a_decision_model": "Este modelo não é um modelo de decisão. O modelo atual foi mantido.",
+      "compatibility_check_failed": "Este modelo falhou na decisão de teste (recusada, inválida ou mais lenta que 5 segundos). O modelo atual foi mantido."
     },
     "finance": {
       "title": "Finanças",
@@ -4580,8 +4585,8 @@
         "import_map": "Correspondência de coluna de importação",
         "brief_split": "Breve detalhamento",
         "landing_demo": "Demonstração de ditado público",
-        "jev_decision": "Decisões Jev",
-        "jev_shadow": "Sombra Jev"
+        "jev_decision": "Decisões de IA",
+        "jev_shadow": "Verificações de decisões"
       },
       "stripeHidden": "A receita da Stripe está oculta: o faturamento não está conectado a esta instância."
     },

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { decisionsUrl, expandJevQuestions, parseJevAnswers } from "./jev";
+import { decisionsUrl, expandDecisionQuestions, parseDecisionAnswers } from "./decision-model";
 import type { DecisionSpec } from "./types";
 
 /**
- * The pure half of the Jev adapter. The engine is never trusted blindly:
+ * The pure half of the decision-model adapter. The engine is never trusted blindly:
  * every answer is checked against the spec's real values, and ANY deviation
  * (a missing answer, an unknown value, a malformed envelope) is an error the
- * runner reads as "Jev unavailable" — never a value the caller could write.
+ * runner reads as "decision model unavailable" — never a value the caller could write.
  */
 
 const SPEC: DecisionSpec = {
@@ -57,9 +57,9 @@ describe("decisionsUrl", () => {
   });
 });
 
-describe("expandJevQuestions", () => {
+describe("expandDecisionQuestions", () => {
   it("maps a single choice to a choice with the options as criteria", () => {
-    const questions = expandJevQuestions(SPEC);
+    const questions = expandDecisionQuestions(SPEC);
     expect(questions.priority).toEqual({
       type: "choice",
       criteria: { high: "high", low: "low" },
@@ -68,7 +68,7 @@ describe("expandJevQuestions", () => {
   });
 
   it("spreads a multi choice into one noul per option, prefixed by the key", () => {
-    const questions = expandJevQuestions(SPEC);
+    const questions = expandDecisionQuestions(SPEC);
     expect(questions["category_ids:cat-a"]).toEqual({
       type: "noul",
       instructions: "A",
@@ -85,7 +85,7 @@ describe("expandJevQuestions", () => {
   });
 
   it("maps a boolean to noul and a score to its ordered criteria", () => {
-    const questions = expandJevQuestions(SPEC);
+    const questions = expandDecisionQuestions(SPEC);
     expect(questions.is_junk).toEqual({ type: "noul", instructions: "junk?" });
     expect(questions.effort).toEqual({
       type: "score",
@@ -99,9 +99,9 @@ describe("expandJevQuestions", () => {
   });
 });
 
-describe("parseJevAnswers", () => {
+describe("parseDecisionAnswers", () => {
   it("parses a complete, well-formed response", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "high", probabilities: { high: 0.9, low: 0.1 }, confidence: 0.87 },
         "category_ids:cat-a": { noul: 0.92 },
@@ -124,7 +124,7 @@ describe("parseJevAnswers", () => {
   });
 
   it("caps the multi selection at the spec's cardinality, most probable first", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "low" },
         "category_ids:cat-a": 0.6,
@@ -141,7 +141,7 @@ describe("parseJevAnswers", () => {
   });
 
   it("treats a 0.5 noul as yes, and a borderline no as low confidence", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: "high",
         "category_ids:cat-a": 0.5,
@@ -159,7 +159,7 @@ describe("parseJevAnswers", () => {
   });
 
   it("accepts the answers under the `questions` key when `answers` is absent", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       questions: {
         priority: { choice: "low" },
         "category_ids:cat-a": 0.9,
@@ -173,7 +173,7 @@ describe("parseJevAnswers", () => {
   });
 
   it("refuses a choice value outside the spec's options", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "urgent" },
         "category_ids:cat-a": 0.9,
@@ -187,7 +187,7 @@ describe("parseJevAnswers", () => {
   });
 
   it("refuses a score value outside the level list", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "low" },
         "category_ids:cat-a": 0.9,
@@ -203,7 +203,7 @@ describe("parseJevAnswers", () => {
   it("resolves the current score shape through its legend and distribution", () => {
     // The drifted decisions API answers a 0–1 grade, not the level value:
     // the chosen level is the argmax index, mapped back by the legend.
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "low" },
         "category_ids:cat-a": 0.9,
@@ -233,8 +233,34 @@ describe("parseJevAnswers", () => {
     }
   });
 
+  it.each([
+    ["a JSON string (Liquid, OpenAI)", JSON.stringify({ value: 2, label: "s" })],
+    ["free text (Nace)", "value: 2\nlabel: s"],
+  ])("resolves a score legend echoed as %s (MIN-694)", (_shape, middle) => {
+    const parsed = parseDecisionAnswers(SPEC, {
+      answers: {
+        priority: { choice: "low" },
+        "category_ids:cat-a": 0.9,
+        "category_ids:cat-b": 0.1,
+        "category_ids:cat-c": 0.1,
+        is_junk: 0.1,
+        effort: {
+          score: 1.1,
+          legend: { 0: "xs", 1: middle, 2: "m" },
+          probabilities: { 0: 0.1, 1: 0.7, 2: 0.2 },
+          confidence: 0.6,
+        },
+      },
+    });
+    expect(parsed).toEqual({
+      answers: expect.objectContaining({
+        effort: { value: 2, probability: 0.7, confidence: 0.6 },
+      }),
+    });
+  });
+
   it("refuses a current-shape score whose legend carries an unknown value", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "low" },
         "category_ids:cat-a": 0.9,
@@ -254,7 +280,7 @@ describe("parseJevAnswers", () => {
   });
 
   it("refuses a response with a missing answer — every question must be answered", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "low" },
         "category_ids:cat-a": 0.9,
@@ -267,14 +293,14 @@ describe("parseJevAnswers", () => {
   });
 
   it("refuses a response without a parsable answers object, naming the shape", () => {
-    const parsed = parseJevAnswers(SPEC, { hello: "world" });
+    const parsed = parseDecisionAnswers(SPEC, { hello: "world" });
     expect(parsed).toMatchObject({ error: expect.stringContaining("hello") });
-    expect(parseJevAnswers(SPEC, null)).toMatchObject({ error: expect.any(String) });
-    expect(parseJevAnswers(SPEC, [1, 2])).toMatchObject({ error: expect.any(String) });
+    expect(parseDecisionAnswers(SPEC, null)).toMatchObject({ error: expect.any(String) });
+    expect(parseDecisionAnswers(SPEC, [1, 2])).toMatchObject({ error: expect.any(String) });
   });
 
   it("reads a missing choice confidence as unconfident, not as trustworthy", () => {
-    const parsed = parseJevAnswers(SPEC, {
+    const parsed = parseDecisionAnswers(SPEC, {
       answers: {
         priority: { choice: "low" },
         "category_ids:cat-a": 0.9,

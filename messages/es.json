@@ -4485,12 +4485,12 @@
         "label": "Modelo para commits de fusión generados"
       },
       "jev_decisions_enabled": {
-        "label": "Decisiones Jev",
-        "desc": "Activa o corta la capa de decisión de IA en todas partes de una vez. Cortada, cada llamada de decisión vuelve a su pase LLM. Interruptor de emergencia, no un ajuste de producto."
+        "label": "Decisiones de IA",
+        "desc": "Activa o desactiva la capa de decisión de IA en todas partes a la vez. Desactivada, cada llamada de decisión recurre a su pasada LLM. Interruptor de incidentes, no un ajuste del producto."
       },
       "jev_model": {
-        "label": "Modelo de decisiones Jev",
-        "desc": "El modelo System One que responde preguntas estructuradas (categorías, triaje, revisión). Se alcanza por el endpoint decisions de OpenRouter, facturado solo por tokens de entrada."
+        "label": "Modelo de decisión",
+        "desc": "El único modelo que responde a todas las decisiones de IA de la instancia: Smart Fill, Smart Assign y la revisión de comentarios. Solo se proponen modelos de decisión, y cada elección se prueba con una llamada antes de guardarse. El umbral de confianza se calibró con Jev: otro modelo puede recurrir al LLM con más o menos frecuencia."
       },
       "faq_ask_enabled": {
         "label": "Recuadro de preguntas FAQ",
@@ -4500,6 +4500,11 @@
         "label": "Modelo del recuadro FAQ",
         "desc": "Responde la pregunta de un visitante a partir de la FAQ de la página y de la documentación del producto. Alguien espera la respuesta, y el recuadro funciona todo el día en el sitio público: elige un modelo rápido y barato."
       }
+    },
+    "decisionModelErrors": {
+      "catalog_unavailable": "El catálogo de modelos de decisión no está disponible. Se mantiene el modelo actual.",
+      "not_a_decision_model": "Este modelo no es un modelo de decisión. Se mantiene el modelo actual.",
+      "compatibility_check_failed": "Este modelo falló la decisión de prueba (rechazada, no válida o más lenta de 5 segundos). Se mantiene el modelo actual."
     },
     "finance": {
       "title": "Finanzas",
@@ -4580,8 +4585,8 @@
         "import_map": "Importe de la correspondencia de la columna",
         "brief_split": "Breve desglose",
         "landing_demo": "Demostración de dictado público",
-        "jev_decision": "Decisiones Jev",
-        "jev_shadow": "Sombra Jev"
+        "jev_decision": "Decisiones de IA",
+        "jev_shadow": "Verificaciones de decisiones"
       },
       "stripeHidden": "Los ingresos de Stripe están ocultos: la facturación no está conectada en esta instancia."
     },

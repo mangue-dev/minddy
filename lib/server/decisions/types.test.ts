@@ -39,7 +39,7 @@ describe("validateDecisionSpec", () => {
     expect(validateDecisionSpec(baseSpec())).toBe(true);
   });
 
-  it("refuses an empty state — Jev answers confidently on no information", () => {
+  it("refuses an empty state — the decision model answers confidently on no information", () => {
     expect(validateDecisionSpec(baseSpec({ state: {} }))).toBe(false);
     expect(validateDecisionSpec(baseSpec({ state: undefined as never }))).toBe(false);
   });

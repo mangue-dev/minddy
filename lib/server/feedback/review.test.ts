@@ -5,16 +5,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  *
  * Both engines are doubles, exactly like `runner.test.ts` and
  * `smart-assign.test.ts` mock theirs: what is pinned here is the AGREEMENT —
- * the Jev filter is briefed on the same world the LLM pass reads (the spec
+ * the decision-model filter is briefed on the same world the LLM pass reads (the spec
  * carries the post, the kNN candidates, the categories), and ONLY a clean
  * answer at a confident-enough level publishes without the LLM. A junk,
  * sensitive or duplicate verdict — however confident — goes back to the full
  * `review_feedback` LLM pass, which re-decides everything and translates;
- * Jev down, unsure or switched off does the same, and both engines failing
+ * the decision model down, unsure or switched off does the same, and both engines failing
  * leaves the post to human review (fail-closed).
  *
  * Billing is asserted on the engine contexts: ONE run across both stages,
- * `jev_decision` for Jev, `feedback_classify` for the LLM, both billed to the
+ * `jev_decision` for the decision model, `feedback_classify` for the LLM, both billed to the
  * project owner — the economy of the first filter must read in `ai_usage`.
  */
 
@@ -28,7 +28,7 @@ const {
   setFeedbackPostCategoriesMock,
   emitFeedbackFieldChangesMock,
   notifyFeedbackTransitionMock,
-  runJevDecisionMock,
+  runModelDecisionMock,
   newRunIdMock,
   fromMock,
   rpcMock,
@@ -64,7 +64,7 @@ const {
   >(),
   emitFeedbackFieldChangesMock: vi.fn<() => Promise<void>>(),
   notifyFeedbackTransitionMock: vi.fn<() => Promise<void>>(),
-  runJevDecisionMock: vi.fn<
+  runModelDecisionMock: vi.fn<
     (
       spec: unknown,
       ctx: { runId: string; seq?: number; billTo: unknown; projectId?: string | null }
@@ -102,7 +102,7 @@ vi.mock("@/lib/server/feedback/events", () => ({
 vi.mock("@/lib/server/feedback/notify", () => ({
   notifyFeedbackTransition: notifyFeedbackTransitionMock,
 }));
-vi.mock("@/lib/server/decisions/jev", () => ({ runJevDecision: runJevDecisionMock }));
+vi.mock("@/lib/server/decisions/decision-model", () => ({ runModelDecision: runModelDecisionMock }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: fromMock, rpc: rpcMock }),
 }));
@@ -204,9 +204,9 @@ function wireDb() {
   });
 }
 
-/** A confident clean Jev answer set: nothing to moderate, nothing to protect,
+/** A confident clean decision-model answer set: nothing to moderate, nothing to protect,
  * no duplicate, one category — the min confidence across answers is 0.9. */
-const jevAnswer = (over: DecisionAnswers = {}): DecisionAnswers => ({
+const modelAnswer = (over: DecisionAnswers = {}): DecisionAnswers => ({
   is_junk: { value: false, probability: 0.03, confidence: 0.97 },
   is_sensitive: { value: false, probability: 0.01, confidence: 0.99 },
   sensitivity_kind: { value: "none", probability: 0.98, confidence: 0.98 },
@@ -236,7 +236,13 @@ const lowConfidence = (answers: DecisionAnswers): DecisionAnswers =>
     Object.entries(answers).map(([key, answer]) => [key, { ...answer, confidence: 0.3 }])
   ) as DecisionAnswers;
 
-describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
+
+/** A decision-model result: the answers and the versioned model that gave them. */
+function answered<T>(answers: T) {
+  return { answers, model: "typesafe/jev-1.13-20260917" };
+}
+
+describe("reviewFeedbackPost — the decision-model first filter (MIN-565)", () => {
   beforeEach(() => {
     updatePayloads.length = 0;
     eqFilters.length = 0;
@@ -256,21 +262,21 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
     });
     emitFeedbackFieldChangesMock.mockReset().mockResolvedValue(undefined);
     notifyFeedbackTransitionMock.mockReset().mockResolvedValue(undefined);
-    runJevDecisionMock.mockReset().mockResolvedValue(null);
+    runModelDecisionMock.mockReset().mockResolvedValue(null);
     newRunIdMock.mockReset().mockReturnValue("run-test");
     wireDb();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   it("restricts duplicate search to the explicit objective and never writes an objective", async () => {
-    runJevDecisionMock.mockResolvedValue(jevAnswer());
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer()));
     await reviewFeedbackPost("post-new", "project-1");
     expect(matchFeedbackPostsMock).toHaveBeenCalledWith(expect.objectContaining({ objectiveId: "docs-objective" }));
     for (const payload of updatePayloads) expect(payload).not.toHaveProperty("objective_id");
   });
 
   it("discards a stale verdict when the objective changes during review", async () => {
-    runJevDecisionMock.mockResolvedValue(jevAnswer());
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer()));
     feedbackPostsReads.push(() => ({ data: { ...FRESH_ROW, objective_id: null }, error: null }));
 
     const report = await reviewFeedbackPost("post-new", "project-1");
@@ -283,7 +289,7 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
   });
 
   it("does not suggest a merge rejected because the objectives changed", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     forcedToolCallMock.mockResolvedValue(llmArgs({ duplicate_of: "post-1", confidence: 0.95 }));
     mergePostsMock.mockResolvedValue({ ok: false, error: "feedback_merge_objective_mismatch" });
 
@@ -294,12 +300,12 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
     expect(updatePayloads.some((payload) => (payload as Record<string, unknown>).suggested_merge_into_id === "post-1")).toBe(false);
   });
 
-  it("publishes a clean confident Jev verdict WITHOUT paying the LLM", async () => {
-    runJevDecisionMock.mockResolvedValue(jevAnswer());
+  it("publishes a clean confident decision-model verdict WITHOUT paying the LLM", async () => {
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer()));
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(forcedToolCallMock).not.toHaveBeenCalled();
     expect(report.posts_reviewed).toBe(1);
     expect(report.posts_categorized).toBe(1);
@@ -328,12 +334,12 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
     expect(updatePayloads[0]).not.toHaveProperty("source_language");
   });
 
-  it("briefs Jev on the same world as the LLM pass, billed to the owner", async () => {
-    runJevDecisionMock.mockResolvedValue(jevAnswer());
+  it("briefs the decision model on the same world as the LLM pass, billed to the owner", async () => {
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer()));
 
     await reviewFeedbackPost("post-new", "project-1");
 
-    const [spec, ctx] = runJevDecisionMock.mock.calls[0] as [
+    const [spec, ctx] = runModelDecisionMock.mock.calls[0] as [
       {
         useCase: string;
         state: { post: { title: string }; candidates: { id: string }[] };
@@ -362,17 +368,17 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
   });
 
   it("sends a junk verdict to the full LLM pass instead of auto-acting", async () => {
-    runJevDecisionMock.mockResolvedValue(
-      jevAnswer({ is_junk: { value: true, probability: 0.97, confidence: 0.97 } })
-    );
-    // The LLM CONFIRMS the junk: the applied verdict is ITS, not Jev's.
+    runModelDecisionMock.mockResolvedValue(answered(
+      modelAnswer({ is_junk: { value: true, probability: 0.97, confidence: 0.97 } })
+    ));
+    // The LLM CONFIRMS the junk: the applied verdict is ITS, not the decision model's.
     forcedToolCallMock.mockResolvedValue(
       llmArgs({ is_junk: true, reason: "advertising bot" })
     );
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
     expect(report.posts_reviewed).toBe(1);
     expect(report.posts_rejected).toBe(1);
@@ -386,12 +392,12 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
   });
 
   it("sends a sensitive verdict to the full LLM pass, which translates", async () => {
-    runJevDecisionMock.mockResolvedValue(
-      jevAnswer({
+    runModelDecisionMock.mockResolvedValue(answered(
+      modelAnswer({
         is_sensitive: { value: true, probability: 0.96, confidence: 0.96 },
         sensitivity_kind: { value: "security", probability: 0.96, confidence: 0.96 },
       })
-    );
+    ));
     forcedToolCallMock.mockResolvedValue(
       llmArgs({
         is_sensitive: true,
@@ -420,9 +426,9 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
   });
 
   it("sends a suspected duplicate to the full LLM pass, which merges", async () => {
-    runJevDecisionMock.mockResolvedValue(
-      jevAnswer({ duplicate_of: { value: "post-1", probability: 0.93, confidence: 0.93 } })
-    );
+    runModelDecisionMock.mockResolvedValue(answered(
+      modelAnswer({ duplicate_of: { value: "post-1", probability: 0.93, confidence: 0.93 } })
+    ));
     forcedToolCallMock.mockResolvedValue(llmArgs({ duplicate_of: "post-1", confidence: 0.95 }));
 
     const report = await reviewFeedbackPost("post-new", "project-1");
@@ -434,51 +440,51 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
     expect(report.posts_merged).toBe(1);
   });
 
-  it("falls back to the LLM when Jev answers below the confidence floor", async () => {
-    runJevDecisionMock.mockResolvedValue(lowConfidence(jevAnswer()));
+  it("falls back to the LLM when the decision model answers below the confidence floor", async () => {
+    runModelDecisionMock.mockResolvedValue(answered(lowConfidence(modelAnswer())));
     forcedToolCallMock.mockResolvedValue(llmArgs());
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
     expect(report.posts_reviewed).toBe(1);
     expect(updatePayloads[0]).toEqual(expect.objectContaining({ review_state: "published" }));
   });
 
-  it("falls back to the LLM when Jev is unavailable", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+  it("falls back to the LLM when the decision model is unavailable", async () => {
+    runModelDecisionMock.mockResolvedValue(null);
     forcedToolCallMock.mockResolvedValue(llmArgs());
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
     expect(report.posts_reviewed).toBe(1);
   });
 
-  it("skips Jev entirely under the kill switch, behaving like today", async () => {
+  it("skips the decision model entirely under the kill switch, behaving like today", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_decisions_enabled: "false" });
     forcedToolCallMock.mockResolvedValue(llmArgs());
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(runJevDecisionMock).not.toHaveBeenCalled();
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
     expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
     expect(report.posts_reviewed).toBe(1);
-    // No Jev ran: the LLM is the first generation of the run.
+    // No decision model ran: the LLM is the first generation of the run.
     const options = forcedToolCallMock.mock.calls[0]?.[5];
     expect(options?.record?.seq).toBe(0);
     expect(options?.record?.runId).toBe("run-test");
   });
 
-  it("skips Jev for a use case listed LLM-first (MIN-567) — the switch covers the bespoke flow", async () => {
+  it("skips the decision model for a use case listed LLM-first (MIN-567) — the switch covers the bespoke flow", async () => {
     getAppConfigValuesMock.mockResolvedValue({ jev_llm_first: "feedback_review" });
     forcedToolCallMock.mockResolvedValue(llmArgs());
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(runJevDecisionMock).not.toHaveBeenCalled();
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
     expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
     expect(report.posts_reviewed).toBe(1);
     // The LLM pass is the FIRST generation, exactly like a kill-switched run.
@@ -486,31 +492,31 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
     expect(options?.record?.seq).toBe(0);
   });
 
-  it("bills a mixed decision as ONE run — Jev then the LLM pass", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+  it("bills a mixed decision as ONE run — the decision model then the LLM pass", async () => {
+    runModelDecisionMock.mockResolvedValue(null);
     forcedToolCallMock.mockResolvedValue(llmArgs());
 
     await reviewFeedbackPost("post-new", "project-1");
 
-    const [, jevCtx] = runJevDecisionMock.mock.calls[0] as [
+    const [, modelCtx] = runModelDecisionMock.mock.calls[0] as [
       unknown,
       { runId: string; seq?: number },
     ];
     const options = forcedToolCallMock.mock.calls[0]?.[5];
-    expect(options?.record?.runId).toBe(jevCtx.runId);
-    expect(jevCtx.seq).toBe(0);
+    expect(options?.record?.runId).toBe(modelCtx.runId);
+    expect(modelCtx.seq).toBe(0);
     expect(options?.record?.seq).toBe(1);
     expect(options?.record?.feature).toBe("feedback_classify");
     expect(options?.record?.billTo).toEqual({ projectOwner: "project-1" });
   });
 
   it("fails closed to human review when BOTH engines fail", async () => {
-    runJevDecisionMock.mockResolvedValue(null);
+    runModelDecisionMock.mockResolvedValue(null);
     forcedToolCallMock.mockResolvedValue(null);
 
     const report = await reviewFeedbackPost("post-new", "project-1");
 
-    expect(runJevDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
     expect(forcedToolCallMock).toHaveBeenCalledTimes(1);
     expect(report.failures).toBe(1);
     expect(report.posts_reviewed).toBe(0);
@@ -521,7 +527,7 @@ describe("reviewFeedbackPost — Jev first filter (MIN-565)", () => {
 
 describe("feedbackVerdictFromAnswers / isCleanFeedbackVerdict", () => {
   it("maps a clean answer set, folding the none-sentinels to null", () => {
-    const verdict = feedbackVerdictFromAnswers(jevAnswer());
+    const verdict = feedbackVerdictFromAnswers(modelAnswer());
     expect(verdict).toEqual({
       duplicateOf: null,
       confidence: 0.1,
@@ -536,7 +542,7 @@ describe("feedbackVerdictFromAnswers / isCleanFeedbackVerdict", () => {
 
   it("maps a duplicate pick to the candidate id with its calibrated certainty", () => {
     const verdict = feedbackVerdictFromAnswers(
-      jevAnswer({ duplicate_of: { value: "post-1", probability: 0.93, confidence: 0.9 } })
+      modelAnswer({ duplicate_of: { value: "post-1", probability: 0.93, confidence: 0.9 } })
     );
     expect(verdict.duplicateOf).toBe("post-1");
     expect(verdict.confidence).toBe(0.93);
@@ -545,7 +551,7 @@ describe("feedbackVerdictFromAnswers / isCleanFeedbackVerdict", () => {
 
   it("maps the sensitivity kind and rejects a sensitive verdict as clean", () => {
     const verdict = feedbackVerdictFromAnswers(
-      jevAnswer({
+      modelAnswer({
         is_sensitive: { value: true, probability: 0.9, confidence: 0.9 },
         sensitivity_kind: { value: "security", probability: 0.9, confidence: 0.9 },
       })

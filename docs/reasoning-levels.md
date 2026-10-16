@@ -93,7 +93,7 @@ Metadata is checked against the resolved runtime model, including an account's
 BYOK override and routing suffix. Available metadata, including stale entries,
 is read synchronously; the existing catalog loader refreshes in the background
 without delaying generation. The catalog is cached per function instance, so
-the decision runner starts loading it while Jev answers, and an empty cache
+the decision runner starts loading it while the decision model answers, and an empty cache
 waits at most `COLD_CATALOG_WAIT_MS` (1.5 seconds) inside the 20-second
 deadline before the request is sent. A catalog still missing after that wait,
 or mandatory/unknown reasoning, retains the existing low-effort request for
@@ -109,13 +109,13 @@ codes without response content or exception messages. A deadline never
 triggers a retry, and an unsuccessful fill still permits issue creation.
 See the [MIN-674 incident review](audits/min-674-smart-fill.md).
 
-When that LLM fallback fails after a low-confidence Jev decision, Smart Fill
-keeps the Jev answers whose own confidence meets `jev_confidence_floor` and
+When that LLM fallback fails after a low-confidence decision-model answer,
+Smart Fill keeps the answers whose own confidence meets `jev_confidence_floor` and
 fills only those fields. The runner offers this through the opt-in
-`keepConfidentJevAnswers` input; Smart Assign and Feedback Review still
+`keepConfidentModelAnswers` input; Smart Assign and Feedback Review still
 receive `null`. The runner logs `llm_failed` with the fallback reason, run ID
 and kept field names, and Smart Fill logs its outcome (`no_decision`,
-`jev_partial` or an empty patch) and gate skips (`platform_disabled`,
+`model_partial` or an empty patch) and gate skips (`platform_disabled`,
 `budget_exhausted`, `context_unavailable`). These lines contain no issue
 text, answers or exception messages. See the
 [MIN-687 incident review](audits/min-687-smart-fill.md).

@@ -75,17 +75,19 @@ export type AiFeature =
   | "routine_code"
   | "routine_compute"
   /**
-    * A Jev decision (MIN-561): one call to the System One model that answers
-    * typed questions over a structured state, priced on input tokens only
-    * (output is free). Its own feature because the decision layer (MIN-562)
-    * will back several automations, and their Jev share must stay readable.
+    * An AI decision (MIN-561): one call to the instance's decision model
+    * (Jev by default, any compatible decision model since MIN-694 — the id
+    * is historical and the row's `model` names the model that answered),
+    * which answers typed questions over a structured state, priced on input
+    * tokens. Its own feature because the decision layer (MIN-562) backs
+    * several automations, and their decision-model share must stay readable.
     * The usage bar files it under “Automations” (`USAGE_SEGMENTS`), as its
     * callers are the same gestures.
     */
   | "jev_decision"
   /**
    * The shadow replay of a sampled decision (MIN-567): the LLM pass run
-   * again in the background after a confident Jev decision, to measure the
+   * again in the background after a confident decision-model decision, to measure the
    * agreement. Its own feature — NOT the use case's pass feature, or the
    * finance view would read phantom LLM decisions into the real ones; the
    * sampling delta stays readable as one line. Same segment as
@@ -95,7 +97,7 @@ export type AiFeature =
   /**
    * Smart Triage (MIN-566): the LLM scoring pass of a column reorder — ONE
    * call per column, answering every ticket id on the 1–5 urgency scale. Its
-   * own feature next to `jev_decision` (which carries the System One half of
+   * own feature next to `jev_decision` (which carries the decision-model half of
    * the same decision): one line per engine, both filed under “Automations”.
    * The rules mode costs nothing — it is pure code.
    */

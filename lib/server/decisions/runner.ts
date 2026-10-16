@@ -15,7 +15,7 @@ import {
   type DecisionSpec,
   type DecisionUseCase,
 } from "@/lib/server/decisions/types";
-import { runJevDecision, type DecisionCallContext } from "@/lib/server/decisions/jev";
+import { runModelDecision, type DecisionCallContext } from "@/lib/server/decisions/decision-model";
 import { runLlmDecision, warmLlmDecision } from "@/lib/server/decisions/llm";
 import { runShadowComparison } from "@/lib/server/decisions/shadow";
 
@@ -24,7 +24,8 @@ import { runShadowComparison } from "@/lib/server/decisions/shadow";
  * AI decision of the first lot takes (MIN-557):
  *
  *   use case builds its spec (pure, `prepare.ts`)
- *     → Jev first (`jev.ts`), one call, no retry
+ *     → the configured decision model first (`decision-model.ts`, one global
+ *       `jev_model` setting, Jev by default — MIN-694), one call, no retry
  *     → unavailable OR confidence under `jev_confidence_floor` → the existing
  *       LLM pass (`llm.ts`), verbatim
  *     → both failed → `null`, and the use case applies ITS OWN degradation
@@ -34,10 +35,10 @@ import { runShadowComparison } from "@/lib/server/decisions/shadow";
  * Two knobs ride along (MIN-567), both plain `app_config` keys, both
  * invisible to the caller:
  *
- * - `jev_llm_first` — a use case listed there skips Jev and decides with
- *   the LLM directly. The calibrated escape hatch when the shadow comparison
- *   shows the use case structurally bad at Jev.
- * - `jev_shadow_sample_rate` — after a CONFIDENT Jev decision, a uniform
+ * - `jev_llm_first` — a use case listed there skips the decision model and
+ *   decides with the LLM directly. The calibrated escape hatch when the
+ *   shadow comparison shows the use case structurally bad at decision models.
+ * - `jev_shadow_sample_rate` — after a CONFIDENT model decision, a uniform
  *   roll under the rate schedules the shadow comparison (`shadow.ts`): the
  *   LLM pass replayed in the background, the agreement written to
  *   `ai_decision_evaluations`. The LLM is the reference; the replay never
@@ -49,29 +50,42 @@ import { runShadowComparison } from "@/lib/server/decisions/shadow";
  * record their lines on the same run id — a mixed decision reads as one
  * gesture with one line per engine, no double imputation. The shadow's
  * replay has its own run, billed under `jev_shadow`.
+ *
+ * The `jev_*` key and ledger names are historical identifiers kept by MIN-694
+ * so existing settings, encrypted config rows and usage history carry over;
+ * they apply to whichever decision model is configured. None of these knobs
+ * selects a model: the model is the single `jev_model` setting, the LLM pass
+ * keeps each use case's own LLM setting, and neither can diverge per use case.
+ *
+ * Calibration is per instance, not per model: `jev_confidence_floor` was
+ * calibrated on Jev, and other decision models spread their confidences
+ * differently (MIN-694 findings). After switching the model, read the shadow
+ * metrics — now recorded with the model that answered — before trusting the
+ * floor; raise it, or list a use case in `jev_llm_first`, if agreement drops.
  */
 
 /** Calibratable: MIN-567 owns the real numbers from the shadow comparison. */
-export const DEFAULT_JEV_CONFIDENCE_FLOOR = 0.55;
-export const DEFAULT_JEV_SHADOW_SAMPLE_RATE = 0.05;
+export const DEFAULT_DECISION_CONFIDENCE_FLOOR = 0.55;
+export const DEFAULT_DECISION_SHADOW_SAMPLE_RATE = 0.05;
 
-export interface JevDecisionSettings {
+export interface DecisionModelSettings {
   /**
    * `jev_decisions_enabled` — the incident kill-switch laid down by MIN-561,
    * NOT a product setting: off means "LLM everywhere, today's behavior".
    */
   enabled: boolean;
-  /** Jev answers under this global confidence are discarded for the LLM pass. */
+  /** Decision-model answers under this global confidence are discarded for the LLM pass. */
   confidenceFloor: number;
   /**
-   * Share of decisions sampled for the Jev-vs-LLM shadow comparison. Read
+   * Share of decisions sampled for the model-vs-LLM shadow comparison. Read
    * here so the calibration has one home; the sampling itself is MIN-567.
    */
   shadowSampleRate: number;
   /**
-   * `jev_llm_first` — the use cases that skip Jev and decide with the LLM
-   * directly (MIN-567). Populated ONLY from the shadow comparison, when a
-   * use case proves structurally bad at Jev; a config edit, never a deploy.
+   * `jev_llm_first` — the use cases that skip the decision model and decide
+   * with the LLM directly (MIN-567). Populated ONLY from the shadow
+   * comparison, when a use case proves structurally bad at the decision
+   * model; a config edit, never a deploy.
    */
   llmFirstUseCases: DecisionUseCase[];
 }
@@ -93,11 +107,11 @@ function parseUseCaseList(value: string | null | undefined): DecisionUseCase[] {
 }
 
 /**
- * The Jev knobs, read like `feedback_merge_auto_threshold` — plain
+ * The decision-model knobs, read like `feedback_merge_auto_threshold` — plain
  * `app_config` keys OUTSIDE the admin registry (no UI by decision, MIN-557):
  * they exist for calibration, not for tuning from the dashboard.
  */
-export async function loadJevDecisionSettings(): Promise<JevDecisionSettings> {
+export async function loadDecisionModelSettings(): Promise<DecisionModelSettings> {
   const cfg = await getAppConfigValues([
     "jev_decisions_enabled",
     "jev_confidence_floor",
@@ -108,10 +122,10 @@ export async function loadJevDecisionSettings(): Promise<JevDecisionSettings> {
     enabled:
       (cfg["jev_decisions_enabled"] ?? aiModelFallback("jev_decisions_enabled")).trim() !==
       "false",
-    confidenceFloor: parseFloatClamped(cfg["jev_confidence_floor"], DEFAULT_JEV_CONFIDENCE_FLOOR),
+    confidenceFloor: parseFloatClamped(cfg["jev_confidence_floor"], DEFAULT_DECISION_CONFIDENCE_FLOOR),
     shadowSampleRate: parseFloatClamped(
       cfg["jev_shadow_sample_rate"],
-      DEFAULT_JEV_SHADOW_SAMPLE_RATE
+      DEFAULT_DECISION_SHADOW_SAMPLE_RATE
     ),
     llmFirstUseCases: parseUseCaseList(cfg["jev_llm_first"]),
   };
@@ -129,17 +143,17 @@ export interface DecisionRunInput {
    */
   subjectId?: string | null;
   /**
-   * When the LLM fallback fails after a LOW-CONFIDENCE Jev decision, keep
-   * the Jev answers that individually meet the floor instead of returning
+   * When the LLM fallback fails after a LOW-CONFIDENCE model decision, keep
+   * the model answers that individually meet the floor instead of returning
    * `null` (MIN-687). Only for use cases whose policy accepts a partial
    * answer — Smart Fill fills the fields it got and leaves the others empty.
    */
-  keepConfidentJevAnswers?: boolean;
+  keepConfidentModelAnswers?: boolean;
 }
 
 /**
- * Run one decision. Resolves to the answers of ONE engine — Jev when it
- * answered confidently enough, the LLM otherwise — or `null` when both
+ * Run one decision. Resolves to the answers of ONE engine — the decision
+ * model when it answered confidently enough, the LLM otherwise — or `null` when both
  * failed, which the use case reads as "apply your degradation".
  */
 export async function runDecision(
@@ -152,7 +166,7 @@ export async function runDecision(
     console.error(`[decisions] invalid spec for ${spec.useCase} — degrading`);
     return null;
   }
-  const settings = await loadJevDecisionSettings();
+  const settings = await loadDecisionModelSettings();
   const runId = newRunId();
   const ctx: DecisionCallContext = {
     runId,
@@ -161,21 +175,23 @@ export async function runDecision(
   };
 
   let fallbackReason: DecisionFallbackReason;
-  let jevRan = false;
-  let discardedJevAnswers: DecisionAnswers | null = null;
+  let modelRan = false;
+  let discardedModelAnswers: DecisionAnswers | null = null;
+  let discardedModel: string | null = null;
   if (!settings.enabled) {
-    fallbackReason = "jev_disabled";
+    fallbackReason = "model_disabled";
   } else if (settings.llmFirstUseCases.includes(spec.useCase)) {
-    fallbackReason = "jev_llm_first";
+    fallbackReason = "llm_first";
   } else {
-    jevRan = true;
-    // The catalog loads while Jev answers, so a fallback is ready to start.
+    modelRan = true;
+    // The catalog loads while the decision model answers, so a fallback is ready to start.
     warmLlmDecision(spec);
-    const jevStartedAt = performance.now();
-    const jevAnswers = await runJevDecision(spec, { ...ctx, seq: 0 });
-    const jevLatencyMs = Math.round(performance.now() - jevStartedAt);
-    if (jevAnswers) {
-      const confidence = decisionConfidence(spec, jevAnswers);
+    const modelStartedAt = performance.now();
+    const result = await runModelDecision(spec, { ...ctx, seq: 0 });
+    const modelLatencyMs = Math.round(performance.now() - modelStartedAt);
+    if (result) {
+      const { answers: modelAnswers, model } = result;
+      const confidence = decisionConfidence(spec, modelAnswers);
       if (confidence >= settings.confidenceFloor) {
         // Shadow sampling (MIN-567): measure, never decide. The comparison
         // replays the LLM pass in the background — after the response, on a
@@ -185,32 +201,40 @@ export async function runDecision(
           afterOrNow(() =>
             runShadowComparison({
               spec,
-              jevAnswers,
-              jevConfidence: confidence,
-              jevLatencyMs,
+              model,
+              modelAnswers,
+              modelConfidence: confidence,
+              modelLatencyMs,
               billTo: input.billTo,
               projectId: input.projectId ?? null,
               subjectId: input.subjectId ?? null,
             })
           );
         }
-        return { engine: "jev", answers: jevAnswers, confidence, fallbackReason: null };
+        return {
+          engine: "model",
+          model,
+          answers: modelAnswers,
+          confidence,
+          fallbackReason: null,
+        };
       }
       // Confident about the wrong thing is still under the floor: the LLM
-      // re-decides, the Jev answers are discarded, not merged.
-      fallbackReason = "jev_low_confidence";
-      discardedJevAnswers = jevAnswers;
+      // re-decides, the model answers are discarded, not merged.
+      fallbackReason = "model_low_confidence";
+      discardedModelAnswers = modelAnswers;
+      discardedModel = model;
     } else {
-      fallbackReason = "jev_unavailable";
+      fallbackReason = "model_unavailable";
     }
   }
 
   // The fallback REPLACES the retry: one LLM pass, on the same run.
-  const llmAnswers = await runLlmDecision(spec, { ...ctx, seq: jevRan ? 1 : 0 });
+  const llmAnswers = await runLlmDecision(spec, { ...ctx, seq: modelRan ? 1 : 0 });
   if (!llmAnswers) {
     const kept =
-      input.keepConfidentJevAnswers && discardedJevAnswers
-        ? confidentAnswers(discardedJevAnswers, settings.confidenceFloor)
+      input.keepConfidentModelAnswers && discardedModelAnswers
+        ? confidentAnswers(discardedModelAnswers, settings.confidenceFloor)
         : {};
     const keptKeys = Object.keys(kept);
     // Identifiers, fixed codes and field names only: never answers or text.
@@ -219,9 +243,10 @@ export async function runDecision(
         keptKeys.join(",") || "none"
       }`
     );
-    if (keptKeys.length === 0) return null;
+    if (keptKeys.length === 0 || !discardedModel) return null;
     return {
-      engine: "jev",
+      engine: "model",
+      model: discardedModel,
       answers: kept,
       confidence: decisionConfidence(spec, kept),
       fallbackReason,

@@ -177,7 +177,7 @@ describe("smartFillAnswersToRaw", () => {
   });
 
   it("drops non-textual values and non-textual ids of a multi-choice", () => {
-    // Jev never produces these for those keys, but the adapter is tolerant on
+    // the decision model never produces these for those keys, but the adapter is tolerant on
     // the shape and the sanitizer stays the judge of everything else.
     const raw = smartFillAnswersToRaw({
       priority: { value: 3, probability: null, confidence: null },
@@ -245,7 +245,7 @@ function queryReturning(rows: unknown[], error: { message: string } | null = nul
   return query;
 }
 
-function outcome(answers: DecisionAnswers, engine: DecisionOutcome["engine"] = "jev"): DecisionOutcome {
+function outcome(answers: DecisionAnswers, engine: DecisionOutcome["engine"] = "model"): DecisionOutcome {
   return { engine, answers, confidence: 0.9, fallbackReason: null };
 }
 
@@ -273,7 +273,7 @@ describe("runSmartFill — decision layer", () => {
       description: "It fails on CI once in five runs.",
     });
 
-  it("passes through the runner and sanitizes the JEV answers like any other", async () => {
+  it("passes through the runner and sanitizes the decision-model answers like any other", async () => {
     runDecisionMock.mockResolvedValue(
       outcome({
         priority: { value: "high", probability: 0.9, confidence: 0.9 },
@@ -319,21 +319,21 @@ describe("runSmartFill — decision layer", () => {
     expect(input).toEqual({
       billTo: { userId: "user-1" },
       projectId: "project-1",
-      keepConfidentJevAnswers: true,
+      keepConfidentModelAnswers: true,
     });
   });
 
-  it("fills the confident Jev fields kept after a failed LLM fallback, and says so (MIN-687)", async () => {
+  it("fills the confident decision-model fields kept after a failed LLM fallback, and says so (MIN-687)", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     runDecisionMock.mockResolvedValue({
-      engine: "jev",
+      engine: "model",
       answers: { priority: { value: "high", probability: 0.8, confidence: 0.8 } },
       confidence: 0.8,
-      fallbackReason: "jev_low_confidence",
+      fallbackReason: "model_low_confidence",
       partial: true,
     });
     await expect(run()).resolves.toEqual({ priority: "high" });
-    expect(warn).toHaveBeenCalledWith("[smart-fill] outcome: jev_partial fields=priority");
+    expect(warn).toHaveBeenCalledWith("[smart-fill] outcome: model_partial fields=priority");
   });
 
   it("logs a fixed code when no engine decides, without the issue text", async () => {

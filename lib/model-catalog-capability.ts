@@ -6,6 +6,16 @@ export const MODEL_CATALOG_CAPABILITIES = ["text", "transcription", "embedding"]
 export type ModelCatalogCapability = (typeof MODEL_CATALOG_CAPABILITIES)[number];
 
 /**
+ * Families the platform admin catalog can filter on. `decision` is admin-only:
+ * decision models (OpenRouter `output_modalities: ["decisions"]`) answer typed
+ * questions on the decisions endpoint and are never a BYOK assignment, so the
+ * account capability lists above stay unchanged.
+ */
+export const ADMIN_CATALOG_CAPABILITIES = [...MODEL_CATALOG_CAPABILITIES, "decision"] as const;
+
+export type AdminCatalogCapability = (typeof ADMIN_CATALOG_CAPABILITIES)[number];
+
+/**
  * Model families that Minddy can route through each BYOK provider.
  *
  * This is deliberately provider-derived rather than user-configurable. Replacing
@@ -32,6 +42,12 @@ export function isModelCatalogCapability(
   value: string | null | undefined,
 ): value is ModelCatalogCapability {
   return (MODEL_CATALOG_CAPABILITIES as readonly string[]).includes(value ?? "");
+}
+
+export function isAdminCatalogCapability(
+  value: string | null | undefined,
+): value is AdminCatalogCapability {
+  return (ADMIN_CATALOG_CAPABILITIES as readonly string[]).includes(value ?? "");
 }
 
 /** Capability required by a configured runtime model. */

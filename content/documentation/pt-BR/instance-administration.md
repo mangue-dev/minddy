@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate with the global decision model (MIN-694)",
     "editions": [
       "self-hosted"
     ],
@@ -35,14 +35,18 @@
       "components/admin/admin-dashboard.tsx",
       "lib/admin-tabs.ts",
       "lib/server/admin.ts",
-      "docs/self-hosting-auth.md"
+      "docs/self-hosting-auth.md",
+      "lib/ai-model-config.ts",
+      "app/api/admin/app-config/route.ts",
+      "lib/server/decisions/model-validation.ts",
+      "docs/plans/min-694-decision-model-selection.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-694 decision model selector, save validation and fallback source and test review; live decision probes recorded in docs/plans/min-694-decision-model-selection.md; existing figures unchanged)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-694 six-locale decision model section meaning review; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "authentication-and-email",
@@ -59,7 +63,7 @@
       "src": "/documentation/pt-BR/instance-administration-overview.png",
       "alt": "Visão geral administrativa com indicadores agregados de contas, integração inicial e conteúdo.",
       "caption": "Visão geral mostra os indicadores agregados da instância. Finanças não aparece neste perfil de demonstração porque não há chave gerenciada do OpenRouter configurada.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -75,7 +79,7 @@
       "src": "/documentation/pt-BR/instance-administration-models.png",
       "alt": "Configurações de modelos de IA e raciocínio da instância.",
       "caption": "Modelos configura padrões e usos específicos. A captura mostra a configuração existente; nenhum modelo ou provedor foi alterado.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,6 +108,12 @@ Administrar a instância é diferente de ser proprietário de um projeto. `ADMIN
 ## Usar os controles disponíveis {#panels}
 
 O console inclui Visão geral, Usuários, Modelos e, quando disponível, Finanças. Finanças fica oculto sem OpenRouter gerenciado; a atribuição de plano depende da cobrança habilitada ou de um override já existente. Abrir o console não acrescenta cobrança Cloud a uma instância própria sem provedores comerciais. Confira modelos, padrões, usuários e quotas na versão instalada antes de alterar. As mudanças afetam toda a instância: valide com uma conta de demonstração.
+
+## Escolher o modelo de decisão de IA {#decision-model}
+
+Em **Modelos**, seção **Automações**, **Modelo de decisão** define o único modelo de decisão que responde a todas as decisões de IA da instância: Smart Fill, Smart Assign e a revisão de feedback. Não há escolha por projeto, por usuário ou por recurso. O seletor só lista modelos do OpenRouter que publicam a capacidade de decisão; modelos de chat, embedding e transcrição nunca aparecem. Ao salvar, o candidato é testado com uma decisão representativa. Um modelo que não é de decisão, recusa a solicitação, devolve uma resposta inválida ou leva mais de 5 segundos é recusado, e o modelo atual continua em uso. Quando o catálogo não pode ser carregado, toda alteração é recusada. Instâncias auto-hospedadas sem IA gerenciada não têm catálogo da plataforma e mantêm o padrão, Jev.
+
+Novas decisões usam o modelo salvo em cerca de um minuto em cada processo do servidor. Quando o modelo falha ou responde abaixo do limite de confiança, a decisão recorre ao modelo LLM próprio do recurso, como antes. **Decisões de IA** continua sendo o interruptor de incidentes que envia todas as decisões a esse modelo LLM. O limite foi calibrado no Jev e outros modelos de decisão distribuem a confiança de outra forma: após uma troca, confira a concordância por modelo na visão de banco de dados `ai_decision_evaluations_weekly`. As linhas de uso registram o modelo que respondeu.
 
 ## Manter responsabilidades operacionais {#responsibilities}
 
