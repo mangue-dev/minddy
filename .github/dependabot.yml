@@ -18,6 +18,9 @@ updates:
       # production. See lib/server/pages-projection.ts before lifting this.
       - dependency-name: jsdom
         versions: [">=27"]
+      # Pinned to the exact version the Radix primitives depend on, so the app
+      # ships one copy. Bump it together with those primitives, not alone.
+      - dependency-name: "@radix-ui/react-slot"
     groups:
       minor-and-patch:
         patterns:
