@@ -62,6 +62,9 @@ async function render(restoring = false, strict = false) {
   await act(() => root.render(strict ? createElement(StrictMode, null, tree) : tree));
 }
 const settle = async () => { await act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)); }); };
+// Settles until an expected outcome lands. A single fixed settle raced the
+// response-to-render chain on loaded CI runners.
+const settleUntil = (check: () => void) => vi.waitFor(async () => { await settle(); check(); });
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -133,8 +136,8 @@ describe("mounted restored-tab startup admission", () => {
     await render(false);
     expect(reads).toHaveLength(1);
     expect(navigationPreparationPending(client)).toBe(true);
-    reads[0].finish(rows()); await settle();
-    expect(value?.activeId).toBe(firstId);
+    reads[0].finish(rows());
+    await settleUntil(() => expect(value?.activeId).toBe(firstId));
     expect(visit).toHaveBeenCalledOnce();
     expect(navigationPreparationPending(client)).toBe(false);
     expect(arm).toHaveBeenCalledOnce();
@@ -145,13 +148,13 @@ describe("mounted restored-tab startup admission", () => {
   it("holds the canonical list until the existing sealed window selection resolves", async () => {
     sessionStorage.setItem(appTabsStorageKey("owner"), JSON.stringify(snapshot("owner")));
     await render(false);
-    reads[0].finish(rows()); await settle();
-    expect(opens).toHaveLength(1);
+    reads[0].finish(rows());
+    await settleUntil(() => expect(opens).toHaveLength(1));
     expect(value?.activeId).toBeNull();
     expect(navigationPreparationPending(client)).toBe(true);
     expect(visit).not.toHaveBeenCalled();
-    opens[0].finish({ id: firstId, href: "/home" }); await settle();
-    expect(value?.activeId).toBe(firstId);
+    opens[0].finish({ id: firstId, href: "/home" });
+    await settleUntil(() => expect(value?.activeId).toBe(firstId));
     expect(visit).toHaveBeenCalledOnce();
     expect(navigationPreparationPending(client)).toBe(false);
     expect(writes).toEqual([]);
@@ -162,8 +165,8 @@ describe("mounted restored-tab startup admission", () => {
     visit.mockImplementation(() => worker.acquire());
     await render(false);
     const stop = subscribeNavigationPreparation(client, () => transitions.push(navigationPreparationPending(client)));
-    reads[0].finish(rows()); await settle();
-    expect(value?.activeId).toBe(firstId);
+    reads[0].finish(rows());
+    await settleUntil(() => expect(value?.activeId).toBe(firstId));
     expect(navigationPreparationPending(client)).toBe(true);
     expect(transitions).not.toContain(false);
     worker.release();
@@ -173,8 +176,8 @@ describe("mounted restored-tab startup admission", () => {
 
   it("publishes an activation's destination at once and prepares the rest after it paints", async () => {
     await render(false);
-    reads[0].finish(rows()); await settle();
-    expect(visit).toHaveBeenCalledOnce();
+    reads[0].finish(rows());
+    await settleUntil(() => expect(visit).toHaveBeenCalledOnce());
     expect(select).not.toHaveBeenCalled();
     await act(async () => { await value!.session.activate(secondId); });
     expect(value?.activeId).toBe(secondId);
@@ -198,17 +201,17 @@ describe("mounted restored-tab startup admission", () => {
   it("releases optional admission after the ordinary canonical query exhausts its retries", async () => {
     await render(false);
     expect(navigationPreparationPending(client)).toBe(true);
-    reads[0].finish({ code: "database" }, 500); await settle();
-    expect(value?.loadError).toBe(true);
+    reads[0].finish({ code: "database" }, 500);
+    await settleUntil(() => expect(value?.loadError).toBe(true));
     expect(navigationPreparationPending(client)).toBe(false);
     expect(visit).not.toHaveBeenCalled();
     expect(writes).toEqual([]);
   });
 
   it("releases admission when initial creation fails instead of remaining pending forever", async () => {
-    await render(false); reads[0].finish([]); await settle();
+    await render(false); reads[0].finish([]);
+    await settleUntil(() => expect(writes).toEqual(["POST /api/me/app-tabs"]));
     expect(value?.activeId).toBeNull();
-    expect(writes).toEqual(["POST /api/me/app-tabs"]);
     expect(navigationPreparationPending(client)).toBe(false);
     expect(value?.error).toBe("unexpected_write");
   });

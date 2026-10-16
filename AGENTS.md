@@ -153,8 +153,11 @@ and metadata tests as well.
 
 ## Toolchain and lockfiles
 
-Use Node.js 24 and pnpm **10.28.0**, as pinned by
-[the CI workflow](.github/workflows/ci.yml):
+Use Node.js 24 and pnpm **10.28.0**, as pinned by the `packageManager` field
+of `package.json` and by [the CI workflow](.github/workflows/ci.yml). Keep the
+two identical: `pnpm/action-setup` fails when they differ, and the field is
+what makes Dependabot regenerate `pnpm-lock.yaml` with the same pnpm instead of
+dropping its overrides and patches.
 
 ```bash
 corepack prepare pnpm@10.28.0 --activate
@@ -166,6 +169,14 @@ The repository maintains `pnpm-lock.yaml` for actual installation and
 change, synchronize both lockfiles using the pinned pnpm version and
 `npm install --package-lock-only --legacy-peer-deps`. Review the lockfile diff;
 preserve `pnpm.packageExtensions`, overrides, and patched dependencies.
+
+`mangue-ui` declares the libraries Minddy also imports (`framer-motion`,
+`sonner`, `cmdk`, `@lobehub/icons`, Hugeicons) as peer dependencies, so both
+share one copy without overrides or patches;
+`lib/mangue-ui-shared-dependencies.test.ts` fails if a second copy returns.
+Change a shared library's major version in mangue-ui's peer range first.
+`@lobehub/icons` is imported per logo file, which needs React alone, so
+`pnpm.packageExtensions` marks its `@lobehub/ui` and `antd` peers optional.
 
 `npm run typecheck` uses the repository's TypeScript 7 compiler. The editor may
 use a different TypeScript version; use repository diagnostics for validation.
