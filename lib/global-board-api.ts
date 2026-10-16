@@ -1,7 +1,7 @@
 "use client";
 
 import { fetchClientRead } from "./client-read";
-import { HttpResponseError } from "./backend-availability";
+import { apiErrorCode, HttpResponseError } from "./backend-availability";
 
 import { applyPendingRelations } from "./optimistic/relation-writes";
 import { applyPendingBoard, GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
@@ -38,7 +38,7 @@ export async function fetchGlobalBoardApi(
   if (!response.ok) {
     const message =
       (data as { error?: string } | null)?.error || text.trim() || "Request failed";
-    throw new HttpResponseError(message, response.status);
+    throw new HttpResponseError(message, response.status, apiErrorCode(data));
   }
   if (data == null) throw new Error("Empty response");
   return data as GlobalBoardResponse;

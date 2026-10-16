@@ -193,6 +193,8 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     readState: pullRequestReadState(query, activationSequence),
     // Loaded session data stays visible during revalidation; writes still use readState.
     displayReadState: pullRequestDisplayReadState(query, activationSequence),
+    /** Why the last read failed, for the error screen's explanation. */
+    readError: query.error,
     refetch,
   };
 }
@@ -388,7 +390,7 @@ export function useAllPullRequestsQuery(
 ) {
   const client = useQueryClient();
   const settledPage = useRef({ state, limit });
-  const { data, isPending, isError, isFetching, isPlaceholderData, refetch } = useQuery({
+  const { data, isPending, isError, error, isFetching, isPlaceholderData, refetch } = useQuery({
     ...allPullRequestsQueryOptions(state, limit, pin),
     placeholderData: (previous) => previous ?? cachedPullRequestListForPin(client, state, limit, pin),
     refetchOnMount: "always",
@@ -409,6 +411,7 @@ export function useAllPullRequestsQuery(
     anyPr: data?.anyPr ?? false,
     /** A failed read with nothing to show: not the same as "no linked repository". */
     readFailed: isError && !data,
+    readError: error,
     loading: isPending,
     fetching: isFetching,
     refetch,

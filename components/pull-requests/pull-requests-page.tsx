@@ -22,6 +22,8 @@ import {
 } from "mangue-ui";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { EmptyScene } from "@/components/empty-scene";
+import { ReadFailureNotice } from "@/components/read-failure-notice";
+import { pullRequestReadFailureMessage } from "./pr-read-failure";
 import { GitLogin } from "@/components/git/git-login";
 import { UserAvatar } from "@/components/user-avatar";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
@@ -126,14 +128,10 @@ function PrSectionIcon({ section, className = "size-4 shrink-0 text-muted-foregr
 
 /** Sections are independent toggles; changing one keeps the menu open. */
 /** A failed list read is not an empty account: never answer it with "link a repository". */
-function PrListReadFailed({ onRetry }: { onRetry: () => void }) {
+function PrListReadFailed({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const t = useTranslations("PullRequests");
-  return (
-    <div className="flex flex-col items-center gap-3 px-4 py-10 text-center text-sm text-muted-foreground" role="alert">
-      <p>{t("listReadFailed")}</p>
-      <Button variant="ghost" size="sm" onClick={onRetry}>{t("readRetry")}</Button>
-    </div>
-  );
+  return <ReadFailureNotice error={error} className="px-4 py-10" retryLabel={t("readRetry")} onRetry={onRetry}
+    message={pullRequestReadFailureMessage(t, error, "list")} />;
 }
 
 function PrFilterMenu({
@@ -736,7 +734,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             <PrListSkeleton />
           </div>
         ) : readFailed ? (
-          <PrListReadFailed onRetry={() => void active.refetch()} />
+          <PrListReadFailed error={active.readError} onRetry={() => void active.refetch()} />
         ) : groups.length === 0 ? (
           <EmptyScene
             size="compact"
@@ -817,7 +815,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   if (!loading && readFailed) {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-        <PrListReadFailed onRetry={() => void active.refetch()} />
+        <PrListReadFailed error={active.readError} onRetry={() => void active.refetch()} />
       </div>
     );
   }

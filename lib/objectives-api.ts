@@ -1,7 +1,7 @@
 "use client";
 
 import { fetchClientRead } from "./client-read";
-import { HttpResponseError } from "./backend-availability";
+import { apiErrorCode, HttpResponseError } from "./backend-availability";
 
 import { saveCreationRelations } from "./creation-relations";
 
@@ -24,7 +24,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const message =
       (data as { error?: string } | null)?.error || text.trim() || "Request failed";
-    throw new HttpResponseError(message, response.status);
+    throw new HttpResponseError(message, response.status, apiErrorCode(data));
   }
   return data as T;
 }

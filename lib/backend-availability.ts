@@ -46,10 +46,16 @@ export function sanitizeBackendRetryPath(
 
 /** An HTTP failure that keeps its status after a client API response is parsed. */
 export class HttpResponseError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message);
     this.name = "HttpResponseError";
   }
+}
+
+/** The stable `code` of an API error body, when it has one. */
+export function apiErrorCode(body: unknown): string | undefined {
+  const code = (body as { code?: unknown } | null)?.code;
+  return typeof code === "string" ? code : undefined;
 }
 
 /**

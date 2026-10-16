@@ -128,7 +128,7 @@ it.each(boards)("retains the $kind initial skeleton, keeps rows through transien
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(getComputedStyle(card).visibility).toBe("hidden");
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("readError");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("readErrorForbidden");
     // Retry rereads the failed prerequisite and restores the board without a reload.
     denied = false; read.mockClear();
     await act(async () => { container.querySelector<HTMLButtonElement>('[role="alert"] button')!.click(); await vi.advanceTimersByTimeAsync(0); });
