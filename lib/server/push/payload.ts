@@ -1,7 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
-import { decodeAgentTitle, legacyAgentTitleSchema } from "@/lib/server/agent/run-title-content";
 import { decodePullRequestContent } from "@/lib/server/agent/pull-request-content";
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
@@ -94,7 +93,6 @@ export function toPushLocale(raw: string | null | undefined): PushLocale {
 
 export interface PushContext {
   issues: Map<string, { number: number; title: string }>;
-  agentConversations: Map<string, string | null>;
   objectives: Map<string, string>;
   feedbackPosts: Map<string, { projectId: string; title: string }>;
   /** Title of a ROUTINE (MIN-185) — the banner only shows him. */
@@ -113,7 +111,6 @@ export interface PushContext {
 export function emptyPushContext(): PushContext {
   return {
     issues: new Map(),
-    agentConversations: new Map(),
     objectives: new Map(),
     feedbackPosts: new Map(),
     routines: new Map(),
@@ -141,7 +138,6 @@ export async function loadPushContext(
   ): string[] => [
     ...new Set(rows.map(pick).filter((v): v is string => !!v))];
   const issueIds = ids((r) => r.issue_id);
-  const conversationIds = ids((r) => r.agent_conversation_id);
   const objectiveIds = ids((r) => r.objective_id);
   const feedbackIds = ids((r) => r.feedback_post_id);
   const routineIds = ids((r) => r.routine_id);
@@ -153,7 +149,6 @@ export async function loadPushContext(
 
   const [
     issues,
-    agentConversations,
     objectives,
     feedback,
     routines,
@@ -171,18 +166,6 @@ export async function loadPushContext(
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[],
         }),
-    conversationIds.length
-      ? (async () => {
-        const first = await service.from("agent_conversations")
-          .select("id, project_id, title, title_ciphertext, title_encryption_version")
-          .in("id", conversationIds);
-        return legacyAgentTitleSchema(first.error)
-          ? service.from("agent_conversations")
-              .select("id, project_id, title").in("id", conversationIds)
-          : first;
-      })()
-      : Promise.resolve({ data: [] as { id: string; project_id: string;
-          title: string | null }[] }),
     objectiveIds.length
       ? objectiveStore(service)
           .select("id, name")
@@ -230,14 +213,6 @@ export async function loadPushContext(
 
   for (const i of issues.data ?? []) {
     ctx.issues.set(i.id, { number: i.number, title: i.title });
-  }
-  for (const c of agentConversations.data ?? []) {
-    if (!rows.some((row) => row.agent_conversation_id === c.id &&
-        row.project_id === c.project_id)) continue;
-    const decoded = await decodeAgentTitle(c as { id: string; project_id: string;
-      title: string | null; title_ciphertext?: string | null;
-      title_encryption_version?: number });
-    ctx.agentConversations.set(c.id, decoded.title);
   }
   for (const o of objectives.data ?? []) ctx.objectives.set(o.id, o.name);
   for (const f of feedback.data ?? []) ctx.feedbackPosts.set(f.id, { projectId: f.project_id, title: f.title });
@@ -316,12 +291,6 @@ export function buildPushPayload(
     if (!issue) return null;
     const key = row.project_id ? ctx.projectKeys.get(row.project_id) : null;
     title = key ? `${key}-${issue.number} · ${issue.title}` : issue.title;
-  } else if (row.agent_conversation_id) {
-    const conversationTitle = ctx.agentConversations.get(
-      row.agent_conversation_id,
-    );
-    if (conversationTitle === undefined) return null;
-    title = conversationTitle || t("someAgentConversationFallback");
   } else {
     return null;
   }

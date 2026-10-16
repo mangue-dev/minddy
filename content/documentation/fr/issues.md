@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -93,13 +93,14 @@
       "components/file-viewer.tsx",
       "components/image-viewer.tsx",
       "lib/issue-prompt.ts",
-      "lib/server/issue-prompt-context.ts"
+      "lib/server/issue-prompt-context.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence)",
-    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun)",
+    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
     "date": "2026-10-16"
   },
   "related": [
@@ -145,7 +146,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé avec titre, description et propriétés manuelles.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -161,7 +162,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -177,7 +178,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -193,7 +194,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -209,7 +210,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -225,7 +226,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -241,7 +242,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -257,7 +258,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -268,28 +269,12 @@
       "padding": 24
     },
     {
-      "id": "bulk-issue-actions-steps",
-      "kind": "screenshot",
-      "src": "/documentation/fr/work-bulk-actions.png",
-      "alt": "Menu d’actions pour deux tickets de démonstration sélectionnés.",
-      "caption": "Le menu agit sur les tickets sélectionnés. Aucune modification groupée n’a été envoyée sur cette capture.",
-      "revision": 11,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        788,
-        506
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "import-issues-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -306,7 +291,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Retirer.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -327,7 +312,6 @@
     "sub-issues-steps",
     "implementation-plans-steps",
     "recurring-issues-steps",
-    "bulk-issue-actions-steps",
     "import-issues-workflow",
     "issue-file-preview"
   ]
@@ -475,11 +459,11 @@ Le plan utilise des lignes de tâches Markdown : `- [ ]` pour une tâche en atte
 
 Complétez ou corrigez le plan existant plutôt que de le remplacer par une nouvelle copie décochée. Gardez les étapes terminées et les raisons des changements de périmètre. Avant une réécriture importante, comparez avec le dernier plan si un membre ou un agent travaille aussi sur le ticket.
 
-Un plan écrit peut être confié à Numo lorsque le travail sur dépôt et son sandbox configuré sont disponibles. Après du travail accompli, l’interface propose aussi une vérification d’implémentation. Ces actions lancent du travail ; cocher une étape ne prouve pas que le code passe les tests. Lisez résultat, modifications et contrôles avant de terminer le ticket.
+Pour faire implémenter le plan, copiez le prompt du ticket pour votre propre agent de code, comme décrit ci-dessous. Une étape cochée ne prouve pas à elle seule que le code passe les tests. Lisez résultat, modifications et contrôles avant de terminer le ticket.
 
 ### Copier un prompt pour un autre agent de code {#copy-issue-prompt}
 
-Pour confier un ticket à un agent de code hors de Minddy, comme Claude Code, Codex ou Cursor, ouvrez le menu d'actions du ticket, choisissez **Copier le prompt**, puis **Générer un plan** (ou **Vérifier le plan** s'il existe), **Implémenter le ticket**, **Vérifier l'implémentation** ou **Personnalisé…**. Avec plusieurs tickets sélectionnés, **Copier le prompt combiné** les réunit dans un seul prompt. La copie n'exécute aucun modèle d'IA et ne consomme pas votre quota d'IA : Minddy assemble ce qu'il connaît déjà, et l'agent explore lui-même le dépôt.
+Pour confier un ticket à un agent de code hors de Minddy, comme Claude Code, Codex ou Cursor, ouvrez le menu d'actions du ticket, choisissez **Copier le prompt**, puis **Générer un plan** (ou **Vérifier le plan** s'il existe), **Implémenter le ticket**, **Vérifier l'implémentation** ou **Personnalisé…**. Avec plusieurs tickets sélectionnés, **Copier le prompt combiné** les réunit dans un seul prompt. La copie n'exécute aucun modèle d'IA et ne consomme pas votre quota d'IA : Minddy assemble ce qu'il connaît déjà, et l'agent explore lui-même le dépôt. Si **Démarrer le ticket ou la tâche quand je copie son prompt** est activé dans les préférences du compte, la copie démarre aussi un ticket qui n'a pas encore commencé. Consultez [Travail de code et pull requests](/docs/code-work) pour le parcours complet et la relecture des pull requests.
 
 Le prompt contient les champs du ticket, ses catégories, ses relations, le nombre de ressources jointes et l'avancement du plan, mais pas le texte du plan, que l'agent lit par le serveur MCP de Minddy ou vous demande. Il indique aussi le dépôt lié au projet et chaque pull request liée au ticket, avec son état et ses branches lorsqu'ils sont connus. L'agent poursuit une pull request ouverte sur sa branche et traite celles qui sont fusionnées ou fermées comme de l'historique. Sans pull request ouverte, le prompt suggère un nom de branche formé de l'identifiant du ticket et d'un titre court, par exemple `min-42-keyboard-navigation`. Ce n'est qu'une suggestion : l'agent vérifie d'abord les branches existantes et suit la convention de nommage du dépôt. Garder l'identifiant dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42` permet à Minddy de rattacher la pull request au ticket lorsque le dépôt est lié.
 
@@ -507,8 +491,6 @@ Une routine Numo est différente : elle planifie une conversation et peut consom
 Dans un tableau, maintenez Maj et cliquez sur chaque carte pour l’ajouter à la sélection ou l’en retirer. Avec une souris, vous pouvez aussi tracer un rectangle depuis une zone vide du tableau ; Maj, Commande ou Ctrl ajoute cette zone à la sélection existante. Le rectangle n’est pas un mode de sélection tactile. Vérifiez le nombre choisi et les identifiants visibles avant d’ouvrir les actions groupées. La sélection est l’ensemble ciblé par l’action, pas une vue enregistrée ni une autorisation supplémentaire.
 
 Choisissez Actions dans la barre flottante de sélection pour ouvrir la palette de commandes. Choisissez l’état, la priorité, l’effort ou le responsable, définissez la valeur et validez le formulaire intégré. L’action sur l’objectif apparaît seulement pour une sélection appartenant à un projet avec des objectifs disponibles. Les autres actions, comme ajouter ou retirer des tickets du cycle, lier deux tickets ou confier la sélection à Numo, apparaissent selon les capacités du tableau courant. Inspectez ensuite les tickets concernés. Sur un appareil uniquement tactile sans geste de sélection multiple pris en charge, modifiez les tickets un par un dans leur panneau de détail.
-
-![Menu d’actions pour deux tickets de démonstration sélectionnés.](/documentation/fr/work-bulk-actions.png)
 
 ### Résultats partiels et suppression {#bulk-results}
 

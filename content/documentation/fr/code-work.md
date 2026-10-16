@@ -3,7 +3,7 @@
   "id": "code-work",
   "locale": "fr",
   "title": "Travail de code et pull requests",
-  "summary": "Déléguez l’implémentation d’un ticket à un agent de code, poursuivez le travail et examinez la pull request liée.",
+  "summary": "Confiez un ticket à votre propre agent de code avec un prompt copié et le MCP minddy, puis relisez et fusionnez la pull request liée.",
   "topic": "Numo et intégrations",
   "type": "guide",
   "audiences": [
@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; delegated worker reliability and card controls",
+    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -31,34 +31,25 @@
       "desktop"
     ],
     "evidence": [
-      "content/knowledge/plans-and-agents.md",
-      "content/knowledge/agents-and-mcp.md",
-      "components/assistant/delegated-work-card.tsx",
+      "components/agent/use-agent-menu-actions.tsx",
+      "components/agent/custom-prompt-dialog.tsx",
+      "components/settings/account-preferences-section.tsx",
       "components/pull-requests/pr-detail.tsx",
-      "components/pull-requests/pr-reviews-details.tsx",
-      "components/settings/native-agent-connections.tsx",
-      "components/settings/native-agent-connections.test.tsx",
-      "app/api/account/agent-preferences/route.ts",
-      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
-      "components/agent/agent-engine-badge.tsx",
-      "lib/server/assistant/account-worker-context.ts",
-      "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
-      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
-      "lib/native-agent-models.ts",
-      "components/settings/native-agent-model-preferences.tsx",
-      "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
-      "content/documentation/reviews/agent-reliability-and-cards-2026-10-11.md"
+      "components/pull-requests/pr-unresolved-conversations.tsx",
+      "lib/server/agent/pr-mention.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance)",
-    "date": "2026-10-11"
+    "revision": 9,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution); agent:/root/min721_docs (MIN-721 source review inherited from en revision 9; fr translation of removal edits; no operational rerun)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
-    "numo",
-    "repository-skills"
+    "issues",
+    "minddy-mcp",
+    "git"
   ],
   "aliases": [
     "delegate-code-work",
@@ -66,34 +57,17 @@
     "review-pull-requests"
   ],
   "tags": [
-    "Déléguer un ticket au worker de code",
+    "Confier un ticket à un agent de code externe",
     "Relire une pull request liée"
   ],
   "figures": [
-    {
-      "id": "delegate-code-work-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/fr/delegate-code-work-workflow.png",
-      "alt": "Carte de démonstration avec état, durée, Codex, modèle, réflexion, copie de branche, bouton PR et Voir le travail.",
-      "caption": "Carte illustrative issue du composant mis à jour avec des données de démonstration. Les actions ouvrent le panneau de travail, copient la branche ou ouvrent la PR dans Minddy. Cet exemple ne prouve ni une exécution réussie du fournisseur ni la réussite des contrôles.",
-      "revision": 8,
-      "reviewed": true,
-      "capturedAt": "2026-10-11",
-      "viewport": [
-        568,
-        379
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
-    },
     {
       "id": "review-pull-requests-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/review-pull-requests-workflow.png",
       "alt": "Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.",
-      "caption": "La véritable PR corrigée reste ouverte, sans fusion. Le diff supprime les espaces autour du nom et utilise World pour une valeur vide. Cette instance ne peut pas demander l’autorisation utilisateur GitHub ; le libellé de disponibilité ne donne pas le droit de fusionner et ne prouve pas que la CI du fournisseur a réussi.",
-      "revision": 8,
+      "caption": "PR de démonstration qui reste ouverte, sans fusion. Le diff supprime les espaces autour du nom et utilise World pour une valeur vide. Cette instance ne peut pas demander l’autorisation utilisateur GitHub ; le libellé de disponibilité ne donne pas le droit de fusionner et ne prouve pas que la CI du fournisseur a réussi.",
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,48 +79,42 @@
     }
   ],
   "requiredFigures": [
-    "delegate-code-work-workflow",
     "review-pull-requests-workflow"
   ]
 }
 ---
 
-Le travail sur le code part du dépôt lié au projet et s’exécute dans une sandbox serveur. Préparez le ticket et déléguez l’implémentation au worker de code de Numo, puis relisez la pull request liée et les contrôles du fournisseur avant de fusionner.
+Minddy suit le travail ; votre propre agent de code, comme Claude Code, Codex ou Cursor, modifie le code. Copiez un prompt depuis le ticket, laissez l’agent lire et mettre à jour le ticket via le MCP minddy, puis relisez la pull request liée dans Minddy avant de la fusionner. Numo n’écrit pas de code, n’ouvre pas de branche et ne lance pas de tests.
 
-## Déléguer un ticket au worker de code {#delegate-code-work}
+## Confier un ticket à un agent de code externe {#external-coding-agents}
 
-Le projet doit avoir un dépôt GitHub ou GitLab lié, une autorisation fournisseur valide et une sandbox serveur configurée. Vérifiez **Agent de code** dans les paramètres IA du compte. OpenCode exige un modèle de code API compatible ; l’accès restreint à Codex et Claude Code exige la connexion du compte personnel sélectionné. Réglez le modèle et la réflexion ici ou gardez **Automatique**. Ces choix sont indépendants du modèle de conversation Numo. Si l’accès natif échoue, reconnectez-vous ou choisissez explicitement OpenCode ; le travail ne bascule pas vers une facturation API.
+Connectez d’abord votre agent au MCP minddy pour qu’il puisse lire le plan et mettre à jour ses tâches ; consultez [Connecter un assistant externe au MCP minddy](/docs/minddy-mcp#external-minddy-mcp). L’agent s’exécute sur votre ordinateur ou dans son propre service, avec son propre abonnement ou ses propres coûts d’API. Minddy ne lui fournit pas d’accès au dépôt.
 
-L’authentification Codex par abonnement dans les services hébergés n’est pas disponible pour un usage général. OpenAI exclut explicitement l’authentification app-server des services hébergés et les oriente vers son programme Sign in with ChatGPT. Minddy doit utiliser une intégration autorisée avant son ouverture. Les tests techniques restreints ne prouvent ni l’autorisation du fournisseur ni la reprise après expiration naturelle des tokens. L’exécution payante de Claude Code reste non testée. Retirer les badges de l’interface ne change pas ces conditions de disponibilité. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
+1. Ouvrez le ticket et décrivez le comportement attendu, les contraintes et les critères à vérifier. Rédigez ou relisez le plan dans son onglet Plan lorsque le travail comporte plusieurs étapes.
+2. Ouvrez le menu d’actions du ticket et choisissez **Copier le prompt**. Choisissez **Générer un plan** (ou **Vérifier le plan** lorsqu’il en existe un) pour cadrer le travail sans coder, **Implémenter le ticket** pour lancer la modification, **Vérifier l'implémentation** pour que l’agent contrôle le travail terminé au regard du plan et des commentaires, ou **Personnalisé…** pour rédiger votre propre instruction.
+3. Collez le prompt dans votre agent, dans la copie de travail du dépôt. La copie n’exécute aucun modèle d’IA et ne consomme aucun crédit IA.
+4. Suivez l’avancement du plan dans le ticket à mesure que l’agent met à jour ses tâches via MCP. Répondez à ses questions dans l’agent, ou ajoutez les décisions au ticket pour que le prompt suivant les reprenne.
 
-La carte de travail délégué, les détails de l’agent et sa conversation affichent le moteur de cette exécution : **Codex**, **Claude Code** ou **OpenCode**, avec son logo. Cette identité est enregistrée au démarrage. Modifier les paramètres du compte concerne les nouveaux agents ; cela ne renomme pas une exécution existante. Les anciennes exécutions sans moteur enregistré affichent un libellé générique d’agent de code.
+Le contenu du prompt, la suggestion de branche et les règles de langue sont décrits dans [Copier un prompt pour un autre agent de code](/docs/issues#copy-issue-prompt).
 
-La carte verticale présente l’état actuel, le temps d’exécution, le moteur, le modèle, la réflexion, les fichiers modifiés et la branche. Le timer cumule le travail repris et se met en pause en attendant votre réponse. L’icône de copie de la branche permet de copier son nom complet. Ouvrez **Actions de l’agent** pour **Arrêter** le travail. **Voir le travail** ouvre le panneau d’activité avec les mêmes informations. **Voir la pull request** ouvre la PR liée dans Minddy.
+### Garder le travail lié au ticket {#link-work}
 
-L’implémentation est livrée par une pull request. Si la publication est bloquée, Numo signale l’échec de la livraison. La vérification est distincte de la publication ; les contrôles inachevés ne sont pas considérés comme réussis. La description de la PR dans Minddy conserve le footer Numo avec le modèle, l’environnement et la réflexion.
+Lorsque le dépôt est lié au projet, conservez l’identifiant du ticket dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42`. Minddy rattache alors la pull request au ticket, et les prompts suivants demandent à l’agent de poursuivre la pull request ouverte sur sa branche.
 
-1. Ouvrez le ticket et décrivez le résultat attendu, les contraintes et les critères à vérifier.
-2. Ouvrez Numo avec le contexte du ticket. Demandez une inspection du dépôt avant un plan technique. Des fichiers ou API non vérifiés ne constituent pas une preuve.
-3. Demandez explicitement l’implémentation. Numo délègue les changements de branche au worker, qui clone le dépôt lié dans le sandbox serveur.
-4. Suivez sa carte pour la progression, les fichiers, les contrôles et les questions. Répondez dans la conversation.
-5. Ouvrez la pull request liée. Relisez le diff et les contrôles face aux critères avant de fusionner. Une prévisualisation existe seulement si le fournisseur de déploiement en a produit une.
-
-![Carte de démonstration avec état, durée, Codex, modèle, réflexion, copie de branche, bouton PR et Voir le travail.](/documentation/fr/delegate-code-work-workflow.png)
-
-### Reprendre sans doublon {#continuation}
-
-Un point de reprise peut permettre de continuer s’il a été conservé, sans garantir l’achèvement. Vérifiez la branche et la PR avant de relancer. Conservez les tâches cochées et les modifications concurrentes du plan. Les fichiers uniquement présents sur votre ordinateur sont indisponibles : poussez d’abord le code ou les skills nécessaires.
+Dans **Paramètres du compte → Préférences**, **Démarrer le ticket ou la tâche quand je copie son prompt** passe en cours un ticket ou une tâche de carnet pas encore démarré lorsque vous copiez son prompt. Laissez cette option désactivée si vous copiez des prompts uniquement pour les lire.
 
 ## Relire une pull request liée {#review-pull-requests}
 
-Ouvrez la pull request liée à un ticket ou à une exécution déléguée. L’accès au dépôt reste nécessaire : être membre du projet ne donne pas les permissions du fournisseur Git.
+Ouvrez la pull request liée à un ticket, ou retrouvez-la dans la liste des pull requests. L’accès au dépôt reste nécessaire : être membre du projet ne donne pas les permissions du fournisseur Git.
 
-Lisez la description et l’activité, puis les fichiers modifiés et les portions du diff. Ouvrez les discussions non résolues et répondez dans le fil concerné. Les marques de fichiers relus suivent votre lecture, sans constituer une approbation du fournisseur. Vérifiez les commits, les résultats CI et les tickets liés pour confirmer la couverture du travail demandé.
+Lisez la description et l’activité, puis les fichiers modifiés et les portions du diff. Ouvrez les discussions non résolues et répondez dans le fil concerné plutôt que d’ajouter un commentaire sans lien. Pour renvoyer les retours restants à votre agent, ouvrez **Voir les conversations**, puis **Tout corriger** et **Copier le prompt**. Les marques de fichiers relus suivent votre lecture, sans constituer une approbation du fournisseur. Vérifiez les commits, les résultats CI et les tickets liés pour confirmer que la modification proposée couvre le travail demandé.
+
+Mentionnez `@numo` dans un commentaire de pull request pour demander à Numo une relecture en lecture seule dans une conversation. Il lit la pull request et répond ; il ne pousse pas de commits. Une mention écrite sur le fournisseur Git n’est prise en compte que si son auteur est lié à un membre d’un projet qui lie le dépôt, et sa consommation est imputée au propriétaire de ce projet.
 
 ![Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.](/documentation/fr/review-pull-requests-workflow.png)
 
 ### Revue et fusion {#decision}
 
-Demandez un reviewer si une seconde revue est nécessaire. Une revue IA disponible est un avis supplémentaire, pas la preuve que les tests passent. Contrôlez l’état brouillon ou prêt pour revue, les discussions ouvertes, les revues demandées et les règles de fusion du fournisseur.
+Demandez un reviewer si une seconde revue est nécessaire. Contrôlez l’état brouillon ou prêt pour revue, les discussions ouvertes, les revues demandées et les règles de fusion du fournisseur.
 
-Fusionnez après satisfaction des contrôles et revues applicables, avec un compte fournisseur autorisé. Une action visible peut être refusée par le fournisseur. Si l’état semble ancien, actualisez et vérifiez chez le fournisseur avant de répéter. Numo peut lire, commenter, modifier la disponibilité ou fusionner sur autorisation ; les changements de branche passent par le worker. Une prévisualisation dépend d’un véritable déploiement.
+Fusionnez après satisfaction des contrôles et revues applicables, avec un compte fournisseur autorisé. **Fusionner avec Numo** laisse Numo rédiger le titre et la description du commit de fusion à partir de la pull request, puis fusionne dès qu’ils sont prêts. Une action visible peut être refusée par le fournisseur. Si l’état semble ancien, actualisez et vérifiez chez le fournisseur avant de répéter une action. Une prévisualisation liée dépend d’un véritable déploiement chez le fournisseur.

@@ -4,7 +4,7 @@ const h = vi.hoisted(() => ({
   isOwner: true,
   rpc: vi.fn(),
   turns: [
-    { id: "turn-2", conversation_id: "conversation", status: "waiting_work", cost_usd: 0.01 },
+    { id: "turn-2", conversation_id: "conversation", status: "running", cost_usd: 0.01 },
     { id: "turn-1", conversation_id: "conversation", status: "waiting_input", cost_usd: 0.02 },
   ],
 }));
@@ -47,11 +47,11 @@ beforeEach(() => {
 });
 
 describe("routine occurrence usage consumers", () => {
-  it("shows active delegated spend and only platform charges in the usage percentage", async () => {
+  it("shows the active turn spend and only platform charges in the usage percentage", async () => {
     const { GET } = await import("@/app/api/routines/[id]/runs/route");
     const response = await GET({} as never, { params: Promise.resolve({ id: "routine" }) });
     const { runs } = await response.json();
-    expect(runs[0]).toMatchObject({ cost_usd: 2.07, numo_status: "waiting_work" });
+    expect(runs[0]).toMatchObject({ cost_usd: 2.07, numo_status: "running" });
     expect(runs[0].usage_percent).toBeCloseTo(15.7);
   });
 

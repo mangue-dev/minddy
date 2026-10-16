@@ -22,7 +22,6 @@ const duplicatePage = vi.fn();
 const createPageFile = vi.fn();
 const uploadProjectIcon = vi.fn();
 const compressIconFile = vi.fn();
-const authorizeRunPrRequest = vi.fn();
 const prAttachmentResponse = vi.fn();
 
 vi.mock("server-only", () => ({}));
@@ -59,7 +58,6 @@ vi.mock("@/lib/server/project-icon", async (importOriginal) => ({
   compressIconFile: (...args: unknown[]) => compressIconFile(...args),
 }));
 vi.mock("@/lib/server/agent/pr-actions", () => ({
-  authorizeRunPrRequest: (...args: unknown[]) => authorizeRunPrRequest(...args),
   prAttachmentResponse: (...args: unknown[]) => prAttachmentResponse(...args),
   readUploadedFile: async (request: Request) => {
     const entry = (await request.formData()).get("file");
@@ -99,9 +97,6 @@ const pageFilesRoute = await import(
 );
 const projectIconRoute = await import("@/app/api/projects/[id]/icon/route");
 const accountIconRoute = await import("@/app/api/account/project-icon/route");
-const runAttachmentsRoute = await import(
-  "@/app/api/agent-runs/[runId]/pr/attachments/route"
-);
 const ogRoute = await import("@/app/og/route");
 
 /** A multipart request carrying a tiny file. */
@@ -177,22 +172,6 @@ describe("newly rate-limited surfaces", () => {
     const rank = await refusedAt(20, () => accountIconRoute.POST(upload()));
     expect(rank).toBe(21);
     expect(compressIconFile).toHaveBeenCalledTimes(20);
-  });
-
-  it("limits the PR attachment FACADE like the route it exposes", async () => {
-    // The route by PR was limited, its frontage per run was not: a
-    // guard that can be bypassed through another door is not one.
-    authorizeRunPrRequest.mockResolvedValue({
-      ok: true,
-      scope: {},
-      userId: "u-run-pr",
-    });
-    prAttachmentResponse.mockResolvedValue({ status: 200 });
-    const params = { params: Promise.resolve({ runId: "run-1" }) };
-    const rank = await refusedAt(60, () =>
-      runAttachmentsRoute.POST(upload(), params)
-    );
-    expect(rank).toBe(61);
   });
 
   it("borne /og par ADRESSE IP — la route n'a pas d'utilisateur", async () => {

@@ -167,21 +167,6 @@ VALUES
     'a0'
   );
 
-INSERT INTO public.agent_conversations (id, project_id, owner_id, title)
-VALUES
-  (
-    '76900000-0000-4000-8000-000000000001',
-    '76100000-0000-4000-8000-000000000001',
-    '76000000-0000-4000-8000-000000000001',
-    'Source conversation'
-  ),
-  (
-    '76900000-0000-4000-8000-000000000002',
-    '76100000-0000-4000-8000-000000000002',
-    '76000000-0000-4000-8000-000000000002',
-    'Foreign conversation'
-  );
-
 INSERT INTO public.git_connections (id, user_id, provider)
 VALUES
   (
@@ -246,7 +231,6 @@ INSERT INTO public.notifications (
   feedback_post_id,
   routine_id,
   page_id,
-  agent_conversation_id,
   pull_request_id
 )
 VALUES (
@@ -260,7 +244,6 @@ VALUES (
   '76600000-0000-4000-8000-000000000001',
   '76700000-0000-4000-8000-000000000001',
   '76800000-0000-4000-8000-000000000001',
-  '76900000-0000-4000-8000-000000000001',
   '76c00000-0000-4000-8000-000000000001'
 );
 
@@ -433,15 +416,6 @@ SELECT throws_ok(
   '23514',
   'notification_target_scope_mismatch',
   'the service role cannot attach a page from another project'
-);
-
-SELECT throws_ok(
-  $$ UPDATE public.notifications
-     SET agent_conversation_id = '76900000-0000-4000-8000-000000000002'
-     WHERE id = '76400000-0000-4000-8000-000000000001' $$,
-  '23514',
-  'notification_target_scope_mismatch',
-  'the service role cannot attach a conversation from another project'
 );
 
 SELECT throws_ok(

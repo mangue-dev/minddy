@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -93,13 +93,14 @@
       "components/file-viewer.tsx",
       "components/image-viewer.tsx",
       "lib/issue-prompt.ts",
-      "lib/server/issue-prompt-context.ts"
+      "lib/server/issue-prompt-context.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence)",
-    "language": "agent:/root (pt-BR new copied-prompt section, translation and retained-meaning self-review)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; pt-BR translation of removal edits; no operational rerun)",
+    "language": "agent:/root (pt-BR new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_pt-BR (pt-BR translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
     "date": "2026-10-16"
   },
   "related": [
@@ -146,7 +147,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado com título, descrição e propriedades que podem ser escolhidas manualmente.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Problema recebido de demonstração DOC-11 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +179,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "Busca de um ticket bloqueador pelo identificador.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -226,7 +227,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -242,7 +243,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -258,7 +259,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -269,28 +270,12 @@
       "padding": 24
     },
     {
-      "id": "bulk-issue-actions-steps",
-      "kind": "screenshot",
-      "src": "/documentation/pt-BR/work-bulk-actions.png",
-      "alt": "Menu de ações para dois tickets de demonstração selecionados.",
-      "caption": "O menu atua nos tickets selecionados. Nenhuma alteração em grupo foi enviada nesta captura.",
-      "revision": 11,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        788,
-        506
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "import-issues-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -307,7 +292,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Remover.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -328,7 +313,6 @@
     "sub-issues-steps",
     "implementation-plans-steps",
     "recurring-issues-steps",
-    "bulk-issue-actions-steps",
     "import-issues-workflow",
     "issue-file-preview"
   ]
@@ -473,11 +457,11 @@ O plano usa linhas de tarefas Markdown: `- [ ]` para pendente, `- [~]` para em a
 
 Amplie ou altere o plano existente em vez de substituí-lo por uma cópia nova sem marcações. Preserve as etapas concluídas e as explicações de mudanças de escopo. Antes de salvar uma reescrita importante, compare-a com o plano mais recente se outro membro ou agente trabalhou no problema.
 
-Um plano escrito pode ser entregue ao Numo para implementação quando o trabalho no repositório e o ambiente isolado configurado estiverem disponíveis. Quando já existir trabalho concluído, a interface também oferece verificar a implementação. Essas ações iniciam trabalho; uma caixa marcada não prova por si só que o código passa nos testes. Leia resultado, mudanças e verificações antes de marcar o problema como concluído.
+Para implementar o plano, copie o prompt do problema para seu próprio agente de código, como descrito abaixo. Uma tarefa marcada não prova por si só que o código passa nos testes. Leia resultado, mudanças e verificações antes de marcar o problema como concluído.
 
 ### Copiar um prompt para outro agente de código {#copy-issue-prompt}
 
-Para entregar um problema a um agente de código fora do Minddy, como Claude Code, Codex ou Cursor, abra o menu de ações do problema, escolha **Copiar como prompt** e depois **Gerar um plano** (ou **Revisar o plano** quando já existir um), **Implementar o problema**, **Verificar a implementação** ou **Personalizado…**. Com vários problemas selecionados, **Copiar o prompt combinado** reúne todos em um único prompt. Copiar não executa nenhum modelo de IA nem consome sua cota de IA: o Minddy reúne o que já tem armazenado e o agente explora o repositório por conta própria.
+Para entregar um problema a um agente de código fora do Minddy, como Claude Code, Codex ou Cursor, abra o menu de ações do problema, escolha **Copiar como prompt** e depois **Gerar um plano** (ou **Revisar o plano** quando já existir um), **Implementar o problema**, **Verificar a implementação** ou **Personalizado…**. Com vários problemas selecionados, **Copiar o prompt combinado** reúne todos em um único prompt. Copiar não executa nenhum modelo de IA nem consome sua cota de IA: o Minddy reúne o que já tem armazenado e o agente explora o repositório por conta própria. Se **Iniciar o problema ou tarefa quando eu copiar seu prompt** estiver ativado nas preferências da conta, copiar também inicia um problema que ainda não foi iniciado. Consulte [Trabalho de código e pull requests](/docs/code-work) para o fluxo completo e a revisão de pull requests.
 
 O prompt traz os campos do problema, suas categorias, suas relações, o número de recursos anexados e o progresso do plano, mas não o texto do plano, que o agente lê pelo servidor MCP do Minddy ou pede a você. Ele também indica o repositório vinculado ao projeto e cada pull request vinculada ao problema, com seu estado e suas branches quando conhecidos. O agente continua uma pull request aberta na branch dela e trata as mescladas ou fechadas como histórico. Sem uma pull request aberta, o prompt sugere um nome de branch formado pelo identificador do problema e um título curto, por exemplo `min-42-keyboard-navigation`. É apenas uma sugestão: o agente verifica primeiro as branches existentes e segue a convenção de nomes do repositório. Manter o identificador no nome da branch, no título da pull request ou em uma linha `Fixes MIN-42` permite que o Minddy vincule a pull request ao problema quando o repositório está vinculado.
 
@@ -505,8 +489,6 @@ Uma rotina do Numo é um objeto diferente: ela agenda uma conversa e pode usar o
 No quadro, mantenha Shift pressionado e clique em cada cartão para adicioná-lo à seleção ou removê-lo dela. Com o mouse, você também pode arrastar um retângulo de seleção a partir de um espaço vazio do quadro. Shift, Command ou Ctrl fazem esse gesto ampliar a seleção existente. O retângulo não é um modo de seleção para telas sensíveis ao toque. Confira a quantidade selecionada e os identificadores visíveis antes de abrir as ações em lote. A seleção é um conjunto de trabalho para a ação, não uma visualização salva nem uma concessão de permissão.
 
 Escolha Ações na barra flutuante de seleção para abrir a paleta de comandos. Escolha estado, prioridade, esforço ou responsável, defina o valor e confirme o formulário integrado. A ação de objetivo aparece somente quando a seleção pertence a um único projeto com objetivos disponíveis. Outras ações, como adicionar ou remover do ciclo, vincular dois problemas ou enviar a seleção ao Numo, aparecem quando o quadro atual oferece suporte a elas. Confira os problemas afetados depois. Em um dispositivo somente de toque sem um gesto de seleção múltipla compatível, edite cada problema pelo painel de detalhes.
-
-![Menu de ações para dois tickets de demonstração selecionados.](/documentation/pt-BR/work-bulk-actions.png)
 
 ### Resultados parciais e ações destrutivas {#bulk-results}
 

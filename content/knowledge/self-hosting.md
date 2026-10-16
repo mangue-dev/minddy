@@ -45,19 +45,13 @@ The deployed application needs these values:
 - `MINDDY_PUBLIC_SUPABASE_URL` and `MINDDY_PUBLIC_SUPABASE_ANON_KEY`: the public API origin and anon key of the selected Supabase service.
 - `SUPABASE_SERVICE_ROLE_KEY`: server-only and required in production; never expose it to a browser.
 
-The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET`, and `AGENT_RUNNER_SECRET` on every installation; `MINDDY_PUBLIC_VAPID_PUBLIC_KEY` and its private counterpart are generated when the `web-push` capability is selected. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
+The installer generates `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, and `CRON_SECRET` on every installation; `MINDDY_PUBLIC_VAPID_PUBLIC_KEY` and its private counterpart are generated when the `web-push` capability is selected. Preserve encryption secrets when upgrading. Configure a complete set of external credentials for any optional capability; an incomplete set is disabled rather than guessed. Leave `MINDDY_MANAGED_AI=0` and `MINDDY_MANAGED_BILLING=0` for self-hosting.
 
-## Numo, routines, and server execution
+## Numo and routines
 
-The reference server profiles include Numo conversations, scheduled requests, delegated repository work, and the built-in Docker sandbox runner. They use:
+The reference server profiles include Numo conversations and scheduled routines. The `scheduler` container calls the authenticated cron routes with `CRON_SECRET`, which the installer generates. Numo works on tracker content and connected forges; it does not run code, so the profiles contain no container runner and no service receives the Docker socket. No Vercel account or desktop computer needs to remain online.
 
-```dotenv
-AGENT_EXECUTION_BACKEND=self-hosted
-AGENT_RUNNER_URL=http://agent-runner:6464
-AGENT_CONTROL_ORIGIN=http://minddy:3000
-```
-
-The installer generates `AGENT_RUNNER_SECRET` and `CRON_SECRET`. No Vercel account or desktop computer needs to remain online. Each server-side run gets its own restricted Docker sandbox. Sandboxes do not receive the Docker socket, the private Supabase network, or instance secrets. The trusted runner does have Docker socket authority, so protect the host and never publish port 6464 or the runner secret. Desktop-local code execution is retired: use `AGENT_EXECUTION_BACKEND=self-hosted` for the built-in runner or `vercel` for an operator-owned Vercel Sandbox project.
+An instance upgraded from an earlier release may still contain `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, or `AGENT_CONTROL_ORIGIN`. The application ignores them; remove them from the environment file and start the profile with `--remove-orphans` so Compose deletes the retired `agent-runner` container.
 
 ## Local installation
 
@@ -106,7 +100,7 @@ After installation, run the read-only diagnostic and resolve every failure:
 pnpm self-host:doctor -- --mode managed --db-url 'postgresql://postgres:...'
 ```
 
-It checks redacted configuration, release compatibility, containers, scheduler, agent runner, disk space, and—when given a database URL—migrations and Storage. Confirm the app origin, health endpoint, Auth email delivery, a test account, a project, an issue, an attachment, and a first restorable backup before declaring the instance ready.
+It checks redacted configuration, release compatibility, containers, scheduler, disk space, and—when given a database URL—migrations and Storage. Confirm the app origin, health endpoint, Auth email delivery, a test account, a project, an issue, an attachment, and a first restorable backup before declaring the instance ready.
 
 To make a self-hosted server the desktop app's data source, open the native
 **minddy** menu on macOS or press **Alt** to reveal it on Windows and Linux. Choose

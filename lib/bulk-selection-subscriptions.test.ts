@@ -24,7 +24,7 @@ vi.mock("@/lib/keyboard/keyboard-context", () => ({
 afterEach(() => { chord.current = null; vi.unstubAllGlobals(); });
 
 describe("bulk action subscriptions", () => {
-  it("keeps board actions asleep during assistant updates and preserves selected keyboard actions", async () => {
+  it("keeps board actions asleep during assistant updates", async () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     const issue = { id: "issue", project_id: "project", number: 1, title: "Selected issue" } as Issue;
     let actions: AssistantPanelActions;
@@ -32,8 +32,7 @@ describe("bulk action subscriptions", () => {
     const renderBoard = vi.fn();
     function Board() {
       renderBoard();
-      useBulkSelectionActions({ selectedIssues: [issue], projectId: "project",
-        identifierOf: () => "PERF-1", buildInput: () => ({ issue, projectId: "project", projectKey: "PERF" }) });
+      useBulkSelectionActions({ selectedIssues: [issue], buildInput: () => ({ issue, projectId: "project", projectKey: "PERF" }) });
       return null;
     }
     function Panel() { actions = useAssistantPanelActions(); panel = useAssistantPanel(); return null; }
@@ -44,13 +43,9 @@ describe("bulk action subscriptions", () => {
       expect(renderBoard).toHaveBeenCalledTimes(1);
       await act(() => actions.setAmbientContext({ issueId: "other" }, "other"));
       expect(renderBoard).toHaveBeenCalledTimes(1);
-      chord.current = "g";
+      // ⇧A no longer hands the selection to Numo (MIN-721): the key is left alone.
       await act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", shiftKey: true })));
       expect(panel!.isOpen).toBe(false);
-      chord.current = null;
-      await act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", shiftKey: true })));
-      expect(panel!.isOpen).toBe(true);
-      expect(panel!.pendingOptions).toMatchObject({ projectId: "project" });
       expect(renderBoard).toHaveBeenCalledTimes(1);
     } finally { await act(() => root.unmount()); }
   });

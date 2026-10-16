@@ -37,7 +37,6 @@ import {
   usePrReplyingUser,
   usePrReviewThreadActions,
 } from "@/lib/pr-endpoint-context";
-import { NumoIcon } from "@/components/numo-icon";
 import {
   displayLineOf,
   displayStartLineOf,
@@ -418,7 +417,7 @@ function CommentBody({
  * justified it remaining a bare textarea when the thread knew how to do everything.
  *
  * The endpoint comes from the context: the diff view is crossed by the PR panel
- * as by the conversation of a run, and none of the intermediate components have
+ * as by the commit diff, and none of the intermediate components have
  * to raise the question.
  */
 function Composer({
@@ -683,12 +682,6 @@ export function ReviewThreadCard({
                       <HugeiconsIcon icon={Copy01Icon} />
                       {t("copyPromptShort")}
                     </DropdownMenuItem>
-                    {threadActions.launchNumo ? (
-                      <DropdownMenuItem onSelect={() => threadActions.launchNumo?.(thread)}>
-                        <NumoIcon animated={false} />
-                        {t("launchNumoShort")}
-                      </DropdownMenuItem>
-                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : null}

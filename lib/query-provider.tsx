@@ -86,31 +86,22 @@ const persistenceStops = new Set<() => void>();
  * persisted: it is this which paints the tree instantly.
  *
  * The prefixes below are the REAL keys (see lib/use-agent-runs.ts):
- * deviating from it would result in a list that filters nothing while claiming the
- * to the contrary. This happened three times at once (MIN-303) — `["agent-activity"]`
- * for `["agent-active-issues"]`, a `["agent-run-pr"]` which does not designate any
- * query in the repository, and a `["agent-run-diff"]` which does not cover NOT
- * `["agent-run-diff-stat"]` (the comparison is segment by segment, not
- * character by character). The activity poll, which runs every 4
- * seconds when an agent is working, was therefore serialized to disk every
- * tick. **Any entry added here checks against its real key, and
+ * deviating from it would result in a list that filters nothing while claiming
+ * the contrary. This happened three times at once (MIN-303): guessed keys that
+ * designated no query, and a prefix that did not cover a distinct segment (the
+ * comparison is segment by segment, not character by character). **Any entry
+ * added here checks against its real key, and
  * its test in lib/query-persist.test.ts reads as a proof, not as
  * a repeat of this list.**
  */
 const NON_PERSISTED_KEY_PREFIXES: string[][] = [
-  ["native-agent-models"], // Subscription catalogs are bound to the current connection generation.
   ["project-icon"], // Authorized image bytes belong only to the current account's memory cache.
   ["app-tabs"], // Unbounded account collection; only local activation uses sessionStorage.
   ["me", "search-index"],
   ["me", "pages", "search"], // Per-keystroke snippets are bounded in memory, never restored from disk.
   ["me", "board-issues"], // short-lived resume snapshot; duplicates full issue rows
-  ["agent-run"], // ["agent-run", runId]
-  ["agent-runs"], // ["agent-runs", "issue", issueId]
-  ["agent-run-events"],
-  ["agent-run-diff"],
-  ["agent-run-diff-stat"], // distinct segment: ["agent-run-diff"] does not cover it
-  ["agent-sessions"], // ["agent-sessions", "all"]
-  ["agent-active-issues"], // components/agent/agent-activity-context.tsx
+  ["issue-pull-requests"], // components/issue-pr-context.tsx
+  ["issue-pull-request"], // ["issue-pull-request", issueId] — lib/use-agent-runs.ts
   ["pull-requests"], // ["pull-requests", "all"]
   ["pr-comments"],
   ["pr-review-comments"],

@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-14",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-683 bounded saved-cache delta; prior evidence retained)",
+    "version": "0.11.1 candidate (MIN-683 bounded saved-cache delta; prior evidence retained); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -70,14 +70,15 @@
       "lib/navigation-working-set.ts",
       "lib/query-storage-writes.test.ts",
       "lib/local-snapshot-security.test.ts",
-      "content/documentation/reviews/min-683-bounded-query-cache-2026-10-14.json"
+      "content/documentation/reviews/min-683-bounded-query-cache-2026-10-14.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained); agent:/root/preparation (MIN-683 whole-query cache fallback; source, regression and compiled excluded-probe review; prior unrelated evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review); agent:/root/preparation (six-locale cache-paragraph idiom and retained-meaning review; agent review, not human reader acceptance)",
-    "date": "2026-10-14"
+    "revision": 11,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained); agent:/root/preparation (MIN-683 whole-query cache fallback; source, regression and compiled excluded-probe review; prior unrelated evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 11; it translation of removal edits; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review); agent:/root/preparation (six-locale cache-paragraph idiom and retained-meaning review; agent review, not human reader acceptance); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "issues"
@@ -102,7 +103,7 @@
       "src": "/documentation/it/web-and-mobile-workflow.png",
       "alt": "Pannello mobile di un ticket con titolo, descrizione, proprietà e campo per i commenti.",
       "caption": "Su uno schermo stretto, i dettagli della issue occupano un pannello adattabile. Usa il pulsante di chiusura per tornare al progetto; Numo resta accessibile dal pulsante mobile.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -119,7 +120,7 @@
       "src": "/documentation/it/install-the-pwa-workflow.png",
       "alt": "Guida illustrata di minddy per l’installazione da Safari: Condividi, aggiungi alla schermata Home e conferma.",
       "caption": "La guida pubblica illustra i tre passaggi di Safari e l’opzione Apri come app web da mantenere attiva. Sono illustrazioni didattiche mostrate da minddy, non schermate di un’installazione iOS completata.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,28 +132,12 @@
       "deviceScaleFactor": 2
     },
     {
-      "id": "desktop-app-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/it/desktop-app-workflow.png",
-      "alt": "Impostazioni desktop nella vera app Electron di sviluppo per macOS, versione 0.11.1, collegata al server locale con un profilo isolato.",
-      "caption": "Impostazioni desktop nella vera app Electron di sviluppo per macOS, versione 0.11.1, collegata al server locale con un profilo isolato. La cattura non convalida release firmate né altri sistemi operativi.",
-      "revision": 10,
-      "reviewed": true,
-      "capturedAt": "2026-10-08",
-      "viewport": [
-        816,
-        287
-      ],
-      "theme": "light",
-      "padding": 24
-    },
-    {
       "id": "devices-and-notifications-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/devices-and-notifications-workflow.png",
       "alt": "Impostazioni push con permesso bloccato nel browser e nessun dispositivo registrato.",
       "caption": "Questo browser blocca le notifiche. Ripristina il permesso del sito prima di registrare il dispositivo.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -169,7 +154,7 @@
       "src": "/documentation/it/devices-and-notifications-registered.png",
       "alt": "Dispositivo browser registrato e attivo sull’account, con la data effettiva dell’ultimo invio.",
       "caption": "L’account ha un dispositivo browser registrato e attivo. L’elenco mostra la data di registrazione e quella dell’ultimo invio. La comparsa di un avviso dipende comunque dal permesso del browser e dalle impostazioni del sistema operativo.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -185,7 +170,7 @@
       "src": "/documentation/it/desktop-renderer-recovery.png",
       "alt": "Pagina locale di ripristino dopo un arresto forzato del processo di rendering, con i controlli Reload window e Check server settings.",
       "caption": "Pagina di ripristino nell’app di sviluppo per macOS, con un profilo isolato e un server dimostrativo. L’interfaccia nativa usa etichette in inglese in tutte le lingue.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -200,7 +185,6 @@
   "requiredFigures": [
     "web-and-mobile-workflow",
     "install-the-pwa-workflow",
-    "desktop-app-workflow",
     "devices-and-notifications-workflow",
     "devices-and-notifications-registered-workflow",
     "desktop-renderer-recovery"
@@ -242,15 +226,13 @@ L’installazione non crea una copia offline del progetto. Il service worker di 
 
 Apri la pagina pubblica dei download. Su macOS, scegli il pacchetto per Apple silicon o Intel. Su Windows, installa l’app da Microsoft Store. Su Linux, scegli un’AppImage o un pacchetto `deb`/`rpm` firmato per x64 o ARM64. Segui la guida della piattaforma e le istruzioni di verifica del pacchetto. Windows non offre un installer `exe`.
 
-Nel selettore del server, scegli minddy Cloud, l’origine di un server self-hosted o il runtime locale disponibile. Controlla la destinazione prima di accedere: gli account appartengono alle rispettive istanze. OAuth usa il browser di sistema e ritorna poi all’app desktop. Un runtime locale non significa che il worker di codice Numo lavori nel tuo checkout locale.
+Nel selettore del server, scegli minddy Cloud, l’origine di un server self-hosted o il runtime locale disponibile. Controlla la destinazione prima di accedere: gli account appartengono alle rispettive istanze. OAuth usa il browser di sistema e ritorna poi all’app desktop.
 
 ### Schede, chiusura e aggiornamenti {#desktop-app-operation}
 
 Usa i controlli delle schede e la palette dei comandi per spostarti tra le attività. Segui le scorciatoie mostrate per la piattaforma: macOS usa Command dove Windows e Linux usano generalmente Control. Chiudere la finestra la nasconde e lascia l’app in esecuzione. Usa Esci per terminare l’applicazione; su macOS puoi anche usare Cmd+Q. Le notifiche in background dipendono dal pacchetto e dalle funzioni della piattaforma.
 
-macOS e le AppImage portatili offrono aggiornamenti nell’app. Windows li installa tramite Microsoft Store. Per `deb`/`rpm`, installa il nuovo pacchetto verificato. Le impostazioni desktop dell’account mostrano il server collegato e i controlli di aggiornamento o assistenza disponibili. Dopo l’aggiornamento, controlla la versione desktop visualizzata e verifica che si apra ancora l’istanza desiderata.
-
-![Impostazioni desktop nella vera app Electron di sviluppo per macOS, versione 0.11.1, collegata al server locale con un profilo isolato.](/documentation/it/desktop-app-workflow.png)
+macOS e le AppImage portatili offrono aggiornamenti nell’app. Windows li installa tramite Microsoft Store. Per `deb`/`rpm`, installa il nuovo pacchetto verificato. Le impostazioni desktop dell’account mostrano il server collegato e la versione dell’app, con un controllo degli aggiornamenti quando il pacchetto lo supporta. Dopo l’aggiornamento, controlla la versione desktop visualizzata e verifica che si apra ancora l’istanza desiderata.
 
 ### Ripristinare una finestra dopo un arresto anomalo {#desktop-renderer-recovery}
 
@@ -260,7 +242,7 @@ Se una pagina è ancora in caricamento dopo 30 secondi, oppure una finestra non 
 
 La cache delle query salvata, che è facoltativa, può contenere fino a 2 MiB di dati. Se l’intera cache è troppo grande, minddy conserva i risultati completi delle query che possono essere salvati, dando priorità, quando necessario, alle viste correnti e alle schede presenti nella barra. Se anche questa selezione supera il limite, la precedente istantanea locale viene rimossa. I dati esclusi dalla cache salvata restano in memoria durante la sessione e vengono recuperati di nuovo quando servono dopo un riavvio. Le bozze salvate separatamente non sono interessate. Questa cache non è un backup del tuo lavoro.
 
-Per ridurre l’uso della memoria nelle sessioni lunghe, i dettagli delle PR, i diff di commit e agenti, i flussi di eventi degli agenti e i contenuti delle pagine inattivi vengono rilasciati dopo un minuto e ricaricati quando servono. Le query attive vengono conservate. Le etichette delle schede mantengono solo informazioni leggere sulle PR: lasciare una scheda aperta non trattiene quindi le sue patch.
+Per ridurre l’uso della memoria nelle sessioni lunghe, i dettagli delle PR, i diff di commit e i contenuti delle pagine inattivi vengono rilasciati dopo un minuto e ricaricati quando servono. Le query attive vengono conservate. Le etichette delle schede mantengono solo informazioni leggere sulle PR: lasciare una scheda aperta non trattiene quindi le sue patch.
 
 ![Pagina locale di ripristino dopo un arresto forzato del processo di rendering, con i controlli Reload window e Check server settings.](/documentation/it/desktop-renderer-recovery.png)
 

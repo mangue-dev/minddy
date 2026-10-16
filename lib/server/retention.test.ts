@@ -36,7 +36,6 @@ describe("RETENTION_DAYS", () => {
   it.each([
     ["readNotifications", 180, "read notifications: 6 months"],
     ["pendingInvitations", 30, "pending invitations: 30 days"],
-    ["agentRunTrace", 30, "agent run traces: 30 days after completion"],
     ["stripeWebhookPayload", 90, "Stripe webhook payloads: 90 days"],
     ["trash", 30, "trash: 30 days before permanent deletion"],
     [

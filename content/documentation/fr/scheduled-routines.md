@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -36,14 +36,15 @@
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-677-editor-captures.json"
+      "content/documentation/reviews/min-677-editor-captures.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (fr translation, label and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; fr translation of removal edits; no operational rerun)",
+    "language": "agent:/root (fr translation, label and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -57,7 +58,7 @@
       "src": "/documentation/fr/scheduled-routines-workflow.png",
       "alt": "Modes « Programmé » et « Événement », un seul groupe de conditions, icônes de l’application et boutons d’information discrets.",
       "caption": "Démonstration locale du véritable éditeur de déclencheurs. Aucune routine n’a été enregistrée ou exécutée.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -77,7 +78,7 @@
 
 ## Créer une routine {#scheduled-routines}
 
-Seul le propriétaire du projet peut créer, modifier ou activer une routine. Ouvrez Routines, choisissez un projet dont vous êtes propriétaire et rédigez les instructions pour Numo. Mentionnez les tickets, pages ou objectifs utiles. Chaque occurrence possède une conversation Numo privée, un historique, les outils Minddy et une délégation de code facultative. Les workers utilisent les réglages du compte du propriétaire ; un dépôt n’est nécessaire que pour travailler sur son code.
+Seul le propriétaire du projet peut créer, modifier ou activer une routine. Ouvrez Routines, choisissez un projet dont vous êtes propriétaire et rédigez les instructions pour Numo. Mentionnez les tickets, pages ou objectifs utiles. Chaque occurrence possède une conversation Numo privée, un historique et les outils Minddy. Les routines organisent et suivent le travail, par exemple un tri hebdomadaire, une revue des tickets inactifs ou un résumé hebdomadaire ; elles ne modifient pas le code du dépôt.
 
 Choisissez **Programmé** ou **Événement**. L’arrivée dans une base est un choix de la liste des événements.
 
@@ -104,7 +105,7 @@ Une entrée créée sans sa propriété requise attend qu’une modification sat
 
 Ouvrez la routine pour consulter ses attentes, modifier ses instructions ou son déclencheur, la mettre en pause ou lire ses occurrences. La pause, la suppression ou une modification de configuration invalide les attentes. La réactivation écoute les futurs événements sans rejouer les anciennes arrivées. Une exécution manuelle peut lancer chaque type de routine sans attendre son événement et consomme également du budget.
 
-Chaque occurrence utilise le budget IA du propriétaire, avec un plafond par défaut de 15 % du budget mensuel, Numo et workers compris. Ouvrez sa conversation pour lire la source, le résultat, les vérifications, questions et travaux délégués. Si Numo demande votre avis, répondez dans cette conversation ; le budget restant de l’occurrence est conservé. Consultez les résultats enregistrés avant de modifier un plafond ou de réessayer. Après un changement de propriétaire, la routine de l’ancien propriétaire ne peut plus démarrer de travail ; créez-en une avec le compte du propriétaire actuel.
+Chaque occurrence utilise le budget IA du propriétaire, avec un plafond par défaut de 15 % du budget mensuel, qui inclut chaque appel à Numo de cette occurrence. Ouvrez sa conversation pour lire la source, le résultat et les questions. Si Numo demande votre avis, répondez dans cette conversation ; le budget restant de l’occurrence est conservé. Consultez les résultats enregistrés avant de modifier un plafond ou de réessayer. Après un changement de propriétaire, la routine de l’ancien propriétaire ne peut plus démarrer de travail ; créez-en une avec le compte du propriétaire actuel.
 
 Les anciennes automatisations du projet apparaissent comme propositions en pause lorsque leur propriétaire ouvre Routines. Lisez le [guide de transition](/docs/automation-settings) avant de les activer.
 

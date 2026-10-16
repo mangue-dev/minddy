@@ -7,14 +7,10 @@ DECLARE
   protected uuid := gen_random_uuid();
   request_id uuid := gen_random_uuid();
   project_id uuid := gen_random_uuid();
-  issue_id uuid := gen_random_uuid();
-  chain_id uuid;
-  operation public.numo_automation_operations;
   routine_id uuid;
   occurrence public.numo_routine_occurrences;
   cipher text := 'mdyn3:2:YWJj';
   long_cipher text := 'mdyn3:2:' || repeat('A',220);
-  context_cipher jsonb;
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.conversations(id,user_id,title)
@@ -66,28 +62,10 @@ BEGIN
   request_id := gen_random_uuid();
   SELECT * INTO occurrence FROM public.ensure_numo_routine_occurrence(
     routine_id,actor,'manual',NULL,request_id,cipher);
-  IF occurrence.conversation_id IS DISTINCT FROM request_id OR
-      (SELECT title FROM public.conversations WHERE id=request_id)
-        IS DISTINCT FROM cipher THEN
+  IF occurrence.request_id IS DISTINCT FROM request_id OR
+      (SELECT title FROM public.conversations
+        WHERE id=occurrence.conversation_id) IS DISTINCT FROM cipher THEN
     RAISE EXCEPTION 'routine reservation copied a clear title';
-  END IF;
-  INSERT INTO public.issues(id,project_id,number,title)
-    VALUES(issue_id,project_id,1,'Private issue title');
-  INSERT INTO public.agent_chains(project_id,issue_id,owner_id,status,
-    step,played_rule_ids) VALUES(project_id,issue_id,actor,'running',
-      1,'["rule"]'::jsonb) RETURNING id INTO chain_id;
-  request_id := gen_random_uuid();
-  context_cipher := jsonb_build_object('encrypted_operation_value',
-      jsonb_build_object('format',3,'keyVersion',2)::text,
-      'encryption_version',2,'project_id',project_id,
-      'chain_id',chain_id,'step',1,'field','context');
-  SELECT * INTO operation FROM public.ensure_numo_automation_operation(
-    chain_id,1,'rule','verify',actor,cipher,request_id,
-    'mdyo3:2:YWJj','en',context_cipher);
-  IF operation.conversation_id IS DISTINCT FROM request_id OR
-      (SELECT title FROM public.conversations WHERE id=request_id)
-        IS DISTINCT FROM cipher THEN
-    RAISE EXCEPTION 'automation reservation copied a clear title';
   END IF;
   IF has_function_privilege('authenticated',
       'public.migrate_numo_conversation_title(uuid,text,text)','EXECUTE') THEN

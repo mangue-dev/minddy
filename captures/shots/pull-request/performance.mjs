@@ -53,10 +53,6 @@ async function serve(page) {
     (url) => url.pathname === `${endpoint}/review-comments`,
     (route) => json(route, { comments: REVIEW_COMMENTS, threads: REVIEW_THREADS, reactions: [] }),
   );
-  await page.route(
-    (url) => url.pathname === `${endpoint}/ai-review`,
-    (route) => json(route, { run: null, reviewedHeadSha: null, model: null }),
-  );
   for (const commit of COMMITS) {
     await page.route(
       (url) => url.pathname === `${endpoint}/commits/${commit.sha}`,

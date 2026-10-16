@@ -30,7 +30,7 @@ import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_UPLOAD_MB } from
  * access control to the PR that prevents it from being made an open host.
  */
 export function useForgeUploads(
-  /** PR base: `/api/pull-requests/{id}` or facade `/api/agent-runs/{id}/pr`. */
+  /** PR base: `/api/pull-requests/{id}`. */
   endpoint: string,
   /** The composer applies the transformation to his draft — he is the one who holds the
 , and the insertion must respect what has been typed in the meantime. */

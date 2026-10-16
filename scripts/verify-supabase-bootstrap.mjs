@@ -26,7 +26,7 @@ const REQUIRED_APP_CONFIG = [
   "feedback_classify_enabled",
   "agent_model",
 ];
-const REQUIRED_TABLES = ["projects", "issues", "attachments", "feedback_posts", "pages", "agent_runs"];
+const REQUIRED_TABLES = ["projects", "issues", "attachments", "feedback_posts", "pages", "conversations"];
 
 function fail(message) {
   throw new Error(`Supabase verification failed: ${message}`);

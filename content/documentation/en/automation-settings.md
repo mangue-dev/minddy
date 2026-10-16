@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -33,18 +33,17 @@
       "components/settings/smart-assign-section.tsx",
       "content/knowledge/settings-and-data.md",
       "content/documentation/reviews/remaining-account-capture-candidates.json",
-      "lib/server/agent/quota.ts",
       "lib/server/usage.ts",
-      "lib/server/agent/execute.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (en translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review: running code work removed from the migration note; deleted agent evidence paths dropped; no operational rerun)",
+    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min721_docs (en removal edit; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -60,7 +59,7 @@
 
 Project automation switches and account presets, effort switches and start-delay settings have been replaced by [Routines](/docs/scheduled-routines). Open Routines as the project owner. Enabled rules from the archive are proposed once as paused routines; opening the list does not enable them or spend an execution budget.
 
-Review each proposal's instruction, status trigger, conditions, delay and spending cap. The original workflow is retained in the instruction for comparison. Check human checkpoints and any unavailable references before enabling it. Proposals require owner input at human checkpoints and default to a 15% monthly-budget cap per occurrence. They are not a silent continuation of the old chain. Pending chains and chains waiting for a human stop; already running code work can finish or be stopped in its conversation, without a successor chain step. Historical activity and account backups retain the archive.
+Review each proposal's instruction, status trigger, conditions, delay and spending cap. The original workflow is retained in the instruction for comparison. Check human checkpoints and any unavailable references before enabling it. Proposals require owner input at human checkpoints and default to a 15% monthly-budget cap per occurrence. They are not a silent continuation of the old chain. Pending chains and chains waiting for a human stop, without a successor chain step. Historical activity and account backups retain the archive.
 
 ## Keep other project helpers distinct {#mechanisms}
 

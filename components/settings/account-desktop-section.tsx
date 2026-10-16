@@ -37,8 +37,6 @@ export function AccountDesktopSection() {
   } | null>(null);
   const [switching, setSwitching] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [copyingDiagnostics, setCopyingDiagnostics] = useState(false);
-  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
 
   useEffect(() => {
     const bridge = getDesktopBridge();
@@ -68,17 +66,6 @@ export function AccountDesktopSection() {
       await desktop.bridge.checkForUpdates();
     } finally {
       setChecking(false);
-    }
-  };
-
-  const copyDiagnostics = async () => {
-    if (!desktop.bridge.copyDiagnosticReport || copyingDiagnostics) return;
-    setCopyingDiagnostics(true);
-    setDiagnosticsCopied(false);
-    try {
-      setDiagnosticsCopied(await desktop.bridge.copyDiagnosticReport());
-    } finally {
-      setCopyingDiagnostics(false);
     }
   };
 
@@ -134,29 +121,6 @@ export function AccountDesktopSection() {
           ) : undefined
         }
       />
-      {desktop.bridge.copyDiagnosticReport && (
-        <SettingsRow
-          label={ta("desktopDiagnosticsLabel")}
-          hint={ta("desktopDiagnosticsDesc")}
-          control={
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={copyingDiagnostics}
-              onClick={() => void copyDiagnostics()}
-            >
-              {ta(
-                diagnosticsCopied
-                  ? "desktopDiagnosticsCopied"
-                  : copyingDiagnostics
-                    ? "desktopDiagnosticsCopying"
-                    : "desktopDiagnosticsCopy",
-              )}
-            </Button>
-          }
-        />
-      )}
     </SettingsGroup>
   );
 }

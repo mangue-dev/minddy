@@ -1,9 +1,14 @@
-# Numo code-worker reasoning, provider by provider
+# Numo reasoning levels, provider by provider
 
-> **Date**: 2026-07-29, reviewed on 2026-10-05 · **Ticket**: MIN-122
+> **Date**: 2026-07-29, reviewed on 2026-10-05 and 2026-10-16 · **Tickets**: MIN-122, MIN-721
 >
-> What the user chooses, what really goes on the thread, and what is
-> passes when the model in front does not want it.
+> What the user chooses, what really goes on the wire, and what happens
+> when the model in front does not accept it.
+
+These levels were introduced for Numo's code worker. MIN-721 removed that
+worker: the levels now apply to Numo conversations (the composer selector and
+the instance default) and to the AI features that share `lib/ai-chat.ts`.
+The code worker's run and preference tables were dropped with it.
 
 ## What changed on 2026-08-11: the levels are those of the MODELS
 
@@ -68,8 +73,7 @@ Claude family that accepts it, the adapter explicitly sends
 The families that refuse the field with a 400 (Fable 5, Mythos 5, Mythos
 Preview, Claude Opus 5.5, Claude Sonnet 5.5) get no field at all: their
 default thinking stays on. Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1
-also reject forced tool use on every request. Both the shared chat adapter and
-the code-worker compatibility adapter downgrade forced `tool_choice` to `auto`
+also reject forced tool use on every request. The shared chat adapter downgrades forced `tool_choice` to `auto`
 on those families; non-forced choices remain unchanged. Earlier Fable 5 and
 Mythos 5 keep forced tool use. See the
 [Anthropic thinking reference](https://platform.claude.com/docs/en/build-with-claude/thinking).
@@ -120,23 +124,22 @@ and kept field names, and Smart Fill logs its outcome (`no_decision`,
 text, answers or exception messages. See the
 [MIN-687 incident review](audits/min-687-smart-fill.md).
 
-**The default is `medium`** (“Standard” in the UI): Numo's code worker gains at
-think a little before acting. `off` was the default on the day of delivery of
+**The default is `medium`** (“Standard” in the UI): Numo thinks a little
+before acting. `off` was the default on the day of delivery of
 MIN-122, to not change anything in the existing behavior while observing the
 field on the real; this was not the best setting for the user.
-The fault lives in one place, `DEFAULT_REASONING_LEVEL`
-([lib/agent-reasoning.ts](../lib/agent-reasoning.ts)): the server cascade
-(`resolveReasoningLevel`), launch selector and account setting
-everyone reads. The `agent_runs.reasoning_level` column keeps a `default 'off'`
-in base — a net that is never used, `createRun` always writing the level
-resolved.
+The default lives in one place, `DEFAULT_REASONING_LEVEL`
+([lib/agent-reasoning.ts](../lib/agent-reasoning.ts)), which the Numo
+conversation configuration
+([lib/server/assistant/conversation-config.ts](../lib/server/assistant/conversation-config.ts))
+and the instance model settings read.
 
 ### Why the credits remain silent
 
 Its base URL is an unknown server (vLLM, LM Studio, an in-house proxy, etc.). The
 *documented* compat layers ignore unknown fields; a strict waiter, he,
-answers **400**, and an unrecoverable 400 kills the run. Send a field to a
-endpoint about which we know nothing, it is betting the user's run on a
+answers **400**, and an unrecoverable 400 kills the turn. Sending a field to an
+endpoint about which we know nothing bets the user's turn on an
 assumption. We don't do it.
 
 ## Anthropic and Gemini particularities
@@ -181,12 +184,10 @@ the tool-calls** of the round.
 paid: it must be usable in its entirety.
 
 A “`high` limit reserved for BYOK” existed for a while, then was removed — it does not
-protected from nothing. Reflection tokens are billed from the usage budget
-monthly plan (`plan.includedUsageUsd`,
-[lib/server/agent/quota.ts](../lib/server/agent/quota.ts)), but this budget is
-**already** a hard terminal: `checkAgentQuota` refuses the launch when it is
-exhausted, the loop stops by itself when it drops to zero during the run, and the
-spend-guard keeps the OpenRouter key. A `high` therefore consumes the budget faster —
+protected from nothing. Reflection tokens are billed from the monthly plan usage budget
+(`plan.includedUsageUsd`), but this budget is **already** a hard limit: Numo
+refuses a turn when it is exhausted, and the spend guard protects the
+OpenRouter key. A `high` therefore consumes the budget faster —
 which is the business of the one who paid for it - without ever being able to exceed it.
 Restricting the level in addition was a rule to be explained in exchange for nothing.
 
@@ -206,20 +207,19 @@ has nothing to change — neither for the quota (counted in USD), nor for the di
 tokens.
 
 The additional cost is real and can be seen: on the same short prompt, `off` cost
-$0.000165 and `low` $0.002592. It is not limited by a level ceiling — the
-four are open to all, minddy quota included — but by the usage budget
-itself: `checkAgentQuota` refuses the launch and the loop stops by itself
-when he is exhausted.
+$0.000165 and `low` $0.002592. It is not limited by a level ceiling (the
+four are open to all, minddy quota included) but by the usage budget
+itself.
 
 ## When the model is not capable
 
 Two behaviors remain possible, and they are distinguished **only at execution**:
 
-1. **The field is ignored.** The run takes place normally, without reflection. Nothing
+1. **The field is ignored.** The turn takes place normally, without reflection. Nothing
    indicates it — otherwise the thread will not display any “Reasoning” lines.
 2. **The field is rejected (400).** Known case: OpenAI + a non-reasoning model
    (`gpt-4o`, `gpt-4o-mini`). A 400 cannot be taken back: without guardrails, it
-   would cause the run to fail.
+   would cause the turn to fail.
 
 The main safeguard is now static: the credits remain silent, and the
 known providers all go through the model-aware translator. A field rejection of
@@ -233,22 +233,17 @@ to lie in the UI.
 
 ## What the user sees
 
-The reasoning **is not streamed**. It used to be (a text bubble that
-was written directly), which drowned the progress of the work under pages of
-monologue. Instead:
+The reasoning **is not streamed** as answer text: that drowned the progress of
+the work under pages of monologue. Numo shows it in a compact, collapsible
+reasoning block (`components/agent/reasoning-block.tsx`) that anyone can unfold
+to read the trace.
 
-- during reflection, a compact “Reasoning” line (same template as a
-  tool-call) with a **seconds counter on the right**, timed on the server side and
-  rebroadcast ~4 times per second on the `agent-run:{runId}` topic;
-- at the end of the round, the trace is persisted (event `thinking` marked
-  `kind: "reasoning"`, capped at 2000 characters, with its `durationMs`) and remains
-  **folded** — unfoldable for anyone who wants to read it.
-
-The level is **frozen on run** (`agent_runs.reasoning_level`), like the model:
-a run is divided into chunks taken up by successive serverless invocations, a
-state in memory would not survive it. The personal flaw lives in
-`user_agent_preferences.default_reasoning_level` ; `null` (never set) falls to
-`DEFAULT_REASONING_LEVEL`, or `medium`.
+The level is resolved when the turn is admitted and passed with it
+(`reasoningLevel` in
+[lib/server/assistant/conversation-config.ts](../lib/server/assistant/conversation-config.ts)),
+like the model: an explicit conversation choice wins, otherwise the instance
+default applies, and a level the model no longer accepts is lowered with
+`nearestReasoningLevel`.
 
 ## The compaction reasoning
 
@@ -281,6 +276,6 @@ in `delta.reasoning` — so the loop timer has something to measure.
 
 BYOK **OpenAI / Anthropic / Gemini direct** have not been probed (no key
 test on hand). The most interesting case is OpenAI + a **non** model
-reasoner (`gpt-4o-mini`): this is the expected trigger of guardrail 400. This
-that we then check, it is not that the level applies, it is that the run **is
-ends anyway**.
+reasoner (`gpt-4o-mini`): this is the expected trigger of the 400 guardrail.
+What to check then is not that the level applies, but that the turn **still
+ends**.

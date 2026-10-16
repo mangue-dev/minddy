@@ -22,8 +22,6 @@ import { broadcastPrChanged } from "./pr-live";
 import { recordPrCommentEditQuiet } from "./pr-comment-edits";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
-import type { PrReviewRunSummary, PrReviewSession } from "@/lib/pr-review-session";
-import { canReadAgentRun } from "./run-access";
 import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
@@ -40,23 +38,15 @@ import { GitlabApiError } from "./mr";
 import { encodePullRequestContent, shouldEncryptPullRequestContent } from
   "./pull-request-content";
 import {
-  lastReviewedShaForPullRequest,
-  latestRunForPullRequest,
-  syncPrState,
-  type AgentRun,
-} from "./runs";
-import {
   findPullRequest,
   pullRequestIssueIds,
   prStateFromRef,
-  resolvePrForRun,
   rowProvider,
   upsertPullRequest,
   type PullRequestRow,
   type PullRequestState,
 } from "./pull-requests";
 import { linkPullRequestToIssue, type PrLinkRefusal } from "./pr-link";
-import { getRun } from "./runs";
 import type {
   CommitExtras,
   DeploymentOutcome,
@@ -83,17 +73,14 @@ import { attachmentObjectMetadata, decodeAttachmentObject,
   encodeAttachmentObject } from "@/lib/server/encryption/attachment-object-content";
 import type { ChecksSummary } from "./checks-core";
 import {
-  numoIntentErrorResponse,
   startNumoIntent,
   type StartedNumoIntent,
 } from "@/lib/server/numo/start-intent";
 import { executeNumoTurn } from "@/lib/server/numo/turns";
-import { answerNumoWorkerInput } from "@/lib/server/numo/worker-mediation";
 import {
   bindNumoSurfaceEvent,
   ensureNumoSurfaceThread,
   failNumoSurfaceEvent,
-  pendingSurfaceWorkerInput,
   reserveNumoSurfaceEvent,
 } from "@/lib/server/numo/surface-conversations";
 import {
@@ -105,22 +92,18 @@ import {
 } from "@/lib/pr-readiness";
 
 /**
- * Pull request review gestures (MIN-143), indexed by PR and not by run.
+ * Pull request review gestures (MIN-143), indexed by PR.
  *
- * All logic from the old `agent-runs/[runId]/pr/*` routes lives here. Those
- * routes are now facades (run to PR to delegate), while the new
- * `pull-requests/[prId]/*` routes call this module directly. Each action has one
- * implementation and forge errors are translated to HTTP in one place.
+ * The `pull-requests/[prId]/*` routes call this module directly. Each action has
+ * one implementation and forge errors are translated to HTTP in one place.
  *
- * The ticket link moved to the PR. `syncIssueStatusFromPr` and activity tracking
- * read the current `pull_request_issues` associations. Human and Numo PRs can
- * carry several tickets. A PR without a ticket silently synchronizes and
+ * `syncIssueStatusFromPr` and activity tracking read the current
+ * `pull_request_issues` associations. A PR can carry several tickets. A PR without a ticket silently synchronizes and
  * records nothing; that is a normal case.
  */
 
 /**
- * Limits for free-form fields sent to the forge and, for a review message that
- * relaunches the agent, included in the run prompt. GitHub limits comment bodies
+ * Limits for free-form fields sent to the forge. GitHub limits comment bodies
  * to 65,536 characters and rejects longer requests.
  */
 const MAX_COMMENT_BODY_LENGTH = 65_536;
@@ -299,46 +282,6 @@ export async function authorizePrRequest(
   // Keep the authenticated client: its RLS is the guard when an action touches a
   // table beyond the PR. Manual ticket linking (MIN-163) rereads the ticket with
   // this client instead of duplicating a project-membership check.
-  return { ok: true, scope, userId: auth.user.id, supabase: auth.supabase };
-}
-
-/**
- * Same thing from a `runId`: what the facades do
- * `agent-runs/[runId]/pr/*`, kept for existing `?run=` deep-links and
- * for the diff view of the agent conversation.
- *
- * `noPr` distinguishes “this run has no PR” (legitimate empty response on GET,
- * 400 on POST) of “unknown run” (404).
- *
- * We pass through the SAME guard as the other routes of the run (MIN-332) before
- * resolve your PR: entering by `runId` should not open anything more than entering by
- * `prId`, and a run that we do not have the right to read must respond “unknown” —
- * including the existence of the run → PR link.
- */
-export async function authorizeRunPrRequest(
-  request: NextRequest,
-  runId: string,
-): Promise<PrRequestAuth | { ok: false; noPr: true; response: NextResponse }> {
-  const readNotBefore = performance.now();
-  const auth = await getAuthedUser(request);
-  if (!auth.ok) return { ok: false, response: auth.response };
-
-  const run = await getRun(runId, { decode: false });
-  if (!run || !(await canReadAgentRun(auth.user.id, run))) {
-    return { ok: false, response: NextResponse.json({ error: "Run not found" }, { status: 404 }) };
-  }
-
-  const pr = await resolvePrForRun(run);
-  if (!pr) {
-    return {
-      ok: false,
-      noPr: true,
-      response: NextResponse.json({ error: "This run has no pull request" }, { status: 400 }),
-    };
-  }
-
-  const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET", readNotBefore);
-  if (!scope) return { ok: false, response: prNotFound() };
   return { ok: true, scope, userId: auth.user.id, supabase: auth.supabase };
 }
 
@@ -1198,33 +1141,6 @@ export async function startNumoPrReview(input: {
     }
     if (!reserved.created) return null;
 
-    const pendingInput = await pendingSurfaceWorkerInput(service, thread.conversation_id);
-    if (pendingInput) {
-      const disposition = await answerNumoWorkerInput({
-        conversationId: thread.conversation_id,
-        userId,
-        correlation: {
-          parentTurnId: pendingInput.turnId,
-          runId: pendingInput.runId,
-          questionId: pendingInput.questionId,
-        },
-        answer: input.question.body,
-        messageId: eventId,
-        persistParentMessage: true,
-      });
-      if (disposition.action !== "answered" && disposition.action !== "already") {
-        const reason = disposition.action === "refused"
-          ? disposition.reason
-          : disposition.action;
-        throw new Error(`Unable to resume pull request worker input: ${reason}`);
-      }
-      await bindNumoSurfaceEvent({ service, eventId, turnId: pendingInput.turnId });
-      return {
-        conversationId: thread.conversation_id,
-        turnId: pendingInput.turnId,
-      };
-    }
-
     const started = await startNumoIntent({
       supabase,
       userId,
@@ -2028,18 +1944,11 @@ async function propagatePrState(
     mergedAt: state === "merged" ? new Date().toISOString() : scope.pr.merged_at,
     issueId: scope.pr.issue_id ?? undefined,
   });
-  const runs = await syncPrState({
-    repoFullName: scope.target.repoFullName,
-    prNumber: scope.pr.number,
-    prState: state,
-    provider: scope.target.provider,
-  });
-  const currentState = runs[0]?.prState ?? state;
   for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
     await syncIssueStatusFromPr({
       issueId,
       actorId,
-      prState: currentState,
+      prState: state,
     });
   }
 }
@@ -2076,30 +1985,7 @@ export async function prRequestReviewerResponse(scope: PrScope, login: unknown):
 export interface PrActionBody {
   action?: string;
   message?: string;
-  model?: string;
-  reasoningLevel?: string;
   verdict?: string;
-  relaunch?: boolean;
-  /** Legacy desktop-local flag retained so stale clients are rejected explicitly. */
-  localExec?: boolean;
-  /** Legacy desktop worktree flag; it cannot enable local execution. */
-  localWorktree?: boolean;
-  /** Legacy local-context acknowledgement; it cannot enable local execution. */
-  localIssueContextConfirmed?: boolean;
-  /**
-   * Post the VERDICT on the forge? Default `true` (the historic gesture).
-   *
-   * `false` = “have Numo correct it, don’t say anything for me”: the message
-   * is no longer a review text, it is an INSTRUCTION for the agent. Two reasons
-   * to be able to say it:
-   * - the “correct comments” mode pre-writes an instruction intended to
-   * Numo; publishing it as a review would post robotic text under the name
-   * of the person;
-   * - a forge verdict requires the person's git identity (MIN-144), not the
-   * relaunch of Numo. Soldering them would make anyone who doesn't have
-   * counts — even though only the first one needs it.
-   */
-  postVerdict?: boolean;
   method?: string;
   commitTitle?: string;
   commitMessage?: string;
@@ -2718,17 +2604,11 @@ export async function prMaintenanceActionResponse(
   }
 }
 
-/**
- * Submit a human review verdict and optionally start a Numo fix conversation.
- * The selected PR id and refs remain the stable source context, including for a
- * human PR with no linked issue. The eventual writable worker, if needed, is
- * launched only by Numo's internal delegation service.
- */
+/** Submit a human review verdict under the user's forge identity. */
 export async function prReviewResponse(
   scope: PrScope,
   body: PrActionBody,
   userId: string,
-  supabase: SupabaseClient,
 ): Promise<Response> {
   const verdict = body.verdict as ReviewVerdict | undefined;
   if (!verdict || !REVIEW_VERDICTS.includes(verdict)) {
@@ -2743,85 +2623,23 @@ export async function prReviewResponse(
   if (!message && verdict !== "approve") {
     return NextResponse.json({ error: "Message required" }, { status: 400 });
   }
-  // Relaunching Numo only makes sense when requesting changes: it needs
-  // an instruction, and approving requires nothing.
-  const relaunch = !!body.relaunch && verdict === "request_changes";
-  // Approving or commenting publishes a verdict. Only a request for changes has
-  // the additional effect of relaunching Numo.
-  const postVerdict = body.postVerdict !== false || verdict !== "request_changes";
-  if (!postVerdict && !relaunch) {
-    return NextResponse.json({ error: "Nothing to do", code: "noEffect" }, { status: 400 });
-  }
 
-  // Human verdicts require the user's forge identity. A Numo-only fix request
-  // does not publish on the user's behalf and therefore needs no forge actor.
-  let actor: Extract<ForgeActor, { kind: "actor" }> | null = null;
-  if (postVerdict) {
-    const resolved = await requireActor(scope, "read");
-    if (!resolved.ok) return resolved.response;
-    actor = resolved.actor;
-  }
+  const resolved = await requireActor(scope, "read");
+  if (!resolved.ok) return resolved.response;
+  const actor = resolved.actor;
 
-  let startedIntent: StartedNumoIntent | null = null;
-  if (relaunch) {
-    if ("model" in body || "reasoningLevel" in body) {
-      return NextResponse.json(
-        {
-          error: "workerConfigurationManagedInSettings",
-          code: "workerConfigurationManagedInSettings",
-        },
-        { status: 400 },
-      );
-    }
-    if (scope.pr.state === "merged") {
-      return NextResponse.json(
-        { error: "Pull request is merged", code: "prMerged" },
-        { status: 409 },
-      );
-    }
-    try {
-      startedIntent = await startNumoIntent({
-        supabase,
-        userId,
-        locale: await getLocale(),
-        source: "pull_request",
-        action: "fix",
-        context: {
-          pullRequestId: scope.pr.id,
-          prNumber: scope.pr.number,
-          prState: scope.pr.state,
-          prHeadRef: scope.pr.head_branch ?? undefined,
-          prBaseRef: scope.pr.base_branch ?? undefined,
-          ...(scope.pr.issue_id ? { issueId: scope.pr.issue_id } : {}),
-        },
-        prompt: message,
-      });
-    } catch (error) {
-      return numoIntentErrorResponse(error);
-    }
-  }
-
-  // `none`: nothing was said about the forge, and that was intentional — the PR does not cover
-  // than Numo's work. The screen distinguishes it from a verdict folded into
-  // comment (`comment`), which is a withdrawal suffered.
-  let published: "review" | "comment" | "none" = postVerdict ? "review" : "none";
+  let published: "review" | "comment";
   try {
-    if (actor) {
-      const result = await scope.forge.submitReview({
-        ...actorCall(actor, scope),
-        verdict,
-        body: message,
-        locale: await getLocale(),
-      });
-      published = result.published;
-      invalidateReviewQueue(scope.pr.provider, scope.call.repoFullName);
-    }
+    const result = await scope.forge.submitReview({
+      ...actorCall(actor, scope),
+      verdict,
+      body: message,
+      locale: await getLocale(),
+    });
+    published = result.published;
+    invalidateReviewQueue(scope.pr.provider, scope.call.repoFullName);
   } catch (err) {
-    // The Numo conversation already carries the request, so a later forge
-    // failure must not make the user believe that the fix request was lost.
-    if (!relaunch) return forgeErrorResponse(err);
-    console.error("[pr-actions] review_post_failed");
-    published = "comment";
+    return forgeErrorResponse(err);
   }
 
   // Direct: a review moves three surfaces — its message goes in the thread, its
@@ -2831,10 +2649,8 @@ export async function prReviewResponse(
   broadcastPrChanged(scope.pr.id, ["conversation", "reviewComments", "pr"]);
 
   // The ACTUAL verdict is drawn on Minddy's side even when the forge folded it into
-  // comment: this is where the user will read "approved the PR". Nothing to
-  // trace when no verdict has been given: the revival is told by
-  // the agent launch event.
-  for (const issueId of postVerdict ? await pullRequestIssueIds(scope.pr.id) : []) {
+  // comment: this is where the user will read "approved the PR".
+  for (const issueId of await pullRequestIssueIds(scope.pr.id)) {
     await recordPrActionEvent(
       issueId,
       userId,
@@ -2843,88 +2659,5 @@ export async function prReviewResponse(
       scope.target.provider,
     );
   }
-  return NextResponse.json({
-    ok: true,
-    published,
-    ...(startedIntent
-      ? {
-          conversation: { id: startedIntent.conversationId },
-          turn: { id: startedIntent.turnId },
-        }
-      : {}),
-  });
-}
-
-/** Compatibility adapter for the former direct PR review launch. */
-export async function prAiReviewResponse(
-  scope: PrScope,
-  userId: string,
-  supabase: SupabaseClient,
-): Promise<Response> {
-  try {
-    const started = await startNumoIntent({
-      supabase,
-      userId,
-      locale: await getLocale(),
-      source: "pull_request",
-      action: "review",
-      context: {
-        pullRequestId: scope.pr.id,
-        prNumber: scope.pr.number,
-        prState: scope.pr.state,
-        prHeadRef: scope.pr.head_branch ?? undefined,
-        prBaseRef: scope.pr.base_branch ?? undefined,
-        ...(scope.pr.issue_id ? { issueId: scope.pr.issue_id } : {}),
-      },
-      prompt:
-        "Review this pull request, inspect the changed code and existing feedback, then preserve the established review delivery by posting the useful line comments and summary to the pull request.",
-    });
-    return NextResponse.json(
-      {
-        ok: true,
-        conversation: { id: started.conversationId },
-        turn: { id: started.turnId },
-      },
-      { status: 202 },
-    );
-  } catch (error) {
-    return numoIntentErrorResponse(error);
-  }
-}
-
-/** An agent run → what the PR thread shows (see `lib/pr-review-session`). */
-function toReviewRunSummary(run: AgentRun): PrReviewRunSummary {
-  return {
-    runId: run.id,
-    status: run.status,
-    working: run.status === "queued" || run.status === "running",
-    model: run.model,
-    createdAt: run.created_at,
-    completedAt: (run as AgentRun & { completed_at?: string | null }).completed_at ?? null,
-    conversationId: run.parent_numo_conversation_id ?? null,
-  };
-}
-
-/**
- * The status of Numo's replay on this PR: the last session, and what
- * decide whether to relaunch one.
- *
- * `reviewedHeadSha` is the SHA that the last TERMINATED session read. The screen
- * compare to the running head: as long as they are equal, rerolling would pay for a run
- * integer for exactly the same code, and the menu entry grays out. This is the
- * server that says it, not the screen that guesses it.
- *
- */
-export async function prReviewRunResponse(
-  scope: PrScope,
-): Promise<NextResponse> {
-  const [run, reviewedHeadSha] = await Promise.all([
-    latestRunForPullRequest(scope.pr.id),
-    lastReviewedShaForPullRequest(scope.pr.id),
-  ]);
-  const session: PrReviewSession = {
-    run: run ? toReviewRunSummary(run) : null,
-    reviewedHeadSha,
-  };
-  return NextResponse.json(session);
+  return NextResponse.json({ ok: true, published });
 }

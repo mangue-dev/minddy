@@ -11,12 +11,6 @@ import {
   listStoragePrefix,
   projectIconPaths,
 } from "@/lib/server/project-storage";
-import { deleteSandboxByName } from "@/lib/server/agent/sandbox";
-import { agentSandboxName, legacyAgentSandboxName } from "@/lib/server/agent/network-policy";
-import { listScopedAgentRuns, type ErasableAgentRun } from "@/lib/server/agent/sandbox-erasure";
-import { eraseSandboxAllocations } from "@/lib/server/agent/sandbox-allocation";
-import { eraseNativePrototypeAccount } from "@/lib/server/agent/native-prototype/connections";
-import { revokeRunKeyStrict } from "@/lib/server/agent/run-key";
 import { decodeProjectName } from "@/lib/server/project-content";
 
 /**
@@ -44,16 +38,14 @@ type Service = ReturnType<typeof getServiceClient>;
 
 async function listAccountScopedIds(
   service: Service,
-  table: "projects" | "agent_conversations",
+  table: "projects",
   userId: string,
-  privateOnly = false,
 ): Promise<string[]> {
   const ids: string[] = [];
   let lastId: string | null = null;
   for (;;) {
     let query = service.from(table).select("id").eq("owner_id", userId)
       .order("id", { ascending: true }).limit(500);
-    if (privateOnly) query = query.eq("visibility", "private");
     if (lastId) query = query.gt("id", lastId);
     const { data, error } = await query;
     if (error) throw new Error(`Unable to enumerate ${table} for account erasure`);
@@ -166,17 +158,6 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   const service = getServiceClient();
   const warnings: string[] = [];
 
-  // A committed SQL fence serializes with run creation and queued-to-running
-  // claims. A retry retains the fence until Auth deletes the user.
-  const { data: fenced, error: fenceError } = await service.rpc("begin_agent_account_erasure", {
-    p_user_id: userId,
-  });
-  if (fenceError || fenced !== true) throw new Error("Unable to fence Agent runs for account erasure");
-  // Native controllers must stop before the Auth cascade removes their encrypted
-  // control descriptors and user keys. Cleanup remains active when the pilot is disabled.
-  await eraseNativePrototypeAccount(userId);
-  await eraseSandboxAllocations("account", userId);
-
   // ── 1. Stripe subscription ─────────────────────────────────────────────
   let subscriptionCanceled = false;
   const { data: billing } = await service
@@ -267,40 +248,6 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       [avatarPath],
       warnings,
     );
-  }
-
-  // Personal conversations of the code officer in OTHERS' projects
-  // owners. `owner_id on delete set null` would anonymize them instead of
-  // delete them; we first cut their compute and their key, then the cascade of
-  // the conversation carries runs, turns, messages, events and readings.
-  const personalConversationIds = await listAccountScopedIds(
-    service, "agent_conversations", userId, true,
-  );
-  const runs = new Map<string, ErasableAgentRun>();
-  for (const id of ownedIds) {
-    for (const run of await listScopedAgentRuns("project_id", id)) runs.set(run.id, run);
-  }
-  for (const id of personalConversationIds) {
-    for (const run of await listScopedAgentRuns("conversation_id", id)) runs.set(run.id, run);
-  }
-  for (const run of runs.values()) {
-    // The legacy name can still own a persistent snapshot after the run row
-    // was switched to the nonpersistent namespace. Delete both generations.
-    for (const name of new Set([run.sandbox_id, agentSandboxName(run.id), legacyAgentSandboxName(run.id)])) {
-      if (name) await deleteSandboxByName(name).catch(() => {
-        throw new Error("Unable to erase Agent sandbox");
-      });
-    }
-    if (run.provider_key_id) {
-      await revokeRunKeyStrict(run.provider_key_id);
-    }
-  }
-  for (let offset = 0; offset < personalConversationIds.length; offset += 100) {
-    const { error: conversationsError } = await service
-      .from("agent_conversations")
-      .delete()
-      .in("id", personalConversationIds.slice(offset, offset + 100));
-    if (conversationsError) warnings.push(`agent conversations: ${conversationsError.message}`);
   }
 
   // ── 3. The account ──────────────────────────── ────────────────────────────

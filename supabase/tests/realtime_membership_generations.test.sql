@@ -82,8 +82,6 @@ INSERT INTO expected_realtime_function_privileges VALUES
   ('public.rekey_deleted_project()', false, false, false),
   ('public.rekey_project_realtime_membership()', false, false, false),
   ('public.rekey_project_realtime_owner()', false, false, false),
-  ('public.rekey_agent_conversation_scope()', false, false, false),
-  ('public.rekey_agent_run_scope()', false, false, false),
   ('public.rekey_pull_request_scope()', false, false, false),
   ('public.rotate_user_realtime_generation(uuid)', false, false, false),
   ('public.rekey_deleted_auth_sessions()', false, false, false),
@@ -97,8 +95,8 @@ INSERT INTO expected_realtime_function_privileges VALUES
 
 SELECT is(
   (SELECT count(*) FROM expected_realtime_function_privileges),
-  27::bigint,
-  'the ACL matrix covers all 27 functions defined by this migration'
+  25::bigint,
+  'the ACL matrix covers all 25 functions defined by this migration'
 );
 
 SELECT is(
@@ -356,18 +354,6 @@ VALUES
     '73000000-0000-4000-8000-000000000004',
     'MFA Realtime project',
     'RTA'
-  ),
-  (
-    '73100000-0000-4000-8000-000000000005',
-    '73000000-0000-4000-8000-000000000001',
-    'Agent scope Realtime project',
-    'RTS'
-  ),
-  (
-    '73100000-0000-4000-8000-000000000006',
-    '73000000-0000-4000-8000-000000000001',
-    'Agent move Realtime project',
-    'RTR'
   );
 INSERT INTO public.project_members (project_id, user_id, added_by)
 VALUES
@@ -378,16 +364,6 @@ VALUES
   ),
   (
     '73100000-0000-4000-8000-000000000002',
-    '73000000-0000-4000-8000-000000000003',
-    '73000000-0000-4000-8000-000000000001'
-  ),
-  (
-    '73100000-0000-4000-8000-000000000005',
-    '73000000-0000-4000-8000-000000000002',
-    '73000000-0000-4000-8000-000000000001'
-  ),
-  (
-    '73100000-0000-4000-8000-000000000006',
     '73000000-0000-4000-8000-000000000003',
     '73000000-0000-4000-8000-000000000001'
   );
@@ -457,48 +433,6 @@ VALUES (
   'Realtime generation feedback',
   'Synthetic feedback body',
   'internal'
-);
-INSERT INTO public.agent_conversations (
-  id, project_id, owner_id, visibility
-)
-VALUES
-  (
-    '73400000-0000-4000-8000-000000000001',
-    '73100000-0000-4000-8000-000000000001',
-    '73000000-0000-4000-8000-000000000001',
-    'project'
-  ),
-  (
-    '73400000-0000-4000-8000-000000000002',
-    '73100000-0000-4000-8000-000000000002',
-    '73000000-0000-4000-8000-000000000001',
-    'project'
-  ),
-  (
-    '73400000-0000-4000-8000-000000000003',
-    '73100000-0000-4000-8000-000000000005',
-    '73000000-0000-4000-8000-000000000001',
-    'project'
-  ),
-  (
-    '73400000-0000-4000-8000-000000000004',
-    '73100000-0000-4000-8000-000000000006',
-    '73000000-0000-4000-8000-000000000001',
-    'project'
-  );
-INSERT INTO public.agent_runs (
-  id, project_id, created_by, conversation_id
-)
-VALUES (
-  '73500000-0000-4000-8000-000000000001',
-  '73100000-0000-4000-8000-000000000001',
-  '73000000-0000-4000-8000-000000000001',
-  '73400000-0000-4000-8000-000000000001'
-), (
-  '73500000-0000-4000-8000-000000000002',
-  '73100000-0000-4000-8000-000000000005',
-  '73000000-0000-4000-8000-000000000001',
-  '73400000-0000-4000-8000-000000000003'
 );
 INSERT INTO public.git_connections (
   id, user_id, provider, account_login
@@ -594,48 +528,6 @@ SELECT throws_ok(
 INSERT INTO public.project_realtime_generations (project_id, generation)
 SELECT project_id, generation FROM missing_project_generation;
 
-SELECT isnt(
-  public.current_realtime_topic(
-    'agent-run:73500000-0000-4000-8000-000000000002'
-  ),
-  'agent-run:73500000-0000-4000-8000-000000000002:v:' ||
-    pg_catalog.md5('73100000-0000-4000-8000-000000000006:2'),
-  'an agent run topic is bound to its project even at equal generations'
-);
-UPDATE public.agent_runs
-SET conversation_id = '73400000-0000-4000-8000-000000000004',
-    project_id = '73100000-0000-4000-8000-000000000006'
-WHERE id = '73500000-0000-4000-8000-000000000002';
-SELECT is(
-  public.current_realtime_topic(
-    'agent-run:73500000-0000-4000-8000-000000000002'
-  ),
-  'agent-run:73500000-0000-4000-8000-000000000002:v:' ||
-    pg_catalog.md5('73100000-0000-4000-8000-000000000006:3'),
-  'moving a service-owned run scope changes its topic across equal generations'
-);
-SELECT is(
-  (
-    SELECT generation
-    FROM public.project_realtime_generations
-    WHERE project_id = '73100000-0000-4000-8000-000000000005'
-  ),
-  3::bigint,
-  'moving a run rotates its old project generation'
-);
-SELECT is(
-  (
-    SELECT generation
-    FROM public.project_realtime_generations
-    WHERE project_id = '73100000-0000-4000-8000-000000000006'
-  ),
-  3::bigint,
-  'moving a run rotates its new project generation'
-);
-UPDATE public.agent_runs
-SET conversation_id = '73400000-0000-4000-8000-000000000003',
-    project_id = '73100000-0000-4000-8000-000000000005'
-WHERE id = '73500000-0000-4000-8000-000000000002';
 
 SELECT isnt(
   public.current_realtime_topic(
@@ -689,28 +581,24 @@ SELECT is(
   '73100000-0000-4000-8000-000000000002'::uuid,
   'the page comment namespace reports only the page comment project'
 );
-SELECT public.broadcast_private_realtime(
-  'numo-comment:73300000-0000-4000-8000-000000000001',
-  'collision-regular-comment',
-  '{"table":"comments"}'::jsonb
-);
-SELECT public.broadcast_private_realtime(
-  'numo-page-comment:73300000-0000-4000-8000-000000000001',
-  'collision-page-comment',
-  '{"table":"page_comments"}'::jsonb
-);
 SELECT isnt(
-  (
-    SELECT topic
-    FROM realtime.messages
-    WHERE event = 'collision-regular-comment'
+  public.current_realtime_topic(
+    'numo-comment:73300000-0000-4000-8000-000000000001'
   ),
-  (
-    SELECT topic
-    FROM realtime.messages
-    WHERE event = 'collision-page-comment'
+  public.current_realtime_topic(
+    'numo-page-comment:73300000-0000-4000-8000-000000000001'
   ),
-  'equal UUIDs from the two tables cannot cross-broadcast on one topic'
+  'equal UUIDs from the two tables cannot resolve to one topic'
+);
+SELECT throws_ok(
+  $$ SELECT public.broadcast_private_realtime(
+       'numo-comment:73300000-0000-4000-8000-000000000001',
+       'collision-regular-comment',
+       '{"table":"comments"}'::jsonb
+     ) $$,
+  '22023',
+  'Comment streams require encrypted snapshots',
+  'comment streams refuse direct service broadcasts'
 );
 SELECT throws_ok(
   $$ UPDATE public.issues
@@ -805,14 +693,6 @@ SELECT is(
 );
 SELECT is(
   public.resolve_realtime_topic(
-    'agent-run:73500000-0000-4000-8000-000000000001'
-  ),
-  'agent-run:73500000-0000-4000-8000-000000000001:v:' ||
-    pg_catalog.md5('73100000-0000-4000-8000-000000000001:3'),
-  'a member resolves a project-visible agent run generation'
-);
-SELECT is(
-  public.resolve_realtime_topic(
     'numo-comment:73300000-0000-4000-8000-000000000001'
   ),
   'numo-comment:73300000-0000-4000-8000-000000000001:v:' ||
@@ -845,53 +725,15 @@ SELECT ok(
   ) LIKE 'pull-request:73800000-0000-4000-8000-000000000001:v:%',
   'a member resolves the linked pull request generation digest'
 );
-SELECT is(
-  public.resolve_realtime_topic(
-    'agent-run:73500000-0000-4000-8000-000000000002'
-  ),
-  'agent-run:73500000-0000-4000-8000-000000000002:v:' ||
-    pg_catalog.md5('73100000-0000-4000-8000-000000000005:4'),
-  'a project member initially resolves a project-visible run'
-);
-RESET ROLE;
-UPDATE public.agent_conversations
-SET visibility = 'private'
-WHERE id = '73400000-0000-4000-8000-000000000003';
-SELECT is(
-  (
-    SELECT generation
-    FROM public.project_realtime_generations
-    WHERE project_id = '73100000-0000-4000-8000-000000000005'
-  ),
-  5::bigint,
-  'making a conversation private rotates its project generation'
-);
-SET LOCAL ROLE authenticated;
 SELECT set_config(
   'request.jwt.claims',
   '{"role":"authenticated","sub":"73000000-0000-4000-8000-000000000002","aal":"aal1","session_id":"73010000-0000-4000-8000-000000000002"}',
   true
 );
-SELECT throws_ok(
-  $$ SELECT public.resolve_realtime_topic(
-       'agent-run:73500000-0000-4000-8000-000000000002'
-     ) $$,
-  '42501',
-  'Realtime topic access denied',
-  'a former project viewer cannot resolve a run after it becomes private'
-);
 SELECT set_config(
   'request.jwt.claims',
   '{"role":"authenticated","sub":"73000000-0000-4000-8000-000000000001","aal":"aal1","session_id":"73010000-0000-4000-8000-000000000001"}',
   true
-);
-SELECT is(
-  public.resolve_realtime_topic(
-    'agent-run:73500000-0000-4000-8000-000000000002'
-  ),
-  'agent-run:73500000-0000-4000-8000-000000000002:v:' ||
-    pg_catalog.md5('73100000-0000-4000-8000-000000000005:5'),
-  'the private conversation owner resolves its replacement run topic'
 );
 SELECT set_config(
   'request.jwt.claims',
@@ -993,14 +835,6 @@ SELECT throws_ok(
   '42501',
   'Realtime topic access denied',
   'an outsider cannot resolve a project topic'
-);
-SELECT throws_ok(
-  $$ SELECT public.resolve_realtime_topic(
-       'agent-run:73500000-0000-4000-8000-000000000001'
-     ) $$,
-  '42501',
-  'Realtime topic access denied',
-  'an outsider cannot resolve a project-visible agent run topic'
 );
 SELECT ok(
   public.resolve_realtime_topic(
@@ -1138,14 +972,6 @@ SELECT throws_ok(
   '42501',
   'Realtime topic access denied',
   'a removed member cannot resolve replacement Presence'
-);
-SELECT throws_ok(
-  $$ SELECT public.resolve_realtime_topic(
-       'agent-run:73500000-0000-4000-8000-000000000001'
-     ) $$,
-  '42501',
-  'Realtime topic access denied',
-  'a removed member cannot resolve a replacement agent run topic'
 );
 SELECT throws_ok(
   $$ SELECT public.resolve_realtime_topic(

@@ -15,11 +15,8 @@ vi.mock("@/lib/server/routine-hooks", async importOriginal => ({
 }));
 
 import { registerPageTools } from "./mcp/page-tools";
-import { executePageTool } from "./agent/page-tools";
 import { executeTool, type ToolContext } from "./assistant/execute-tool";
-import { agentToolsFor } from "./agent/tools";
 import { PROJECT_ASSISTANT_TOOLS } from "./assistant/tools";
-import { PLATFORM_TOOLS_BY_ANCHOR } from "./agent/platform-tool-names";
 import { DATABASE_TOOL_SCHEMA, DATABASE_TOOL_PARAMETERS } from "./database-tool-schema";
 
 const PROJECT = "49930000-0000-4000-8000-000000000001";
@@ -39,7 +36,7 @@ registerPageTools({ registerTool(name: string, config: { inputSchema: z.ZodObjec
   if (name === "minddy_update_page_database") { callback = handler; mcpSchema = config.inputSchema; }
 } } as unknown as McpServer);
 
-const surfaces = ["mcp", "chat", "agent"] as const;
+const surfaces = ["mcp", "chat"] as const;
 async function call(surface: typeof surfaces[number], args: Record<string, unknown>) {
   if (surface === "mcp") {
     const result = await callback(mcpSchema.parse({ project_id: PROJECT, ...args }), {
@@ -47,7 +44,6 @@ async function call(surface: typeof surfaces[number], args: Record<string, unkno
     });
     return { success: !result.isError, result: JSON.parse(result.content[0].text) };
   }
-  if (surface === "agent") return executePageTool({ projectId: PROJECT, actorId: ACTOR }, "update_page_database", args);
   return executeTool("update_page_database", args, { projectId: PROJECT, userId: ACTOR, locale: "en" } as ToolContext);
 }
 
@@ -100,18 +96,7 @@ describe.each(surfaces)("%s database tools", (surface) => {
   });
 });
 
-it("advertises the shared contract on every Numo anchor and MCP", () => {
-  for (const anchor of ["issue", "notebook", "pr"] as const) {
-    expect(PLATFORM_TOOLS_BY_ANCHOR[anchor].has("update_page_database")).toBe(true);
-    const tools = agentToolsFor({ anchor, webSearch: true, interactive: true });
-    expect(tools.find(t => t.function.name === "update_page_database")?.function.parameters).toEqual(DATABASE_TOOL_PARAMETERS);
-    expect(tools.find(t => t.function.name === "create_page")?.function.parameters.properties).toHaveProperty("database");
-  }
+it("advertises the shared contract on Numo and MCP", () => {
   expect(PROJECT_ASSISTANT_TOOLS.find(t => t.function.name === "update_page_database")?.function.parameters.properties).toMatchObject(DATABASE_TOOL_PARAMETERS.properties);
   expect(mcpSchema.omit({ project_id: true }).shape).toEqual(DATABASE_TOOL_SCHEMA.shape);
-});
-
-it("rejects an ownerless coding run before any page lookup", async () => {
-  expect(await executePageTool({ projectId: PROJECT, actorId: null }, "update_page_database", valueArgs)).toMatchObject({ success: false });
-  expect(h.getPage).not.toHaveBeenCalled();
 });

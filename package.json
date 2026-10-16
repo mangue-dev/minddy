@@ -5,12 +5,11 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {
-    "predev": "npm run build:agent-vm && npm run build:native-agent-prototype && npm run build:pages-md",
+    "predev": "npm run build:pages-md",
     "dev": "NODE_OPTIONS=--max-http-header-size=32768 next dev",
-    "prebuild": "npm run build:agent-vm && npm run build:native-agent-prototype && npm run build:pages-md",
+    "prebuild": "npm run build:pages-md",
     "build": "next build",
     "check:deployment-db": "node scripts/check-deployment-database.mjs",
-    "build:agent-vm": "node scripts/build-agent-vm.mjs",
     "build:pages-md": "node scripts/build-pages-md.mjs",
     "build:app-layout": "node scripts/build-app-layout.mjs",
     "desktop:dev": "node scripts/dev-desktop.mjs",
@@ -46,7 +45,7 @@
     "self-host:update": "node scripts/self-hosting-maintenance.mjs update",
     "self-host:backup": "node scripts/self-hosting-maintenance.mjs backup",
     "self-host:restore": "node scripts/self-hosting-maintenance.mjs restore",
-    "test:self-hosted-tools": "node --test scripts/agent-runner-http.test.mjs scripts/self-hosting-tools.test.mjs scripts/self-hosting-encryption.test.mjs scripts/prepare-self-hosted-functions.test.mjs scripts/self-hosted-database-proxy.test.mjs scripts/agent-runner-egress.test.mjs scripts/agent-runner-git-relay.test.mjs scripts/rewrap-data-root.test.mjs scripts/rewrap-data-root.integration.test.mjs",
+    "test:self-hosted-tools": "node --test scripts/self-hosting-tools.test.mjs scripts/self-hosting-encryption.test.mjs scripts/prepare-self-hosted-functions.test.mjs scripts/self-hosted-database-proxy.test.mjs scripts/rewrap-data-root.test.mjs scripts/rewrap-data-root.integration.test.mjs",
     "test:bootstrap:supabase": "node --test scripts/bootstrap-supabase.test.mjs",
     "validate:self-hosted": "node scripts/self-hosting-clean-room.mjs",
     "test:self-hosted": "node --test scripts/self-hosting-clean-room.test.mjs",
@@ -63,8 +62,7 @@
     "test:changelog": "node --test scripts/changelog.test.mjs && vitest run lib/changelog.test.ts lib/changelog-illustrations.test.ts lib/server/changelog.test.ts",
     "check:documentation": "node scripts/documentation-check.mjs",
     "check:documentation:release": "node scripts/documentation-check.mjs --release",
-    "test:documentation-check": "node --test scripts/documentation-check.test.mjs",
-    "build:native-agent-prototype": "node scripts/build-native-agent-prototype.mjs"
+    "test:documentation-check": "node --test scripts/documentation-check.test.mjs"
   },
   "overrides": {
     "@tiptap/extension-bubble-menu": "3.31.4",

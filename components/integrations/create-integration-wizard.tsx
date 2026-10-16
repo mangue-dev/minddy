@@ -21,7 +21,6 @@ const AddToListSceneIcon = sceneIcon(AddToListIcon);
 const MessageMultipleSceneIcon = sceneIcon(MessageMultiple01Icon);
 const WebhookSceneIcon = sceneIcon(WebhookIcon);
 const ClockSceneIcon = sceneIcon(Clock01Icon);
-import { NumoIcon } from "@/components/numo-icon";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
   WizardDialog,
@@ -41,8 +40,6 @@ import {
   updateIntegrationWebhookApi,
 } from "@/lib/integrations-api";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
-import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import type { IntegrationKind } from "@/lib/types";
 
 /**
@@ -91,7 +88,6 @@ export function CreateIntegrationWizard({
   const tField = useTranslations("Field");
   const { objectives } = useObjectivesQuery(projectId);
   const [objectiveId, setObjectiveId] = useState<string | null>(null);
-  const { openIntent } = useAssistantPanelActions();
 
   const [kind, setKind] = useState<IntegrationKind>("issues");
   const [name, setName] = useState("");
@@ -106,10 +102,6 @@ export function CreateIntegrationWizard({
   const [prompt, setPrompt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Numo can only work on a repository: without a git link, the option does not work
-  // not show — a button that has nothing to clone is not worth a refusal.
-  const { link } = useProjectGitLinkQuery(projectId);
-  const canHandOffToNumo = !!link;
 
   // Go back to answer “not now” — or to change the
   // type of key — abandons what had been set: this is the answer that
@@ -145,19 +137,6 @@ export function CreateIntegrationWizard({
     } catch {
       // Refused out of a click: this button IS a click, there is nothing to say.
     }
-  };
-
-  /** Hand the generated implementation request to the shared Numo conversation. */
-  const handOffToNumo = () => {
-    if (!prompt) return;
-    handleOpenChange(false);
-    openIntent({
-      source: "feedback",
-      action: "implement",
-      projectId,
-      prompt,
-      pageContext: { projectId },
-    });
   };
 
   /** Last configuration step: we create, we plug in, we write. */
@@ -418,29 +397,6 @@ export function CreateIntegrationWizard({
                 )}
                 {t("feedbackWizardCopy")}
               </Button>
-              {canHandOffToNumo && (
-                <>
-                  <div className="mt-1 flex items-center gap-3">
-                    <span className="h-px flex-1 bg-border" aria-hidden />
-                    <span className="text-xs text-muted-foreground">
-                      {tCommon("or")}
-                    </span>
-                    <span className="h-px flex-1 bg-border" aria-hidden />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-center gap-2"
-                    onClick={handOffToNumo}
-                  >
-                    <NumoIcon className="size-4" />
-                    {t("feedbackWizardNumoButton")}
-                  </Button>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    {t("feedbackWizardNumoDesc")}
-                  </p>
-                </>
-              )}
             </>
           )}
         </div>

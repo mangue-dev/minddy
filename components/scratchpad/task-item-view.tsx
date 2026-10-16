@@ -197,28 +197,6 @@ export function TaskItemView({
     surface.promote(note);
   };
 
-  // “Launch an agent” (MIN-84): the line goes into markdown (marker and title
-  // section included — the note is the ONLY channel to the agent), packaged
-  // by the surface in the SAME prompt as “copy prompt” above; THE
-  // compose the Agents page shows it as is, editable, and makes you choose the
-  // project before sending.
-  //
-  // The start takes place HERE, with the gesture, and not with the actual sending: the run is not
-  // attached to no task (its note is a simple text, cf.
-  //lib/server/agent/launch.ts), so nothing could find the line anymore
-  // late. Aborting the composer leaves the task “in progress” — one click to
-  // hand over, against a handover which does not mark anything in the normal case.
-  const launchAgent = () => {
-    if (!surface) return;
-    const md = taskMarkdown(true);
-    if (!md) return;
-    // BEFORE `launchAgent`: the surface records when leaving (the book flushes
-    // when unmounting, the page flushes before navigating) — the state must therefore
-    // be placed to leave with it, otherwise it would get lost on the way.
-    startSubtree();
-    surface.launchAgent(md);
-  };
-
   // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button
   // or by right-clicking the task; anchored to the ⋯ trigger (Radix positions it
   // transform-aware, unlike a fixed-point anchor inside the dialog).
@@ -238,14 +216,13 @@ export function TaskItemView({
   const CurrentStateIcon =
     STATE_CHOICES.find((c) => c.value === state)?.icon ?? CircleIcon;
 
-  // Shortcuts on hover, like on a ticket card: ⇧A launches the agent,
-  // ⇧P copies the line as a prompt. They are placed on the TASK alone — the
+  // Shortcut on hover, like on a ticket card: ⇧P copies the line as a prompt. They are placed on the TASK alone — the
   // sections keep their hover buttons, the entire notebook its buttons
   // header, and neither has a shortcut.
   //
-  // The notebook like a page are editable surfaces, where ⇧A is also
-  // “write an A”. The rule: **typing wins as long as you write**, wherever
-  // be the pointer. Writing “Add” on its own line therefore launches nothing
+  // The notebook like a page are editable surfaces, where ⇧P is also
+  // “write a P”. The rule: **typing wins as long as you write**, wherever
+  // be the pointer. Writing “Plan” on its own line therefore copies nothing
   // — and write on ANOTHER line either, even though the mouse is
   // remained on this one (`pointerIsStale`, cf. hover-keys.ts). The shortcut does not
   // restarts only once the task is targeted again, with a movement of the pointer.
@@ -255,12 +232,12 @@ export function TaskItemView({
   // Everything that moves from one rendering to another (the actions reread the contents of the
   // node, `getPos` its position) passes through a ref: the listener then remains
   // subscribed from one end of the hover to the other instead of resubscribing on each keystroke.
-  const liveRef = useRef({ copyLine, launchAgent, getPos });
-  liveRef.current = { copyLine, launchAgent, getPos };
+  const liveRef = useRef({ copyLine, getPos });
+  liveRef.current = { copyLine, getPos };
 
   // The target task is read in the DOM at the time of typing: go from one
-  // line to the other then type immediately can no longer launch the agent on the
-  // previous (MIN-158). `useHoverKeys` also designates the most important task
+  // line to the other then type immediately can no longer copy the previous one
+  // (MIN-158). `useHoverKeys` also designates the most important task
   // INTERIOR, which resolves nested tasks — entering the child does not
   // does not move out of the parent, both are hovered over, the child wins.
   //
@@ -269,8 +246,8 @@ export function TaskItemView({
     (e) => {
       if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
       const key = eventKey(e);
-      if (key !== "a" && key !== "p") return;
-      // A ticket selection owns ⇧P/⇧A while the pill is up (MIN-539): stand
+      if (key !== "p") return;
+      // A ticket selection owns ⇧P while the pill is up (MIN-539): stand
       // down like the card handlers do — “@” already prefers the selection.
       if (selectionKeysActive()) return;
       // We type in a field outside the surface (the search for ⋯, a dialog
@@ -290,8 +267,7 @@ export function TaskItemView({
       // Hover has the combination: neither the editor nor the dialog sees it.
       e.preventDefault();
       e.stopImmediatePropagation();
-      if (key === "a") liveRef.current.launchAgent();
-      else liveRef.current.copyLine();
+      liveRef.current.copyLine();
     },
     surface !== null && !menuOpen
   );
@@ -398,25 +374,6 @@ export function TaskItemView({
                   {t("changeState")}
                 </CommandItem>
                 <CommandSeparator className="my-1" />
-                <CommandItem
-                  value={t("launchAgent")}
-                  keywords={[
-                    "agent",
-                    "numo",
-                    "launch",
-                    "lancer",
-                    "run",
-                    "coder",
-                  ]}
-                  onSelect={() => pick(launchAgent)}
-                >
-                  <NumoIcon animated={false} className="size-4" />
-                  {t("launchAgent")}
-                  {/* Same keys as on a ticket, displayed in the same place. */}
-                  <CommandShortcut>
-                    <Kbd size="sm">⇧A</Kbd>
-                  </CommandShortcut>
-                </CommandItem>
                 <CommandItem
                   value={t("promoteToIssue")}
                   keywords={[

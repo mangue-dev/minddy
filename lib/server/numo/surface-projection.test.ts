@@ -6,7 +6,7 @@ import {
 } from "./surface-projection";
 
 describe("Numo shared-surface response lifecycle", () => {
-  it.each(["queued", "running", "waiting_work", "retryable"] as const)(
+  it.each(["queued", "running", "retryable"] as const)(
     "keeps the response private while a %s turn is still working",
     (status) => {
       expect(numoSurfaceProjectionDisposition(status)).toBe("wait");

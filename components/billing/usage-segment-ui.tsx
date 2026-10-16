@@ -1,5 +1,4 @@
 import {
-  BotIcon,
   BubbleChatDelayIcon,
   FlowIcon,
   MessageMultiple01Icon,
@@ -25,7 +24,6 @@ export const SEGMENT_UI: Record<
     icon: AppIcon;
     text: string;
     labelKey:
-      | "segmentAgents"
       | "segmentRoutines"
       | "segmentNumo"
       | "segmentDictation"
@@ -33,11 +31,6 @@ export const SEGMENT_UI: Record<
       | "segmentAutomations";
   }
 > = {
-  agents: {
-    icon: BotIcon,
-    text: "text-violet-600 dark:text-violet-400",
-    labelKey: "segmentAgents",
-  },
   routines: {
     icon: BubbleChatDelayIcon,
     text: "text-sky-600 dark:text-sky-400",

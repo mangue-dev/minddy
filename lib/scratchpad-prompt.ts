@@ -76,10 +76,7 @@ function indentWidth(line: string): number {
  * under "Deployment" or under "Ideas", and "Sidebar" means nothing without
  * the "Pull requests" which includes it - hence the entire path, joined by " >".
  *
- * This is the only channel available for numo's CARNET run: its note is a
- * simple text (editable in the composer, stored in `agent_runs.prompt`), so
- * the section must travel in it — and the server recuts it with this same
- * function. Copied prompt and agent prompt are thus identical.
+ * The copied prompt is plain text, so the section must travel in it.
  *
  * The head titles must NEST (strictly increasing ranks): this is
  * what a chain of sections produces, and two titles of the same rank describe,

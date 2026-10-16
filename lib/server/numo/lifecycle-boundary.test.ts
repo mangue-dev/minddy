@@ -31,13 +31,12 @@ describe("unified Numo lifecycle boundary", () => {
     ...productionSources("lib"),
   ];
 
-  it("launches a new code worker only from Numo's internal delegation tool", () => {
+  it("never launches a code worker (MIN-721)", () => {
     const launchers = production
-      .filter(({ contents }) => contents.includes("launchAgentRun({"))
-      .map(({ file }) => file)
-      .sort();
+      .filter(({ contents }) => contents.includes("launchAgentRun("))
+      .map(({ file }) => file);
 
-    expect(launchers).toEqual(["lib/server/assistant/execute-tool.ts"]);
+    expect(launchers).toEqual([]);
   });
 
   it("routes every background trigger into a durable Numo intent", () => {
@@ -55,32 +54,12 @@ describe("unified Numo lifecycle boundary", () => {
 
   it("keeps voluntary product actions on the shared composer contract", () => {
     for (const file of [
-      "components/agent/agent-conversation.tsx",
-      "components/feedback/feedback-setup-wizard.tsx",
       "components/global-board.tsx",
       "components/home/home-numo-composer.tsx",
-      "components/integrations/create-integration-wizard.tsx",
-      "components/issue-card.tsx",
-      "components/issue-side-panel.tsx",
       "components/pages/page-task-surface.tsx",
-      "components/pull-requests/pr-detail.tsx",
-      "components/scratchpad/use-launch-agent-note.ts",
     ]) {
       expect(source(file), file).toContain("openIntent({");
     }
   });
 
-  it("retains historical worker adapters without a launch composer", () => {
-    expect(source("app/api/agent-runs/route.ts")).toContain(
-      '.is("parent_numo_turn_id", null)',
-    );
-    expect(source("app/api/issues/[id]/agent/route.ts")).toContain(
-      "parent_numo_turn_id == null",
-    );
-    expect(source("components/agent/agent-conversation.tsx")).toContain(
-      "useAgentRunLocalDiff(",
-    );
-    expect(production.some(({ file }) => file.endsWith("session-compose.tsx"))).toBe(false);
-    expect(production.some(({ file }) => file.endsWith("agent-compose-draft.ts"))).toBe(false);
-  });
 });

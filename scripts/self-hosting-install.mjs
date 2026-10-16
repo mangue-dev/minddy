@@ -194,7 +194,6 @@ export function generatedValues(capabilities = new Set()) {
     S3_PROTOCOL_ACCESS_KEY_SECRET: secret(),
     MINIO_ROOT_PASSWORD: secret(),
     POOLER_TENANT_ID: randomBytes(12).toString("hex"),
-    AGENT_RUNNER_SECRET: secret(),
     CRON_SECRET: secret(),
     // Forge secrets are ALWAYS generated: GitHub/GitLab connect through the
     // managed forge relay by default (credentials provisioned on first
@@ -327,9 +326,6 @@ export function environmentValues(options, generated = generatedValues(options.c
     // provisioning of the relay identity on first connect.
     ...(options.forgeRelay === false ? { MINDDY_FORGE_RELAY: "0" } : {}),
     MINDDY_SELF_HOST_FEATURES: [...capabilities].join(","),
-    AGENT_EXECUTION_BACKEND: "self-hosted",
-    AGENT_RUNNER_URL: "http://agent-runner:6464",
-    AGENT_CONTROL_ORIGIN: "http://minddy:3000",
     EMAIL_PROVIDER: capabilities.has("application-email") ? "resend" : "",
     VAPID_SUBJECT: capabilities.has("web-push") ? `mailto:${adminEmail}` : "",
     MINDDY_SCHEDULER_URL: "http://minddy:3000",
@@ -540,7 +536,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
   if (options.bootstrap && !options.dbUrl) fail("--db-url is required unless --skip-bootstrap is used.");
   console.log(`This will ${hasExistingEnvironment ? "reuse" : "create"} ${options.envFile} (mode 0600), start the ${options.mode} Compose profile, and ${options.bootstrap ? "run" : "not run"} Supabase bootstrap.`);
-  console.log(`Optional integrations: ${options.capabilities.size ? [...options.capabilities].join(", ") : "none"}. Scheduled routines and server agent sandboxes are included.`);
+  console.log(`Optional integrations: ${options.capabilities.size ? [...options.capabilities].join(", ") : "none"}. Scheduled routines are included.`);
   assertPrerequisites(options, values);
   if (hasExistingEnvironment) console.log("→ existing environment file left unchanged; resuming safe Compose/bootstrap phases.");
   else if (options.dryRun) console.log("→ would create the protected environment file without replacing an existing file.");
@@ -559,7 +555,9 @@ export async function main(argv = process.argv.slice(2)) {
     // this stateless service before waiting for the rest of the stack.
     command("docker", [...compose, "up", "-d", ...(options.pull === false ? ["--pull", "never"] : []), "--force-recreate", "--wait", "--wait-timeout", "120", "functions"], { dryRun: options.dryRun });
   }
-  command("docker", [...compose, "up", "-d", ...(options.pull === false ? ["--pull", "never"] : []), "--wait", "--wait-timeout", "120"], { dryRun: options.dryRun });
+  // Resumed installations created before the code runner was removed still
+  // have its container; --remove-orphans deletes services no profile defines.
+  command("docker", [...compose, "up", "-d", ...(options.pull === false ? ["--pull", "never"] : []), "--remove-orphans", "--wait", "--wait-timeout", "120"], { dryRun: options.dryRun });
   recordCheckpoint(options.envFile, options.mode === "full" ? "database-started" : "application-stack-started", options);
   if (options.bootstrap) {
     const bootstrap = resolve(SCRIPT_DIR, "bootstrap-supabase.mjs");

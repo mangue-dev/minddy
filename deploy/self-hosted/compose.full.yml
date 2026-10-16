@@ -73,12 +73,10 @@ services:
     depends_on:
       kong:
         condition: service_healthy
-      agent-runner:
-        condition: service_healthy
     networks:
       - default
       - private
-      - agent_egress
+      - app_egress
     labels:
       org.opencontainers.image.version: ${MINDDY_RELEASE:?Set MINDDY_RELEASE from the matching compatibility row.}
     healthcheck:
@@ -140,31 +138,6 @@ services:
       timeout: 5s
       retries: 3
 
-  agent-runner:
-    image: ${MINDDY_IMAGE:?Set MINDDY_IMAGE from the matching compatibility row.}
-    restart: unless-stopped
-    user: "0:0"
-    read_only: true
-    command: ["node", "/app/agent-runner.mjs"]
-    environment:
-      AGENT_RUNNER_SECRET: ${AGENT_RUNNER_SECRET:?Set AGENT_RUNNER_SECRET.}
-      AGENT_RUNNER_SANDBOX_IMAGE: ${MINDDY_IMAGE:?Set MINDDY_IMAGE.}
-      AGENT_RUNNER_NETWORK: minddy-full_agent_egress
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    tmpfs:
-      - /tmp:size=64m,mode=1777
-    networks:
-      - private
-      - agent_egress
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:6464/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-
 volumes:
   caddy_data:
   caddy_config:
@@ -172,8 +145,8 @@ volumes:
 networks:
   # Supabase services use an internal network. Caddy alone joins `edge` for
   # ingress and ACME. Auth uses `auth_egress` for SMTP and password-compromise
-  # checks. The application, runner, and sandboxes use `agent_egress` for
-  # operator-selected providers. Sandboxes do not join the Supabase network.
+  # checks. The application uses `app_egress` for operator-selected AI and
+  # forge providers.
   default:
     internal: true
   edge:
@@ -183,4 +156,4 @@ networks:
   maintenance:
   private:
     internal: true
-  agent_egress:
+  app_egress:

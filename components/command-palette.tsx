@@ -983,7 +983,6 @@ export function CommandPalette({
       onDelete,
       onAskNumo,
       onCopyPrompt,
-      onLaunchAgent,
       cycle,
       objectives,
       onLink,
@@ -1017,23 +1016,6 @@ export function CommandPalette({
               filterCategory: "bulk",
               execute: () => {
                 onCopyPrompt();
-              },
-            } as CpPaletteItem,
-          ]
-        : []),
-      // ⇧A on the selection (MIN-539): Numo takes the whole selection in one
-      // combined request.
-      ...(onLaunchAgent
-        ? [
-            {
-              id: "bulk-launch-agent",
-              title: tBulk("launchAgent"),
-              icon: <NumoActionIcon className="size-4" />,
-              keywords: ["numo", "agent", "implement", "launch", "lancer"],
-              shortcut: ["⇧", "A"],
-              filterCategory: "bulk",
-              execute: () => {
-                onLaunchAgent();
               },
             } as CpPaletteItem,
           ]

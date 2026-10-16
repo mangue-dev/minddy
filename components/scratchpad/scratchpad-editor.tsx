@@ -168,11 +168,9 @@ export function ScratchpadEditor({
   initialValue,
   onChange,
   onCopySection,
-  onLaunchSection,
   startOnCopy,
   placeholder,
   copySectionLabel,
-  launchSectionLabel,
   markdownRef,
   applyExternalRef,
   removeSettledRef,
@@ -183,15 +181,11 @@ export function ScratchpadEditor({
   onChange: (markdown: string) => void;
   /** “Copy section” — `moved` = tasks passed “in progress” by the way. */
   onCopySection: (markdown: string, moved: number) => void;
-  /** “Launch an agent” on the hovered section (MIN-84) — markdown of the section. */
-  onLaunchSection: (markdown: string) => void;
   /** The account option “copy prompt starts the job” (MIN-20): it
- controls the copy gesture, both at the line and at the section. Launching an agent,
-, always starts (MIN-46) — nothing to adjust. */
+ controls the copy gesture, both at the line and at the section. */
   startOnCopy: boolean;
   placeholder: string;
   copySectionLabel: string;
-  launchSectionLabel: string;
   /** Populated with a getter for the editor's live markdown, so the parent's
       "copy all" reflects the current text without waiting for a debounced save. */
   markdownRef?: MutableRefObject<(() => string) | null>;
@@ -333,8 +327,6 @@ export function ScratchpadEditor({
   onChangeRef.current = onChange;
   const onCopySectionRef = useRef(onCopySection);
   onCopySectionRef.current = onCopySection;
-  const onLaunchSectionRef = useRef(onLaunchSection);
-  onLaunchSectionRef.current = onLaunchSection;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const submitIfChanged = (markdown: string) => {
@@ -417,14 +409,6 @@ export function ScratchpadEditor({
     const done = sectionGesture(headingIndex, startOnCopy);
     if (done) onCopySectionRef.current(done.markdown, done.moved);
   };
-  const launchSectionRef = useRef<(headingIndex: number) => void>(() => {});
-  launchSectionRef.current = (headingIndex: number) => {
-    // As with a task: launching an agent always starts the job, and the
-    // move precedes `onLaunchSection` — it is he who closes the notebook, and
-    // this disassembly flushes the autosave.
-    const done = sectionGesture(headingIndex, true);
-    if (done) onLaunchSectionRef.current(done.markdown);
-  };
 
   // pnpm resolves @tiptap/core twice (same 3.27.4 version, two symlink paths),
   // so TaskList/TaskItem's Node type reads as a different identity than the one
@@ -469,12 +453,10 @@ export function ScratchpadEditor({
         SectionCopy.configure({
           label: copySectionLabel,
           onCopy: (index) => copySectionRef.current(index),
-          launchLabel: launchSectionLabel,
-          onLaunch: (index) => launchSectionRef.current(index),
         }),
         SlashCommand.configure({ items: slashItems }),
       ] as unknown as Extensions,
-    [placeholder, copySectionLabel, launchSectionLabel, slashItems]
+    [placeholder, copySectionLabel, slashItems]
   );
 
   // The initial content, frozen during editing. tiptap only reads `content`

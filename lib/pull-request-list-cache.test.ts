@@ -39,11 +39,6 @@ const item = (over: Partial<PullRequestListItem>): PullRequestListItem => ({
   updated_at: "2026-09-01T10:00:00Z",
   issue: null,
   project: null,
-  runId: null,
-  numoOpened: false,
-  activeRunId: null,
-  busyRunId: null,
-  runIds: [],
   ...over,
 });
 
@@ -56,13 +51,12 @@ const page = (pullRequests: PullRequestListItem[]): PullRequestListResponse => (
 });
 
 describe("prepared pinned list display", () => {
-  it("reuses only a successful same-filter/page cache containing the requested PR or run", async () => {
+  it("reuses only a successful same-filter/page cache containing the requested PR", async () => {
     const client = new QueryClient();
-    const key = [...ALL_PULL_REQUESTS_QUERY_KEY, "open", 100, null, null];
-    const data = page([item({ prId: "known", runId: "current", runIds: ["older"] })]);
+    const key = [...ALL_PULL_REQUESTS_QUERY_KEY, "open", 100, null];
+    const data = page([item({ prId: "known" })]);
     client.setQueryData(key, data);
     expect(cachedPullRequestListForPin(client, "open", 100, { pr: "known" })).toBe(data);
-    expect(cachedPullRequestListForPin(client, "open", 100, { run: "older" })).toBe(data);
     expect(cachedPullRequestListForPin(client, "open", 100, { pr: "absent" })).toBeUndefined();
     expect(cachedPullRequestListForPin(client, "completed", 100, { pr: "known" })).toBeUndefined();
     expect(cachedPullRequestListForPin(client, "open", 200, { pr: "known" })).toBeUndefined();
@@ -76,9 +70,9 @@ describe("prepared pinned list display", () => {
   });
 });
 
-const OPEN_KEY = ["pull-requests", "all", "open", 100, null, null] as const;
-const ALL_KEY = ["pull-requests", "all", "all", 100, null, null] as const;
-const MERGED_KEY = ["pull-requests", "all", "merged", 100, null, null] as const;
+const OPEN_KEY = ["pull-requests", "all", "open", 100, null] as const;
+const ALL_KEY = ["pull-requests", "all", "all", 100, null] as const;
+const MERGED_KEY = ["pull-requests", "all", "merged", 100, null] as const;
 const DETAIL_KEY = ["pull-request", "pr-1"] as const;
 
 const newClient = () =>

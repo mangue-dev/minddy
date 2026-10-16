@@ -149,10 +149,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "card.dueDate", labelKey: "dueDate", keys: [["D"]] },
       { id: "card.objective", labelKey: "objective", keys: [["O"]] },
       // The shortcut that ALSO accepts multiple selection: when the pill is
-      // up, “@” speaks of checked tickets (MIN-105) — like ⇧P/⇧A below.
+      // up, “@” speaks of checked tickets (MIN-105) — like ⇧P below.
       { id: "card.askNumo", labelKey: "askNumo", keys: [["@"]] },
       { id: "card.copyPrompt", labelKey: "copyPrompt", keys: [["⇧", "P"]] },
-      { id: "card.launchAgent", labelKey: "launchAgent", keys: [["⇧", "A"]] },
       // Mounted wherever DictateButton carries the shortcut: ticket panel
       // and “new ticket” dialog. He needs ⌘: a combo ⇧ alone
       // triggered on a capital letter typed in the title or description.
@@ -160,9 +159,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
     ],
   },
   {
-    // The same two combos as the card section, but on a multi-selection:
-    // while the selection pill is up, they act on EVERY checked ticket with
-    // one combined prompt (MIN-539) — and outrank the hovered card, the same
+    // The same combo as the card section, but on a multi-selection: while the
+    // selection pill is up, it acts on EVERY checked ticket with one combined
+    // prompt (MIN-539) — and outrank the hovered card, the same
     // precedence “@” follows.
     id: "selection",
     titleKey: "selection",
@@ -171,11 +170,6 @@ export const CHEATSHEET: CheatsheetSection[] = [
         id: "selection.copyPrompt",
         labelKey: "selectionCopyPrompt",
         keys: [["⇧", "P"]],
-      },
-      {
-        id: "selection.launchAgent",
-        labelKey: "selectionLaunchAgent",
-        keys: [["⇧", "A"]],
       },
     ],
   },

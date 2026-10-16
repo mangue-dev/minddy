@@ -20,9 +20,6 @@ export const REQUIRED_PROFILE_FILES = [
   "deploy/self-hosted/scheduler.mjs",
     "deploy/self-hosted/database-proxy.mjs",
     "deploy/self-hosted/functions-bundle.json",
-  "deploy/self-hosted/agent-runner.mjs",
-  "deploy/self-hosted/agent-runner-egress.mjs",
-  "deploy/self-hosted/agent-runner-git-relay.mjs",
   "deploy/self-hosted/.env.example",
 ];
 
@@ -80,10 +77,6 @@ export function createDisposableEnvironment(entry, directory, upstream = {}) {
     SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
     MINDDY_MANAGED_AI: "0",
     MINDDY_MANAGED_BILLING: "0",
-    AGENT_EXECUTION_BACKEND: "self-hosted",
-    AGENT_RUNNER_URL: "http://agent-runner:6464",
-    AGENT_RUNNER_SECRET: "0123456789abcdef0123456789abcdef",
-    AGENT_CONTROL_ORIGIN: "http://minddy:3000",
     CRON_SECRET: "0123456789abcdef0123456789abcdef",
     MINDDY_SCHEDULER_URL: "http://minddy:3000",
   };

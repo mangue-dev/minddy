@@ -2,54 +2,34 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, CodeSimpleIcon as Code2, Copy01Icon, Edit01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { CodeSimpleIcon as Code2, Copy01Icon, Edit01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { NumoIcon } from "@/components/numo-icon";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 /**
- * The two “agent” entries in the menu ⋯ / right-click on a ticket — copy the
- * prompt, launch the Numo agent — shared by the board cards and the panel
- * lateral, so that they do not diverge.
+ * The “Copy as prompt” entry in the ⋯ / right-click menu of a ticket, shared
+ * by the board cards and the side panel so that they do not diverge. It copies
+ * a prompt for the user's own coding agent.
  *
- * Each is a SUBMENU with ways to work on a ticket, in order
- * where we cross them: the plan (frame, without coding), “Implement the ticket”,
- * “Check the implementation” (read again the work against the plan and the
- * comments, fix real bugs), then “Custom” — the instructions
- * written by the user, last because it comes out in all three ways
- * framed. Keyboard shortcuts do not move — ⇧P copies the prompt
- * implementation, ⇧A launches the agent on it — and are therefore displayed on this
- * leaf there.
+ * It is a SUBMENU with the ways to work on a ticket, in the order they are
+ * used: the plan (scope, without coding), “Implement the ticket”, “Check the
+ * implementation” (reread the work against the plan and the comments), then
+ * “Custom” — the user's own instructions, last because they leave the three
+ * framed ways. ⇧P copies the implementation prompt, so it is displayed on that
+ * leaf.
  *
- * The “plan” sheet tracks the status of the ticket: “Generate a plan” when there is no
- * does not, “Check the plan” when he has one — asking for one again would not have
- * direction, and the underlying prompt switches the same way. The leaf
- * “check” does not depend on any state: the menu keeps the same form whatever
- * whatever the ticket (the prompt adapts to the plan which exists or not).
- *
- * Existing session: “Open agent” remains a simple entry (it reopens the
- * conversation, it does not launch anything) and it is “New session” which carries the
- * sous-menu.
+ * The “plan” leaf tracks the ticket: “Generate a plan” when there is none,
+ * “Check the plan” when it has one, and the underlying prompt switches the
+ * same way.
  */
 export function useAgentMenuActions({
-  agentsEnabled,
-  hasSession,
   hasPlan,
   onCopyPrompt,
   onCopyPlanPrompt,
   onCopyVerifyPrompt,
   onCopyCustomPrompt,
-  onImplementWithAgent,
-  onWritePlanWithAgent,
-  onVerifyWithAgent,
-  onCustomWithAgent,
-  onOpenSession,
 }: {
-  /** Agents available (linked repository) — otherwise, no agent entry. */
-  agentsEnabled: boolean;
-  /** The ticket already has an agent conversation. */
-  hasSession: boolean;
   /** The ticket already has a plan (at least one task) → check, rather than write. */
   hasPlan: boolean;
   onCopyPrompt: () => void;
@@ -58,22 +38,13 @@ export function useAgentMenuActions({
   onCopyVerifyPrompt: () => void;
   /** Opens the free instruction dialog, then copies the corresponding prompt. */
   onCopyCustomPrompt: () => void;
-  onImplementWithAgent: () => void;
-  onWritePlanWithAgent: () => void;
-  /** Lance Numo on checking the work already done. */
-  onVerifyWithAgent: () => void;
-  /** Open the free locker dialog, then launch Numo on it. */
-  onCustomWithAgent: () => void;
-  /** Reopens the existing conversation (modal on panel side, Numo panel on card side). */
-  onOpenSession: () => void;
 }): ContextMenuAction[] {
   const t = useTranslations("IssueUI");
-  const tAgent = useTranslations("Agent");
 
   return useMemo(() => {
-
     // The two labels remain searchable together: whatever the state of the
-    // ticket, typing “map” or “check” finds the entry.
+    // ticket, typing “plan” or “check” finds the entry. French keywords are
+    // intentional: the menu search matches what French users type.
     const planKeywords = [
       "plan",
       "planifier",
@@ -87,8 +58,6 @@ export function useAgentMenuActions({
     ];
     const planLabel = hasPlan ? t("actionReviewPlan") : t("actionWritePlan");
     const implementKeywords = ["implement", "implémenter", "code", "coder", "build"];
-    // “Check” is also the word of the plan sheet: the words that separate
-    // so both (bug, proofread, implementation) are the ones that matter here.
     const verifyKeywords = [
       "verify",
       "vérifier",
@@ -100,35 +69,6 @@ export function useAgentMenuActions({
       "implémentation",
       "implementation",
     ];
-
-    const verifyAction = (id: string, onSelect: () => void, transfersFocus = false): ContextMenuAction => ({
-      id,
-      label: t("actionVerifyImplementation"),
-      keywords: verifyKeywords,
-      icon: <HugeiconsIcon icon={Search01Icon} className="size-4" />,
-      transfersFocus,
-      onSelect,
-    });
-
-    // “Personalized”: the user writes the instructions (dialog), Minddy keeps
-    // the context of the ticket around. Searchable by what you type when you want
-    // get out of the three framed ways.
-    const customAction = (id: string, onSelect: () => void): ContextMenuAction => ({
-      id,
-      label: t("actionCustomPrompt"),
-      keywords: [
-        "custom",
-        "personnalisé",
-        "personnalise",
-        "prompt",
-        "libre",
-        "autre",
-        "own",
-      ],
-      icon: <HugeiconsIcon icon={Edit01Icon} className="size-4" />,
-      transfersFocus: true,
-      onSelect,
-    });
 
     const copyPrompt: ContextMenuAction = {
       id: "copy-prompt",
@@ -151,81 +91,23 @@ export function useAgentMenuActions({
           shortcut: "⇧P",
           onSelect: onCopyPrompt,
         },
-        verifyAction("copy-prompt-verify", onCopyVerifyPrompt),
-        customAction("copy-prompt-custom", onCopyCustomPrompt),
+        {
+          id: "copy-prompt-verify",
+          label: t("actionVerifyImplementation"),
+          keywords: verifyKeywords,
+          icon: <HugeiconsIcon icon={Search01Icon} className="size-4" />,
+          onSelect: onCopyVerifyPrompt,
+        },
+        {
+          id: "copy-prompt-custom",
+          label: t("actionCustomPrompt"),
+          keywords: ["custom", "personnalisé", "personnalise", "prompt", "libre", "autre", "own"],
+          icon: <HugeiconsIcon icon={Edit01Icon} className="size-4" />,
+          transfersFocus: true,
+          onSelect: onCopyCustomPrompt,
+        },
       ],
     };
-
-    if (!agentsEnabled) return [copyPrompt];
-
-    // The two sheets of agent launch. ⇧A is only displayed when it
-    // REALLY triggers this sheet — with an existing session it reopens
-    // the conversation, and the shortcut therefore remains on “Open agent”.
-    const launchChildren: ContextMenuAction[] = [
-      {
-        id: "agent-plan",
-        label: planLabel,
-        keywords: planKeywords,
-        icon: <HugeiconsIcon icon={TaskDone01Icon} className="size-4" />,
-        transfersFocus: true,
-        onSelect: onWritePlanWithAgent,
-      },
-      {
-        id: "agent-implement",
-        label: t("actionImplement"),
-        keywords: implementKeywords,
-        icon: <AppIcon icon={Code2} className="size-4" />,
-        shortcut: "⇧A",
-        transfersFocus: true,
-        onSelect: onImplementWithAgent,
-      },
-      verifyAction("agent-verify", onVerifyWithAgent, true),
-      customAction("agent-custom", onCustomWithAgent),
-    ];
-
-    return hasSession
-      ? [
-          copyPrompt,
-          {
-            id: "open-agent",
-            label: tAgent("openAgent"),
-            keywords: ["agent", "open", "ouvrir", "session", "code", "ai", "numo"],
-            icon: <NumoIcon className="size-4" />,
-            transfersFocus: true,
-            onSelect: onOpenSession,
-          },
-          {
-            id: "new-agent-session",
-            label: tAgent("newSession"),
-            keywords: ["agent", "new", "nouvelle", "session", "launch", "lancer", "numo"],
-            icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />,
-            children: launchChildren,
-          },
-        ]
-      : [
-          copyPrompt,
-          {
-            id: "launch-agent",
-            label: tAgent("menuLaunch"),
-            keywords: ["agent", "launch", "lancer", "code", "ai", "numo"],
-            icon: <NumoIcon className="size-4" />,
-            children: launchChildren,
-          },
-        ];
-  }, [
-    agentsEnabled,
-    hasSession,
-    hasPlan,
-    onCopyPrompt,
-    onCopyPlanPrompt,
-    onCopyVerifyPrompt,
-    onCopyCustomPrompt,
-    onImplementWithAgent,
-    onWritePlanWithAgent,
-    onVerifyWithAgent,
-    onCustomWithAgent,
-    onOpenSession,
-    t,
-    tAgent,
-  ]);
+    return [copyPrompt];
+  }, [hasPlan, onCopyPrompt, onCopyPlanPrompt, onCopyVerifyPrompt, onCopyCustomPrompt, t]);
 }

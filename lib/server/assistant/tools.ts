@@ -14,10 +14,6 @@ import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { ACCOUNT_THEMES } from "@/lib/account-theme";
 import { SEND_MODES } from "@/lib/keyboard/send-shortcut";
-import {
-  SANDBOX_REGIONS,
-  SANDBOX_SIZES,
-} from "@/lib/agent-sandbox-config";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
@@ -65,7 +61,7 @@ export type AssistantToolDef = {
  * namely: `update_page` replaces the ENTIRE body, therefore one line of image that one
  * has not copied is a file detached from its document.
  *
- * The same prose on the three surfaces (MCP, Numo, code agent), like the
+ * The same prose on both surfaces (MCP and Numo), like the
  * remains of the instructions for using the syntax.
  */
 const PAGE_FILES_DESCRIPTION =
@@ -93,7 +89,7 @@ const ISSUE_FIELD_PROPERTIES = {
   plan: {
     type: ["string", "null"],
     description:
-      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets — the grounded technical plan is the code agent's job (launch_code_agent, mode 'plan'). On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to reword a passage use edit_issue_text, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan.",
+      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets. On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to reword a passage use edit_issue_text, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan.",
   },
   status: {
     type: "string",
@@ -139,7 +135,7 @@ const ISSUE_FIELD_PROPERTIES = {
 
 const CREATE_ISSUE_FIELD_PROPERTIES = {
   ...ISSUE_FIELD_PROPERTIES,
-  // Creation-only landing rule (mirrors the code agent's create_issue): WHERE
+  // Creation-only landing rule (mirrors the MCP create_issue): WHERE
   // the issue lands is an account setting, not a model choice. execute-tool
   // falls back to the user's configured Numo default when this field is left
   // out, so omitting it is always safe; forcing one is reserved for an
@@ -1541,7 +1537,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, analytics consent, the code agent's selected engine, adapter capabilities, safe native connection status, OpenCode model and reasoning defaults, branch prefix and sandbox (region, size). Native credentials and login capabilities are never returned. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, and analytics consent. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1550,7 +1546,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_account_settings",
       description:
-        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user. The code-agent engine, model and reasoning are read-only here and can only be changed by the user in Account settings.",
+        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user.",
       parameters: {
         type: "object",
         properties: {
@@ -1687,23 +1683,6 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "The user's product-analytics consent (cookies, PostHog). 'accepted' enables measurement, 'declined' turns it off, null clears the stored answer (they will be asked again).",
           },
-          sandbox_region: {
-            type: "string",
-            enum: [...SANDBOX_REGIONS],
-            description:
-              "Region of the server sandbox where Numo's code agent runs: 'eu' (Dublin) or 'us' (Virginia). Closer region, faster worker I/O.",
-          },
-          sandbox_size: {
-            type: "string",
-            enum: [...SANDBOX_SIZES],
-            description:
-              "Resources of the server sandbox where Numo's code agent runs: 'standard' (4 vCPU / 8 GB) or 'performance' (8 vCPU / 16 GB, costs more per hour against the AI budget).",
-          },
-          branch_prefix: {
-            type: ["string", "null"],
-            description:
-              "Prefix for new branches created by Numo, for example 'numo/' or 'team/numo/'. The trailing slash is added automatically. null resets it to 'numo/'. Existing branches are unchanged.",
-          },
         },
       },
     },
@@ -1723,7 +1702,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_plan_usage",
       description:
-        "Read the current user's plan consumption and recent execution history, read-only: the AI budget spent in the current billing window (included vs used USD), the spend per segment (agents, routines, Numo, dictation, feedback, automations), and the most recent code-agent runs and routine passages with their status and cost. Use it when the user asks what their plan was used for, what agents or routines recently did, or what their budget looks like. Read-only: it cannot change the plan, the budget or any setting.",
+        "Read the current user's plan consumption, read-only: the AI budget spent in the current billing window (included vs used USD) and the spend per segment (routines, Numo, dictation, feedback, automations). Use it when the user asks what their plan was used for or what their budget looks like; list_routine_runs tells what a routine recently did. Read-only: it cannot change the plan, the budget or any setting.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -2137,118 +2116,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "list_agent_models",
-      description:
-        "List code-worker models available to this user through their active provider. The result is informational: Numo may explain the current account configuration, but only the user can change the worker model in Account settings. Always pass `query` to narrow — a provider catalog can hold hundreds of models.",
-      parameters: {
-        type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description:
-              "Case-insensitive substring to filter models by id or name (e.g. 'gpt', 'claude', 'sonnet', 'deepseek', 'gemini'). Omit only to sample the top of the catalog.",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "launch_code_agent",
-      description:
-        "Delegate a complete repository task to the code worker owned by this Numo turn, using the engine selected by the user in Account settings. Read get_account_settings for adapter capabilities: OpenCode uses API model/reasoning preferences; native Codex or Claude Code uses the connected subscription and CLI defaults, with guarded Minddy MCP tools. Native built-in tools, images and subagents are unavailable; mediate questions through Numo. Authentication or subscription failures do not fall back to API billing. Launch results describe the frozen worker capabilities. First gather the issue, plan, relevant wiki pages and pull request when they exist; resolve important ambiguity; and decide that repository work is actually needed — CODE work: writing files, pushing, rebasing, revising a branch, or a line-anchored review. Merging, renaming, commenting on or resolving the review conversations of a pull request is NOT repository work: those gestures go through merge_pull_request, update_pull_request, post_pull_request_comment and resolve_pull_request_threads directly. A ticket is optional context, not the delegation identity. The worker returns here and Numo gives the final answer in this conversation. Reuse `continuation_run_id` for follow-up on the appropriate worker lineage. A pull request is not automatic. Engine, model and reasoning overrides are never accepted.",
-      parameters: {
-        type: "object",
-        properties: {
-          issue_id: {
-            type: "string",
-            description:
-              "Optional issue context. Required only for plan, implement and verify.",
-          },
-          pull_request_id: {
-            type: "string",
-            description:
-              "Optional Minddy pull request id. Required for review and fix so the selected PR and branch remain the delegation anchor.",
-          },
-          mode: {
-            type: "string",
-            enum: ["plan", "implement", "verify", "custom", "review", "fix"],
-            description:
-              "Which job to send. The first three are written for you, word for word like the app's own buttons: 'plan' scopes the issue WITHOUT coding (writes the implementation plan, or reviews it task by task when one already exists) and leaves the issue's status alone; 'implement' does the work (the instructions adapt to the issue's plan and effort); 'verify' checks the implementation already done against the plan and the issue's comments, then fixes the bugs it can prove. 'review' reads the selected pull request without writing to its branch and delivers the existing PR review output. 'fix' continues work on the selected pull request and its current branch. 'custom' is for anything else.",
-          },
-          prompt: {
-            type: "string",
-            description:
-              "Optional native-mode precision retained for compatibility. Put the complete worker task in objective.",
-          },
-          objective: {
-            type: "string",
-            description:
-              "The complete, unambiguous task the worker must accomplish. Include the desired outcome, not just an issue title or a request to investigate.",
-          },
-          source_references: {
-            type: "array",
-            description:
-              "Sources Numo gathered and relied on for the brief. Cite issues, plans, pages, pull requests, conversation facts, attachments or URLs explicitly.",
-            items: {
-              type: "object",
-              properties: {
-                kind: {
-                  type: "string",
-                  enum: ["issue", "plan", "page", "pull_request", "conversation", "attachment", "url", "other"],
-                },
-                label: { type: "string" },
-                id: { type: "string" },
-                url: { type: "string" },
-                version: { type: "string" },
-              },
-              required: ["kind", "label"],
-            },
-          },
-          constraints: {
-            type: "array",
-            items: { type: "string" },
-            description:
-              "Known product, compatibility, scope, security or delivery constraints the worker must preserve. Pass an empty array only when there are none beyond repository instructions.",
-          },
-          authorized_work: {
-            type: "array",
-            items: {
-              type: "string",
-              enum: ["read_repository", "modify_repository", "run_verification", "commit_changes", "manage_pull_request", "update_issue_plan"],
-            },
-            description:
-              "Explicit work Numo authorizes for this task. Implementation includes modifying the repository, committing changes and managing its pull request. Grant only what the user's request requires.",
-          },
-          requires_pull_request: {
-            type: "boolean",
-            description:
-              "Set true for implementation and whenever the user or routine requests delivery through a pull request. Requires manage_pull_request authorization. The worker must produce a real PR or return an explicit delivery failure; a branch alone is insufficient. Set false for inspection, planning or verification without implementation.",
-          },
-          expected_output: {
-            type: "array",
-            items: { type: "string" },
-            description:
-              "Optional task-specific additions to the standard structured result (summary, changed files, verification, artifacts and unresolved decisions).",
-          },
-          continuation_run_id: {
-            type: "string",
-            description:
-              "Run id from an earlier delegation when this is follow-up work that must reuse its code conversation and branch/PR lineage.",
-          },
-        },
-        // `mode` is REQUIRED: on a small model, an optional field is not
-        // simply not filled in — the choice of job would then always be 'custom'
-        // by default, and the three native instructions would never be used.
-        required: ["mode", "objective", "source_references", "constraints", "authorized_work", "requires_pull_request"],
-      },
-    },
-  },
-  // ── Routines (MIN-185) : un run d'agent qui revient tout seul ──────────
+  // ── Routines (MIN-185): a Numo task that comes back on its own ──────────
   {
     type: "function",
     function: {
@@ -2315,7 +2183,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_routine_occurrence",
       description:
-        "Read ONE occurrence of a routine in full: its run state (running, completed, failed, canceled or paused waiting for the owner's input), its outcome and error, any delegated code work (pull request), and — when the caller is the routine's owner — its conversation: what the occurrence said and decided (assistant messages; tool actions summarized). The transcript is private to the owner; for a member the tool returns the state only. Use list_routine_runs to find occurrence ids.",
+        "Read ONE occurrence of a routine in full: its run state (running, completed, failed, canceled or paused waiting for the owner's input), its outcome and error, and — when the caller is the routine's owner — its conversation: what the occurrence said and decided (assistant messages; tool actions summarized). The transcript is private to the owner; for a member the tool returns the state only. Use list_routine_runs to find occurrence ids.",
       parameters: {
         type: "object",
         properties: {
@@ -2334,7 +2202,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. To delegate repository work, use launch_code_agent with that exact pull_request_id and mode review or fix.",
+        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR.",
       parameters: {
         type: "object",
         properties: {
@@ -2381,12 +2249,9 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   /**
    * PR management without touching the code (MIN-550): merge, rename /
    * re-describe, comment, edit a comment Numo posted itself, resolve (or
-   * reopen) review conversations. Everything CODE (branch changes, pushes,
-   * rebases) stays delegated to the code agent — these tools never modify
-   * the content of the code, only the PR metadata and its thread. The merge
-   * carries the same guardrail prose as the code agent's
-   * `set_pull_request_state`: irreversible, confirmed by the user, never
-   * against a red CI or a conflict — the executor (`pull-request-writes.ts`)
+   * reopen) review conversations. These tools never modify the content of the
+   * code, only the PR metadata and its thread. The merge is irreversible,
+   * confirmed by the user, never against a red CI or a conflict — the executor (`pull-request-writes.ts`)
    * re-checks all three before calling the forge.
    */
   {
@@ -2394,7 +2259,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "merge_pull_request",
       description:
-        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks all three and refuses, but a refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so — merging is never a reason to delegate to launch_code_agent.",
+        "Merge a pull request of the project's linked repository. MERGING IS IRREVERSIBLE: never merge on your own initiative — confirm the intent with the user first (ask_user), and never merge with red or running CI checks, with merge conflicts, or a pull request still in draft. The tool re-checks all three and refuses, but a refusal is information, not a challenge: report it instead of retrying. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass merge_method only when the user named one (merge, squash, rebase — only the methods the forge offers). On success the linked issue's status follows the pull request: merged → done. If the merge is refused for reasons you cannot fix yourself (protection rules, missing approvals), say so.",
       parameters: {
         type: "object",
         properties: {
@@ -2422,7 +2287,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_pull_request",
       description:
-        "Rename a pull request and/or rewrite its description — the PR metadata only, NEVER the code (for changes to the branch itself, use launch_code_agent). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass at least one of title and body. Use it on an explicit user request ('rename this PR…') or when you opened the PR through the agent and its title no longer describes what the branch carries.",
+        "Rename a pull request and/or rewrite its description — the PR metadata only, NEVER the code. Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request). Pass at least one of title and body. Use it on an explicit user request ('rename this PR…') or when you opened the PR through the agent and its title no longer describes what the branch carries.",
       parameters: {
         type: "object",
         properties: {
@@ -2453,7 +2318,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "post_pull_request_comment",
       description:
-        "Post a comment in the conversation thread of a pull request (NOT anchored to code — line remarks stay with launch_code_agent). The comment is signed at the forge as Numo (minddy). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request); body is the markdown comment. Use it to report a review verdict, answer a question in the thread, or keep the author posted — in the user's language.",
+        "Post a comment in the conversation thread of a pull request (NOT anchored to code). The comment is signed at the forge as Numo (minddy). Identify the pull request by issue_id or pull_request_id, exactly one (same resolution as read_pull_request); body is the markdown comment. Use it to report a review verdict, answer a question in the thread, or keep the author posted — in the user's language.",
       parameters: {
         type: "object",
         properties: {
@@ -2481,7 +2346,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "edit_own_pull_request_comment",
       description:
-        "Edit the body of a conversation comment YOU posted on a pull request — never a comment written by a human. The executor checks the author (your bot identity, or your Numo signature on the body) and refuses anything else. Get the comment id from the result of post_pull_request_comment or from read_pull_request's conversation_comments; body is the FULL new markdown body (it replaces the old one, it does not append). Like every PR tool here, it never touches the code — branch changes stay with launch_code_agent.",
+        "Edit the body of a conversation comment YOU posted on a pull request — never a comment written by a human. The executor checks the author (your bot identity, or your Numo signature on the body) and refuses anything else. Get the comment id from the result of post_pull_request_comment or from read_pull_request's conversation_comments; body is the FULL new markdown body (it replaces the old one, it does not append). Like every PR tool here, it never touches the code.",
       parameters: {
         type: "object",
         properties: {
@@ -2513,7 +2378,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "resolve_pull_request_threads",
       description:
-        "Mark review conversations of a pull request as RESOLVED at the forge (or reopen already-resolved ones with resolved: false), without any delegation — this is PR metadata, not repository work. Each conversation is designated by the root comment id of its thread, the `id` read_pull_request puts on every review_comments entry. Only resolve a conversation whose request is FULLY addressed: the code change is on the branch (your launch_code_agent run came back), or the request needed no code and you answered it in the thread with post_pull_request_comment. Never resolve wholesale to tidy up — an unresolved conversation is how a reviewer tracks what is still open. The conversations are closed under minddy's account, like every PR gesture here.",
+        "Mark review conversations of a pull request as RESOLVED at the forge (or reopen already-resolved ones with resolved: false) — this is PR metadata, not repository work. Each conversation is designated by the root comment id of its thread, the `id` read_pull_request puts on every review_comments entry. Only resolve a conversation whose request is FULLY addressed: the code change is on the branch, or the request needed no code and you answered it in the thread with post_pull_request_comment. Never resolve wholesale to tidy up — an unresolved conversation is how a reviewer tracks what is still open. The conversations are closed under minddy's account, like every PR gesture here.",
       parameters: {
         type: "object",
         properties: {
@@ -2556,7 +2421,6 @@ export const ACCOUNT_TOOLS = new Set([
   "update_account_settings",
   "get_user_stats",
   "get_plan_usage",
-  "list_agent_models",
   "list_trash",
   "move_to_trash",
   "restore_from_trash",
@@ -2727,31 +2591,3 @@ export const CONVERSATION_ASSISTANT_TOOLS = buildGlobalTools().map((tool) => {
   };
   return targeted;
 });
-
-const ANSWER_CODE_WORKER_TOOL: AssistantToolDef = {
-  type: "function",
-  function: {
-    name: "answer_code_worker",
-    description:
-      "Answer the exact pending question from the code worker and warm-resume its preserved task. Use only the run, parent turn and question identifiers supplied in the mediation context. Do not use this when the parent conversation does not reliably determine the answer; ask the user instead.",
-    parameters: {
-      type: "object",
-      properties: {
-        parent_turn_id: { type: "string" },
-        run_id: { type: "string" },
-        question_id: { type: "string" },
-        answer: {
-          type: "string",
-          description: "A direct, self-contained answer to give the waiting worker.",
-        },
-      },
-      required: ["parent_turn_id", "run_id", "question_id", "answer"],
-    },
-  },
-};
-
-/** Restricted surface used while Numo mediates one worker decision. */
-export const WORKER_MEDIATION_ASSISTANT_TOOLS = [
-  CONVERSATION_ASSISTANT_TOOLS.find((tool) => tool.function.name === "ask_user")!,
-  ANSWER_CODE_WORKER_TOOL,
-];

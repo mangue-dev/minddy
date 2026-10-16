@@ -12,8 +12,6 @@ export type CapabilityId =
   | "storage"
   | "managedBilling"
   | "managedAi"
-  | "agentExecution"
-  | "vercelSandbox"
   | "scheduler"
   | "analytics"
   | "transactionalEmail"
@@ -33,20 +31,6 @@ export interface CapabilityStatus {
 }
 
 export type CapabilityEnvironment = Record<string, string | undefined>;
-
-export type AgentExecutionBackend = "self-hosted" | "vercel" | null;
-
-/**
- * The server sandbox selected for every agent run. Interactive Numo sessions,
- * routines, automations, reviews, web clients, and desktop clients deliberately
- * share this deployment-level decision.
- */
-export function resolveAgentExecutionBackend(
-  env: CapabilityEnvironment,
-): AgentExecutionBackend {
-  const backend = env.AGENT_EXECUTION_BACKEND?.trim();
-  return backend === "self-hosted" || backend === "vercel" ? backend : null;
-}
 
 import { resolveDeploymentEdition } from "@/lib/env";
 import {
@@ -167,73 +151,6 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     keys: ["OPENROUTER_API_KEY"],
     ready: "Managed OpenRouter quota is enabled; BYOK remains an alternative.",
   });
-
-  const sandboxBackend = resolveAgentExecutionBackend(env);
-  const sandboxKeys = present(env, "VERCEL")
-    ? []
-    : missing(env, [
-        "VERCEL_TOKEN",
-        "VERCEL_TEAM_ID",
-        "VERCEL_PROJECT_ID",
-        "MINDDY_PUBLIC_APP_URL",
-      ]);
-  // Match RootKeyCrypto's contract before allocating a sandbox or sealing its policy.
-  if (!/^[a-fA-F0-9]{64}$/.test(env.MINDDY_DATA_ROOT_KEY ?? "")) {
-    sandboxKeys.push("MINDDY_DATA_ROOT_KEY (64 hexadecimal characters)");
-  }
-  const vercelSandbox =
-    sandboxBackend !== "vercel"
-      ? status({
-          id: "vercelSandbox",
-          requirement: "replaceable",
-          state: "disabled",
-          diagnostic:
-            "Vercel Sandbox is disabled. Set AGENT_EXECUTION_BACKEND=vercel or configure the self-hosted server runner.",
-        })
-      : sandboxKeys.length === 0
-        ? status({
-            id: "vercelSandbox",
-            requirement: "replaceable",
-            state: "ready",
-            diagnostic: "Vercel Sandbox execution is explicitly enabled.",
-          })
-        : status({
-            id: "vercelSandbox",
-            requirement: "replaceable",
-            state: "incomplete",
-            missing: sandboxKeys,
-            diagnostic: `Vercel Sandbox configuration is incomplete. Set: ${sandboxKeys.join(", ")}.`,
-          });
-  const selfHostedRunnerMissing = missing(env, ["AGENT_RUNNER_URL", "AGENT_RUNNER_SECRET"]);
-  const agentExecution = sandboxBackend === "self-hosted"
-    ? selfHostedRunnerMissing.length === 0
-      ? status({
-          id: "agentExecution",
-          requirement: "replaceable",
-          state: "ready",
-          diagnostic: "The built-in self-hosted agent runner is configured.",
-        })
-      : status({
-          id: "agentExecution",
-          requirement: "replaceable",
-          state: "incomplete",
-          missing: selfHostedRunnerMissing,
-          diagnostic: `Self-hosted agent runner selected but configuration is missing: ${selfHostedRunnerMissing.join(", ")}.`,
-        })
-    : sandboxBackend === "vercel"
-      ? status({
-          id: "agentExecution",
-          requirement: "replaceable",
-          state: vercelSandbox.state,
-          missing: vercelSandbox.missing,
-          diagnostic: vercelSandbox.diagnostic,
-        })
-      : status({
-          id: "agentExecution",
-          requirement: "replaceable",
-          state: "disabled",
-          diagnostic: "Server-side agent execution is disabled; configure AGENT_EXECUTION_BACKEND and its server sandbox.",
-        });
 
   const clientAnalytics = present(env, "MINDDY_PUBLIC_POSTHOG_KEY") &&
     present(env, "MINDDY_PUBLIC_POSTHOG_HOST");
@@ -427,8 +344,6 @@ export function resolveCapabilities(env: CapabilityEnvironment): Record<Capabili
     }),
     managedBilling: billing,
     managedAi,
-    agentExecution,
-    vercelSandbox,
     scheduler:
       !present(env, "CRON_SECRET")
           ? status({

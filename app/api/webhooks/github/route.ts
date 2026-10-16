@@ -1,5 +1,3 @@
-import { filterLinkedIssueRuns } from "@/lib/server/agent/activity";
-import { pullRequestIssueIds } from "@/lib/server/agent/pull-requests";
 import { type NextRequest, NextResponse } from "next/server";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -10,14 +8,10 @@ import {
   getProvisionedWebhookSecret,
   loadProvisionedRelayConfig,
 } from "@/lib/server/forge-relay/provisioning";
-import { syncPrState, findRunsForPr } from "@/lib/server/agent/runs";
-import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import {
   applyForgePrToIssue,
   isPrActionEcho,
-  recordForgePrActionEvents,
   recordForgePrGesture,
-  notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
 import { notifyPullRequestOpened } from "@/lib/server/agent/pr-opened-notify";
 import {
@@ -63,8 +57,8 @@ import type { PrActionEventType } from "@/lib/pr-events";
  * We check the HMAC signature (`X-Hub-Signature-256`) then we synchronize the state
  * Pull Requests from the repository:
  * - `pull_request` → INGEST the PR in `pull_requests` (MIN-143: from Numo or
- * of a human, it's the same fact of the repository), updates `agent_runs.pr_state`
- * (the in-app review reflects the real state on the GitHub side) AND trace in the activity
+ * of a human, it's the same fact of the repository), so the in-app review
+ * reflects the real state on the GitHub side, AND trace in the activity
  * of the related issue what was done DIRECTLY on GitHub: open (`opened`),
  *    push commits (`synchronize`), accept or reject (`closed`).
  * - `pull_request_review` → trace “approved the PR” / “requested changes”,
@@ -371,88 +365,22 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // did it `if (!prState) return`, amounted to never tracing it.
   if (!prState && !actionType) return;
 
-  const prRuns = prState
-    ? await syncPrState({
-        repoFullName,
-        prNumber: number,
-        prState,
-        prUrl: payload.pull_request?.html_url ?? null,
-        provider: "github",
-      })
-    : await findRunsForPr({
-        repoFullName,
-        prNumber: number,
-        provider: "github",
-      });
   const linkedPr = await findPullRequestByNumber({ provider: "github", repoFullName, number });
-  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
-  const currentPrState =
-    linkedPr?.state ?? prRuns[0]?.prState ??
-    ingested?.state ??
-    prState;
-
+  const currentPrState = linkedPr?.state ?? ingested?.state ?? prState;
   const byHuman = !isBot(payload.sender);
 
-  // Synchronize manual associations; worker issues keep their existing notification path.
-  {
-    await applyForgePrToIssue({
-      excludeIssueIds: runs.map((run) => run.issueId),
-      provider: "github",
-      repoFullName,
-      prNumber: number,
-      prState: currentPrState,
-      actionType: byHuman ? actionType : null,
-      accountId: actorAccountId(payload.sender),
-      login: payload.sender?.login ?? null,
-      occurredAt: prEventAt,
-    });
-    if (runs.length === 0) return;
-  }
-
-  // Aligns the status of the issues with the new PR state (MIN-46):
-  // merged→done, closed→todo, ouverte→in_review, brouillon→in_progress.
-  if (currentPrState) {
-    for (const run of runs) {
-      // `issueId` null = run notebook (MIN-84): no issue to align.
-      if (run.createdBy && run.issueId) {
-        await syncIssueStatusFromPr({
-          issueId: run.issueId,
-          actorId: run.createdBy,
-          prState: currentPrState,
-        });
-      }
-    }
-  }
-  // `byHuman` no longer says “made on GitHub” since MIN-144: a merge/close
-  // launched from minddy also has a human account. The echo is therefore read on
-  // the event that the road has just written.
-  const echo =
-    !!actionType &&
-    byHuman &&
-    (await isPrActionEcho({
-      issueIds: runs.map((r) => r.issueId),
-      type: actionType,
-      prNumber: number,
-      provider: "github",
-      accountId: actorAccountId(payload.sender),
-      login: payload.sender?.login ?? null,
-    }));
-  if (actionType && byHuman && !echo) {
-    await recordForgePrActionEvents({
-      runs,
-      type: actionType,
-      prNumber: number,
-      provider: "github",
-      login: payload.sender?.login ?? null,
-      occurredAt: prEventAt,
-    });
-    // Inbox: the author of the run learns that his PR has been merged (MIN-138).
-    await notifyForgePrAction({
-      runs,
-      type: actionType,
-      actorLogin: payload.sender?.login ?? null,
-    });
-  }
+  // Align every linked ticket's status and record the human gesture (MIN-46,
+  // MIN-143): merged→done, closed→todo, open→in_review, draft→in_progress.
+  await applyForgePrToIssue({
+    provider: "github",
+    repoFullName,
+    prNumber: number,
+    prState: currentPrState,
+    actionType: byHuman ? actionType : null,
+    accountId: actorAccountId(payload.sender),
+    login: payload.sender?.login ?? null,
+    occurredAt: prEventAt,
+  });
 }
 
 /**

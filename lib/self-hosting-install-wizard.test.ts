@@ -128,7 +128,7 @@ describe("published self-hosting installation capabilities", () => {
       if (path === "local") expect(command).toContain("git clone --branch v0.11.0");
       if (path === "full") {
         expect(command).toContain("--mode full --skip-start");
-        expect(host.querySelector(`a[href="https://example.test/docs/install-a-server#adapted-start"]`)).toBeTruthy();
+        expect(host.querySelector(`a[href="https://example.test/docs/install-a-server#install"]`)).toBeTruthy();
         expect(host.textContent).toContain(copy.fullPreparedDone);
       }
     });
@@ -145,7 +145,7 @@ describe("published self-hosting installation capabilities", () => {
       if (path === "full") {
         expect(prompt).toContain("--mode full --skip-start");
         expect(prompt).toContain(copy.fullPreparationBody);
-        expect(prompt).toContain("https://example.test/docs/install-a-server#adapted-start");
+        expect(prompt).toContain("https://example.test/docs/install-a-server#install");
       }
       expect(prompt).not.toContain("MINDDY_ENCRYPTION_SETUP");
     });

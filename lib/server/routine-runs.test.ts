@@ -158,7 +158,6 @@ describe("Numo routine run reads", () => {
     expect(routineRunStatus(null)).toBe("queued");
     expect(routineRunStatus("queued")).toBe("running");
     expect(routineRunStatus("running")).toBe("running");
-    expect(routineRunStatus("waiting_work")).toBe("running");
     expect(routineRunStatus("waiting_input")).toBe("running");
     expect(routineRunStatus("completed")).toBe("completed");
     expect(routineRunStatus("failed")).toBe("failed");
@@ -171,15 +170,15 @@ describe("Numo routine run reads", () => {
       { id: TURN_A, conversation_id: CONVERSATION_A, created_at: "2026-09-21T09:00:00Z",
         status: "waiting_input", cost_usd: 0.02 },
       { id: TURN_B, conversation_id: CONVERSATION_A, created_at: "2026-09-21T10:00:00Z",
-        status: "waiting_work", cost_usd: 0.01, outcome: "Resuming the worker" },
+        status: "running", cost_usd: 0.01, outcome: null },
     ];
     world.spend = [{ conversation_id: CONVERSATION_A, total_cost: 1.8, platform_cost: 1.3 }];
     const { routineRunSummaries } = await import("./routine-runs");
     const [summary] = await routineRunSummaries({ id: ROUTINE_ID } as never);
-    expect(summary).toMatchObject({ cost_usd: 1.8, numo_status: "waiting_work", waiting_input: false });
+    expect(summary).toMatchObject({ cost_usd: 1.8, numo_status: "running", waiting_input: false });
   });
 
-  it("summarizes runs with state, outcome and the delegated pull request", async () => {
+  it("summarizes runs with state and outcome", async () => {
     world.tables["numo_routine_occurrences"] = [
       occurrenceRow({
         id: "88888888-8888-4888-8888-888888888888",
@@ -217,16 +216,6 @@ describe("Numo routine run reads", () => {
         completed_at: "2026-09-22T10:03:00Z",
       },
     ];
-    world.tables["agent_runs"] = [
-      {
-        id: "worker-1",
-        parent_numo_turn_id: TURN_B,
-        pr_number: 42,
-        pr_url: "https://example.com/pull/42",
-        pr_state: "open",
-      },
-    ];
-
     world.spend = [
       { conversation_id: CONVERSATION_A, total_cost: 1.42, platform_cost: 0.92 },
       { conversation_id: CONVERSATION_B, total_cost: 0.8, platform_cost: 0.8 },
@@ -248,8 +237,6 @@ describe("Numo routine run reads", () => {
     expect(finished.status).toBe("completed");
     expect(finished.waiting_input).toBe(false);
     expect(finished.outcome).toBe("summary");
-    expect(finished.pr_number).toBe(42);
-    expect(finished.pr_url).toBe("https://example.com/pull/42");
   });
 
   it("reports a failed reservation even without a turn", async () => {

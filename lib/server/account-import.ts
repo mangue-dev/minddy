@@ -8,9 +8,6 @@ import { encodeCategory } from "./category-store";
 import "server-only";
 import { selectImportedAccountMetadata } from "./account-metadata-import";
 import { encodeIssue } from "@/lib/server/issue-store";
-import { encodeImportedAgentMessage, shouldEncryptAgentLaunch } from "@/lib/server/agent/run-launch-content";
-import { encodeAgentContextSnapshot, shouldEncryptAgentContext } from
-  "@/lib/server/agent/context-snapshot-content";
 
 import { isKnownAgentProvider } from "@/lib/agent-providers";
 import { randomUUID } from "node:crypto";
@@ -29,7 +26,6 @@ import { encodeRoutine } from "@/lib/server/routine-content";
 import { decodeProject, encodeProject } from "@/lib/server/project-content";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
-import { saveAgentPreferences } from "@/lib/server/agent/branch-prefix-content";
 
 type Service = ReturnType<typeof getServiceClient>;
 
@@ -142,6 +138,15 @@ async function validateExistingIds(
 }
 
 /**
+ * Older exports may hold notifications about a retired code-agent conversation
+ * (MIN-721). Their target no longer exists, so they are neither validated nor
+ * imported.
+ */
+function importableNotifications(document: AccountTransferDocument): TransferRow[] {
+  return document.notifications.filter((row) => row.agent_conversation_id == null);
+}
+
+/**
  * Validate the complete transfer graph before the service-role client mutates anything.
  * Imported IDs may target only rows already owned by this account, while project
  * references outside the archive must already be accessible to the account.
@@ -165,8 +170,8 @@ async function validateAccountImportScope(
   uniqueIds(document.agent_routines ?? []);
   const cycleIds = uniqueIds(document.cycles);
   uniqueIds(document.assistant_conversations);
-  const codeConversationIds = uniqueIds(document.code_agent_conversations);
-  uniqueIds(document.notifications);
+  const notificationRows = importableNotifications(document);
+  uniqueIds(notificationRows);
 
   const byId = (rows: TransferRow[]) =>
     new Map(rows.map((row) => [requiredUuid(row, "id"), row]));
@@ -175,7 +180,6 @@ async function validateAccountImportScope(
   const pagesById = byId(document.pages);
   const objectivesById = byId(document.objectives);
   const categoriesById = byId(document.categories ?? []);
-  const codeConversationsById = byId(document.code_agent_conversations);
   const projectOf = (row: TransferRow) => requiredUuid(row, "project_id");
   const referencedRow = (
     row: TransferRow,
@@ -190,21 +194,6 @@ async function validateAccountImportScope(
     if (reference && projectOf(row) !== projectOf(reference)) scopeError();
   };
 
-  const codeTurns = document.code_agent_conversations.flatMap((conversation) =>
-    Array.isArray(conversation.turns)
-      ? (conversation.turns as unknown[]).map((turn) => {
-          if (!turn || typeof turn !== "object" || Array.isArray(turn)) scopeError();
-          const row = turn as TransferRow;
-          const conversationId = requiredUuid(conversation, "id");
-          const declaredConversationId = optionalUuid(row, "conversation_id");
-          if (declaredConversationId && declaredConversationId !== conversationId) scopeError();
-          return { ...row, conversation_id: conversationId };
-        })
-      : [],
-  );
-  const codeTurnIds = uniqueIds(codeTurns);
-  const codeTurnsById = byId(codeTurns);
-
   const projectRows = [
     ...document.memberships,
     ...document.issues,
@@ -216,8 +205,7 @@ async function validateAccountImportScope(
     ...document.views,
     ...(document.agent_routines ?? []),
     ...document.assistant_conversations,
-    ...document.code_agent_conversations,
-    ...document.notifications,
+    ...notificationRows,
     ...document.statistics,
   ];
   const projectIds = new Set(ownedProjectIds);
@@ -276,43 +264,11 @@ async function validateAccountImportScope(
     const category = referencedRow(row, "category_id", categoriesById);
     if (!issue || !category || projectOf(issue) !== projectOf(category)) scopeError();
   }
-  for (const row of document.notifications) {
+  for (const row of notificationRows) {
     requireReference(row, "issue_id", issueIds);
     requireReference(row, "comment_id", commentIds);
-    requireReference(row, "agent_conversation_id", codeConversationIds);
   }
   for (const row of document.statistics) requireReference(row, "issue_id", issueIds);
-  for (const conversation of document.code_agent_conversations) {
-    const conversationId = requiredUuid(conversation, "id");
-    if (Array.isArray(conversation.messages)) {
-      for (const message of conversation.messages as unknown[]) {
-        if (!message || typeof message !== "object" || Array.isArray(message)) scopeError();
-        const row = message as TransferRow;
-        requireReference(row, "turn_id", codeTurnIds);
-        const turn = referencedRow(row, "turn_id", codeTurnsById);
-        if (turn && stringValue(turn, "conversation_id") !== conversationId) scopeError();
-      }
-    }
-    if (Array.isArray(conversation.contexts)) {
-      for (const context of conversation.contexts as unknown[]) {
-        if (!context || typeof context !== "object" || Array.isArray(context)) scopeError();
-        const row = context as TransferRow;
-        const conversationProjectId = projectOf(codeConversationsById.get(conversationId) ?? scopeError());
-        if (row.kind === "issue") {
-          requireReference(row, "resource_id", issueIds);
-          if (projectOf(referencedRow(row, "resource_id", issuesById) ?? scopeError()) !== conversationProjectId) {
-            scopeError();
-          }
-        } else if (row.kind === "page") {
-          requireReference(row, "resource_id", pageIds);
-          if (projectOf(referencedRow(row, "resource_id", pagesById) ?? scopeError()) !== conversationProjectId) {
-            scopeError();
-          }
-        }
-        else scopeError();
-      }
-    }
-  }
 
   const existingProjects = await existingById(
     service,
@@ -390,13 +346,7 @@ async function validateAccountImportScope(
     validateExistingIds(service, "conversations", document.assistant_conversations, "id, user_id", (row) =>
       stringValue(row, "user_id") === userId,
     ),
-    validateExistingIds(service, "agent_conversations", document.code_agent_conversations, "id, owner_id", (row) =>
-      stringValue(row, "owner_id") === userId,
-    ),
-    validateExistingIds(service, "agent_turns", codeTurns, "id, conversation_id", (row, source) =>
-      stringValue(row, "conversation_id") === stringValue(source, "conversation_id"),
-    ),
-    validateExistingIds(service, "notifications", document.notifications, "id, user_id", (row) =>
+    validateExistingIds(service, "notifications", notificationRows, "id, user_id", (row) =>
       stringValue(row, "user_id") === userId,
     ),
   ]);
@@ -868,14 +818,6 @@ async function importAccountTransferCore(
   await upsertRows(service, "attachments", attachments);
   result.attachments = attachments.length;
 
-  if (document.preferences) {
-    const fields = Object.fromEntries(Object.entries(document.preferences)
-      .filter(([key]) => ["branch_prefix", "default_model",
-        "default_model_provider", "default_reasoning_level",
-        "sandbox_region", "sandbox_size"].includes(key)));
-    await saveAgentPreferences(userId, fields, service);
-    result.personalData += 1;
-  }
   for (const preference of document.numo_preferences ?? []) {
     if (typeof preference.provider !== "string" || !isKnownAgentProvider(preference.provider) ||
       !(preference.model === null || typeof preference.model === "string" && /^[\w./:@-]{1,200}$/.test(preference.model))) {
@@ -1042,112 +984,7 @@ async function importAccountTransferCore(
   }
   result.personalData += conversations.length;
 
-  const codeConversationIds = new Map<string, string>();
-  const { encodeAgentTitle, shouldEncryptAgentTitle } = await import(
-    "@/lib/server/agent/run-title-content"
-  );
-  const codeConversations = (await Promise.all(document.code_agent_conversations.map(async (source) => {
-    const id = uuidValue(source, "id");
-    const projectId = mapId(source.project_id, projects.projectIds);
-    if (!id || !projectId) return [];
-    codeConversationIds.set(id, id);
-    const storedTitle = await shouldEncryptAgentTitle(service, projectId)
-      ? await encodeAgentTitle(projectId, id, source.title as string | null ?? null)
-      : { title: source.title ?? null };
-    return [{
-      id,
-      project_id: projectId,
-      owner_id: userId,
-      ...storedTitle,
-      visibility: source.visibility ?? "private",
-      archived_at: source.archived_at ?? null,
-      created_at: source.created_at,
-      updated_at: source.updated_at,
-    }];
-  }))).flat();
-  await upsertRows(service, "agent_conversations", codeConversations);
-  const codeTurnIds = new Map<string, string>();
-  const { encodeTurnSummary, shouldEncryptAgentSummary } = await import(
-    "@/lib/server/agent/run-summary-content"
-  );
-  const codeTurns = (await Promise.all(document.code_agent_conversations.map(async (conversation) => {
-    const conversationId = uuidValue(conversation, "id");
-    const projectId = codeConversations.find((row) => row.id === conversationId)
-      ?.project_id as string | undefined;
-    if (!conversationId || !codeConversationIds.has(conversationId) || !projectId) return [];
-    return Array.isArray(conversation.turns)
-      ? (await Promise.all((conversation.turns as unknown[]).map(async (turn) => {
-          if (!turn || typeof turn !== "object") return [];
-          const row = turn as TransferRow;
-          const id = uuidValue(row, "id");
-          if (!id) return [];
-          codeTurnIds.set(id, id);
-          const protectedSummary = await shouldEncryptAgentSummary(service, projectId);
-          const content = protectedSummary ? {
-            outcome: await encodeTurnSummary(projectId, id, null, "outcome",
-              row.outcome as string | null ?? null),
-            error_message: await encodeTurnSummary(projectId, id, null,
-              "error_message", row.error_message as string | null ?? null),
-          } : { outcome: row.outcome ?? null, error_message: row.error_message ?? null };
-          return [{ ...pick(row, ["id", "status", "model", "reasoning_level", "cost_usd", "started_at", "completed_at", "created_at"]),
-            ...content, id, conversation_id: conversationId }];
-        }))).flat()
-      : [];
-  }))).flat();
-  await upsertRows(service, "agent_turns", codeTurns);
-  const codeMessages = await Promise.all(document.code_agent_conversations.flatMap((conversation) => {
-    const conversationId = uuidValue(conversation, "id");
-    if (!conversationId || !codeConversationIds.has(conversationId)) return [];
-    return Array.isArray(conversation.messages)
-      ? (conversation.messages as unknown[]).flatMap((message) => {
-          if (!message || typeof message !== "object") return [];
-          const row = message as TransferRow;
-          return [{ row, conversationId }];
-        })
-      : [];
-  }).map(async ({ row, conversationId }) => {
-    const id = randomUUID();
-    const projectId = codeConversations.find((item) => item.id === conversationId)?.project_id;
-    if (typeof projectId !== "string" || typeof row.content !== "string") {
-      throw new Error("Invalid imported agent message");
-    }
-    const content = await shouldEncryptAgentLaunch(service, projectId)
-      ? await encodeImportedAgentMessage(projectId, id, row.content)
-      : { content: row.content };
-    return { ...pick(row, ["role", "source", "created_at"]), id, ...content,
-      conversation_id: conversationId, turn_id: mapId(row.turn_id, codeTurnIds),
-      created_by: remapUser(row.created_by, sourceUserId, userId) };
-  }));
-  await upsertRows(service, "agent_messages", codeMessages);
-  const codeContexts = (await Promise.all(document.code_agent_conversations.map(async (conversation) => {
-    const conversationId = uuidValue(conversation, "id");
-    if (!conversationId || !codeConversationIds.has(conversationId)) return [];
-    const projectId = codeConversations.find((item) => item.id === conversationId)?.project_id;
-    if (typeof projectId !== "string") throw new Error("Invalid imported agent context scope");
-    return Array.isArray(conversation.contexts)
-      ? (await Promise.all((conversation.contexts as unknown[]).map(async (context) => {
-          if (!context || typeof context !== "object") return [];
-          const row = context as TransferRow;
-          const resourceId = row.kind === "issue"
-            ? mapId(row.resource_id, issueIds)
-            : row.kind === "page"
-              ? mapId(row.resource_id, pageIds)
-              : null;
-          if (!resourceId) return [];
-          const stored = { conversation_id: conversationId, kind: row.kind as string,
-            resource_id: resourceId, snapshot: row.snapshot as Record<string, unknown> ?? {} };
-          const content = await shouldEncryptAgentContext(service, projectId)
-            ? await encodeAgentContextSnapshot(projectId, stored)
-            : { snapshot: stored.snapshot };
-          return [{ ...pick(row, ["kind", "role", "created_at"]),
-            conversation_id: conversationId, resource_id: resourceId, ...content }];
-        }))).flat()
-      : [];
-  }))).flat();
-  await upsertRows(service, "agent_conversation_contexts", codeContexts, "conversation_id,kind,resource_id");
-  result.personalData += codeConversations.length;
-
-  const notifications = document.notifications.flatMap((source) => {
+  const notifications = importableNotifications(document).flatMap((source) => {
     const id = uuidValue(source, "id");
     const projectId = mapId(source.project_id, projects.projectIds);
     if (!id || (source.project_id !== undefined && !projectId)) return [];
@@ -1158,7 +995,6 @@ async function importAccountTransferCore(
       project_id: projectId,
       issue_id: mapId(source.issue_id, issueIds),
       comment_id: mapId(source.comment_id, new Map()),
-      agent_conversation_id: mapId(source.agent_conversation_id, codeConversationIds),
     }];
   });
   await upsertRows(service, "notifications", notifications);

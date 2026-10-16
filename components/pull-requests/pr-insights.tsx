@@ -35,7 +35,7 @@ import type { AiReviewProvider, AiReviewState } from "@/lib/pr-ai-review/types";
 import type { PrDeploymentStory } from "@/lib/pr-deployment-story";
 
 /** Short feedback after an action is activated. */
-export type PrActionFeedback = "copied" | "opened" | "launched";
+export type PrActionFeedback = "copied" | "opened";
 
 const FEEDBACK_KEYS: Record<
   PrActionFeedback,
@@ -43,7 +43,6 @@ const FEEDBACK_KEYS: Record<
 > = {
   copied: "cardFeedbackCopied",
   opened: "cardFeedbackOpened",
-  launched: "cardFeedbackLaunched",
 };
 
 /** How long an action displays its feedback. */
@@ -106,34 +105,28 @@ interface PrInsight {
     testId?: string;
     disabled?: boolean;
   };
-  /** Paired actions with short feedback after activation. */
+  /** One or two actions with short feedback after activation. */
   actions?: {
-    top: {
-      label: string;
-      onClick: () => void;
-      testId?: string;
-      feedback?: PrActionFeedback;
-    };
-    bottom: {
-      label: string;
-      onClick: () => void;
-      testId?: string;
-      disabled?: boolean;
-      feedback?: PrActionFeedback;
-    };
+    top: PrInsightAction;
+    bottom?: PrInsightAction;
   };
 }
 
-/** Numo review status and actions, embedded in the reviews disclosure. */
-export interface PrNumoReviewSpec {
-  kind: "running" | "current" | "requested";
+interface PrInsightAction {
   label: string;
-  /** Opens the review conversation in the Numo panel. */
-  onOpen: (() => void) | null;
-  /** Live clock of a running review. */
-  startedAt: string | null;
-  /** Settled duration of the completed pass. */
-  durationMs: number | null;
+  onClick: () => void;
+  testId?: string;
+  feedback?: PrActionFeedback;
+}
+
+/** The actions of an insight, in display order. */
+function insightActionList(insight: PrInsight): { which: "top" | "bottom"; action: PrInsightAction }[] {
+  const actions = insight.actions;
+  if (!actions) return [];
+  return [
+    { which: "top" as const, action: actions.top },
+    ...(actions.bottom ? [{ which: "bottom" as const, action: actions.bottom }] : []),
+  ];
 }
 
 interface PrInsightsProps {
@@ -157,9 +150,6 @@ interface PrInsightsProps {
   aiReviews?: AiReviewStatus[];
   requestingReviewer?: string | null;
   onRequestAiReview?: (provider: AiReviewProvider) => void;
-  numoReview: PrNumoReviewSpec | null;
-  /** A running correction links to its Numo conversation from the popover. */
-  fixRun: { startedAt: string | null; onOpen: () => void } | null;
   /** A "generate then merge" job (MIN-548) runs in the background: Numo
       writes the commit message, the merge fires the moment it lands. The
       caller keeps the marker alive across navigation — the job does not
@@ -168,11 +158,9 @@ interface PrInsightsProps {
   /** The merge-state control can also open the checks popover. */
   checksOpen: boolean;
   onChecksOpenChange: (open: boolean) => void;
-  /** The fix gesture of a failing PR (MIN-548 review): copy the prompt, or
-      hand the PR to Numo. `null` = nothing is failing. */
+  /** The fix gesture of a failing PR (MIN-548 review): copy the prompt.
+      `null` = nothing is failing. */
   fix: {
-    canLaunch: boolean;
-    onLaunch: () => void;
     onCopy: () => void;
   } | null;
 }
@@ -193,7 +181,7 @@ export function PrInsights(props: PrInsightsProps) {
   const fixInsight = insights.find(({ insight }) => insight.id === "fix")?.insight;
   const checksInsight = insights.find((entry) => entry.isChecks)!.insight;
   const reviews = insights.filter(({ insight }) =>
-    insight.id !== "reviews" && (insight.id === "numo-review" || insight.id.startsWith("ai-review-") ||
+    insight.id !== "reviews" && (insight.id.startsWith("ai-review-") ||
     ["review_requested", "changes_requested", "approvals"].includes(insight.iconKind)),
   );
   const groups = reviewerReviewGroups(props.timeline);
@@ -211,7 +199,6 @@ export function PrInsights(props: PrInsightsProps) {
     !providerLogins.has(user.login.toLowerCase()) &&
     users.findIndex((candidate) => candidate.login.toLowerCase() === user.login.toLowerCase()) === index,
   );
-  const showNumo = !!props.numoReview && props.numoReview.kind !== "requested";
   const reviewTone = reviews.some(({ insight }) => insight.tone === "danger") ||
     humanTone === "danger"
     ? "danger"
@@ -274,8 +261,7 @@ export function PrInsights(props: PrInsightsProps) {
                   <StatusIcon insight={reviews.find(({ insight }) => insight.id === `ai-review-${review.provider.id}`)!.insight} />
                 </span>
               ))}
-              {showNumo ? <NumoIcon animated={false} className="size-4 shrink-0" /> : null}
-              {!showNumo && reviewerAvatars.length === 0 && externalReviews.length === 0 ? <AppIcon icon={UserRoundCheck} className="size-4 shrink-0" /> : null}
+              {reviewerAvatars.length === 0 && externalReviews.length === 0 ? <AppIcon icon={UserRoundCheck} className="size-4 shrink-0" /> : null}
             </>
           }
         >
@@ -286,10 +272,9 @@ export function PrInsights(props: PrInsightsProps) {
             onRequest={props.onRequestReviewer}
             additionalReviewers={reviews.map(({ insight }): PrReviewerDetails => {
               const agent = externalReviews.find((review) => insight.id === `ai-review-${review.provider.id}`);
-              const numo = insight.id === "numo-review";
               return {
                 id: insight.id,
-                name: agent?.provider.name ?? (numo ? t("numoAuthor") : t("reviewsTitle")),
+                name: agent?.provider.name ?? t("reviewsTitle"),
                 avatar: <StatusIcon insight={insight} />,
                 logins: agent?.provider.githubLogins,
                 details: <ReviewStatusDetails insight={insight} now={now} />,
@@ -363,7 +348,7 @@ function buildInsights(
   };
   const busy = props.acting !== null;
 
-  // Corrections keep both copy and launch actions available.
+  // A correction prompt is one copy away.
   if (props.fix) {
     push({
       id: "fix",
@@ -379,13 +364,6 @@ function buildInsights(
           onClick: props.fix.onCopy,
           testId: "pr-card-fix-copy",
           feedback: "copied",
-        },
-        bottom: {
-          label: t("cardFixLaunchNumo"),
-          onClick: props.fix.onLaunch,
-          disabled: !props.fix.canLaunch,
-          testId: "pr-card-fix-launch",
-          feedback: "launched",
         },
       },
     });
@@ -484,35 +462,6 @@ function buildInsights(
       startedAt: review.state === "running" ? review.startedAt : null,
       durationMs: review.durationMs, updatedAt: review.updatedAt,
       donutParts: null, iconKind: "review_requested",
-    });
-  }
-
-  // Numo shares the reviews disclosure with human and external reviewers.
-  const numoReview = props.numoReview;
-  if (numoReview && numoReview.kind !== "requested") {
-    push({
-      id: "numo-review",
-      tone: numoReview.kind === "running" ? "progress" : "success",
-      title: numoReview.label,
-      durationMs: numoReview.durationMs,
-      startedAt: numoReview.startedAt,
-      donutParts: null,
-      iconKind: "mergeability",
-    });
-  }
-
-  // Corrections and merging remain separate from review work.
-  if (props.fixRun) {
-    push({
-      id: "numo-fix",
-      tone: "progress",
-      title: t("numoFixRunning"),
-      durationMs: null,
-      startedAt: props.fixRun.startedAt,
-      donutParts: null,
-      iconKind: "mergeability",
-      openLabel: t("numoReviewOpenSession"),
-      onSelect: props.fixRun.onOpen,
     });
   }
 
@@ -765,26 +714,19 @@ function StatusSummary({ insight, now, compact = false }: { insight: PrInsight; 
 }
 
 function insightMenuActions(insight: PrInsight, t: ReturnType<typeof useTranslations<"PullRequests">>): PrInsightMenuAction[] {
-  if (!insight.actions) return [];
-  return (["top", "bottom"] as const).map((which) => {
-    const action = insight.actions![which];
-    return {
-      ...action,
-      disabled: which === "bottom" && insight.actions!.bottom.disabled,
-      keepOpen: action.feedback === "copied",
-      feedbackLabel: action.feedback ? t(FEEDBACK_KEYS[action.feedback]) : undefined,
-      icon: insight.id === "fix" && which === "bottom"
-        ? <NumoIcon animated={false} />
-        : <HugeiconsIcon icon={which === "top" ? Copy01Icon : LinkSquare01Icon} className="size-4" />,
-    };
-  });
+  return insightActionList(insight).map(({ which, action }) => ({
+    ...action,
+    keepOpen: action.feedback === "copied",
+    feedbackLabel: action.feedback ? t(FEEDBACK_KEYS[action.feedback]) : undefined,
+    icon: <HugeiconsIcon icon={which === "top" ? Copy01Icon : LinkSquare01Icon} className="size-4" />,
+  }));
 }
 
 function PrInsightView({ insight, now }: { insight: PrInsight; now: Date }) {
   const t = useTranslations("PullRequests");
   const label = insight.id === "conversations" ? t("conversationsTitle")
     : insight.id === "deployment" ? t("insightDeployment")
-      : insight.id === "fix" || insight.id === "numo-fix" ? t("insightFix")
+      : insight.id === "fix" ? t("insightFix")
         : insight.id === "numo-merge" ? t("insightMerge")
           : insight.iconKind === "branch" ? t("insightBranch")
             : insight.iconKind === "policy" ? t("insightPolicy")
@@ -823,7 +765,7 @@ function ReviewStatusDetails({ insight, now }: { insight: PrInsight; now: Date }
         {duration ? <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{duration}</span> : null}
       </div>
       {insight.updatedAt ? <time dateTime={insight.updatedAt} className="text-muted-foreground">{format.dateTime(new Date(insight.updatedAt), { dateStyle: "medium", timeStyle: "short" })}</time> : null}
-      {!insight.id.startsWith("ai-review-") && insight.id !== "numo-review" && insight.action ? (
+      {!insight.id.startsWith("ai-review-") && insight.action ? (
         <Button variant="outline" size="sm" data-testid={insight.action.testId} disabled={insight.action.disabled} onClick={insight.action.onClick}>{insight.action.label}</Button>
       ) : null}
     </div>
@@ -844,7 +786,7 @@ function StatusDetails({ insight, now }: { insight: PrInsight; now: Date }) {
   return (
     <section data-testid={`pr-insight-detail-${insight.id}`} className="flex min-w-0 flex-col gap-2">
       <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
-        {insight.id === "numo-review" && insight.action ? <><StatusIcon insight={insight} /><span>{t("numoAuthor")}</span></> : <StatusSummary insight={insight} now={now} />}
+        <StatusSummary insight={insight} now={now} />
       </div>
       {insight.updatedAt ? (
         <time dateTime={insight.updatedAt} className="text-xs text-muted-foreground">
@@ -853,8 +795,7 @@ function StatusDetails({ insight, now }: { insight: PrInsight; now: Date }) {
       ) : null}
       {actions ? (
         <div className="flex flex-wrap gap-2">
-          {(["top", "bottom"] as const).map((which) => {
-            const action = actions[which];
+          {insightActionList(insight).map(({ which, action }) => {
             return (
               <Button
                 key={which}
@@ -862,14 +803,10 @@ function StatusDetails({ insight, now }: { insight: PrInsight; now: Date }) {
                 size="sm"
                 data-testid={action.testId}
                 data-keep-popover-open={action.feedback === "copied" ? "" : undefined}
-                disabled={which === "bottom" && actions.bottom.disabled}
                 onClick={() => { setPressed(which); action.onClick(); }}
               >
                 {insight.id === "deployment" ? <HugeiconsIcon icon={which === "top" ? Copy01Icon : LinkSquare01Icon} aria-hidden className="size-4" /> : null}
-                {insight.id === "fix" ? which === "top"
-                  ? <HugeiconsIcon icon={Copy01Icon} aria-hidden className="size-4" />
-                  : <NumoIcon animated={false} />
-                  : null}
+                {insight.id === "fix" ? <HugeiconsIcon icon={Copy01Icon} aria-hidden className="size-4" /> : null}
                 {pressed === which && action.feedback ? t(FEEDBACK_KEYS[action.feedback]) : action.label}
               </Button>
             );

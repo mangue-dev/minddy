@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -36,14 +36,15 @@
       "content/documentation/reviews/routine-localized-capture-candidates.json",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-677-editor-captures.json"
+      "content/documentation/reviews/min-677-editor-captures.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (en translation, label and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review: code delegation and code routine templates removed; routine examples are now triage, stale issues and weekly summary; no operational rerun)",
+    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -57,7 +58,7 @@
       "src": "/documentation/en/scheduled-routines-workflow.png",
       "alt": "Scheduled and event modes, one condition group, app icons and discreet information buttons.",
       "caption": "Local demonstration of the actual trigger editor. No routine was saved or executed.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -77,7 +78,7 @@
 
 ## Create a routine {#scheduled-routines}
 
-Only the project owner can create, edit or enable a routine. Open Routines, choose an owned project and write the instruction Numo should receive. Mention relevant issues, pages or objectives. Each occurrence has a private Numo conversation, history, Minddy tools and optional code delegation. Code workers use the owner's account defaults; a repository is needed only for repository work.
+Only the project owner can create, edit or enable a routine. Open Routines, choose an owned project and write the instruction Numo should receive. Mention relevant issues, pages or objectives. Each occurrence has a private Numo conversation, history and Minddy tools. Routines organize and track work, for example a weekly triage, a review of stale issues or a weekly summary; they do not change repository code.
 
 Choose **Scheduled** or **Event**. Database arrivals are an option in the event list.
 
@@ -104,7 +105,7 @@ An entry created without its required property stays waiting until an edit satis
 
 Open the routine to inspect waiting conditions, change its instruction or trigger, pause it, or review occurrences. Pausing, deleting or changing its configuration invalidates waiting items. Re-enabling listens to future events without replaying old arrivals. A manual run can start any trigger type without waiting for its event and also consumes usage.
 
-Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by default, including Numo and delegated workers. Open its conversation to inspect the source, outcome, checks, questions and delegated work. When owner input is required, answer in that same conversation; the remaining occurrence budget is retained. Inspect saved results before adjusting a cap or retrying. After an ownership change, the previous owner's routine cannot start new work; create a routine as the current owner.
+Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by default, including every Numo call of that occurrence. Open its conversation to inspect the source, outcome and questions. When owner input is required, answer in that same conversation; the remaining occurrence budget is retained. Inspect saved results before adjusting a cap or retrying. After an ownership change, the previous owner's routine cannot start new work; create a routine as the current owner.
 
 The cap applies when an included monthly budget is available; an uncapped personal-key mode does not acquire an artificial monthly allowance.
 

@@ -49,7 +49,7 @@ describe("workspace query persistence", () => {
   it("does no cache-wide work for excluded polling queries or fetch metadata", async () => {
     const { client, scans, persistClient } = workspace();
     for (let tick = 0; tick < 100; tick++) {
-      client.setQueryData(["agent-active-issues", "all"], { tick });
+      client.setQueryData(["issue-pull-requests", "all"], { tick });
       client.setQueryData(["page", "document"], { version: tick });
       client.setQueryData(["pull-requests", "all"], [{ tick }]);
     }

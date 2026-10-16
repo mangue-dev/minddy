@@ -34,7 +34,6 @@ const { resolveRepoCloneTarget } = vi.hoisted(() => ({
   resolveRepoCloneTarget: vi.fn(),
 }));
 const { forgeFor } = vi.hoisted(() => ({ forgeFor: vi.fn() }));
-const { syncPrState } = vi.hoisted(() => ({ syncPrState: vi.fn() }));
 const { syncIssueStatusFromPr } = vi.hoisted(() => ({
   syncIssueStatusFromPr: vi.fn(),
 }));
@@ -66,10 +65,9 @@ vi.mock("@/lib/server/agent/forge", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/server/agent/forge")>();
   return { ...actual, forgeFor };
 });
-vi.mock("@/lib/server/agent/runs", () => ({ syncPrState }));
 vi.mock("@/lib/server/agent/issue-status-sync", () => ({ syncIssueStatusFromPr }));
 vi.mock("@/lib/server/agent/pr-live", () => ({ broadcastPrChanged }));
-vi.mock("@/lib/server/agent/pr-tools", () => ({ signReviewBody }));
+vi.mock("@/lib/server/agent/review-signature", () => ({ signReviewBody }));
 vi.mock("@/lib/server/git/github-app", () => ({ getGithubAppSlug }));
 vi.mock("@/lib/server/issue-reads", () => ({ assertIssueInProject }));
 
@@ -123,7 +121,6 @@ beforeEach(() => {
   resolveRepoCloneTarget.mockResolvedValue(TARGET);
   upsertPullRequest.mockResolvedValue(ROW);
   pullRequestIssueIds.mockResolvedValue([ISSUE_OK]);
-  syncPrState.mockResolvedValue([]);
   syncIssueStatusFromPr.mockResolvedValue(undefined);
   broadcastPrChanged.mockReturnValue(undefined);
   forgeFor.mockReturnValue(forge);
@@ -175,9 +172,6 @@ describe("merge_pull_request", () => {
         issueId: ISSUE_OK,
       }),
     );
-    expect(syncPrState).toHaveBeenCalledWith(
-      expect.objectContaining({ prNumber: 42, prState: "merged" }),
-    );
     expect(syncIssueStatusFromPr).toHaveBeenCalledWith(
       expect.objectContaining({
         issueId: ISSUE_OK,
@@ -215,24 +209,6 @@ describe("merge_pull_request", () => {
     expect(result).toMatchObject({ state: "merged" });
     expect(result).not.toHaveProperty("issue_status");
     expect(syncIssueStatusFromPr).not.toHaveBeenCalled();
-  });
-
-  it("does not log a private PR state synchronization exception in production", async () => {
-    const sentinel = "MIN591_PRIVATE_PR_SYNC_SENTINEL";
-    vi.stubEnv("NODE_ENV", "production");
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    forgeFor.mockReturnValue(forgeWith({
-      getPullRequest: vi.fn().mockResolvedValue(pr()),
-      mergePullRequest: vi.fn().mockResolvedValue(undefined),
-    }));
-    syncPrState.mockRejectedValue(new Error(sentinel));
-    try {
-      expect((await run()).success).toBe(true);
-      expect(log.mock.calls.flat().map(String).join("\n")).not.toContain(sentinel);
-    } finally {
-      log.mockRestore();
-      vi.unstubAllEnvs();
-    }
   });
 
   it("refuses a draft, a closed pull request and a conflicting one before calling the forge", async () => {

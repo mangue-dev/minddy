@@ -3,7 +3,7 @@
   "id": "code-work",
   "locale": "en",
   "title": "Code work and pull requests",
-  "summary": "Delegate issue implementation to a code worker, continue the work and review the linked pull request.",
+  "summary": "Hand an issue to your own coding agent with a copied prompt and minddy MCP, then review and merge the linked pull request.",
   "topic": "Numo and integrations",
   "type": "guide",
   "audiences": [
@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; delegated worker reliability and card controls",
+    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -31,34 +31,25 @@
       "desktop"
     ],
     "evidence": [
-      "content/knowledge/plans-and-agents.md",
-      "content/knowledge/agents-and-mcp.md",
-      "components/assistant/delegated-work-card.tsx",
+      "components/agent/use-agent-menu-actions.tsx",
+      "components/agent/custom-prompt-dialog.tsx",
+      "components/settings/account-preferences-section.tsx",
       "components/pull-requests/pr-detail.tsx",
-      "components/pull-requests/pr-reviews-details.tsx",
-      "components/settings/native-agent-connections.tsx",
-      "components/settings/native-agent-connections.test.tsx",
-      "app/api/account/agent-preferences/route.ts",
-      "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
-      "components/agent/agent-engine-badge.tsx",
-      "lib/server/assistant/account-worker-context.ts",
-      "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
-      "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
-      "lib/native-agent-models.ts",
-      "components/settings/native-agent-model-preferences.tsx",
-      "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
-      "content/documentation/reviews/agent-reliability-and-cards-2026-10-11.md"
+      "components/pull-requests/pr-unresolved-conversations.tsx",
+      "lib/server/agent/pr-mention.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance)",
-    "date": "2026-10-11"
+    "revision": 9,
+    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture)",
+    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
-    "numo",
-    "repository-skills"
+    "issues",
+    "minddy-mcp",
+    "git"
   ],
   "aliases": [
     "delegate-code-work",
@@ -66,34 +57,17 @@
     "review-pull-requests"
   ],
   "tags": [
-    "Delegate an issue to a code worker",
+    "Hand an issue to an external coding agent",
     "Review a linked pull request"
   ],
   "figures": [
-    {
-      "id": "delegate-code-work-workflow",
-      "kind": "screenshot",
-      "src": "/documentation/en/delegate-code-work-workflow.png",
-      "alt": "Demonstration worker card with state, elapsed time, Codex, model, thinking, branch copy, PR button and View work.",
-      "caption": "Illustrative card rendered from the updated component with demonstration data. The actions open the work panel, copy the branch or open the PR in Minddy. This example does not establish successful provider execution or passing checks.",
-      "revision": 8,
-      "reviewed": true,
-      "capturedAt": "2026-10-11",
-      "viewport": [
-        568,
-        379
-      ],
-      "theme": "light",
-      "padding": 24,
-      "deviceScaleFactor": 2
-    },
     {
       "id": "review-pull-requests-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
-      "caption": "The real corrected PR remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 8,
+      "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,48 +79,42 @@
     }
   ],
   "requiredFigures": [
-    "delegate-code-work-workflow",
     "review-pull-requests-workflow"
   ]
 }
 ---
 
-Code work starts from a project’s linked repository and runs in a server sandbox. Prepare the issue and delegate implementation to Numo’s code worker, then review the linked pull request and provider checks before merging.
+Minddy tracks the work; your own coding agent, such as Claude Code, Codex or Cursor, changes the code. Copy a prompt from the issue, let the agent read and update the issue through minddy MCP, then review the linked pull request in Minddy before merging. Numo does not write code, open branches or run tests.
 
-## Delegate an issue to a code worker {#delegate-code-work}
+## Hand an issue to an external coding agent {#external-coding-agents}
 
-The project needs a linked GitHub or GitLab repository, usable provider authorization and a configured server sandbox. Check **Code agent** in account AI settings. OpenCode requires a compatible API code model; restricted Codex and Claude Code access requires the selected personal account connection. Set the worker model and thinking there or keep **Automatic**. These choices are independent of Numo’s conversation model. If native access fails, reconnect or explicitly choose OpenCode; work does not fall back to API billing.
+Connect your agent to minddy MCP first so it can read the plan and update its tasks; see [Connect an external assistant to minddy MCP](/docs/minddy-mcp#external-minddy-mcp). The agent runs on your computer or in its own service, with its own subscription or API costs. Minddy does not supply it with repository access.
 
-Hosted Codex subscription authentication is not available for general use. OpenAI explicitly excludes app-server authentication from hosted services and directs remotely hosted apps to its Sign in with ChatGPT program. Minddy must use an authorized integration before rollout. Restricted technical tests do not establish provider permission or natural expired-token recovery. Paid Claude Code execution remains untested. Removing interface badges does not change these availability conditions. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
+1. Open the issue and describe the expected behavior, constraints and acceptance checks. Write or review the plan in its Plan tab when the work has several steps.
+2. Open the issue's actions menu and choose **Copy as prompt**. Choose **Generate a plan** (or **Review the plan** when one exists) to scope the work without coding, **Implement the issue** to start the change, **Verify the implementation** to have the agent review finished work against the plan and comments, or **Custom…** to write your own instruction.
+3. Paste the prompt into your agent in the repository's working copy. Copying runs no AI model and uses no AI allowance.
+4. Follow the plan progress in the issue as the agent updates its tasks through MCP. Answer its questions in the agent, or add decisions to the issue so the next prompt carries them.
 
-The delegated-work card, worker details and code-worker conversation show the engine used by that run: **Codex**, **Claude Code** or **OpenCode**, with its logo. This identity is saved when the worker starts. Changing account settings affects new workers; it does not relabel an existing run. Older runs without saved engine metadata show a generic code-agent label.
+The prompt contents, branch suggestion and language rules are described in [Copy a prompt for another coding agent](/docs/issues#copy-issue-prompt).
 
-The vertical card shows the current state, execution time, engine, model, thinking, changed files and branch. Its timer adds resumed work and pauses while waiting for your answer. Use the branch copy icon to copy its full name. Open **Agent actions** to **Stop** the worker. **View work** opens the activity panel with the same information. **View pull request** opens the linked PR inside Minddy.
+### Keep the work linked to the issue {#link-work}
 
-Implementation is delivered through a pull request. If publication is blocked, Numo reports the delivery failure. Validation runs separately from publication; unfinished checks do not count as passing. The PR description in Minddy retains the Numo footer with its model, environment and thinking.
+When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. Minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch.
 
-1. Open the issue and describe expected behavior, constraints and acceptance checks.
-2. Open Numo with the issue context. Ask it to inspect the repository before writing a code-level plan. Unverified filenames and APIs are not implementation evidence.
-3. Request implementation explicitly. Numo delegates branch changes to the worker, which clones the linked repository in the server sandbox.
-4. Follow the delegated-work card for progress, changed files, checks and any questions. Answer requested input in the conversation.
-5. Open the attached pull request. Review the diff and recorded checks against the acceptance criteria before merging. A preview is available only when the deployment provider produced one.
-
-![Demonstration worker card with state, elapsed time, Codex, model, thinking, branch copy, PR button and View work.](/documentation/en/delegate-code-work-workflow.png)
-
-### Continue safely {#continuation}
-
-A saved checkpoint can support recovery if it survived; it does not guarantee completion. Check the branch and PR before retrying a failed run. Existing plans should retain checked tasks and concurrent edits. Files present only on your computer are unavailable: push required code or skills to the repository first.
+In **Account settings → Preferences**, **Start the issue or task when I copy its prompt** moves an issue or notebook task that has not started yet into progress when you copy its prompt. Leave it off if you copy prompts only to read them.
 
 ## Review a linked pull request {#review-pull-requests}
 
-Open the pull request linked to an issue or delegated run. Repository access is still required; project membership alone does not grant forge permissions.
+Open the pull request linked to an issue, or find it in the pull request list. Repository access is still required; project membership alone does not grant forge permissions.
 
-Read the description and activity, then inspect changed files and diff hunks. Open unresolved conversations and respond in the relevant thread rather than creating an unrelated comment. File review marks help track your reading; they are not a provider approval. Check commits, CI results and linked issues to confirm the proposed change covers the requested work.
+Read the description and activity, then inspect changed files and diff hunks. Open unresolved conversations and respond in the relevant thread rather than creating an unrelated comment. To hand the remaining feedback back to your agent, open **View conversations**, then **Fix all** and **Copy prompt**. File review marks help track your reading; they are not a provider approval. Check commits, CI results and linked issues to confirm the proposed change covers the requested work.
+
+Mention `@numo` in a pull request comment to ask Numo for a read-only review in a conversation. It reads the pull request and answers; it does not push commits. A mention written on the forge counts only when its author is linked to a member of a project that links the repository, and its usage is charged to that project's owner.
 
 ![Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.](/documentation/en/review-pull-requests-workflow.png)
 
 ### Review and merge {#decision}
 
-Request a reviewer when a second review is needed. An available AI review is another review input, not proof that tests passed. Check the draft or ready-for-review state, unresolved discussions, requested reviews and provider merge policy.
+Request a reviewer when a second review is needed. Check the draft or ready-for-review state, unresolved discussions, requested reviews and provider merge policy.
 
-Merge only after the applicable checks and reviews are satisfied and your provider account has permission. A visible action can still be rejected by the forge. If the displayed state is stale, refresh and inspect the provider before repeating an action. Numo can read, comment, update readiness or merge when authorized; branch changes go to the code worker. A linked preview depends on a real provider deployment.
+Merge only after the applicable checks and reviews are satisfied and your provider account has permission. **Merge with Numo** lets Numo write the merge commit title and description from the pull request, then merges as soon as they are ready. A visible action can still be rejected by the forge. If the displayed state is stale, refresh and inspect the provider before repeating an action. A linked preview depends on a real provider deployment.

@@ -125,7 +125,7 @@ describe("imputation des lignes ai_usage", () => {
   it("logue aussi quand l'appelant déclare lui-même n'avoir pas de payeur", async () => {
     await recordAiUsage({
       runId: newRunId(),
-      feature: "sandbox_compute",
+      feature: "numo_chat",
       billTo: { unattributed: "run sans created_by" },
       cost: 0.5,
     });
@@ -203,8 +203,7 @@ describe("imputation des lignes ai_usage", () => {
 // Routine charges retain their cost and deduplication key while moving segments.
 describe("routine usage attribution", () => {
   it.each([
-    ["agent_code", "routine_code"], ["numo_chat", "routine_code"],
-    ["web_search", "routine_code"], ["sandbox_compute", "routine_compute"],
+    ["numo_chat", "routine_code"], ["web_search", "routine_code"],
   ] as const)("records routine-owned %s under %s", async (feature, expected) => {
     await recordAiUsage({ runId: "worker-ledger", seq: 12, feature,
       billTo: { userId: OWNER }, numoTurnId: "parent-turn", routineId: "routine-1", cost: 0.3 });

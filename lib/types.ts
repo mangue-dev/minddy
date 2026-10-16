@@ -223,12 +223,6 @@ export interface MyNotification {
   read_at: string | null;
   created_at: string;
   issue_id: string | null;
-  /** Targeted code conversation, including when it has no tickets. */
-  agent_conversation_id: string | null;
-  agent_conversation_title: string | null;
-  /** Parent conversation and delegated run for legacy worker notifications. */
-  numo_conversation_id?: string | null;
-  numo_work_id?: string | null;
   issue_number: number | null;
   issue_title: string | null;
   /** Set instead of the issue fields when the notification points at an objective. */
@@ -1389,54 +1383,6 @@ export interface ProjectGitLink {
   /** Last successful backfill of open issues (null = never). */
   issue_sync_backfilled_at: string | null;
   created_at: string;
-}
-
-/**
- * State of an agent branch, from safest to delete to riskiest:
- * PR merged (work delivered), PR refused (work nowhere else), PR
- * open, no PR (fresh branch or session idle).
- */
-export type AgentBranchState = "merged" | "closed" | "open" | "none";
-
-/**
- * A branch that minddy pushed and which still lives on the repository (MIN-102):
- * `agent_runs` attests to its origin. `issue` is null for a run notebook, which
- * is not attached to any ticket; `prNumber`/`prUrl` are null without PR.
- */
-export interface AgentBranch {
-  branch: string;
-  state: AgentBranchState;
-  prNumber: number | null;
-  prUrl: string | null;
-  prCreatedAt: string | null;
-  issue: { issueId: string; identifier: string; title: string } | null;
-}
-
-export interface AgentBranchesResponse {
-  provider: RepoProviderId;
-  repoFullName: string;
-  branches: AgentBranch[];
-  /** A paginated list of the forge has been cut: the overview is not exhaustive. */
-  truncated: boolean;
-}
-
-/**
- * A project where cleaning up branches makes sense: I am the owner, a repository y
- * is linked, and agent runs have pushed branches there. Serves the command
- * palette, which offers the action from any page.
- */
-export interface BranchCleanupTarget {
-  project_id: string;
-  provider: RepoProviderId;
-  repo_full_name: string | null;
-}
-
-/** Exit of deleting ONE branch (`alreadyGone` = it had disappeared). */
-export interface BranchDeletionResult {
-  branch: string;
-  ok: boolean;
-  alreadyGone?: boolean;
-  error?: string;
 }
 
 /** A candidate repository proposed in the selector (GitHub/GitLab neutral). */

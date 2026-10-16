@@ -314,10 +314,14 @@ function projectBroadcastTables(): string[] {
   return [...tables].sort();
 }
 
-describe("aucune table diffusée sur project:{id} n'est sans réponse", () => {
-  const tables = projectBroadcastTables();
+// Tables still broadcast by their database trigger whose readers were removed
+// with the code agent (MIN-721); nothing on the client listens to them.
+const RETIRED_BROADCAST_TABLES = new Set(["agent_runs", "agent_chains"]);
 
-  it("la liste est bien lue depuis les migrations", () => {
+describe("every table broadcast on project:{id} has an answer", () => {
+  const tables = projectBroadcastTables().filter((table) => !RETIRED_BROADCAST_TABLES.has(table));
+
+  it("reads the list from the migrations", () => {
     // Two probes: one historic, one new. If the extraction breaks, it
     // would return an empty list and the next test would pass for nothing.
     expect(tables).toContain("issues");
@@ -325,7 +329,7 @@ describe("aucune table diffusée sur project:{id} n'est sans réponse", () => {
     expect(tables.length).toBeGreaterThan(10);
   });
 
-  it.each(tables)("%s a une branche dans keysForProjectEvent", (table) => {
+  it.each(tables)("%s has a branch in keysForProjectEvent", (table) => {
     // The four possible parents are informed at once: this test does not judge
     // no fine switching (the tests by table take care of it), only one
     // distribution of this table does not fall into the `default:`.

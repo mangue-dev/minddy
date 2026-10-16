@@ -35,10 +35,7 @@ export type AiFeature =
   | "feedback_classify"
   | "feedback_analyze"
   | "embedding"
-  | "agent_code"
-  | "sandbox_compute"
   | "web_search"
-  | "pr_review"
   | "import_map"
   /**
  * Breaking a brief into objectives + tickets (MIN-172): one call per brief
@@ -63,17 +60,12 @@ export type AiFeature =
  */
   | "feedback_voice"
   /**
- * A ROUTINE run (MIN-185). Technically it's the run of `agent_code`, au
- * exact word — same calls, same sandbox. In billing, no: an agent run
- * is a gesture that we made, a routine is a subscription that we let
- * run, and confusing them makes it "what ate my budget this
- * this month?" " unsolvable when the answer is "something that runs all
- * alone". Hence TWO features, one by cost nature — without
- * `routine_compute`, the microVM minutes of a routine would remain under
- * “Agents”. The subagents of a routine run bill themselves with their mother.
- */
+   * A ROUTINE occurrence (MIN-185): the same Numo calls as `numo_chat`, on
+   * another line. A routine is a subscription that we let run, and confusing
+   * it with chat makes “what ate my budget this month?” unsolvable when the
+   * answer is “something that runs on its own”. The id is historical.
+   */
   | "routine_code"
-  | "routine_compute"
   /**
     * An AI decision (MIN-561): one call to the instance's decision model
     * (Jev by default, any compatible decision model since MIN-694 — the id

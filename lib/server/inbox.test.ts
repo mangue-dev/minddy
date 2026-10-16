@@ -87,7 +87,6 @@ const notification = (id: string, target: Partial<Row>): Row => ({
   project_id: "project-a",
   type: "comment",
   issue_id: null,
-  agent_conversation_id: null,
   objective_id: null,
   feedback_post_id: null,
   routine_id: null,
@@ -193,12 +192,6 @@ describe("readInboxNotifications target isolation", () => {
       notification("feedback-b", { feedback_post_id: "feedback-b" }),
       notification("routine-a", { routine_id: "routine-a" }),
       notification("routine-b", { routine_id: "routine-b" }),
-      notification("conversation-a", {
-        agent_conversation_id: "conversation-a",
-      }),
-      notification("conversation-b", {
-        agent_conversation_id: "conversation-b",
-      }),
       notification("page-a", { page_id: "page-a" }),
       notification("page-b", { page_id: "page-b" }),
       notification("pull-a", { pull_request_id: "pull-a" }),
@@ -231,10 +224,6 @@ describe("readInboxNotifications target isolation", () => {
       agent_routines: [
         scoped("routine-a", "project-a", "Allowed routine"),
         scoped("routine-b", "project-b", "Foreign routine"),
-      ],
-      agent_conversations: [
-        scoped("conversation-a", "project-a", "Allowed conversation"),
-        scoped("conversation-b", "project-b", "Foreign conversation"),
       ],
       pages: [
         scoped("page-a", "project-a", "Allowed page"),
@@ -282,7 +271,6 @@ describe("readInboxNotifications target isolation", () => {
       "objective-a",
       "feedback-a",
       "routine-a",
-      "conversation-a",
       "page-a",
       "pull-a",
     ]);

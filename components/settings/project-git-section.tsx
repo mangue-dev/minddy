@@ -10,7 +10,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button, ConfirmDeleteDialog, Spinner, Switch, toast } from "mangue-ui";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { ProviderConnectButtons } from "@/components/git/provider-connect-buttons";
-import { GitBranchCleanup } from "@/components/settings/git-branch-cleanup";
 import { SearchSelect } from "@/components/search-select";
 import {
   bindGitRepoApi,
@@ -386,12 +385,6 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
                 </p>
               )}
             </SettingsRow>
-
-            {/* Cleaning agent branches of closed PRs (MIN-102) — owner only:
- removing remote branches commits the repository, like unbinding. */}
-            {isOwner && (
-              <GitBranchCleanup projectId={projectId} provider={link.provider} />
-            )}
           </>,
         )}
 

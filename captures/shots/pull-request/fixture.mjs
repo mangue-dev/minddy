@@ -25,9 +25,8 @@ export const RUN_ID = "demo-pr-aur-2";
  * PR identifier, also SYNTHETIC, and has become the key to the entire
  * device: since MIN-143 the Pull Requests page is indexed by the PR and
  * no longer by the run (`/api/pull-requests/{prId}/…`), because it shows
- * also human PRs, which have no runs. The roads
- * `agent-runs/{runId}/pr/*` still exist but are only facades,
- * and this page no longer calls them.
+ * also human PRs, which have no runs. The former
+ * `agent-runs/{runId}/pr/*` routes were removed with the code agent (MIN-721).
  */
 export const PR_ID = "demo-pr-aur-2-row";
 

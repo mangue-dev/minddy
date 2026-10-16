@@ -1,22 +1,9 @@
 // Pure derivation without database or server-only imports, testable in Node/Vitest.
 
 /**
- * Builds the shared agent-activity response used by project and global endpoints.
- *
- * Pull requests come from their own rows so human-attached and closed PRs are
- * represented even when no agent run references them.
+ * Builds the issue → pull request map used by the project and global board
+ * endpoints. Pull requests come from their own rows, in every state.
  */
-
-export interface AgentRunRow {
-  issue_id: string | null;
-  status: string;
-  id: string;
-  pr_number: number | null;
-  pr_state: string | null;
-  created_at: string;
-  /** Common conversation this run was delegated from, when it carries one. */
-  parent_numo_conversation_id?: string | null;
-}
 
 /** A pull request attached to an issue, sorted by `updated_at` descending. */
 export interface IssuePrRow {
@@ -72,25 +59,6 @@ export interface IssuePrRef {
   state: "draft" | "open" | "merged" | "closed";
 }
 
-export interface AgentActivityResponse {
-  /** Issues with a queued or running agent. */
-  workingIssueIds: string[];
-  /**
-   * Issues with an agent conversation, whether active or at rest.
-   */
-  sessionIssueIds: string[];
-  /**
-   * Issue → common conversation to reopen, taken from the newest run that
-   * carries one (rows arrive newest-first). Older runs predate the shared
-   * identity and name no conversation: the issue is simply absent.
-   */
-  sessionConversations: Record<string, string>;
-  /**
-   * Pull requests in every state; clients decide which states receive a chip.
-   */
-  pullRequests: Record<string, IssuePrRef>;
-}
-
 const LIVE_STATES = new Set(["draft", "open"]);
 
 function prState(raw: string): IssuePrRef["state"] {
@@ -116,47 +84,4 @@ export function pickIssuePullRequests(rows: IssuePrRow[]): Record<string, IssueP
     if (live) pickedLive.add(row.issue_id);
   }
   return picked;
-}
-
-export function buildAgentActivity(
-  rows: AgentRunRow[],
-  prRows: IssuePrRow[] = [],
-): AgentActivityResponse {
-  const workingIssueIds = [
-    ...new Set(
-      rows
-        .filter(
-          (r): r is AgentRunRow & { issue_id: string } =>
-            Boolean(r.issue_id) && (r.status === "queued" || r.status === "running"),
-        )
-        .map((r) => r.issue_id),
-    ),
-  ];
-  // `rows` already excludes `failed` runs (contract of calling endpoints).
-  const sessionIssueIds = [
-    ...new Set(rows.flatMap((r) => (r.issue_id ? [r.issue_id] : []))),
-  ];
-  // Newest-first rows: the first run of an issue that names its conversation
-  // wins, so "open agent" reopens the most recent session.
-  const sessionConversations: Record<string, string> = {};
-  for (const row of rows) {
-    if (!row.issue_id || !row.parent_numo_conversation_id) continue;
-    if (sessionConversations[row.issue_id]) continue;
-    sessionConversations[row.issue_id] = row.parent_numo_conversation_id;
-  }
-  return {
-    workingIssueIds,
-    sessionIssueIds,
-    sessionConversations,
-    pullRequests: pickIssuePullRequests(prRows),
-  };
-}
-
-/** Historical runs retain their issue context, but only current links receive PR updates. */
-export function filterLinkedIssueRuns<T extends { issueId: string | null }>(
-  runs: T[],
-  linkedIssueIds: readonly string[],
-): T[] {
-  const linked = new Set(linkedIssueIds);
-  return runs.filter((run) => run.issueId === null || linked.has(run.issueId));
 }

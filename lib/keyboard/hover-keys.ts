@@ -1,7 +1,7 @@
 "use client";
 
 // Keyboard shortcuts that act on “what is under the pointer”:
-// field pickers of a ticket card (S/P/E/A/L/D/O), ⇧A/⇧P on a task
+// field pickers of a ticket card (S/P/E/A/L/D/O), ⇧P on a task
 // from the notebook, “@” on a card. All follow the same rule — **the target is
 // decided at the time of typing**, by asking the DOM which is `:hover`.
 //
@@ -58,7 +58,7 @@ export function innermostHovered<T>(
  * Elsewhere, just look at the target of the event: we do not take the
  * key when it goes into a field (see `isTypingTarget`). The notebook,
  * IS an end-to-end field, and it takes focus when opened: the same
- * rule would turn off ⇧A/⇧P forever. What distinguishes the two gestures
+ * rule would turn off ⇧P forever. What distinguishes the two gestures
  * is therefore not the focus, it is the pointer — aimed at the moment, or left there
  * while writing elsewhere.
  *

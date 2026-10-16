@@ -1,20 +1,10 @@
-import { filterLinkedIssueRuns } from "@/lib/server/agent/activity";
-import { pullRequestIssueIds } from "@/lib/server/agent/pull-requests";
 import { type NextRequest, NextResponse } from "next/server";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { afterOrNow } from "@/lib/server/after-safe";
 import {
-  syncPrState,
-  findRunsForPr,
-  type SyncedPrRun,
-} from "@/lib/server/agent/runs";
-import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
-import {
   applyForgePrToIssue,
   isPrActionEcho,
-  recordForgePrActionEvents,
   recordForgePrGesture,
-  notifyForgePrAction,
 } from "@/lib/server/agent/pr-activity";
 import { notifyPullRequestOpened } from "@/lib/server/agent/pr-opened-notify";
 import {
@@ -65,8 +55,8 @@ import { getServiceClient } from "@/lib/supabase-service";
  *
  * - any useful action → INGEST the MR in `pull_requests` (MIN-143: from Numo
  * or a human, it is the same fact of the deposit).
- * - action `merge` / `close` / `reopen` / `open` → updates `agent_runs.pr_state`
- * (the in-app review reflects the true state on the GitLab side) AND, for a gesture made
+ * - action `merge` / `close` / `reopen` / `open` → updates the PR state (the
+ * in-app review reflects the true state on the GitLab side) AND, for a gesture made
  * DIRECTLY on GitLab, trace “open / accepted / refused the MR” in
  * the activity of the linked issue. The `update` action serves the DRAFT toggle
  * (MIN-138) — GitLab does not have a dedicated action, cf. `gitlabMrStateForAction` — and, when it
@@ -329,90 +319,25 @@ async function handleMergeRequest(
   const prEventAt = actionType ? mrEventOccurredAt(attrs) : null;
   if (!prState && !actionType) return;
 
-  // Runs affected. merge/close/reopen/open resets pr_state in passing.
-  const prRuns: SyncedPrRun[] = prState
-    ? await syncPrState({
-        repoFullName,
-        prNumber: iid,
-        prState,
-        prUrl: attrs.url ?? null,
-        provider: "gitlab",
-      })
-    : await findRunsForPr({ repoFullName, prNumber: iid, provider: "gitlab" });
   const linkedPr = await findPullRequestByNumber({ provider: "gitlab", repoFullName, number: iid });
-  const runs = filterLinkedIssueRuns(prRuns, linkedPr ? await pullRequestIssueIds(linkedPr.id) : []);
-  const currentPrState =
-    linkedPr?.state ?? prRuns[0]?.prState ??
-    ingested?.state ??
-    prState;
-
-  // Synchronize manual associations; worker issues keep their existing notification path.
-  {
-    const echoed =
-      !!actionType &&
-      isServiceAccountGesture(actionType) &&
-      (await isServiceAccount(repoFullName, payload.user));
-    await applyForgePrToIssue({
-      excludeIssueIds: runs.map((run) => run.issueId),
-      provider: "gitlab",
-      repoFullName,
-      prNumber: iid,
-      prState: currentPrState,
-      actionType: echoed ? null : actionType,
-      accountId: actorAccountId(payload.user),
-      login: payload.user?.username ?? null,
-      occurredAt: prEventAt,
-    });
-    if (runs.length === 0) return;
-  }
-
-  // Aligns the status of the exits with the new MR state (MIN-46):
+  const currentPrState = linkedPr?.state ?? ingested?.state ?? prState;
+  // Echo of an in-app action performed through the service account that linked
+  // the repository: already traced by the route with the human actor.
+  const echoed =
+    !!actionType &&
+    isServiceAccountGesture(actionType) &&
+    (await isServiceAccount(repoFullName, payload.user));
+  // Align every linked ticket's status and record the gesture (MIN-46, MIN-143):
   // merged→done, closed→todo, open/reopen→in_review.
-  if (currentPrState) {
-    for (const run of runs) {
-      // `issueId` null = run notebook (MIN-84): no issue to align.
-      if (run.createdBy && run.issueId) {
-        await syncIssueStatusFromPr({
-          issueId: run.issueId,
-          actorId: run.createdBy,
-          prState: currentPrState,
-        });
-      }
-    }
-  }
-
-  if (!actionType) return;
-  // Echo of an in-app action → already traced by the road with the human actor: we
-  // don't re-trace. Two necessary readings: the service account (the gesture
-  // of an AGENT still leaves the account which linked the deposit) and the event already
-  // written — since MIN-144 a human gesture starts from the person's git account,
-  // which is only that of the link for who linked the deposit.
-  const echo =
-    (isServiceAccountGesture(actionType) &&
-      (await isServiceAccount(repoFullName, payload.user))) ||
-    (await isPrActionEcho({
-      issueIds: runs.map((r) => r.issueId),
-      type: actionType,
-      prNumber: iid,
-      provider: "gitlab",
-      accountId: actorAccountId(payload.user),
-      login: payload.user?.username ?? null,
-    }));
-  if (echo) return;
-
-  await recordForgePrActionEvents({
-    runs,
-    type: actionType,
-    prNumber: iid,
+  await applyForgePrToIssue({
     provider: "gitlab",
+    repoFullName,
+    prNumber: iid,
+    prState: currentPrState,
+    actionType: echoed ? null : actionType,
+    accountId: actorAccountId(payload.user),
     login: payload.user?.username ?? null,
     occurredAt: prEventAt,
-  });
-  // Inbox: the author of the run learns that his MR (MIN-138) has been approved or merged.
-  await notifyForgePrAction({
-    runs,
-    type: actionType,
-    actorLogin: payload.user?.username ?? null,
   });
 }
 

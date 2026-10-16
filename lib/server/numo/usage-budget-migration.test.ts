@@ -62,31 +62,6 @@ describe("Numo operation usage migration", () => {
     expect(begin).toContain("run.parent_numo_turn_id is null");
   });
 
-  it("lets every delegated worker draw from one locked parent reservation", () => {
-    const create = operation(
-      "create_agent_run_with_budget",
-      "resume_agent_run_with_budget",
-    );
-    expect(create).toContain(
-      "if nullif(p_values->>'parent_numo_turn_id', '') is not null",
-    );
-    expect(create).toContain("from public.numo_assistant_turns");
-    expect(create).toContain("for update");
-    expect(create).toContain(
-      "where numo_turn_id = v_parent.id and key_mode = 'platform'",
-    );
-    expect(create).toContain("if v_parent.managed_budget_usd is null");
-    expect(create).toContain("set managed_budget_usd = v_granted");
-    expect(create).toContain("v_granted := v_parent.managed_budget_usd");
-  });
-
-  it("keeps BYOK parent usage out of a managed worker reservation", () => {
-    expect(sql).toContain(
-      "create or replace function public.get_numo_operation_platform_spend",
-    );
-    expect(sql).toContain("and key_mode = 'platform'");
-  });
-
   it("reacquires the parent operation reservation on a worker continuation", () => {
     const resume = operation(
       "resume_latest_agent_run_with_message",

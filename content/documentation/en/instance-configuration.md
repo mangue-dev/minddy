@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -49,10 +49,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (en translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min-721 (en runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "workspace-encryption",
@@ -77,7 +77,7 @@
       "src": "/documentation/en/optional-providers-flow.svg",
       "alt": "Diagram: Operator selects an optional capability. Complete credentials and provider conditions. Explicit outbound provider data path. Verify behavior and monitor usage costs.",
       "caption": "Enabling an optional service adds its own credentials, data destination and usage costs.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,9 +107,9 @@
       "id": "proxy-network-and-jobs-flow",
       "kind": "diagram",
       "src": "/documentation/en/proxy-network-and-jobs-flow.svg",
-      "alt": "Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private runner, database and internal ports. Authenticated scheduler; stopped in maintenance.",
+      "alt": "Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private database and internal ports. Authenticated scheduler; stopped in maintenance.",
       "caption": "Public access uses HTTPS while internal services stay private and scheduled jobs pause during maintenance.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -127,7 +127,7 @@
             "title": "Application and public Supabase origins"
           },
           {
-            "title": "Private runner, database and internal ports"
+            "title": "Private database and internal ports"
           },
           {
             "title": "Authenticated scheduler; stopped in maintenance"
@@ -151,7 +151,7 @@ Set `MINDDY_PUBLIC_APP_URL` to one absolute origin with no path or trailing slas
 
 ### Preserve generated secrets {#secrets}
 
-The installer writes missing `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET` and `AGENT_RUNNER_SECRET`. The content root must contain exactly 64 hexadecimal characters. Keep it outside PostgreSQL with a protected recovery copy. Keep the entire environment mode `0600` and out of Git. Do not source the environment as shell code or print it. Retrying installation does not rotate secrets. Losing encryption secrets can make existing data unreadable; deliberate rotation requires the matching recovery procedure.
+The installer writes missing `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY` and `CRON_SECRET`. The content root must contain exactly 64 hexadecimal characters. Keep it outside PostgreSQL with a protected recovery copy. Keep the entire environment mode `0600` and out of Git. Do not source the environment as shell code or print it. Retrying installation does not rotate secrets. Losing encryption secrets can make existing data unreadable; deliberate rotation requires the matching recovery procedure.
 
 ### Apply and check a change {#capabilities}
 
@@ -176,16 +176,14 @@ Application email needs `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `FEEDBACK_EMA
 
 ### Connect Git and code execution {#git-and-code}
 
-GitHub.com and GitLab.com are supported; Enterprise Server and self-managed GitLab are not supported by these adapters. User-initiated connections may use the managed forge relay; opt out with `--no-forge-relay` or `MINDDY_FORGE_RELAY=0` and configure operator-owned apps. Existing connections retain their channel until reconnected. The reference server has a trusted self-hosted Docker runner. Vercel Sandbox is an explicit alternative requiring its credentials and a valid `MINDDY_DATA_ROOT_KEY` even when content encryption is off. Desktop-local code execution is retired. Missing execution configuration blocks delegation rather than running code on a user computer.
-
-The published application image includes Node.js and Git but deliberately removes `npm`, `npx` and Corepack. The reference Compose profile also selects that image for workers through `AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE`. This is insufficient for a fresh code worker: the OpenCode bootstrap uses `npm` to install its pinned runtime and plugin, even for a repository with no project dependencies. Without `npm`, execution stops at bootstrap; no project edit or test success can be inferred from the conversation. Use an operator-built and verified dedicated worker image with Node.js 24, `npm`, Git and the project’s required tools, selected by overriding `AGENT_RUNNER_SANDBOX_IMAGE` in the runner service. Keep the runner’s isolation constraints. Verify bootstrap, repository cloning, actual tests and the resulting diff before enabling code delegation. Fixing the runner files alone does not supply this worker toolchain.
+GitHub.com and GitLab.com are supported; Enterprise Server and self-managed GitLab are not supported by these adapters. User-initiated connections may use the managed forge relay; opt out with `--no-forge-relay` or `MINDDY_FORGE_RELAY=0` and configure operator-owned apps. Existing connections retain their channel until reconnected. Numo does not run code, so the reference server needs no code runner or sandbox, and no service receives the Docker socket. Settings left by an earlier release, such as `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` and the Vercel Sandbox credentials, are ignored; remove them from the protected environment.
 
 ## Expose public origins and run scheduled work {#proxy-network-and-jobs}
 
-Public installations require a TLS reverse proxy and HTTP-to-HTTPS redirect. Application origin, Supabase public origin, Auth redirects, OAuth callbacks and forwarded headers must agree. Keep PostgreSQL, Studio, internal service ports and the agent runner off the Internet. Full-profile application requests use internal `http://kong:8000` while browsers and generated links retain the public Supabase origin. Private HTTP requires `localhost` or trusted private IPv4 and no router port forwarding.
+Public installations require a TLS reverse proxy and HTTP-to-HTTPS redirect. Application origin, Supabase public origin, Auth redirects, OAuth callbacks and forwarded headers must agree. Keep PostgreSQL, Studio and internal service ports off the Internet. Full-profile application requests use internal `http://kong:8000` while browsers and generated links retain the public Supabase origin. Private HTTP requires `localhost` or trusted private IPv4 and no router port forwarding.
 
 
-![Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private runner, database and internal ports. Authenticated scheduler; stopped in maintenance.](/documentation/en/proxy-network-and-jobs-flow.svg)
+![Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private database and internal ports. Authenticated scheduler; stopped in maintenance.](/documentation/en/proxy-network-and-jobs-flow.svg)
 
 ### Provide authenticated scheduling {#schedules}
 

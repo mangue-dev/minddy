@@ -1,16 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
-import { getNumoConversationDetail, listNumoConversations, resolveNumoConversation, validNumoPatch } from "./conversations";
+import { getNumoConversationDetail, listNumoConversations, validNumoPatch } from "./conversations";
 
 const auth = vi.hoisted(() => ({ get: vi.fn(), service: vi.fn() }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: auth.service }));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: auth.get }));
 import { GET as list, POST as create } from "@/app/api/numo/conversations/route";
 import { GET as detail, PATCH as patch } from "@/app/api/numo/conversations/[id]/route";
-import { GET as resolve } from "@/app/api/numo/resolve/route";
 import { GET as active, PUT as setActive } from "@/app/api/assistant/active-conversation/route";
-import { GET as legacyMessages } from "@/app/api/assistant/conversations/[id]/messages/route";
 
 type Row = Record<string, unknown>;
 const id = "51400000-0000-4000-8000-000000000020";
@@ -52,7 +50,8 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("Numo conversation adapter", () => {
   it("returns a bounded, deterministically ordered history page", async () => {
-    const rows = Array.from({ length: 501 }, (_, n) => ({ id: String(n), updated_at: "2026-09-01" }));
+    const rows = Array.from({ length: 501 }, (_, n) => ({ id: String(n), user_id: userId,
+      legacy_id: String(n), title: null, error_message: null, updated_at: "2026-09-01" }));
     const db = database({ numo_user_conversation_history: rows });
     expect(await listNumoConversations(db.client)).toEqual({ conversations: rows.slice(0, 50), hasMore: true });
     expect(db.from).toHaveBeenCalledWith("numo_user_conversation_history");
@@ -62,70 +61,20 @@ describe("Numo conversation adapter", () => {
     ]);
   });
 
-  it("hydrates an issue-derived agent title through the authorized issue repository", async () => {
-    const agent = { id, source: "agent", project_id: "project", title: null,
-      latest_work_id: "work-1" };
-    const db = database({
-      numo_user_conversation_history: [agent],
-      agent_runs: [{ id: "work-1", project_id: "project", issue_id: "issue-1" }],
-      issues: [{ id: "issue-1", project_id: "project", title: "Private issue" }],
-    });
-    expect((await listNumoConversations(db.client)).conversations[0].title).toBe("Private issue");
-    expect(db.from).toHaveBeenCalledWith("agent_runs");
-    expect(db.from).toHaveBeenCalledWith("issues");
-  });
-
-  it("hydrates a PR title only after matching the authorized run project", async () => {
-    const agent = { id, source: "agent", project_id: "project", title: null,
-      latest_work_id: "work-1" };
-    const db = database({
-      numo_user_conversation_history: [agent],
-      agent_runs: [{ id: "work-1", project_id: "project", issue_id: null,
-        pull_request_id: "pr-1" }],
-      pull_requests: [{ id: "pr-1", title: "Private pull request" }],
-    });
-    expect((await listNumoConversations(db.client)).conversations[0].title)
-      .toBe("Private pull request");
-    expect(db.from).toHaveBeenCalledWith("pull_requests");
-  });
-
   it("does not read content for a missing or inaccessible common identity", async () => {
     const db = database();
     expect(await getNumoConversationDetail(db.client, id)).toBeNull();
     expect(db.from).toHaveBeenCalledTimes(1);
   });
 
-  it("preserves worker provenance and attachments while separating tool actions", async () => {
-    const worker = { id: "worker", conversation_id: id, source: "agent", kind: "worker_message", role: "assistant", run_id: "old-run", worker_source: "assistant_summary", metadata: {} };
+  it("keeps attachments while separating tool actions from messages", async () => {
     const message = { id: "message", conversation_id: id, source: "assistant", kind: "message", metadata: { attachments: [{ storage_path: "original.pdf" }] } };
     const action = { id: "action", conversation_id: id, source: "assistant", kind: "action", tool_call_id: "original-call", metadata: {} };
-    const work = { id: "old-run", conversation_id: id, pr_number: 42 };
-    const db = database({ numo_conversation_history: [conversation], numo_messages: [message, worker, action], numo_work: [work] });
+    const db = database({ numo_conversation_history: [conversation], numo_messages: [message, action] });
     const result = await getNumoConversationDetail(db.client, id);
-    expect(result?.messages).toEqual([message, worker]);
+    expect(result?.messages).toEqual([message]);
     expect(result?.actions).toEqual([action]);
-    expect(result?.work).toEqual([work]);
-    expect(db.calls).toContainEqual({ table: "numo_messages", method: "order", args: ["source", { ascending: true }] });
-  });
-
-  it("resolves delegated work to its parent conversation", async () => {
-    const db = database({ numo_work: [{
-      id: "run",
-      conversation_id: id,
-      work_conversation_id: "51400000-0000-4000-8000-000000000099",
-    }] });
-    expect(await resolveNumoConversation(db.client, "run", "run")).toEqual({
-      conversationId: id,
-      workId: "run",
-    });
-  });
-
-  it("uses an accessible origin for legacy agent links and otherwise preserves their mapping", async () => {
-    const db = database({ numo_work_origins: [{ agent_id: "old-agent", conversation_id: id }] });
-    expect((await resolveNumoConversation(db.client, "agent", "old-agent"))?.conversationId).toBe(id);
-    const member = database({ numo_conversation_ids: [{ id: "common-work", agent_id: "old-agent" }] });
-    expect((await resolveNumoConversation(member.client, "agent", "old-agent"))?.conversationId).toBe("common-work");
-    expect(await resolveNumoConversation(member.client, "assistant", "old-agent")).toBeNull();
+    expect(db.from).not.toHaveBeenCalledWith("numo_work");
   });
 
   it("rejects changes to ownership, project context and visibility", () => {
@@ -144,9 +93,9 @@ describe("Numo conversation routes", () => {
     const responses = await Promise.all([
       list(request("/api/numo/conversations")), create(request("/api/numo/conversations", "POST", {})),
       detail(request(`/api/numo/conversations/${id}`), params), patch(request(`/api/numo/conversations/${id}`, "PATCH", {}), params),
-      resolve(request(`/api/numo/resolve?source=run&id=${id}`)), active(request("/api/assistant/active-conversation")),
+      active(request("/api/assistant/active-conversation")),
     ]);
-    expect(responses.map((r) => r.status)).toEqual([401, 401, 401, 401, 401, 401]);
+    expect(responses.map((r) => r.status)).toEqual([401, 401, 401, 401, 401]);
   });
 
   it("creates a projectless conversation owned by the authenticated user", async () => {
@@ -184,17 +133,9 @@ describe("Numo conversation routes", () => {
     expect((await patch(request(`/api/numo/conversations/${id}`, "PATCH", { read: true }), params)).status).toBe(404);
   });
 
-  it("keeps worker messages out of the legacy assistant renderer", async () => {
-    const db = database({ numo_conversation_history: [{ ...conversation, source: "agent" }] });
-    auth.get.mockResolvedValue({ ok: true, user: { id: userId }, supabase: db.client });
-    const result = await legacyMessages(request(`/api/assistant/conversations/${id}/messages`), params);
-    expect(result.status).toBe(409);
-    expect(db.from).toHaveBeenCalledTimes(1);
-  });
-
-  it("restores a work pointer and suppresses pointers after access is lost", async () => {
+  it("restores the active pointer and suppresses it after access is lost", async () => {
     const db = database({ assistant_active_conversation: [{ user_id: userId, conversation_id: id }],
-      numo_conversation_history: [{ ...conversation, source: "agent" }] });
+      numo_conversation_history: [conversation] });
     auth.get.mockResolvedValue({ ok: true, user: { id: userId }, supabase: db.client });
     expect(await (await active(request("/api/assistant/active-conversation"))).json()).toEqual({ conversationId: id, projectId: null });
     const revoked = database({ assistant_active_conversation: [{ user_id: userId, conversation_id: id }] });

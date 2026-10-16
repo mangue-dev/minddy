@@ -62,7 +62,7 @@ import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { GlobalKanbanColumn } from "@/components/global-kanban-column";
 import type { BoardLandingPreview } from "@/components/board-drop-indicator";
-import { AgentActivityProvider } from "@/components/agent/agent-activity-context";
+import { IssuePrProvider } from "@/components/issue-pr-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import {
@@ -325,17 +325,12 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, selectionProjectId, onAddRelation, clearSelection]);
-  // ⇧P/⇧A on the selection (MIN-539): ONE combined prompt for all the checked
+  // ⇧P on the selection (MIN-539): ONE combined prompt for all the checked
   // tickets. A mixed selection spans projects: the prompt resolves each
   // issue's key in its own project, and the Numo intent stays projectless
   // (the composer asks, like the existing bulk “Ask Numo”).
   const bulkPromptActions = useBulkSelectionActions({
     selectedIssues,
-    projectId: selectionProjectId,
-    identifierOf: (issue) => {
-      const key = projectMap.get(issue.project_id)?.key;
-      return key ? issueIdentifier(key, issue.number) : String(issue.number);
-    },
     buildInput: (issue) => {
       const objectives = objectiveMapByProject.get(issue.project_id);
       return {
@@ -551,7 +546,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   return (
     // Halo “agent in progress” on cross-project maps: the provider receives
     // every project displayed by this board.
-    <AgentActivityProvider projectIds={[...projectMap.keys()]}>
+    <IssuePrProvider projectIds={[...projectMap.keys()]}>
       {/* “@” on card hover or selection opens Numo with the same context as
           the button on the selection pill (MIN-105). */}
       <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
@@ -584,7 +579,6 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
               onClear={clearSelection}
               onAskNumo={() => onAskNumo(selectedIssues)}
               onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
-              onLaunchAgent={bulkPromptActions.launchAgent}
               cycle={bulkCycle}
               objectives={bulkObjectives}
               onLink={bulkLink}
@@ -666,6 +660,6 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
           </DragOverlay>
         </DndContext>
       </AskNumoProvider>
-    </AgentActivityProvider>
+    </IssuePrProvider>
   );
 });

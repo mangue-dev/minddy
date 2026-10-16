@@ -22,7 +22,6 @@ import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SideP
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { GitLogin } from "@/components/git/git-login";
-import { NumoIcon } from "@/components/numo-icon";
 import {
   useReviewReplies,
   useThreadResolution,
@@ -42,10 +41,8 @@ export function PrUnresolvedConversations({
   threads,
   canComment,
   canResolve,
-  canLaunch,
   open,
   onOpenChange,
-  onLaunch,
   onThreadChanged,
   onResolutionChanged,
   showBar = true,
@@ -55,10 +52,8 @@ export function PrUnresolvedConversations({
   threads: PullRequestFeedbackThread[];
   canComment: boolean;
   canResolve: boolean;
-  canLaunch: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onLaunch: (prompt: string) => void;
   onThreadChanged: () => unknown;
   onResolutionChanged: () => unknown;
   /** Inline workspace bar — hidden when the status cards carry the count. */
@@ -199,19 +194,6 @@ export function PrUnresolvedConversations({
                       <HugeiconsIcon icon={Copy01Icon} />
                       {t("copyUnresolvedPrompt")}
                     </DropdownMenuItem>
-                    {canLaunch ? (
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          onOpenChange(false);
-                          onLaunch(
-                            buildPullRequestFeedbackPrompt(context, unresolved),
-                          );
-                        }}
-                      >
-                        <NumoIcon animated={false} />
-                        {t("launchNumoUnresolved")}
-                      </DropdownMenuItem>
-                    ) : null}
                     {canResolve ? (
                       <DropdownMenuItem
                         data-testid="pr-fix-all-resolve"

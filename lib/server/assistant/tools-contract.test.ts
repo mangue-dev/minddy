@@ -57,8 +57,6 @@ describe("Numo tool contracts", () => {
     for (const name of [
       "send_shortcut",
       "analytics_consent",
-      "sandbox_region",
-      "sandbox_size",
     ]) {
       expect(settings, name).toHaveProperty(name);
     }
@@ -136,56 +134,30 @@ describe("Numo tool contracts", () => {
     expect(usage?.function.description).toMatch(/routine/i);
   });
 
-  it("keeps worker model and reasoning out of delegation tools", () => {
-    for (const name of ["launch_code_agent", "create_routine", "update_routine"]) {
+  it("offers no code-agent tool or setting (MIN-721)", () => {
+    for (const name of ["launch_code_agent", "list_agent_models", "answer_code_worker"]) {
+      expect(tool(name), name).toBeUndefined();
+    }
+    for (const name of ["create_routine", "update_routine"]) {
       const properties = tool(name)?.function.parameters.properties;
       expect(properties, name).not.toHaveProperty("model");
       expect(properties, name).not.toHaveProperty("reasoning_level");
-      if (name !== "launch_code_agent") {
-        expect(properties, name).not.toHaveProperty("base_branch");
-      }
+      expect(properties, name).not.toHaveProperty("base_branch");
     }
 
     const accountProperties = tool("update_account_settings")?.function.parameters.properties;
-    expect(accountProperties).not.toHaveProperty("default_model");
-    expect(accountProperties).not.toHaveProperty("default_reasoning_level");
+    for (const name of ["default_model", "default_reasoning_level", "sandbox_region", "sandbox_size", "branch_prefix"]) {
+      expect(accountProperties).not.toHaveProperty(name);
+    }
   });
 
   it("describes routines as repository-optional Numo conversations", () => {
     const create = tool("create_routine");
     expect(create?.function.description).toMatch(/Numo conversation/i);
     expect(create?.function.description).toMatch(/does not need a linked repository/i);
-    expect(create?.function.description).toMatch(/delegates to a code worker only/i);
   });
 
-  it("requires a complete structured brief for code delegation", () => {
-    const launch = tool("launch_code_agent");
-    expect(launch?.function.parameters.required).toEqual([
-      "mode",
-      "objective",
-      "source_references",
-      "constraints",
-      "authorized_work",
-      "requires_pull_request",
-    ]);
-    expect(launch?.function.parameters.properties).toHaveProperty("expected_output");
-    expect(launch?.function.parameters.properties).toHaveProperty("continuation_run_id");
-    expect(launch?.function.description).toMatch(/owned by this Numo turn/i);
-    expect(launch?.function.description).toMatch(/returns here/i);
-  });
-
-  it("keeps pull request review and fixes anchored to the selected PR", () => {
-    const launch = tool("launch_code_agent");
-    const mode = launch?.function.parameters.properties.mode as {
-      enum?: string[];
-    };
-    expect(mode.enum).toEqual(
-      expect.arrayContaining(["review", "fix"]),
-    );
-    expect(launch?.function.parameters.properties).toHaveProperty(
-      "pull_request_id",
-    );
-
+  it("reads the selected pull request by its id", () => {
     const read = tool("read_pull_request");
     expect(read?.function.parameters.properties).toHaveProperty(
       "pull_request_id",
@@ -210,8 +182,7 @@ describe("Numo tool contracts", () => {
       expect(pr?.function.parameters.properties).toHaveProperty(
         "pull_request_id",
       );
-      // Delegation stays the path for anything that changes the branch.
-      expect(pr?.function.description).toMatch(/launch_code_agent/);
+      expect(pr?.function.description).not.toMatch(/launch_code_agent/);
     }
   });
 
@@ -230,7 +201,7 @@ describe("Numo tool contracts", () => {
     // The discipline: only addressed conversations get closed, never a
     // wholesale tidy-up.
     expect(resolve?.function.description).toMatch(/FULLY addressed/);
-    expect(resolve?.function.description).toMatch(/without any delegation/);
+    expect(resolve?.function.description).toMatch(/not repository work/);
   });
 
   it("keeps the merge guardrail explicit: irreversible, confirmed, never against a red CI", () => {
@@ -383,8 +354,7 @@ describe("Numo tool contracts", () => {
   });
 });
 
-
-it("requires an explicit target on every conversation project action and worker", () => {
+it("requires an explicit target on every conversation project action", () => {
   for (const name of PROJECT_SCOPED_TOOLS) {
     const tool = CONVERSATION_ASSISTANT_TOOLS.find((candidate) => candidate.function.name === name);
     expect(tool?.function.parameters.required, name).toContain("project_id");

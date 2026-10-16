@@ -3,9 +3,7 @@
  * cloud code (MIN-46). NO server-only import: the model picker (UI) and the
  * server-side resolution (`lib/server/agent/model.ts`) both import it.
  *
- * New code workers resolve only the provider-bound account preference in
- * `user_agent_preferences`. The root model below remains a pricing baseline;
- * it is never a launch fallback.
+ * The root model below remains a pricing baseline.
  */
 import { aiModelFallback } from "@/lib/ai-model-config";
 

@@ -39,7 +39,6 @@ import { addAiKeyApi, deleteAiKeyApi, type AiKey } from "@/lib/agent-keys-api";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
-import { agentPreferencesQueryKey } from "@/lib/use-agent-preferences-query";
 
 const MINDDY_CLOUD_PROVIDER = "minddy";
 
@@ -109,7 +108,6 @@ export function ByokConnectPanel({
     Promise.all([
       queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
       queryClient.invalidateQueries({ queryKey: agentModelsQueryKey }),
-      queryClient.invalidateQueries({ queryKey: agentPreferencesQueryKey }),
       queryClient.invalidateQueries({ queryKey: numoPreferencesQueryKey }),
     ]);
   const resetForm = () => {

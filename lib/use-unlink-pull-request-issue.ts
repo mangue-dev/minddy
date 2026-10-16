@@ -17,8 +17,8 @@ export function useUnlinkPullRequestIssue() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ALL_PULL_REQUESTS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: ["pull-request", prId] }),
-        queryClient.invalidateQueries({ queryKey: ["agent-active-issues"] }),
-        queryClient.invalidateQueries({ queryKey: ["agent-runs", "issue", issueId] }),
+        queryClient.invalidateQueries({ queryKey: ["issue-pull-requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["issue-pull-request", issueId] }),
       ]);
       toast.success(t("unlinkIssueDone", { identifier }));
     },

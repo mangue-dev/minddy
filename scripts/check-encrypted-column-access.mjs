@@ -77,91 +77,6 @@ const rules = [
     allowed: new Set(["lib/server/oauth/grants.ts"]),
   },
   {
-    access: /\.\s*from\s*\(\s*["'`]agent_run_events["'`]\s*\)/,
-    allowed: new Set(["lib/server/agent/runs.ts",
-      "lib/server/agent/run-event-store.ts",
-      "lib/server/encryption/agent-event-backfill.ts",
-      "app/api/pull-requests/route.ts", "lib/server/retention.ts"]),
-  },
-  {
-    access: /\.\s*(?:from\s*\(\s*["'`]agent_event_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_event_ciphertext["'`])/,
-    allowed: new Set(["lib/server/agent/run-event-store.ts",
-      "lib/server/encryption/agent-event-backfill.ts"]),
-  },
-  {
-    access: /\.\s*from\s*\(\s*["'`]agent_messages["'`]\s*\)/,
-    allowed: new Set(["lib/server/account-export.ts", "lib/server/account-import.ts",
-      "lib/server/agent/run-launch-content.ts",
-      "lib/server/encryption/agent-standalone-message-backfill.ts"]),
-  },
-  {
-    access: /\.\s*from\s*\(\s*["'`]agent_conversation_contexts["'`]\s*\)/,
-    allowed: new Set(["lib/server/account-export.ts", "lib/server/account-import.ts",
-      "lib/server/numo/conversations.ts", "lib/server/encryption/agent-context-backfill.ts"]),
-  },
-  {
-    access: /\.\s*(?:from\s*\(\s*["'`]agent_context_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_context_snapshot["'`])/,
-    allowed: new Set(["lib/server/agent/context-snapshot-content.ts",
-      "lib/server/encryption/agent-context-backfill.ts"]),
-  },
-  {
-    access: /\.\s*rpc\s*\(\s*["'`]migrate_agent_standalone_message["'`]/,
-    allowed: new Set(["lib/server/encryption/agent-standalone-message-backfill.ts"]),
-  },
-  {
-    access: /\.\s*(?:from\s*\(\s*["'`]agent_launch_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_launch_ciphertext["'`])/,
-    allowed: new Set(["lib/server/agent/run-launch-content.ts",
-      "lib/server/encryption/agent-launch-backfill.ts"]),
-  },
-  {
-    access: /\.\s*(?:from\s*\(\s*["'`]agent_title_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_(?:conversation_)?title_ciphertext["'`])/,
-    allowed: new Set(["lib/server/agent/run-title-content.ts",
-      "lib/server/encryption/agent-title-backfill.ts"]),
-  },
-  {
-    access: /\.\s*(?:from\s*\(\s*["'`]agent_checkpoint_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_(?:agent_checkpoint_ciphertext|orphan_agent_runtime_checkpoint)["'`])/,
-    allowed: new Set(["lib/server/agent/run-checkpoint-content.ts",
-      "lib/server/encryption/agent-checkpoint-backfill.ts"]),
-  },
-  {
-    access: /\.\s*(?:from\s*\(\s*["'`]agent_delegation_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_delegation_input["'`])/,
-    allowed: new Set(["lib/server/agent/run-delegation-content.ts",
-      "lib/server/encryption/agent-delegation-backfill.ts"]),
-  },
-  {
-    access: /\.\s*from\s*\(\s*["'`]agent_run_messages["'`]\s*\)/,
-    allowed: new Set(["lib/server/agent/runs.ts", "lib/server/retention.ts",
-      "lib/server/agent/run-queue-content.ts",
-      "lib/server/encryption/agent-queue-backfill.ts"]),
-  },
-  {
-    access: /\.\s*rpc\s*\(\s*["'`]migrate_agent_queue_bundle["'`]/,
-    allowed: new Set(["lib/server/encryption/agent-queue-backfill.ts"]),
-  },
-  {
-    access: /\.\s*from\s*\(\s*["'`]agent_run_input_requests["'`]\s*\)/,
-    allowed: new Set(["app/api/assistant/conversations/[id]/status/route.ts",
-      "lib/server/numo/worker-mediation.ts",
-      "lib/server/numo/worker-input-cancel.ts",
-      "lib/server/encryption/agent-queue-backfill.ts"]),
-  },
-  {
-    access: /\.\s*from\s*\(\s*["'`]agent_run_journal["'`]\s*\)/,
-    allowed: new Set(["lib/server/agent/runs.ts",
-      "lib/server/encryption/agent-journal-backfill.ts",
-      "lib/server/encryption/critical-backfill-readiness.ts",
-      "lib/server/retention.ts"]),
-  },
-  {
-    access: /\.\s*(?:from\s*\(\s*["'`]agent_journal_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_agent_journal_ciphertext["'`])/,
-    allowed: new Set(["lib/server/agent/encrypted-journal.ts",
-      "lib/server/encryption/agent-journal-backfill.ts"]),
-  },
-  {
-    access: /\.\s*rpc\s*\(\s*["'`]agent_journal_legacy_batch_exists["'`]/,
-    allowed: new Set(["lib/server/agent/runs.ts"]),
-  },
-  {
     access: /\bissues(?:![\w]+)?\([^\r\n)]*\b(?:title|description|plan|remote_url|automation_override)\b/,
     allowed: new Set(),
   },
@@ -174,7 +89,6 @@ const rules = [
       "lib/server/git/issue-sync.ts",
       "lib/server/comment-store.ts", "app/api/issues/[id]/comments/route.ts",
       "app/api/issues/[id]/route.ts", "lib/server/assistant/comment-agent.ts",
-      "lib/server/agent/control-plane.ts", "lib/server/agent/vm-rest.ts",
       "lib/server/cycles.ts", "lib/server/recurrence.ts", "lib/server/smart-assign.ts",
       "captures/world/seed/002-projet-aurora.mjs", "captures/world/seed/003-projet-beacon.mjs",
       "captures/world/seed/004-cycle.mjs", "captures/world/seed/006-numo.mjs",
@@ -355,14 +269,6 @@ for (const file of files) {
   // The demo seed only checks existence. Its constant demo fixture is not a user-content reader.
   if (normalized === "captures/world/seed/005-carnet.mjs" &&
       /\.\s*from\s*\(\s*["'`]user_scratchpad["'`]\s*\)(?!\s*\.\s*select\s*\(\s*["'`]user_id["'`]\s*\))/.test(source)) {
-    violations.push(normalized);
-  }
-  if (normalized === "app/api/pull-requests/route.ts" &&
-      /\.\s*from\s*\(\s*["'`]agent_run_events["'`]\s*\)(?!\s*\.\s*select\s*\(\s*["'`]run_id["'`]\s*\))/.test(source)) {
-    violations.push(normalized);
-  }
-  if (normalized === "lib/server/retention.ts" &&
-      /\.\s*from\s*\(\s*["'`]agent_run_(?:events|journal)["'`]\s*\)(?!\s*\.\s*delete\s*\()/.test(source)) {
     violations.push(normalized);
   }
 }

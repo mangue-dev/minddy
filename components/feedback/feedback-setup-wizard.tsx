@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Textarea, toast } from "mangue-ui";
-import { NumoIcon } from "@/components/numo-icon";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
   WizardDialog,
@@ -40,8 +39,6 @@ import {
   integrationsQueryKey,
   useIntegrationsQuery,
 } from "@/lib/use-integrations-query";
-import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 
@@ -103,8 +100,6 @@ export function FeedbackSetupWizard({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("Settings");
-  const tCommon = useTranslations("Common");
-  const { openIntent } = useAssistantPanelActions();
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("board");
   const [sso, setSso] = useState(true);
@@ -137,10 +132,6 @@ export function FeedbackSetupWizard({
     (i) => i.kind === "feedback" && !i.revoked_at,
   );
 
-  // Numo can only work on a repository: without a git link, the option does not work
-  // not show — a button that has nothing to clone is not worth a refusal.
-  const { link } = useProjectGitLinkQuery(projectId);
-  const canHandOffToNumo = !!link;
 
   /**
    * The journey opens on what is ALREADY in place, not on the values ​​by
@@ -300,19 +291,6 @@ export function FeedbackSetupWizard({
     } finally {
       setGenerating(false);
     }
-  };
-
-  /** Hand the generated implementation request to the shared Numo conversation. */
-  const handOffToNumo = () => {
-    if (!prompt) return;
-    handleOpenChange(false);
-    openIntent({
-      source: "feedback",
-      action: "implement",
-      projectId,
-      prompt,
-      pageContext: { projectId },
-    });
   };
 
   const stepDefs: Record<StepId, WizardStep<StepId>> = {
@@ -493,16 +471,14 @@ export function FeedbackSetupWizard({
     done: {
       id: "done",
       title: t("feedbackWizardDoneTitle"),
-      subtitle: canHandOffToNumo
-        ? t("feedbackWizardDoneDesc")
-        : t("feedbackWizardCopied"),
+      subtitle: t("feedbackWizardCopied"),
       lockBack: true,
       submitLabel: t("integrationKeyDone"),
       // The prompt itself is not displayed: it is long, it is already in the
-      // clipboard, and rereading it here learns nothing — it is the agent who
-      // bed. There remains what requires a gesture, in the order in which it is done: the
-      // line to put in the `.env` first (a key does not show up), then
-      // the two possible destinations of the prompt, separated by their “or”.
+      // clipboard, and rereading it here learns nothing — the agent reads it.
+      // There remains what requires a gesture, in the order in which it is
+      // done: the line to put in the `.env` first (a key does not show up),
+      // then copying the prompt again.
       content: (
         <div className="flex flex-col gap-3 text-left">
           {/* The prompt no longer carries a credential: here it is, separately, under the
@@ -563,30 +539,6 @@ export function FeedbackSetupWizard({
             {t("feedbackWizardCopy")}
           </Button>
 
-          {/* The other: minddy's agent, on the deposit already linked to the project. */}
-          {canHandOffToNumo && (
-            <>
-              <div className="mt-1 flex items-center gap-3">
-                <span className="h-px flex-1 bg-border" aria-hidden />
-                <span className="text-xs text-muted-foreground">
-                  {tCommon("or")}
-                </span>
-                <span className="h-px flex-1 bg-border" aria-hidden />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-center gap-2"
-                onClick={handOffToNumo}
-              >
-                <NumoIcon className="size-4" />
-                {t("feedbackWizardNumoButton")}
-              </Button>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {t("feedbackWizardNumoDesc")}
-              </p>
-            </>
-          )}
         </div>
       ),
     },

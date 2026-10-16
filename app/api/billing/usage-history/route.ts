@@ -4,13 +4,13 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { getUsagePeriod } from "@/lib/server/usage";
 import { USAGE_SEGMENTS, type UsageSegmentId } from "@/lib/billing-plans";
-import { toUsageHistoryFeature } from "@/lib/usage-features";
+import { toUsageHistoryFeature, USAGE_HISTORY_FEATURES } from "@/lib/usage-features";
 import { decodeProjectName } from "@/lib/server/project-content";
 import type { UsageHistoryEntry, UsageHistoryResponse } from "@/lib/billing-types";
 
 const PAGE_SIZE = 25;
 
-/** ledger feature → display segment (agent_code AND sandbox_compute → agents). */
+/** ledger feature → display segment. */
 function segmentForFeature(feature: string): UsageSegmentId {
   return (
     USAGE_SEGMENTS.find((segment) =>
@@ -20,9 +20,11 @@ function segmentForFeature(feature: string): UsageSegmentId {
 }
 
 /**
- * GET /api/billing/usage-history?segment=agents&offset=0 — typed history
+ * GET /api/billing/usage-history?segment=numo&offset=0 — typed history
  * of the current window (MIN-72, returns): one run of the ledger per entry,
- * grouped by RPC `get_user_usage_history`, filterable by segment.
+ * grouped by RPC `get_user_usage_history`, filterable by segment. Unfiltered,
+ * it lists the features the user has a word for: lines of the retired code
+ * agent (MIN-721) are left out.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await service.rpc("get_user_usage_history", {
     p_user_id: auth.user.id,
     p_since: period.start,
-    p_features: segment ? segment.features : null,
+    p_features: segment ? segment.features : [...USAGE_HISTORY_FEATURES],
     p_limit: PAGE_SIZE,
     p_offset: offset,
   });
@@ -79,8 +81,7 @@ export async function GET(request: NextRequest) {
         segmentId: segmentForFeature(entry.feature),
         // The feature as is, so that the line says the gesture and not the
         // family. The PRC keeps `min(feature)` per run: in a mixed run,
-        // it is the one that the user recognizes (`agent_code` before
-        // `sandbox_compute`, `routine_code` before `routine_compute`).
+        // it is the one that the user recognizes.
         feature: toUsageHistoryFeature(entry.feature),
         at: entry.first_at,
         projectName: entry.project_id ? projectNames.get(entry.project_id) ?? null : null,

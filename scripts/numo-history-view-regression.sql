@@ -12,7 +12,8 @@ BEGIN
   IF current_database() NOT LIKE 'minddy_min591_%' THEN
     RAISE EXCEPTION 'Run this rehearsal only in an isolated minddy_min591_* database';
   END IF;
-  FOREACH view_name IN ARRAY ARRAY['numo_work', 'numo_conversation_history', 'numo_user_conversation_history'] LOOP
+  FOREACH view_name IN ARRAY ARRAY['numo_conversation_history', 'numo_user_conversation_history',
+      'numo_messages', 'numo_actions', 'numo_turns'] LOOP
     IF EXISTS (SELECT 1 FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = view_name AND column_name = 'detail_href') THEN
       RAISE EXCEPTION 'obsolete history URL remains in %', view_name;

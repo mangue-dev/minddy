@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   authorizePrRequest,
   prAiMergeResponse,
-  prAiReviewResponse,
   prDetailResponse,
   prLinkIssueResponse,
   prUnlinkIssueResponse,
@@ -22,22 +21,18 @@ import {
  * | { action: 'reopen' } → closed → reopened (MIN-164)
  * | { action: 'ready_for_review' } → draft → ready
  * | { action: 'convert_to_draft' } → open → draft
- *       | { action: 'review', verdict, message, relaunch? }
- *       | { action: 'ai_review' } → compatibility Numo review intent
+ *       | { action: 'review', verdict, message? }
+ *       | { action: 'merge_with_numo' } → merge with a generated message
  *       | { action: 'link_issue', issueId } → adds an issue association
  *       | { action: 'unlink_issue', issueId } → removes an issue association
  *
- * Both Numo actions return a durable common conversation. Existing worker
- * review status remains readable from `./ai-review` for historical runs.
- *
- * The old `agent-runs/[runId]/pr/*` roads have become facades of
- * these: the body of each gesture lives in `lib/server/agent/pr-actions`,
- * routes only do auth.
+ * The body of each gesture lives in `lib/server/agent/pr-actions`; routes only
+ * do auth.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };
 
-// A Numo turn or delegated worker may continue after the response.
+// Merge message generation may continue after the response.
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -65,7 +60,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     action !== "close" &&
     action !== "reopen" &&
     action !== "review" &&
-    action !== "ai_review" &&
     action !== "ready_for_review" &&
     action !== "convert_to_draft" &&
     action !== "link_issue" &&
@@ -88,31 +82,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return prAiMergeResponse(auth.scope, body, auth.userId);
   }
   if (action === "review") {
-    return prReviewResponse(auth.scope, body, auth.userId, auth.supabase);
+    return prReviewResponse(auth.scope, body, auth.userId);
   }
   if (action === "unlink_issue") {
     return prUnlinkIssueResponse(auth.scope, auth.supabase, body);
   }
   if (action === "link_issue") {
     return prLinkIssueResponse(auth.scope, auth.supabase, body, auth.userId);
-  }
-  if (action === "ai_review") {
-    if ("model" in body || "reasoningLevel" in body) {
-      return NextResponse.json(
-        {
-          error: "workerConfigurationManagedInSettings",
-          code: "workerConfigurationManagedInSettings",
-        },
-        { status: 400 },
-      );
-    }
-    // Language is no longer a parameter: an agent session writes in that of
-    // its launcher, resolved in the first chunk as for all the others.
-    return prAiReviewResponse(
-      auth.scope,
-      auth.userId,
-      auth.supabase,
-    );
   }
   if (
     action === "update_branch" ||

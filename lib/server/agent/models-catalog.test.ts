@@ -100,12 +100,6 @@ async function freshCatalog(
     loadOpenRouterIndex: vi.fn(async () => {}),
   }));
   vi.doMock("./model", () => ({
-    getUserDefaultModel: vi.fn(async () => ({
-      model: endpoint?.provider === "anthropic"
-        ? "claude-sonnet-5"
-        : "deepseek/deepseek-v4-flash",
-      provider: endpoint?.provider ?? "openrouter",
-    })),
     resolveAgentApiKey: vi.fn(async () => {
       if (endpoint) return { ...endpoint, credentialVersion: `${endpoint.apiKey}-version` };
       return {

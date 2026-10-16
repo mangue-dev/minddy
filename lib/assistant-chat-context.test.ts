@@ -22,7 +22,6 @@ const h = vi.hoisted(() => ({
     } | null,
   },
   read: vi.fn(), load: vi.fn(), reset: vi.fn(), send: vi.fn(), abort: vi.fn(), active: vi.fn(), pointer: vi.fn(),
-  queryClient: { invalidateQueries: vi.fn() },
   chatOptions: null as { onToolResult?: (name: string, success: boolean, result: unknown) => void } | null,
   router: { push: vi.fn(), refresh: vi.fn() },
   theme: { setTheme: vi.fn() }, auth: { refreshUser: vi.fn() },
@@ -30,8 +29,6 @@ const h = vi.hoisted(() => ({
 vi.mock("./assistant-panel-context", () => ({ useAssistantPanel: () => h.panel }));
 vi.mock("./use-assistant-chat", () => ({ useAssistantChat: (options: { onToolResult?: (name: string, success: boolean, result: unknown) => void }) => { h.chatOptions = options; return { state: h.state, loadConversation: h.load, reset: h.reset, sendMessage: h.send, abort: h.abort }; } }));
 vi.mock("./assistant-api", () => ({ fetchActiveConversation: h.active, setActiveConversation: h.pointer, updateConversation: h.read }));
-vi.mock("./use-agent-runs", () => ({ allAgentSessionsQueryKey: ["agent-sessions", "all"] as const }));
-vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => h.queryClient }));
 vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
 vi.mock("next-intl", () => ({ useLocale: () => "en" }));
 vi.mock("next/navigation", () => ({ useRouter: () => h.router }));
@@ -187,14 +184,4 @@ describe("persistent conversation context", () => {
    * spinner at once: the sessions list rests (no poll) and only an
    * invalidation sees a run that just started.
    */
-  it("invalidates the agent sessions on a delegation tool result", async () => {
-    await render();
-    expect(h.chatOptions).not.toBeNull();
-
-    await act(async () => h.chatOptions?.onToolResult?.("launch_code_agent", true, { run_id: "run" }));
-    expect(h.queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["agent-sessions", "all"] });
-
-    await act(async () => h.chatOptions?.onToolResult?.("launch_code_agent", false, {}));
-    expect(h.queryClient.invalidateQueries).toHaveBeenCalledOnce();
-  });
 });

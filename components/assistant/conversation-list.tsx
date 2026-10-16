@@ -337,19 +337,15 @@ export function ConversationList({
               {isArchived ? <HugeiconsIcon icon={ArchiveArrowUpIcon} /> : <HugeiconsIcon icon={ArchiveIcon} />}
               {t(isArchived ? "unarchiveConversation" : "archiveConversation")}
             </DropdownMenuItem>
-            {conversation.source === "assistant" && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  disabled={deletingId === conversation.id}
-                  onSelect={() => setPendingDelete(conversation.id)}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} />
-                  {t("deleteConversation")}
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={deletingId === conversation.id}
+              onSelect={() => setPendingDelete(conversation.id)}
+            >
+              <HugeiconsIcon icon={Delete02Icon} />
+              {t("deleteConversation")}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

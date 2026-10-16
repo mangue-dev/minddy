@@ -2,7 +2,6 @@ import "server-only";
 
 import {
   getUserByok,
-  getUserDefaultModel,
   resolveAgentApiKey,
   type UserByok,
 } from "./model";
@@ -428,24 +427,16 @@ export async function getAgentModelsForUser(
     endpointConfigured = false;
   }
 
-  // Assistant calls retain provider feature defaults. Code-worker catalogs
-  // expose only the explicit provider-bound account preference: there is no
-  // provider or platform fallback that a new delegation could silently use.
+  // Assistant calls retain provider feature defaults. Other catalogs expose
+  // no provider or platform fallback that a caller could silently use.
   const byok = byokRead ? await byokRead : null;
   const featureDefault = byok?.featureModels[modelKey]?.trim();
-  const providerDefault =
-    surface === "assistant"
-      ? featureDefault ||
-        (await resolveByokFeatureDefaultModel(provider, modelKey))
-      : null;
-  const accountDefault =
-    surface === "agent" ? await getUserDefaultModel(userId) : null;
   const defaultModel =
     surface === "assistant"
-      ? (providerDefault ?? null)
-      : accountDefault?.provider === provider
-        ? accountDefault.model
-        : null;
+      ? featureDefault ||
+        (await resolveByokFeatureDefaultModel(provider, modelKey)) ||
+        null
+      : null;
 
   const limit = mode === "platform" ? await getModelPlanLimit(userId) : null;
   const localEndpoint = isLocalAgentProvider(provider)

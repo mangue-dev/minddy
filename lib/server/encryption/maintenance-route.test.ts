@@ -8,25 +8,8 @@ const workers: Array<[string, string[]]> = [
   ["@/lib/server/encryption/project-draft-backfill", ["backfillProjectDraftsBatch"]],
   ["@/lib/server/encryption/feedback-post-backfill", ["backfillFeedbackPostsBatch"]],
   ["@/lib/server/encryption/issue-backfill", ["backfillIssuesBatch"]],
-  ["@/lib/server/encryption/agent-journal-backfill", ["backfillAgentJournalBatch"]],
-  ["@/lib/server/encryption/agent-event-backfill", ["backfillAgentEventsBatch"]],
-  ["@/lib/server/encryption/agent-launch-backfill", ["backfillAgentLaunchBatch"]],
-  ["@/lib/server/encryption/agent-title-backfill", ["backfillAgentTitleBatch"]],
-  ["@/lib/server/encryption/agent-checkpoint-backfill", ["backfillAgentCheckpointBatch"]],
-  ["@/lib/server/encryption/agent-delegation-backfill", ["backfillAgentDelegationBatch"]],
-  ["@/lib/server/encryption/agent-standalone-message-backfill", ["backfillAgentStandaloneMessages"]],
-  ["@/lib/server/encryption/agent-queue-backfill", ["backfillAgentQueueBatch"]],
-  ["@/lib/server/encryption/agent-context-backfill", ["backfillAgentContextsBatch"]],
   ["@/lib/server/encryption/github-issue-metadata-backfill", ["backfillGithubIssueMetadataBatch"]],
   ["@/lib/server/encryption/github-comment-url-backfill", ["backfillGithubCommentUrlsBatch"]],
-  ["@/lib/server/encryption/agent-verdict-backfill", ["backfillAgentVerdictsBatch"]],
-  ["@/lib/server/encryption/agent-deployment-backfill", ["backfillAgentDeploymentUrlsBatch"]],
-  ["@/lib/server/encryption/agent-base-branch-backfill", ["backfillAgentRunBaseBranchesBatch", "backfillOrphanRuntimeBaseBranchesBatch"]],
-  ["@/lib/server/encryption/agent-work-branch-backfill", ["backfillAgentArtifactBranchesBatch", "backfillAgentRunWorkBranchesBatch", "backfillOrphanRuntimeWorkBranchesBatch"]],
-  ["@/lib/server/encryption/agent-delegation-result-backfill", ["backfillAgentDelegationResultsBatch"]],
-  ["@/lib/server/encryption/agent-numo-worker-backfill", ["backfillNumoWorkerEventsBatch", "backfillNumoWorkerCheckpointsBatch"]],
-  ["@/lib/server/encryption/agent-run-summary-backfill", ["backfillAgentRunSummariesBatch", "backfillAgentTurnSummariesBatch"]],
-  ["@/lib/server/encryption/agent-pr-url-backfill", ["backfillAgentArtifactUrlsBatch", "backfillAgentRunPrUrlsBatch"]],
   ["@/lib/server/encryption/pull-request-url-backfill", ["backfillPullRequestUrlsBatch"]],
   ["@/lib/server/encryption/pull-request-content-backfill", ["backfillPullRequestContentBatch"]],
   ["@/lib/server/encryption/pr-comment-edit-backfill", ["backfillPrCommentEditsBatch"]],
@@ -45,9 +28,7 @@ const workers: Array<[string, string[]]> = [
   ["@/lib/server/encryption/provider-resource-backfill", ["backfillProviderResourcesBatch"]],
   ["@/lib/server/encryption/app-config-backfill", ["backfillAppConfigBatch"]],
   ["@/lib/server/encryption/feedback-merge-backfill", ["backfillFeedbackMergeBatch"]],
-  ["@/lib/server/encryption/agent-chain-code-backfill", ["backfillAgentChainCodesBatch"]],
   ["@/lib/server/encryption/numo-turn-intent-backfill", ["backfillNumoTurnIntentsBatch"]],
-  ["@/lib/server/encryption/numo-automation-content-backfill", ["backfillNumoAutomationContentBatch"]],
   ["@/lib/server/encryption/numo-conversation-title-backfill", ["backfillNumoConversationTitlesBatch"]],
   ["@/lib/server/encryption/numo-user-message-backfill", ["backfillNumoUserMessagesBatch"]],
   ["@/lib/server/encryption/numo-final-content-backfill", ["backfillNumoFinalContentBatch"]],
@@ -68,7 +49,6 @@ const workers: Array<[string, string[]]> = [
   ["@/lib/server/encryption/forge-relay-user-delivery-backfill", ["backfillRelayUserDeliveriesBatch"]],
   ["@/lib/server/encryption/forge-oauth-token-backfill", ["backfillForgeOAuthConnectionsBatch", "backfillForgeOAuthIdentitiesBatch"]],
   ["@/lib/server/encryption/personal-mcp-backfill", ["backfillMcpConnectionsBatch", "backfillMcpAttemptsBatch"]],
-  ["@/lib/server/encryption/agent-branch-prefix-backfill", ["backfillAgentBranchPrefixesBatch"]],
   ["@/lib/server/encryption/app-tab-backfill", ["backfillAppTabsBatch"]],
   ["@/lib/server/encryption/ai-decision-evaluation-backfill", ["backfillAiDecisionEvaluationsBatch"]],
   ["@/lib/server/encryption/stripe-webhook-payload-scrub", ["scrubStripeWebhookPayloadsBatch"]],
@@ -158,12 +138,12 @@ describe("application-wide encryption maintenance", () => {
       expect(callbacks.get("backfillPageContentBatch")).toHaveBeenCalled();
     } finally { log.mockRestore(); }
   });
-  it("serializes shared agent and Numo bundles and resumes later passes after a failure", async () => {
+  it("serializes shared routine and Numo bundles and resumes later passes after a failure", async () => {
     enable();
     let active = 0;
     let maximum = 0;
     let completed = 0;
-    const bundles = [...callbacks].filter(([name]) => /^backfill(Agent|Numo|OrphanRuntime)/.test(name));
+    const bundles = [...callbacks].filter(([name]) => /^backfill(AgentRoutine|Numo)/.test(name));
     for (const [name, callback] of bundles) {
       callback.mockImplementation(async () => {
         active++;
@@ -171,7 +151,7 @@ describe("application-wide encryption maintenance", () => {
         await Promise.resolve();
         active--;
         completed++;
-        if (name === "backfillNumoWorkerEventsBatch") throw Error("Private source failure");
+        if (name === "backfillNumoActivityBatch") throw Error("Private source failure");
         return emptyBatch;
       });
     }

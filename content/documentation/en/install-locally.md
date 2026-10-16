@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work",
     "editions": [
       "self-hosted"
     ],
@@ -44,14 +44,15 @@
       "app/api/oauth/register/route.ts",
       "lib/server/oauth/metadata.ts",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
-      "content/documentation/reviews/premerge-light-review-2026-10-10.md"
+      "content/documentation/reviews/premerge-light-review-2026-10-10.md",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 en network guidance and terminology review)",
-    "date": "2026-10-09"
+    "revision": 6,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root/min721_docs (MIN-721 source review: desktop Copy Diagnostic Report menu item removed; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 en network guidance and terminology review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "workspace-encryption",
@@ -68,7 +69,7 @@
       "src": "/documentation/en/install-locally-flow.svg",
       "alt": "Diagram: Desktop app selects the clone. Loopback application: port 6463. Minimal Supabase and durable data. Quitting stops app and backend.",
       "caption": "The desktop app manages startup and shutdown of local services while preserving their stored data.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +101,7 @@
       "src": "/documentation/en/install-locally-wizard.png",
       "alt": "Public installation wizard with the local computer profile selected.",
       "caption": "Choose the personal installation when the desktop app will manage the local services.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -153,4 +154,4 @@ This desktop-managed profile listens only on loopback. A compatible MCP client o
 
 ## Recover a failed launch {#recover}
 
-Closing a window leaves the desktop application running; use the application’s Quit command to stop it and the local services. Use the native Help menu to copy the diagnostic report if startup fails. Check Docker, CLI availability, free space and whether port 6463 belongs to another process. `pnpm self-host:local` is a terminal troubleshooting fallback. Stop it with Ctrl+C before returning control to the app; the app refuses to claim another process. Quitting the app normally stops Supabase too. The `--keep-backend` option deliberately changes that behavior. Never use `supabase db reset --local` as recovery: it destroys evaluation data. Verify a new account, project, issue and attachment before relying on the instance.
+Closing a window leaves the desktop application running; use the application’s Quit command to stop it and the local services. Check Docker, CLI availability, free space and whether port 6463 belongs to another process. `pnpm self-host:local` is a terminal troubleshooting fallback. Stop it with Ctrl+C before returning control to the app; the app refuses to claim another process. Quitting the app normally stops Supabase too. The `--keep-backend` option deliberately changes that behavior. Never use `supabase db reset --local` as recovery: it destroys evaluation data. Verify a new account, project, issue and attachment before relying on the instance.

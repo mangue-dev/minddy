@@ -22,9 +22,6 @@ test("the release profile inventory includes both Compose paths and their runtim
     "deploy/self-hosted/scheduler.mjs",
     "deploy/self-hosted/database-proxy.mjs",
     "deploy/self-hosted/functions-bundle.json",
-    "deploy/self-hosted/agent-runner.mjs",
-    "deploy/self-hosted/agent-runner-egress.mjs",
-    "deploy/self-hosted/agent-runner-git-relay.mjs",
     "deploy/self-hosted/.env.example",
   ]);
 });
@@ -32,7 +29,7 @@ test("the release profile inventory includes both Compose paths and their runtim
 test("the full profile keeps application and Supabase traffic on internal networks", () => {
   const profile = readFileSync(resolve(root, "deploy/self-hosted/compose.full.yml"), "utf8");
   assert.match(profile, /networks:\n[\s\S]*?default:\n\s+internal: true/);
-  assert.match(profile, /minddy:[\s\S]*?networks:\n\s+- default\n\s+- private\n\s+- agent_egress/);
+  assert.match(profile, /minddy:[\s\S]*?networks:\n\s+- default\n\s+- private\n\s+- app_egress/);
   assert.match(profile, /caddy:[\s\S]*?networks:\n\s+- default\n\s+- edge\n\s+- private/);
   assert.match(profile, /auth:[\s\S]*?networks:\n\s+- default\n\s+- auth_egress/);
 });
@@ -89,14 +86,14 @@ test("both server profiles bound database import request bodies at the proxy", (
   }
 });
 
-test("both server profiles include routines and isolated agent execution by default", () => {
+test("both server profiles include routines without a privileged container runner", () => {
   for (const name of ["managed", "full"]) {
     const profile = readFileSync(resolve(root, `deploy/self-hosted/compose.${name}.yml`), "utf8");
     assert.match(profile, /\n  scheduler:\n/);
     assert.doesNotMatch(profile, /scheduled-jobs/);
-    assert.match(profile, /\n  agent-runner:\n/);
-    assert.match(profile, /\/var\/run\/docker\.sock:\/var\/run\/docker\.sock/);
-    assert.match(profile, /AGENT_RUNNER_NETWORK: minddy-(?:managed|full)_agent_egress/);
+    assert.match(profile, /minddy:[\s\S]*?networks:\n(?:\s+- (?:default|private)\n)+\s+- app_egress/);
+    assert.doesNotMatch(profile, /agent-runner|agent_egress/);
+    assert.doesNotMatch(profile, /docker\.sock/);
   }
 });
 

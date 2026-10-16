@@ -8,13 +8,16 @@ import test from "node:test";
 const container = process.env.MINDDY_NUMO_LOCK_TEST_CONTAINER;
 const read = (file) => readFileSync(new URL(`../supabase/migrations/${file}`, import.meta.url), "utf8");
 const durable = read("20270106680000_durable_numo_turns.sql");
-const protectedSql = read("20270107650000_numo_tool_content_encryption.sql");
 const fences = read("20270108090000_encryption_snapshot_write_fences.sql");
-const migration = read("20270109200031_numo_event_lock_order.sql");
+const lockOrder = read("20270109200031_numo_event_lock_order.sql");
+// The code-agent removal rewrote both tool completions without their worker argument.
+const current = read("20270109200049_drop_code_agent_schema.sql");
 function definition(source, name) {
   const start = source.search(new RegExp(`CREATE (?:OR REPLACE )?FUNCTION public\\.${name}\\(`));
   assert.notEqual(start, -1);
-  return source.slice(start, source.indexOf("$$;", start) + 3);
+  const tag = source.slice(start).match(/AS (\$[a-z_]*\$)/)[1];
+  const body = source.indexOf(tag, start) + tag.length;
+  return source.slice(start, source.indexOf(`${tag};`, body) + tag.length + 1);
 }
 function args(database) {
   return ["exec", "-i", container, "psql", "-X", "-Atq", "-v", "ON_ERROR_STOP=1",
@@ -48,11 +51,10 @@ async function paused(database, name) {
   throw new Error("Concurrent append did not reach the pause trigger");
 }
 
-test("Numo lock upgrade eliminates message and tool deadlocks without weakening durable claims", { skip: !container }, async (context) => {
+test("Numo lock order keeps event appends, messages and tool completions deadlock-free without weakening durable claims", { skip: !container }, async (context) => {
   const database = `numo_locks_${randomUUID().replaceAll("-", "")}`;
   const turn = randomUUID();
   const claim = randomUUID();
-  const worker = randomUUID();
   sql("postgres", `CREATE DATABASE ${database};`);
   try {
     sql(database, `DO $$ BEGIN
@@ -61,19 +63,17 @@ test("Numo lock upgrade eliminates message and tool deadlocks without weakening 
       IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='service_role') THEN CREATE ROLE service_role; END IF;
     END $$;
     CREATE TABLE public.numo_assistant_turns(id uuid PRIMARY KEY, last_event_seq integer NOT NULL DEFAULT -1,
-      updated_at timestamptz, status text, claim_token uuid, active_run_id uuid);
+      updated_at timestamptz, status text, claim_token uuid);
     CREATE TABLE public.numo_turn_events(id uuid PRIMARY KEY, turn_id uuid REFERENCES public.numo_assistant_turns,
       seq integer, type text, payload jsonb, UNIQUE(turn_id,seq));
     CREATE TABLE public.assistant_messages(id uuid PRIMARY KEY, turn_id uuid REFERENCES public.numo_assistant_turns);
-    CREATE TABLE public.agent_runs(id uuid PRIMARY KEY);
     CREATE TABLE public.numo_tool_operations(turn_id uuid REFERENCES public.numo_assistant_turns,
       tool_call_id text, status text, claim_token uuid, success boolean, pause boolean, result jsonb,
-      result_version integer, model_result jsonb, model_result_version integer, result_run_id uuid,
+      result_version integer, model_result jsonb, model_result_version integer,
       completed_at timestamptz, tool_name text, PRIMARY KEY(turn_id,tool_call_id));
     INSERT INTO public.numo_assistant_turns(id,status,claim_token) VALUES('${turn}','running','${claim}');
-    INSERT INTO public.agent_runs VALUES('${worker}');
-    INSERT INTO public.numo_tool_operations(turn_id,tool_call_id,status,claim_token,tool_name,result_run_id)
-      VALUES('${turn}','launch','started','${claim}','launch_code_agent','${worker}');
+    INSERT INTO public.numo_tool_operations(turn_id,tool_call_id,status,claim_token,tool_name)
+      VALUES('${turn}','search','started','${claim}','search_issues');
     ${definition(fences, "require_encryption_read_committed")}
     ${definition(fences, "guard_encryption_snapshot_write")}
     CREATE TRIGGER final_fence BEFORE INSERT OR UPDATE ON public.numo_assistant_turns
@@ -90,19 +90,15 @@ test("Numo lock upgrade eliminates message and tool deadlocks without weakening 
     CREATE TRIGGER pause_test_event BEFORE INSERT ON public.numo_turn_events
       FOR EACH ROW EXECUTE FUNCTION public.pause_test_event();
     ${definition(durable, "append_numo_turn_event")}
-    ${definition(durable, "complete_numo_tool_operation")}
-    ${definition(protectedSql, "complete_numo_tool_operation_protected")}
     REVOKE ALL ON FUNCTION public.append_numo_turn_event(uuid,uuid,text,jsonb) FROM PUBLIC;
-    REVOKE ALL ON FUNCTION public.complete_numo_tool_operation(uuid,uuid,text,boolean,jsonb,jsonb,boolean) FROM PUBLIC;
-    REVOKE ALL ON FUNCTION public.complete_numo_tool_operation_protected(uuid,uuid,text,boolean,jsonb,integer,jsonb,integer,uuid,boolean) FROM PUBLIC;
     GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;`);
 
     const append = (event = randomUUID()) => `SELECT seq FROM public.append_numo_turn_event('${turn}','${event}','pause_fixture','{}');`;
     const complete = (protectedCall, token = claim) => protectedCall
-      ? `SELECT public.complete_numo_tool_operation_protected('${turn}','${token}','launch',true,'{}',1,'{}',1,'${worker}',false);`
-      : `SELECT public.complete_numo_tool_operation('${turn}','${token}','launch',true,'{"run_id":"${worker}"}','{}',false);`;
+      ? `SELECT public.complete_numo_tool_operation_protected('${turn}','${token}','search',true,'{}',1,'{}',1,false);`
+      : `SELECT public.complete_numo_tool_operation('${turn}','${token}','search',true,'{}','{}',false);`;
     const reset = () => sql(database, `UPDATE public.numo_tool_operations SET status='started';
-      UPDATE public.numo_assistant_turns SET status='running',claim_token='${claim}',active_run_id=NULL;`);
+      UPDATE public.numo_assistant_turns SET status='running',claim_token='${claim}';`);
     const pair = async (other) => {
       const name = `append_${randomUUID().replaceAll("-", "")}`;
       const first = concurrent(database, name, append());
@@ -110,19 +106,21 @@ test("Numo lock upgrade eliminates message and tool deadlocks without weakening 
       return Promise.all([first, concurrent(database, `other_${name}`, other)]);
     };
     const message = () => `INSERT INTO public.assistant_messages VALUES('${randomUUID()}','${turn}');`;
-    for (const other of [message(), complete(true), complete(false)]) {
-      reset();
-      const before = await pair(other);
-      assert.ok(before.some((result) => /40P01/.test(result.errors)), JSON.stringify(before));
-    }
-    context.diagnostic("Both completion RPCs and message FK checks reproduce SQLSTATE 40P01 before the upgrade.");
-    sql(database, migration);
+    reset();
+    const before = await pair(message());
+    assert.ok(before.some((result) => /40P01/.test(result.errors)), JSON.stringify(before));
+    context.diagnostic("Message FK checks reproduce SQLSTATE 40P01 before the upgrade.");
+    sql(database, `${definition(lockOrder, "append_numo_turn_event")}
+      ${definition(current, "complete_numo_tool_operation")}
+      ${definition(current, "complete_numo_tool_operation_protected")}
+      REVOKE ALL ON FUNCTION public.complete_numo_tool_operation(uuid,uuid,text,boolean,jsonb,jsonb,boolean) FROM PUBLIC;
+      REVOKE ALL ON FUNCTION public.complete_numo_tool_operation_protected(uuid,uuid,text,boolean,jsonb,integer,jsonb,integer,boolean) FROM PUBLIC;
+      GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;`);
     for (const other of [message(), complete(true), complete(false)]) {
       reset();
       const after = await pair(other);
       assert.ok(after.every((result) => result.code === 0), JSON.stringify(after));
     }
-    assert.equal(sql(database, `SELECT active_run_id='${worker}' FROM public.numo_assistant_turns WHERE id='${turn}';`), "t");
 
     reset();
     const event = randomUUID();
@@ -161,7 +159,7 @@ test("Numo lock upgrade eliminates message and tool deadlocks without weakening 
     }
     for (const signature of ["append_numo_turn_event(uuid,uuid,text,jsonb)",
       "complete_numo_tool_operation(uuid,uuid,text,boolean,jsonb,jsonb,boolean)",
-      "complete_numo_tool_operation_protected(uuid,uuid,text,boolean,jsonb,integer,jsonb,integer,uuid,boolean)"]) {
+      "complete_numo_tool_operation_protected(uuid,uuid,text,boolean,jsonb,integer,jsonb,integer,boolean)"]) {
       assert.equal(sql(database, `SELECT has_function_privilege('service_role','public.${signature}','EXECUTE')
         AND NOT has_function_privilege('authenticated','public.${signature}','EXECUTE')
         AND NOT has_function_privilege('anon','public.${signature}','EXECUTE');`), "t");

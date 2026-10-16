@@ -9,7 +9,7 @@ import type { Routine } from "@/lib/routines-api";
 import type { Objective } from "@/lib/types";
 
 const state = vi.hoisted(() => ({ reset: vi.fn(), toast: vi.fn(), push: vi.fn(),
-  runs: [] as { id: string; kind: string; created_at: string; status: string }[] }));
+  runs: [] as { id: string; kind: string; numo_conversation_id?: string; created_at: string; status: string }[] }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "en", useNow: () => new Date("2026-10-13T00:00:00Z"), useFormatter: () => ({ dateTime: () => "October 13", number: (value: number) => String(value) }) }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("mangue-ui", async () => {
@@ -32,8 +32,7 @@ vi.mock("@/components/routines/routine-trigger-fields", () => ({ RoutineTriggerF
 vi.mock("@/components/routines/routine-schedule-fields", () => ({ RoutineScheduleFields: () => null }));
 vi.mock("@/components/routines/spend-cap-combobox", () => ({ SpendCapCombobox: () => null }));
 vi.mock("@/components/settings/settings-ui", () => ({ SettingsRow: () => null }));
-vi.mock("@/components/agent/agent-conversation", () => ({ AgentConversation: ({ noteRunId }: { noteRunId: string }) => <p data-open-run={noteRunId}>{noteRunId}</p> }));
-vi.mock("@/components/assistant/assistant-shell", () => ({ AssistantShell: () => null }));
+vi.mock("@/components/assistant/assistant-shell", () => ({ AssistantShell: ({ embeddedConversationId }: { embeddedConversationId: string }) => <p data-open-run={embeddedConversationId}>{embeddedConversationId}</p> }));
 vi.mock("@/lib/use-agent-models-query", () => ({ useAgentModelsQuery: () => ({ routineSchedulingConfigured: true, loading: false }) }));
 vi.mock("@/lib/use-routines-query", () => ({ useRoutineRunsQuery: () => ({ runs: state.runs, loading: false }), routineRunsQueryKey: (id: string) => ["routines", id, "runs"], routinesQueryKey: () => ["routines"], patchRoutineInCache: vi.fn() }));
 vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: null, scrollProps: {}, edges: { start: false, end: false } }) }));
@@ -113,12 +112,12 @@ it("adopts accepted remote routine fields in an edit form that has not been chan
 });
 
 it("keeps an opened run on retained returns while preserving owner-only routine editing", async () => {
-  state.runs = [{ id: "run", kind: "legacy_agent", created_at: "2026-10-13T00:00:00Z", status: "completed" }];
+  state.runs = [{ id: "run", kind: "numo", numo_conversation_id: "conversation", created_at: "2026-10-13T00:00:00Z", status: "completed" }];
   await renderRoutine(true, false); expect(button("edit")).toBeUndefined();
   await act(() => host.querySelector<HTMLTableRowElement>("tbody tr")!.click());
-  expect(host.querySelector('[data-open-run="run"]')).not.toBeNull();
+  expect(host.querySelector('[data-open-run="conversation"]')).not.toBeNull();
   await renderRoutine(false, false); await renderRoutine(true, false);
-  expect(host.querySelector('[data-open-run="run"]')).not.toBeNull();
+  expect(host.querySelector('[data-open-run="conversation"]')).not.toBeNull();
 });
 
 it("preserves dirty objective name and description plus dictation history across hidden remote updates", async () => {

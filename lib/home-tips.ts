@@ -53,7 +53,6 @@ export const HOME_TIPS: HomeTip[] = [
   tip("openCard", "card.open"),
   tip("askNumo", "card.askNumo"),
   tip("copyPrompt", "card.copyPrompt"),
-  tip("launchAgent", "card.launchAgent"),
   tip("dictateIssue", "create.issueDictate"),
   tip("objectiveIssues", "nav.objectiveIssues"),
 

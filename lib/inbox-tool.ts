@@ -74,13 +74,6 @@ function targetOf(notification: MyNotification) {
       title: notification.routine_title,
     };
   }
-  if (notification.agent_conversation_id) {
-    return {
-      kind: "agent_conversation",
-      id: notification.agent_conversation_id,
-      title: notification.agent_conversation_title,
-    };
-  }
   return { kind: "inbox", id: null, title: null };
 }
 

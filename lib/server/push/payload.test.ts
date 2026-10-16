@@ -222,18 +222,6 @@ describe("buildPushPayload", () => {
       "Réparer le sélecteur de cycle"
     );
   });
-
-  it("pushes nothing for a conversation-only row (no URL can carry it)", () => {
-    const ctx = emptyPushContext();
-    ctx.agentConversations.set("conversation-1", null);
-    const row = issueRow("agent_done", {
-      issue_id: null,
-      agent_conversation_id: "conversation-1",
-    });
-    // A Numo conversation has no page any more: the payload is skipped rather
-    // than opening something unrelated (better nothing than the wrong screen).
-    expect(buildPushPayload(ctx, row, "fr")).toBeNull();
-  });
 });
 
 describe("toPushLocale", () => {

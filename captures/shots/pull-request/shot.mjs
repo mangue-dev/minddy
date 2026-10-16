@@ -38,8 +38,8 @@ const VARIANTS = CAPTURE_VARIANTS;
 /**
  * Readings responded to by capture. They are ALL indexed by the PR
  * since MIN-143 (`/api/pull-requests/{prId}/…`): the page also shows the PRs
- * human, which have no runs, and `agent-runs/{runId}/pr/*` routes do not
- * are more than facades that she does not call.
+ * human, which have no runs; the former `agent-runs/{runId}/pr/*` routes
+ * were removed with the code agent (MIN-721).
  *
  * We aim by the EXACT PATH, not by a glob: `**\/pull-requests/*` picks up
  * aussi bien `/comments` que `/commits` selon l'ordre d'enregistrement.
@@ -163,8 +163,7 @@ async function capture({ locale, theme }) {
 
     await page.getByTestId("pr-more-actions").click();
     const actionIds = [
-      "pr-action-numo-request",
-      "pr-action-numo-review",
+      "pr-action-request-changes",
       "pr-action-start-review",
       "pr-action-convert-to-draft",
       "pr-action-close",
@@ -177,7 +176,7 @@ async function capture({ locale, theme }) {
     }
     if (!actionTops.every((top, index) => index === 0 || top > actionTops[index - 1])) {
       throw new Error(
-        `${locale}/${theme} — overflow actions are not grouped Numo, review, then PR state.`,
+        `${locale}/${theme} — overflow actions are not grouped review, then PR state.`,
       );
     }
     if ((await page.getByRole("menu").locator('[role="separator"]').count()) !== 2) {

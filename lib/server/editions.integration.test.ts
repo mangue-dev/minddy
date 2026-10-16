@@ -70,7 +70,6 @@ const { ensureAgentsAllowed } = await import("@/lib/server/entitlements");
 const { isStripeConfigured } = await import("@/lib/server/stripe");
 const { POST: stripeWebhook } = await import("@/app/api/stripe/webhook/route");
 const { resolveAiRuntime } = await import("@/lib/server/ai-runtime");
-const { checkAgentQuota } = await import("@/lib/server/agent/quota");
 
 const matrix = edition ? describe : describe.skip;
 
@@ -154,30 +153,4 @@ matrix(`edition matrix: ${edition ?? "no fixture"}`, () => {
     }
   });
 
-  it("reads the minddy plan and quota only for Cloud AI", async () => {
-    getResolvedBilling.mockClear();
-    getUserUsage.mockClear();
-    const quota = await checkAgentQuota("quota-user-id");
-
-    if (byok) {
-      expect(quota).toMatchObject({ allowed: true, unlimited: true, mode: "byok" });
-      expect(getResolvedBilling).not.toHaveBeenCalled();
-      expect(getUserUsage).not.toHaveBeenCalled();
-    } else if (expectAi) {
-      expect(quota).toMatchObject({
-        allowed: false,
-        mode: "platform",
-        reason: "usage_budget_exceeded",
-      });
-      expect(getResolvedBilling).toHaveBeenCalledWith("quota-user-id");
-      expect(getUserUsage).toHaveBeenCalledWith("quota-user-id");
-    } else {
-      expect(quota).toMatchObject({
-        allowed: false,
-        reason: "managed_ai_unavailable",
-      });
-      expect(getResolvedBilling).not.toHaveBeenCalled();
-      expect(getUserUsage).not.toHaveBeenCalled();
-    }
-  });
 });

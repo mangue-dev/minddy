@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (cd1843e12); MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -33,14 +33,15 @@
     "evidence": [
       "content/knowledge/repository-skills.md",
       "components/assistant/skill-preview-dialog.tsx",
-      "content/documentation/reviews/repository-skill-capture-candidates.json"
+      "content/documentation/reviews/repository-skill-capture-candidates.json",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min721_docs (MIN-721 source review: skills still load into Numo turns and routines; delegated code work removed; no operational rerun)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [],
   "aliases": [],
@@ -54,7 +55,7 @@
       "src": "/documentation/en/repository-skills-workflow.png",
       "alt": "Repository skill preview with its stable name, file path and complete instructions.",
       "caption": "Preview the skill before attaching it to a message. This real demonstration skill requests `npm test` and forbids merging the pull request; previewing it does not run either action.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -81,6 +82,6 @@ Commit and push these files to the linked GitHub or GitLab repository. Choose th
 
 Use `/`, `$` or the `+` menu and preview the instructions before sending. Select up to five skills; green badges show the selection. `$` lists repository skills only, while `/` also includes other commands.
 
-The selection applies to that user turn. Skills selected in a routine apply to every occurrence. They are repository files, not global account installations, and cannot override system or safety instructions. To create or revise one, edit the repository files or ask Numo to delegate that code work, then push the change before selecting the new version.
+The selection applies to that user turn. Skills selected in a routine apply to every occurrence. They are repository files, not global account installations, and cannot override system or safety instructions. To create or revise one, edit the repository files yourself or with your own coding agent, then push the change before selecting the new version.
 
 ![Repository skill preview with its stable name, file path and complete instructions.](/documentation/en/repository-skills-workflow.png)

@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 vi.mock("server-only", () => ({}));
 const h = vi.hoisted(() => ({
   rows: new Map<string, Array<Record<string, unknown>>>(),
-  failWorkerAccess: false,
   operations: [] as Array<{ table: string; action: string }>,
   versionReadGate: null as Promise<void> | null,
   receiptInsertGate: null as Promise<void> | null,
@@ -23,7 +22,6 @@ function query(table: string) {
   let patch: Record<string, unknown> | undefined;
   const execute = () => {
     h.operations.push({ table, action: insertion ? "insert" : patch ? "update" : "read" });
-    if (table.startsWith("agent_run") && h.failWorkerAccess) return { data: null, error: { message: "network" } };
     const rows = h.rows.get(table) ?? [];
     h.rows.set(table, rows);
     if (insertion) {
@@ -86,12 +84,12 @@ vi.mock("@/lib/server/numo/turn-intent-content", () => ({
   shouldProtectNumoTurnIntent: () => h.protectIntent(),
   encodeNumoTurnIntent: (...args: Parameters<typeof h.encodeIntent>) => h.encodeIntent(...args),
 }));
-const { requestNumoRequestStop, stopCanceledNumoMediation } = await import("./turns");
+const { requestNumoRequestStop } = await import("./turns");
 const { ensureNumoRequestConversation } = await import("./request-conversation");
 const { POST } = await import("@/app/api/assistant/turns/stop/route");
 
 beforeEach(() => {
-  h.rows.clear(); h.failWorkerAccess = false; h.operations = [];
+  h.rows.clear(); h.operations = [];
   h.versionReadGate = null; h.receiptInsertGate = null; h.beforeReceiptInsert = null;
   h.protectIntent.mockReset(); h.protectIntent.mockResolvedValue(false); h.encodeIntent.mockClear();
 });
@@ -165,36 +163,16 @@ describe("Durable Numo request cancellation", () => {
       .rejects.toThrow("unavailable");
   });
 
-  it("revokes only the matched execution and preserves admitted workers, steering and questions", async () => {
+  it("revokes only the matched execution", async () => {
     h.rows.set("numo_assistant_turns", [
       { id: "old", conversation_id: "conversation", user_id: "owner", request_id: "request", status: "running", claim_token: "claim", claimed_at: "then" },
       { id: "new", conversation_id: "conversation", user_id: "owner", request_id: "newer-request", status: "running", claim_token: "new-claim" },
     ]);
-    h.rows.set("agent_runs", [
-      { id: "worker", parent_numo_turn_id: "old", status: "running", interrupt_requested: false },
-      { id: "queued", parent_numo_turn_id: "old", status: "queued", interrupt_requested: false },
-      { id: "unrelated", parent_numo_turn_id: "new", status: "running", interrupt_requested: false },
-    ]);
-    h.rows.set("agent_run_messages", [{ run_id: "worker", consumed_at: null }, { run_id: "unrelated", consumed_at: null }]);
-    h.rows.set("agent_run_input_requests", [{ parent_numo_turn_id: "old", status: "pending" }]);
     expect(await requestNumoRequestStop(identity)).toEqual({
       id: "old", conversation_id: "conversation", user_id: "owner", request_id: "request", status: "stopped",
       claim_token: null, claimed_at: null, completed_at: expect.any(String), updated_at: expect.any(String), error_message: null,
     });
     expect(h.rows.get("numo_assistant_turns")![1]).toMatchObject({ status: "running", claim_token: "new-claim" });
-    expect(h.rows.get("agent_runs")!.map(row => row.interrupt_requested)).toEqual([false, false, false]);
-    expect(h.rows.get("agent_run_messages")!.map(row => Boolean(row.consumed_at))).toEqual([false, false]);
-    expect(h.rows.get("agent_run_input_requests")![0].status).toBe("pending");
-  });
-
-  it("stops Numo independently of worker storage and remains idempotent", async () => {
-    h.rows.set("numo_assistant_turns", [{ id: "turn", conversation_id: "conversation", user_id: "owner", request_id: "request", status: "running" }]);
-    h.rows.set("agent_runs", [{ id: "worker", parent_numo_turn_id: "turn", status: "running", interrupt_requested: false }]);
-    h.failWorkerAccess = true;
-    expect(await requestNumoRequestStop(identity)).toMatchObject({ status: "stopped" });
-    expect(await requestNumoRequestStop(identity)).toMatchObject({ status: "stopped" });
-    expect(h.rows.get("agent_runs")![0].interrupt_requested).toBe(false);
-    expect(h.operations.some(operation => operation.table.startsWith("agent_run"))).toBe(false);
   });
 
   it("clears the stopped conversation projection while preserving a newer generation", async () => {
@@ -238,30 +216,6 @@ describe("Durable Numo request cancellation", () => {
     expect(h.protectIntent).not.toHaveBeenCalled();
   });
 
-  it("revokes the mediated parent while its submission receipt encryption is still pending", async () => {
-    const conversationId = "61000000-0000-4000-8000-000000000002";
-    const turnId = "61000000-0000-4000-8000-000000000003";
-    const requestId = "61000000-0000-4000-8000-000000000004";
-    h.rows.set("conversations", [{ id: conversationId, user_id: "owner" }]);
-    h.rows.set("numo_assistant_turns", [{ id: turnId, conversation_id: conversationId,
-      user_id: "owner", request_id: "parent-request", status: "waiting_work", claim_token: "claim" }]);
-    let releaseReceipt!: (protect: boolean) => void;
-    h.protectIntent.mockImplementation(() => new Promise((resolve) => { releaseReceipt = resolve; }));
-    const pending = POST(new Request("http://localhost/api/assistant/turns/stop", {
-      method: "POST", body: JSON.stringify({ requestId, conversationId, turnId }),
-    }) as never);
-    try {
-      await vi.waitFor(() => {
-        expect(h.rows.get("numo_assistant_turns")![0]).toMatchObject({ status: "stopped", claim_token: null });
-        expect(h.protectIntent).toHaveBeenCalledOnce();
-      }, { timeout: 100 });
-    } finally {
-      releaseReceipt?.(false);
-    }
-    expect((await pending).status).toBe(200);
-    expect(h.rows.get("numo_assistant_turns")!.find(row => row.request_id === requestId)).toMatchObject({ status: "stopped" });
-  });
-
   it("refuses a Stop for another user's conversation before recording a receipt", async () => {
     const conversationId = "61000000-0000-4000-8000-000000000002";
     h.rows.set("conversations", [{ id: conversationId, user_id: "other" }]);
@@ -272,30 +226,6 @@ describe("Durable Numo request cancellation", () => {
     }) as never);
     expect(response.status).toBe(404);
     expect(h.rows.get("numo_assistant_turns")).toBeUndefined();
-  });
-
-  it("stops the actual delegated parent after a steering submission while retaining its admission receipt", async () => {
-    const conversationId = "61000000-0000-4000-8000-000000000002";
-    const turnId = "61000000-0000-4000-8000-000000000003";
-    const submissionRequestId = "61000000-0000-4000-8000-000000000004";
-    const parentRequestId = "61000000-0000-4000-8000-000000000005";
-    h.rows.set("conversations", [{ id: conversationId, user_id: "owner" }]);
-    h.rows.set("numo_assistant_turns", [{ id: turnId, conversation_id: conversationId,
-      user_id: "owner", request_id: parentRequestId, status: "waiting_work", model: "model", attempts: 1 }]);
-    h.rows.set("agent_runs", [{ id: "worker", parent_numo_turn_id: turnId,
-      status: "running", interrupt_requested: false }]);
-    h.rows.set("agent_run_messages", [{ run_id: "worker", consumed_at: null }]);
-    const response = await POST(new Request("http://localhost/api/assistant/turns/stop", {
-      method: "POST", body: JSON.stringify({ requestId: submissionRequestId, conversationId, turnId }),
-    }) as never);
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ turn_id: turnId, status: "stopped" });
-    expect(h.rows.get("numo_assistant_turns")!.find(row => row.request_id === submissionRequestId))
-      .toMatchObject({ status: "stopped" });
-    expect(h.rows.get("numo_assistant_turns")!.find(row => row.id === turnId))
-      .toMatchObject({ status: "stopped", claim_token: null });
-    expect(h.rows.get("agent_runs")![0].interrupt_requested).toBe(false);
-    expect(h.rows.get("agent_run_messages")![0].consumed_at).toBeNull();
   });
 
   it("refuses a turn hint outside the authorized conversation before writing a submission receipt", async () => {
@@ -314,29 +244,4 @@ describe("Durable Numo request cancellation", () => {
     expect(h.rows.get("numo_assistant_turns")![0].status).toBe("running");
   });
 
-  it("finds the delegated parent from its persisted submission when response headers have not arrived", async () => {
-    const conversationId = "61000000-0000-4000-8000-000000000002";
-    const submissionRequestId = "61000000-0000-4000-8000-000000000004";
-    h.rows.set("conversations", [{ id: conversationId, user_id: "owner" }]);
-    h.rows.set("numo_assistant_turns", [{ id: "parent", conversation_id: conversationId,
-      user_id: "owner", request_id: "parent-request", status: "waiting_work", model: "model", attempts: 1 }]);
-    h.rows.set("assistant_messages", [{ id: submissionRequestId, conversation_id: conversationId, role: "user", turn_id: "parent" }]);
-    h.rows.set("agent_runs", [{ id: "worker", parent_numo_turn_id: "parent", status: "running", interrupt_requested: false }]);
-    const response = await POST(new Request("http://localhost/api/assistant/turns/stop", {
-      method: "POST", body: JSON.stringify({ requestId: submissionRequestId, conversationId }),
-    }) as never);
-    expect(await response.json()).toMatchObject({ turn_id: "parent", status: "stopped" });
-    expect(h.rows.get("agent_runs")![0].interrupt_requested).toBe(false);
-  });
-
-  it("finishes cancellation when a worker submission commits after its Stop receipt", async () => {
-    h.rows.set("numo_assistant_turns", [
-      { id: "parent", conversation_id: "conversation", user_id: "owner", request_id: "parent-request", status: "waiting_work", model: "model", attempts: 1 },
-      { id: "receipt", conversation_id: "conversation", user_id: "owner", request_id: "request", status: "stopped" },
-    ]);
-    h.rows.set("agent_runs", [{ id: "worker", parent_numo_turn_id: "parent", status: "running", interrupt_requested: false }]);
-    expect(await stopCanceledNumoMediation({ ...identity, parentTurnId: "parent" }))
-      .toMatchObject({ id: "parent", status: "stopped" });
-    expect(h.rows.get("agent_runs")![0].interrupt_requested).toBe(false);
-  });
 });

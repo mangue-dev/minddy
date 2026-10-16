@@ -33,10 +33,6 @@ import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notifi
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
-import type {
-  DesktopLocalRunDiff,
-  DesktopLocalRunDiffInput,
-} from "@/lib/desktop/local-run-diff";
 
 export interface DesktopNativePushRegistration {
   transport: "apns" | "wns";
@@ -60,8 +56,6 @@ export interface DesktopBridge {
   openServerPicker?(): void;
   /** Run an explicitly requested shell update check. */
   checkForUpdates?(): Promise<void>;
-  /** Confirm and copy the diagnostic report without exposing its contents. */
-  copyDiagnosticReport?(): Promise<boolean>;
   /** Explicit notification support. Optional only for older installed shells. */
   readonly notificationCapabilities?: DesktopNotificationCapabilities;
   /**
@@ -232,11 +226,6 @@ export interface DesktopBridge {
     aliases?: string[];
     path: string;
   }): Promise<RepositorySkill | null>;
-  /**
-   * Read the durable diff produced by a local run. Optional for compatibility
-   * with desktop shells released before this review surface was added.
-   */
-  localRunDiff?(input: DesktopLocalRunDiffInput): Promise<DesktopLocalRunDiff | null>;
   /**
    * Reads models exposed by Ollama or an OpenAI-compatible endpoint on the
    * local loop. The main process refuses any URL that does not point to

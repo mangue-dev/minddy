@@ -468,7 +468,7 @@ export function SelfHostingInstallWizard({
   const localBootstrap = `pnpm bootstrap:supabase -- --minimal --app-url ${localOrigin}`;
   const installationGuide = path === "local" ? links.localInstallation : links.serverInstallation;
   const releaseProcedureNote = replaceTokens(copy.releaseProcedureBody, { MINDDY_RELEASE_TAG: releaseTag });
-  const fullPreparationNote = `${copy.fullPreparationBody}\n${copy.releaseProcedureGuide}: ${links.serverInstallation}#adapted-start`;
+  const fullPreparationNote = `${copy.fullPreparationBody}\n${copy.releaseProcedureGuide}: ${links.serverInstallation}#install`;
   const releasePrompt = `${releaseProcedureNote}\n${copy.releaseProcedureGuide}: ${installationGuide}`;
   const encryptionPrompt = `${encryptionReleaseNote}\n${encryptionKeyNote}\n${copy.encryptionReleaseGuide}: ${links.encryption}\n${releasePrompt}`;
 
@@ -816,7 +816,7 @@ export function SelfHostingInstallWizard({
         canContinue: true,
         continueLabel: supabaseMode === "full" ? copy.continueLabel : copy.confirmInstaller,
         content: (
-          <div className={HIGHLIGHT_PANEL}>{supabaseMode === "full" && <div className="mb-4"><ResourceLink href={`${links.serverInstallation}#adapted-start`}>{copy.releaseProcedureGuide}</ResourceLink></div>}<CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{encryptionKeyNote}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={supabaseMode === "full" ? copy.fullPreparedDone : copy.installerDone} /></div>
+          <div className={HIGHLIGHT_PANEL}>{supabaseMode === "full" && <div className="mb-4"><ResourceLink href={`${links.serverInstallation}#install`}>{copy.releaseProcedureGuide}</ResourceLink></div>}<CommandBlock command={installServer} copy={copy} /><p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"><AppIcon icon={ShieldCheck} className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />{copy.installerSafe}</p><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{encryptionKeyNote}</p>{selectedFeatures.length > 0 && <div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">{copy.selectedServicesPrompt}</p><Checklist items={selectedFeatures.map(({ title, setup }) => `${title}: ${setup}`)} /></div>}<CompletionNote copy={copy} criterion={supabaseMode === "full" ? copy.fullPreparedDone : copy.installerDone} /></div>
         ),
       },
     ] : []),

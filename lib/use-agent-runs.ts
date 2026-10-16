@@ -10,134 +10,39 @@ import { useEffect, useMemo, useRef } from "react";
 import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestDisplayReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
 import { nextReadActivationSequence } from "./read-activation-sequence";
 import {
-  fetchAgentRunApi,
-  fetchAgentRunDiffApi,
-  fetchAgentSessionsApi,
   fetchAllPullRequestsApi,
-  fetchIssueAgentRunsApi,
+  fetchIssuePullRequestApi,
   fetchOpenPullRequestCountApi,
   fetchPullRequestReadinessBatchApi,
   fetchPrCommitDiffApi,
-  isAgentRunWorking,
-  type AgentSessionListItem,
   type PrEndpoint,
   type PullRequestStateFilter,
 } from "./agent-api";
-import { getDesktopBridge } from "./desktop/bridge";
-import {
-  parseAgentLocalDiff,
-  type AgentLocalDiff,
-} from "./agent-local-diff";
-import { DESKTOP_LOCAL_DIFF_PATCH_CAP } from "./desktop/local-run-diff";
-import { readAgentEvents, type AgentEventsData } from "./agent-events-query";
 import { refetchOnRevealWhenStale } from "./reveal-freshness";
 import {
   PULL_REQUEST_SETTLED_POLL_MS,
   pullRequestReadinessBatchRefetchInterval,
 } from "./pr-readiness-actions";
 
-/** Cache key for agent runs of an issue. */
-export function issueAgentRunsQueryKey(issueId: string) {
-  return ["agent-runs", "issue", issueId] as const;
+/** Cache key for the pull request of an issue (side panel). */
+export function issuePullRequestQueryKey(issueId: string) {
+  return ["issue-pull-request", issueId] as const;
 }
 
 /**
- * Runs of the agent of an issue, with adaptive polling: ~3 s as long as the agent
- * WORK (queued/running); ~12 s backstop otherwise as soon as a run exists —
- * to capture a recovery triggered by ANOTHER client (other tab,
- * teammate) even when our conversation is open. Opening the modal reads again
- * unless realtime vouches for a recent cache (avoids opening “compose” on a
- * session already alive because of an expired cache): run, chain and PR
- * broadcasts invalidate this key, and so does the catch-up.
+ * The pull request of an issue, in every state, for the side panel — which also
+ * opens where the board's PR provider does not exist (Pull requests page,
+ * feedback board). Realtime invalidates this key on every `pull_requests`
+ * write, so no polling.
  */
-export function useIssueAgentRunsQuery(issueId: string | null) {
-  const enabled = !!issueId;
-  const { data, isPending } = useQuery({
-    queryKey: issueAgentRunsQueryKey(issueId ?? ""),
-    queryFn: () => fetchIssueAgentRunsApi(issueId as string),
-    enabled,
+export function useIssuePullRequestQuery(issueId: string | null) {
+  const { data } = useQuery({
+    queryKey: issuePullRequestQueryKey(issueId ?? ""),
+    queryFn: () => fetchIssuePullRequestApi(issueId as string),
+    enabled: !!issueId,
     refetchOnMount: refetchOnRevealWhenStale,
-    refetchInterval: (query) => {
-      const runs = query.state.data?.runs ?? [];
-      if (runs.some((r) => isAgentRunWorking(r.status))) return 3000;
-      if (runs.length > 0) return 12000;
-      return false;
-    },
   });
-  return {
-    runs: data?.runs ?? [],
-    /** The PR of the ticket, regardless of its state — null if it has none. */
-    pullRequest: data?.pullRequest ?? null,
-    loading: enabled && isPending,
-  };
-}
-
-/** Cache key for the details of a run (conversation of a NOTEBOOK session, MIN-84). */
-export function agentRunQueryKey(runId: string) {
-  return ["agent-run", runId] as const;
-}
-
-/**
- * Details of ONE run — the conversation of a notebook session (the run IS the session,
- * no list of outcome runs to query). Same cadence as the outcome runs:
- * ~3 s as long as the agent is working, ~12 s backstop otherwise (captures a restart
- * from another tab), fresh state each time it is edited.
- */
-export function useAgentRunQuery(runId: string | null) {
-  const enabled = !!runId;
-  const { data, isPending } = useQuery({
-    queryKey: agentRunQueryKey(runId ?? ""),
-    queryFn: () => fetchAgentRunApi(runId as string),
-    enabled,
-    refetchOnMount: "always",
-    refetchInterval: (query) => {
-      const run = query.state.data?.run;
-      if (run && isAgentRunWorking(run.status)) return 3000;
-      if (run) return 12000;
-      // No data yet (first fetch pending, failed, or errored): keep polling.
-      // Returning `false` here wedged the UI on a single failed fetch — the
-      // card showed “starting” forever until a remount, because `run` stayed
-      // null and no interval ever restarted the query.
-      return 5000;
-    },
-  });
-  return { run: data?.run ?? null, loading: enabled && isPending };
-}
-
-/**
- * Live view events of a run: polling ~2 s as long as the run is active.
- * `runId` null = the session does not yet exist (in-flight launch POST): nothing to
- * query, the thread only displays the optimistic bubble of the 1st message.
- *
- * `refetchOnMount: always`: at rest the run no longer pollutes, and the global `staleTime`
- * of 5 min would keep the cache “fresh”. Without this forcing, return to the Agents page
- * after leaving the tab (remounting the component) would redisplay the events
- * BEFORE — without the last message sent or the agent's response — until a
- * complete reloading. We therefore refetch at each edit, like the runs of the outcome.
- */
-export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
-  const enabled = !!runId;
-  const firstRead = useRef<string | null>(null);
-  const { data, isPending, isFetching } = useQuery({
-    queryKey: ["agent-run-events", runId],
-    queryFn: async ({ client, queryKey, signal }) => {
-      const state = client.getQueryState<AgentEventsData>(queryKey);
-      const result = await readAgentEvents(runId as string, state?.data, {
-        full: firstRead.current !== runId || state?.status === "error" || state?.isInvalidated,
-        signal,
-      });
-      firstRead.current = runId;
-      return result;
-    },
-    enabled,
-    refetchOnMount: "always",
-    refetchInterval: active ? 2000 : false,
-  });
-  return {
-    events: data?.events ?? [],
-    loading: enabled && isPending,
-    fetching: enabled && isFetching,
-  };
+  return data?.pullRequest ?? null;
 }
 
 /**
@@ -225,106 +130,6 @@ export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
   };
 }
 
-/** Cache key for the live diff of a run (diff view in the conversation). */
-export function agentRunDiffQueryKey(runId: string) {
-  return ["agent-run-diff", runId] as const;
-}
-
-/**
- * Diff alive from a run — the diff view IN the conversation, without waiting for the PR.
- * Queried only when the view is OPEN (`enabled`); as long as the agent
- * works, re-poll ~7 sec. `refetchOnMount: always`: the view always restarts
- * from a fresh state upon opening (the overall staleTime of 5 min would otherwise keep a
- * diff before the last round).
- *
- * The 7 s cadence dates from the time when this diff only moved at the end of the push.
- * round. He now comes from the sandbox during the turn and therefore advances in
- * continuous ; 7 s remains the right step — each pass is an RPC round trip in the
- * microVM, and a diff view that repaints itself four times per second does not read.
- */
-export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: boolean) {
-  const { data, isPending } = useQuery({
-    queryKey: agentRunDiffQueryKey(runId),
-    queryFn: () => fetchAgentRunDiffApi(runId),
-    enabled,
-    refetchOnMount: "always",
-    refetchInterval: enabled && working ? 7000 : false,
-  });
-  return {
-    files: data?.files ?? [],
-    provider: data?.provider,
-    url: data?.url ?? null,
-    live: data?.live === true,
-    loading: enabled && isPending,
-  };
-}
-
-/**
- * Full local diff retained by the desktop shell. It is read only while the
- * review panel is open, and the settled key forces one final disk read when a
- * running turn stops. Older shells return no source and the caller falls back
- * to the persisted event payload.
- */
-export function useDesktopAgentRunDiffQuery(
-  runId: string,
-  enabled: boolean,
-  working: boolean,
-): { diff: AgentLocalDiff | null; loading: boolean } {
-  const bridge = getDesktopBridge();
-  const supported = Boolean(bridge?.localRunDiff);
-  const { data, isPending } = useQuery({
-    queryKey: ["desktop-agent-run-diff", runId, working ? "live" : "settled"],
-    queryFn: async () => {
-      const raw = await getDesktopBridge()?.localRunDiff?.({ runId });
-      return raw
-        ? parseAgentLocalDiff(raw, { patchCap: DESKTOP_LOCAL_DIFF_PATCH_CAP })
-        : null;
-    },
-    enabled: enabled && supported,
-    refetchOnMount: "always",
-    refetchInterval: enabled && working ? 7000 : false,
-    retry: false,
-  });
-  return {
-    diff: data ?? null,
-    loading: enabled && supported && isPending,
-  };
-}
-
-/** Diff SUMMARY cache key (the same files, without the patches). */
-export function agentRunDiffStatQueryKey(runId: string) {
-  return ["agent-run-diff-stat", runId] as const;
-}
-
-/**
- * Header summary from the same diff source as the full session patch.
- *
- * It loads once whenever a conversation is displayed, then polls only while the
- * agent works. Loading at rest lets an authoritative empty response clear stale
- * historical events instead of resurrecting reverted files.
- */
-export function useAgentRunDiffStatQuery(
-  runId: string | null,
-  enabled: boolean,
-  working: boolean,
-) {
-  const { data, isFetching, isError } = useQuery({
-    queryKey: agentRunDiffStatQueryKey(runId ?? ""),
-    queryFn: () => fetchAgentRunDiffApi(runId!, { stat: true }),
-    enabled: Boolean(runId) && enabled,
-    refetchOnMount: "always",
-    refetchInterval: enabled && working ? 7000 : false,
-  });
-  return {
-    files: data?.files ?? [],
-    live: data?.live === true,
-    /** Distinguishes an authoritative empty diff from a query that has not answered yet. */
-    ready: data !== undefined,
-    /** Safe to use for actions: the latest refresh completed successfully. */
-    verified: data !== undefined && !isFetching && !isError,
-  };
-}
-
 /** Default list page — the server limits to 500 (an active repository has
     hundreds of PRs; loading them all never helped anyone). */
 export const PULL_REQUESTS_PAGE = 100;
@@ -332,7 +137,6 @@ export const PULL_REQUESTS_PAGE = 100;
 /** PR to be guaranteed in the response despite pagination (deep-link). */
 export interface PullRequestPin {
   pr?: string | null;
-  run?: string | null;
 }
 
 /** Global PR List Cache Key (MIN-66) — variable per filter/page. */
@@ -341,7 +145,7 @@ export function allPullRequestsQueryKey(
   limit: number = PULL_REQUESTS_PAGE,
   pin?: PullRequestPin,
 ) {
-  return ["pull-requests", "all", state, limit, pin?.pr ?? null, pin?.run ?? null] as const;
+  return ["pull-requests", "all", state, limit, pin?.pr ?? null] as const;
 }
 
 /** Shared authorized list read for foreground observers and idle preparation. */
@@ -357,8 +161,7 @@ export function allPullRequestsQueryOptions(state: PullRequestStateFilter = "ope
 }
 
 /**
- * Global list of PRs of linked repositories (Pull Requests page). Polling ~5 seconds
- * that a PR has an active run (Numo is reworking on it), otherwise a light
+ * Global list of PRs of linked repositories (Pull Requests page). A light
  * one-minute backstop (MIN-595): the list endpoint triggers the out-of-band
  * sweeps of stale repositories, so this backstop is what keeps the list — and,
  * through the sweep, the badge — converging without the user reloading. One
@@ -369,10 +172,9 @@ export function allPullRequestsQueryOptions(state: PullRequestStateFilter = "ope
  * shows the entire repository and not just the Numo PRs, “all” means
  * hundreds of lines, of which no one looks at the closed ones.
  *
- * `refetchOnMount: always` (same reason as useAgentSessionsQuery): at rest the
- * list no longer polls AND the app-shell keeps this cache hot, therefore a deep-link
- * `?run=` arriving on a “fresh” cache (global staleTime 5 min) would not see
- * never the PR that we have just created. We also expose `fetching`: the PR page
+ * `refetchOnMount: always`: the app-shell keeps this cache hot, therefore a
+ * deep-link `?pr=` arriving on a “fresh” cache (global staleTime 5 min) would
+ * never see the PR that was just created. We also expose `fetching`: the PR page
  * waits for an in-flight refetch to land before falling back to the 1st PR of the
  * list, otherwise the deep-link would open the last PR instead of the correct one.
  *
@@ -394,12 +196,7 @@ export function useAllPullRequestsQuery(
     ...allPullRequestsQueryOptions(state, limit, pin),
     placeholderData: (previous) => previous ?? cachedPullRequestListForPin(client, state, limit, pin),
     refetchOnMount: "always",
-    refetchInterval: (query) => {
-      const prs = query.state.data?.pullRequests ?? [];
-      return prs.some((p) => p.activeRunId)
-        ? 5000
-        : PULL_REQUEST_SETTLED_POLL_MS;
-    },
+    refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   if (!isPending && !isPlaceholderData) settledPage.current = { state, limit };
   return {
@@ -437,35 +234,6 @@ export function useCompletedPullRequestsQuery(enabled: boolean) {
   return { ...query, pullRequests };
 }
 
-/** Cache key for the global list of agent sessions (Agents page). */
-export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
-
-type AgentSessionsData = { sessions: AgentSessionListItem[] };
-
-/** Update one conversation's pinned state in the shared sessions cache.
- * The Agents list derives both its pinned group and its project groups from
- * this query, so one synchronous cache write moves the row immediately. The
- * previous field value is returned for a targeted rollback if the PATCH fails. */
-export function patchAgentConversationPinnedInCache(
-  queryClient: QueryClient,
-  runId: string,
-  pinned: boolean,
-): boolean | undefined {
-  const previous = queryClient.getQueryData<AgentSessionsData>(
-    allAgentSessionsQueryKey,
-  );
-  const session = previous?.sessions.find((item) => item.runId === runId);
-  if (!previous || !session) return undefined;
-
-  queryClient.setQueryData<AgentSessionsData>(allAgentSessionsQueryKey, {
-    ...previous,
-    sessions: previous.sessions.map((item) =>
-      item.runId === runId ? { ...item, pinned } : item,
-    ),
-  });
-  return session.pinned;
-}
-
 /** Lightweight cache key for the persistent navigation badge. */
 export const openPullRequestCountQueryKey = ["pull-requests", "open-count"] as const;
 
@@ -489,27 +257,6 @@ export function useOpenPullRequestCountQuery() {
     refetchInterval: PULL_REQUEST_SETTLED_POLL_MS,
   });
   return data?.count ?? 0;
-}
-
-/**
- * Global list of agent sessions (the FAB's activity signals). Polling ~5 sec as a
- * WORK session (Numo is running), otherwise no polling — modeled on
- * `useAllPullRequestsQuery`. `refetchOnMount: always` for the same reason as the
- * events: at rest the list no longer polls, so reopening the FAB after having
- * left the tab would redisplay outdated/unread statuses (“fresh” cache 5 min)
- * until fully recharged.
- */
-export function useAgentSessionsQuery() {
-  const { data, isPending, refetch } = useQuery({
-    queryKey: allAgentSessionsQueryKey,
-    queryFn: fetchAgentSessionsApi,
-    refetchOnMount: "always",
-    refetchInterval: (query) => {
-      const sessions = query.state.data?.sessions ?? [];
-      return sessions.some((s) => s.working) ? 5000 : false;
-    },
-  });
-  return { sessions: data?.sessions ?? [], loading: isPending, refetch };
 }
 
 /**

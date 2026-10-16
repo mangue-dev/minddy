@@ -8,7 +8,6 @@ import {
   type ModelReasoning,
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
-import type { AgentExecutionBackend } from "@/lib/capabilities";
 import type { AdminCatalogCapability } from "@/lib/model-catalog-capability";
 
 /**
@@ -71,10 +70,6 @@ interface AgentModelsResult {
  * on the entire catalog, as before.
  */
   recommended: string[];
-  /** The cloud backend can actually launch a session on this instance. */
-  cloudExecutionConfigured: boolean;
-  /** Identifies whether that server-side sandbox is local to the instance or hosted. */
-  executionBackend: AgentExecutionBackend;
   /** Scheduled task routes are protected and can be scheduled. */
   routineEventProcessingConfigured?: boolean;
   routineSchedulingConfigured: boolean;
@@ -98,8 +93,6 @@ export async function fetchAgentModels(
     maxMultiplier: null,
     planId: null,
     recommended: [],
-    cloudExecutionConfigured: false,
-    executionBackend: null,
     routineSchedulingConfigured: false,
     defaultReasoning: undefined,
   };
@@ -116,8 +109,6 @@ export async function fetchAgentModels(
     maxMultiplier?: number | null;
     planId?: string | null;
     recommended?: string[];
-    cloudExecutionConfigured?: boolean;
-    executionBackend?: AgentExecutionBackend;
     routineEventProcessingConfigured?: boolean;
     routineSchedulingConfigured?: boolean;
     defaultReasoning?: ReasoningLevel;
@@ -142,8 +133,6 @@ export async function fetchAgentModels(
     recommended: data.recommended ?? [],
     // An unknown ability remains unavailable: activate it during a failure or
     // a loading would offer an action which the server will then refuse in 503.
-    cloudExecutionConfigured: data.cloudExecutionConfigured ?? false,
-    executionBackend: data.executionBackend ?? null,
     routineEventProcessingConfigured: data.routineEventProcessingConfigured ?? false,
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     defaultReasoning: data.defaultReasoning,
@@ -181,8 +170,6 @@ export function useAgentModelsQuery(
     maxMultiplier: data?.maxMultiplier ?? null,
     planId: data?.planId ?? null,
     recommended: data?.recommended ?? [],
-    cloudExecutionConfigured: data?.cloudExecutionConfigured ?? false,
-    executionBackend: data?.executionBackend ?? null,
     routineEventProcessingConfigured: data?.routineEventProcessingConfigured ?? false,
     routineSchedulingConfigured: data?.routineSchedulingConfigured ?? false,
     defaultReasoning: data?.defaultReasoning,

@@ -13,7 +13,6 @@ vi.mock("./surface-destination-content", () => ({
 }));
 
 import {
-  pendingSurfaceWorkerInput,
   reserveNumoSurfaceEvent,
 } from "./surface-conversations";
 
@@ -95,32 +94,4 @@ describe("Numo shared-surface event admission", () => {
     encryption.enabled = false;
   });
 
-  it("returns the exact pending worker correlation for a subsequent reply", async () => {
-    const checkpoint = {
-      phase: "worker_input_wait",
-      input_request: {
-        runId: "run-id",
-        questionId: "question-id",
-      },
-    };
-    const builder = {
-      select: () => builder,
-      eq: () => builder,
-      order: () => builder,
-      limit: () => builder,
-      maybeSingle: async () => ({
-        data: { id: "turn-id", checkpoint },
-        error: null,
-      }),
-    };
-    const service = { from: () => builder };
-
-    await expect(
-      pendingSurfaceWorkerInput(service as never, "conversation-id"),
-    ).resolves.toEqual({
-      turnId: "turn-id",
-      runId: "run-id",
-      questionId: "question-id",
-    });
-  });
 });

@@ -44,8 +44,6 @@ function notification(id: string): MyNotification {
     type: "comment",
     read_at: null,
     created_at: "2026-10-12T09:00:00Z",
-    agent_conversation_id: null,
-    agent_conversation_title: null,
     objective_id: null,
     objective_name: null,
     feedback_post_id: null,

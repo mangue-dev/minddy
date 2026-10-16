@@ -19,7 +19,7 @@ Electron shell has a separate package and build under `desktop/`.
 | Server business logic | `lib/server/` |
 | Browser, session, and privileged database clients | `lib/supabase.ts`, `lib/supabase-server.ts`, `lib/supabase-service.ts` |
 | Numo conversations and tools | `lib/server/numo/`, `lib/server/assistant/` |
-| Code workers and sandbox lifecycle | `lib/server/agent/`, `lib/server/agent/vm/` |
+| Pull requests and forge integration | `lib/server/agent/`, `lib/server/git/` |
 | External MCP tools and authentication | `lib/server/mcp/` |
 | Database schema and policies | `supabase/migrations/` |
 | Locale catalogs and configuration | `messages/`, `i18n/config.ts` |
@@ -30,8 +30,8 @@ server boundaries; a privileged database client does not replace membership or
 capability validation. Follow the existing domain repository and codec when
 reading or writing protected content rather than accessing its raw columns.
 
-`npm run dev` and `npm run build` first generate the Agent VM and page-Markdown
-bundles through their lifecycle hooks. Vitest also builds the page projection
+`npm run dev` and `npm run build` first generate the page-Markdown bundle
+through their lifecycle hooks. Vitest also builds the page projection
 through `test/build-pages-md-setup.ts`. The root TypeScript configuration excludes
 `desktop/`; CI checks the Electron bundle separately with
 `node scripts/build-desktop.mjs`.
@@ -193,7 +193,7 @@ repository lint and type check where applicable:
 ```bash
 npm run lint
 npm run typecheck
-npx vitest run lib/server/agent
+npx vitest run lib/server/assistant
 npm test
 npm run test:tooling
 ```
@@ -218,10 +218,10 @@ keep real process deadlines where process termination is the behavior under test
 
 | Test concern | Existing example |
 | --- | --- |
-| Pure logic | `lib/server/agent/prune.test.ts` |
-| API/SSE worker loop | `lib/server/agent/vm/supervisor.test.ts` |
-| Generated Agent tools | `lib/server/agent/vm/opencode-tools.test.ts` |
-| Server boundary with external dependencies mocked | `lib/server/agent/control-plane.test.ts` |
+| Pure logic | `lib/plan.test.ts` |
+| Numo streaming loop | `lib/server/assistant/loop-completion.test.ts` |
+| Numo tool contracts | `lib/server/assistant/tools-contract.test.ts` |
+| Server boundary with external dependencies mocked | `lib/server/assistant/pull-request-writes.test.ts` |
 
 CI additionally runs release tooling, self-hosted contracts, edition-specific
 build/start checks, dependency auditing, and publication/secret guards. Consult

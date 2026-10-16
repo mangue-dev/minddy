@@ -80,7 +80,7 @@ function measure(mode) {
   cache.getAll = () => { scans++; return getAll(); };
   const shouldPersistQuery = (query) =>
     query.state.status === "success" &&
-    query.queryKey[0] !== "agent-active-issues" && query.queryKey[0] !== "page";
+    query.queryKey[0] !== "issue-pull-requests" && query.queryKey[0] !== "page";
   const options = {
     queryClient,
     // The no-op storage isolates dehydration and subscription work. The number
@@ -98,7 +98,7 @@ function measure(mode) {
   scans = 0;
   const startedAt = performance.now();
   for (let tick = 0; tick < fixture.excludedPollUpdates; tick++) {
-    queryClient.setQueryData(["agent-active-issues", "all"], { tick });
+    queryClient.setQueryData(["issue-pull-requests", "all"], { tick });
   }
   for (let edit = 0; edit < fixture.commentEdits; edit++) {
     queryClient.setQueryData(["comments", 0], [{ id: 0, body: `Edited ${edit}` }]);

@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; persistent personal Numo default; PR #407 independent Numo Stop",
+    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-676 private hosted native worker selection; MIN-676 frozen worker identity and proactive Numo context; MIN-676 split account AI settings, restricted native access and hosted authentication requirement; MIN-676 engine-specific native model and thinking controls; persistent personal Numo default; PR #407 independent Numo Stop; MIN-721 removal of Numo code work",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -56,28 +56,23 @@
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-light-review-2026-10-10.md",
       "content/documentation/reviews/min-670-feedback-objectives.md",
-      "components/settings/native-agent-connections.tsx",
-      "components/settings/native-agent-connections.test.tsx",
-      "app/api/account/agent-preferences/route.ts",
       "content/documentation/reviews/min-676-native-worker-selection-2026-10-10.md",
-      "components/agent/agent-engine-badge.tsx",
-      "lib/server/assistant/account-worker-context.ts",
       "content/documentation/reviews/min-676-native-identity-2026-10-10.md",
       "content/documentation/reviews/min-676-account-ai-organization-2026-10-10.md",
-      "lib/native-agent-models.ts",
-      "components/settings/native-agent-model-preferences.tsx",
       "content/documentation/reviews/min-676-model-controls-2026-10-10.md",
       "content/documentation/reviews/min-676-provider-numo-defaults-2026-10-11.md",
       "lib/server/numo/request-stop.test.ts",
       "supabase/migrations/20270109200042_numo_stop_preserves_workers.sql",
-      "content/documentation/reviews/agent-reliability-and-cards-2026-10-11.md"
+      "content/documentation/reviews/agent-reliability-and-cards-2026-10-11.md",
+      "lib/server/numo/turns.ts",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (account default and conversation precedence source/UI review; prior procedures retained, no inference); agent:/root (independent Numo Stop source and focused application/PostgreSQL review; no hosted UI rehearsal); agent:/root (existing conversation, permissions, execution and MCP figures retained; no Stop cascade shown, original capture evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale default-model additions reviewed for equivalent meaning); agent:/root (six-locale Numo Stop meaning and localized controls reviewed; not human acceptance)",
-    "date": "2026-10-11"
+    "revision": 12,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (account default and conversation precedence source/UI review; prior procedures retained, no inference); agent:/root (independent Numo Stop source and focused application/PostgreSQL review; no hosted UI rehearsal); agent:/root (existing conversation, permissions, execution and MCP figures retained; no Stop cascade shown, original capture evidence retained); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; pt-BR translation of removal edits; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale default-model additions reviewed for equivalent meaning); agent:/root (six-locale Numo Stop meaning and localized controls reviewed; not human acceptance); agent:/root/min721_pt-BR (pt-BR translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "code-work",
@@ -96,10 +91,10 @@
   "tags": [
     "Concluir uma tarefa do projeto com o Numo",
     "Entender as permissões do Numo",
-    "Entender os turnos persistentes do Numo e o trabalho delegado",
+    "Entender os turnos persistentes do Numo",
     "Conectar um serviço MCP pessoal ao Numo",
     "Retomar trabalho do Numo interrompido ou pendente",
-    "Entender turnos duráveis Numo e trabalho delegado"
+    "Entender turnos duráveis Numo"
   ],
   "figures": [
     {
@@ -108,7 +103,7 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -125,7 +120,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -184,11 +179,11 @@
       "id": "numo-execution-model-flow",
       "kind": "diagram",
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
-      "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar worker atual se necessário. Rever eventos e reconciliar escritas incertas.",
-      "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar worker atual se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 11,
+      "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
+      "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-16",
       "viewport": [
         720,
         640
@@ -204,7 +199,7 @@
             "title": "Assumir turno, gravar ferramentas e resultados"
           },
           {
-            "title": "Aguardar worker atual se necessário"
+            "title": "Aguardar sua resposta se necessário"
           },
           {
             "title": "Rever eventos e reconciliar escritas incertas"
@@ -218,7 +213,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -235,7 +230,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Formulário de servidor MCP personalizado com configurações avançadas de autenticação, transporte e cabeçalhos.",
       "caption": "Formulário de servidor MCP personalizado com configurações avançadas de autenticação, transporte e cabeçalhos. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -257,14 +252,14 @@
 }
 ---
 
-O Numo usa o contexto da conversa e as permissões da sua conta. Comece com uma solicitação delimitada e confira o resultado. O trabalho de código delegado usa uma sandbox no servidor; as rotinas usam as conexões e o orçamento do proprietário. Se um turno ficar em espera ou falhar, confira o estado salvo antes de repetir a solicitação.
+O Numo usa o contexto da conversa e as permissões da sua conta. Comece com uma solicitação delimitada, confira o resultado e use as seções de permissões e execução para entender o trabalho agendado; as rotinas usam as conexões e o orçamento do proprietário. Se um turno ficar em espera ou falhar, confira o estado salvo antes de repetir a solicitação.
 
 ## Concluir uma tarefa do projeto com o Numo {#work-with-numo}
 
 Abra a tarefa ou o projeto e use o botão flutuante do Numo. A página atual vira contexto da conversa. As ações contextuais que passam trabalho ao Numo abrem o mesmo painel. Você precisa de acesso ao projeto e uso de IA disponível ou uma chave pessoal compatível.
 
 1. Confira o contexto na área de mensagem. Identifique a tarefa quando houver vários itens relevantes.
-2. Escolha o modelo e o nível de raciocínio da conversa. O worker de código usa padrões separados nas configurações da conta.
+2. Escolha o modelo e o nível de raciocínio da conversa. Essas escolhas valem para a conversa.
 3. Envie um pedido delimitado, por exemplo: “Leia esta tarefa e proponha critérios de aceitação. Não altere o status”.
 4. Leia a resposta e abra os links de tarefas ou fontes. Para uma alteração, confira o objeto atualizado.
 
@@ -272,9 +267,9 @@ O modelo padrão do Numo vem de **Configurações da conta → IA → Modelo pad
 
 ![Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.](/documentation/pt-BR/work-with-numo-workflow.png)
 
-### Continuar ou delegar {#continue}
+### Continuar uma conversa {#continue}
 
-A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. Para alterações no repositório, o Numo delega a um worker em uma sandbox do servidor e mostra progresso, arquivos, verificações e pull request. Ele não trabalha na sua pasta local.
+A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. O Numo organiza e acompanha o trabalho: lê e atualiza problemas, planos, páginas e outros conteúdos do Minddy e pode ler as pull requests vinculadas. Ele não escreve código nem altera repositórios. Para que o código seja escrito, copie o prompt do problema para seu próprio agente de código; consulte [Trabalho de código e pull requests](/docs/code-work#external-coding-agents).
 
 Se o Numo pedir informações, envie sua escolha antes de esperar a continuação das ações dependentes. Um cartão de consumo ou erro explica a interrupção. Confira qualquer gravação externa antes de pedir para repetir a ação.
 
@@ -282,7 +277,7 @@ Se o Numo pedir informações, envie sua escolha antes de esperar a continuaçã
 
 O Numo age dentro do acesso do usuário atual. Um pedido no chat não dá a membros acesso a configurações exclusivas do proprietário. O proprietário gerencia membros, integrações, repositório e configurações de feedback. As preferências pessoais pertencem à conta atual.
 
-O Numo pode alterar preferências compatíveis e configurações de projeto autorizadas ao proprietário. Você configura credenciais de provedores, conexões de assinaturas nativas, conexões Git, autenticação de dois fatores e arquivos de avatar. Escolha agente de código, modelo e raciocínio padrão somente nas configurações IA da conta.
+O Numo pode alterar preferências compatíveis e configurações de projeto autorizadas ao proprietário. Você configura credenciais de provedores, conexões Git, autenticação de dois fatores e arquivos de avatar.
 
 ### Autorizar a ação {#authorization}
 
@@ -292,31 +287,25 @@ Uma solicitação pode chegar a um provedor externo. Desativar a conexão impede
 
 ### Contexto pessoal e agendado {#context}
 
-Conversas não usam conexões MCP pessoais de outro membro. Rotinas usam conexões e orçamento do proprietário. Após mudar o proprietário, inicie uma nova execução com o atual; uma anterior não conserva credenciais antigas. A sandbox do servidor não herda arquivos nem sessões do seu computador.
+Conversas não usam conexões MCP pessoais de outro membro. Rotinas usam conexões e orçamento do proprietário. Após mudar o proprietário, inicie uma nova execução com o atual; uma anterior não conserva credenciais antigas. O Numo é executado no servidor: não lê arquivos do seu computador nem usa suas sessões pessoais.
 
 ![Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.](/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg)
 
-## Entender os turnos persistentes do Numo e o trabalho delegado {#numo-execution-model}
+## Entender os turnos persistentes do Numo {#numo-execution-model}
 
-Mensagens interativas, ações contextuais e rotinas entram nas conversas do Numo. O modelo e raciocínio da conversa são escolhidos no campo de composição. O trabalho delegado de repositório usa o agente de código escolhido nas configurações de IA da conta: O OpenCode usa seu modelo API e raciocínio configurados, enquanto o Codex ou Claude Code usa a assinatura pessoal conectada com modelo e raciocínio salvos, ou os padrões nativos sem uma escolha explícita. As ferramentas diretas do Minddy podem agir sem repositório. O trabalho de código abre uma sandbox de servidor hospedada para o repositório conectado somente quando necessário. Uma rotina cria uma conversa nova com instruções salvas e contexto do proprietário e projeto. O desktop não precisa permanecer online. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
+Mensagens interativas, ações contextuais e rotinas entram nas conversas do Numo. O modelo e raciocínio da conversa são escolhidos no campo de composição. O Numo age por meio de suas ferramentas do Minddy e das conexões MCP pessoais que você adicionou; ele não precisa de repositório. Uma rotina cria uma conversa nova com instruções salvas e contexto do proprietário e projeto. O desktop não precisa permanecer online.
 
-A autenticação Codex por assinatura em serviços hospedados não está disponível para uso geral. A OpenAI exclui explicitamente a autenticação app-server desses serviços e os direciona ao Sign in with ChatGPT. O Minddy precisa usar uma integração autorizada antes do lançamento. Os testes técnicos restritos não comprovam a permissão do provedor nem a recuperação após a expiração natural de tokens. A execução paga do Claude Code continua sem teste. Remover os selos da interface não altera essas condições. [Codex / Claude Code](/docs/ai-settings-and-usage#native-agent-preview).
-
-Antes de delegar, o Numo recebe a seleção atual da conta e as capacidades do adaptador escolhido. Depois que o agente inicia, seu mecanismo e suas capacidades salvos têm prioridade para aquela execução, mesmo após alterações nas configurações da conta. O Numo identifica esse agente ao explicar o trabalho delegado. Se não conseguir ler a seleção da conta, consulta as configurações em vez de adivinhar.
-
-O adaptador nativo expõe ferramentas controladas do Minddy via MCP. Ferramentas integradas nativas do provedor, imagens de entrada e subagentes não estão disponíveis nesses adaptadores. Responde às perguntas do agente com contexto confiável da conversa ou pergunta a você quando falta uma decisão. O Numo pode usar suas próprias ferramentas compatíveis dentro da sua autorização; não inventa operações que o mecanismo não suporta.
-
-![Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar worker atual se necessário. Rever eventos e reconciliar escritas incertas.](/documentation/pt-BR/numo-execution-model-flow.svg)
+![Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.](/documentation/pt-BR/numo-execution-model-flow.svg)
 
 ### Separar execução e visualização {#state}
 
-A intenção é registrada em um turno durável com UUID e mensagem. O turno passa de `queued` para `running` e depois para `completed`, `waiting_input` ou `waiting_work`. `stopping` e `stopped` indicam interrupção; `retryable` e `failed` indicam erro. O fluxo SSE mostra a atividade, mas não controla a execução. Após reconectar, o cliente lê os eventos posteriores à sequência já recebida. O término de um worker retoma apenas o turno pai da execução atual; avisos duplicados ou atrasados não iniciam outro trabalho. Contexto não concede acesso: objetos privados continuam privados.
+A intenção é registrada em um turno durável com UUID e mensagem. O turno passa de `queued` para `running` e depois para `completed` ou `waiting_input`. `stopping` e `stopped` indicam interrupção; `retryable` e `failed` indicam erro. O fluxo SSE mostra a atividade, mas não controla a execução. Após reconectar, o cliente lê os eventos posteriores à sequência já recebida. Avisos duplicados ou atrasados não iniciam outro trabalho. Contexto não concede acesso: objetos privados continuam privados.
 
 ### Tratar alterações incertas {#mutations}
 
 Antes de uma alteração, o sistema registra a operação e seu checkpoint; ele reutiliza resultados já concluídos. Uma leitura interrompida pode ser repetida, enquanto uma alteração com resultado incerto entra em `reconciling` sem nova tentativa automática. Confira o destino antes de gravar novamente. As rotinas respeitam propriedade, orçamento e proteções de custo; outro membro não herda a conexão MCP pessoal anterior.
 
-Interromper o Numo encerra seu turno e impede que os resultados dos workers o retomem automaticamente. Os agentes de código já admitidos continuam de forma independente, inclusive o trabalho na fila; suas mensagens em espera e perguntas pendentes são mantidas. Para interromper um worker, abra **Ações do agente** no cartão e escolha **Parar**. Uma ação externa já enviada ainda pode terminar.
+Interromper o Numo encerra seu turno. Uma ação externa já enviada ainda pode terminar. Uma conversa que aguardava trabalho de código de uma versão anterior é interrompida automaticamente e volta ao estado inativo.
 
 ## Conectar um serviço MCP pessoal ao Numo {#numo-mcp-connections}
 
@@ -336,15 +325,15 @@ Desativar bloqueia chamadas novas, não enviadas. Limites: 30 segundos, 1 MiB de
 
 ## Retomar trabalho do Numo interrompido ou pendente {#recover-numo-work}
 
-Volte à conversa existente e leia as últimas mensagens e o cartão do worker. Diferencie perguntas aguardando resposta, limite da conta, teto da rotina, alocação da operação esgotada e falha técnica. Fechar o painel não comprova que o trabalho parou.
+Volte à conversa existente e leia as últimas mensagens e os cartões. Diferencie perguntas aguardando resposta, limite da conta, teto da rotina, alocação da operação esgotada e falha técnica. Fechar o painel não comprova que o trabalho parou.
 
 Em um cartão ativo, responda todas as perguntas obrigatórias e envie o conjunto. Cartões anteriores são registros e não aceitam outra resposta. Pular não fornece os dados ausentes nem autoriza alterações dependentes.
 
 ### Orçamento e falhas {#recovery}
 
-O cartão de limite da conta mostra a data de redefinição do limite, quando conhecida, e pode oferecer plano ou chave pessoal. O da rotina leva à gestão: confira o teto por execução. A alocação corresponde àquela operação. Repetir o pedido não elimina o limite. Chaves pessoais não tornam gratuito o processamento da sandbox.
+O cartão de limite da conta mostra a data de redefinição do limite, quando conhecida, e pode oferecer plano ou chave pessoal. O da rotina leva à gestão: confira o teto por execução. A alocação corresponde àquela operação. Repetir o pedido não elimina o limite.
 
-Só é possível retomar de um checkpoint se ele tiver sido preservado. Confira tarefas, branch, PR e serviços externos antes de repetir: uma gravação pode ter funcionado mesmo com a resposta perdida. Informe o que falta e peça para continuar. Sem checkpoint recuperável, forneça o estado verificado em um novo pedido. Ao relatar falhas persistentes, identifique a conversa sem incluir credenciais.
+Só é possível retomar de um checkpoint se ele tiver sido preservado. Confira tarefas, páginas e serviços externos antes de repetir: uma gravação pode ter funcionado mesmo com a resposta perdida. Informe o que falta e peça para continuar. Sem checkpoint recuperável, forneça o estado verificado em um novo pedido. Ao relatar falhas persistentes, identifique a conversa sem incluir credenciais.
 
 ## Escolher um objetivo para um feedback {#feedback-objectives}
 

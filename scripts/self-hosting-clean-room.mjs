@@ -47,7 +47,6 @@ const CLOUD_OPT_INS = [
   "MINDDY_EDITION",
   "MINDDY_MANAGED_AI",
   "MINDDY_MANAGED_BILLING",
-  "AGENT_EXECUTION_BACKEND",
   "MINDDY_PUBLIC_POSTHOG_KEY",
   "MINDDY_PUBLIC_ERROR_TRACKING",
   "POSTHOG_API_KEY",
@@ -351,7 +350,6 @@ export function cloudEnvironmentFindings(env = process.env) {
     const value = env[name]?.trim();
     if (!value) return false;
     if (name === "MINDDY_EDITION") return value === "cloud";
-    if (name === "AGENT_EXECUTION_BACKEND") return value === "vercel";
     return value !== "0" && value.toLowerCase() !== "false";
   });
 }

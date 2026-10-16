@@ -13,13 +13,6 @@ const h = vi.hoisted(() => ({
     { id: "event-1", seq: 0, type: "content_delta", payload: { delta: "First" } },
     { id: "event-2", seq: 1, type: "done", payload: { status: "completed" } },
   ],
-  pendingInput: {
-    run_id: "51600000-0000-4000-8000-000000000022",
-    parent_numo_turn_id: "51600000-0000-4000-8000-000000000021",
-    question_id: "question-1",
-    call_id: "call-question",
-    questions: [{ header: "Source", question: "Which API should be used?", options: [] }],
-  },
 }));
 
 function queryFor(table: string) {
@@ -41,7 +34,6 @@ function queryFor(table: string) {
       if (table === "numo_conversation_history") {
         return { data: { id: CONVERSATION_ID, source: "assistant" } };
       }
-      if (table === "agent_run_input_requests") return { data: h.pendingInput };
       if (table === "numo_assistant_turns") return {
         data: h.latestTurns.find(turn => !excludeReceipts || turn.status !== "stopped"
           || turn.model != null || Number(turn.attempts) > 0) ?? null,
@@ -49,10 +41,9 @@ function queryFor(table: string) {
       return {
           data: {
             id: TURN_ID,
-            status: "waiting_work",
+            status: "running",
             error_message: null,
             last_event_seq: 1,
-            active_run_id: RUN_ID,
           },
         };
     },
@@ -68,7 +59,6 @@ function queryFor(table: string) {
 const supabase = { from: (table: string) => queryFor(table) };
 const CONVERSATION_ID = "51600000-0000-4000-8000-000000000020";
 const TURN_ID = "51600000-0000-4000-8000-000000000021";
-const RUN_ID = "51600000-0000-4000-8000-000000000022";
 
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: (...args: unknown[]) => h.getAuthedUser(...args),
@@ -87,8 +77,8 @@ const { POST } = await import("@/app/api/assistant/conversations/[id]/turn/route
 beforeEach(() => {
   vi.clearAllMocks();
   h.afterSeq = -1;
-  h.latestTurns = [{ id: TURN_ID, status: "waiting_work", error_message: null,
-    last_event_seq: 1, active_run_id: RUN_ID }];
+  h.latestTurns = [{ id: TURN_ID, status: "running", error_message: null,
+    last_event_seq: 1 }];
   h.getAuthedUser.mockResolvedValue({
     ok: true,
     user: { id: "user-1" },
@@ -115,10 +105,9 @@ describe("durable Numo turn routes", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
-      status: "waiting_work",
+      status: "running",
       turn_id: TURN_ID,
       last_event_seq: 1,
-      pending_input: h.pendingInput,
       activity: [{ id: "event-2", seq: 1, type: "done" }],
     });
     expect(h.decodeNumoEvent).toHaveBeenCalledWith(
@@ -128,7 +117,7 @@ describe("durable Numo turn routes", () => {
   });
 
   it("stops the parent through the atomic orchestration action", async () => {
-    h.requestStop.mockResolvedValue({ id: TURN_ID, status: "stopped", active_run_id: RUN_ID });
+    h.requestStop.mockResolvedValue({ id: TURN_ID, status: "stopped" });
 
     const response = await POST(
       new NextRequest(`http://localhost/api/assistant/conversations/${CONVERSATION_ID}/turn`, {

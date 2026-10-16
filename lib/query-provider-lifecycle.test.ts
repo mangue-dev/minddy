@@ -51,7 +51,7 @@ async function mount() {
 describe("query provider persistence lifecycle", () => {
   it("releases inactive full payloads after one minute while preserving board persistence", async () => {
     await mount();
-    const keys = [["pull-request", "pr"], ["pr-commit-diff", "pr", "sha"], ["desktop-agent-run-diff", "run", "live"]];
+    const keys = [["pull-request", "pr"], ["pr-commit-diff", "pr", "sha"]];
     keys.forEach(key => client.setQueryData(key, { files: [{ patch: "x".repeat(1024 * 1024) }] }));
     client.setQueryData(["issues", "project"], [{ id: "retained" }]);
     window.dispatchEvent(new Event("pagehide"));

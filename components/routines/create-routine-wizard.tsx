@@ -63,9 +63,9 @@ type StepId = "project" | "job" | "schedule" | "done";
     obstacle of this step, and these three describe what a routine does
     better: return to what we never look at spontaneously. */
 const EXAMPLE_KEYS = [
-  "exampleSecurity",
-  "exampleDeps",
-  "exampleTests",
+  "exampleTriage",
+  "exampleStale",
+  "exampleDigest",
 ] as const;
 
 export function CreateRoutineWizard({
@@ -343,7 +343,7 @@ export function CreateRoutineWizard({
                 }}
                 className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
               >
-                {t(`${key}Label` as "exampleSecurityLabel")}
+                {t(`${key}Label` as "exampleTriageLabel")}
               </button>
             ))}
           </div>

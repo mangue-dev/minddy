@@ -5,11 +5,9 @@ const h = vi.hoisted(() => ({
   read: vi.fn(),
   update: vi.fn(),
   create: vi.fn(),
-  launch: vi.fn(),
   findPr: vi.fn(),
   resolveRepo: vi.fn(),
 }));
-vi.mock("@/lib/server/agent/launch", () => ({ launchAgentRun: h.launch }));
 vi.mock("@/lib/server/agent/pull-requests", () => ({
   findPullRequest: h.findPr,
   findPullRequestForIssue: vi.fn(),
@@ -24,20 +22,7 @@ vi.mock("@/lib/server/page-tools", () => ({
   updateDatabaseForAgent: h.update,
   createPageForAgent: h.create,
 }));
-vi.mock("@/lib/server/automations/operation-content", () => ({
-  shouldProtectAutomationOperation: async () => true,
-  encodeOperationText: async (_project: string, _chain: string,
-    _step: number, _field: string, value: string) => `sealed:${value}`,
-  encodeOperationJson: async (_project: string, _chain: string,
-    _step: number, _field: string, value: unknown) => ({ sealed: value }),
-  decodeOperationText: async (_project: string, _chain: string,
-    _step: number, _field: string, value: string) => value?.replace(/^sealed:/, ""),
-  decodeOperationJson: async (_project: string, _chain: string,
-    _step: number, _field: string, value: { sealed?: unknown }) =>
-    value?.sealed ?? value,
-}));
 import { executeTool } from "./execute-tool";
-import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 import { CONVERSATION_ASSISTANT_TOOLS, PROJECT_ASSISTANT_TOOLS } from "./tools";
 const ctx = {
   projectId: "project",
@@ -75,79 +60,6 @@ beforeEach(() => {
     repoFullName: "mangue-dev/minddy",
   });
 });
-describe("code-worker launch diagnostics", () => {
-  it("returns a correlated database rejection without private server details", async () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    h.launch.mockRejectedValueOnce(new DatabaseOperationError("create_agent_run", {
-      code: "23514",
-      message: 'new row violates check constraint "agent_runs_delegation_brief_check"',
-      details: "Private brief with secret token",
-    }, 400));
-    const result = await executeTool("launch_code_agent", { prompt: "Inspect the repository" }, {
-      ...ctx, conversationId: "conversation", routineId: "routine",
-    });
-    expect(result).toMatchObject({ success: false, result: {
-      error_code: "code_agent_launch_failed", retryable: false,
-      stage: "create_agent_run", correlation_id: expect.any(String),
-      failure: { code: "23514", constraint: "agent_runs_delegation_brief_check", status: 400 },
-    } });
-    const payload = result.result as { correlation_id: string; error: string };
-    expect(payload.error).toContain("database rejected");
-    expect(log).toHaveBeenCalledWith("[assistant] code_agent_launch_failed", expect.objectContaining({
-      correlation_id: payload.correlation_id, routine_id: "routine", conversation_id: "conversation",
-    }));
-    expect(JSON.stringify([result, log.mock.calls])).not.toMatch(/Private|secret token/);
-    expect(h.launch).toHaveBeenCalledTimes(1);
-    log.mockRestore();
-  });
-
-  it("does not suggest replaying a launch whose outcome is unknown", async () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    h.launch.mockRejectedValueOnce(new Error("private endpoint or prompt"));
-    expect(await executeTool("launch_code_agent", { prompt: "Read" }, ctx)).toMatchObject({
-      success: false, result: { error: expect.stringContaining("check the run state"),
-        error_code: "code_agent_launch_failed", retryable: false, failure: { kind: "internal" } },
-    });
-    expect(JSON.stringify(log.mock.calls)).not.toContain("private endpoint");
-    log.mockRestore();
-  });
-
-  it("keeps known quota refusals distinct from unexpected launch failures", async () => {
-    h.launch.mockResolvedValueOnce({ ok: false, error: "quotaExceeded" });
-    expect(await executeTool("launch_code_agent", { prompt: "Read" }, ctx)).toMatchObject({
-      success: false, result: { error_code: "quotaExceeded", retryable: false,
-        error: expect.stringContaining("usage limit") },
-    });
-  });
-
-  it.each(["codex", "claude_code"])("reports frozen %s adapter capabilities on a delegated worker", async (engine) => {
-    h.launch.mockResolvedValueOnce({ ok: true, run: { id: "native-run", agent_engine: engine,
-      conversation_id: "worker", status: "queued", model: `${engine}/fixture-model`,
-      native_reasoning_effort: "high", reasoning_level: null } });
-    const result = await executeTool("launch_code_agent", { prompt: "Inspect the repository" }, ctx);
-    expect(result).toMatchObject({ success: true, result: {
-      engine, model: `${engine}/fixture-model`, native_reasoning_effort: "high",
-      harness_capabilities: { funding: "subscription", modelSelection: "native_account_model",
-        minddyTools: true, subagents: false, nativeBuiltinTools: false, imageInput: false },
-      harness_description: expect.stringContaining("mediate questions"),
-    } });
-  });
-
-  it.each(["nativeConnectionRequired", "nativeAgentUnavailable"])("explains %s without suggesting automatic API fallback", async (error) => {
-    h.launch.mockResolvedValueOnce({ ok: false, error });
-    const result = await executeTool("launch_code_agent", { prompt: "Inspect the repository" }, ctx);
-    expect(result).toMatchObject({ success: false, result: { error_code: error, retryable: false,
-      error: expect.stringContaining("Do not switch harness, provider or payer automatically") } });
-    expect(h.launch).toHaveBeenCalledTimes(1);
-  });
-
-  it("refuses a forged native engine override before launching", async () => {
-    expect(await executeTool("launch_code_agent", { engine: "codex", prompt: "Inspect" }, ctx)).toMatchObject({
-      success: false, result: { error: expect.stringContaining("cannot be overridden") },
-    });
-    expect(h.launch).not.toHaveBeenCalled();
-  });
-});
 
 describe("Numo database tool dispatch", () => {
   it("provides canonical production citations for public documentation help", async () => {
@@ -156,12 +68,11 @@ describe("Numo database tool dispatch", () => {
       id: "issues", sourceUrl: "https://minddy.app/fr/documentation/issues",
     } });
   });
-  it.each(["get_issue", "list_projects", "create_issue", "launch_code_agent", "update_account_settings", "web_search", "call_mcp_tool"])("blocks %s on the public documentation surface before dispatch", async tool => {
+  it.each(["get_issue", "list_projects", "create_issue", "update_account_settings", "web_search", "call_mcp_tool"])("blocks %s on the public documentation surface before dispatch", async tool => {
     const result = await executeTool(tool, {}, { ...ctx, documentationHelp: true });
     expect(result.success).toBe(false);
     expect(result.result).toEqual({ error: "Only public documentation help is available in this conversation." });
     expect(h.access).not.toHaveBeenCalled();
-    expect(h.launch).not.toHaveBeenCalled();
   });
   it("exposes a project-scoped database tool and returns schema read results", async () => {
     const tool = PROJECT_ASSISTANT_TOOLS.find(
@@ -235,17 +146,16 @@ describe("Numo database tool dispatch", () => {
   });
 });
 
-
 describe("conversation action targets", () => {
   const conversation = { ...ctx, requireExplicitProjectTarget: true };
-  it("keeps routine conversations able to delegate and ask for owner input", () => {
+  it("keeps routine conversations able to ask for owner input without code tools", () => {
     const names = CONVERSATION_ASSISTANT_TOOLS.map((tool) => tool.function.name);
-    expect(names).toContain("launch_code_agent");
+    expect(names).not.toContain("launch_code_agent");
     expect(names).not.toContain("report_automation_outcome");
     expect(names).toContain("ask_user");
   });
-  it("never substitutes ambient context for an omitted action or worker target", async () => {
-    for (const name of ["update_page_database", "launch_code_agent", "update_view"]) {
+  it("never substitutes ambient context for an omitted action target", async () => {
+    for (const name of ["update_page_database", "update_view"]) {
       expect(await executeTool(name, {}, conversation)).toMatchObject({ success: false });
     }
     expect(h.access).not.toHaveBeenCalled();
@@ -257,153 +167,9 @@ describe("conversation action targets", () => {
     expect(h.access).toHaveBeenCalledWith("actor", "a");
     expect(h.update).toHaveBeenCalledWith(expect.objectContaining({ projectId: "a" }));
   });
-  it("launches a worker for the authorized target even when ambient context is elsewhere", async () => {
-    h.launch.mockResolvedValue({ ok: true, run: { id: "run", conversation_id: "worker", status: "queued", model: "test" } });
-    expect(await executeTool("launch_code_agent", { project_id: "a", prompt: "Update the documentation" }, { ...conversation, projectId: "b" }))
-      .toMatchObject({ success: true });
-    expect(h.access).toHaveBeenCalledWith("actor", "a");
-    expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({ projectId: "a", userId: "actor" }));
-  });
-  it("owns a structured worker brief from the durable parent turn", async () => {
-    h.access.mockResolvedValue({ project: { id: "a", key: "MIN" } });
-    h.launch.mockResolvedValue({
-      ok: true,
-      run: {
-        id: "run",
-        conversation_id: "worker",
-        status: "queued",
-        model: "test",
-        reasoning_level: "medium",
-      },
-    });
-    const query: Record<string, unknown> = {};
-    const chain = () => query;
-    query.select = chain;
-    query.eq = chain;
-    query.is = chain;
-    query.maybeSingle = async () => ({
-      data: {
-        metadata: {
-          attachments: [{
-            storage_path: "actor/chat/file.txt",
-            file_name: "file.txt",
-            mime_type: "text/plain",
-            size_bytes: 12,
-          }],
-        },
-      },
-    });
-    const durable = {
-      ...conversation,
-      conversationId: "parent-conversation",
-      turnId: "parent-turn",
-      toolCallId: "call-1",
-      operationBudgetUsd: 1.5,
-      routineId: "routine-1",
-      automationChainId: "chain-1",
-      service: { from: () => query },
-    } as unknown as ToolContext;
-
-    const result = await executeTool("launch_code_agent", {
-      project_id: "a",
-      mode: "custom",
-      objective: "Inspect and update the repository documentation.",
-      source_references: [{ kind: "conversation", label: "User request" }],
-      constraints: ["Keep the public API stable."],
-      authorized_work: ["read_repository", "modify_repository", "run_verification", "manage_pull_request"],
-      requires_pull_request: true,
-    }, durable);
-
-    expect(result).toMatchObject({
-      success: true,
-      result: { run_id: "run", parent_turn_id: "parent-turn", contract_version: 1 },
-    });
-    expect(h.launch).toHaveBeenCalledWith(expect.objectContaining({
-      projectId: "a",
-      budgetUsd: 1.5,
-      routineId: "routine-1",
-      triggeredBy: "chat",
-      delegation: expect.objectContaining({
-        parentConversationId: "parent-conversation",
-        parentTurnId: "parent-turn",
-        toolCallId: "call-1",
-        objective: "Inspect and update the repository documentation.",
-        requiresPullRequest: true,
-        attachments: [expect.objectContaining({ file_name: "file.txt" })],
-        sourceReferences: expect.arrayContaining([
-          expect.objectContaining({ kind: "attachment", label: "file.txt" }),
-        ]),
-      }),
-    }));
-    const launchInput = h.launch.mock.calls.at(-1)?.[0] as Record<string, unknown>;
-    expect(launchInput).not.toHaveProperty("model");
-    expect(launchInput).not.toHaveProperty("reasoningLevel");
-  });
   it("refuses the retired automation outcome tool", async () => {
     expect(await executeTool("report_automation_outcome", { outcome: "ok", summary: "Done" }, conversation))
       .toMatchObject({ success: false });
-  });
-  it.each([
-    ["review", { pullRequestId: "pr-1" }],
-    [
-      "fix",
-      { continuePullRequestId: "pr-1", issueId: "issue-1" },
-    ],
-  ] as const)(
-    "preserves the selected pull request when delegating %s work",
-    async (mode, expectedAnchor) => {
-      h.access.mockResolvedValue({ project: { id: "a", key: "MIN" } });
-      h.launch.mockResolvedValue({
-        ok: true,
-        run: {
-          id: "run",
-          conversation_id: "worker",
-          status: "queued",
-          model: "test",
-          reasoning_level: "medium",
-        },
-      });
-
-      const result = await executeTool(
-        "launch_code_agent",
-        {
-          project_id: "a",
-          pull_request_id: "pr-1",
-          mode,
-          objective: `${mode} the selected pull request.`,
-          source_references: [],
-          constraints: [],
-          authorized_work:
-            mode === "review"
-              ? ["read_repository", "run_verification"]
-              : ["read_repository", "modify_repository", "run_verification", "manage_pull_request"],
-        },
-        conversation,
-      );
-
-      expect(result).toMatchObject({ success: true, result: { mode } });
-      expect(h.launch).toHaveBeenCalledWith(
-        expect.objectContaining(expectedAnchor),
-      );
-    },
-  );
-  it("explains how to replace a retired desktop-only worker provider", async () => {
-    h.launch.mockResolvedValue({
-      ok: false,
-      error: "providerEndpointUnavailableFromSandbox",
-    });
-    expect(
-      await executeTool(
-        "launch_code_agent",
-        { project_id: "a", prompt: "Update the documentation" },
-        conversation,
-      ),
-    ).toMatchObject({
-      success: false,
-      result: {
-        error: expect.stringMatching(/server sandbox.*cannot switch providers or billing accounts/i),
-      },
-    });
   });
   it("rechecks access before the next message's action", async () => {
     const args = { project_id: "a", page_id: "entry", operation: "value" };

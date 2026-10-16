@@ -223,13 +223,12 @@ test("runs when the CLI entry path contains a filesystem symlink", () => {
   }
 });
 
-test("rejects enabled proprietary services but accepts the built-in self-hosted backend", () => {
+test("rejects enabled proprietary services and accepts disabled ones", () => {
   assert.deepEqual(
     cloudEnvironmentFindings({
       MINDDY_MANAGED_AI: "0",
       MINDDY_MANAGED_BILLING: "false",
       MINDDY_EDITION: "self-hosted",
-      AGENT_EXECUTION_BACKEND: "self-hosted",
       MINDDY_PUBLIC_POSTHOG_KEY: "",
     }),
     []
@@ -238,9 +237,8 @@ test("rejects enabled proprietary services but accepts the built-in self-hosted 
     cloudEnvironmentFindings({
       MINDDY_EDITION: "cloud",
       POSTHOG_API_KEY: "phx_test",
-      AGENT_EXECUTION_BACKEND: "vercel",
     }),
-    ["MINDDY_EDITION", "AGENT_EXECUTION_BACKEND", "POSTHOG_API_KEY"]
+    ["MINDDY_EDITION", "POSTHOG_API_KEY"]
   );
 });
 

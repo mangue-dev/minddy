@@ -3,7 +3,7 @@
   "id": "architecture-and-data-flows",
   "locale": "pt-BR",
   "title": "Arquitetura e fluxos de dados",
-  "summary": "Acompanhe solicitações e dados entre minddy, Supabase, agendador, sandbox e provedores externos, distinguindo serviços persistentes e destinos dos dados.",
+  "summary": "Acompanhe solicitações e dados entre minddy, Supabase, agendador e provedores externos, distinguindo serviços persistentes e destinos dos dados.",
   "topic": "Conceitos técnicos",
   "type": "explanation",
   "audiences": [
@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-16",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-721 removal of Numo code work and repository sandboxes",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -38,14 +38,15 @@
       "lib/server/capabilities.ts",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root/min721_docs (MIN-721 source review inherited from en revision 5; pt-BR translation of removal edits; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min721_pt-BR (pt-BR translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
+    "date": "2026-10-16"
   },
   "related": [
     "instance-configuration",
@@ -61,11 +62,11 @@
       "id": "architecture-and-data-flows-flow",
       "kind": "diagram",
       "src": "/documentation/pt-BR/architecture-and-data-flows-flow.svg",
-      "alt": "Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.",
+      "alt": "Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente para tarefas em segundo plano. Provedores opcionais: destinos separados.",
       "caption": "A aplicação coordena os serviços internos e usa os provedores externos quando estão configurados.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-16",
       "viewport": [
         720,
         640
@@ -81,7 +82,7 @@
             "title": "Supabase: PostgreSQL, Auth, Storage, Realtime"
           },
           {
-            "title": "Agendador independente e runner confiável"
+            "title": "Agendador independente para tarefas em segundo plano"
           },
           {
             "title": "Provedores opcionais: destinos separados"
@@ -100,11 +101,11 @@
 
 O `Next.js` fornece a interface e as APIs autorizadas. O Supabase fornece PostgreSQL, Auth, Storage e Realtime. O PostgreSQL guarda registros da aplicação, contas, dados da plataforma e metadados dos arquivos; o Storage guarda os bytes. A configuração protegida contém chaves e definições de provedores. Os containers podem ser recriados, mas volumes, bytes e chaves precisam persistir. Uma restauração completa reúne esses elementos no mesmo ponto de recuperação.
 
-![Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente e runner confiável. Provedores opcionais: destinos separados.](/documentation/pt-BR/architecture-and-data-flows-flow.svg)
+![Diagrama: Navegador e aplicação autenticada. Supabase: PostgreSQL, Auth, Storage, Realtime. Agendador independente para tarefas em segundo plano. Provedores opcionais: destinos separados.](/documentation/pt-BR/architecture-and-data-flows-flow.svg)
 
 ## Seguir uma solicitação {#requests}
 
-O navegador usa as origens públicas do minddy e do Supabase. O Auth cria a sessão; o servidor verifica o usuário e o objeto antes de executar a operação. O Realtime propaga atualizações. No perfil full, o servidor usa o Kong na rede interna sem alterar as origens do navegador ou os links de conta. O agendador envia requisições HTTP autenticadas sem navegador. Quando o Numo precisa trabalhar com código, o runner confiável cria sandboxes restritas para o repositório conectado; elas não recebem segredos da instância nem o socket Docker.
+O navegador usa as origens públicas do minddy e do Supabase. O Auth cria a sessão; o servidor verifica o usuário e o objeto antes de executar a operação. O Realtime propaga atualizações. No perfil full, o servidor usa o Kong na rede interna sem alterar as origens do navegador ou os links de conta. O agendador envia requisições HTTP autenticadas sem navegador.
 
 ## Identificar destinos externos {#providers}
 

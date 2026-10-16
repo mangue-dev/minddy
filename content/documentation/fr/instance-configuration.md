@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-16",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -49,10 +49,10 @@
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence)",
-    "language": "agent:/root (fr translation, label and retained-meaning self-review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
+    "language": "agent:/root (fr translation, label and retained-meaning self-review); agent:/root/min-721 (fr runner-removal edits and full retained meaning)",
+    "date": "2026-10-16"
   },
   "related": [
     "workspace-encryption",
@@ -77,7 +77,7 @@
       "src": "/documentation/fr/optional-providers-flow.svg",
       "alt": "Schéma: L’opérateur choisit une capacité optionnelle. Identifiants complets et conditions fournisseur. Destination externe explicitement choisie. Vérifier le comportement et suivre les coûts.",
       "caption": "Activer un service optionnel ajoute ses propres identifiants, destinations de données et coûts d’utilisation.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -107,9 +107,9 @@
       "id": "proxy-network-and-jobs-flow",
       "kind": "diagram",
       "src": "/documentation/fr/proxy-network-and-jobs-flow.svg",
-      "alt": "Schéma: Proxy HTTPS public. Origines application et Supabase public. Runner, base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.",
+      "alt": "Schéma: Proxy HTTPS public. Origines application et Supabase public. Base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.",
       "caption": "L’accès public utilise HTTPS, tandis que les services internes restent privés et les tâches planifiées sont arrêtées pendant la maintenance.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -127,7 +127,7 @@
             "title": "Origines application et Supabase public"
           },
           {
-            "title": "Runner, base et ports internes privés"
+            "title": "Base et ports internes privés"
           },
           {
             "title": "Jobs authentifiés, arrêtés en maintenance"
@@ -151,7 +151,7 @@ Définissez `MINDDY_PUBLIC_APP_URL` comme une origine absolue unique, sans chemi
 
 ### Conserver les secrets {#secrets}
 
-L’installateur crée les valeurs manquantes de `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY`, `CRON_SECRET` et `AGENT_RUNNER_SECRET`. La racine de chiffrement contient exactement 64 caractères hexadécimaux. Gardez-la hors de PostgreSQL avec une copie de récupération protégée. Conservez l’environnement en mode `0600` et hors de Git. Ne l’exécutez pas comme script shell et ne l’affichez pas. Relancer l’installation ne renouvelle pas les secrets. Leur perte peut rendre les données existantes illisibles ; une rotation volontaire exige la procédure de récupération correspondante.
+L’installateur crée les valeurs manquantes de `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `MINDDY_DATA_ROOT_KEY` et `CRON_SECRET`. La racine de chiffrement contient exactement 64 caractères hexadécimaux. Gardez-la hors de PostgreSQL avec une copie de récupération protégée. Conservez l’environnement en mode `0600` et hors de Git. Ne l’exécutez pas comme script shell et ne l’affichez pas. Relancer l’installation ne renouvelle pas les secrets. Leur perte peut rendre les données existantes illisibles ; une rotation volontaire exige la procédure de récupération correspondante.
 
 ### Appliquer et contrôler une modification {#capabilities}
 
@@ -176,16 +176,14 @@ L’email applicatif exige `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `FEEDBACK_
 
 ### Connecter Git et l’exécution de code {#git-and-code}
 
-GitHub.com et GitLab.com sont pris en charge, contrairement à Enterprise Server et GitLab autogéré. Les connexions lancées par l’utilisateur peuvent utiliser le relais forge géré ; refusez-le avec `--no-forge-relay` ou `MINDDY_FORGE_RELAY=0` puis configurez vos propres applications. Les connexions existantes gardent leur canal jusqu’à reconnexion. Le serveur de référence inclut un runner Docker self-hosted de confiance. Vercel Sandbox est une alternative explicite avec ses identifiants et `MINDDY_DATA_ROOT_KEY` valide, même sans chiffrement du contenu. L’exécution desktop locale est retirée. Une configuration absente bloque la délégation au lieu d’exécuter du code sur l’ordinateur de l’utilisateur.
-
-L’image publiée de l’application inclut Node.js et Git, mais retire volontairement `npm`, `npx` et Corepack. Le profil Compose de référence choisit aussi cette image pour les workers via `AGENT_RUNNER_SANDBOX_IMAGE=MINDDY_IMAGE`. Cela ne suffit pas pour un nouveau worker de code : le bootstrap OpenCode utilise `npm` pour installer son runtime et son plugin épinglés, même dans un dépôt sans dépendances de projet. Sans `npm`, l’exécution s’arrête au bootstrap ; la conversation ne permet pas de conclure qu’un fichier du projet a été modifié ou qu’un test a réussi. Utilisez une image dédiée aux workers, construite et vérifiée par l’opérateur, avec Node.js 24, `npm`, Git et les outils nécessaires au projet, en surchargeant `AGENT_RUNNER_SANDBOX_IMAGE` dans le service runner. Conservez les contraintes d’isolation du runner. Vérifiez le bootstrap, le clonage, les véritables tests et le diff obtenu avant d’autoriser la délégation de code. Corriger les fichiers du runner ne fournit pas cette chaîne d’outils au worker.
+GitHub.com et GitLab.com sont pris en charge, contrairement à Enterprise Server et GitLab autogéré. Les connexions lancées par l’utilisateur peuvent utiliser le relais forge géré ; refusez-le avec `--no-forge-relay` ou `MINDDY_FORGE_RELAY=0` puis configurez vos propres applications. Les connexions existantes gardent leur canal jusqu’à reconnexion. Numo n’exécute pas de code : le serveur de référence n’a besoin d’aucun runner de code ni d’aucune sandbox, et aucun service ne reçoit le socket Docker. Les réglages laissés par une release antérieure, comme `AGENT_EXECUTION_BACKEND`, `AGENT_RUNNER_URL`, `AGENT_RUNNER_SECRET`, `AGENT_CONTROL_ORIGIN` et les identifiants Vercel Sandbox, sont ignorés ; retirez-les de l’environnement protégé.
 
 ## Exposer les origines publiques et exécuter les tâches planifiées {#proxy-network-and-jobs}
 
-Une installation publique exige un proxy TLS et une redirection HTTP vers HTTPS. Origines applicative et Supabase, redirections Auth, callbacks OAuth et en-têtes transmis doivent correspondre. Gardez PostgreSQL, Studio, ports internes et runner hors d’Internet. En full, l’application appelle `http://kong:8000` en interne ; le navigateur et les liens générés conservent l’origine publique Supabase. HTTP privé exige `localhost` ou une IPv4 privée de confiance, sans redirection de ports du routeur.
+Une installation publique exige un proxy TLS et une redirection HTTP vers HTTPS. Origines applicative et Supabase, redirections Auth, callbacks OAuth et en-têtes transmis doivent correspondre. Gardez PostgreSQL, Studio et ports internes hors d’Internet. En full, l’application appelle `http://kong:8000` en interne ; le navigateur et les liens générés conservent l’origine publique Supabase. HTTP privé exige `localhost` ou une IPv4 privée de confiance, sans redirection de ports du routeur.
 
 
-![Schéma: Proxy HTTPS public. Origines application et Supabase public. Runner, base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.](/documentation/fr/proxy-network-and-jobs-flow.svg)
+![Schéma: Proxy HTTPS public. Origines application et Supabase public. Base et ports internes privés. Jobs authentifiés, arrêtés en maintenance.](/documentation/fr/proxy-network-and-jobs-flow.svg)
 
 ### Fournir une planification authentifiée {#schedules}
 

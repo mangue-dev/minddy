@@ -137,7 +137,7 @@ export function useIssueFieldShortcuts(
     const key = eventKey(e);
     const action = actionsRef.current?.[e.shiftKey ? `shift+${key}` : key];
     if (action) {
-      // A ticket selection owns ⇧P/⇧A while the pill is up (MIN-539): the
+      // A ticket selection owns ⇧P while the pill is up (MIN-539): the
       // selection acts on every checked ticket, hover must not narrow the
       // action to one. Stand down WITHOUT consuming — the selection listener
       // (lib/use-bulk-selection-actions.ts) takes it from here.

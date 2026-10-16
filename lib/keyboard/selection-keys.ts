@@ -1,10 +1,10 @@
-// ⇧P / ⇧A on a ticket SELECTION (MIN-539) outrank the per-card hover
-// variants: while the selection pill is up, it is the current mode — the same
+// ⇧P on a ticket SELECTION (MIN-539) outranks the per-card hover
+// variant: while the selection pill is up, it is the current mode — the same
 // precedence “@” follows (lib/ask-numo-context.tsx). The card and panel
 // handlers (components/issue-field-shortcuts.tsx) consult
 // `selectionKeysActive()` at keystroke time and stand down on Shift combos,
 // so the ONE window listener of lib/use-bulk-selection-actions.ts owns the
-// two combos wherever the pointer rests; with no selection, nothing changes.
+// combo wherever the pointer rests; with no selection, nothing changes.
 //
 // The gate is a counter rather than a boolean: two surfaces can coexist
 // briefly during a route transition (the old board unmounting after the new
@@ -21,7 +21,7 @@ export function selectionKeysActive(): boolean {
 }
 
 /**
- * Claims the ⇧P/⇧A ownership for one surface, for as long as its selection
+ * Claims the ⇧P ownership for one surface, for as long as its selection
  * is non-empty. Returns the release; calling it more than once is a no-op, so
  * a StrictMode double-effect cannot over-release.
  */

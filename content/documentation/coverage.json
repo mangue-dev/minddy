@@ -647,11 +647,11 @@
       "member"
     ],
     "type": "guide",
-    "source": "K/plans-and-agents; `components/assistant/delegated-work-card.tsx`; K/agents-and-mcp",
-    "gaps": "Linked repo/configured sandbox, worker model, progress/checks/files, user input and limits; no desktop-local worker promise",
-    "illustration": "Reuse workflowAgent/workflowPr; new localized run details",
+    "source": "`components/agent/use-agent-menu-actions.tsx`; K/agents-and-mcp; MIN-721 removal of Numo code work",
+    "gaps": "Copied plan/implement/verify/custom prompts, MCP plan updates, issue-linked branch or PR, auto-start preference; no Numo code worker or sandbox",
+    "illustration": "Reuse the PR Changes capture; the retired worker card was removed in MIN-721",
     "requiresFigures": true,
-    "section": "delegate-code-work"
+    "section": "external-coding-agents"
   },
   {
     "workflow": "N04",
@@ -662,7 +662,7 @@
     ],
     "type": "guide",
     "source": "`components/pull-requests/pr-detail.tsx`; `components/pull-requests/pr-reviews-details.tsx`; K/plans-and-agents",
-    "gaps": "Tabs, file/hunk navigation, comments/unresolved threads, review requests/AI review, readiness and merge permissions",
+    "gaps": "Tabs, file/hunk navigation, comments/unresolved threads and copied fix prompt, review requests, read-only @numo review, readiness, Merge with Numo and merge permissions",
     "illustration": "New current PR controls; reuse workflowPr as overview only",
     "requiresFigures": true,
     "section": "review-pull-requests"
@@ -820,7 +820,7 @@
     ],
     "type": "guide",
     "source": "K/plans-and-billing; `components/settings/account-ai-keys-section.tsx`; `components/settings/account-sandbox-section.tsx`",
-    "gaps": "Surface/model assignments, provider billing, server compute, conversation versus worker defaults, secure edit/remove",
+    "gaps": "Surface/model assignments, provider billing, conversation defaults, local-model limits, secure edit/remove",
     "illustration": "New redacted provider/default controls",
     "requiresFigures": true,
     "section": "ai-keys-and-models"
@@ -876,7 +876,7 @@
     ],
     "type": "explanation",
     "source": "K/plans-and-billing; `app/(app)/billing/page.tsx`; `app/(marketing)/pricing/page.tsx`",
-    "gaps": "Current capacities, checkout/portal actions, included calls/compute, caps/no overage, BYOK and self-host costs",
+    "gaps": "Current capacities, checkout/portal actions, included calls and usage segments, caps/no overage, BYOK and self-host costs",
     "illustration": "New billing/usage with demo amounts",
     "requiresFigures": true,
     "section": "plans-and-ai-usage"
@@ -1232,7 +1232,7 @@
     ],
     "type": "explanation",
     "source": "K/agents-and-mcp; D/architecture/numo-persistence; D/architecture/numo-durable-turns",
-    "gaps": "Durable state versus UI projection, owner context, sandbox data access, checkpoints/limits and source freshness",
+    "gaps": "Durable state versus UI projection, owner context, server-side data access, checkpoints/limits and source freshness",
     "illustration": "Localized execution/state diagram",
     "requiresFigures": true,
     "section": "numo-execution-model"

@@ -7,7 +7,6 @@ import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppRouter } from "@/lib/use-app-router";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -34,35 +33,15 @@ import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
 import { SubIssuesSection } from "@/components/sub-issues-section";
 import { IssueParentMenu } from "@/components/issue-parent-menu";
 import { RelationsSection } from "@/components/relations-section";
-// Deferred: the agent conversation carries the whole AI streaming stack
-// (streamdown + shiki) — it must not ride along on every board navigation.
-// The modal only mounts once a run exists AND the user opens it.
-const AgentChatModal = dynamic(
-  () => import("@/components/agent/agent-chat-modal").then((m) => m.AgentChatModal),
-  { ssr: false }
-);
-import { IssueAgentChip } from "@/components/agent/issue-agent-chip";
+import { IssuePrChip } from "@/components/issue-pr-chip";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
-import {
-  CustomPromptDialog,
-  type CustomPromptTarget,
-} from "@/components/agent/custom-prompt-dialog";
+import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
-import { useIssueAgentRunsQuery } from "@/lib/use-agent-runs";
-import {
-  isLatestAgentRunResumable,
-  isAgentRunWorking,
-} from "@/lib/agent-api";
-import type { NumoIntentAction } from "@/lib/assistant-types";
-import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { useIssuePullRequestQuery } from "@/lib/use-agent-runs";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import {
-  agentLaunchPromptVariant,
-  agentPlanPromptVariant,
-} from "@/lib/agent-launch-prompt";
 import {
   buildIssueCustomPrompt,
   buildIssuePlanPrompt,
@@ -174,9 +153,7 @@ export function IssueSidePanel({
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const tPlan = useTranslations("Plan");
-  const tAgent = useTranslations("Agent");
   const { openIssue: openGlobalIssue } = useIssuePanelActions();
-  const { openIntent } = useAssistantPanelActions();
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();
@@ -241,13 +218,8 @@ export function IssueSidePanel({
       the surface with the stale reflection the prop still carries. One-shot:
       consumed by the very next container blur. */
   const justCommitted = useRef(false);
-  // Agent conversation, in modal ABOVE the panel: hot restart
-  // must not cost the context of the ticket (the card has nothing to lose
-  // and leaves its page).
-  const [chatOpen, setChatOpen] = useState(false);
-  // “Personalized”: the free instructions dialog, opened either to copy the
-  // prompt, or to launch the agent (`null` = closed).
-  const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
+  // “Custom”: the free instructions dialog that copies the prompt.
+  const [customPromptOpen, setCustomPromptOpen] = useState(false);
 
   const { items, readState, retryRead, addComment, updateComment, deleteComment, deleteAttachment } =
     useIssueTimeline(
@@ -265,18 +237,10 @@ export function IssueSidePanel({
       open,
     );
 
-  // Code agent of this ticket. Same derivations as maps (lib/server/
-  // agent/activity.ts), but from the runs of the issue alone: ​​the panel
-  // also opens where the board activity provider does not exist (Pull page
-  // requests, feedback board). The PR travels with it, served by the same route and
-  // read on `pull_requests`: a ticket can carry one without any run.
-  const { runs, pullRequest } = useIssueAgentRunsQuery(issue?.id ?? null);
-  const workingAgentRun = runs.find((r) => isAgentRunWorking(r.status));
-  const agentWorking = workingAgentRun != null;
-  const latestRun = runs[0] ?? null;
-  // Only the latest run can reopen its conversation; newer runs supersede any
-  // checkpoints retained by older runs.
-  const hasAgentSession = isLatestAgentRunResumable(runs);
+  // The PR of this ticket, served on its own route: the panel also opens where
+  // the board's PR provider does not exist (Pull requests page, feedback
+  // board). A ticket can carry one opened by anyone.
+  const pullRequest = useIssuePullRequestQuery(issue?.id ?? null);
 
   // Cycle (MIN-32): the panel reads the current cycle itself rather than
   // brought down by its four callers — the hook is already spoiled by the
@@ -360,68 +324,7 @@ export function IssueSidePanel({
     return resolveDisplayRelationsByIssue(relations, byId, objectiveById).get(issue.id) ?? [];
   }, [issue, relations, allIssues, objectives]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // New work enters the common Numo conversation. Historical worker sessions
-  // remain available only as navigation to existing execution details.
-  const entrustToNumo = useCallback(
-    (prompt: string, action: NumoIntentAction = "implement") => {
-      if (!issue) return;
-      openIntent({
-        source: "issue",
-        action,
-        projectId: issue.project_id,
-        prompt,
-        pageContext: {
-          projectId: issue.project_id,
-          issueId: issue.id,
-          issueIdentifier: issueIdentifier(projectKey, issue.number),
-          issueTitle: issue.title,
-        },
-      });
-    },
-    [issue, projectKey, openIntent]
-  );
-
-  const startNewAgentSession = useCallback(() => {
-    if (!issue) return;
-    // “Implement the ticket” ALWAYS arrives with its pre-written instructions
-    // (ticket context, tailored to their plan/effort) — like the other three
-    // ways of working from the same submenu. She left empty when the ticket
-    // already had a session, on the grounds that the context was inherited: from place
-    // from the user, the same menu entry populated the dial once
-    // out of two, without anything announcing the difference.
-    const identifier = issueIdentifier(projectKey, issue.number);
-    entrustToNumo(
-      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
-    );
-  }, [issue, projectKey, entrustToNumo, tAgent]);
-
-  // Planning remains an explicit intent and does not move the issue status.
-  const writePlanWithAgent = useCallback(() => {
-    if (!issue) return;
-    const identifier = issueIdentifier(projectKey, issue.number);
-    entrustToNumo(
-      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
-      "plan"
-    );
-  }, [issue, projectKey, entrustToNumo, tAgent]);
-
-  // Verification remains distinct from implementation and leaves status alone.
-  const verifyWithAgent = useCallback(() => {
-    if (!issue) return;
-    const identifier = issueIdentifier(projectKey, issue.number);
-    entrustToNumo(
-      `${tAgent("launchPrompt.head", { identifier })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
-      "verify"
-    );
-  }, [issue, projectKey, entrustToNumo, tAgent]);
-
-  // ⇧A always starts a new common Numo request for this issue.
-  const launchAgent = useCallback(() => {
-    startNewAgentSession();
-  }, [startNewAgentSession]);
-
-  // `?pr=` and not `?run=`: the link must work as well for a PR as for no run
-  // has not opened — a human PR, or a hand-attached PR (MIN-163).
+  // `?pr=`: the link works for any PR, including a hand-attached one (MIN-163).
   const openPr = useCallback(() => {
     if (pullRequest) router.push(`/pull-requests?pr=${pullRequest.prId}`);
   }, [pullRequest, router]);
@@ -534,21 +437,13 @@ export function IssueSidePanel({
     toast.success(t("verifyPromptCopied"));
   }, [issue, promptContext, projectKey, t]);
 
-  // “Customized”: the instruction entered in the dialog replaces the instruction
+  // “Custom”: the instruction entered in the dialog replaces the instruction
   // ready made — the context of the ticket remains provided by minddy (block
-  // <issue> of the copied prompt; session context on the Numo agent side). None
-  // automatic start: we do not know if this instruction is work.
+  // <issue> of the copied prompt). No automatic start: we do not know if this
+  // instruction is work.
   const runCustomPrompt = useCallback(
-    async (instructions: string, target: CustomPromptTarget) => {
+    async (instructions: string) => {
       if (!issue || !promptContext) return;
-      if (target === "launch") {
-        const identifier = issueIdentifier(projectKey, issue.number);
-        entrustToNumo(
-          `${tAgent("launchPrompt.head", { identifier })}\n\n${instructions}`,
-          "custom"
-        );
-        return;
-      }
       const forge = await loadOneIssuePromptContext(issue.id);
       await navigator.clipboard.writeText(
         buildIssueCustomPrompt(
@@ -566,40 +461,32 @@ export function IssueSidePanel({
       );
       toast.success(t("promptCopied"));
     },
-    [issue, promptContext, projectKey, entrustToNumo, tAgent, t]
+    [issue, promptContext, projectKey, t]
   );
 
-  // “Copy prompt” and “Launch Numo agent”: two submenus, each
-  // with the “plan” sheet (generate or verify, depending on the ticket) and
-  // “Implement the ticket” (hook shared with the board cards).
+  // “Copy as prompt”: one submenu with the “plan” leaf (generate or verify,
+  // depending on the ticket) and “Implement the ticket” (hook shared with the
+  // board cards).
   const agentActions = useAgentMenuActions({
-    agentsEnabled: true,
-    hasSession: hasAgentSession,
     hasPlan: issueHasPlan,
     onCopyPrompt: () => void copyPrompt(),
     onCopyPlanPrompt: () => void copyPlanPrompt(),
     onCopyVerifyPrompt: () => void copyVerifyPrompt(),
-    onCopyCustomPrompt: () => setCustomTarget("copy"),
-    onImplementWithAgent: startNewAgentSession,
-    onWritePlanWithAgent: writePlanWithAgent,
-    onVerifyWithAgent: verifyWithAgent,
-    onCustomWithAgent: () => setCustomTarget("launch"),
-    onOpenSession: () => setChatOpen(true),
+    onCopyCustomPrompt: () => setCustomPromptOpen(true),
   });
 
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
   // body; the picker opens at the cursor, in the key/value section. `d` maps to
   // the due-date picker here just like on board cards (voice dictation lives on
-  // `v`, so nothing needs to be freed). ⇧P / ⇧A double the menu “⋯”, as on
-  // maps; the hook never triggers them during an entry (title,
+  // `v`, so nothing needs to be freed). ⇧P doubles the menu “⋯”, as on
+  // cards; the hook never triggers them during an entry (title,
   // description, commentaire).
   // The “Custom” dialog suspends them: it covers the panel, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } = useIssueFieldShortcuts(
-    open && !customTarget,
+    open && !customPromptOpen,
     {
       "shift+p": () => void copyPrompt(),
-      "shift+a": launchAgent,
     }
   );
 
@@ -877,15 +764,9 @@ export function IssueSidePanel({
                   {issueIdentifier(projectKey, issue.number)}
                 </span>
               </SidePanelTitle>
-              {/* Code Agent: the only state that deserves the header (at work,
-                  or a PR to reread) — the rest is in the “⋯” menu. */}
-              <IssueAgentChip
-                working={agentWorking}
-                engine={workingAgentRun?.agent_engine}
-                pr={pullRequest}
-                onOpenConversation={() => setChatOpen(true)}
-                onOpenPr={openPr}
-              />
+              {/* A PR to reread: the only state that deserves the header —
+                  the rest is in the “⋯” menu. */}
+              <IssuePrChip pr={pullRequest} onOpenPr={openPr} />
               {/* Voice editing — Numo turns dictated commands into field updates */}
               {numoBusy ? (
                 <>
@@ -1011,13 +892,9 @@ export function IssueSidePanel({
                   key={issue.id}
                   plan={issue.plan}
                   onCommit={(plan) => void patch({ plan })}
-                  // Internal actions always enter Numo. Copyable prompts remain
-                  // available for intentional external-agent workflows.
-                  onWriteWithAgent={writePlanWithAgent}
+                  // Copyable prompts serve the user's own coding agent.
                   onCopyPrompt={() => void copyPlanPrompt()}
-                  onImplementWithAgent={startNewAgentSession}
                   onCopyImplementPrompt={() => void copyPrompt()}
-                  onVerifyWithAgent={verifyWithAgent}
                   onCopyVerifyPrompt={() => void copyVerifyPrompt()}
                 />
               </TabsContent>
@@ -1273,26 +1150,11 @@ export function IssueSidePanel({
         </SidePanelContent>
       </SidePanel>
 
-      {/* Hot restart of the conversation, ABOVE the panel: opens the
-          last run and gives access to the ticket's run history. Rise
-          only when a run exists — without `initialRunId` the modal
-          would fall back on a composer, which “New session” already does. */}
-      {latestRun && (
-        <AgentChatModal
-          open={chatOpen}
-          onOpenChange={setChatOpen}
-          issueId={issue.id}
-          projectId={issue.project_id}
-          issueIdentifier={issueIdentifier(projectKey, issue.number)}
-          initialRunId={latestRun.id}
-        />
-      )}
-
       <CustomPromptDialog
-        target={customTarget}
-        onOpenChange={(open) => !open && setCustomTarget(null)}
-        onSubmit={(instructions, target) => {
-          void runCustomPrompt(instructions, target);
+        open={customPromptOpen}
+        onOpenChange={setCustomPromptOpen}
+        onSubmit={(instructions) => {
+          void runCustomPrompt(instructions);
         }}
       />
 

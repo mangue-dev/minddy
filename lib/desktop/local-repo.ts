@@ -15,8 +15,7 @@
  * untenable: a home path means nothing anywhere other than on the machine which
  * carries it, and storing it on the server side would publish it — false — to all members.
  * The attachment therefore lives in `userData`, by project, on THIS machine, and it
- * there is nothing to migrate on the database side: `agent_runs.local_exec` (MIN-355) is the only one
- * server state, per run, frozen at launch.
+ * there is nothing to migrate on the database side.
  *
  * Product consequence, which must be assumed rather than discovered: on a project with
  * three, a member on Windows just doesn't see the selector and its runs

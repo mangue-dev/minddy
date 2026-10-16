@@ -27,7 +27,7 @@ export async function POST(
     .select("id, source")
     .eq("id", conversationId)
     .maybeSingle();
-  if (!conversation || conversation.source !== "assistant") {
+  if (!conversation) {
     return Response.json({ error: "Conversation not found" }, { status: 404 });
   }
 

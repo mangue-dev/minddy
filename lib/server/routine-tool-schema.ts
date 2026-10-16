@@ -20,7 +20,6 @@ import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
  * a client that confuses them creates the wrong thing;
  * - **each occurrence is a Numo conversation** that can use Minddy tools and
  *   pause visibly for owner input;
- * - **repository work is optional** and delegated only when needed;
  * - **only the project owner can create one**;
  * - **the time zone cannot be guessed**.
  */
@@ -35,15 +34,13 @@ export const CREATE_ROUTINE_DESCRIPTION =
   "is NO name to pass: minddy writes the routine's title from its " +
   "instruction, and rewrites it whenever the instruction changes. `prompt` IS the " +
   "instruction Numo receives, so WRITE it from the user's request rather than " +
-  "copying their sentence. Numo uses Minddy tools directly for product work and " +
-  "delegates to a code worker only when repository access is actually needed. A " +
-  "project therefore does not need a linked repository to create or run a routine. " +
+  "copying their sentence. Numo uses Minddy tools directly; a project does not " +
+  "need a linked repository to create or run a routine. " +
   "If a real decision is missing, the occurrence can pause for owner input in its " +
   "conversation. OWNER ONLY: only the project's " +
   "owner can create a routine, because it is their usage budget that leaves every " +
-  "occurrence — a member gets a refusal, and there is no way around it. Delegated " +
-  "workers always use the owner's current account code model and reasoning. The " +
-  "complete occurrence, including Numo and delegated workers, stops at 15% of the " +
+  "occurrence — a member gets a refusal, and there is no way around it. An " +
+  "occurrence stops at 15% of the " +
   "owner's monthly usage budget by default — it cannot silently take the whole " +
   "month (`max_spend_percent`).";
 
@@ -67,7 +64,7 @@ export const LIST_ROUTINES_DESCRIPTION =
   "of stacking a second routine that does the same job.";
 
 /**
- * The spending ceiling for one occurrence, including Numo and delegated work.
+ * The spending ceiling for one occurrence.
  * Without the sentence about the default, a client
  * resets it to 100 “to avoid getting in the way” and reopens exactly the hole the
  * ceiling is meant to close.
@@ -75,7 +72,7 @@ export const LIST_ROUTINES_DESCRIPTION =
 const MAX_SPEND_PERCENT_PROPERTY = {
   type: "number",
   description:
-    "Cap on what ONE occurrence, including Numo and delegated code work, may spend, as a percentage (1–100) of " +
+    "Cap on what ONE occurrence may spend, as a percentage (1–100) of " +
     "the owner's monthly usage budget. OMIT IT unless the user asks for a cap: " +
     "the default (15) leaves room for a routine to run all month without eating " +
     "the budget, and passing 100 removes the cap entirely. Raise it for a " +
@@ -153,8 +150,8 @@ export const CREATE_ROUTINE_PARAMETERS = {
       description:
         "The instruction Numo receives at every occurrence, in the user's language. It " +
         "must stand on its own: say what to look at, what counts as a finding, and " +
-        "what to do with one. Numo may use Minddy tools, delegate repository work, " +
-        "or pause the conversation when owner input is genuinely required.",
+        "what to do with one. Numo may use Minddy tools, or pause the conversation " +
+        "when owner input is genuinely required.",
     },
     trigger: TRIGGER_PROPERTY,
     ...ROUTINE_SCHEDULE_PROPERTIES,

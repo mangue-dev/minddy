@@ -6,35 +6,8 @@ import { backfillCategoriesBatch } from "@/lib/server/encryption/category-backfi
 import { backfillProjectDraftsBatch } from "@/lib/server/encryption/project-draft-backfill";
 import { backfillFeedbackPostsBatch } from "@/lib/server/encryption/feedback-post-backfill";
 import { backfillIssuesBatch } from "@/lib/server/encryption/issue-backfill";
-import { backfillAgentJournalBatch } from "@/lib/server/encryption/agent-journal-backfill";
-import { backfillAgentEventsBatch } from "@/lib/server/encryption/agent-event-backfill";
-import { backfillAgentLaunchBatch } from "@/lib/server/encryption/agent-launch-backfill";
-import { backfillAgentTitleBatch } from "@/lib/server/encryption/agent-title-backfill";
-import { backfillAgentCheckpointBatch } from "@/lib/server/encryption/agent-checkpoint-backfill";
-import { backfillAgentDelegationBatch } from "@/lib/server/encryption/agent-delegation-backfill";
-import { backfillAgentStandaloneMessages } from "@/lib/server/encryption/agent-standalone-message-backfill";
-import { backfillAgentQueueBatch } from "@/lib/server/encryption/agent-queue-backfill";
-import { backfillAgentContextsBatch } from "@/lib/server/encryption/agent-context-backfill";
 import { backfillGithubIssueMetadataBatch } from "@/lib/server/encryption/github-issue-metadata-backfill";
 import { backfillGithubCommentUrlsBatch } from "@/lib/server/encryption/github-comment-url-backfill";
-import { backfillAgentVerdictsBatch } from "@/lib/server/encryption/agent-verdict-backfill";
-import { backfillAgentDeploymentUrlsBatch } from "@/lib/server/encryption/agent-deployment-backfill";
-import { backfillAgentRunBaseBranchesBatch,
-  backfillOrphanRuntimeBaseBranchesBatch } from "@/lib/server/encryption/agent-base-branch-backfill";
-import { backfillAgentArtifactBranchesBatch,
-  backfillAgentRunWorkBranchesBatch,
-  backfillOrphanRuntimeWorkBranchesBatch } from "@/lib/server/encryption/agent-work-branch-backfill";
-import { backfillAgentDelegationResultsBatch } from
-  "@/lib/server/encryption/agent-delegation-result-backfill";
-import { backfillNumoWorkerEventsBatch,
-  backfillNumoWorkerCheckpointsBatch } from
-  "@/lib/server/encryption/agent-numo-worker-backfill";
-import { backfillAgentRunSummariesBatch,
-  backfillAgentTurnSummariesBatch } from
-  "@/lib/server/encryption/agent-run-summary-backfill";
-import { backfillAgentArtifactUrlsBatch,
-  backfillAgentRunPrUrlsBatch } from
-  "@/lib/server/encryption/agent-pr-url-backfill";
 import { backfillPullRequestUrlsBatch } from
   "@/lib/server/encryption/pull-request-url-backfill";
 import { backfillPullRequestContentBatch } from
@@ -71,12 +44,8 @@ import { backfillAppConfigBatch } from
   "@/lib/server/encryption/app-config-backfill";
 import { backfillFeedbackMergeBatch } from
   "@/lib/server/encryption/feedback-merge-backfill";
-import { backfillAgentChainCodesBatch } from
-  "@/lib/server/encryption/agent-chain-code-backfill";
 import { backfillNumoTurnIntentsBatch } from
   "@/lib/server/encryption/numo-turn-intent-backfill";
-import { backfillNumoAutomationContentBatch } from
-  "@/lib/server/encryption/numo-automation-content-backfill";
 import { backfillNumoConversationTitlesBatch } from
   "@/lib/server/encryption/numo-conversation-title-backfill";
 import { backfillNumoUserMessagesBatch } from
@@ -118,8 +87,6 @@ import { backfillForgeOAuthConnectionsBatch,
   "@/lib/server/encryption/forge-oauth-token-backfill";
 import { backfillMcpConnectionsBatch, backfillMcpAttemptsBatch } from
   "@/lib/server/encryption/personal-mcp-backfill";
-import { backfillAgentBranchPrefixesBatch } from
-  "@/lib/server/encryption/agent-branch-prefix-backfill";
 import { backfillAppTabsBatch } from
   "@/lib/server/encryption/app-tab-backfill";
 import { backfillAiDecisionEvaluationsBatch } from
@@ -186,31 +153,8 @@ export async function GET(request: NextRequest) {
       contentEnabled ? maintenancePass(() => backfillProjectDraftsBatch(50, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillFeedbackPostsBatch(50, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillIssuesBatch(50, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentJournalBatch(5, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentEventsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentLaunchBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentTitleBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentCheckpointBatch(5, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentDelegationBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentStandaloneMessages(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentQueueBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentContextsBatch(20, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillGithubIssueMetadataBatch(20, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillGithubCommentUrlsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentVerdictsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentDeploymentUrlsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunBaseBranchesBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillOrphanRuntimeBaseBranchesBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentArtifactBranchesBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunWorkBranchesBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillOrphanRuntimeWorkBranchesBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentDelegationResultsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoWorkerEventsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoWorkerCheckpointsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunSummariesBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentTurnSummariesBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentArtifactUrlsBatch(20, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentRunPrUrlsBatch(20, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillPullRequestUrlsBatch(20, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillPullRequestContentBatch(20, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillPrCommentEditsBatch(20, signal)) : Promise.resolve(null),
@@ -229,9 +173,7 @@ export async function GET(request: NextRequest) {
       contentEnabled ? maintenancePass(() => backfillProviderResourcesBatch(50, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillAppConfigBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillFeedbackMergeBatch(50, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentChainCodesBatch(50, signal)) : Promise.resolve(null),
       contentEnabled ? bundlePass(() => backfillNumoTurnIntentsBatch(30, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillNumoAutomationContentBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? bundlePass(() => backfillNumoConversationTitlesBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? bundlePass(() => backfillNumoUserMessagesBatch(30, signal)) : Promise.resolve(null),
       contentEnabled ? bundlePass(() => backfillNumoFinalContentBatch(30, signal)) : Promise.resolve(null),
@@ -254,7 +196,6 @@ export async function GET(request: NextRequest) {
       contentEnabled ? maintenancePass(() => backfillForgeOAuthIdentitiesBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillMcpConnectionsBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillMcpAttemptsBatch(25, signal)) : Promise.resolve(null),
-      contentEnabled ? bundlePass(() => backfillAgentBranchPrefixesBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillAppTabsBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => backfillAiDecisionEvaluationsBatch(25, signal)) : Promise.resolve(null),
       contentEnabled ? maintenancePass(() => scrubStripeWebhookPayloadsBatch(100, signal)) : Promise.resolve(null),
@@ -281,88 +222,62 @@ export async function GET(request: NextRequest) {
     const projectDrafts = outcomes[9];
     const feedbackPosts = outcomes[10];
     const issues = outcomes[11];
-    const agentJournal = outcomes[12];
-    const agentEvents = outcomes[13];
-    const agentLaunch = outcomes[14];
-    const agentTitle = outcomes[15];
-    const agentCheckpoint = outcomes[16];
-    const agentDelegation = outcomes[17];
-    const agentStandaloneMessages = outcomes[18];
-    const agentQueueMessages = outcomes[19];
-    const agentContexts = outcomes[20];
-    const issueSidecar = outcomes[21];
-    const githubCommentUrls = outcomes[22];
-    const agentVerdicts = outcomes[23];
-    const agentDeployments = outcomes[24];
-    const agentBaseBranches = outcomes[25];
-    const orphanRuntimeBaseBranches = outcomes[26];
-    const agentBranchArtifacts = outcomes[27];
-    const agentWorkBranches = outcomes[28];
-    const orphanRuntimeWorkBranches = outcomes[29];
-    const agentDelegationResults = outcomes[30];
-    const numoWorkerEvents = outcomes[31];
-    const numoWorkerCheckpoints = outcomes[32];
-    const agentRunSummaries = outcomes[33];
-    const agentTurnSummaries = outcomes[34];
-    const agentArtifactUrls = outcomes[35];
-    const agentRunPrUrls = outcomes[36];
-    const pullRequestUrls = outcomes[37];
-    const pullRequestContent = outcomes[38];
-    const prCommentEdits = outcomes[39];
-    const forgeRelayDeliveries = outcomes[40];
-    const forgeRelayAudit = outcomes[41];
-    const attachmentObjects = outcomes[42];
-    const attachmentMetadata = outcomes[43];
-    const pageFileMetadata = outcomes[44];
-    const feedbackUsers = outcomes[45];
-    const feedbackOtp = outcomes[46];
-    const shareTokens = outcomes[47];
-    const numoSurfaces = outcomes[48];
-    const feedbackSso = outcomes[49];
-    const forgeMention = outcomes[50];
-    const numoActivity = outcomes[51];
-    const providerResources = outcomes[52];
-    const appConfig = outcomes[53];
-    const feedbackMerge = outcomes[54];
-    const agentChainCodes = outcomes[55];
-    const numoTurnIntents = outcomes[56];
-    const numoAutomation = outcomes[57];
-    const numoConversationTitles = outcomes[58];
-    const numoUserMessages = outcomes[59];
-    const numoFinalContent = outcomes[60];
-    const numoErrors = outcomes[61];
-    const numoToolContent = outcomes[62];
-    const forgeRepositoryNames = outcomes[63];
-    const forgeDefaultBranches = outcomes[64];
-    const projectIcons = outcomes[65];
-    const viewContent = outcomes[66];
-    const savedViewBookmarks = outcomes[67];
-    const agentRoutines = outcomes[68];
-    const projectContent = outcomes[69];
-    const pageContent = outcomes[70];
-    const userAiKeys = outcomes[71];
-    const relayInstances = outcomes[72];
-    const projectWebhookSecrets = outcomes[73];
-    const relayProvisioning = outcomes[74];
-    const relayUserDeliveries = outcomes[75];
-    const forgeOAuthConnections = outcomes[76];
-    const forgeOAuthIdentities = outcomes[77];
-    const mcpConnections = outcomes[78];
-    const mcpAttempts = outcomes[79];
-    const agentBranchPrefixes = outcomes[80];
-    const appTabs = outcomes[81];
-    const aiDecisionEvaluations = outcomes[82];
-    const stripeWebhookPayloads = outcomes[83];
-    const billingIdentity = outcomes[84];
-    const oauthClients = outcomes[85];
-    const oauthCodes = outcomes[86];
-    const apiKeys = outcomes[87];
-    const integrations = outcomes[88];
-    const push = outcomes[89];
-    const forgeAttachments = outcomes[90].status === "fulfilled"
-      ? outcomes[90].value : { scanned: 0, migrated: 0, failed: 1 };
-    const forgeAttachmentRotation = outcomes[91].status === "fulfilled"
-      ? outcomes[91].value : { scanned: 0, rotated: 0, failed: 1 };
+    const issueSidecar = outcomes[12];
+    const githubCommentUrls = outcomes[13];
+    const pullRequestUrls = outcomes[14];
+    const pullRequestContent = outcomes[15];
+    const prCommentEdits = outcomes[16];
+    const forgeRelayDeliveries = outcomes[17];
+    const forgeRelayAudit = outcomes[18];
+    const attachmentObjects = outcomes[19];
+    const attachmentMetadata = outcomes[20];
+    const pageFileMetadata = outcomes[21];
+    const feedbackUsers = outcomes[22];
+    const feedbackOtp = outcomes[23];
+    const shareTokens = outcomes[24];
+    const numoSurfaces = outcomes[25];
+    const feedbackSso = outcomes[26];
+    const forgeMention = outcomes[27];
+    const numoActivity = outcomes[28];
+    const providerResources = outcomes[29];
+    const appConfig = outcomes[30];
+    const feedbackMerge = outcomes[31];
+    const numoTurnIntents = outcomes[32];
+    const numoConversationTitles = outcomes[33];
+    const numoUserMessages = outcomes[34];
+    const numoFinalContent = outcomes[35];
+    const numoErrors = outcomes[36];
+    const numoToolContent = outcomes[37];
+    const forgeRepositoryNames = outcomes[38];
+    const forgeDefaultBranches = outcomes[39];
+    const projectIcons = outcomes[40];
+    const viewContent = outcomes[41];
+    const savedViewBookmarks = outcomes[42];
+    const agentRoutines = outcomes[43];
+    const projectContent = outcomes[44];
+    const pageContent = outcomes[45];
+    const userAiKeys = outcomes[46];
+    const relayInstances = outcomes[47];
+    const projectWebhookSecrets = outcomes[48];
+    const relayProvisioning = outcomes[49];
+    const relayUserDeliveries = outcomes[50];
+    const forgeOAuthConnections = outcomes[51];
+    const forgeOAuthIdentities = outcomes[52];
+    const mcpConnections = outcomes[53];
+    const mcpAttempts = outcomes[54];
+    const appTabs = outcomes[55];
+    const aiDecisionEvaluations = outcomes[56];
+    const stripeWebhookPayloads = outcomes[57];
+    const billingIdentity = outcomes[58];
+    const oauthClients = outcomes[59];
+    const oauthCodes = outcomes[60];
+    const apiKeys = outcomes[61];
+    const integrations = outcomes[62];
+    const push = outcomes[63];
+    const forgeAttachments = outcomes[64].status === "fulfilled"
+      ? outcomes[64].value : { scanned: 0, migrated: 0, failed: 1 };
+    const forgeAttachmentRotation = outcomes[65].status === "fulfilled"
+      ? outcomes[65].value : { scanned: 0, rotated: 0, failed: 1 };
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (forgeAttachments?.failed ?? 0) > 0 ||
       (forgeAttachmentRotation?.failed ?? 0) > 0 ||
@@ -370,7 +285,7 @@ export async function GET(request: NextRequest) {
         (scratchpad.value.failed > 0 || scratchpad.value.interrupted)) ||
       (statistics.status === "fulfilled" && statistics.value !== null &&
         (statistics.value.failed > 0 || statistics.value.interrupted)) ||
-      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, agentJournal, agentEvents, agentLaunch, agentTitle, agentCheckpoint, agentDelegation, agentStandaloneMessages, agentQueueMessages, agentContexts, issueSidecar, githubCommentUrls, agentVerdicts, agentDeployments, agentBaseBranches, orphanRuntimeBaseBranches, agentBranchArtifacts, agentWorkBranches, orphanRuntimeWorkBranches, agentDelegationResults, numoWorkerEvents, numoWorkerCheckpoints, agentRunSummaries, agentTurnSummaries, agentArtifactUrls, agentRunPrUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, agentChainCodes, numoTurnIntents, numoAutomation, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, agentBranchPrefixes, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
+      [activity, pageVersions, comments, pageComments, objectives, categories, projectDrafts, feedbackPosts, issues, issueSidecar, githubCommentUrls, pullRequestUrls, pullRequestContent, prCommentEdits, forgeRelayDeliveries, forgeRelayAudit, attachmentObjects, attachmentMetadata, pageFileMetadata, feedbackUsers, feedbackOtp, shareTokens, numoSurfaces, feedbackSso, forgeMention, numoActivity, providerResources, appConfig, feedbackMerge, numoTurnIntents, numoConversationTitles, numoUserMessages, numoFinalContent, numoErrors, numoToolContent, forgeRepositoryNames, forgeDefaultBranches, projectIcons, viewContent, savedViewBookmarks, agentRoutines, projectContent, pageContent, userAiKeys, relayInstances, projectWebhookSecrets, relayProvisioning, relayUserDeliveries, forgeOAuthConnections, forgeOAuthIdentities, mcpConnections, mcpAttempts, appTabs, aiDecisionEvaluations, stripeWebhookPayloads, billingIdentity, oauthClients, oauthCodes, apiKeys, integrations, push].some((outcome) => outcome.status === "fulfilled" && outcome.value !== null &&
         (outcome.value.failed > 0 || outcome.value.interrupted));
     const result = {
       ...(invitation.status === "fulfilled" ? invitation.value : { invitation_failed: true }),
@@ -387,31 +302,8 @@ export async function GET(request: NextRequest) {
         project_drafts: projectDrafts.status === "fulfilled" ? projectDrafts.value : { failed: true },
         feedback_posts: feedbackPosts.status === "fulfilled" ? feedbackPosts.value : { failed: true },
         ...(contentEnabled ? { issues: issues.status === "fulfilled" ? issues.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_journal: agentJournal.status === "fulfilled" ? agentJournal.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_events: agentEvents.status === "fulfilled" ? agentEvents.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_launch: agentLaunch.status === "fulfilled" ? agentLaunch.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_titles: agentTitle.status === "fulfilled" ? agentTitle.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_checkpoints: agentCheckpoint.status === "fulfilled" ? agentCheckpoint.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_delegation: agentDelegation.status === "fulfilled" ? agentDelegation.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_standalone_messages: agentStandaloneMessages.status === "fulfilled" ? agentStandaloneMessages.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_queue_messages: agentQueueMessages.status === "fulfilled" ? agentQueueMessages.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_contexts: agentContexts.status === "fulfilled" ? agentContexts.value : { failed: true } } : {}),
         ...(contentEnabled ? { github_issue_metadata: issueSidecar.status === "fulfilled" ? issueSidecar.value : { failed: true } } : {}),
         ...(contentEnabled ? { github_comment_urls: githubCommentUrls.status === "fulfilled" ? githubCommentUrls.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_verdicts: agentVerdicts.status === "fulfilled" ? agentVerdicts.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_deployments: agentDeployments.status === "fulfilled" ? agentDeployments.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_base_branches: agentBaseBranches.status === "fulfilled" ? agentBaseBranches.value : { failed: true },
-          orphan_runtime_base_branches: orphanRuntimeBaseBranches.status === "fulfilled" ? orphanRuntimeBaseBranches.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_branch_artifacts: agentBranchArtifacts.status === "fulfilled" ? agentBranchArtifacts.value : { failed: true },
-          agent_work_branches: agentWorkBranches.status === "fulfilled" ? agentWorkBranches.value : { failed: true },
-          orphan_runtime_work_branches: orphanRuntimeWorkBranches.status === "fulfilled" ? orphanRuntimeWorkBranches.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_delegation_results: agentDelegationResults.status === "fulfilled" ? agentDelegationResults.value : { failed: true } } : {}),
-        ...(contentEnabled ? { numo_worker_events: numoWorkerEvents.status === "fulfilled" ? numoWorkerEvents.value : { failed: true },
-          numo_worker_checkpoints: numoWorkerCheckpoints.status === "fulfilled" ? numoWorkerCheckpoints.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_run_summaries: agentRunSummaries.status === "fulfilled" ? agentRunSummaries.value : { failed: true },
-          agent_turn_summaries: agentTurnSummaries.status === "fulfilled" ? agentTurnSummaries.value : { failed: true } } : {}),
-        ...(contentEnabled ? { agent_artifact_urls: agentArtifactUrls.status === "fulfilled" ? agentArtifactUrls.value : { failed: true },
-          agent_run_pr_urls: agentRunPrUrls.status === "fulfilled" ? agentRunPrUrls.value : { failed: true } } : {}),
         ...(contentEnabled ? { pull_request_urls: pullRequestUrls.status === "fulfilled" ? pullRequestUrls.value : { failed: true } } : {}),
         ...(contentEnabled ? { pull_request_content: pullRequestContent.status === "fulfilled" ? pullRequestContent.value : { failed: true } } : {}),
         ...(contentEnabled ? { pr_comment_edits: prCommentEdits.status === "fulfilled" ? prCommentEdits.value : { failed: true } } : {}),
@@ -451,14 +343,7 @@ export async function GET(request: NextRequest) {
           feedback_merge: feedbackMerge.status === "fulfilled" ? feedbackMerge.value : { failed: true },
         } : {}),
         ...(contentEnabled ? {
-          agent_chain_codes: agentChainCodes.status === "fulfilled" ? agentChainCodes.value : { failed: true },
-        } : {}),
-        ...(contentEnabled ? {
           numo_turn_intents: numoTurnIntents.status === "fulfilled" ? numoTurnIntents.value : { failed: true },
-        } : {}),
-        ...(contentEnabled ? {
-          numo_automation_content: numoAutomation.status === "fulfilled"
-            ? numoAutomation.value : { failed: true },
         } : {}),
         ...(contentEnabled ? {
           numo_conversation_titles: numoConversationTitles.status === "fulfilled"
@@ -543,10 +428,6 @@ export async function GET(request: NextRequest) {
             ? mcpConnections.value : { failed: true },
           mcp_attempts: mcpAttempts.status === "fulfilled"
             ? mcpAttempts.value : { failed: true },
-        } : {}),
-        ...(contentEnabled ? {
-          agent_branch_prefixes: agentBranchPrefixes.status === "fulfilled"
-            ? agentBranchPrefixes.value : { failed: true },
         } : {}),
         ...(contentEnabled ? {
           app_tabs: appTabs.status === "fulfilled" ? appTabs.value : { failed: true },

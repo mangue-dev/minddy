@@ -5,22 +5,18 @@ summary: Work with Numo in minddy and connect external agents or personal MCP to
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-10-07
+lastReviewed: 2026-10-16
 ---
 
-Numo is minddy's built-in conversation for understanding and acting on project work. The floating Numo button is the one place conversations live: it opens the Numo panel, adds the current page as context, and keeps every conversation reachable from its conversation list. Contextual actions such as **Hand to Numo** enter this same conversation instead of opening a separate agent destination, and links to the retired dedicated Numo page open the panel too.
+Numo is minddy's built-in conversation for understanding and acting on project work. The floating Numo button is the one place conversations live: it opens the Numo panel, adds the current page as context, and keeps every conversation reachable from its conversation list. Contextual actions such as **Ask Numo** enter this same conversation instead of opening a separate agent destination, and links to the retired dedicated Numo page open the panel too.
 
-Choose the conversation model and reasoning level in Numo's composer. When a request needs repository work, Numo delegates it to a code worker and shows its progress, changed files, checks, and pull request inside the conversation. **Account settings → AI** selects the worker engine. OpenCode uses the configured API code model and reasoning. In the private preview, enabled accounts can connect their own Codex or Claude Code subscription and select that native CLI for new workers; the CLI chooses its model and reasoning defaults. The worker clones the project's linked GitHub or GitLab repository into the configured hosted server sandbox. The connection is restored for new sandboxes; no local computer or permanently running sandbox is required.
+Choose the conversation model and reasoning level in Numo's composer. Numo organizes and tracks work: it reads and updates issues, plans, pages, objectives, feedback, cycles and routines, and it can read, comment on, update and merge linked pull requests. Numo does not write code, push branches, run tests or open pull requests. To have code written, copy an issue's prompt for your own coding agent and connect that agent to minddy through MCP.
 
-The native preview exposes guarded Minddy tools through MCP. Provider-native built-in tools, image input and subagents are unavailable in these adapters. Numo reads the selected adapter capabilities and receives the frozen worker capabilities with its result. It mediates worker questions using reliable conversation context, or asks you when a decision is missing. Numo can use its own supported tools within your authorization; it does not invent unsupported harness operations.
+Stopping Numo stops its turn. An external action already sent may still complete. Conversations that were waiting on code work from an earlier version are stopped automatically and return to idle.
 
-Native authentication or subscription limits stop native work without switching to an API provider or another payer. Users reconnect the selected account or explicitly choose OpenCode. Existing workers keep their frozen engine. Native subscriptions fund native model usage; Numo calls and sandbox compute still follow Minddy usage and budget rules. Paid Claude Code execution remains unvalidated in this preview. The native connection controls include a two-sandbox access and Minddy-tool diagnostic; unobserved authentication renewal is reported separately.
+Routines are scheduled Numo requests. Each occurrence starts a new Numo conversation with the saved instruction and project context. Numo uses Minddy tools and the owner's MCP connections; routines do not change repository code. The conversation records the result and any request for user input.
 
-Stopping Numo stops only its turn. Already admitted code workers, including queued runs, continue with their messages and questions preserved; their results cannot automatically resume the stopped turn. Stop a worker separately from **Agent actions** on its card.
-
-Routines are scheduled Numo requests. Each occurrence starts a new Numo conversation with the saved instruction and project context. Numo can use Minddy tools directly and delegate repository work only when needed. The conversation records the result and any request for user input.
-
-minddy also exposes an OAuth-based MCP server for external tools. Compatible coding agents can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages, feedback posts, cycles, routines, and the task notebook. The MCP setup page provides the endpoint and setup instructions for supported clients. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
+minddy also exposes an OAuth-based MCP server for external tools. This is how coding agents such as Claude Code, Codex or Cursor work with minddy: they can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages, feedback posts, cycles, routines, and the task notebook. The MCP setup page provides the endpoint and setup instructions for supported clients. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
 
 ## Connect Numo to an MCP server
 
@@ -80,7 +76,7 @@ under the current owner.
 
 Edit, disable, or remove a connection at any time. Disabling or removing stops
 new calls; a request already sent may still finish. Secrets are encrypted with
-`AI_KEY_ENCRYPTION_SECRET` and never returned to the browser or code-worker sandbox.
+`AI_KEY_ENCRYPTION_SECRET` and never returned to the browser.
 Blank credential fields preserve existing values. Changing the URL clears saved
 credentials and headers. Use **Remove saved token** to clear a bearer token, or
 enter `{}` in custom headers to remove them. Reconnect if OAuth access expires or

@@ -75,8 +75,8 @@ export const MCP_FULL_USAGE_GUIDE =
       "page_id from minddy_list_pages), " +
       "and minddy_get_resource reads one by id (a file's signed URL or its bytes " +
       "inline; a link's url and title; a page's id and title, whose document " +
-      "minddy_get_page then reads). An issue worked by minddy's code agent " +
-      "carries a PULL REQUEST: minddy_get_pull_request reads it from the issue: " +
+      "minddy_get_page then reads). An issue can carry a PULL REQUEST: " +
+      "minddy_get_pull_request reads it from the issue: " +
       "state, branches, description and per-file diffs. A pull request of a linked " +
       "repository normally finds its issue by CONVENTION (the identifier in the branch, " +
       "the title, or a 'Fixes KEY-42' line); when it followed none of them and stayed " +
@@ -176,8 +176,8 @@ export const MCP_FULL_USAGE_GUIDE =
       "minddy_update_routine pauses or re-times one, minddy_delete_routine sends " +
       "it to the trash — it stops at once and keeps its history, restorable from " +
       "the app for a few weeks. A routine is distinct from an issue recurrence. " +
-      "Typed nested AND/OR filters can wait for later edits; status exit cancels the waiting item. Pausing or editing invalidates waiting items and activation listens to future events. Numo uses Minddy tools and " +
-      "delegates code only when needed, so a repository is optional; the occurrence " +
+      "Typed nested AND/OR filters can wait for later edits; status exit cancels the waiting item. Pausing or editing invalidates waiting items and activation listens to future events. Numo uses Minddy tools, " +
+      "so a repository is optional; the occurrence " +
       "can pause visibly when owner input is required. " +
       "Start with minddy_list_projects to discover project ids.";
 

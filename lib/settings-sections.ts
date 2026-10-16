@@ -1,6 +1,6 @@
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BellRingIcon as BellRing, BotIcon as Bot, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
+import { AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { SmartAssignIcon } from "@/components/smart-icons";
 
@@ -68,11 +68,8 @@ export const SETTINGS_SECTIONS = {
   accountMcp: "account-mcp",
   accountMcpClients: "account-mcp-clients",
   accountConnectedApps: "account-connected-apps",
-  accountGitBranchPrefix: "account-git-branch-prefix",
   accountGitConnections: "account-git-connections",
   accountAiProvider: "account-ai-provider",
-  accountAgent: "account-agent",
-  accountSandbox: "account-sandbox",
   accountAnalytics: "account-analytics",
   accountDataImport: "account-data-import",
   accountDataExport: "account-data-export",
@@ -151,7 +148,6 @@ export function settingsSectionHref(
  */
 export function useSettingsSections(): SettingsSection[] {
   const tAccount = useTranslations("Account");
-  const tNative = useTranslations("NativeAgentConnections");
   const tSecurity = useTranslations("AccountSecurity");
   const tData = useTranslations("AccountData");
   const tAnalytics = useTranslations("Analytics");
@@ -363,16 +359,6 @@ export function useSettingsSections(): SettingsSection[] {
       // the two are therefore united there — “act in my name” must always fall
       // on this map.
       account({
-        id: SETTINGS_SECTIONS.accountGitBranchPrefix,
-        tab: "git",
-        icon: GitBranch,
-        title: tAccount("gitAgentBranchesTitle"),
-        keywords: [
-          "agent", "numo", "git", "branche", "branch", "préfixe", "prefix",
-          "namespace", "espace de noms",
-        ],
-      }),
-      account({
         id: SETTINGS_SECTIONS.accountGitConnections,
         tab: "git",
         icon: GitBranch,
@@ -395,23 +381,6 @@ export function useSettingsSections(): SettingsSection[] {
           "ia", "ai", "clé", "cle", "key", "api", "byok", "openai",
           "anthropic", "provider", "quota", "budget",
         ],
-      }),
-      account({
-        id: SETTINGS_SECTIONS.accountAgent,
-        tab: "agent",
-        icon: Bot,
-        title: tNative("title"),
-        keywords: [
-          "agent", "numo", "modèle", "modele", "model", "raisonnement",
-          "reasoning", "défaut", "defaut", "default",
-        ],
-      }),
-      account({
-        id: SETTINGS_SECTIONS.accountSandbox,
-        tab: "agent",
-        icon: Bot,
-        title: tAccount("sandboxTitle"),
-        keywords: ["sandbox", "region", "Europe", "US", "CPU", "RAM", "performance"],
       }),
       account({
         id: SETTINGS_SECTIONS.accountAnalytics,
@@ -617,7 +586,6 @@ export function useSettingsSections(): SettingsSection[] {
       }),
     ];
   }, [
-    tNative,
     tAccount,
     tSecurity,
     tData,

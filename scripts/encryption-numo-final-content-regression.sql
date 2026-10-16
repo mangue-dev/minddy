@@ -53,7 +53,7 @@ BEGIN
   END;
   BEGIN
     PERFORM public.checkpoint_numo_turn(protected_turn,claim,'completed',
-      '{}'::jsonb,NULL,NULL,'Private obsolete outcome',NULL);
+      '{}'::jsonb,NULL,'Private obsolete outcome',NULL);
     RAISE EXCEPTION 'old checkpoint writer was accepted';
   EXCEPTION WHEN check_violation THEN
     IF SQLERRM='old checkpoint writer was accepted' THEN RAISE; END IF;

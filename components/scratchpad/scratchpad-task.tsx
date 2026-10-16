@@ -12,7 +12,6 @@ import { useTranslations } from "next-intl";
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
-import { useLaunchAgentNote } from "@/components/scratchpad/use-launch-agent-note";
 import {
   TaskSurfaceProvider,
   type TaskSurface,
@@ -36,13 +35,11 @@ export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
   const t = useTranslations("Scratchpad");
   const { close } = useScratchpad();
   const { open: openAssistant, routeProjectId } = useAssistantPanel();
-  const launchNote = useLaunchAgentNote();
 
   const surface = useMemo<TaskSurface>(
     () => ({
       copyPrompt: (markdown) =>
         buildScratchpadPrompt(markdown, { section: true }),
-      launchAgent: (markdown) => launchNote(markdown, { section: true }),
       // The ROUTE project, therefore the current project if we consult one, and
       // the global mode otherwise — where Numo asks which one. The notebook is
       // cross-project, it does not impose any on its side.
@@ -57,7 +54,7 @@ export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
         });
       },
     }),
-    [t, close, openAssistant, routeProjectId, launchNote]
+    [t, close, openAssistant, routeProjectId]
   );
 
   return <TaskSurfaceProvider value={surface}>{children}</TaskSurfaceProvider>;

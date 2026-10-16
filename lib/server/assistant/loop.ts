@@ -70,8 +70,7 @@ export interface ProcessChatResult {
 }
 
 export type ProcessChatSuspension =
-  | { kind: "input" }
-  | { kind: "work"; runId: string };
+  | { kind: "input" };
 
 export interface ProcessChatCheckpoint {
   phase: "model" | "tools";
@@ -231,7 +230,6 @@ export interface ProcessChatContext extends ToolContext {
     roundCount: number;
     completionRepairs?: number;
   }) => Promise<string>;
-  registerActiveRun?: (runId: string) => void;
   toolLedger?: ToolExecutionLedger;
   shouldStop?: () => Promise<boolean>;
   /**
@@ -261,7 +259,6 @@ const RETRYABLE_READ_TOOLS = new Set([
   "get_user_stats",
   "get_plan_usage",
   "list_trash",
-  "list_agent_models",
   "get_cycle",
   "get_scratchpad",
   "list_issues",
@@ -283,11 +280,6 @@ const RETRYABLE_READ_TOOLS = new Set([
   "read_pull_request",
   "propose_backlog",
   "web_search",
-  // The durable parent turn/tool-call pair is a database uniqueness key on
-  // delegated workers. Re-delivery resolves the original run instead of
-  // launching another one, including after a process dies before ledger commit.
-  "launch_code_agent",
-  "answer_code_worker",
   // A repeated report targets the same operation row and payload.
 ]);
 
@@ -681,7 +673,7 @@ export async function processChat(
       if (stopObserved) {
         // The stop was requested while this round streamed: hand the turn back
         // without persisting a partial round. `executeNumoTurnCore` observes
-        // the pending stop, interrupts any active worker and checkpoints
+        // the pending stop and checkpoints
         // `stopped`.
         break;
       }
@@ -737,21 +729,6 @@ export async function processChat(
     if (toolCallAccumulators.size > 0 && !stopObserved) {
       const assistantToolCalls: AssistantToolCall[] = [];
       for (const [, acc] of toolCallAccumulators) {
-        if (acc.name === "ask_user" && context.workerInput) {
-          try {
-            acc.arguments = JSON.stringify({
-              ...JSON.parse(acc.arguments),
-              _worker_input: {
-                parent_turn_id: context.workerInput.parentTurnId,
-                run_id: context.workerInput.runId,
-                question_id: context.workerInput.questionId,
-              },
-            });
-          } catch {
-            // Invalid arguments remain invalid and the ordinary ask_user parser
-            // will render no question instead of attaching false correlation.
-          }
-        }
         emitter.emit("tool_call_complete", {
           id: acc.id,
           name: acc.name,
@@ -1016,17 +993,6 @@ export async function processChat(
           ),
         });
         completedToolCallIds.add(acc.id);
-        if (
-          (acc.name === "launch_code_agent" || acc.name === "answer_code_worker")
-          && success
-        ) {
-          const runId = (result as { run_id?: unknown } | null)?.run_id;
-          if (typeof runId === "string" && runId) {
-            suspension = { kind: "work", runId };
-            pausedByTool = true;
-            context.registerActiveRun?.(runId);
-          }
-        }
         await context.persistCheckpoint?.({
           phase: "tools",
           assistantContent: fullContent || null,

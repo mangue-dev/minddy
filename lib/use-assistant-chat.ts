@@ -28,7 +28,7 @@ import type { AssistantReasoning } from "./assistant-reasoning";
 import { createAssistantEventStream } from "./assistant-event-stream";
 
 const ACTIVE_NUMO_TURN_STATUSES = new Set([
-  "queued", "running", "waiting_work", "waiting_input", "stopping", "retryable", "reconciling",
+  "queued", "running", "waiting_input", "stopping", "retryable", "reconciling",
 ]);
 
 // ── State ──────────────────────────────────────────────────────────────
@@ -112,8 +112,6 @@ export interface AssistantChatState {
   conversationConfigError: string | null;
   error: string | null;
   turnStatus: NumoTurnStatus | null;
-  /** Undefined until checked; null once the server confirms no worker decision is pending. */
-  pendingWorkerInput: AssistantChatRequest["workerInput"] | null | undefined;
   /** Provenance for conversations created by a routine occurrence. */
   routineOccurrence: NonNullable<NumoConversationDetail["routine_occurrence"]> | null;
 }
@@ -133,7 +131,6 @@ const initialState: AssistantChatState = {
   conversationConfigError: null,
   error: null,
   turnStatus: null,
-  pendingWorkerInput: undefined,
   routineOccurrence: null,
 };
 
@@ -183,10 +180,6 @@ type Action =
     }
   | { type: "DONE"; responseReady?: boolean }
   | { type: "GENERATING_SERVER" }
-  | {
-      type: "SET_PENDING_WORKER_INPUT";
-      workerInput: AssistantChatRequest["workerInput"] | null;
-    }
   | { type: "ERROR"; message: string; turnStatus?: NumoTurnStatus }
   | { type: "STOP_FAILED"; message: string }
   | {
@@ -442,9 +435,6 @@ function reducer(
         error: null,
       };
 
-    case "SET_PENDING_WORKER_INPUT":
-      return { ...state, pendingWorkerInput: action.workerInput };
-
     case "ERROR":
       return {
         ...state,
@@ -515,15 +505,6 @@ async function fetchConversationStatus(
   error_message: string | null;
   turn_id?: string | null;
   last_event_seq?: number;
-  active_run_id?: string | null;
-  pending_input?: {
-    run_id: string;
-    parent_numo_turn_id: string;
-    question_id: string;
-    call_id: string;
-    questions: unknown[];
-    created_at: string;
-  } | null;
   activity?: NumoTurnActivity[];
 }> {
   const res = await fetch(
@@ -531,17 +512,6 @@ async function fetchConversationStatus(
   );
   if (!res.ok) throw new Error(errorMessage);
   return res.json();
-}
-
-function pendingWorkerInput(
-  value: Awaited<ReturnType<typeof fetchConversationStatus>>["pending_input"],
-): AssistantChatRequest["workerInput"] | null {
-  if (!value) return null;
-  return {
-    parentTurnId: value.parent_numo_turn_id,
-    runId: value.run_id,
-    questionId: value.question_id,
-  };
 }
 
 async function fetchConversationMessages(
@@ -630,11 +600,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       // unless the authoritative status says the turn is still working.
       if (!options?.quiet) dispatch({ type: "GENERATING_SERVER" });
       let after = -1;
-      // Suspension already reflected in the thread: `<turn>:<run>` last reloaded.
-      let reloadedSuspension: string | null = null;
-      // The turn is suspended on its delegated worker — the assistant itself
-      // is paused until the worker wakes it.
-      let suspended = false;
       // The turn died (claim ceiling reached) and waits for the drain to re-run
       // it from its checkpoint — history reloaded once on entering that wait.
       let reloadedRetryable = false;
@@ -661,10 +626,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           const { status, error_message } = response;
           activeTurnRef.current = response.turn_id && ACTIVE_NUMO_TURN_STATUSES.has(status)
             ? { conversationId, turnId: response.turn_id } : null;
-          dispatch({
-            type: "SET_PENDING_WORKER_INPUT",
-            workerInput: pendingWorkerInput(response.pending_input),
-          });
           for (const event of response.activity ?? []) {
             if (!options?.quiet) {
               handleSSEEvent(event.type, event.payload, dispatch, {
@@ -673,42 +634,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
               });
             }
             after = Math.max(after, event.seq);
-          }
-
-          if (status === "waiting_work") {
-            // The turn is suspended while its delegated worker runs in the
-            // sandbox. The card's live state comes from polling the run, and
-            // it needs the run id carried by the persisted launch tool
-            // result — which a replayed journal never re-emits (`tool_result`
-            // is not persisted). Reload the history once per suspension so
-            // the card picks the real state instead of staying on
-            // "Starting" until the worker ends.
-            const key = `${response.turn_id}:${response.active_run_id ?? ""}`;
-            if (key !== reloadedSuspension) {
-              await reloadMessages();
-              if (!isCurrentPoll()) return;
-              // Set only after success: a failed reload must be retried by
-              // the next poll instead of being skipped forever.
-              reloadedSuspension = key;
-              // The assistant handed the work to its agent: it is not
-              // "Traitement en cours…" for minutes. The composer goes back
-              // to idle; the delegated card carries the live state, and the
-              // wake-up re-arms the generating presentation below.
-              dispatch({ type: "DONE" });
-            }
-            suspended = true;
-            pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
-            return;
-          }
-
-          if (
-            suspended
-            && (status === "queued" || status === "running" || status === "stopping")
-          ) {
-            // The worker finished and the parent turn woke up: back to the
-            // generating presentation so the resumed replay is visible.
-            suspended = false;
-            dispatch({ type: "GENERATING_SERVER" });
           }
 
           if (status === "stopping" && options?.quiet) {
@@ -814,7 +739,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       if (signal.aborted || !isCurrent()) return true;
       activeTurnRef.current = turn_id && ACTIVE_NUMO_TURN_STATUSES.has(status)
         ? { conversationId: convId, turnId: turn_id } : null;
-      if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping" || status === "retryable") {
+      if (status === "generating" || status === "queued" || status === "running" || status === "stopping" || status === "retryable") {
         startPolling(convId, convProjectId);
         return true;
       }
@@ -867,7 +792,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         command?: AssistantCommandId;
         /** Repository skills explicitly attached to this message. */
         skills?: AssistantSkillSelection[];
-        workerInput?: AssistantChatRequest["workerInput"];
         /** Voluntary entry provenance from the common Numo intent contract. */
         intent?: AssistantChatRequest["intent"];
       },
@@ -908,9 +832,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         newConversation: !requestConversationId,
         projectId,
         frozen: false,
-        turnId: options?.workerInput?.parentTurnId
-          ?? (activeTurnRef.current?.conversationId === requestConversationId
-            ? activeTurnRef.current.turnId : undefined),
+        turnId: activeTurnRef.current?.conversationId === requestConversationId
+          ? activeTurnRef.current.turnId : undefined,
       };
       activeSendRef.current = sending;
 
@@ -940,7 +863,6 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(options?.skills?.length
             ? { skills: options.skills }
             : {}),
-          ...(options?.workerInput ? { workerInput: options.workerInput } : {}),
           ...(options?.intent ? { intent: options.intent } : {}),
           // The browser's time zone travels with each message: Numo has it
           // need to set a routine at the time we tell him (MIN-185).
@@ -1047,7 +969,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         // A retryable terminal event (first in-request failure) is NOT an
         // end either: the drain re-queues the turn from its checkpoint and
         // the poll rides it out, as the poll loop's own retryable branch does.
-        if (finalServerStatus === "waiting_work" || finalServerStatus === "queued"
+        if (finalServerStatus === "queued"
           || finalServerStatus === "running" || finalServerStatus === "stopping"
           || finalServerStatus === "retryable") {
           const conversationId = liveConvRef.current.id ?? state.conversationId;
@@ -1144,11 +1066,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         if (loadGeneration !== loadGenerationRef.current) return;
         activeTurnRef.current = response.turn_id && ACTIVE_NUMO_TURN_STATUSES.has(status)
           ? { conversationId, turnId: response.turn_id } : null;
-        dispatch({
-          type: "SET_PENDING_WORKER_INPUT",
-          workerInput: pendingWorkerInput(response.pending_input),
-        });
-        if (status === "generating" || status === "queued" || status === "running" || status === "waiting_work" || status === "stopping" || status === "retryable") {
+        if (status === "generating" || status === "queued" || status === "running" || status === "stopping" || status === "retryable") {
           startPolling(conversationId, conversationProjectId);
         } else if (status === "error" || status === "failed" || status === "reconciling") {
           dispatch({
@@ -1448,7 +1366,7 @@ function handleSSEEvent(
       });
       break;
     case "done":
-      if (data.status === "waiting_work" || data.status === "queued" || data.status === "running") {
+      if (data.status === "queued" || data.status === "running") {
         dispatch({ type: "GENERATING_SERVER" });
       } else {
         dispatch({

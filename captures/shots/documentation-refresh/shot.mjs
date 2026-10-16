@@ -27,7 +27,7 @@ const settings = [
   ["external-minddy-mcp-workflow", "mcp", "account-mcp"],
 ];
 const knownScreens = new Set([...settings.map(([screen]) => screen),
-  "external-minddy-mcp-install-workflow", "numo-mcp-connections-config-workflow", "plans-and-ai-usage-workflow",
+  "external-minddy-mcp-install-workflow", "numo-mcp-connections-config-workflow",
   "import-issues-workflow", "work-with-numo-workflow", "scheduled-routines-workflow", "install-the-pwa-workflow",
   "install-locally-wizard", "install-a-server-wizard", "web-and-mobile-workflow",
 ]);
@@ -102,7 +102,6 @@ for (const locale of locales) {
       await page.getByRole("button", { name: messages.McpClients.custom, exact: true }).click();
       await page.getByRole("dialog").getByRole("button", { name: messages.McpClients.advanced, exact: true }).click();
     });
-    await capture("plans-and-ai-usage-workflow", "/billing", "main", async () => { await page.getByRole("heading").first().waitFor(); }, { width: 1440, height: 1050 });
     const importTitles = {
       en: ["Prepare the release", "Verify the attachment", "Demonstration checklist"],
       fr: ["Préparer la version", "Vérifier la pièce jointe", "Liste de contrôle de démonstration"],

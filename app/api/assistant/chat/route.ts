@@ -27,8 +27,6 @@ import { encodeConversationTitle, shouldProtectConversationTitle } from
 import { newRunId } from "@/lib/server/ai-usage";
 import { isWebSearchEnabled } from "@/lib/server/web-search";
 import { parseResourcesInput } from "@/lib/server/attachments";
-import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
-import { buildPageContextBlock } from "@/lib/server/assistant/prompt";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
 import {
   ManagedAiUnavailableError,
@@ -49,13 +47,7 @@ import {
   beginNumoTurn,
   executeNumoTurn,
   NumoBudgetReservationError,
-  stopCanceledNumoMediation,
 } from "@/lib/server/numo/turns";
-import {
-  answerNumoWorkerInput,
-  steerNumoWorker,
-  type WorkerInputCorrelation,
-} from "@/lib/server/numo/worker-mediation";
 import { routineContinuationForConversation } from "@/lib/server/routine-occurrences";
 import { ensureNumoRequestConversation } from "@/lib/server/numo/request-conversation";
 
@@ -64,7 +56,7 @@ export const maxDuration = 300;
 
 const ASSISTANT_CHAT_RATE_LIMIT = { limit: 20 };
 
-function mediatedWorkerResponse(conversationId: string, turnId: string, status = "waiting_work") {
+function settledTurnResponse(conversationId: string, turnId: string, status: string) {
   const body = [
     `event: conversation_id\ndata: ${JSON.stringify({ conversationId, turnId })}\n`,
     `event: done\ndata: ${JSON.stringify({ status })}\n`,
@@ -81,22 +73,6 @@ function mediatedWorkerResponse(conversationId: string, turnId: string, status =
   });
 }
 
-function parseWorkerInput(raw: unknown): WorkerInputCorrelation | null | undefined {
-  if (raw === undefined) return undefined;
-  if (!raw || typeof raw !== "object") return null;
-  const input = raw as Record<string, unknown>;
-  const parentTurnId = input.parentTurnId;
-  const runId = input.runId;
-  const questionId = input.questionId;
-  if (
-    typeof parentTurnId !== "string" || !NUMO_UUID.test(parentTurnId)
-    || typeof runId !== "string" || !NUMO_UUID.test(runId)
-    || typeof questionId !== "string" || !questionId.trim()
-    || questionId.length > 300
-  ) return null;
-  return { parentTurnId, runId, questionId };
-}
-
 const NUMO_INTENT_SOURCES = new Set([
   "home",
   "issue",
@@ -104,7 +80,6 @@ const NUMO_INTENT_SOURCES = new Set([
   "feedback",
   "page",
   "scratchpad",
-  "code_worker",
   "pull_request",
   "bulk",
 ]);
@@ -235,12 +210,6 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
         ? obj.prNumber
         : undefined,
     prState: pick("prState"),
-    prRunId: pick("prRunId"),
-    codeWorkerRunId:
-      typeof obj.codeWorkerRunId === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(obj.codeWorkerRunId)
-        ? obj.codeWorkerRunId
-        : undefined,
     objectiveId: pick("objectiveId"),
     objectiveName: pick("objectiveName"),
     objectiveColor: pick("objectiveColor"),
@@ -344,10 +313,6 @@ export async function POST(request: NextRequest) {
       (typeof newConversationId !== "string" || !NUMO_UUID.test(newConversationId) || conversationId)) {
     return Response.json({ error: "Invalid new conversation identity" }, { status: 400 });
   }
-  const workerInput = parseWorkerInput(body.workerInput);
-  if (workerInput === null) {
-    return Response.json({ error: "Invalid worker input correlation" }, { status: 400 });
-  }
   if ((projectId?.length ?? 0) > 100 || (conversationId?.length ?? 0) > 100) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
@@ -364,7 +329,7 @@ export async function POST(request: NextRequest) {
   if (body.pageContext && typeof body.pageContext === "object" && "documentation" in body.pageContext && !pageContext?.documentation) {
     return Response.json({ error: "Invalid documentation context" }, { status: 400 });
   }
-  if (pageContext?.documentation && (projectId || workerInput || body.skills || body.skillPaths || body.attachments || body.mentions || body.command)) {
+  if (pageContext?.documentation && (projectId || body.skills || body.skillPaths || body.attachments || body.mentions || body.command)) {
     return Response.json({ error: "Documentation help does not accept workspace context or actions" }, { status: 400 });
   }
   if (projectId && !pageContext?.projectId) pageContext = { ...pageContext, projectId };
@@ -394,27 +359,17 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id).eq("request_id", requestId)
       .eq("status", "stopped").maybeSingle();
     if (error) return Response.json({ error: "Unable to read Numo request authority" }, { status: 503 });
-    if (stopped) return mediatedWorkerResponse(requestConversationId, stopped.id as string, "stopped");
-  }
-  if (workerInput && !conversationId) {
-    return Response.json({ error: "Worker input requires a conversation" }, { status: 400 });
+    if (stopped) return settledTurnResponse(requestConversationId, stopped.id as string, "stopped");
   }
 
-  // Resolve parent ownership before any unrelated Numo configuration or
-  // context work. A pending worker answer and active steering are text-only
-  // continuations of an admitted turn, not new assistant turns.
+  // Resolve conversation ownership before any unrelated Numo configuration or
+  // context work.
   let convId = conversationId;
   let existingConversation: {
     id: string;
     model?: string | null;
     reasoning_level?: string | null;
   } | null = null;
-  let preparedAttachments: AttachmentInput[] | undefined;
-  let preparedContext: {
-    context: AssistantPageContext | null;
-    mentions: AssistantMention[];
-  } | undefined;
-  let preparedSkills: RepositorySkill[] | undefined;
   if (convId) {
     const { data, error } = await supabase
       .from("conversations")
@@ -430,152 +385,9 @@ export async function POST(request: NextRequest) {
       model?: string | null;
       reasoning_level?: string | null;
     };
-
-    // A parent message can steer an active code worker. Prepare the same
-    // user-selected context that an ordinary Numo turn would retain, then pass
-    // the worker-readable portions through its durable message queue.
-    let workerSteering: {
-      content: string;
-      mentions: AssistantMention[];
-      context: AssistantPageContext | null;
-      metadata: Record<string, unknown>;
-    } | undefined;
-    if (!workerInput) {
-      const steeringResources = parseResourcesInput(
-        body.attachments,
-        `chat/${user.id}/`,
-        5,
-      );
-      if (steeringResources === null) {
-        return Response.json({ error: "Invalid attachments" }, { status: 400 });
-      }
-      const steeringAttachments = steeringResources.filter(
-        (resource): resource is AttachmentInput => resource.kind !== "link",
-      );
-      const steeringContext = await validateMessageContext(supabase, pageContext, mentions);
-      if (!steeringContext) {
-        return Response.json(
-          { error: "Some attached context is unavailable. Remove it or check your project access." },
-          { status: 404 },
-        );
-      }
-      preparedAttachments = steeringAttachments;
-      preparedContext = steeringContext;
-      const steeringSkills: RepositorySkill[] = [];
-      try {
-        for (const sourceProjectId of new Set(skillSelections.map((skill) => skill.projectId))) {
-          const { data: sourceProject } = await supabase.from("projects").select("id")
-            .eq("id", sourceProjectId).is("deleted_at", null).maybeSingle();
-          if (!sourceProject) {
-            return Response.json(
-              { error: "A selected skill's project is unavailable. Remove the skill or check your access." },
-              { status: 404 },
-            );
-          }
-          const paths = skillSelections
-            .filter((skill) => skill.projectId === sourceProjectId)
-            .map((skill) => skill.path);
-          const loaded = await loadProjectRepositorySkills(sourceProjectId, paths);
-          if (!loaded) {
-            return Response.json(
-              { error: "One or more repository skills are no longer available" },
-              { status: 400 },
-            );
-          }
-          steeringSkills.push(...loaded.map((skill) => ({ ...skill, projectId: sourceProjectId })));
-        }
-        if (steeringSkills.reduce(
-          (size, skill) => size + new TextEncoder().encode(skill.content).byteLength,
-          0,
-        ) > MAX_SELECTED_SKILL_BYTES) {
-          return Response.json(
-            { error: "Selected skills are too large. Remove a skill and try again." },
-            { status: 400 },
-          );
-        }
-      } catch (error) {
-        console.error("[repository-skills] selection failed:", (error as Error).message);
-        return Response.json({ error: "Repository skills could not be loaded" }, { status: 502 });
-      }
-      preparedSkills = steeringSkills;
-      let workerContent = await promptWithAttachments(
-        sanitizedUserMessage,
-        steeringAttachments,
-      );
-      if (steeringContext.context) {
-        workerContent += "\n\n[Context captured for this message only; it does not authorize later actions]\n"
-          + buildPageContextBlock(steeringContext.context);
-      }
-      workerSteering = {
-        content: workerContent,
-        mentions: steeringContext.mentions,
-        context: steeringContext.context,
-        metadata: {
-          ...(steeringAttachments.length > 0 ? { attachments: steeringAttachments } : {}),
-          ...(steeringContext.mentions.length > 0 ? { mentions: steeringContext.mentions } : {}),
-          ...(command ? { command } : {}),
-          ...(steeringSkills.length > 0 ? { skills: steeringSkills } : {}),
-        },
-      };
-    }
-
-    const mediated = pageContext?.documentation
-      ? { action: "none" as const }
-      : workerInput
-      ? await answerNumoWorkerInput({
-          conversationId: convId,
-          userId: user.id,
-          correlation: workerInput,
-          answer: sanitizedUserMessage,
-          messageId: requestId,
-          persistParentMessage: true,
-        })
-      : await steerNumoWorker({
-          conversationId: convId,
-          userId: user.id,
-          messageId: requestId,
-          content: workerSteering?.content ?? sanitizedUserMessage,
-          parentContent: sanitizedUserMessage,
-          mentions: workerSteering?.mentions,
-          context: workerSteering?.context,
-          metadata: workerSteering?.metadata,
-        });
-    if (
-      mediated.action === "answered"
-      || mediated.action === "already"
-      || mediated.action === "steered"
-    ) {
-      const stopped = await stopCanceledNumoMediation({
-        conversationId: convId, requestId, userId: user.id, parentTurnId: mediated.turnId,
-      });
-      if (stopped) return mediatedWorkerResponse(convId, stopped.id, stopped.status);
-      return mediatedWorkerResponse(convId, mediated.turnId);
-    }
-    if (workerInput) {
-      const quota = mediated.action === "refused" && mediated.reason === "quota_exceeded";
-      return Response.json(
-        {
-          error: quota
-            ? "The code worker cannot resume because its usage quota is exhausted."
-            : "This worker question is no longer pending.",
-          code: quota ? "quotaExceeded" : "worker_input_stale",
-        },
-        { status: quota ? 402 : 409 },
-      );
-    }
-    if (mediated.action === "refused" && mediated.reason === "worker_input_pending") {
-      return Response.json(
-        {
-          error: "A code worker is waiting for an answer to its pending question.",
-          code: "worker_input_pending",
-        },
-        { status: 409 },
-      );
-    }
   }
 
   // Plan usage budget (MIN-72) — pre-flight before a new Numo LLM call.
-  // Worker answers and steering have their own authorization and quota path.
   let admittedUsage: UserUsage;
   try {
     admittedUsage = pageContext?.documentation
@@ -591,7 +403,7 @@ export async function POST(request: NextRequest) {
   // the descriptors ride the request and live on the message's metadata.
   // FILES only — the shell has no link composer, and a chat attachment has no
   // DB row to carry a link's url anyway.
-  const parsedResources = preparedAttachments ?? parseResourcesInput(
+  const parsedResources = parseResourcesInput(
     body.attachments,
     `chat/${user.id}/`,
     5,
@@ -635,13 +447,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const validated = preparedContext ?? await validateMessageContext(supabase, pageContext, mentions);
+  const validated = await validateMessageContext(supabase, pageContext, mentions);
   if (!validated) return Response.json({ error: "Some attached context is unavailable. Remove it or check your project access." }, { status: 404 });
   pageContext = validated.context;
   mentions = validated.mentions;
 
-  const selectedSkills: RepositorySkill[] = preparedSkills ?? [];
-  if (!preparedSkills) try {
+  const selectedSkills: RepositorySkill[] = [];
+  try {
     for (const sourceProjectId of new Set(skillSelections.map((skill) => skill.projectId))) {
       // The repository loader uses service credentials: authorize its source first.
       const { data: sourceProject } = await supabase.from("projects").select("id")

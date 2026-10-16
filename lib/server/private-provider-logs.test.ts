@@ -37,7 +37,6 @@ vi.mock("@/lib/server/git/repository-name-content", () => ({
 
 import { sendOtpEmail } from "./feedback/otp-email";
 import { executeTool } from "./assistant/execute-tool";
-import { anchorPullRequestBase, commitAndPush, type RepoHost } from "./agent/repo-host";
 import { ensureRelayWebhookRegistration } from "./forge-relay/webhook-registration";
 import { pushGitlabHookSecret } from "./forge-relay/gitlab-hook-sync";
 
@@ -108,22 +107,4 @@ describe("private provider failure logs in production", () => {
     expect(logs()).not.toContain(SENTINEL);
   });
 
-  it("does not copy PR anchor command output", async () => {
-    const host = { exec: vi.fn(async () => ({ exitCode: 1, stdout: SENTINEL, stderr: SENTINEL })) } as unknown as RepoHost;
-    await anchorPullRequestBase(host, { authUrl: "https://synthetic@example.test/repo", baseSha: "a".repeat(40) });
-    expect(logs()).not.toContain(SENTINEL);
-  });
-
-  it("does not expose push output to callers that may log failures", async () => {
-    const host = { exec: vi.fn(async (command: string) => {
-      if (command.startsWith("git push")) return { exitCode: 1, stdout: SENTINEL, stderr: SENTINEL };
-      return { exitCode: 0, stdout: command === "git rev-parse HEAD" ? "a".repeat(40) : "", stderr: "" };
-    }) } as unknown as RepoHost;
-    const failure = await commitAndPush(host, {
-      authUrl: "https://synthetic@example.test/repo", workBranch: "work", baseBranch: "main", message: "test",
-      committer: { name: "Synthetic", email: "synthetic@example.test" },
-    }).catch((error: Error) => error);
-    expect(failure).toBeInstanceOf(Error);
-    expect(String(failure)).not.toContain(SENTINEL);
-  });
 });

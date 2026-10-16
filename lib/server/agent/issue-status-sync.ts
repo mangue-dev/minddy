@@ -6,20 +6,17 @@ import {
   type SyncableIssueStatus,
 } from "@/lib/pr-issue-status";
 import type { RepoProviderId } from "@/lib/repo-providers";
-import type { AgentRun } from "./runs";
+import type { PullRequestState } from "./pull-requests";
 
 /**
- * Aligns the status of the issue with the code agent lifecycle (MIN-46):
- * - agent launched, no PR yet available → `in_progress`
+ * Aligns the status of the issue with its pull request (MIN-46):
  * - PR DRAFT (not yet proposed) → `in_progress`
  *  - PR ouverte (disponible en revue)          → `in_review`
  * - Merged PR (accepted) → `done`
  * - PR closed (refused) → `todo` (return to be made, NOT canceled)
  *
- * `syncIssueStatusOnAgentStart` is called at startup/resume without PR
- * (launch.ts). `syncIssueStatusFromPr` is called when opening the PR
- * (execute.ts), on in-app review actions (merge/close) and on the webhook
- * GitHub (merge/close/reopen). Best effort: sync should never
+ * `syncIssueStatusFromPr` is called on in-app review actions (merge/close) and
+ * on the forge webhooks (merge/close/reopen). Best effort: sync should never
  * Fail the calling flow.
  */
 
@@ -67,24 +64,12 @@ async function applyIssueStatus(
   }
 }
 
-/**
- * The agent starts (or resumes) the work without PR available → the issue goes to
- * `in_progress`. Called at the start of a run and at the resumption of a session which
- * n'a pas (ou plus) de PR ouverte.
- */
-export async function syncIssueStatusOnAgentStart(opts: {
-  issueId: string;
-  actorId: string;
-}): Promise<void> {
-  await applyIssueStatus(opts.issueId, opts.actorId, "in_progress");
-}
-
 export async function syncIssueStatusFromPr(opts: {
   issueId: string;
-  /** Actor of the change (author of the run for the agent/webhook, user for merge/close in-app). */
+  /** Actor of the change (the repository linker for the webhook, the user for merge/close in-app). */
   actorId: string;
-  prState: AgentRun["pr_state"];
-  /** Forge to be credited in place of the actor — a PR without a run (MIN-143). */
+  prState: PullRequestState | null;
+  /** Forge to be credited in place of the actor (MIN-143). */
   forgeSync?: RepoProviderId | null;
 }): Promise<void> {
   const status = issueStatusForPrState(opts.prState);

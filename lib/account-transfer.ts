@@ -8,8 +8,24 @@
 
 export const ACCOUNT_TRANSFER_FORMAT = "minddy-account-transfer" as const;
 export const ACCOUNT_TRANSFER_VERSION = 1;
-export const CURRENT_ACCOUNT_EXPORT_VERSION = 3;
-export const SUPPORTED_ACCOUNT_EXPORT_VERSIONS = [2, CURRENT_ACCOUNT_EXPORT_VERSION] as const;
+/**
+ * Version 4 (MIN-721) no longer carries the retired code-agent sections, so an
+ * older reader that still requires them reports an unsupported version instead
+ * of a missing field. Versions 2 and 3 remain readable.
+ */
+export const CURRENT_ACCOUNT_EXPORT_VERSION = 4;
+export const SUPPORTED_ACCOUNT_EXPORT_VERSIONS = [2, 3, CURRENT_ACCOUNT_EXPORT_VERSION] as const;
+/**
+ * Sections written by older exports for the retired code agent (MIN-721):
+ * `preferences` held its default model, reasoning, branch prefix and sandbox
+ * settings, and `code_agent_conversations` its conversation history. Their
+ * tables no longer exist, so these sections are accepted without validation
+ * and left out of the normalized document.
+ */
+export const RETIRED_ACCOUNT_TRANSFER_SECTIONS = [
+  "preferences",
+  "code_agent_conversations",
+] as const;
 export const MAX_ACCOUNT_TRANSFER_BYTES = 100 * 1024 * 1024;
 
 export type TransferRow = Record<string, unknown>;
@@ -21,7 +37,6 @@ export interface AccountTransferDocument {
   exported_at: string;
   readme?: Record<string, string>;
   account: TransferRow;
-  preferences: TransferRow | null;
   numo_preferences?: TransferRow[];
   owned_projects: TransferRow[];
   memberships: TransferRow[];
@@ -39,7 +54,6 @@ export interface AccountTransferDocument {
   cycles: TransferRow[];
   scratchpad: TransferRow | null;
   assistant_conversations: TransferRow[];
-  code_agent_conversations: TransferRow[];
   notifications: TransferRow[];
   push_devices: TransferRow[];
   statistics: TransferRow[];
@@ -74,7 +88,6 @@ const REQUIRED_ARRAYS = [
   "views",
   "cycles",
   "assistant_conversations",
-  "code_agent_conversations",
   "notifications",
   "push_devices",
   "statistics",
@@ -97,7 +110,10 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   );
 }
 
-/** Validate and normalize both the current envelope and legacy format v2 files. */
+/**
+ * Validate and normalize the current envelope and legacy format v2 and v3 files.
+ * Retired sections (`RETIRED_ACCOUNT_TRANSFER_SECTIONS`) are ignored.
+ */
 export function validateAccountTransfer(input: unknown): TransferValidationResult {
   if (!isRecord(input)) return { ok: false, error: "notObject" };
 
@@ -145,7 +161,7 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
     }
   }
 
-  for (const field of ["preferences", "scratchpad", "billing"] as const) {
+  for (const field of ["scratchpad", "billing"] as const) {
     if (input[field] !== null && input[field] !== undefined && !isRecord(input[field])) {
       return { ok: false, error: "invalidField", field };
     }
@@ -163,7 +179,6 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
       exported_at: input.exported_at as string,
       readme: input.readme as Record<string, string> | undefined,
       account: input.account,
-      preferences: (input.preferences as TransferRow | null | undefined) ?? null,
       numo_preferences: (input.numo_preferences as TransferRow[] | undefined) ?? [],
       owned_projects: input.owned_projects as TransferRow[],
       memberships: input.memberships as TransferRow[],
@@ -181,7 +196,6 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
       cycles: input.cycles as TransferRow[],
       scratchpad: (input.scratchpad as TransferRow | null | undefined) ?? null,
       assistant_conversations: input.assistant_conversations as TransferRow[],
-      code_agent_conversations: input.code_agent_conversations as TransferRow[],
       notifications: input.notifications as TransferRow[],
       push_devices: input.push_devices as TransferRow[],
       statistics: input.statistics as TransferRow[],

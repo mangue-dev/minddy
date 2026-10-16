@@ -21,12 +21,11 @@ import { getServiceClient } from "@/lib/supabase-service";
  *
  * `claimRoutine` advances the schedule before admission. A missed occurrence
  * is recorded but never replayed in a burst, preserving the existing cadence
- * and DST behavior. The occurrence's parent turn shares its configured spend
- * cap with every delegated worker.
+ * and DST behavior. The occurrence's turn carries its configured spend cap.
  */
 
 export const runtime = "nodejs";
-// The initial Numo turn may execute tools before yielding to durable work.
+// The initial Numo turn may execute tools before the response.
 export const maxDuration = 300;
 
 /** The next five-minute tick handles anything beyond this batch. */
@@ -40,19 +39,6 @@ function launchErrorCode(error: string): RoutineErrorCode {
       return "quota";
     case "managedServiceUnavailable":
       return "managedServiceUnavailable";
-    case "executionBackendUnavailable":
-      return "executionBackendUnavailable";
-    case "providerEndpointUnavailableFromSandbox":
-      return "providerEndpointUnavailableFromSandbox";
-    case "noRepo":
-    case "unsupportedProvider":
-      return "noRepo";
-    case "alreadyRunning":
-      return "alreadyRunning";
-    case "noModelForProvider":
-      return "noModelForProvider";
-    case "modelAbovePlan":
-      return "modelAbovePlan";
     default:
       return "launchFailed";
   }

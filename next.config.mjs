@@ -311,17 +311,10 @@ const nextConfig = {
   /**
    * Runtime files of the repository, embedded in the functions.
    *
-   * The agent bundle and Markdown projection are produced by `prebuild`; the
+   * The Markdown projection is produced by `prebuild`; the
    * product knowledge is versioned Markdown. All are read by path at runtime.
    * Next's tracer tracks imports, not arbitrary file reads, so these patterns
    * keep them in the deployed function.
-   *
-   * `.agent-vm/` (MIN-224) — the microVM harness, written to the VM at
-   * startup of each round. Absent, each `loop_in_vm` run fails on a
-   * ENOENT. The pattern covers all API routes: the harness is written from
-   * the LAUNCH path as well as from the drain CRON, and listing both at the
-   * main would cause a third caller, someday, to discover the problem in
-   * production.
    *
    * `.pages-md/` (MIN-295) — the markdown projection of the pages, output of the bundler
    * of Next because it substitutes `typeof window` → `"undefined"` and
@@ -337,7 +330,7 @@ const nextConfig = {
    * intentionally outside the source graph so product updates stay Markdown-only.
    */
   outputFileTracingIncludes: {
-    "/api/**": [".agent-vm/**", "content/knowledge/**"],
+    "/api/**": ["content/knowledge/**"],
     "/**": [".pages-md/**", "content/changelog/releases/*.json", "content/documentation/**/*.md"],
   },
   // Bridge Vercel's server-only VERCEL_ENV into a public var so client
