@@ -440,8 +440,13 @@ export async function callDecisionModel(
     });
     if (!response.ok) {
       const detail = await response.text();
+      // Constant format string: the model id comes from an admin request on
+      // the save probe, and the provider body is third-party text.
       console.error(
-        `[decisions-model] ${model} HTTP ${response.status}: ${detail.slice(0, 200)}`
+        "[decisions-model] %s HTTP %d: %s",
+        model,
+        response.status,
+        detail.slice(0, 200)
       );
       return { ok: false, reason: "http", status: response.status };
     }
@@ -471,7 +476,7 @@ export async function callDecisionModel(
     });
     const parsed = parseDecisionAnswers(spec, data);
     if ("error" in parsed) {
-      console.error(`[decisions-model] ${answeredBy} invalid response: ${parsed.error}`);
+      console.error("[decisions-model] %s invalid response: %s", answeredBy, parsed.error);
       return { ok: false, reason: "invalid_response" };
     }
     return { ok: true, answers: parsed.answers, model: answeredBy };
@@ -484,7 +489,7 @@ export async function callDecisionModel(
           err instanceof SyntaxError
           ? "invalid_response"
           : "network";
-    console.error(`[decisions-model] ${model} call failed (${reason}):`, error.message);
+    console.error("[decisions-model] %s call failed (%s): %s", model, reason, error.message);
     return { ok: false, reason };
   }
 }

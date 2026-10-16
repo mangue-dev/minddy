@@ -124,6 +124,19 @@ describe("callDecisionModel", () => {
     });
   });
 
+  it("logs failures with a constant format string, the model id only as a value", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchAiProviderMock.mockRejectedValueOnce(new Error("reset"));
+    await callDecisionModel(SPEC, CTX, { model: "evil/%s%o" });
+    fetchAiProviderMock.mockResolvedValueOnce(respond({ error: "no" }, 400));
+    await callDecisionModel(SPEC, CTX, { model: "evil/%s%o" });
+    for (const [format, ...values] of error.mock.calls) {
+      expect(format).not.toContain("evil/");
+      expect(values).toContain("evil/%s%o");
+    }
+    expect(error).toHaveBeenCalledTimes(2);
+  });
+
   it("records a paid but unusable answer, then refuses it", async () => {
     fetchAiProviderMock.mockResolvedValue(
       respond({ model: "x/decider", answers: { priority: { choice: "urgent" } }, usage: {} })
