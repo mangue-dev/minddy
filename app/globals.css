@@ -3357,3 +3357,23 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 @media (prefers-reduced-motion: reduce) {
   .mobile-navigation-progress > div { animation: none; width: 100%; }
 }
+
+/* ─── Placeholder tabs while the first tab list loads ─────────────────────────────
+   A soft band sweeps left to right across muted tab shapes in the top bar,
+   in the reading direction like `text-shimmer`. Reduced motion keeps the
+   shapes still. */
+.app-tab-skeleton {
+  background: linear-gradient(90deg,
+    var(--sidebar-accent) 0%,
+    color-mix(in oklab, var(--sidebar-accent), var(--sidebar-foreground) 8%) 50%,
+    var(--sidebar-accent) 100%);
+  background-size: 300% 100%;
+  animation: app-tab-skeleton-sweep 1.4s ease-in-out infinite;
+}
+@keyframes app-tab-skeleton-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-tab-skeleton { animation: none; }
+}
