@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { useProjects } from "@/lib/projects-context";
 import { useTriageCountsQuery } from "@/lib/use-triage-counts-query";
+import { useHiddenProjects } from "@/lib/use-hidden-projects";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 
@@ -53,17 +54,20 @@ type Signal = {
  * the recycle bin keeps its tickets in sorting (DELETE /api/projects/[id] does not
  * does not touch) and therefore continues to weigh on it, even though it is no longer in the list.
  * Joining it through the list means dismissing it without having to filter it.
+ * A project I hid (MIN-692) is left out the same way: hiding it says I am not
+ * following it day to day.
  */
 export function HomeProjectSignals() {
   const t = useTranslations("Home");
   const { projects } = useProjects();
   const { counts } = useTriageCountsQuery();
+  const { hiddenProjectIds } = useHiddenProjects();
 
   const signals = useMemo(() => {
     const rows: Signal[] = [];
     for (const project of projects) {
       const count = counts[project.id];
-      if (!count) continue;
+      if (!count || hiddenProjectIds.has(project.id)) continue;
       for (const kind of ["triage", "feedback"] as const) {
         if (count[kind] > 0) {
           rows.push({
@@ -83,7 +87,7 @@ export function HomeProjectSignals() {
       (a, b) => b.count - a.count || a.projectName.localeCompare(b.projectName)
     );
     return rows;
-  }, [projects, counts]);
+  }, [projects, counts, hiddenProjectIds]);
 
   if (signals.length === 0) return null;
 

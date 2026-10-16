@@ -1822,7 +1822,9 @@
     "deleteSavedView": "Esquecer esta visualização",
     "savedViewDeleted": "“{name}” esquecido",
     "nameThisView": "Nomeie esta visualização",
-    "documentation": "Documentação"
+    "documentation": "Documentação",
+    "hideProject": "Ocultar projeto",
+    "showProject": "Mostrar projeto"
   },
   "CommandPaletteActions": {
     "copied": "Copiado",
@@ -2475,7 +2477,11 @@
     "numoDefaultModelHint": "Salvo para sua conta e este provedor. Cada conversa pode usar outro modelo.",
     "numoApplicationDefault": "Padrão do app",
     "numoModelSaveError": "Não foi possível salvar o modelo do Numo. Tente novamente.",
-    "numoModelLoadError": "Não foi possível carregar o modelo do Numo. Recarregue as configurações."
+    "numoModelLoadError": "Não foi possível carregar o modelo do Numo. Recarregue as configurações.",
+    "hiddenProjectsTitle": "Projetos ocultos",
+    "hiddenProjectsHelp": "Os projetos ocultos não aparecem mais na sua barra lateral nem no seu início. Seu acesso, os outros membros e a atividade do projeto não mudam.",
+    "hiddenProjectsEmpty": "Nenhum projeto oculto. Oculte um nas configurações dele ou no menu dele na barra lateral.",
+    "hiddenProjectsOpen": "Abrir"
   },
   "AccountData": {
     "importTitle": "Transfira dados de outra instância minddy",
@@ -2765,7 +2771,11 @@
     "draftCloseDescription": "Você o encontrará na barra lateral e continuará a partir desta etapa.",
     "draftCloseCancel": "Voltar",
     "draftCloseDiscard": "Descartar",
-    "draftCloseConfirm": "Salvar"
+    "draftCloseConfirm": "Salvar",
+    "hiddenToast": "“{name}” está oculto na sua barra lateral. Encontre-o em Configurações da conta → Projetos ocultos.",
+    "shownToast": "“{name}” voltou para a sua barra lateral.",
+    "hideFailed": "Não foi possível ocultar o projeto. Tente novamente.",
+    "showFailed": "Não foi possível mostrar o projeto. Tente novamente."
   },
   "Settings": {
     "title": "Configurações do projeto",
@@ -3089,7 +3099,14 @@
     "localRepoAttach": "Anexar uma pasta",
     "localRepoChange": "Alterar",
     "localRepoDetach": "Desanexar",
-    "localRepoWarning": "Um agente em execução aqui lê e escreve nesta pasta com sua própria conta. O que ele faz lá — seus comandos, os arquivos que toca, trechos do que lê — é enviado para minddy, mantido por 30 dias e legível por todos no projeto. O que se lê fora desta pasta não é: fica neste Mac. A pasta em si é anexada apenas aqui e ninguém mais no projeto a vê."
+    "localRepoWarning": "Um agente em execução aqui lê e escreve nesta pasta com sua própria conta. O que ele faz lá — seus comandos, os arquivos que toca, trechos do que lê — é enviado para minddy, mantido por 30 dias e legível por todos no projeto. O que se lê fora desta pasta não é: fica neste Mac. A pasta em si é anexada apenas aqui e ninguém mais no projeto a vê.",
+    "visibilityTitle": "Visibilidade para você",
+    "hideProjectLabel": "Ocultar da sua barra lateral",
+    "hideProjectHint": "Só para você. Os outros membros continuam vendo o projeto, e as rotinas e notificações continuam funcionando.",
+    "projectHiddenLabel": "Oculto na sua barra lateral",
+    "projectHiddenHint": "Você ainda pode abri-lo e editá-lo. Mostre-o para trazê-lo de volta à sua barra lateral.",
+    "hideProject": "Ocultar",
+    "showProject": "Mostrar"
   },
   "Seed": {
     "emptyBoardCta": "Bate-papo com Numo",

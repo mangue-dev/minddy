@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,13 +43,18 @@
       "lib/project-key.ts",
       "components/project-context-actions.tsx",
       "components/projects/project-trash-dialog.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "components/settings/project-visibility-section.tsx",
+      "components/settings/account-hidden-projects-section.tsx",
+      "lib/use-hidden-projects.ts",
+      "lib/server/hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -74,7 +79,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "General project settings with name, key, icon and a separate trash action.",
       "caption": "Check the project name and key before saving. Moving the project to trash is a separate action.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +95,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Email invitation form and three demonstration members, with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,7 +117,7 @@ A project brings together issues, objectives, pages and its members. Its owner m
 
 ## Configure a project {#project-settings}
 
-Open the project, then its settings. Project ownership controls administrative settings. Members can inspect the general section and leave the project but do not gain the owner's editing controls.
+Open the project, then its settings. Project ownership controls administrative settings. Members can inspect the general section, hide the project for themselves and leave it, but do not gain the owner's editing controls.
 
 As owner, enter a nonempty name and a valid project key, then save. The key is normalized to uppercase and uses 2 to 5 ASCII letters. Review the resulting identifiers after changing it. Use the icon and appearance controls to distinguish the project in navigation; these visual choices do not change membership.
 
@@ -120,6 +125,14 @@ Other sections manage collaborators, recurring issues, Git, import, integrations
 
 
 ![General project settings with name, key, icon and a separate trash action.](/documentation/en/project-general.png)
+
+### Hide a project for yourself {#hide-project}
+
+Hide a project you no longer follow day to day to keep it out of your sidebar and home without leaving it. In the project's general settings, choose **Hide** under **Visibility for you**, or right-click the project in the sidebar and choose **Hide project**. Every member can hide a project, owner included.
+
+Hiding changes only your own navigation. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from **Account settings** → **Preferences** → **Hidden projects**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
+
+To bring it back, choose **Show** in **Hidden projects** or in the project's general settings, or choose **Show project** from its sidebar menu. If the change cannot be saved, an error appears and the project returns to its previous state; try again. Unlike leaving or moving to trash, hiding never removes access or content.
 
 ### Leaving and deleting {#project-removal}
 

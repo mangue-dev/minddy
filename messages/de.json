@@ -1822,7 +1822,9 @@
     "deleteSavedView": "Diese Ansicht vergessen",
     "savedViewDeleted": "„{name}“ vergessen",
     "nameThisView": "Diese Ansicht benennen",
-    "documentation": "Dokumentation"
+    "documentation": "Dokumentation",
+    "hideProject": "Projekt ausblenden",
+    "showProject": "Projekt einblenden"
   },
   "CommandPaletteActions": {
     "copied": "Kopiert",
@@ -2475,7 +2477,11 @@
     "numoDefaultModelHint": "Für Ihr Konto und diesen Anbieter gespeichert. Unterhaltungen können ein anderes Modell verwenden.",
     "numoApplicationDefault": "App-Standard",
     "numoModelSaveError": "Das Numo-Modell konnte nicht gespeichert werden. Versuchen Sie es erneut.",
-    "numoModelLoadError": "Das Numo-Modell konnte nicht geladen werden. Laden Sie die Einstellungen neu."
+    "numoModelLoadError": "Das Numo-Modell konnte nicht geladen werden. Laden Sie die Einstellungen neu.",
+    "hiddenProjectsTitle": "Ausgeblendete Projekte",
+    "hiddenProjectsHelp": "Ausgeblendete Projekte erscheinen nicht mehr in deiner Seitenleiste und auf deiner Startseite. Dein Zugriff, die anderen Mitglieder und die Aktivität des Projekts bleiben unverändert.",
+    "hiddenProjectsEmpty": "Keine ausgeblendeten Projekte. Blende eines in seinen Einstellungen oder über sein Menü in der Seitenleiste aus.",
+    "hiddenProjectsOpen": "Öffnen"
   },
   "AccountData": {
     "importTitle": "Daten von einer anderen minddy-Instanz übertragen",
@@ -2765,7 +2771,11 @@
     "draftCloseDescription": "Sie finden ihn in der Seitenleiste und können mit diesem Schritt fortfahren.",
     "draftCloseCancel": "Zurück",
     "draftCloseDiscard": "Verwerfen",
-    "draftCloseConfirm": "Speichern"
+    "draftCloseConfirm": "Speichern",
+    "hiddenToast": "„{name}“ ist in deiner Seitenleiste ausgeblendet. Du findest es unter Kontoeinstellungen → Ausgeblendete Projekte.",
+    "shownToast": "„{name}“ ist wieder in deiner Seitenleiste.",
+    "hideFailed": "Das Projekt konnte nicht ausgeblendet werden. Versuche es erneut.",
+    "showFailed": "Das Projekt konnte nicht eingeblendet werden. Versuche es erneut."
   },
   "Settings": {
     "title": "Projekteinstellungen",
@@ -3089,7 +3099,14 @@
     "localRepoAttach": "Einen Ordner anhängen",
     "localRepoChange": "Ändern",
     "localRepoDetach": "Abtrennen",
-    "localRepoWarning": "Ein hier laufender Agent liest und schreibt in diesem Ordner mit Ihrem eigenen Konto. Was es dort tut – seine Befehle, die Dateien, die es berührt, Auszüge dessen, was es liest – wird an minddy gesendet, 30 Tage lang aufbewahrt und für alle Projektmitarbeiter lesbar. Was außerhalb dieses Ordners gelesen wird, ist nicht: Das bleibt auf diesem Mac. Der Ordner selbst ist nur hier angehängt und niemand sonst im Projekt sieht ihn."
+    "localRepoWarning": "Ein hier laufender Agent liest und schreibt in diesem Ordner mit Ihrem eigenen Konto. Was es dort tut – seine Befehle, die Dateien, die es berührt, Auszüge dessen, was es liest – wird an minddy gesendet, 30 Tage lang aufbewahrt und für alle Projektmitarbeiter lesbar. Was außerhalb dieses Ordners gelesen wird, ist nicht: Das bleibt auf diesem Mac. Der Ordner selbst ist nur hier angehängt und niemand sonst im Projekt sieht ihn.",
+    "visibilityTitle": "Sichtbarkeit für dich",
+    "hideProjectLabel": "In deiner Seitenleiste ausblenden",
+    "hideProjectHint": "Nur für dich. Andere Mitglieder sehen es weiterhin, und Routinen und Benachrichtigungen laufen weiter.",
+    "projectHiddenLabel": "In deiner Seitenleiste ausgeblendet",
+    "projectHiddenHint": "Du kannst es weiterhin öffnen und bearbeiten. Blende es ein, um es wieder in deiner Seitenleiste zu sehen.",
+    "hideProject": "Ausblenden",
+    "showProject": "Einblenden"
   },
   "Seed": {
     "emptyBoardCta": "Chatten Sie mit Numo",

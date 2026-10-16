@@ -1822,7 +1822,9 @@
     "deleteSavedView": "Forget this view",
     "savedViewDeleted": "“{name}” forgotten",
     "nameThisView": "Name this view",
-    "documentation": "Documentation"
+    "documentation": "Documentation",
+    "hideProject": "Hide project",
+    "showProject": "Show project"
   },
   "CommandPaletteActions": {
     "copied": "Copied",
@@ -2475,7 +2477,11 @@
     "numoDefaultModelHint": "Saved for your account and this provider. Conversations can override it.",
     "numoApplicationDefault": "App default",
     "numoModelSaveError": "Could not save the Numo model. Try again.",
-    "numoModelLoadError": "Could not load the Numo model. Reload settings."
+    "numoModelLoadError": "Could not load the Numo model. Reload settings.",
+    "hiddenProjectsTitle": "Hidden projects",
+    "hiddenProjectsHelp": "Projects you hid stay out of your sidebar and home. Your access, the other members and the project's activity are unchanged.",
+    "hiddenProjectsEmpty": "No hidden projects. Hide one from its settings or its sidebar menu.",
+    "hiddenProjectsOpen": "Open"
   },
   "AccountData": {
     "importTitle": "Transfer data from another minddy instance",
@@ -2765,7 +2771,11 @@
     "draftCloseDescription": "You'll find it in the sidebar, and pick up at this step.",
     "draftCloseCancel": "Back",
     "draftCloseDiscard": "Discard",
-    "draftCloseConfirm": "Save"
+    "draftCloseConfirm": "Save",
+    "hiddenToast": "“{name}” is hidden from your sidebar. Find it in Account settings → Hidden projects.",
+    "shownToast": "“{name}” is back in your sidebar.",
+    "hideFailed": "Couldn't hide the project. Try again.",
+    "showFailed": "Couldn't show the project. Try again."
   },
   "Settings": {
     "title": "Project settings",
@@ -3089,7 +3099,14 @@
     "localRepoAttach": "Attach a folder",
     "localRepoChange": "Change",
     "localRepoDetach": "Detach",
-    "localRepoWarning": "An agent running here reads and writes in this folder with your own account. What it does there — its commands, the files it touches, excerpts of what it reads — is sent to minddy, kept 30 days and readable by everyone on the project. What it reads outside this folder is not: that stays on this Mac. The folder itself is attached here only, and nobody else on the project sees it."
+    "localRepoWarning": "An agent running here reads and writes in this folder with your own account. What it does there — its commands, the files it touches, excerpts of what it reads — is sent to minddy, kept 30 days and readable by everyone on the project. What it reads outside this folder is not: that stays on this Mac. The folder itself is attached here only, and nobody else on the project sees it.",
+    "visibilityTitle": "Visibility for you",
+    "hideProjectLabel": "Hide from your sidebar",
+    "hideProjectHint": "Only for you. Other members still see it, and its routines and notifications keep running.",
+    "projectHiddenLabel": "Hidden from your sidebar",
+    "projectHiddenHint": "You can still open and edit it. Show it to bring it back to your sidebar.",
+    "hideProject": "Hide",
+    "showProject": "Show"
   },
   "Seed": {
     "emptyBoardCta": "Chat with Numo",

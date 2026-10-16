@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   openCreateIssue: vi.fn(), openCreateObjective: vi.fn(), push: vi.fn(), replace: vi.fn(),
   deleteProject: vi.fn(), toast: { error: vi.fn(), success: vi.fn() },
   dialog: null as null | { open: boolean; onConfirm: () => Promise<void>; title: string },
+  hidden: new Set<string>(), setProjectHidden: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }));
 vi.mock("next-intl", () => ({ useTranslations: (ns: string) => (key: string) => `${ns}.${key}` }));
@@ -20,6 +21,9 @@ vi.mock("@/lib/create-context", () => ({ useCreate: () => ({ openCreateIssue: st
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: state.push, replace: state.replace }) }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({ deleteProject: state.deleteProject }) }));
 vi.mock("@/lib/use-pages-query", () => ({ useCreatePage: () => vi.fn() }));
+vi.mock("@/lib/use-hidden-projects", () => ({ useHiddenProjects: () => ({
+  isHidden: (id: string) => state.hidden.has(id), setProjectHidden: state.setProjectHidden,
+}) }));
 vi.mock("mangue-ui", () => ({
   toast: state.toast,
   ConfirmDeleteDialog: (props: { open: boolean; onConfirm: () => Promise<void>; title: string }) => {
@@ -39,24 +43,38 @@ const render = () => act(() => root.render(<Probe />));
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
-  state.pathname = "/projects/a/settings"; state.user = { id: "owner" }; state.dialog = null;
+  state.pathname = "/projects/a/settings"; state.user = { id: "owner" }; state.dialog = null; state.hidden = new Set();
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
 });
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 
 describe("useProjectContextActions", () => {
-  it("offers New, Settings and, for the owner, Move to trash last", async () => {
+  it("offers New, Settings, Hide and, for the owner, Move to trash last", async () => {
     await render();
     const menu = actions.projectActions(project("b"));
-    expect(menu.map((entry) => entry.id)).toEqual(["project-new", "project-settings", "project-trash"]);
+    expect(menu.map((entry) => entry.id)).toEqual(["project-new", "project-settings", "project-hide", "project-trash"]);
     expect(menu.at(-1)?.variant).toBe("destructive");
     expect(menu[0].children?.map((entry) => entry.id)).toEqual(["project-new-issue", "project-new-objective", "project-new-page"]);
   });
 
-  it("hides Move to trash from members", async () => {
+  it("hides Move to trash from members but keeps their personal Hide entry", async () => {
     state.user = { id: "member" };
     await render();
-    expect(actions.projectActions(project("b")).map((entry) => entry.id)).not.toContain("project-trash");
+    const ids = actions.projectActions(project("b", "owner")).map((entry) => entry.id);
+    expect(ids).not.toContain("project-trash");
+    expect(ids).toContain("project-hide");
+  });
+
+  it("hides or shows the right-clicked project through the shared preference, never destructively", async () => {
+    state.hidden = new Set(["c"]);
+    await render();
+    const hide = actions.projectActions(project("b")).find((entry) => entry.id === "project-hide")!;
+    const show = actions.projectActions(project("c")).find((entry) => entry.id === "project-show")!;
+    expect(hide.variant).toBeUndefined();
+    expect(show.variant).toBeUndefined();
+    hide.onSelect?.(); show.onSelect?.();
+    expect(state.setProjectHidden).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: "b" }), true);
+    expect(state.setProjectHidden).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: "c" }), false);
   });
 
   it("binds every creation to the right-clicked project, not the one on screen", async () => {

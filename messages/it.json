@@ -1822,7 +1822,9 @@
     "deleteSavedView": "Dimentica questa vista",
     "savedViewDeleted": "«{name}» rimossa",
     "nameThisView": "Nome questa vista",
-    "documentation": "Documentazione"
+    "documentation": "Documentazione",
+    "hideProject": "Nascondi progetto",
+    "showProject": "Mostra progetto"
   },
   "CommandPaletteActions": {
     "copied": "Copiato",
@@ -2475,7 +2477,11 @@
     "numoDefaultModelHint": "Salvato per il tuo account e questo fornitore. Ogni conversazione può usare un altro modello.",
     "numoApplicationDefault": "Predefinito dell’app",
     "numoModelSaveError": "Impossibile salvare il modello di Numo. Riprova.",
-    "numoModelLoadError": "Impossibile caricare il modello di Numo. Ricarica le impostazioni."
+    "numoModelLoadError": "Impossibile caricare il modello di Numo. Ricarica le impostazioni.",
+    "hiddenProjectsTitle": "Progetti nascosti",
+    "hiddenProjectsHelp": "I progetti nascosti non compaiono più nella tua barra laterale né nella tua home. Il tuo accesso, gli altri membri e l'attività del progetto non cambiano.",
+    "hiddenProjectsEmpty": "Nessun progetto nascosto. Nascondine uno dalle sue impostazioni o dal suo menu nella barra laterale.",
+    "hiddenProjectsOpen": "Apri"
   },
   "AccountData": {
     "importTitle": "Trasferire dati da un'altra istanza minddy",
@@ -2765,7 +2771,11 @@
     "draftCloseDescription": "Lo troverai nella barra laterale, e lo riprendi a questo passo.",
     "draftCloseCancel": "Indietro",
     "draftCloseDiscard": "Scartare",
-    "draftCloseConfirm": "Salva"
+    "draftCloseConfirm": "Salva",
+    "hiddenToast": "«{name}» è nascosto dalla tua barra laterale. Lo trovi in Impostazioni account → Progetti nascosti.",
+    "shownToast": "«{name}» è di nuovo nella tua barra laterale.",
+    "hideFailed": "Impossibile nascondere il progetto. Riprova.",
+    "showFailed": "Impossibile mostrare il progetto. Riprova."
   },
   "Settings": {
     "title": "Impostazioni del progetto",
@@ -3089,7 +3099,14 @@
     "localRepoAttach": "Allega una cartella",
     "localRepoChange": "Cambia",
     "localRepoDetach": "Staccaggio",
-    "localRepoWarning": "Un agente che corre qui legge e scrive in questa cartella con il proprio conto. Ciò che fa lì — i suoi comandi, i file che tocca, estratti di ciò che legge — viene inviato a minddy, mantenuto 30 giorni e leggibile da tutti sul progetto. Ciò che legge fuori di questa cartella non è: che rimane su questo Mac. La cartella stessa è collegata solo qui, e nessuno Altrimenti nel progetto lo vede."
+    "localRepoWarning": "Un agente che corre qui legge e scrive in questa cartella con il proprio conto. Ciò che fa lì — i suoi comandi, i file che tocca, estratti di ciò che legge — viene inviato a minddy, mantenuto 30 giorni e leggibile da tutti sul progetto. Ciò che legge fuori di questa cartella non è: che rimane su questo Mac. La cartella stessa è collegata solo qui, e nessuno Altrimenti nel progetto lo vede.",
+    "visibilityTitle": "Visibilità per te",
+    "hideProjectLabel": "Nascondi dalla tua barra laterale",
+    "hideProjectHint": "Solo per te. Gli altri membri continuano a vederlo, e le sue routine e notifiche continuano a funzionare.",
+    "projectHiddenLabel": "Nascosto dalla tua barra laterale",
+    "projectHiddenHint": "Puoi ancora aprirlo e modificarlo. Mostralo per ritrovarlo nella tua barra laterale.",
+    "hideProject": "Nascondi",
+    "showProject": "Mostra"
   },
   "Seed": {
     "emptyBoardCta": "Chiacchierata con Numo",

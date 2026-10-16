@@ -3999,5 +3999,21 @@
         "error_code"
       ]
     }
+  },
+  "hidden_projects": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "user_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "hidden_at"
+      ]
+    }
   }
 }

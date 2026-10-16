@@ -9770,5 +9770,40 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "hidden_projects": {
+    "columns": {
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "hidden_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "user_id",
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "users",
+        "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
   }
 }

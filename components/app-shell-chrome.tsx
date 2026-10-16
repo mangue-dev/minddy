@@ -34,6 +34,7 @@ import { openInbox } from "@/lib/inbox-launcher";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useHiddenProjects, visibleNavigationProjects } from "@/lib/use-hidden-projects";
 import { useCreate } from "@/lib/create-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useNotifications } from "@/lib/use-notifications";
@@ -357,6 +358,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const projectById = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),
     [projects]
+  );
+  // Projects I hid (MIN-692) leave the home panel's list. The switchers keep
+  // the project on screen so they can still say where I am; leaving it does
+  // not bring it back.
+  const { hiddenProjectIds } = useHiddenProjects();
+  const listedProjects = useMemo(
+    () => visibleNavigationProjects(projects, hiddenProjectIds),
+    [projects, hiddenProjectIds]
+  );
+  const switcherProjects = useMemo(
+    () => visibleNavigationProjects(projects, hiddenProjectIds, currentProjectId),
+    [projects, hiddenProjectIds, currentProjectId]
   );
   // CSV export: only one pallet line, never per project — this is the
   // dialogue which requires scope, because “one project or all” is precisely
@@ -1186,7 +1199,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
       {
         items: [
-          ...projects.map((p) => {
+          ...listedProjects.map((p) => {
             // A single number for both halves of the line: enter the
             // project breaks it down into its Triage and Feedback tabs, and the
             // total must land there exactly.
@@ -1241,7 +1254,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pathname, inboxCount, openPrCount, projects, projectDrafts, openProjectDraft, deleteProjectDraft, triageCounts, openCreateProject, openCreateIssue, agentsAllowed, projectLimitReached, smartAssignBadge, projectContext.projectActions, user?.id, t, tProjects]
+    [pathname, inboxCount, openPrCount, projects, listedProjects, projectDrafts, openProjectDraft, deleteProjectDraft, triageCounts, openCreateProject, openCreateIssue, agentsAllowed, projectLimitReached, smartAssignBadge, projectContext.projectActions, user?.id, t, tProjects]
   );
 
   const sections = useMemo<AppNavSection[]>(() => {
@@ -1416,8 +1429,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
     const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
       ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname } : undefined);
-    return { sections: root, projects, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
-  }, [projects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t]);
+    return { sections: root, projects: switcherProjects, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
+  }, [projects, switcherProjects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).
@@ -1492,7 +1505,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             homeSections={homeDesktopSections}
             modeKey={modeKey}
             currentProject={currentProject}
-            projects={projects}
+            projects={switcherProjects}
             onLayerOpenChange={setSidebarLayerOpen}
           />
         </SidebarNavOverlay>

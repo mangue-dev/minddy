@@ -161,6 +161,8 @@ export interface AccountExport {
   numo_preferences?: Row[];
   owned_projects: Row[];
   memberships: Row[];
+  /** Projects hidden from my own navigation (MIN-692). Optional in older exports. */
+  hidden_projects?: Row[];
   issues: Row[];
   comments: Row[];
   attachments: Row[];
@@ -228,6 +230,12 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const memberIds = list("project_members", membershipsResult)
     .map((membership) => membership.project_id as string);
   const readableIssueProjectIds = [...new Set([...ownedIds, ...memberIds])];
+  // Personal navigation preference (MIN-692): which projects I hid.
+  const hiddenProjects = list("hidden_projects", await service
+    .from("hidden_projects")
+    .select("project_id, hidden_at")
+    .eq("user_id", userId)
+    .order("hidden_at"));
 
   const [
     numoPreferences,
@@ -496,6 +504,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     numo_preferences: list("user_numo_preferences", numoPreferences),
     owned_projects: exportedProjects,
     memberships: list("project_members", memberships),
+    hidden_projects: hiddenProjects,
     issues: [...issuesById.values()],
     comments: list("comments", comments),
     attachments: exportedAttachments,

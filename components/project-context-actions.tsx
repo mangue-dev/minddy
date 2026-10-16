@@ -10,6 +10,8 @@ import {
   MessageMultiple01Icon,
   Settings01Icon,
   Target01Icon,
+  ViewIcon,
+  ViewOffIcon,
 } from "@hugeicons/core-free-icons";
 import { toast } from "mangue-ui";
 import { usePathname } from "next/navigation";
@@ -22,6 +24,7 @@ import { pageHref, pagesHref, replacePagesHistory } from "@/lib/pages-navigation
 import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useCreatePage } from "@/lib/use-pages-query";
+import { useHiddenProjects } from "@/lib/use-hidden-projects";
 import type { Project } from "@/lib/types";
 
 const icon = (data: Parameters<typeof HugeiconsIcon>[0]["icon"]) => (
@@ -80,7 +83,10 @@ export function useProjectRowActions(project: Project | null | undefined): Conte
 export type ProjectTabKind = "tickets" | "objectives" | "pages" | "feedback";
 
 export interface ProjectContextActions {
-  /** Settings, a "New" submenu and, for the owner, Move to trash (last). */
+  /**
+   * A "New" submenu, settings, the personal Hide/Show project entry and, for
+   * the owner, Move to trash (last).
+   */
   projectActions: (project: Project) => ContextMenuAction[];
   /** The creation entry of one project tab ("New objective" on Objectives…). */
   tabActions: (project: Project, tab: ProjectTabKind) => ContextMenuAction[];
@@ -106,6 +112,7 @@ export function useProjectContextActions({
   const { openCreateIssue, openCreateObjective } = useCreate();
   const router = useAppRouter();
   const pathname = usePathname();
+  const { isHidden, setProjectHidden } = useHiddenProjects();
   const [trashTarget, setTrashTarget] = useState<Project | null>(null);
 
   const createActions = useCallback(
@@ -158,6 +165,21 @@ export function useProjectContextActions({
           icon: icon(Settings01Icon),
           onSelect: () => router.push(`/projects/${project.id}/settings`),
         },
+        // A personal preference (MIN-692), open to every member: it only
+        // changes my own navigation, so it is never presented as destructive.
+        isHidden(project.id)
+          ? {
+            id: "project-show",
+            label: t("showProject"),
+            icon: icon(ViewIcon),
+            onSelect: () => { void setProjectHidden(project, false); },
+          }
+          : {
+            id: "project-hide",
+            label: t("hideProject"),
+            icon: icon(ViewOffIcon),
+            onSelect: () => { void setProjectHidden(project, true); },
+          },
       ];
       // Same rule as the settings' danger zone: only the owner may trash.
       if (user && project.owner_id === user.id) {
@@ -172,7 +194,7 @@ export function useProjectContextActions({
       }
       return actions;
     },
-    [createActions, router, t, tc, user],
+    [createActions, isHidden, router, setProjectHidden, t, tc, user],
   );
 
   const tabActions = useCallback(
