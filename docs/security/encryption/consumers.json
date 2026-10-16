@@ -3990,6 +3990,20 @@
     "storage": true
   },
   {
+    "file": "lib/server/auth-sessions.ts",
+    "operation": "rpc",
+    "resource": "list_auth_sessions",
+    "line": 26,
+    "storage": false
+  },
+  {
+    "file": "lib/server/auth-sessions.ts",
+    "operation": "rpc",
+    "resource": "revoke_auth_session",
+    "line": 49,
+    "storage": false
+  },
+  {
     "file": "lib/server/automations/chain.ts",
     "operation": "from",
     "resource": "agent_chains",
