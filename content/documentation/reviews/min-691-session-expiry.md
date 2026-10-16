@@ -14,13 +14,15 @@ existing captures keep their evidence.
 
 ## Factual evidence
 
-- `public.is_auth_session_active` (`supabase/migrations/20270106620000_release_security_hardening.sql`)
-  refuses sessions older than 720 hours or unused for 168 hours.
+- `public.is_auth_session_active`
+  (`supabase/migrations/20270109200045_session_lifetime_one_year.sql`, applied
+  to the hosted project on 2026-10-16) refuses sessions older than 8760 hours or
+  unused for 720 hours.
 - The hosted Auth configuration was read through the Management API on
   2026-10-16: `sessions_timebox` and `sessions_inactivity_timeout` were `0`
-  (disabled). They were set to `720` and `168` hours the same day and read back.
-  `deploy/self-hosted/compose.full.yml` and `supabase/config.toml` already set
-  the same limits.
+  (disabled). They were set to `8760` and `720` hours the same day, after the
+  SQL migration, and read back. `deploy/self-hosted/compose.full.yml` and
+  `supabase/config.toml` set the same limits.
 - `lib/session-revocation.ts`, `lib/auth-context.tsx` and
   `lib/signed-out-redirect.ts`: a `sessionInvalid` refusal is confirmed by one
   refresh and one retried read, then the local session ends and the app opens

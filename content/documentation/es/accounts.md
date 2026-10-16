@@ -185,7 +185,7 @@ Vuelve a la aplicación que quieres utilizar e inicia sesión. Una cuenta recié
 
 Abre el menú de la cuenta, elige cerrar sesión y confirma. En la aplicación de escritorio, cerrar una pestaña o ventana no equivale a cerrar sesión. Utiliza el menú de la cuenta si quieres terminar la sesión.
 
-Una sesión permanece iniciada como máximo 30 días y termina tras 7 días sin uso. Cuando termina, o se cierra desde otro dispositivo, minddy vuelve a la pantalla de inicio de sesión con un mensaje que indica que tu sesión ha caducado. Vuelve a iniciar sesión para continuar donde estabas.
+Una sesión permanece iniciada mientras uses minddy, hasta un año, y termina tras 30 días sin uso. Cuando termina, o se cierra desde otro dispositivo, minddy vuelve a la pantalla de inicio de sesión con un mensaje que indica que tu sesión ha caducado. Vuelve a iniciar sesión para continuar donde estabas.
 
 Si el correo no llega, comprueba la dirección, la carpeta de spam y la identidad de la instancia. El operador de una instancia autoalojada debe haber configurado un envío de correo de Auth que funcione; el correo opcional de notificaciones de la aplicación y la confirmación de Auth son funciones distintas. Una página de confirmación caducada permite volver al inicio de sesión para solicitar un enlace nuevo. No reenvíes enlaces de confirmación o recuperación como prueba para diagnosticar un problema: autorizan el acceso a la cuenta.
 

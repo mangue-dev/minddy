@@ -187,7 +187,7 @@ Torna all’applicazione prevista e accedi. Un account appena autenticato può c
 
 Apri il menu dell’account, scegli di uscire e conferma. Nell’app desktop, chiudere una scheda o una finestra non equivale a uscire dall’account. Usa il menu dell’account se vuoi terminare la sessione.
 
-Una sessione resta attiva al massimo 30 giorni e termina dopo 7 giorni di inutilizzo. Quando termina, o viene chiusa da un altro dispositivo, minddy torna alla schermata di accesso con un messaggio che indica che la sessione è scaduta. Accedi di nuovo per riprendere da dove eri rimasto.
+Una sessione resta attiva finché usi minddy, fino a un anno, e termina dopo 30 giorni di inutilizzo. Quando termina, o viene chiusa da un altro dispositivo, minddy torna alla schermata di accesso con un messaggio che indica che la sessione è scaduta. Accedi di nuovo per riprendere da dove eri rimasto.
 
 Se l’email non arriva, controlla indirizzo, cartella dello spam e identità dell’istanza. L’operatore di un’istanza autonoma deve aver configurato un invio email funzionante per Auth; le notifiche email opzionali dell’applicazione e la conferma di Auth sono funzioni distinte. Una pagina di conferma scaduta permette di tornare all’accesso per richiedere un nuovo collegamento. Non inoltrare collegamenti di conferma o recupero come prova diagnostica: autorizzano l’accesso all’account.
 

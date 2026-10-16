@@ -185,7 +185,7 @@ Kehre zur vorgesehenen Anwendung zurück und melde dich an. Ein neu angemeldetes
 
 Öffne das Kontomenü, wähle die Abmeldung und bestätige sie. In der Desktop-App ist das Schließen eines Tabs oder Fensters nicht mit einer Abmeldung gleichzusetzen. Verwende das Kontomenü, wenn du die Sitzung beenden möchtest.
 
-Eine Sitzung bleibt höchstens 30 Tage angemeldet und endet nach 7 Tagen ohne Nutzung. Endet sie oder wird sie auf einem anderen Gerät beendet, kehrt minddy mit dem Hinweis, dass deine Sitzung abgelaufen ist, zur Anmeldung zurück. Melde dich erneut an, um dort weiterzumachen, wo du warst.
+Eine Sitzung bleibt angemeldet, solange du minddy nutzt, höchstens ein Jahr, und endet nach 30 Tagen ohne Nutzung. Endet sie oder wird sie auf einem anderen Gerät beendet, kehrt minddy mit dem Hinweis, dass deine Sitzung abgelaufen ist, zur Anmeldung zurück. Melde dich erneut an, um dort weiterzumachen, wo du warst.
 
 Kommt keine E-Mail an, prüfe Adresse, Spamordner und die Identität der Instanz. Bei Selbsthosting muss der Betreiber einen funktionierenden E-Mail-Versand für Auth eingerichtet haben; optionale Benachrichtigungs-E-Mails der Anwendung und die Auth-Bestätigung sind getrennte Funktionen. Eine abgelaufene Bestätigungsseite führt zurück zur Anmeldung, um einen neuen Link anzufordern. Leite Bestätigungs- oder Wiederherstellungslinks nicht zur Fehlerdiagnose weiter: Sie ermöglichen den Kontozugriff.
 

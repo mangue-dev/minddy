@@ -191,7 +191,7 @@ Revenez dans l’application souhaitée et connectez-vous. Le compte peut créer
 
 Ouvrez le menu du compte, choisissez la déconnexion et confirmez. Dans l’application desktop, fermer une fenêtre ou un onglet laisse votre session active.
 
-Une session reste connectée 30 jours au maximum et se termine après 7 jours sans utilisation. Quand elle se termine, ou qu’elle est fermée depuis un autre appareil, minddy revient à l’écran de connexion avec un message indiquant que votre session a expiré. Reconnectez-vous pour reprendre là où vous étiez.
+Une session reste connectée tant que vous utilisez minddy, jusqu’à un an, et se termine après 30 jours sans utilisation. Quand elle se termine, ou qu’elle est fermée depuis un autre appareil, minddy revient à l’écran de connexion avec un message indiquant que votre session a expiré. Reconnectez-vous pour reprendre là où vous étiez.
 
 Si le message n’arrive pas, vérifiez l’adresse, les indésirables et l’instance. En auto-hébergement, l’opérateur doit configurer l’envoi des messages Auth ; les notifications optionnelles de l’application sont un service distinct. Une confirmation expirée propose de revenir à la connexion pour demander un nouveau lien. Ne transmettez pas de lien de confirmation ou de récupération dans un diagnostic : il autorise l’accès au compte.
 

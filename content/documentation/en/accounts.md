@@ -191,7 +191,7 @@ Return to the intended application and sign in. A newly authenticated account ca
 
 Open the account menu, choose sign out and confirm. In the desktop app, closing a tab or window leaves your session active.
 
-A session stays signed in for at most 30 days and ends after 7 days without use. When it ends, or is closed from another device, minddy returns to the sign-in screen with a message that your session has expired. Sign in again to continue where you were.
+A session stays signed in while you use minddy, for up to one year, and ends after 30 days without use. When it ends, or is closed from another device, minddy returns to the sign-in screen with a message that your session has expired. Sign in again to continue where you were.
 
 If mail does not arrive, check the address, spam folder and instance identity. A self-hosted operator must have configured working Auth email delivery; optional application notification email and Auth confirmation are separate concerns. An expired confirmation page provides a route back to login to request a new link. Do not forward confirmation or recovery links as diagnostic evidence: they authorize account access.
 

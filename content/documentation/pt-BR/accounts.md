@@ -187,7 +187,7 @@ Volte à aplicação desejada e entre. Uma conta recém-autenticada pode criar s
 
 Abra o menu da conta, escolha sair e confirme. No aplicativo desktop, fechar uma aba ou janela não é o mesmo que sair da conta. Use o menu da conta quando quiser encerrar a sessão.
 
-Uma sessão fica conectada por no máximo 30 dias e termina após 7 dias sem uso. Quando ela termina, ou é encerrada em outro dispositivo, o minddy volta à tela de entrada com uma mensagem informando que sua sessão expirou. Entre novamente para continuar de onde parou.
+Uma sessão fica conectada enquanto você usa o minddy, por até um ano, e termina após 30 dias sem uso. Quando ela termina, ou é encerrada em outro dispositivo, o minddy volta à tela de entrada com uma mensagem informando que sua sessão expirou. Entre novamente para continuar de onde parou.
 
 Se a mensagem não chegar, confira o endereço, a pasta de spam e a identidade da instância. O operador de uma instância auto-hospedada precisa ter configurado um envio de e-mail funcional para o Auth; os e-mails opcionais de notificação da aplicação e a confirmação do Auth são funções distintas. Uma página de confirmação expirada permite voltar à entrada para solicitar um novo link. Não encaminhe links de confirmação ou recuperação como evidência para diagnóstico: eles autorizam acesso à conta.
 
