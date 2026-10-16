@@ -18,7 +18,7 @@ vi.mock("./supabase", () => ({ getSupabase: () => ({
   realtime: { setAuth: realtime.setAuth },
 }) }));
 vi.mock("./realtime-topic", () => ({
-  onRealtimeRekey: () => realtime.rekeyCleanup,
+  watchRealtimeTopic: () => realtime.rekeyCleanup,
   resolveRealtimeTopic: realtime.resolveTopic,
 }));
 

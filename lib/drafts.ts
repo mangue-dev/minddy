@@ -18,6 +18,7 @@ import type {
 import type { ObjectiveStatus } from "@/lib/objective-constants";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type { AttachmentInput, PendingRelationInput, ResourceInput } from "@/lib/types";
+import { getDesktopBridge } from "./desktop/bridge";
 import { localSnapshotGeneration, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
 
 export type DraftKind = "issue" | "objective";
@@ -146,6 +147,10 @@ async function persist<K extends DraftKind>(
   const trimmed = [...drafts].sort(byRecency).slice(0, MAX_DRAFTS);
   if (typeof window !== "undefined") {
     await saveLocalSnapshot(window.localStorage, keyFor(kind), `${kind}-drafts`, trimmed);
+    // The desktop shell otherwise commits localStorage seconds later: a forced
+    // quit right after the dialog confirms the save would lose the draft. A
+    // failed flush leaves the ordinary deferred commit, so it is not an error.
+    try { await getDesktopBridge()?.flushStorage?.(); } catch {}
   }
   return trimmed;
 }

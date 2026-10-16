@@ -160,6 +160,7 @@ export function RoutineDetail({
    * it.
    */
   const [draft, setDraft] = useState<RoutineDraft | null>(null);
+  const draftSource = useRef<Routine | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   // The fade from the bottom of the list, like everywhere where content overflows.
@@ -167,11 +168,24 @@ export function RoutineDetail({
 
   const editing = draft !== null && isOwner;
 
-  // Changing routine closes what we read about the previous one.
+  // Activity reconnects effects on return; only a different routine resets local work.
+  const previousRoutineId = useRef(routine.id);
   useEffect(() => {
+    if (previousRoutineId.current === routine.id) return;
+    previousRoutineId.current = routine.id;
+    draftSource.current = null;
     setOpenRunId(null);
     setDraft(null);
   }, [routine.id]);
+  // A clean edit form follows accepted remote fields; typing keeps its own draft.
+  useEffect(() => {
+    const source = draftSource.current;
+    if (!draft || !source || source === routine || source.id !== routine.id) return;
+    if (JSON.stringify(draft) === JSON.stringify(draftFrom(source))) {
+      draftSource.current = routine;
+      setDraft(draftFrom(routine));
+    }
+  }, [routine]); // eslint-disable-line react-hooks/exhaustive-deps
   const openRun: RoutineRunSummary | null =
     runs.find((r) => r.id === openRunId) ?? null;
   const openRoutineRun = (run: RoutineRunSummary) => {
@@ -474,7 +488,7 @@ export function RoutineDetail({
                   <HugeiconsIcon icon={PlayIcon} className="size-4" />
                   {t("runNow")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setDraft(draftFrom(routine))}>
+                <DropdownMenuItem onSelect={() => { draftSource.current = routine; setDraft(draftFrom(routine)); }}>
                   <HugeiconsIcon icon={Edit04Icon} className="size-4" />
                   {tCommon("edit")}
                 </DropdownMenuItem>

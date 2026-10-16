@@ -7,20 +7,18 @@ import { describe, expect, it } from "vitest";
  * The UI loading flag reads on STATUS (`isPending`), never
  * on the current flight (`isLoading`).
  *
- * Why. The cache is rehydrated from localStorage on mount
- * (`PersistQueryClientProvider`, lib/query-provider.tsx), and this restore
- * is ASYNCHRONOUS: the first render is painted before it returns.
- * During this window, react-query forces `fetchStatus: "idle"` to all
- * queries — they are in `pending`, with no data, but nothing is in flight. Or
- * `isLoading = isPending && isFetching` (v5): it is therefore FALSE while there
- * still has nothing to show.
+ * Why. `isLoading = isPending && isFetching` (v5) is FALSE whenever a pending
+ * query has no request in flight: a read paused offline, or any window in which
+ * react-query holds observers. The cache restore in lib/query-provider.tsx used
+ * to hold every observer that way, with `fetchStatus: "idle"`, while the sealed
+ * snapshot opened.
  *
  * What it looked like on the screen: each page painted its empty state — “none
  * ticket », “no session”, “empty trash” — the time of an image, then
  * its skeleton, then its contents. On ALL pages, on each load,
  * because the cause is the common provider and not this or that page.
  *
- * `isPending` says exactly "no data": it covers the restore like
+ * `isPending` says exactly "no data": it covers a held or paused read like
  * the first fetch. Its only counterpart is that a DEACTIVATED query remains
  * `pending` forever — hence the `enabled && isPending` of the guarded hooks,
  * which uses the same expression as the `enabled` of the query.

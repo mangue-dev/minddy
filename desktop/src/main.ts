@@ -35,6 +35,7 @@ import {
   withDesktopUserAgent,
 } from "@/lib/desktop/config";
 import { windowCloseAction } from "@/lib/desktop/hide-window";
+import { desktopTestBackground } from "@/lib/desktop/test-background";
 import {
   linuxDesktopPaths,
   prepareLinuxDesktopPaths,
@@ -82,6 +83,10 @@ import {
   desktopTitleBarOverlay,
   desktopDocumentChrome,
   MACOS_TRAFFIC_LIGHT_POSITION,
+  rememberableWindowChrome,
+  startupIntegratedChrome,
+  windowChromeReplacement,
+  type RememberedWindowChrome,
 } from "@/lib/desktop/window-frame";
 import { readDesktopChannel, writeDesktopChannel } from "./channel-store";
 import {
@@ -114,6 +119,7 @@ import {
   readDesktopServerOrigin,
   writeDesktopServerOrigin,
 } from "./server-store";
+import { readWindowChrome, writeWindowChrome } from "./window-chrome-store";
 import { desktopShellFontDataUrl } from "./shell-font";
 import {
   checkForUpdatesManually,
@@ -148,6 +154,16 @@ const authLinkDelivery = createDesktopAuthLinkDelivery({
 });
 const integratedFrames = new WeakMap<BrowserWindow, boolean>();
 const documentChrome = new Map<number, boolean>();
+/** The frame the selected origin's last document asked for (Windows and Linux). */
+let rememberedChrome: RememberedWindowChrome | null = null;
+
+/** Writes the observation only when it changes: most launches write nothing. */
+function rememberWindowChrome(next: RememberedWindowChrome | null): void {
+  if (!next) return;
+  if (rememberedChrome?.origin === next.origin && rememberedChrome.integrated === next.integrated) return;
+  rememberedChrome = next;
+  writeWindowChrome(next);
+}
 const localNotifications = new DesktopLocalNotificationRegistry();
 /** Electron closes windows before `before-quit` during an updater relaunch. */
 let quittingForUpdate = false;
@@ -365,8 +381,7 @@ function applyServerOrigin(next: string | null, entryPath = DESKTOP_ENTRY_PATH):
   rebuildAppMenu();
   if (mainWindow) {
     loadDesktopWindow(mainWindow, `${origin}${entryPath}`);
-    mainWindow.show();
-    mainWindow.focus();
+    revealWindow(mainWindow);
   }
 }
 
@@ -419,8 +434,7 @@ const channelSwitch = createDesktopChannelSwitch({
     if (mainWindow) {
       rebuildAppMenu();
       goHome(mainWindow);
-      mainWindow.show();
-      mainWindow.focus();
+      revealWindow(mainWindow);
     }
   },
 });
@@ -611,8 +625,7 @@ function receiveDeepLink(raw: string): void {
   authLinkDelivery.receive(link);
   const window = mainWindow;
   if (!window) return;
-  window.show();
-  window.focus();
+  revealWindow(window);
   flushAuthLink();
 }
 
@@ -620,8 +633,7 @@ function flushOpenLink(): void {
   if (!pendingOpenPath || !mainWindow) return;
   const next = pendingOpenPath;
   pendingOpenPath = null;
-  mainWindow.show();
-  mainWindow.focus();
+  revealWindow(mainWindow);
   loadDesktopWindow(mainWindow, `${origin}${next}`);
 }
 
@@ -637,8 +649,7 @@ function revealLocalNotificationTarget(target: string | null): void {
   if (!mainWindow) return;
   const url = desktopLocalNotificationUrl(origin, target);
   if (url) loadDesktopWindow(mainWindow, url);
-  mainWindow.show();
-  mainWindow.focus();
+  revealWindow(mainWindow);
 }
 
 /**
@@ -874,14 +885,14 @@ function createWindow(
       );
     },
   );
-  if (process.platform === "darwin" && showWhenReady) window.once("ready-to-show", () => window.show());
+  if (process.platform === "darwin" && showWhenReady) window.once("ready-to-show", () => revealWindow(window, false));
   let shownOnce = false;
   window.on("show", () => { shownOnce = true; });
   window.webContents.on("did-finish-load", () => {
     if (process.platform === "darwin" || mainWindow !== window) return;
-    const desired = documentChrome.get(window.webContents.id) ?? integrated;
-    if (desired === integrated) {
-      if (showWhenReady && !shownOnce) window.show();
+    const desired = windowChromeReplacement(documentChrome.get(window.webContents.id), integrated);
+    if (desired === null) {
+      if (showWhenReady && !shownOnce) revealWindow(window, false);
       return;
     }
     // Frame style is a constructor option. Wait for the document to finish so
@@ -1212,8 +1223,7 @@ function registerIpc(): void {
 
   ipcMain.on("minddy:focus", () => {
     if (!mainWindow) return;
-    mainWindow.show();
-    mainWindow.focus();
+    revealWindow(mainWindow);
   });
 
   // THE LOCAL PROJECT FILE (MIN-359) — the first three `handle` of the
@@ -1299,6 +1309,13 @@ function registerIpc(): void {
   ipcMain.handle("minddy:local-models:discover", (_event, input: unknown) =>
     discoverLocalModels(input),
   );
+
+  // Chromium defers DOM storage commits by several seconds; a forced quit in
+  // that window loses an acknowledged local draft. The flush takes no input
+  // and only touches the caller's own session.
+  ipcMain.handle("minddy:storage:flush", (event) => {
+    event.sender.session.flushStorageData();
+  });
 
 }
 
@@ -1393,6 +1410,7 @@ function hardenSession(): void {
     if (mainWindow && details.webContentsId === mainWindow.webContents.id) {
       const supported = desktopDocumentChrome(details, origin);
       if (supported !== null) documentChrome.set(details.webContentsId, supported);
+      if (process.platform !== "darwin") rememberWindowChrome(rememberableWindowChrome(details, origin));
     }
     callback({});
   });
@@ -1476,6 +1494,22 @@ if (!app.isPackaged && process.env.MINDDY_DESKTOP_TEST_USER_DATA?.trim()) {
   app.setPath("sessionData", process.env.MINDDY_DESKTOP_TEST_USER_DATA.trim());
 }
 
+// Electron test bench only: automated runs open their windows without taking
+// focus, so a measurement does not pull the person away from their work. See
+// lib/desktop/test-background.ts; a packaged app always ignores it.
+const testBackground = desktopTestBackground(app.isPackaged, process.env);
+if (testBackground && process.platform === "darwin") app.setActivationPolicy("accessory");
+
+/** Show a window, and give it focus unless the test bench runs in the background. */
+function revealWindow(window: BrowserWindow, focus = true): void {
+  if (testBackground) {
+    window.showInactive();
+    return;
+  }
+  window.show();
+  if (focus) window.focus();
+}
+
 // Single instance: the deep link must reach the app ALREADY opened, not in
 // launch a second which would have neither its session nor its window.
 if (!app.requestSingleInstanceLock()) {
@@ -1491,8 +1525,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on("second-instance", (_event, argv) => {
     for (const arg of desktopProtocolArguments(argv)) receiveDeepLink(arg);
     if (mainWindow && !isLinuxBackgroundLaunch(argv)) {
-      mainWindow.show();
-      mainWindow.focus();
+      revealWindow(mainWindow);
     }
   });
 
@@ -1556,7 +1589,14 @@ if (!app.requestSingleInstanceLock()) {
     registerIpc();
     const localSelected = customServerOrigin === LOCAL_SELF_HOST_ORIGIN;
     const localRoot = localSelected ? readLocalRuntimeRoot() : null;
-    mainWindow = createWindow(!localSelected, !backgroundLaunchRequested);
+    // Windows and Linux: start with the frame this origin's last document
+    // asked for, so its first load is not repeated in a replacement window.
+    rememberedChrome = process.platform === "darwin" ? null : readWindowChrome();
+    mainWindow = createWindow(
+      !localSelected,
+      !backgroundLaunchRequested,
+      startupIntegratedChrome(process.platform, rememberedChrome, origin),
+    );
     if (localRoot) {
       const generation = localRuntimeGeneration;
       showLocalRuntimeStatus("Starting Supabase and the app. The first start can take several minutes.");
@@ -1607,8 +1647,7 @@ if (!app.requestSingleInstanceLock()) {
     // macOS: clicking the dock icon of an app without a visible window brings it back.
     app.on("activate", () => {
       if (!mainWindow) return;
-      mainWindow.show();
-      mainWindow.focus();
+      revealWindow(mainWindow);
     });
   });
 

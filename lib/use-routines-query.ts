@@ -4,6 +4,7 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 
 import { fetchRoutineRunsApi, fetchRoutinesApi, type Routine } from "./routines-api";
 import { isAgentRunWorking } from "./agent-api";
+import { refetchOnRevealWhenStale } from "./reveal-freshness";
 
 /**
  * ROUTINES (MIN-185) on the client side.
@@ -16,6 +17,10 @@ import { isAgentRunWorking } from "./agent-api";
  * EXECUTIONS follow the rule for agent runs: ~3 s as long as a
  * passage works, a net of 12 s as long as there are runs, nothing at all all
  * then.
+ *
+ * Both reads are realtime-covered (`agent_routines` and routine runs on the
+ * project topic, plus the catch-up), so a retained Routines tab reads again on
+ * reveal only when that coverage cannot vouch for the cache.
  */
 
 export function routinesQueryKey() {
@@ -58,7 +63,7 @@ export function useRoutinesQuery() {
   const { data, isPending } = useQuery({
     queryKey: routinesQueryKey(),
     queryFn: fetchRoutinesApi,
-    refetchOnMount: "always",
+    refetchOnMount: refetchOnRevealWhenStale,
   });
   return { routines: data?.routines ?? [], loading: isPending };
 }
@@ -69,7 +74,7 @@ export function useRoutineRunsQuery(routineId: string | null) {
     queryKey: routineRunsQueryKey(routineId ?? ""),
     queryFn: () => fetchRoutineRunsApi(routineId as string),
     enabled,
-    refetchOnMount: "always",
+    refetchOnMount: refetchOnRevealWhenStale,
     refetchInterval: (query) => {
       const runs = query.state.data?.runs ?? [];
       if (runs.some((r) => isAgentRunWorking(r.status))) return 3000;

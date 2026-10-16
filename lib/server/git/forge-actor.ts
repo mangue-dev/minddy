@@ -54,6 +54,12 @@ export type ForgeActor =
       login?: string | null;
     };
 
+/** Optional admission for an already-authorized, request-local batch reader. */
+export interface ForgeActorReadControl {
+  beforeRead(): void;
+  onRateLimit(status: 403 | 429, retryAfter: string | null): void;
+}
+
 /**
  * In-process cache of the membership VERDICT, by (userId, provider, deposit).
  * Short TTL: the right of an account on a deposit rarely moves, but when it
@@ -128,11 +134,14 @@ async function resolveAccount(
   provider: RepoProviderId,
   /** Ignores the stored expiry and rotates the token: see `resolveForgeActor`. */
   force = false,
+  readControl?: ForgeActorReadControl,
 ): Promise<ActorAccount | null> {
+  readControl?.beforeRead();
   if (provider === "github") return getGithubUserToken(userId, { force });
 
   const connection = await findReusableConnection(userId, "gitlab");
   if (!connection) return null;
+  readControl?.beforeRead();
   try {
     const token = await getGitlabAccessToken(connection.id, { force });
     return { token, login: connection.account_login, avatarUrl: null };
@@ -168,6 +177,7 @@ async function fetchCapability(
   provider: RepoProviderId,
   repoFullName: string,
   token: string,
+  readControl?: ForgeActorReadControl,
 ): Promise<CapabilityProbe> {
   const response =
     provider === "github"
@@ -178,6 +188,13 @@ async function fetchCapability(
           `${GITLAB_API_BASE}/projects/${encodeURIComponent(repoFullName)}`,
           { headers: gitlabHeaders(token) },
         );
+
+  const retryAfter = response.headers.get("retry-after") ??
+    (provider === "github" && response.headers.get("x-ratelimit-remaining") === "0" &&
+      Number(response.headers.get("x-ratelimit-reset")) > Date.now() / 1000
+      ? String(Math.ceil(Number(response.headers.get("x-ratelimit-reset")) - Date.now() / 1000)) : null);
+  if (response.status === 429 || response.status === 403 && retryAfter?.trim())
+    readControl?.onRateLimit(response.status as 403 | 429, retryAfter);
 
   if (response.status === 401) return { outcome: "expired" };
   if (response.status === 404) {
@@ -199,15 +216,17 @@ async function fetchCapability(
 }
 
 /**
- * Who acts, and to what extent. Never raises: any failure results in an explicit refusal
- * that the UI knows how to explain.
+ * Ordinary actor lookups retain their explicit refusal/fallback contract.
+ * A controlled batch can stop a later read after its request quota is known.
  */
 export async function resolveForgeActor(opts: {
   userId: string;
   provider: RepoProviderId;
   repoFullName: string;
+  readControl?: ForgeActorReadControl;
 }): Promise<ForgeActor> {
-  let account = await resolveAccount(opts.userId, opts.provider);
+  let account = await resolveAccount(opts.userId, opts.provider, false, opts.readControl);
+  opts.readControl?.beforeRead();
   if (!account) return { kind: "none", reason: "noAccount" };
 
   // Token already found dead: neither probe nor rotation. BEFORE the cache
@@ -227,8 +246,9 @@ export async function resolveForgeActor(opts: {
   }
 
   const probe = async (token: string): Promise<CapabilityProbe | null> => {
+    opts.readControl?.beforeRead();
     try {
-      return await fetchCapability(opts.provider, opts.repoFullName, token);
+      return await fetchCapability(opts.provider, opts.repoFullName, token, opts.readControl);
     } catch {
       // Dead network: we neither claim that it has the right nor that it does not have it.
       // Without cache, the next attempt will retry — and the writing will
@@ -248,7 +268,7 @@ export async function resolveForgeActor(opts: {
   // the refresh token is also dead, the authorization is indeed up
   // redo, and that's what we say.
   if (probed.outcome === "expired") {
-    const rotated = await resolveAccount(opts.userId, opts.provider, true);
+    const rotated = await resolveAccount(opts.userId, opts.provider, true, opts.readControl);
     if (!rotated || rotated.token === account.token) {
       await rememberDeadToken(opts.userId, opts.provider, account.token);
       return { kind: "none", reason: "expired", login: account.login };

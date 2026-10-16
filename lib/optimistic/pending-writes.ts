@@ -12,12 +12,12 @@
 // just done, regardless of order of arrival.
 //
 // The contract is TEMPORAL, not versioned: we apply an entry as long as
-// `settledAt === null || settledAt > fetchStartedAt`. Pas de comparaison
+// `settledAt === null || settledAt > fetchStartedAt`. No comparison
 // of `updated_at` — the server clock is not ours and loads
 // aggregates don't expose it everywhere. Conservative by construction: we can
 // re-apply a patch that the response already contained, which has no effect.
 //
-// Module pur (pas de React, pas de react-query, horloge injectable) : voir
+// Pure module (no React or react-query, injectable clock): see
 // pending-writes.test.ts. Application registers live in issue-writes.ts.
 
 /** What a write promises to the cache, while waiting for the server line. */
@@ -82,6 +82,10 @@ export interface PendingWrites<T extends { id: string }> {
  * denoted by `id` (issues) or by `issue_id` (issue_categories).
  */
   wasJustWritten(id: unknown, record?: unknown): boolean;
+  /** Whether this identity still awaits its creation response, excluding patches and accepted inserts. */
+  hasUnsettledInsert(id: string): boolean;
+  /** Identity-only notification after an unsettled insert is accepted or rejected. */
+  subscribeInsertSettlement(listener: (id: string) => void): () => void;
   /** Tests only: clears the registry. */
   reset(): void;
 }
@@ -125,6 +129,7 @@ export function createPendingWrites<T extends { id: string }>(
   // Insertion order = order of `seq` increasing: the patches merge into
   // the order in which they were made, the last one wins field by field.
   const slots = new Map<number, Slot<T>>();
+  const insertListeners = new Set<(id: string) => void>();
   let nextSeq = 1;
 
   /** Forget entries confirmed for more than `retentionMs`. */
@@ -146,27 +151,44 @@ export function createPendingWrites<T extends { id: string }>(
     settle(handle, serverRow) {
       const slot = slots.get(handle.seq);
       if (!slot) return;
+      const insertedId = slot.entry.kind === "insert" && slot.settledAt === null ? slot.entry.row.id : null;
       slot.settledAt = now();
       slot.stamp = stampOf(serverRow);
-      if (!serverRow) return;
       // The server line is authoritative: it is subsequent to any response
       // that we will continue to overlay, so merging it can only refine it.
-      if (slot.entry.kind === "patch") {
+      if (serverRow && slot.entry.kind === "patch") {
         slot.entry = {
           kind: "patch",
           id: slot.entry.id,
           patch: { ...slot.entry.patch, ...serverRow },
         };
-      } else if (slot.entry.kind === "insert") {
+      } else if (serverRow && slot.entry.kind === "insert") {
         slot.entry = {
           kind: "insert",
           row: { ...slot.entry.row, ...serverRow },
         };
       }
+      if (insertedId !== null) for (const listener of insertListeners) listener(insertedId);
     },
 
     fail(handle) {
+      const slot = slots.get(handle.seq);
       slots.delete(handle.seq);
+      if (slot?.entry.kind === "insert" && slot.settledAt === null) {
+        for (const listener of insertListeners) listener(slot.entry.row.id);
+      }
+    },
+
+    hasUnsettledInsert(id) {
+      for (const slot of slots.values()) {
+        if (slot.entry.kind === "insert" && slot.settledAt === null && slot.entry.row.id === id) return true;
+      }
+      return false;
+    },
+
+    subscribeInsertSettlement(listener) {
+      insertListeners.add(listener);
+      return () => { insertListeners.delete(listener); };
     },
 
     apply(rows, fetchStartedAt) {

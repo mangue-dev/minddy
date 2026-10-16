@@ -1,4 +1,5 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import { projectScopeKeys } from "./realtime-keys";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CATCH_UP_COALESCE_MS,
@@ -154,6 +155,39 @@ describe("createCatchUpQueue", () => {
 describe("with a real QueryClient", () => {
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("refreshes an active Page once after missed events, marks inactive bodies stale and isolates another account", async () => {
+    vi.useFakeTimers();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    const otherAccount = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    const activeKey = ["page", "active"], inactiveKey = ["page", "inactive"];
+    const read = vi.fn(async () => ({ id: "active", version: 2, content: "Remote changes while away" }));
+    for (const account of [client, otherAccount]) {
+      account.setQueryData(activeKey, { id: "active", version: 1, content: "Previously accepted body" });
+      account.setQueryData(inactiveKey, { id: "inactive", version: 1, content: "Inactive body" });
+    }
+    const observer = new QueryObserver(client, { queryKey: activeKey, queryFn: read, staleTime: Infinity });
+    const stop = observer.subscribe(() => {});
+    let pending: Promise<void> | undefined;
+    const queue = createCatchUpQueue((matches) => {
+      pending = client.invalidateQueries({ predicate: (query) => matches(query.queryKey) });
+    });
+    try {
+      expect(read).not.toHaveBeenCalled();
+      queue.push(projectScopeKeys("project-one"));
+      queue.push(projectScopeKeys("project-two"));
+      await vi.advanceTimersByTimeAsync(CATCH_UP_COALESCE_MS);
+      await pending;
+      expect(read).toHaveBeenCalledOnce();
+      expect(observer.getCurrentResult().data).toEqual({ id: "active", version: 2, content: "Remote changes while away" });
+      expect(client.getQueryState(activeKey)?.isInvalidated).toBe(false);
+      expect(client.getQueryState(inactiveKey)?.isInvalidated).toBe(true);
+      expect(client.getQueryState(inactiveKey)?.fetchStatus).toBe("idle");
+      expect(otherAccount.getQueryData(activeKey)).toEqual({ id: "active", version: 1, content: "Previously accepted body" });
+      expect(otherAccount.getQueryState(activeKey)?.isInvalidated).toBe(false);
+      expect(otherAccount.getQueryState(inactiveKey)?.isInvalidated).toBe(false);
+    } finally { queue.cancel(); stop(); client.clear(); otherAccount.clear(); }
   });
 
   /**

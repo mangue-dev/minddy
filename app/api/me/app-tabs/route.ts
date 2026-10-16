@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { appTabResultStatus, listAppTabs, mutateAppTab } from "@/lib/server/app-tabs";
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  // The RLS read overlaps the live session check, which still gates the response.
+  const auth = await getAuthedUserWithRlsReads(request, ({ user, supabase }) => listAppTabs(supabase, user.id));
   if (!auth.ok) return auth.response;
   try {
-    return NextResponse.json(await listAppTabs(auth.supabase, auth.user.id));
+    return NextResponse.json(await auth.reads);
   } catch {
     return NextResponse.json({ code: "database" }, { status: 500 });
   }

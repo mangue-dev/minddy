@@ -16,7 +16,15 @@ vi.mock("./server/project-members", () => ({
 vi.mock("./server/cycles", () => ({ ensureCycles: vi.fn(), toCycleInfo: vi.fn(), todayInTz: vi.fn() }));
 vi.mock("./cycle-prefs", () => ({ resolveCyclePrefs: () => ({ enabled: false }) }));
 vi.mock("./server/api-auth", () => ({
-  getAuthedUser: async () => ({
+  getAuthedUserWithRlsReads: async (_request: unknown,
+    readRls: (verified: { user: unknown; supabase: unknown }) => Promise<unknown> | null) => {
+    const auth = authed();
+    return { ...auth, reads: readRls(auth) };
+  },
+}));
+
+function authed() {
+  return {
     ok: true,
     user: { id: "user", user_metadata: {} },
     supabase: {
@@ -29,6 +37,10 @@ vi.mock("./server/api-auth", () => ({
             return query;
           },
           order() { return query; },
+          limit() { return query; },
+          gt() { return query; },
+          gte() { return query; },
+          lt() { return query; },
           is() { return query; },
           then(resolve: (result: unknown) => unknown) {
             const rows = table === "issue_relations" ? state.relations : [];
@@ -43,8 +55,8 @@ vi.mock("./server/api-auth", () => ({
         return query;
       },
     },
-  }),
-}));
+  };
+}
 
 const { GET } = await import("@/app/api/me/board/route");
 

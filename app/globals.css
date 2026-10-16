@@ -16,6 +16,11 @@
 @custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
 @custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
 
+/* The closed picker and its floating wrapper must both release board hit points. */
+[data-radix-popper-content-wrapper]:has(> [data-project-picker-menu][data-state="closed"]) {
+  pointer-events: none;
+}
+
 /* One hover cursor for the whole app (MIN-587): buttons and every other
    interactive element show the default arrow, never the pointer hand. The
    adapted cursor still wins where it carries meaning — text fields, drag
@@ -3351,4 +3356,24 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 .mobile-navigation-progress > div { animation: mobile-navigation-progress 1.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .mobile-navigation-progress > div { animation: none; width: 100%; }
+}
+
+/* ─── Placeholder tabs while the first tab list loads ─────────────────────────────
+   A soft band sweeps left to right across muted tab shapes in the top bar,
+   in the reading direction like `text-shimmer`. Reduced motion keeps the
+   shapes still. */
+.app-tab-skeleton {
+  background: linear-gradient(90deg,
+    var(--sidebar-accent) 0%,
+    color-mix(in oklab, var(--sidebar-accent), var(--sidebar-foreground) 8%) 50%,
+    var(--sidebar-accent) 100%);
+  background-size: 300% 100%;
+  animation: app-tab-skeleton-sweep 1.4s ease-in-out infinite;
+}
+@keyframes app-tab-skeleton-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-tab-skeleton { animation: none; }
 }

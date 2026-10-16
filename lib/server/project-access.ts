@@ -57,6 +57,41 @@ export async function accessibleProjectIds(
   ]);
 }
 
+/** Plaintext project columns an access check may return with its decision. */
+export type ProjectAccessColumn = "icon_url" | "icon_storage_path";
+
+/**
+ * The access decision of `getProjectAccess` without decoding the project, for
+ * routes that only need to know whether the caller may use it. The project
+ * row and the membership probe are read together in this request; `columns`
+ * adds plaintext columns of the same row, read under the same decision.
+ */
+export async function hasProjectAccess<Column extends ProjectAccessColumn = never>(
+  userId: string,
+  projectId: string,
+  columns: readonly Column[] = []
+): Promise<{ isOwner: boolean; row: Record<Column, unknown> } | null> {
+  const supabase = getServiceClient();
+  const [{ data: project }, { data: membership }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select(["id", "owner_id", ...columns].join(","))
+      .eq("id", projectId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("project_id", projectId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+  if (!project) return null;
+  const row = project as unknown as Record<Column | "owner_id", unknown>;
+  const isOwner = row.owner_id === userId;
+  return isOwner || membership ? { isOwner, row } : null;
+}
+
 export async function getProjectAccess(
   userId: string,
   projectId: string

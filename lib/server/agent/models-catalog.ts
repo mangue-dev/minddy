@@ -1,6 +1,11 @@
 import "server-only";
 
-import { getUserByok, getUserDefaultModel, resolveAgentApiKey } from "./model";
+import {
+  getUserByok,
+  getUserDefaultModel,
+  resolveAgentApiKey,
+  type UserByok,
+} from "./model";
 import {
   getBaselinePricing,
   getModelPlanLimit,
@@ -381,8 +386,15 @@ async function resolveRecommended(
 export async function getAgentModelsForUser(
   userId: string,
   surface: Extract<AiSurface, "agent" | "assistant"> = "agent",
+  /** This request's `getUserByok(userId, "assistant")`, when the caller already started it. */
+  assistantByok?: Promise<UserByok | null>,
 ): Promise<AgentModelsCatalog> {
   const modelKey: ByokModelKey = "assistant_model";
+  // The assistant catalog reads the same assignment for its endpoint and for
+  // its feature default: resolve it once.
+  const byokRead = surface === "assistant"
+    ? assistantByok ?? getUserByok(userId, surface)
+    : undefined;
   // Active Provider: BYOK of the account, or OpenRouter platform key.
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
@@ -396,6 +408,7 @@ export async function getAgentModelsForUser(
     // namespace.
     const endpoint = await resolveAgentApiKey(userId, surface, {
       allowLocal: true,
+      byok: byokRead,
     });
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
@@ -409,8 +422,7 @@ export async function getAgentModelsForUser(
   // Assistant calls retain provider feature defaults. Code-worker catalogs
   // expose only the explicit provider-bound account preference: there is no
   // provider or platform fallback that a new delegation could silently use.
-  const byok =
-    surface === "assistant" ? await getUserByok(userId, surface) : null;
+  const byok = byokRead ? await byokRead : null;
   const featureDefault = byok?.featureModels[modelKey]?.trim();
   const providerDefault =
     surface === "assistant"
@@ -487,8 +499,9 @@ export async function getAgentModelsForUser(
 /** Catalog for Numo conversations, using the assistant BYOK surface. */
 export function getAssistantModelsForUser(
   userId: string,
+  byok?: Promise<UserByok | null>,
 ): Promise<AgentModelsCatalog> {
-  return getAgentModelsForUser(userId, "assistant");
+  return getAgentModelsForUser(userId, "assistant", byok);
 }
 
 /** Capability-aware catalog for the active BYOK settings screen. */

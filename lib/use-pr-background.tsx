@@ -1,8 +1,11 @@
 "use client";
 
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { createPrActivityPreparation } from "./pr-activity-preparation";
+import { createPrDiffRuntimePreparation, type PreparedPrDiffRuntime } from "./pr-diff-runtime-preparation";
 import { useAllPullRequestsQuery } from "./use-agent-runs";
-import { pullRequestAccountRetryAt, pullRequestQueryOptions } from "./pull-request-query";
+import { createPrBackgroundRefresh } from "./pr-background-refresh";
 import { usePrLive } from "./use-pr-live";
 
 export const PR_BACKGROUND_LIMIT = 5;
@@ -19,14 +22,26 @@ export function PrBackgroundSync() {
   const ids = [...new Set(pullRequests
     .filter((pr) => pr.pr_state === "open" || pr.pr_state === "draft")
     .map((pr) => pr.prId))].slice(0, PR_BACKGROUND_LIMIT);
-  useQueries({ queries: ids.map((prId) => ({
-    ...pullRequestQueryOptions(prId),
-    staleTime: 60_000,
-    refetchOnMount: true as const,
-    refetchInterval: () => {
-      const pause = pullRequestAccountRetryAt(client) - Date.now();
-      return pause > 0 ? pause : 60_000;
-    },
-  })) });
-  return ids.map((prId) => <LiveDetail key={prId} prId={prId} />);
+  const identity = ids.join("|");
+  const [diffRuntime, setDiffRuntime] = useState<PreparedPrDiffRuntime | null>(null);
+  const refresh = useRef<ReturnType<typeof createPrBackgroundRefresh> | null>(null);
+  useEffect(() => createPrDiffRuntimePreparation(client, identity ? identity.split("|") : [], setDiffRuntime), [client, identity]);
+  useEffect(() => {
+    const owner = createPrBackgroundRefresh(client);
+    refresh.current = owner;
+    return () => { owner.dispose(); if (refresh.current === owner) refresh.current = null; };
+  }, [client]);
+  useEffect(() => {
+    refresh.current?.update(identity ? identity.split("|") : []);
+  }, [client, identity]);
+  useEffect(() => {
+    const preparation = createPrActivityPreparation(client);
+    preparation.update(identity ? identity.split("|") : []);
+    return () => preparation.dispose();
+  }, [client, identity]);
+  const DiffRuntime = diffRuntime?.Surface;
+  return <>
+    {ids.map((prId) => <LiveDetail key={prId} prId={prId} />)}
+    {ids.length > 0 && DiffRuntime && <DiffRuntime languages={diffRuntime.languages} />}
+  </>;
 }

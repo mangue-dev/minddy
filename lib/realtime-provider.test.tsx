@@ -6,6 +6,11 @@ import type { AuthChangeEvent } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeProvider } from "./realtime-provider";
 import { signalRealtimeRekey } from "./realtime-topic";
+import { realtimeCoverageLive } from "./realtime-coverage";
+import { recordAcceptedPageWrite } from "./optimistic-page-writes";
+import { globalBoardQueryFn } from "./global-board-api";
+import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import type { GlobalBoardResponse, Issue } from "./types";
 
 const realtime = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -18,8 +23,10 @@ vi.mock("./supabase", () => ({ getSupabase: () => ({
   rpc: realtime.rpc,
   channel: realtime.channel,
   removeChannel: realtime.removeChannel,
-  realtime: { setAuth: realtime.setAuth },
-  auth: { onAuthStateChange: (listener: (event: AuthChangeEvent) => void) => {
+  realtime: { setAuth: realtime.setAuth, isConnected: () => true, connect: vi.fn(),
+    sendHeartbeat: async () => {}, pendingHeartbeatRef: null },
+  auth: { getSession: async () => ({ data: { session: { user: { id: "user-1" } } }, error: null }),
+    onAuthStateChange: (listener: (event: AuthChangeEvent) => void) => {
     realtime.authListeners.add(listener);
     return { data: { subscription: { unsubscribe: () =>
       realtime.authListeners.delete(listener) } } };
@@ -279,5 +286,214 @@ describe("Realtime authorization recovery", () => {
     await auth("TOKEN_REFRESHED");
     await advance(60_000);
     expect(requests("user:user-1")).toBe(2);
+  });
+});
+
+describe("reveal coverage", () => {
+  it("vouches for cached reads only while every open scope is joined", async () => {
+    let status: ((value: string) => void) | undefined;
+    realtime.channel.mockImplementation((topic: string) => {
+      const channel = {
+        on: vi.fn(() => channel),
+        subscribe: vi.fn((listener) => {
+          if (topic.startsWith("project:")) status = listener;
+          else listener("SUBSCRIBED");
+        }),
+      };
+      return channel;
+    });
+    expect(realtimeCoverageLive()).toBe(false);
+    await mount();
+    await advance(0);
+    expect(realtimeCoverageLive()).toBe(false);
+    await act(async () => status!("SUBSCRIBED"));
+    expect(realtimeCoverageLive()).toBe(true);
+    await act(async () => status!("CHANNEL_ERROR"));
+    expect(realtimeCoverageLive()).toBe(false);
+    await act(async () => status!("SUBSCRIBED"));
+    expect(realtimeCoverageLive()).toBe(true);
+    await act(() => root.unmount());
+    mounted = false;
+    expect(realtimeCoverageLive()).toBe(false);
+  });
+});
+
+describe("own page write echoes", () => {
+  const page = (version: number, updatedAt: string) => ({ id: "page-1", project_id: "project-1", version, updated_at: updatedAt });
+  const at = "2026-10-15T10:00:00.123456+00:00", later = "2026-10-15T10:00:02.000000+00:00";
+  const DOCUMENT_KEYS = [["page", "page-1"], ["pages", "project-1"], ["app-tab-metadata"]].map((key) => JSON.stringify(key));
+  async function projectUpdates() {
+    await mount();
+    await advance(1_000);
+    const index = realtime.channel.mock.calls.findIndex(([topic]) => topic === "project:project-1:v:1");
+    const channel = realtime.channel.mock.results[index].value;
+    const update = channel.on.mock.calls.find(([, filter]: [unknown, { event: string }]) => filter.event === "UPDATE")![2];
+    return (record: ReturnType<typeof page>) => act(async () => update({ payload: {
+      operation: "UPDATE", table: "pages", schema: "public", record, old_record: page(record.version - 1, at) } }));
+  }
+  function watchInvalidations() {
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    return () => invalidate.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey));
+  }
+
+  it("skips the refetches an acknowledgement landing after its broadcast already wrote", async () => {
+    const update = await projectUpdates();
+    const invalidated = watchInvalidations();
+    // The broadcast leaves at commit, a few milliseconds before the PATCH response.
+    await update(page(17, at));
+    recordAcceptedPageWrite(client, page(17, at), ["content", "version"]);
+    await advance(250);
+    expect(invalidated().filter((key) => DOCUMENT_KEYS.includes(key))).toEqual([]);
+    expect(invalidated()).toContain(JSON.stringify(["me", "search-index"]));
+  });
+
+  it("still refetches a remote version, alone or coalesced with an own echo", async () => {
+    const update = await projectUpdates();
+    recordAcceptedPageWrite(client, page(17, at), ["content", "version"]);
+    const invalidated = watchInvalidations();
+    await update(page(18, later));
+    await advance(250);
+    expect(invalidated()).toEqual(expect.arrayContaining(DOCUMENT_KEYS));
+    const before = invalidated().length;
+    await update(page(17, at));
+    await update(page(18, later));
+    await advance(250);
+    expect(invalidated().slice(before)).toEqual(expect.arrayContaining(DOCUMENT_KEYS));
+  });
+});
+
+describe("remote ticket changes on the aggregate board", () => {
+  const row = (status: string, updatedAt: string) => ({ id: "issue-1", project_id: "project-1", title: "Ticket", status,
+    category_ids: [], created_at: "2026-10-15T10:00:00.000Z", updated_at: updatedAt }) as unknown as Issue;
+  const board = (issues: Issue[]): GlobalBoardResponse => ({ issues, members: {}, categories: {}, objectives: {},
+    integrations: {}, relations: [], cycles: { enabled: false, current: null, upcoming: [], past: [] } });
+  const at = "2026-10-15T10:00:00.000Z", later = "2026-10-15T10:00:05.000Z";
+  async function observedBoard() {
+    const fetch = vi.fn(async (path: string) => path.startsWith("/api/me/board")
+      ? Response.json(board([row("todo", at)]))
+      : path === "/api/issues/issue-1"
+        ? Response.json({ ...row("done", later), github_metadata: null })
+        : Response.json({ error: "Unexpected" }, { status: 500 }));
+    vi.stubGlobal("fetch", fetch);
+    client.setQueryData(GLOBAL_BOARD_KEY, board([row("todo", at)]));
+    const stop = new QueryObserver(client, { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: Infinity }).subscribe(() => {});
+    await mount();
+    await advance(1_000);
+    fetch.mockClear();
+    const paths = () => fetch.mock.calls.map(([path]) => path.split("?")[0]);
+    return { stop, paths };
+  }
+
+  it("reads only the changed ticket for a remote metadata broadcast", async () => {
+    const { stop, paths } = await observedBoard();
+    try {
+      const index = realtime.channel.mock.calls.findIndex(([topic]) => topic === "project:project-1:v:1");
+      const update = realtime.channel.mock.results[index].value.on.mock.calls
+        .find(([, filter]: [unknown, { event: string }]) => filter.event === "UPDATE")![2];
+      const metadata = { id: "issue-1", project_id: "project-1", updated_at: later };
+      await act(async () => update({ payload: { operation: "UPDATE", table: "issues", schema: "public", record: metadata, old_record: metadata } }));
+      await advance(250);
+      await advance(0);
+      expect(paths()).toEqual(["/api/issues/issue-1"]);
+      expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues[0]).toMatchObject({ status: "done", updated_at: later });
+    } finally { stop(); }
+  });
+
+  it("does not read every issue twice when the window comes back", async () => {
+    const { stop, paths } = await observedBoard();
+    try {
+      await act(async () => window.dispatchEvent(new Event("blur")));
+      await advance(20_000);
+      await act(async () => window.dispatchEvent(new Event("focus")));
+      await advance(1_000);
+      expect(paths()).not.toContain("/api/me/issues");
+      expect(paths().filter((path) => path === "/api/me/board")).toHaveLength(1);
+    } finally { stop(); }
+  });
+});
+
+describe("resume revalidation", () => {
+  const board: GlobalBoardResponse = { issues: [], members: {}, categories: {}, objectives: {}, integrations: {},
+    relations: [], cycles: { enabled: false, current: null, upcoming: [], past: [] } };
+  async function resumeAfterAbsence(projectTopic: { data: unknown; error: unknown }) {
+    realtime.channel.mockImplementation(() => {
+      const channel = {
+        state: "joining",
+        on: vi.fn(() => channel),
+        subscribe: vi.fn((listener) => { channel.state = "joined"; listener("SUBSCRIBED"); }),
+      };
+      return channel;
+    });
+    // A board read takes seconds, so the first catch-up wave is still in flight
+    // when a rejoined channel would start a second one.
+    const fetch = vi.fn((path: string) => new Promise<Response>((done) => {
+      setTimeout(() => done(path.startsWith("/api/me/board") ? Response.json(board) : Response.json({ error: "Unexpected" }, { status: 500 })), 2_000);
+    }));
+    vi.stubGlobal("fetch", fetch);
+    client.setQueryData(GLOBAL_BOARD_KEY, board);
+    const stop = new QueryObserver(client, { queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: Infinity }).subscribe(() => {});
+    await mount();
+    await advance(3_000);
+    realtime.rpc.mockImplementation(async (_name, { p_topic }: { p_topic: string }) => {
+      await new Promise((done) => setTimeout(done, 300));
+      return p_topic === "project:project-1" ? projectTopic : { data: `${p_topic}:v:1`, error: null };
+    });
+    fetch.mockClear();
+    realtime.removeChannel.mockClear();
+    const channels = realtime.channel.mock.calls.length;
+    await act(async () => window.dispatchEvent(new Event("blur")));
+    await advance(20_000);
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    await advance(5_000);
+    stop();
+    return {
+      boardReads: fetch.mock.calls.filter(([path]) => path.startsWith("/api/me/board")).length,
+      joined: realtime.channel.mock.calls.slice(channels).map(([topic]) => topic),
+    };
+  }
+
+  it("keeps channels joined on an unchanged generation and catches up once", async () => {
+    const result = await resumeAfterAbsence({ data: "project:project-1:v:1", error: null });
+    expect(realtime.removeChannel).not.toHaveBeenCalled();
+    expect(result.joined).toEqual([]);
+    expect(result.boardReads).toBe(1);
+  });
+
+  it("reconnects a channel whose generation changed and catches up after it joins", async () => {
+    const result = await resumeAfterAbsence({ data: "project:project-1:v:2", error: null });
+    expect(realtime.removeChannel).toHaveBeenCalledTimes(1);
+    expect(result.joined).toEqual(["project:project-1:v:2"]);
+    expect(result.boardReads).toBe(2);
+  });
+
+  it("closes a scope whose access was revoked while away", async () => {
+    const result = await resumeAfterAbsence({ data: null, error: denied });
+    expect(realtime.removeChannel).toHaveBeenCalledTimes(1);
+    expect(result.joined).toEqual([]);
+    await advance(60_000);
+    expect(requests("project:project-1")).toBe(3);
+  });
+});
+
+describe("project counter broadcasts", () => {
+  it("patches the list for an issue number reservation instead of refetching it", async () => {
+    const stored = { id: "project-1", owner_id: "user-1", issue_seq: 7, updated_at: "2026-10-15T09:00:00.000000+00:00", deleted_at: null,
+      content_revision: 3 };
+    client.setQueryData(["projects"], [{ id: "project-1", name: "Project", issue_seq: 7, updated_at: stored.updated_at, deleted_at: null }]);
+    await mount();
+    await advance(1_000);
+    const index = realtime.channel.mock.calls.findIndex(([topic]) => topic === "user:user-1:v:1");
+    const update = realtime.channel.mock.results[index].value.on.mock.calls
+      .find(([, filter]: [unknown, { event: string }]) => filter.event === "UPDATE")![2];
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    // As broadcast: guard_project_content also increments content_revision.
+    const bumped = { ...stored, issue_seq: 8, updated_at: "2026-10-15T10:00:00.000000+00:00", content_revision: 4 };
+    await act(async () => update({ payload: { operation: "UPDATE", table: "projects", schema: "public", record: bumped, old_record: stored } }));
+    await advance(250);
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(client.getQueryData(["projects"])).toEqual([{ id: "project-1", name: "Project", issue_seq: 8, updated_at: bumped.updated_at, deleted_at: null }]);
+    await act(async () => update({ payload: { operation: "UPDATE", table: "projects", schema: "public", record: { ...bumped, deleted_at: bumped.updated_at }, old_record: bumped } }));
+    await advance(250);
+    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(expect.arrayContaining([["projects"], ["me", "smart-assign-warnings"]]));
   });
 });

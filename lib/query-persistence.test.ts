@@ -110,6 +110,50 @@ describe("workspace query persistence", () => {
     expect(persistClient).toHaveBeenCalledTimes(1);
   });
 
+  it("saves the first change after the usual delay even while changes continue", async () => {
+    const { client, persistClient } = workspace();
+    for (let second = 0; second < 5; second++) {
+      client.setQueryData(["comments", "issue-1"], [{ text: `Edit ${second}` }]);
+      await vi.advanceTimersByTimeAsync(second === 4 ? 999 : 1_000);
+    }
+    expect(persistClient).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(persistClient).toHaveBeenCalledTimes(1);
+  });
+
+  it("throttles snapshots during continuous editing and keeps a trailing save", async () => {
+    const { client, persistClient } = workspace();
+    for (let second = 0; second < 120; second++) {
+      client.setQueryData(["comments", "issue-1"], [{ text: `Edit ${second}` }]);
+      await vi.advanceTimersByTimeAsync(1_000);
+    }
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(persistClient.mock.calls.length).toBeLessThanOrEqual(5);
+    const latest = persistClient.mock.calls.at(-1)![0].clientState.queries
+      .find((query) => query.queryKey[0] === "comments");
+    expect(latest?.state.data).toEqual([{ text: "Edit 119" }]);
+  });
+
+  it("saves after the usual delay once changes have been quiet for the interval", async () => {
+    const { client, persistClient, persistence } = workspace();
+    client.setQueryData(["comments", "issue-1"], [{ text: "First" }]);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(persistClient).toHaveBeenCalledTimes(1);
+    // A change soon after a save waits for the interval, unless the page leaves.
+    client.setQueryData(["comments", "issue-1"], [{ text: "Soon after" }]);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(persistClient).toHaveBeenCalledTimes(1);
+    persistence.flush();
+    expect(persistClient).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    client.setQueryData(["comments", "issue-1"], [{ text: "After quiet" }]);
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(persistClient).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(persistClient).toHaveBeenCalledTimes(3);
+  });
+
   it("cancels pending writes and ignores later updates after logout or unmount", () => {
     const { client, persistClient, persistence } = workspace();
     client.setQueryData(["comments", "issue-1"], [{ text: "Private" }]);

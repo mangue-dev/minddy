@@ -7,15 +7,13 @@ import {
   addObjectiveCommentApi,
   deleteResourceApi,
   deleteCommentApi,
-  fetchObjectiveCommentsApi,
-  fetchObjectiveEventsApi,
   updateCommentApi,
 } from "./comments-api";
+import { objectiveCommentsOptions, objectiveEventsOptions } from "./secondary-view-queries";
 import type { Comment, ResourceInput } from "./types";
 import type { TimelineItem } from "./use-issue-timeline";
 
 const commentsKey = (objectiveId: string) => ["objective-comments", objectiveId] as const;
-const eventsKey = (objectiveId: string) => ["objective-events", objectiveId] as const;
 
 /**
  * Comments + activity events for one objective, merged into a chronological
@@ -27,22 +25,10 @@ export function useObjectiveTimeline(objectiveId: string | null) {
   const queryClient = useQueryClient();
 
   const { data: comments } = useQuery({
-    queryKey: commentsKey(objectiveId ?? ""),
-    queryFn: () => fetchObjectiveCommentsApi(objectiveId as string),
-    enabled: !!objectiveId,
-    // Same safety net as the issue and feedback timelines: while a @Numo reply
-    // is 'working', poll for the state transitions the realtime push may miss.
-    refetchInterval: (query) =>
-      (query.state.data as Comment[] | undefined)?.some(
-        (c) => c.assistant_status === "working"
-      )
-        ? 1500
-        : false,
+    ...objectiveCommentsOptions(objectiveId ?? ""), enabled: !!objectiveId,
   });
   const { data: events } = useQuery({
-    queryKey: eventsKey(objectiveId ?? ""),
-    queryFn: () => fetchObjectiveEventsApi(objectiveId as string),
-    enabled: !!objectiveId,
+    ...objectiveEventsOptions(objectiveId ?? ""), enabled: !!objectiveId,
   });
 
   const items = useMemo<TimelineItem[]>(() => {

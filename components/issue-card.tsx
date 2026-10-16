@@ -6,6 +6,7 @@ import {
   memo,
   useCallback,
   useMemo,
+  useLayoutEffect,
   useRef,
   useState,
   type ComponentProps,
@@ -911,6 +912,7 @@ const IssueCardContent = memo(function IssueCardContent({
   selected,
   dragging,
   onSelect,
+  onInteractionChange,
 }: {
   issue: Issue;
   projectId: string;
@@ -961,6 +963,8 @@ const IssueCardContent = memo(function IssueCardContent({
       the case for other selected tickets, which fade with it. */
   dragging?: boolean;
   onSelect?: (issueId: string) => void;
+  /** A window retains card-owned dialogs, drafts and unfinished uploads. */
+  onInteractionChange?: (issueId: string, open: boolean) => void;
 }) {
   const t = useTranslations("IssueUI");
   const tAttach = useTranslations("Resources");
@@ -1305,6 +1309,11 @@ const IssueCardContent = memo(function IssueCardContent({
       "shift+a": launchAgent,
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
+  const interactionOpen = !!(menuPosition || relationType || confirmDelete || customTarget || menuState || uploads.pending.length);
+  useLayoutEffect(() => {
+    onInteractionChange?.(issue.id, interactionOpen);
+    // Activity disconnects effects while retaining dialog state and its owner.
+  }, [issue.id, interactionOpen, onInteractionChange]);
 
   // Opens the picker of a field at the point of the last right click — where the menu
   // who just proposed it was displayed, as for the relationship picker.

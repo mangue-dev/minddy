@@ -7,10 +7,9 @@ import {
   addFeedbackCommentApi,
   deleteResourceApi,
   deleteFeedbackCommentApi,
-  fetchFeedbackCommentsApi,
-  fetchFeedbackEventsApi,
   updateFeedbackCommentApi,
 } from "./comments-api";
+import { feedbackCommentsOptions, feedbackEventsOptions } from "./secondary-view-queries";
 import type { Comment, ResourceInput } from "./types";
 import type { CommentVisibility } from "./feedback/types";
 import type { TimelineItem } from "./use-issue-timeline";
@@ -36,22 +35,10 @@ export function useFeedbackTimeline(projectId: string, postId: string | null) {
   const queryClient = useQueryClient();
 
   const { data: comments } = useQuery({
-    queryKey: feedbackCommentsKey(projectId, postId ?? ""),
-    queryFn: () => fetchFeedbackCommentsApi(projectId, postId as string),
-    enabled: !!postId,
-    // While a @Numo reply streams (assistant_status 'working'), poll as a
-    // safety net for the realtime push.
-    refetchInterval: (query) =>
-      (query.state.data as Comment[] | undefined)?.some(
-        (c) => c.assistant_status === "working"
-      )
-        ? 1500
-        : false,
+    ...feedbackCommentsOptions(projectId, postId ?? ""), enabled: !!postId,
   });
   const { data: events } = useQuery({
-    queryKey: feedbackEventsKey(projectId, postId ?? ""),
-    queryFn: () => fetchFeedbackEventsApi(projectId, postId as string),
-    enabled: !!postId,
+    ...feedbackEventsOptions(projectId, postId ?? ""), enabled: !!postId,
   });
 
   const items = useMemo<TimelineItem[]>(() => {

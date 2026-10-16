@@ -8,12 +8,12 @@ type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /** GET — a page with its body (ProseMirror document). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
-  const { pageId } = await params;
+  const { id, pageId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const result = await getPage(pageId, auth.user.id);
+  const result = await getPage(pageId, auth.user.id, { projectId: id });
   if (!result.ok) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }

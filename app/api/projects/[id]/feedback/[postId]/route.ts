@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { softDeleteItem } from "@/lib/server/trash";
 import {
   getProjectFeedbackPost,
+  requireFeedbackMember,
   requireProjectMember,
 } from "@/lib/server/feedback/team-guard";
 import { getTeamFeedbackDetail } from "@/lib/server/feedback/team-queries";
@@ -14,7 +15,7 @@ type RouteContext = { params: Promise<{ id: string; postId: string }> };
  manual status, team response — never submitted_*); DELETE. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireFeedbackMember(request, id);
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 

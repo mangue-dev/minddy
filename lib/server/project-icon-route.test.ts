@@ -2,18 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const getAuthedUser = vi.fn();
-const getProjectAccess = vi.fn();
+const hasProjectAccess = vi.fn();
 const getBoardByToken = vi.fn();
 const getPublicShareTarget = vi.fn();
 const isShareUnlocked = vi.fn();
 const downloadProjectIcon = vi.fn();
+const downloadProjectIconFromReference = vi.fn();
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: (...args: unknown[]) => getAuthedUser(...args),
 }));
 vi.mock("@/lib/server/project-access", () => ({
-  getProjectAccess: (...args: unknown[]) => getProjectAccess(...args),
+  hasProjectAccess: (...args: unknown[]) => hasProjectAccess(...args),
 }));
 vi.mock("@/lib/server/feedback/boards", () => ({
   getBoardByToken: (...args: unknown[]) => getBoardByToken(...args),
@@ -26,6 +27,8 @@ vi.mock("@/lib/server/share-unlock", () => ({
 }));
 vi.mock("@/lib/server/project-icon", () => ({
   downloadProjectIcon: (...args: unknown[]) => downloadProjectIcon(...args),
+  downloadProjectIconFromReference: (...args: unknown[]) =>
+    downloadProjectIconFromReference(...args),
 }));
 
 const { GET } = await import("@/app/api/projects/[id]/icon/content/route");
@@ -36,11 +39,12 @@ const icon = { bytes: Buffer.from("protected image"), mimeType: "image/webp" };
 beforeEach(() => {
   vi.resetAllMocks();
   getAuthedUser.mockResolvedValue({ ok: false });
-  getProjectAccess.mockResolvedValue(null);
+  hasProjectAccess.mockResolvedValue(null);
   getBoardByToken.mockResolvedValue(null);
   getPublicShareTarget.mockResolvedValue(null);
   isShareUnlocked.mockResolvedValue(false);
   downloadProjectIcon.mockResolvedValue(icon);
+  downloadProjectIconFromReference.mockResolvedValue(icon);
 });
 
 function request(query = "") {
@@ -53,15 +57,18 @@ describe("private project icon delivery", () => {
     getAuthedUser.mockResolvedValue({ ok: true, user: { id: "user-1" } });
     expect((await GET(request(), params)).status).toBe(404);
     expect(downloadProjectIcon).not.toHaveBeenCalled();
+    expect(downloadProjectIconFromReference).not.toHaveBeenCalled();
   });
 
   it("serves current members with a private non-cacheable response", async () => {
     getAuthedUser.mockResolvedValue({ ok: true, user: { id: "user-1" } });
-    getProjectAccess.mockResolvedValue({ project: { id: projectId } });
+    const reference = { icon_url: "/icon?v=1", icon_storage_path: "icons/p.bin" };
+    hasProjectAccess.mockResolvedValue({ isOwner: false, row: reference });
     const response = await GET(request(), params);
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("protected image");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(downloadProjectIconFromReference).toHaveBeenCalledWith(projectId, reference);
   });
 
   it("binds feedback and page capabilities to the same live project", async () => {

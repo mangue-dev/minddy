@@ -130,6 +130,7 @@
     "@tanstack/query-sync-storage-persister": "^5.103.2",
     "@tanstack/react-query": "^5.103.2",
     "@tanstack/react-query-persist-client": "^5.103.2",
+    "@tanstack/react-virtual": "3.14.17",
     "@tiptap/core": "3.31.3",
     "@tiptap/extension-blockquote": "3.31.3",
     "@tiptap/extension-code-block": "3.31.3",

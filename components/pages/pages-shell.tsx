@@ -7,6 +7,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useTranslations } from "next-intl";
@@ -23,13 +24,15 @@ import { PageCreateMenu } from "@/components/pages/page-create-menu";
 import { markDatabaseSetup } from "@/lib/page-database-setup";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { PageView } from "@/components/pages/page-view";
+import { RetainedPageDocuments } from "./retained-page-documents";
+import { retainedPageDocumentCost } from "@/lib/retained-page-documents";
 import { PagesHome } from "@/components/pages/pages-home";
 import { PagePresenceProvider } from "@/components/pages/page-presence";
-import { usePagesQuery } from "@/lib/use-pages-query";
+import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError } from "@/lib/pages-api";
 import { rememberLastPage } from "@/lib/pages-last-open";
-import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
+import { forgetDraftPage, isDraftPage, markDraftPage } from "@/lib/pages-draft";
 import {
   pageHref,
   pagesHref,
@@ -45,6 +48,7 @@ export function PagesShell({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
 function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const openDestination = useAppNavigation();
+  const client = useQueryClient();
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
@@ -62,6 +66,11 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   const { pages, tree, byId, loading, createPage, prefetchPage, updatePage, trashPage } =
     usePagesQuery(projectId);
+  const eligible = new Set(pages.filter((page) => {
+    const state = client.getQueryState(pageKey(page.id));
+    return state?.status === "success" && !isDraftPage(page.id) &&
+      retainedPageDocumentCost(state.data) === 1;
+  }).map((page) => page.id));
   const [query, setQuery] = useMobileCollectionState(base, "query", "");
 
   const previewId = searchParams.get("entry");
@@ -84,10 +93,8 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     else pushPagesHistory(href);
   };
 
-  // The open page is retained HERE rather than in `PageView`: the shell
-  // crosses navigations, so it sees the LAST state of the tab, y
-  // included returning to the list after trashing. It is
-  // `app/(app)/projects/[id]/pages/page.tsx` which rereads it when opened.
+  // Remember the last selection in the project shell, including returning to
+  // the list after trashing. The project's Pages route reads it when reopened.
   useEffect(() => {
     if (activePageId) rememberLastPage(projectId, activePageId);
   }, [projectId, activePageId]);
@@ -263,9 +270,9 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {activePageId ? (
-          <PageView key={activePageId} projectId={projectId} pageId={activePageId} active={!validPreview} onNavigate={openPage} />
-        ) : (
+        <RetainedPageDocuments projectId={projectId} pageId={activePageId} eligible={eligible} active={!validPreview}
+          renderPage={(id, active) => <PageView projectId={projectId} pageId={id} active={active} onNavigate={openPage} />}
+          home={
           <PagesHome
             projectId={projectId}
             pages={pages}
@@ -273,7 +280,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
             loading={loading}
             onCreate={(database) => void create(null, database)}
           />
-        )}
+          } />
       </div>
     </div>
     <SidePanel open={!!validPreview} onOpenChange={(open) => { if (!open) void leavePreview(); }}>

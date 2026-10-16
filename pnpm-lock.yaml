@@ -91,6 +91,9 @@ importers:
       '@tanstack/react-query-persist-client':
         specifier: ^5.103.2
         version: 5.103.2(@tanstack/react-query@5.103.2(react@19.3.0))(react@19.3.0)
+      '@tanstack/react-virtual':
+        specifier: 3.14.17
+        version: 3.14.17(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tiptap/core':
         specifier: 3.31.3
         version: 3.31.3(@tiptap/pm@3.31.3)
@@ -2960,6 +2963,15 @@ packages:
     resolution: {integrity: sha512-B+fWiYZBc+0uUD5zDZAeLw9dKj7XEsdnuu6zRZ+no6LNKpeE3P3bJ+N6HINjcIlWR6fW3vUoTneEaGa2V6ehqw==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@tanstack/react-virtual@3.14.17':
+    resolution: {integrity: sha512-b7b5LwydgQAWcsAWEZyd3iZkN5/QcC6S0K5E1zNheyFoSZl7E78foepGeDHlX2+JuXilA+VIGGFsUYPFddOrig==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@tanstack/virtual-core@3.19.2':
+    resolution: {integrity: sha512-Ch+e8t097FdTfuihfRwBMqz/OfRZKHOH/C213dbM1lXDZ8bv6r330Bcc9k9XCrP6NkoMYy0/ZCHcddOAPihW4w==}
 
   '@tiptap/core@3.31.3':
     resolution: {integrity: sha512-Cz50pvciQrxdSxgTkHOVz0uD0Yl/8Xt0QatGD6ILm47jW8EzyHR9RkUGs/D5IqzXKuVPntfw1ttaT926vXfiRg==}
@@ -8822,6 +8834,14 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.103.2
       react: 19.3.0
+
+  '@tanstack/react-virtual@3.14.17(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@tanstack/virtual-core': 3.19.2
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+
+  '@tanstack/virtual-core@3.19.2': {}
 
   '@tiptap/core@3.31.3(@tiptap/pm@3.31.3)':
     dependencies:

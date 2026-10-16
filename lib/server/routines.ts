@@ -547,25 +547,26 @@ export async function getRoutineForUser(
  */
 export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
   const service = getServiceClient();
-  const { data: owned } = await service
-    .from("projects")
-    .select("id")
-    .eq("owner_id", userId)
-    .is("deleted_at", null);
-  const { data: member } = await service
-    .from("project_members")
-    .select("project_id")
-    .eq("user_id", userId);
+  // Owned rows are read whole once: the archived-automation pass below
+  // decodes them instead of re-reading each project.
+  const [{ data: owned }, { data: member }] = await Promise.all([
+    service
+      .from("projects")
+      .select("*")
+      .eq("owner_id", userId)
+      .is("deleted_at", null),
+    service
+      .from("project_members")
+      .select("project_id")
+      .eq("user_id", userId),
+  ]);
   const ids = new Set<string>([
     ...((owned ?? []) as { id: string }[]).map((p) => p.id),
     ...((member ?? []) as { project_id: string }[]).map((m) => m.project_id),
   ]);
   if (ids.size === 0) return [];
 
-  const { prepareLegacyRoutineProposals } = await import("@/lib/server/legacy-routine-proposals");
-  for (const project of owned ?? []) await prepareLegacyRoutineProposals(project.id, userId);
-
-  const { data } = await service
+  const readRoutines = () => service
     .from("agent_routines")
     // Same guard as the cron scan: a trashed project leaves the
     // list. Path "member" cannot filter `deleted_at` itself
@@ -578,6 +579,14 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
     .is("deleted_at", null)
     .in("project_id", [...ids])
     .order("created_at", { ascending: false });
+  const { prepareLegacyRoutineProposals } = await import("@/lib/server/legacy-routine-proposals");
+  // The list read does not wait for the proposal pass. It is repeated only
+  // when that pass created a routine, so a new proposal still appears here.
+  const [created, listed] = await Promise.all([
+    prepareLegacyRoutineProposals((owned ?? []) as Record<string, unknown>[], userId),
+    readRoutines(),
+  ]);
+  const { data } = created ? await readRoutines() : listed;
   return Promise.all(((data ?? []) as Array<Routine & { projects?: unknown }>)
     .map(async ({ projects: _joined, ...routine }) =>
       await routineWaitingState(await decodeRoutine(routine, userId) as unknown as Routine)));

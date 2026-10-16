@@ -35,9 +35,10 @@ export interface IntegrationsResponse {
 
 export async function fetchIntegrationsApi(
   projectId: string,
+  signal?: AbortSignal,
 ): Promise<IntegrationsResponse> {
   return parseJson<IntegrationsResponse>(
-    await fetchClientRead(`/api/projects/${projectId}/integrations`),
+    await fetchClientRead(`/api/projects/${projectId}/integrations`, { signal }),
   );
 }
 

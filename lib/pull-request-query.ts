@@ -3,24 +3,60 @@ import { ApiError, fetchPullRequestApi } from "./agent-api";
 import { pullRequestRefetchInterval } from "./pr-readiness-actions";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 
-/** Retry-After also gates focus, activation and speculative reads. */
-export function pullRequestReadRetryAt(state: { error: unknown; errorUpdatedAt: number } | undefined): number {
-  if (!(state?.error instanceof ApiError)) return 0;
-  if (state.error.retryAt !== undefined) return state.error.retryAt;
-  if (![403, 429].includes(state.error.status ?? 0)) return 0;
+type ReadQuotaState = { error: unknown; errorUpdatedAt: number; data?: unknown };
+const partialQuotaErrors = new WeakMap<object, ApiError>();
+const accountQuotaErrors = new WeakMap<QueryClient, ApiError>();
+
+function stateQuotaError(state: ReadQuotaState | undefined): ApiError | undefined {
+  let error = state?.error instanceof ApiError ? state.error : undefined;
   // Propagating the same account error to another query must not restart its
   // fallback pause and indefinitely prevent recovery without Retry-After.
-  state.error.retryAt = state.errorUpdatedAt + 60_000;
-  return state.error.retryAt;
+  if (error && error.retryAt === undefined && [403, 429].includes(error.status ?? 0))
+    error.retryAt = state!.errorUpdatedAt + 60_000;
+  const data = state?.data;
+  if (data && typeof data === "object") {
+    const partial = data as { retryStatus?: unknown; retryAt?: unknown };
+    if ([403, 429].includes(partial.retryStatus as number) && typeof partial.retryAt === "number" &&
+        Number.isFinite(partial.retryAt) && partial.retryAt > (error?.retryAt ?? 0)) {
+      let quota = partialQuotaErrors.get(data);
+      if (!quota || quota.retryAt !== partial.retryAt || quota.status !== partial.retryStatus) {
+        quota = new ApiError("Forge reads are paused", "forgeUnavailable");
+        quota.status = partial.retryStatus as number; quota.retryAt = partial.retryAt;
+        partialQuotaErrors.set(data, quota);
+      }
+      error = quota;
+    }
+  }
+  return error;
+}
+
+/** Retry-After also gates focus, activation and speculative reads. */
+export function pullRequestReadRetryAt(state: ReadQuotaState | undefined): number {
+  return stateQuotaError(state)?.retryAt ?? 0;
 }
 
 const PR_READ_KEYS = new Set(["pull-request", "pull-request-readiness", "pull-requests", "pr-comments", "pr-commits", "pr-commit-diff", "pr-review-comments"]);
 const isPullRequestReadKey = (key: readonly unknown[]) => PR_READ_KEYS.has(String(key[0]));
 
+function accountQuotaError(client: QueryClient): ApiError | undefined {
+  let blocked = accountQuotaErrors.get(client);
+  for (const query of client.getQueryCache().findAll()) {
+    if (!isPullRequestReadKey(query.queryKey)) continue;
+    const error = stateQuotaError(query.state);
+    if (error && (error.retryAt ?? 0) > (blocked?.retryAt ?? 0)) blocked = error;
+  }
+  // A refetch clears its own query error before its queryFn runs. Keep the
+  // already-observed account deadline outside that transient fetch state.
+  if (blocked && (blocked.retryAt ?? 0) > Date.now()) {
+    accountQuotaErrors.set(client, blocked); return blocked;
+  }
+  accountQuotaErrors.delete(client);
+  return undefined;
+}
+
 export function assertPullRequestReadBudget(client: QueryClient): void {
-  const blocked = client.getQueryCache().findAll().find((query) =>
-    isPullRequestReadKey(query.queryKey) && pullRequestReadRetryAt(query.state) > Date.now());
-  if (blocked) throw blocked.state.error;
+  const blocked = accountQuotaError(client);
+  if (blocked) throw blocked;
 }
 
 export function pullRequestReadRetry(count: number, error: Error): boolean {
@@ -29,8 +65,7 @@ export function pullRequestReadRetry(count: number, error: Error): boolean {
 }
 
 export function pullRequestAccountRetryAt(client: QueryClient): number {
-  return client.getQueryCache().findAll().filter((query) => isPullRequestReadKey(query.queryKey))
-    .reduce((until, query) => Math.max(until, pullRequestReadRetryAt(query.state)), 0);
+  return accountQuotaError(client)?.retryAt ?? 0;
 }
 
 /** The existing account QueryClient owns both prepared and foreground detail. */

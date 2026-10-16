@@ -18,12 +18,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-14",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-682 native notification fallback delta; prior evidence retained)",
+    "version": "0.11.1 candidate (MIN-683 bounded saved-cache delta; prior evidence retained)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -65,14 +65,19 @@
       "scripts/desktop-renderer-hang.integration.mjs",
       "lib/use-desktop-notifications.ts",
       "lib/use-desktop-notifications.test.ts",
-      "content/documentation/reviews/min-682-native-notification-fallback-2026-10-12.json"
+      "content/documentation/reviews/min-682-native-notification-fallback-2026-10-12.json",
+      "lib/query-provider.tsx",
+      "lib/navigation-working-set.ts",
+      "lib/query-storage-writes.test.ts",
+      "lib/local-snapshot-security.test.ts",
+      "content/documentation/reviews/min-683-bounded-query-cache-2026-10-14.json"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review)",
-    "date": "2026-10-12"
+    "revision": 10,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-651 recovery/cache delta; isolated macOS Electron forced-crash probe; prior procedural evidence retained); agent:/root (MIN-651 live-memory and native stall/hang recovery delta; isolated automated probes; prior procedural evidence retained); agent:/root (MIN-682 configured-server transport fallback; regression-tested hook; prior unrelated procedural and visual evidence retained); agent:/root/preparation (MIN-683 whole-query cache fallback; source, regression and compiled excluded-probe review; prior unrelated evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-651 recovery/cache additions and localized figure text); agent:/root (stall recovery and memory-retention additions); agent:/root (native notification fallback conditions and six-locale retained-meaning review); agent:/root/preparation (six-locale cache-paragraph idiom and retained-meaning review; agent review, not human reader acceptance)",
+    "date": "2026-10-14"
   },
   "related": [
     "issues"
@@ -97,7 +102,7 @@
       "src": "/documentation/en/web-and-mobile-workflow.png",
       "alt": "Mobile issue panel with localized title, description, properties and comment composer.",
       "caption": "On a narrow screen, issue details occupy a responsive panel. Use the close button to return to the project; Numo remains reachable through its floating button.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -114,7 +119,7 @@
       "src": "/documentation/en/install-the-pwa-workflow.png",
       "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
       "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -131,7 +136,7 @@
       "src": "/documentation/en/desktop-app-workflow.png",
       "alt": "Desktop settings in the real macOS Electron development app, version 0.11.1, connected to the local server with an isolated profile.",
       "caption": "Desktop settings in the real macOS Electron development app, version 0.11.1, connected to the local server with an isolated profile. This capture does not validate signed releases or other operating systems.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,7 +152,7 @@
       "src": "/documentation/en/devices-and-notifications-workflow.png",
       "alt": "Push settings showing browser permission blocked and no registered device.",
       "caption": "This browser blocks notifications. Restore site permission before trying to register this device.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -164,7 +169,7 @@
       "src": "/documentation/en/devices-and-notifications-registered.png",
       "alt": "An active browser push device registered to the account, with its actual last-send date.",
       "caption": "The account has an active registered browser device. The list shows its registration and last-send dates. Browser permission and operating-system settings still determine whether a banner appears.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -180,7 +185,7 @@
       "src": "/documentation/en/desktop-renderer-recovery.png",
       "alt": "Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.",
       "caption": "Recovery page in the macOS development app with an isolated profile and demonstration server. The native shell uses English labels in every language.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -253,7 +258,7 @@ If a desktop window crashes, a local recovery page offers **Reload window**. Use
 
 If a page is still loading after 30 seconds, or a window remains unresponsive for five seconds after the desktop app detects it, a native dialog offers **Wait** and **Recover window**. **Wait** is the default and leaves your work and the current request in place. The dialog closes if loading finishes or the window responds again. Recovering may lose unsaved changes: choose **Recover window** to open the local recovery page, then **Reload window** to return to the last screen.
 
-The optional saved query cache is limited to 2 MiB. If it exceeds the limit, its previous local snapshot is removed; the current data stays in memory and is fetched again after a restart. Separately saved drafts are unaffected. This cache is not a backup of your work.
+The optional saved query cache holds up to 2 MiB of query data. If the full cache is too large, minddy keeps complete query results that can be saved, favoring current views and tabs in the tab bar when needed. If that selection still exceeds the limit, the previous local snapshot is removed. Data omitted from the saved cache stays in memory for the session and is fetched again when needed after a restart. Separately saved drafts are unaffected. This cache is not a backup of your work.
 
 To reduce memory use during long sessions, inactive PR details, commit and agent diffs, agent event streams and page bodies are released after one minute and reloaded when needed. Active queries are retained. Tab labels keep only lightweight PR information, so keeping a tab open does not retain its patches.
 

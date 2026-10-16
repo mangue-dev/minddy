@@ -3,15 +3,13 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BotIcon } from "@hugeicons/core-free-icons";
 import type { ComponentType } from "react";
-import {
-  Claude,
-  ClaudeCode,
-  Codex,
-  Cursor,
-  Gemini,
-  OpenCode,
-  Windsurf,
-} from "@lobehub/icons";
+import ClaudeColor from "@lobehub/icons/es/Claude/components/Color";
+import ClaudeCodeColor from "@lobehub/icons/es/ClaudeCode/components/Color";
+import Codex from "@lobehub/icons/es/Codex/components/Mono";
+import Cursor from "@lobehub/icons/es/Cursor/components/Mono";
+import GeminiColor from "@lobehub/icons/es/Gemini/components/Color";
+import OpenCode from "@lobehub/icons/es/OpenCode/components/Mono";
+import Windsurf from "@lobehub/icons/es/Windsurf/components/Mono";
 import { cn } from "mangue-ui";
 import type { McpAgentId } from "@/lib/mcp-agents";
 
@@ -22,11 +20,11 @@ type AgentLogoComponent = ComponentType<
 >;
 
 const AGENT_LOGOS: Partial<Record<McpAgentId, AgentLogoComponent>> = {
-  claude: ClaudeCode.Color,
-  "claude-desktop": Claude.Color,
+  claude: ClaudeCodeColor,
+  "claude-desktop": ClaudeColor,
   codex: Codex,
   cursor: Cursor,
-  gemini: Gemini.Color,
+  gemini: GeminiColor,
   // Monochrome mark (currentColor), like Windsurf.
   opencode: OpenCode,
   windsurf: Windsurf,

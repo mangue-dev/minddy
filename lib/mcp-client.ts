@@ -57,31 +57,8 @@ export const mcpConnectionInput = z
 export const mcpConnectionPatch = mcpConnectionInput
   .partial()
   .refine((value) => Object.keys(value).length > 0);
-export interface McpConnection {
-  id: string;
-  name: string;
-  url: string;
-  enabled: boolean;
-  has_token: boolean;
-  has_headers: boolean;
-  transport: "http" | "sse";
-  auth_mode: "none" | "bearer" | "oauth";
-  oauth_connected: boolean;
-  created_at: string;
-}
-
-export function mcpConnectionNeedsAuth(connection: {
-  auth_mode: McpConnection["auth_mode"];
-  oauth_connected: boolean;
-  has_token?: boolean;
-}): boolean {
-  return connection.auth_mode === "oauth"
-    ? !connection.oauth_connected
-    : connection.auth_mode === "bearer" && !connection.has_token;
-}
-
-export function mcpSettingsHref(connectionId?: string): string {
-  const params = new URLSearchParams({ tab: "mcp-clients" });
-  if (connectionId) params.set("mcp_connection", connectionId);
-  return `/settings?${params}`;
-}
+export {
+  mcpConnectionNeedsAuth,
+  mcpSettingsHref,
+  type McpConnection,
+} from "@/lib/mcp-connection";

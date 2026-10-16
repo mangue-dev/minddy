@@ -37,10 +37,9 @@ const PresenceContext = createContext<PagePresenceMap>(EMPTY);
 /**
  * The subscription lives in the SHELL of the pages, not in the open page.
  *
- * This is what makes it stick: `PageView` rewinds on each navigation
- * (`key={pageId}`), so putting the channel there would make it quit and rejoin at
- * every click in the tree — and flash in everyone. The shell,
- * crosses navigations; changing pages is just another `track`.
+ * The shell crosses document selections, so changing pages only updates its
+ * tracked page. Document Activities suspend their effects, and large or draft
+ * surfaces can unmount without tearing down the project's presence channel.
  */
 export function PagePresenceProvider({
   projectId,

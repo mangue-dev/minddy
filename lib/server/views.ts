@@ -419,7 +419,19 @@ export async function ensureBaselineViews({
     projectId === null
       ? systemQuery.is("project_id", null)
       : systemQuery.eq("project_id", projectId);
-  const { data: systemRow, error: systemReadError } = await systemQuery.maybeSingle();
+  let customQuery = service
+    .from("views")
+    .select("id", { count: "exact", head: true })
+    .eq("kind", "custom");
+  customQuery =
+    projectId === null
+      ? customQuery.is("project_id", null).eq("user_id", userId)
+      : customQuery.eq("project_id", projectId).or(`user_id.is.null,user_id.eq.${userId}`);
+  // The two checks are independent: a system seed never changes the count.
+  const [
+    { data: systemRow, error: systemReadError },
+    { count, error: countError },
+  ] = await Promise.all([systemQuery.maybeSingle(), customQuery]);
   if (systemReadError) {
     console.error("[views] system view lookup failed:", systemReadError.message);
     clean = false;
@@ -441,15 +453,6 @@ export async function ensureBaselineViews({
     }
   }
 
-  let customQuery = service
-    .from("views")
-    .select("id", { count: "exact", head: true })
-    .eq("kind", "custom");
-  customQuery =
-    projectId === null
-      ? customQuery.is("project_id", null).eq("user_id", userId)
-      : customQuery.eq("project_id", projectId).or(`user_id.is.null,user_id.eq.${userId}`);
-  const { count, error: countError } = await customQuery;
   if (countError) {
     console.error("[views] custom views count failed:", countError.message);
     return; // not memorized: we will check again at the next GET

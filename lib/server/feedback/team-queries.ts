@@ -148,22 +148,15 @@ export async function getTeamFeedbackDetail(
   postId: string
 ): Promise<TeamFeedbackDetail | null> {
   const service = getServiceClient();
-  const { data } = await feedbackPostStore(service)
-    .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
-    .is("deleted_at", null)
-    .eq("id", postId)
-    .eq("project_id", projectId)
-    .maybeSingle();
-  if (!data) return null;
-  const row = flattenCategories(
-    data as unknown as FeedbackPostRow & {
-      author: TeamFeedbackAuthor | null;
-    } & WithCategoryEmbed
-  );
-  if (row.author) row.author = await decodeFeedbackIdentityRow(row.author,
-    projectId);
-
-  const [mergedFromRes, eventsRes, suggestionTitles, issueRes] = await Promise.all([
+  // The merge reads depend only on the ids and stay inside the project the
+  // caller already proved access to, so they run alongside the post read.
+  const [{ data }, mergedFromRes, eventsRes] = await Promise.all([
+    feedbackPostStore(service)
+      .select(`${FEEDBACK_POST_SELECT}, author:feedback_users!author_id (${AUTHOR_SELECT}), ${CATEGORY_EMBED}`)
+      .is("deleted_at", null)
+      .eq("id", postId)
+      .eq("project_id", projectId)
+      .maybeSingle(),
     feedbackPostStore(service)
       .select("id, title")
       .is("deleted_at", null)
@@ -177,6 +170,16 @@ export async function getTeamFeedbackDetail(
       .eq("kind", "post")
       .is("undone_at", null)
       .order("created_at", { ascending: false }),
+  ]);
+  if (!data) return null;
+  const row = flattenCategories(
+    data as unknown as FeedbackPostRow & {
+      author: TeamFeedbackAuthor | null;
+    } & WithCategoryEmbed
+  );
+
+  const [author, suggestionTitles, issueRes] = await Promise.all([
+    row.author ? decodeFeedbackIdentityRow(row.author, projectId) : null,
     fetchTitles(projectId, row.suggested_merge_into_id ? [row.suggested_merge_into_id] : []),
     row.issue_id
       ? issueStore(service).select("id, number, status")
@@ -191,6 +194,7 @@ export async function getTeamFeedbackDetail(
 
   return {
     ...row,
+    author,
     suggested_title: row.suggested_merge_into_id
       ? (suggestionTitles.get(row.suggested_merge_into_id) ?? null)
       : null,

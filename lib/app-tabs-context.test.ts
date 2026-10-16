@@ -14,10 +14,11 @@ import { createHomeTab } from "./app-tabs";
 import type { AppTabsSession } from "./app-tabs-session";
 
 const query = vi.hoisted(() => ({ isPending: false, isError: false, refetch: vi.fn() }));
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }));
+const preparations = vi.hoisted(() => [] as { intend: (href: string) => void }[]);
 const viewport = vi.hoisted(() => ({ mobile: false as boolean | undefined }));
 const queryCalls = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null }));
+const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null, loading: false }));
 vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("./auth-context", () => ({ useAuth: () => auth }));
 vi.mock("./use-app-tabs-query", () => ({
@@ -27,6 +28,14 @@ vi.mock("./use-app-tabs-query", () => ({
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/components/app-tab-route-sync", () => ({ AppTabRouteSync: () => null }));
+vi.mock("./pr-tab-preparation", async (original) => {
+  const actual = await original<typeof import("./pr-tab-preparation")>();
+  return { ...actual, createPrTabPreparation: (...args: Parameters<typeof actual.createPrTabPreparation>) => {
+    const preparation = actual.createPrTabPreparation(...args);
+    preparations.push(preparation);
+    return preparation;
+  } };
+});
 
 let root: Root;
 let container: HTMLDivElement;
@@ -58,6 +67,7 @@ beforeEach(async () => {
   router.replace.mockClear();
   sessionStorage.clear();
   auth.user = { id: "owner" };
+  auth.loading = false;
   renders = { strip: 0, navigation: 0, actions: 0 };
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -114,6 +124,53 @@ describe("application tab subscriptions", () => {
         expect(queryCalls).not.toHaveBeenCalled();
       }
     }
+  });
+  describe("across auth identity changes", () => {
+    let mounts: number[];
+    let next: number;
+    let update!: (value: string) => void;
+    function Draft() {
+      // One identity per mounted descendant instance.
+      const [instance] = useState(() => ++next);
+      const [value, setValue] = useState("");
+      update = setValue;
+      useEffect(() => { mounts.push(instance); }, [instance]);
+      return createElement("input", { value, readOnly: true });
+    }
+    const render = (user: { id: string } | null, loading = false) => act(() => {
+      auth.user = user; auth.loading = loading;
+      root.render(createElement(QueryClientProvider, { client },
+        createElement(AppTabsProvider, { children: createElement(Draft) })));
+    });
+    beforeEach(async () => {
+      // The shared setup already resolved auth; start from a fresh provider.
+      await act(() => root.unmount());
+      root = createRoot(container);
+      mounts = []; next = 0;
+    });
+
+    it("keeps descendants and their drafts when auth first resolves to the cookie account", async () => {
+      await render(null, true);
+      await act(() => update("Typed before the session resolved"));
+      await render({ id: "owner" });
+      await render({ id: "owner" });
+      expect(mounts).toEqual([1]);
+      expect(container.querySelector("input")?.value).toBe("Typed before the session resolved");
+    });
+    it("remounts descendants on every later identity change", async () => {
+      await render(null, true);
+      await render({ id: "owner" });
+      await render(null);
+      await render({ id: "other" });
+      await render({ id: "owner" });
+      expect(mounts).toEqual([1, 2, 3, 4]);
+    });
+    it("remounts descendants when a signed-out first resolution later finds an account", async () => {
+      await render(null, true);
+      await render(null);
+      await render({ id: "owner" });
+      expect(mounts).toEqual([1, 2]);
+    });
   });
   it("does not reset the current page when a desktop reload rotates into mobile", async () => {
     window.history.replaceState(null, "", "/projects/example");
@@ -180,6 +237,13 @@ describe("application tab subscriptions", () => {
     expect(renders.actions).toBe(previous.actions);
     unregister();
   });
+});
+
+it("publishes a hovered destination to the live preparation before warming it", () => {
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+  const intend = vi.spyOn(preparations.at(-1)!, "intend");
+  session.prefetch("/projects/hovered");
+  expect(intend).toHaveBeenCalledWith("/projects/hovered");
 });
 
 it("uses local history only for a destination qualified by the mounted retained host", () => {

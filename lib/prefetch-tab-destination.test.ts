@@ -1,8 +1,10 @@
 import { feedbackQueryOptions } from "./feedback-query";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { prefetchAppTabDestination } from "./prefetch-tab-destination";
+import { prefetchAppTabDestination, appTabPreparationQueries, isPreparedAppTabDestination } from "./prefetch-tab-destination";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+
+vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppTabSurfaceReady: () => true }));
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
@@ -27,6 +29,56 @@ afterEach(() => {
 const requested = () => fetchMock.mock.calls.map(([url]) => String(url).split("?")[0]);
 
 describe("tab destination prefetch", () => {
+  it("includes complete routines, objective and feedback prerequisites through shared consumer keys", () => {
+    expect(appTabPreparationQueries(client, "/projects/p/pages/document").map((option) => option.queryKey)).toEqual([
+      ["page", "document"], ["pages", "p"], ["issues", "p"], ["members", "p"], ["objectives", "p"],
+    ]);
+    expect(appTabPreparationQueries(client, "/routines?routine=one").map((option) => option.queryKey)).toEqual([
+      ["routines"], ["agent-models"], ["routines", "one", "runs"],
+    ]);
+    expect(appTabPreparationQueries(client, "/projects/p/objectives").map((option) => option.queryKey)).toEqual([
+      ["issues", "p"], ["members", "p"], ["objectives", "p"], ["issue-relations", "p"], ["pages", "p"],
+    ]);
+    expect(appTabPreparationQueries(client, "/projects/p/feedback").map((option) => option.queryKey)).toEqual([
+      feedbackQueryOptions("p").queryKey, ["issues", "p"], ["categories", "p"], ["members", "p"], ["objectives", "p"], ["issue-relations", "p"], ["pages", "p"],
+    ]);
+  });
+
+  it("resolves explicit scoped detail destinations without preparing every row or a closed setup wizard", () => {
+    client.setQueryData(["issues", "p"], [
+      { id: "recent", project_id: "p", status: "triage", created_at: "2026-01-02" },
+      { id: "explicit", project_id: "p", status: "triage", created_at: "2026-01-01" },
+      { id: "foreign", project_id: "other", status: "triage", created_at: "2026-01-03" },
+    ]);
+    client.setQueryData(["objectives", "p"], [
+      { id: "first", project_id: "p", status: "planned" }, { id: "done", project_id: "p", status: "done" },
+    ]);
+    const posts = [{ id: "open", project_id: "p", status: "open", vote_count: 1, created_at: "2026-01-01", review_state: "published", sensitivity: null },
+      { id: "archive", project_id: "p", status: "shipped", vote_count: 20, created_at: "2026-01-02", review_state: "published", sensitivity: null }];
+    client.setQueryData(["feedback", "p"], { posts, board_enabled: false });
+    const keys = (href: string) => appTabPreparationQueries(client, href).map((option) => option.queryKey);
+    expect(keys("/projects/p/triage?issue=explicit")).toContainEqual(["comments", "explicit"]);
+    expect(keys("/projects/p/triage?issue=foreign")).toContainEqual(["comments", "recent"]);
+    expect(keys("/projects/p/objectives?open=done").slice(-4)).toEqual([
+      ["objective-comments", "done"], ["objective-events", "done"], ["objective-resources", "done"], ["objective-feedback", "p", "done", "count"],
+    ]);
+    expect(keys("/projects/p/feedback?post=archive").slice(-3)).toEqual([
+      ["feedback-detail", "p", "archive"], ["feedback-comments", "p", "archive"], ["feedback-events", "p", "archive"],
+    ]);
+    expect(keys("/projects/p/feedback?post=archive").some((key) => ["feedback-settings", "project-git-link"].includes(String(key[0])))).toBe(false);
+  });
+
+  it("requires every shared prerequisite before allowing retained local navigation", () => {
+    client.setQueryData(["issues", "p"], []);
+    expect(isPreparedAppTabDestination(client, "/projects/p")).toBe(false);
+    for (const options of appTabPreparationQueries(client, "/projects/p")) client.setQueryData(options.queryKey, []);
+    expect(isPreparedAppTabDestination(client, "/projects/p")).toBe(true);
+    for (const href of ["/routines", "/projects/p/objectives"]) {
+      for (const options of appTabPreparationQueries(client, href)) client.setQueryData(options.queryKey, []);
+      expect(isPreparedAppTabDestination(client, href)).toBe(true);
+    }
+  });
+
   it("prepares Pages and Feedback through their actual consumer keys without board reads", async () => {
     fetchMock.mockImplementation(async () => response({ posts: [], board_enabled: false }));
     prefetchAppTabDestination(client, "/projects/p/pages", new Set());
@@ -45,7 +97,7 @@ describe("tab destination prefetch", () => {
     await vi.waitFor(() => expect(requested()).toEqual(["/api/routines", "/api/agent/models"]));
   });
 
-  it("maps project destinations to the five board reads", async () => {
+  it("maps project destinations to every retained board prerequisite", async () => {
     prefetchAppTabDestination(client, "/projects/p1?view=7", new Set());
     await vi.waitFor(() => expect(requested()).toEqual([
       "/api/projects/p1/issues",
@@ -53,6 +105,8 @@ describe("tab destination prefetch", () => {
       "/api/projects/p1/members",
       "/api/projects/p1/objectives",
       "/api/projects/p1/issue-relations",
+      "/api/projects/p1/integrations",
+      "/api/projects/p1/views",
     ]));
   });
 
@@ -102,6 +156,114 @@ describe("tab destination prefetch", () => {
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
     prefetchAppTabDestination(client, "/pull-requests?pr=pr2", new Set());
     await vi.waitFor(() => expect(requested()).toContain("/api/pull-requests/pr2"));
+  });
+
+  describe("default detail prediction from the complete board", () => {
+    const board = (overrides: Partial<{ issues: unknown[]; objectives: Record<string, unknown[]> }> = {}) => ({
+      issues: [
+        { id: "older", project_id: "p", status: "triage", created_at: "2026-01-01" },
+        { id: "newest", project_id: "p", status: "triage", created_at: "2026-01-03" },
+        { id: "accepted", project_id: "p", status: "todo", created_at: "2026-01-04" },
+        { id: "foreign", project_id: "other", status: "triage", created_at: "2026-01-05" },
+      ],
+      objectives: { p: [
+        { id: "running", project_id: "p", status: "in_progress", created_at: "2026-01-03" },
+        { id: "done", project_id: "p", status: "done", created_at: "2026-01-01" },
+        { id: "planned", project_id: "p", status: "planned", created_at: "2026-01-02" },
+      ] },
+      ...overrides,
+    });
+    // The scoped lists never answer: predicted reads must not depend on them.
+    const holdLists = () => fetchMock.mockImplementation((url: string) =>
+      /^\/api\/projects\/p\/(issues|objectives)$/.test(String(url)) ? new Promise(() => {}) : Promise.resolve(response([])));
+
+    it("starts the predicted triage detail with its pending list without making it a prerequisite", async () => {
+      holdLists();
+      client.setQueryData(GLOBAL_BOARD_KEY, board());
+      prefetchAppTabDestination(client, "/projects/p/triage", new Set());
+      await vi.waitFor(() => expect(requested()).toEqual(expect.arrayContaining([
+        "/api/projects/p/issues", "/api/issues/newest/comments", "/api/issues/newest/events",
+      ])));
+      expect(requested().filter((url) => url.startsWith("/api/issues/"))).toEqual(["/api/issues/newest/comments", "/api/issues/newest/events"]);
+      expect(appTabPreparationQueries(client, "/projects/p/triage").map((option) => option.queryKey)).not.toContainEqual(["comments", "newest"]);
+      expect(isPreparedAppTabDestination(client, "/projects/p/triage")).toBe(false);
+    });
+
+    it("honors a URL selection the board confirms and starts the predicted objective detail", async () => {
+      holdLists();
+      client.setQueryData(GLOBAL_BOARD_KEY, board());
+      prefetchAppTabDestination(client, "/projects/p/triage?issue=older", new Set());
+      prefetchAppTabDestination(client, "/projects/p/objectives", new Set());
+      prefetchAppTabDestination(client, "/projects/p/objectives?open=done", new Set());
+      await vi.waitFor(() => expect(requested()).toEqual(expect.arrayContaining([
+        "/api/issues/older/comments", "/api/issues/older/events",
+        "/api/objectives/planned/comments", "/api/objectives/planned/events", "/api/objectives/planned/resources", "/api/objectives/planned/feedback",
+        "/api/objectives/done/comments", "/api/objectives/done/events", "/api/objectives/done/resources", "/api/objectives/done/feedback",
+      ])));
+      expect(requested().some((url) => url.includes("/running/") || url.includes("/newest/"))).toBe(false);
+    });
+
+    it.each([
+      ["the exact list already has data", () => { client.setQueryData(["issues", "p"], []); client.setQueryData(["objectives", "p"], []); }],
+      ["the board is invalidated", () => { void client.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY, refetchType: "none" }); }],
+      ["the board has no row for the project", () => { client.setQueryData(GLOBAL_BOARD_KEY, board({ issues: [], objectives: {} })); }],
+    ])("predicts nothing when %s", async (_label, arrange) => {
+      holdLists();
+      client.setQueryData(GLOBAL_BOARD_KEY, board());
+      arrange();
+      prefetchAppTabDestination(client, "/projects/p/triage", new Set());
+      prefetchAppTabDestination(client, "/projects/p/objectives", new Set());
+      await vi.waitFor(() => expect(requested()).toContain("/api/projects/p/members"));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(requested().filter((url) => url.startsWith("/api/issues/") || url.startsWith("/api/objectives/"))).toEqual([]);
+    });
+  });
+
+  describe("requested Feedback post scope", () => {
+    const open = feedbackQueryOptions("p").queryKey;
+    const post = (id: string, overrides: Record<string, unknown> = {}) => ({ id, project_id: "p", status: "open", vote_count: 1,
+      created_at: "2026-01-01", review_state: "published", sensitivity: null, category_ids: [], ...overrides });
+    const href = "/projects/p/feedback?post=target";
+    const seedPrerequisites = () => {
+      client.setDefaultOptions({ queries: { retry: false, staleTime: 300_000 } });
+      client.setQueryData(open, { posts: [post("top", { vote_count: 9 }), post("target")], board_enabled: true });
+      // Every prerequisite except a list: only the open list above is seeded.
+      for (const options of appTabPreparationQueries(client, href)) {
+        if (options.queryKey[0] !== "feedback" && client.getQueryData(options.queryKey) === undefined) {
+          client.setQueryData(options.queryKey, options.queryKey[0] === "feedback-detail" ? { post: post("target") } : []);
+        }
+      }
+      for (const key of [["feedback-detail", "p", "target"], ["feedback-comments", "p", "target"], ["feedback-events", "p", "target"]]) {
+        if (client.getQueryData(key) === undefined) client.setQueryData(key, key[0] === "feedback-detail" ? { post: post("target") } : []);
+      }
+    };
+
+    it("prepares, reads and admits the accepted open list that contains the post", async () => {
+      seedPrerequisites();
+      expect(appTabPreparationQueries(client, href)[0].queryKey).toEqual(open);
+      expect(appTabPreparationQueries(client, href).map((option) => option.queryKey).slice(-3)).toEqual([
+        ["feedback-detail", "p", "target"], ["feedback-comments", "p", "target"], ["feedback-events", "p", "target"],
+      ]);
+      expect(isPreparedAppTabDestination(client, href)).toBe(true);
+      expect(client.getQueryState(["feedback", "p"])).toBeUndefined();
+      prefetchAppTabDestination(client, href, new Set());
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(requested()).toEqual([]);
+      expect(client.getQueryData<{ posts: unknown[] }>(open)?.posts).toHaveLength(2);
+    });
+
+    it.each(["absent", "invalidated", "error", "resolved", "foreign", "missing"])("falls back to the full list when the open list is %s", async (boundary) => {
+      seedPrerequisites();
+      if (boundary === "absent") client.removeQueries({ queryKey: open, exact: true });
+      if (boundary === "invalidated") await client.invalidateQueries({ queryKey: open, exact: true, refetchType: "none" });
+      if (boundary === "error") client.getQueryCache().find({ queryKey: open, exact: true })!.setState({ status: "error", error: new Error("Denied") });
+      const replace = { resolved: post("target", { status: "shipped" }), foreign: post("target", { project_id: "other" }), missing: post("other") }[boundary as "resolved"];
+      if (replace) client.setQueryData(open, { posts: [post("top", { vote_count: 9 }), replace], board_enabled: true });
+      expect(appTabPreparationQueries(client, href)[0].queryKey).toEqual(["feedback", "p"]);
+      expect(isPreparedAppTabDestination(client, href)).toBe(false);
+      prefetchAppTabDestination(client, href, new Set());
+      await vi.waitFor(() => expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain("/api/projects/p/feedback"));
+    });
   });
 
   it("leaves unknown destinations alone", () => {

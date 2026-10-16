@@ -10,6 +10,7 @@ import {
   ALL_PULL_REQUESTS_QUERY_KEY,
   matchesStateFilter,
   updateCachedPullRequestState,
+  cachedPullRequestListForPin,
 } from "./pull-request-list-cache";
 
 /**
@@ -52,6 +53,27 @@ const page = (pullRequests: PullRequestListItem[]): PullRequestListResponse => (
   truncated: false,
   repoCount: 1,
   anyPr: true,
+});
+
+describe("prepared pinned list display", () => {
+  it("reuses only a successful same-filter/page cache containing the requested PR or run", async () => {
+    const client = new QueryClient();
+    const key = [...ALL_PULL_REQUESTS_QUERY_KEY, "open", 100, null, null];
+    const data = page([item({ prId: "known", runId: "current", runIds: ["older"] })]);
+    client.setQueryData(key, data);
+    expect(cachedPullRequestListForPin(client, "open", 100, { pr: "known" })).toBe(data);
+    expect(cachedPullRequestListForPin(client, "open", 100, { run: "older" })).toBe(data);
+    expect(cachedPullRequestListForPin(client, "open", 100, { pr: "absent" })).toBeUndefined();
+    expect(cachedPullRequestListForPin(client, "completed", 100, { pr: "known" })).toBeUndefined();
+    expect(cachedPullRequestListForPin(client, "open", 200, { pr: "known" })).toBeUndefined();
+    expect(cachedPullRequestListForPin(client, "open", 100, undefined)).toBeUndefined();
+    await client.invalidateQueries({ queryKey: key });
+    expect(cachedPullRequestListForPin(client, "open", 100, { pr: "known" })).toBeUndefined();
+    client.setQueryData(key, data);
+    await client.fetchQuery({ queryKey: key, retry: false, queryFn: async () => { throw new Error("Unavailable"); } }).catch(() => {});
+    expect(cachedPullRequestListForPin(client, "open", 100, { pr: "known" })).toBeUndefined();
+    client.clear();
+  });
 });
 
 const OPEN_KEY = ["pull-requests", "all", "open", 100, null, null] as const;

@@ -24,6 +24,25 @@ function fixture(retentionMs = 30_000) {
 }
 
 describe("createPendingWrites", () => {
+  it("exposes only unsettled insert identities and notifies each terminal transition once", () => {
+    const { writes } = fixture();
+    const notifications: string[] = [];
+    const stop = writes.subscribeInsertSettlement((id) => notifications.push(id));
+    const patch = writes.begin({ kind: "patch", id: "patched", patch: { status: "done" } });
+    const accepted = writes.begin({ kind: "insert", row: row("accepted", "todo") });
+    const rejected = writes.begin({ kind: "insert", row: row("rejected", "todo") });
+    expect(writes.hasUnsettledInsert("patched")).toBe(false);
+    expect(writes.hasUnsettledInsert("accepted")).toBe(true);
+    writes.settle(patch); writes.settle(accepted, row("accepted", "done", "t1"));
+    expect(writes.hasUnsettledInsert("accepted")).toBe(false);
+    expect(writes.wasJustWritten("accepted", row("accepted", "done", "t1"))).toBe(true);
+    writes.settle(accepted); writes.fail(accepted); writes.fail(rejected); writes.fail(rejected);
+    expect(notifications).toEqual(["accepted", "rejected"]);
+    expect(writes.hasUnsettledInsert("rejected")).toBe(false);
+    stop();
+    writes.settle(writes.begin({ kind: "insert", row: row("detached", "todo") }));
+    expect(notifications).toEqual(["accepted", "rejected"]);
+  });
   it("keeps the patch when the response was sent before confirmation", () => {
     const { clock, writes } = fixture();
     const startedAt = clock.at; // the GET leaves…

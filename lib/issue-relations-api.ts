@@ -26,11 +26,12 @@ async function parseJson<T>(response: Response): Promise<T> {
 
 export async function fetchIssueRelationsApi(
   projectId: string,
-  client?: QueryClient
+  client?: QueryClient,
+  signal?: AbortSignal,
 ): Promise<IssueRelation[]> {
   const startedAt = Date.now();
   const rows = await parseJson<IssueRelation[]>(
-    await fetchClientRead(`/api/projects/${projectId}/issue-relations`)
+    await fetchClientRead(`/api/projects/${projectId}/issue-relations`, { signal })
   );
   return applyPendingRelations(client, rows, startedAt, projectId);
 }

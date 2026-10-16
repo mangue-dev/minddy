@@ -17,7 +17,7 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabase } from "./supabase";
-import { onRealtimeRekey, resolveRealtimeTopic } from "./realtime-topic";
+import { resolveRealtimeTopic, watchRealtimeTopic } from "./realtime-topic";
 
 /** Private topic authorized by `can_access_project`. */
 export const pagePresenceTopic = (projectId: string) =>
@@ -39,6 +39,16 @@ type PresenceClient = Pick<
 > & {
   realtime: { setAuth: () => Promise<unknown> };
 };
+
+/** Same pages with the same other accounts, whatever the order of connections. */
+function samePresence(a: PagePresenceMap, b: PagePresenceMap): boolean {
+  if (a.size !== b.size) return false;
+  for (const [pageId, people] of a) {
+    const other = b.get(pageId);
+    if (!other || other.length !== people.length || !people.every((id) => other.includes(id))) return false;
+  }
+  return true;
+}
 
 export interface PagePresenceHandle {
   /** Track another page without leaving the project channel. */
@@ -78,6 +88,10 @@ export function openPagePresence({
   let closed = false;
   let current = pageId;
   let connectVersion = 0;
+  let resolved: string | null = null;
+  // The consumer starts empty. A sync after our own track, a rejoin or a
+  // teammate's unrelated reconnect must not publish a new identical map.
+  let published: PagePresenceMap = new Map();
 
   const publish = (ch: RealtimeChannel) => {
     const state = ch.presenceState<PagePresenceState>();
@@ -96,6 +110,8 @@ export function openPagePresence({
         }
       }
     }
+    if (samePresence(pages, published)) return;
+    published = pages;
     onChange(pages);
   };
 
@@ -123,6 +139,7 @@ export function openPagePresence({
           void ch.track({ userId, pageId: current } satisfies PagePresenceState);
         });
         channel = ch;
+        resolved = topic;
       } catch {
         // The resolver denies a revoked member. Presence is advisory, so the
         // durable page APIs remain the fallback without retrying a dead scope.
@@ -141,7 +158,8 @@ export function openPagePresence({
     }
     connect();
   };
-  const stopRekey = onRealtimeRekey(reconnect);
+  const stopRekey = watchRealtimeTopic(supabase, pagePresenceTopic(projectId),
+    () => ({ resolved, channel, version: connectVersion }), reconnect);
   connect();
 
   return {

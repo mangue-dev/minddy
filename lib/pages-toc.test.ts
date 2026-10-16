@@ -38,8 +38,8 @@ function makeEditor(content: string) {
   });
 }
 
-describe("les titres d'une page", () => {
-  it("sont lus dans l'ordre, avec leur niveau et leur texte", () => {
+describe("page headings", () => {
+  it("are read in order, with their level and text", () => {
     const editor = makeEditor(
       "<h1>Cadrage</h1><p>Du texte</p><h2>Décisions</h2><h3>Détail</h3>"
     );
@@ -53,7 +53,7 @@ describe("les titres d'une page", () => {
     editor.destroy();
   });
 
-  it("rendent une position qui ancre bien le nœud du titre", () => {
+  it("return a position that anchors the heading node", () => {
     const editor = makeEditor("<p>Avant</p><h2>Cible</h2>");
     const [entry] = readHeadings(editor.state.doc);
     expect(editor.state.doc.nodeAt(entry.pos)?.type.name).toBe("heading");
@@ -61,13 +61,13 @@ describe("les titres d'une page", () => {
     editor.destroy();
   });
 
-  it("ignorent un titre encore vide", () => {
+  it("skip a heading that is still empty", () => {
     const editor = makeEditor("<h1>Écrit</h1><h2></h2>");
     expect(readHeadings(editor.state.doc)).toHaveLength(1);
     editor.destroy();
   });
 
-  it("comptent les titres imbriqués dans un dépliant", () => {
+  it("count headings nested in a toggle block", () => {
     const editor = makeEditor(
       '<div data-type="details"><div data-type="detailsSummary">Replié</div>' +
         '<div data-type="detailsContent"><h2>Dedans</h2></div></div>'
@@ -79,8 +79,8 @@ describe("les titres d'une page", () => {
   });
 });
 
-describe("deux lectures successives", () => {
-  it("se reconnaissent identiques tant que rien n'a bougé", () => {
+describe("two successive readings", () => {
+  it("are recognized as identical while nothing has changed", () => {
     const editor = makeEditor("<h1>Un</h1><h2>Deux</h2>");
     expect(
       sameHeadings(readHeadings(editor.state.doc), readHeadings(editor.state.doc))
@@ -88,7 +88,7 @@ describe("deux lectures successives", () => {
     editor.destroy();
   });
 
-  it("se distinguent dès qu'un titre change de texte", () => {
+  it("differ as soon as a heading changes text", () => {
     const before = makeEditor("<h1>Un</h1>");
     const after = makeEditor("<h1>Une</h1>");
     expect(
@@ -98,7 +98,7 @@ describe("deux lectures successives", () => {
     after.destroy();
   });
 
-  it("se distinguent dès qu'un titre change de niveau", () => {
+  it("differ as soon as a heading changes level", () => {
     const before = makeEditor("<h1>Un</h1>");
     const after = makeEditor("<h2>Un</h2>");
     expect(
@@ -122,6 +122,8 @@ describe("deux lectures successives", () => {
     expect(after.map((entry) => entry.pos)).not.toEqual(
       before.map((entry) => entry.pos)
     );
+    // Typing above the headings must not re-render the table.
+    expect(sameHeadings(before, after)).toBe(true);
     editor.destroy();
   });
 });

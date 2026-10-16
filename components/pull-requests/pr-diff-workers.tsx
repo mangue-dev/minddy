@@ -1,9 +1,35 @@
 "use client";
 
-import { WorkerPoolContextProvider } from "@pierre/diffs/react";
-import type { ReactNode } from "react";
+import { getFiletypeFromFileName, getThemes, preloadHighlighter, type SupportedLanguages } from "@pierre/diffs";
+import { useWorkerPool, WorkerPoolContextProvider } from "@pierre/diffs/react";
+import { useEffect, type ReactNode } from "react";
 import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES } from "@/lib/diff-theme";
 import { useEffectiveColorScheme } from "@/components/pull-requests/use-effective-color-scheme";
+
+/** Bound public grammar preparation without copying PR patches into the pool. */
+export function preparedDiffLanguages(paths: readonly string[]): SupportedLanguages[] {
+  return [...new Set(paths.map(getFiletypeFromFileName))].slice(0, 5);
+}
+
+function InitializeDiffRuntime({ languages }: { languages: SupportedLanguages[] }) {
+  const pool = useWorkerPool();
+  const identity = languages.join("|");
+  useEffect(() => {
+    const langs = identity.split("|") as SupportedLanguages[];
+    // Both themes and grammars must arrive before foreground requests fill the
+    // browser's transport slots. This performs no source-content or forge read.
+    void Promise.all([
+      preloadHighlighter({ themes: getThemes(DIFF_THEMES), langs, preferredHighlighter: "shiki-js" }),
+      pool?.initialize(langs),
+    ]).catch(() => {});
+  }, [pool, identity]);
+  return null;
+}
+
+/** Keep the existing two-worker pool owned by the mounted account shell. */
+export function PrDiffRuntimePreparation({ languages }: { languages: SupportedLanguages[] }) {
+  return <PrDiffWorkers><InitializeDiffRuntime languages={languages} /></PrDiffWorkers>;
+}
 
 /**
  * Two workers keep large diffs off the main thread without loading eight copies

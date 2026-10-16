@@ -1,7 +1,7 @@
 import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { DEFAULT_AGENT_PROVIDER } from "@/lib/agent-providers";
-import { getUserByok } from "@/lib/server/agent/model";
+import { getUserByok, type UserByok } from "@/lib/server/agent/model";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 import type { AgentProviderId } from "@/lib/agent-providers";
 import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
@@ -14,9 +14,11 @@ export async function getNumoDefaultModel(userId: string, provider: AgentProvide
   return data?.model ?? null;
 }
 
-/** Resolve the namespace before applying a default, including generic endpoints. */
-export async function getNumoPreferences(userId: string) {
-  const provider = (await getUserByok(userId, "assistant"))?.provider ?? DEFAULT_AGENT_PROVIDER;
+/** Resolve the namespace before applying a default, including generic endpoints.
+ `byok` is this request's `getUserByok(userId, "assistant")` when already started. */
+export async function getNumoPreferences(userId: string, byok?: Promise<UserByok | null>) {
+  const provider = (await (byok ?? getUserByok(userId, "assistant")))?.provider ??
+    DEFAULT_AGENT_PROVIDER;
   const [model, applicationModel] = await Promise.all([
     getNumoDefaultModel(userId, provider), resolveByokFeatureDefaultModel(provider, "assistant_model"),
   ]);

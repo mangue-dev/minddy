@@ -124,12 +124,26 @@ function blockerMessageKey(
 
 export function PrReadinessBadge({
   readiness,
+  unavailable = false,
   className,
 }: {
   readiness: PullRequestReadiness | null;
+  /** The read failed: without it, a missing readiness would claim to be loading forever. */
+  unavailable?: boolean;
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
+  if (!readiness && unavailable) {
+    return (
+      <Badge
+        variant="secondary"
+        className={cn("shrink-0 gap-1.5 bg-destructive/10 text-destructive", className)}
+      >
+        <HugeiconsIcon icon={AlertCircleIcon} className="size-3" />
+        {t("readinessUnavailable")}
+      </Badge>
+    );
+  }
   if (!readiness) {
     return (
       <Badge
@@ -216,15 +230,17 @@ export function PrReadinessIcon({
 }
 
 /** Compact overflow entry with the same structure as the pull request state. */
-export function PrReadinessMenuItem({ readiness, disabled, onSelect }: {
+export function PrReadinessMenuItem({ readiness, unavailable = false, disabled, onSelect }: {
   readiness: PullRequestReadiness | null;
+  unavailable?: boolean;
   disabled: boolean;
   onSelect: () => void;
 }) {
   const t = useTranslations("PullRequests");
   const ready = readiness?.state === "ready";
-  const pending = !readiness || readiness.state === "review_requested" ||
-    readiness.state === "checks_running" || readiness.state === "status_unavailable";
+  const failed = !readiness && unavailable;
+  const pending = readiness ? readiness.state === "review_requested" ||
+    readiness.state === "checks_running" || readiness.state === "status_unavailable" : !failed;
   return (
     <DropdownMenuItem data-testid="pr-readiness-menu" className="app-desktop:hidden"
       disabled={disabled} onSelect={onSelect} aria-haspopup="dialog">
@@ -234,7 +250,7 @@ export function PrReadinessMenuItem({ readiness, disabled, onSelect }: {
           pending && "text-amber-700 dark:text-amber-400",
           !ready && !pending && "text-destructive",
         )} />
-      {t(readiness ? STATE_KEYS[readiness.state] : "readinessLoading")}
+      {t(readiness ? STATE_KEYS[readiness.state] : failed ? "readinessUnavailable" : "readinessLoading")}
       <AppIcon icon={ArrowRight01Icon} className="ml-auto" />
     </DropdownMenuItem>
   );

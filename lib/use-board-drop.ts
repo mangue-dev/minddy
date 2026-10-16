@@ -142,7 +142,8 @@ export function useBoardDrop({
     const node = cardNodesRef.current.get(issueId);
     if (!node) return null;
     let cached = cardGeometryRef.current.get(issueId);
-    if (!cached) {
+    // Windowed rows can move when preceding estimates become measured sizes.
+    if (!cached || node.closest("[data-board-windowed]")) {
       const rect = node.getBoundingClientRect();
       const scroller = node.closest<HTMLElement>(COLUMN_SCROLLER_SELECTOR);
       cached = {
@@ -159,6 +160,15 @@ export function useBoardDrop({
 
   const readManualTarget = useCallback(
     (event: BoardDragEvent, status: IssueStatus) => {
+      // Native autoscroll can mount a target that did not exist at drag start.
+      const mounted = new Map(
+        Array.from((root ? root.current : document)?.querySelectorAll<HTMLElement>(CARD_SELECTOR) ?? [])
+          .flatMap((node) => node.dataset.issueId ? [[node.dataset.issueId, node] as const] : []),
+      );
+      for (const [id, node] of cardNodesRef.current) {
+        if (mounted.get(id) !== node) cardGeometryRef.current.delete(id);
+      }
+      cardNodesRef.current = mounted;
       const activeRect = event.active.rect.current.translated;
       if (!activeRect) {
         return { status, overIssueId: null, after: false };

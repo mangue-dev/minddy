@@ -1,4 +1,8 @@
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import { recordAcceptedPageWrite } from "./optimistic-page-writes";
+import { addRelationOptimistically, beginRelationRemoval } from "./optimistic/relation-writes";
+import type { IssueRelation } from "./types";
 import {
   canonicalSql,
   migrationFiles,
@@ -7,8 +11,12 @@ import {
 } from "@/test/sql-migrations";
 
 import {
+  applyProjectCounterBump,
   keysForProjectEvent,
+  projectCounterBump,
   keysForUserEvent,
+  ownEchoCheck,
+  ownPageEchoCheck,
   USER_SCOPE_KEYS,
   projectScopeKeys,
   type BroadcastChange,
@@ -131,6 +139,149 @@ describe("keysForProjectEvent — pages", () => {
         (key) => JSON.stringify(key) === JSON.stringify(["pages", PROJECT])
       )
     ).toBe(true);
+  });
+
+  it("recognizes only the exact echo of an accepted own PATCH", () => {
+    const client = new QueryClient(), other = new QueryClient();
+    const at = "2026-10-15T10:00:00.123456+00:00";
+    recordAcceptedPageWrite(client, { id: PAGE, version: 17, updated_at: at }, ["content", "version"]);
+    const echo = (record: Record<string, unknown>) => {
+      const event = change("pages", { operation: "UPDATE", record: pageRow(record), old_record: pageRow() });
+      return Object.fromEntries(keysForProjectEvent(event, PROJECT).map((invalidation) =>
+        [JSON.stringify(invalidation.key), ownPageEchoCheck(event, invalidation)?.(client) ?? false]));
+    };
+    expect(echo({ version: 17, updated_at: at })).toMatchObject({
+      [JSON.stringify(["page", PAGE])]: true, [JSON.stringify(["pages", PROJECT])]: true,
+      [JSON.stringify(["app-tab-metadata"])]: true, [JSON.stringify(["me", "trash"])]: false,
+    });
+    // The same instant in another textual offset is still the same row.
+    expect(echo({ version: 17, updated_at: "2026-10-15T12:00:00.123456+02:00" })[JSON.stringify(["page", PAGE])]).toBe(true);
+    // A teammate's next version, or a move that keeps the version, is not ours.
+    for (const record of [{ version: 18, updated_at: at }, { version: 17, updated_at: "2026-10-15T10:00:01.000000+00:00" }]) {
+      expect(Object.values(echo(record)).some(Boolean)).toBe(false);
+    }
+    const event = change("pages", { operation: "UPDATE", record: pageRow({ version: 17, updated_at: at }) });
+    expect(ownPageEchoCheck(event, { key: ["page", PAGE], refetch: "active" })?.(other)).toBe(false);
+    // A rename acknowledged locally still refreshes the tab labels.
+    recordAcceptedPageWrite(client, { id: PAGE, version: 18, updated_at: at }, ["title"]);
+    expect(echo({ version: 18, updated_at: at })).toMatchObject({
+      [JSON.stringify(["page", PAGE])]: true, [JSON.stringify(["app-tab-metadata"])]: false,
+    });
+  });
+
+  it("catches up document bodies after a missed broadcast without treating the tree as their contents", () => {
+    expect(projectScopeKeys(PROJECT)).toContainEqual(["pages", PROJECT]);
+    expect(projectScopeKeys(PROJECT)).toContainEqual(["page"]);
+    expect(projectScopeKeys(PROJECT)).not.toContainEqual(["page", PROJECT]);
+  });
+});
+
+describe("keysForUserEvent — project counter", () => {
+  const OTHER = "66666666-6666-4666-8666-666666666666";
+  const stored = { id: PROJECT, owner_id: "owner", name: null, issue_seq: 41, updated_at: "2026-10-15T09:00:00.000000+00:00",
+    deleted_at: null, encrypted_content: "ciphertext:v1", encryption_version: 1, content_revision: 7,
+    encryption_checked_at: "2026-10-14T09:00:00.000000+00:00", automations: null, smart_assign_rules: null };
+  // As broadcast: guard_project_content also increments content_revision on the reservation.
+  const bumped = { ...stored, issue_seq: 42, updated_at: "2026-10-15T10:00:00.000000+00:00", content_revision: 8 };
+  const update = (record: Record<string, unknown>) => change("projects", { operation: "UPDATE", record, old_record: stored });
+  const cachedList = () => {
+    const client = new QueryClient();
+    client.setQueryData(["projects"], [
+      { id: OTHER, name: "Other", updated_at: "2026-10-15T09:30:00.000000+00:00", deleted_at: null },
+      { id: PROJECT, name: "Decoded", issue_seq: 41, updated_at: stored.updated_at, deleted_at: null },
+    ]);
+    return client;
+  };
+
+  it("patches an issue number reservation into the list without refetching it", () => {
+    expect(projectCounterBump(update(bumped))?.fields).toEqual({ issue_seq: 42, updated_at: bumped.updated_at, content_revision: 8 });
+    const client = cachedList();
+    expect(keysForUserEvent(update(bumped))).toEqual([]);
+    expect(applyProjectCounterBump(client, update(bumped))).toBe(true);
+    expect(client.getQueryData(["projects"])).toEqual([
+      { id: PROJECT, name: "Decoded", issue_seq: 42, updated_at: bumped.updated_at, deleted_at: null },
+      { id: OTHER, name: "Other", updated_at: "2026-10-15T09:30:00.000000+00:00", deleted_at: null },
+    ]);
+  });
+
+  it("matches the revision bump of the project content guard", () => {
+    // Outside encryption maintenance, guard_project_content increments
+    // content_revision on every UPDATE, the reservation included.
+    const sql = canonicalSql(readMigration("20270109200008_content_backfill_attempt_revisions.sql"));
+    expect(sql).toContain("'guard_project_content'");
+    expect(sql).toContain("then old.content_revision else old.content_revision+1 end");
+    expect(projectCounterBump(update({ ...bumped, content_revision: stored.content_revision }))).not.toBeNull();
+  });
+
+  it.each([
+    ["a trash", { deleted_at: "2026-10-15T10:00:00.000000+00:00" }],
+    ["a content rewrite", { encrypted_content: "ciphertext:v2" }],
+    ["a settings change", { smart_assign_rules: { enabled: true } }],
+    ["an unknown column", { revision: 2 }],
+  ])("keeps the full refresh for %s", (_case, extra) => {
+    const client = cachedList();
+    const before = client.getQueryData(["projects"]);
+    const event = update({ ...bumped, ...extra });
+    expect(keysForUserEvent(event).map((k) => k.key)).toEqual([["projects"], ["me", "smart-assign-warnings"], ["me", "triage-counts"]]);
+    expect(applyProjectCounterBump(client, event)).toBe(false);
+    expect(client.getQueryData(["projects"])).toBe(before);
+  });
+
+  it("asks for a refetch when the bumped project is missing, and never regresses a newer row", () => {
+    const client = new QueryClient();
+    client.setQueryData(["projects"], [{ id: OTHER, updated_at: stored.updated_at }]);
+    expect(applyProjectCounterBump(client, update(bumped))).toBe(false);
+    const newer = cachedList();
+    newer.setQueryData<Record<string, unknown>[]>(["projects"], (rows) => rows!.map((row) =>
+      row.id === PROJECT ? { ...row, issue_seq: 43, updated_at: "2026-10-15T11:00:00.000000+00:00" } : row));
+    const before = newer.getQueryData(["projects"]);
+    expect(applyProjectCounterBump(newer, update(bumped))).toBe(true);
+    expect(newer.getQueryData(["projects"])).toBe(before);
+    // INSERT and DELETE keep their invalidations.
+    expect(keysForUserEvent(change("projects", { record: bumped }))).toHaveLength(3);
+    expect(keysForUserEvent(change("projects", { operation: "DELETE", old_record: stored }))).toHaveLength(3);
+  });
+});
+
+describe("keysForProjectEvent — remote tickets", () => {
+  const ISSUE = "55555555-5555-4555-8555-555555555555";
+  const board = (event: BroadcastChange) => keysForProjectEvent(event, PROJECT).filter((k) => JSON.stringify(k.key) === '["me","board"]');
+
+  it("names the changed ticket so the board can read it alone", () => {
+    const metadata = { id: ISSUE, project_id: PROJECT, updated_at: "2026-10-15T10:00:00.000Z" };
+    expect(board(change("issues", { operation: "UPDATE", record: metadata, old_record: metadata })))
+      .toEqual([{ key: ["me", "board"], refetch: "active", issueId: ISSUE }]);
+    expect(board(change("issue_categories", { operation: "DELETE", old_record: { issue_id: ISSUE, category_id: "c" } })))
+      .toEqual([{ key: ["me", "board"], refetch: "active", issueId: ISSUE }]);
+    expect(hasKey(keysForProjectEvent(change("issues", { record: metadata }), PROJECT), ["issues", PROJECT])).toBe(true);
+    // Without a ticket id the whole board is still refetched.
+    expect(board(change("issue_categories", { record: { category_id: "c" } }))).toEqual([{ key: ["me", "board"], refetch: "active" }]);
+  });
+});
+
+describe("keysForProjectEvent — issue relations", () => {
+  const relation: IssueRelation & Record<string, unknown> = { id: "22222222-2222-4222-8222-222222222222", project_id: PROJECT, source_id: "a", source_type: "issue", target_id: "b", target_type: "issue", type: "blocks" };
+  const checks = (client: QueryClient, event: BroadcastChange) => Object.fromEntries(
+    keysForProjectEvent(event, PROJECT).map((invalidation) =>
+      [JSON.stringify(invalidation.key), ownEchoCheck(event, invalidation)?.(client) ?? false]));
+
+  it("skips only the aggregate board refetch for the echo of our own relation writes", async () => {
+    const client = new QueryClient(), other = new QueryClient();
+    let confirm!: (row: IssueRelation) => void;
+    const added = addRelationOptimistically(client, PROJECT, { source_id: "a", target_id: "b", type: "blocks" },
+      () => new Promise((resolve) => { confirm = resolve; }));
+    const insert = change("issue_relations", { record: relation });
+    // The broadcast leaves at commit, usually before the POST acknowledgement.
+    expect(checks(client, insert)).toEqual({ [JSON.stringify(["issue-relations", PROJECT])]: false, [JSON.stringify(["me", "board"])]: true });
+    confirm(relation);
+    await added;
+    expect(checks(client, insert)[JSON.stringify(["me", "board"])]).toBe(true);
+    const removal = beginRelationRemoval(client, PROJECT, relation.id);
+    removal.settle();
+    expect(checks(client, change("issue_relations", { operation: "DELETE", old_record: relation }))[JSON.stringify(["me", "board"])]).toBe(true);
+    // Another window, a teammate, Numo or the MCP still refreshes the board.
+    expect(checks(other, insert)[JSON.stringify(["me", "board"])]).toBe(false);
+    expect(checks(client, change("issue_relations", { record: { ...relation, id: "33333333-3333-4333-8333-333333333333", target_id: "c" } }))[JSON.stringify(["me", "board"])]).toBe(false);
   });
 });
 

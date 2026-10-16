@@ -8,7 +8,7 @@ import { Editor } from "@tiptap/core";
 import { Document } from "@tiptap/extension-document";
 import { Text } from "@tiptap/extension-text";
 import { EditorContent } from "@tiptap/react";
-import { CODE_LANGUAGE_OPTIONS } from "@/components/code-block-language-catalog";
+import { CODE_LANGUAGE_OPTIONS } from "@/components/code-block-full-language-catalog";
 import { codeBlockEditorExtension } from "@/components/code-block-node-view";
 import { blockExtensions } from "@/components/pages/blocks";
 

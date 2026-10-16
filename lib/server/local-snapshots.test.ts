@@ -3,8 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EncryptedStore } from "./encryption/store";
 
-const fixture = vi.hoisted(() => ({ owner: "synthetic-owner", access: "synthetic-access", authorized: true, store: null as EncryptedStore | null }));
-vi.mock("./local-snapshot-access", () => ({ localSnapshotProjectAccess: async () => ({ fingerprint: fixture.access }), assertDraftProjectsAccess: async () => {} }));
+const fixture = vi.hoisted(() => ({ owner: "synthetic-owner", access: "synthetic-access", authorized: true, store: null as EncryptedStore | null,
+  accessReads: 0, keyGate: null as Promise<void> | null }));
+vi.mock("./local-snapshot-access", () => ({ localSnapshotProjectAccess: async () => {
+  fixture.accessReads++;
+  return { fingerprint: fixture.access };
+}, assertDraftProjectsAccess: async () => {} }));
 vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => {
   if (!fixture.store) throw new Error("synthetic missing root");
   return fixture.store;
@@ -20,10 +24,14 @@ let materials: Map<number, Buffer>;
 beforeEach(() => {
   vi.spyOn(console, "info").mockImplementation(() => {});
   fixture.owner = "synthetic-owner"; fixture.access = "synthetic-access"; fixture.authorized = true; version = 1;
+  fixture.accessReads = 0; fixture.keyGate = null;
   materials = new Map([[1, randomBytes(32)], [2, randomBytes(32)]]);
   fixture.store = new EncryptedStore({
     current: async () => ({ version, bytes: Buffer.from(materials.get(version)!) }),
-    byVersion: async (_scope, historical) => ({ version: historical, bytes: Buffer.from(materials.get(historical)!) }),
+    byVersion: async (_scope, historical) => {
+      await fixture.keyGate;
+      return { version: historical, bytes: Buffer.from(materials.get(historical)!) };
+    },
   });
 });
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
@@ -93,4 +101,15 @@ it("retains an account-owned self-authored draft after a project membership chan
   const sealed = await sealLocalSnapshot(fixture.owner, "issue-drafts", [{ title: "self-authored draft" }]);
   fixture.access = "revoked-project-access";
   expect(await openLocalSnapshot(fixture.owner, "issue-drafts", sealed)).toEqual([{ title: "self-authored draft" }]);
+});
+it("reads the live access proof while the cached payload decrypts", async () => {
+  const sealed = await sealLocalSnapshot(fixture.owner, "query-cache", { cached: "PRIVATE_SENTINEL" });
+  let release!: () => void;
+  fixture.keyGate = new Promise((resolve) => { release = resolve; });
+  const reads = fixture.accessReads;
+  const opened = openLocalSnapshot(fixture.owner, "query-cache", sealed);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(fixture.accessReads).toBe(reads + 1);
+  release();
+  expect(await opened).toEqual({ cached: "PRIVATE_SENTINEL" });
 });

@@ -99,9 +99,12 @@ import type {
   Member,
   SavedView,
   SearchIndexIssue,
+  SearchIndexPage,
   SearchIndexResponse,
 } from "@/lib/types";
-import type { PaletteGroup } from "@/components/header-search-pill";
+import type { PaletteGroup, PaletteItem as GroupItem } from "@/components/header-search-pill";
+import { usePageContentSearch } from "@/lib/use-page-search";
+import { withPageContentHits } from "@/lib/palette-page-hits";
 import "./command-palette.css";
 
 /** Search boosts by group — same philosophy as minddy v1:
@@ -206,6 +209,8 @@ export interface CommandPaletteProps {
   /** Prefetch the destination behind a hovered/highlighted row (new tab or
    *  navigation): the palette row is the browsing intent (fourth pass MIN-540). */
   onPrefetchDestination?: (href: string) => void;
+  /** Builds the row of a page that only the content search found. */
+  pageItem?: (page: SearchIndexPage) => GroupItem | null;
 }
 
 export function CommandPalette({
@@ -216,6 +221,7 @@ export function CommandPalette({
   destinationOnly = false,
   onDestinationSelect,
   onPrefetchDestination,
+  pageItem,
 }: CommandPaletteProps) {
   const mobile = useMobileLayout() === true;
   const navigationSearch = destinationOnly || mobile;
@@ -336,14 +342,56 @@ export function CommandPalette({
   // the (colored) icon of their status. The 3 flat theme options are
   // replaced by a single “Change theme” (select submenu) and
   // “Log out” is removed.
+  // Project orb per project id: any row referencing a project (ticket,
+  // page, create line…) shows it LEFT of its right-aligned context text.
+  const projectIconById = useMemo(
+    () => new Map(projects.map((p) => [p.id, projectOrbIcon(projectOrbSeed(p), p.icon_url)])),
+    [projects]
+  );
+
+  const toPaletteItem = useCallback(
+    (it: GroupItem, cat: string): CpPaletteItem => {
+      const Icon = it.icon;
+      const issue = it.entityType === "issue" ? (it.data as PaletteIssue) : null;
+      return {
+        id: it.key,
+        title: it.label,
+        keywords: it.keywords,
+        description: it.description,
+        shortcut: it.keys,
+        icon: issue
+          ? statusIcon(issue.status)
+          : Icon
+            ? <AppIcon icon={Icon} className="size-4" />
+            : undefined,
+        contextLabel: it.metaText,
+        contextIcon: (() => {
+          if (!it.contextId) return undefined;
+          const ProjectIcon = projectIconById.get(it.contextId);
+          return ProjectIcon ? <AppIcon icon={ProjectIcon} className="size-3.5" /> : undefined;
+        })(),
+        filterCategory: cat,
+        entityType: it.entityType ?? (it.href ? "navigation" : undefined),
+        // Line project: the motor boosts those of the current project
+        // (SearchContext.currentContextId), without excluding others.
+        contextId: it.contextId,
+        data: it.data,
+        href: it.href,
+        execute: () => {
+          // `it.key` is a stable identifier (cmd-*, ticket id) —
+          // never the translated wording, which would fragment the stats.
+          track("command_executed", { command_id: it.key, category: cat });
+          const destination = paletteDestinationHref(it.href);
+          if (destinationOnly && destination) onDestinationSelect?.(destination);
+          else it.onSelect?.();
+        },
+      };
+    },
+    [projectIconById, track, destinationOnly, onDestinationSelect]
+  );
+
   const items = useMemo<CpPaletteItem[]>(() => {
     const HIDDEN_KEYS = new Set(["cmd-light", "cmd-dark", "cmd-system", "cmd-signout"]);
-
-    // Project orb per project id: any row referencing a project (ticket,
-    // page, create line…) shows it LEFT of its right-aligned context text.
-    const projectIconById = new Map(
-      projects.map((p) => [p.id, projectOrbIcon(projectOrbSeed(p), p.icon_url)])
-    );
 
     const mapped = groups.flatMap((g, gi) => {
       const cat = g.key ?? g.heading ?? `group-${gi}`;
@@ -354,43 +402,7 @@ export function CommandPalette({
           // Tickets and navigation panels can open in place without a tab destination.
           return mobile && !destinationOnly && (it.entityType === "issue" || ["go-inbox", "open-notes", "go-agents", "cmd-shortcuts"].includes(it.key));
         })
-        .map((it): CpPaletteItem => {
-          const Icon = it.icon;
-          const issue = it.entityType === "issue" ? (it.data as PaletteIssue) : null;
-          return {
-            id: it.key,
-            title: it.label,
-            keywords: it.keywords,
-            description: it.description,
-            shortcut: it.keys,
-            icon: issue
-              ? statusIcon(issue.status)
-              : Icon
-                ? <AppIcon icon={Icon} className="size-4" />
-                : undefined,
-            contextLabel: it.metaText,
-            contextIcon: (() => {
-              if (!it.contextId) return undefined;
-              const ProjectIcon = projectIconById.get(it.contextId);
-              return ProjectIcon ? <AppIcon icon={ProjectIcon} className="size-3.5" /> : undefined;
-            })(),
-            filterCategory: cat,
-            entityType: it.entityType ?? (it.href ? "navigation" : undefined),
-            // Line project: the motor boosts those of the current project
-            // (SearchContext.currentContextId), without excluding others.
-            contextId: it.contextId,
-            data: it.data,
-            href: it.href,
-            execute: () => {
-              // `it.key` is a stable identifier (cmd-*, ticket id) —
-              // never the translated wording, which would fragment the stats.
-              track("command_executed", { command_id: it.key, category: cat });
-              const destination = paletteDestinationHref(it.href);
-              if (destinationOnly && destination) onDestinationSelect?.(destination);
-              else it.onSelect?.();
-            },
-          };
-        });
+        .map((it) => toPaletteItem(it, cat));
     });
 
     // “Change theme”: Enter/⌘; opens the select inline (provider "theme")
@@ -450,7 +462,20 @@ export function CommandPalette({
     });
 
     return mapped;
-  }, [groups, themeLabel, track, savedViews, router, tNav, projects, navigationSearch, mobile, destinationOnly, onDestinationSelect]);
+  }, [groups, toPaletteItem, themeLabel, track, savedViews, router, tNav, navigationSearch, mobile, destinationOnly, onDestinationSelect]);
+
+  // Pages whose CONTENT answers the query (MIN-276), applied here rather than
+  // in the shell: typing and search results only re-render the palette, and a
+  // result rebuilds the matching page rows instead of the whole model.
+  const pageContentHits = usePageContentSearch(open);
+  const searchItems = useMemo(
+    () =>
+      withPageContentHits(items, pageContentHits, (page) => {
+        const row = pageItem?.(page);
+        return row ? toPaletteItem(row, "wiki-pages") : null;
+      }),
+    [items, pageContentHits, pageItem, toPaletteItem]
+  );
 
   // === Contextual issue actions (⌘; / →) ===
   // Each action opens an inline form with one field: the select opens
@@ -1309,11 +1334,11 @@ export function CommandPalette({
 
   // In bulk mode, the palette displays the selection options instead of the
   // normal content (navigation, creation, etc.).
-  const paletteItems = showBulk ? bulkItems : items;
+  const paletteItems = showBulk ? bulkItems : searchItems;
   const paletteCategories = showBulk
     ? bulkCategories
     : navigationSearch
-      ? categories.filter((category) => items.some((item) => item.filterCategory === category.id))
+      ? categories.filter((category) => searchItems.some((item) => item.filterCategory === category.id))
       : categories;
 
   // The placeholder follows the mode: the new-tab launcher asks for a

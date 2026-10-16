@@ -1,6 +1,8 @@
-import type { QueryKey } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import { GLOBAL_BOARD_KEY, issueWrites, objectiveWrites } from "./optimistic/issue-writes";
+import { isAcceptedPageEcho } from "./optimistic-page-writes";
+import { isOwnRelationEcho } from "./optimistic/relation-writes";
 
 /**
  * WHAT A BROADCAST EVENT REFRESHES — the realtime
@@ -36,6 +38,12 @@ export type RefetchMode = "active" | "none";
 export interface Invalidation {
   key: QueryKey;
   refetch: RefetchMode;
+  /**
+   * Set on the aggregate board for a remote ticket change: the provider may
+   * read only this ticket instead of the whole board
+   * (lib/global-issues-api.ts refreshBoardIssues).
+   */
+  issueId?: string;
 }
 
 // Caches that aggregate several projects. A project event has to reach them too
@@ -82,6 +90,9 @@ const ISSUE_AGGREGATE_KEYS: Invalidation[] = [
 ];
 
 const active = (key: QueryKey): Invalidation => ({ key, refetch: "active" });
+
+const sameKey = (a: QueryKey, b: QueryKey) =>
+  a.length === b.length && a.every((part, index) => part === b[index]);
 
 /** Metadata triggers can project DELETE's NEW row into a non-null empty record. */
 function routingRecord(change: BroadcastChange): Record<string, unknown> | null {
@@ -151,6 +162,62 @@ function keysForAgentRun(change: BroadcastChange): Invalidation[] {
   ];
 }
 
+// What an issue number reservation (next_issue_number) changes on its project:
+// the counter, `updated_at` through the set_updated_at trigger, and
+// `content_revision`, which guard_project_content increments on every update
+// outside encryption maintenance. A content or settings change also rewrites
+// another column (encrypted_content, smart_assign_rules…), so it still refetches.
+const PROJECT_COUNTER_COLUMNS = new Set(["issue_seq", "updated_at", "content_revision"]);
+
+/**
+ * Every issue creation bumps its project's counter, which broadcasts the
+ * whole project row to every member. When nothing else differs between the
+ * two rows, the list only needs those two values and its order: the fields
+ * to patch, or null for any other change (which keeps the full refetch).
+ */
+export function projectCounterBump(
+  change: BroadcastChange
+): { id: string; fields: Record<string, unknown> } | null {
+  const { record, old_record: previous } = change;
+  if (change.table !== "projects" || change.operation !== "UPDATE" || !record || !previous) return null;
+  if (typeof record.id !== "string" || record.id !== previous.id || typeof record.updated_at !== "string") return null;
+  const fields: Record<string, unknown> = {};
+  for (const key of new Set([...Object.keys(record), ...Object.keys(previous)])) {
+    if (JSON.stringify(record[key]) === JSON.stringify(previous[key])) continue;
+    if (!PROJECT_COUNTER_COLUMNS.has(key)) return null;
+    fields[key] = record[key];
+  }
+  return Object.keys(fields).length > 0 ? { id: record.id, fields } : null;
+}
+
+/**
+ * Patch a counter bump into the cached project list, in the order of
+ * GET /api/projects (most recently updated first). Only values the cached
+ * row already carries are written: the broadcast row also holds ciphertext
+ * and archived columns the client never receives. False when the row is
+ * missing from a loaded list, so the caller refetches it.
+ */
+export function applyProjectCounterBump(client: QueryClient, change: BroadcastChange): boolean {
+  const bump = projectCounterBump(change);
+  if (!bump) return false;
+  const time = (value: unknown) => Date.parse(String(value)) || 0;
+  let found = true;
+  client.setQueryData<Record<string, unknown>[]>(["projects"], (projects) => {
+    if (!projects) return undefined;
+    const index = projects.findIndex((project) => project.id === bump.id);
+    found = index >= 0;
+    const cached = projects[index];
+    // A later write (a refetch, a bump delivered earlier) already holds newer values.
+    if (!cached || time(cached.updated_at) > time(bump.fields.updated_at ?? cached.updated_at)) return undefined;
+    const patched = { ...cached };
+    for (const [key, value] of Object.entries(bump.fields)) if (key in cached) patched[key] = value;
+    const next = projects.slice();
+    next[index] = patched;
+    return next.sort((a, b) => time(b.updated_at) - time(a.updated_at));
+  });
+  return found;
+}
+
 export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
   switch (change.table) {
     case "app_tabs":
@@ -169,7 +236,9 @@ export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
     // PERIMETER of the sidebar numbers: without that, the line would disappear
     // the list — ["projects"] refreshes — but its share of the “Home” badge
     // remained, not having asked for the table again.
+    // An issue number reservation is patched in place (applyProjectCounterBump).
     case "projects":
+      if (projectCounterBump(change)) return [];
       return [
         active(["projects"]),
         active(SMART_ASSIGN_WARNINGS_KEY),
@@ -234,6 +303,48 @@ export function isOwnEcho(change: BroadcastChange): boolean {
   }
 }
 
+/**
+ * The echo of our own page PATCH, decided when the coalesced invalidation
+ * fires rather than on arrival: the broadcast leaves at commit and usually
+ * lands just before the acknowledgement. Only an accepted write with the
+ * same stamps qualifies, so another window, device, teammate, Numo or the MCP
+ * still refetches. Undefined means the invalidation always applies.
+ */
+export function ownPageEchoCheck(
+  change: BroadcastChange,
+  { key }: Invalidation
+): ((client: QueryClient) => boolean) | undefined {
+  if (change.table !== "pages" || change.operation !== "UPDATE" || !change.record) return undefined;
+  const record = change.record;
+  if ((key[0] === "page" && key[1] === record.id) || key[0] === "pages") {
+    return (client) => isAcceptedPageEcho(client, record, false);
+  }
+  if (key[0] === "app-tab-metadata") return (client) => isAcceptedPageEcho(client, record, true);
+  return undefined;
+}
+
+/**
+ * The echo of our own relation write, decided when the coalesced
+ * invalidation fires: the broadcast usually lands before the POST or DELETE
+ * acknowledgement. The aggregate board already holds that relation slice, so
+ * only its refetch is skipped; the small project relation list still reloads.
+ */
+function ownRelationEchoCheck(
+  change: BroadcastChange,
+  { key }: Invalidation
+): ((client: QueryClient) => boolean) | undefined {
+  if (change.table !== "issue_relations" || !sameKey(key, GLOBAL_BOARD_KEY)) return undefined;
+  return (client) => isOwnRelationEcho(client, change);
+}
+
+/** Every deferred own-echo check; undefined means the invalidation always applies. */
+export function ownEchoCheck(
+  change: BroadcastChange,
+  invalidation: Invalidation
+): ((client: QueryClient) => boolean) | undefined {
+  return ownPageEchoCheck(change, invalidation) ?? ownRelationEchoCheck(change, invalidation);
+}
+
 export function keysForProjectEvent(
   change: BroadcastChange,
   projectId: string
@@ -244,16 +355,21 @@ export function keysForProjectEvent(
     // index all derive from issues (MIN-89). Plan progress on the cards and in
     // the side panel rides the same ["issues", projectId] cache.
     case "issues":
-    case "issue_categories": // issues are cached hydrated with category_ids
+    case "issue_categories": { // issues are cached hydrated with category_ids
       // The echo of OUR own writing (MIN-156): the two ticket caches
       // already carry the server line, merged when the PATCH returns. THE
       // refresh could not learn anything — but would open the window
       // race that we have just closed. Events from other clients (Numo,
       // MCP, teammates) do not match any local writing and therefore pass
       // unchanged, like derived views that are not patched.
-      return isOwnEcho(change)
-        ? ISSUE_DERIVED_KEYS
+      if (isOwnEcho(change)) return ISSUE_DERIVED_KEYS;
+      // Protected broadcasts carry metadata only, so the changed ticket is
+      // read back; the board itself is refetched only when that cannot work.
+      const issueId = change.table === "issues" ? routingRecord(change)?.id : issueIdOf(change);
+      return typeof issueId === "string" && issueId
+        ? [active(["issues", projectId]), { key: GLOBAL_BOARD_KEY, refetch: "active", issueId }, ...ISSUE_DERIVED_KEYS]
         : [active(["issues", projectId]), ...ISSUE_AGGREGATE_KEYS];
+    }
     case "issue_relations":
       return [active(["issue-relations", projectId]), active(GLOBAL_BOARD_KEY)];
     // An objective is copied into TWO caches: that of its project and the
@@ -560,6 +676,9 @@ export const projectScopeKeys = (projectId: string): QueryKey[] => [
   // window remained open on the Pages tab during a shutdown does not ask again
   // NOTHING about herself. It is this catch-up that puts the tree back into phase.
   ["pages", projectId],
+  // A newer tree cannot restore a missed document body. Page IDs are account
+  // query keys, so catch-up refetches active bodies and invalidates inactive ones.
+  ["page"],
   // The activity of a page (MIN-278), prefixed like ticket events:
   // a panel left open during an outage must make up for the gestures it
   // n'a pas vus passer.
