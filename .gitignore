@@ -23,6 +23,7 @@ next-env.d.ts
 /dev.log
 /problems.md
 /tsconfig.tsbuildinfo
+/tsconfig.build.tsbuildinfo
 /copy-audit*.json
 /copy-audit*.md
 /copy-fix-*.md
