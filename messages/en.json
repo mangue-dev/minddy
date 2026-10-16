@@ -2602,7 +2602,15 @@
     "enabledCardTitle": "Two-factor authentication is on",
     "mfaInvalidCode": "That code didn't work. It may have expired; try the next one your app shows.",
     "mfaTooManyAttempts": "Too many attempts. Wait a moment, then try again.",
-    "mfaGenericError": "Couldn't verify the code. Try again."
+    "mfaGenericError": "Couldn't verify the code. Try again.",
+    "sessionsTitle": "Sessions",
+    "signOutOthersLabel": "Sign out other devices",
+    "signOutOthersHint": "Ends every other sign-in to this account. This device stays signed in.",
+    "signOutOthersButton": "Sign out",
+    "signOutOthersConfirmTitle": "Sign out other devices?",
+    "signOutOthersConfirmDescription": "Every other browser and desktop app signed in to this account returns to the sign-in screen. This device stays signed in.",
+    "signOutOthersToast": "Other devices are signed out.",
+    "signOutOthersError": "Couldn't sign out other devices. They are still signed in; try again."
   },
   "Agent": {
     "engineWorking": "{agent} is working…",

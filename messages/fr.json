@@ -2602,7 +2602,15 @@
     "enabledCardTitle": "Double authentification activée",
     "mfaInvalidCode": "Ce code n'a pas fonctionné. Il a peut-être expiré; essayez le suivant affiché par votre application.",
     "mfaTooManyAttempts": "Trop de tentatives. Patientez un instant, puis réessayez.",
-    "mfaGenericError": "Impossible de vérifier le code. Réessayez."
+    "mfaGenericError": "Impossible de vérifier le code. Réessayez.",
+    "sessionsTitle": "Sessions",
+    "signOutOthersLabel": "Déconnecter les autres appareils",
+    "signOutOthersHint": "Met fin à toutes les autres connexions à ce compte. Cet appareil reste connecté.",
+    "signOutOthersButton": "Déconnecter",
+    "signOutOthersConfirmTitle": "Déconnecter les autres appareils ?",
+    "signOutOthersConfirmDescription": "Chaque autre navigateur et chaque app de bureau connectés à ce compte reviennent à l’écran de connexion. Cet appareil reste connecté.",
+    "signOutOthersToast": "Les autres appareils sont déconnectés.",
+    "signOutOthersError": "Impossible de déconnecter les autres appareils. Ils restent connectés ; réessayez."
   },
   "Agent": {
     "engineWorking": "{agent} travaille…",

@@ -56,6 +56,7 @@ export type ProjectSettingsTab =
 export const SETTINGS_SECTIONS = {
   accountProfile: "account-profile",
   accountSecurity: "account-security",
+  accountSessions: "account-sessions",
   accountAppearance: "account-appearance",
   accountIssues: "account-issues",
   accountKeyboard: "account-keyboard",
@@ -223,6 +224,17 @@ export function useSettingsSections(): SettingsSection[] {
           "double authentification", "two-factor", "deux facteurs",
           "authenticator", "mot de passe", "password",
           "codes de secours", "recovery codes",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountSessions,
+        tab: "security",
+        icon: LogOut,
+        title: tSecurity("sessionsTitle"),
+        keywords: [
+          "sessions", "session", "appareils", "devices", "déconnexion",
+          "deconnexion", "sign out", "log out", "déconnecter", "deconnecter",
+          "autres appareils", "other devices",
         ],
       }),
       account({

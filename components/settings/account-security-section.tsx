@@ -7,7 +7,7 @@ import {useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
 import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Button, Checkbox, Spinner, toast} from "mangue-ui";
 import {useAuth} from "@/lib/auth-context";
-import {SettingsGroup, SettingsEmpty} from "@/components/settings/settings-ui";
+import {SettingsGroup, SettingsEmpty, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {mfaStatusQueryKey, useMfaStatusQuery} from "@/lib/use-mfa-status";
 import {mfaVerifyErrorKey} from "@/lib/mfa";
@@ -39,6 +39,14 @@ import {OtpInput} from "@/components/otp-input";
  * settings page places a sticker on the tab, so that the recommendation exists
  * also when you have not come to get it. Once activated, the insert is silent:
  * it notes, it does not congratulate.
+ *
+ * ## Sessions
+ *
+ * A session lasts up to a year while it is used, and signing out only ends the
+ * session of this device (`scope: "local"`). The “Sessions” group is therefore
+ * the one explicit gesture that ends every other session of the account, apart
+ * from the automatic cut when two-factor authentication is turned on. This
+ * device stays signed in: `scope: "others"` keeps the current refresh token.
  */
 
 type Stage = "idle" | "enrolling" | "codes";
@@ -68,6 +76,10 @@ export function AccountSecuritySection() {
 
   const [disableOpen, setDisableOpen] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
+
+  const [signOutOthersOpen, setSignOutOthersOpen] = useState(false);
+  const [signingOutOthers, setSigningOutOthers] = useState(false);
+  const [signOutOthersError, setSignOutOthersError] = useState<string | null>(null);
 
   const provider = (user?.app_metadata?.provider as string | undefined) ?? "email";
   const providerLabel = provider === "google" ? "Google" : provider === "github" ? "GitHub" : null;
@@ -190,6 +202,21 @@ export function AccountSecuritySection() {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const signOutOthers = async () => {
+    setSigningOutOthers(true);
+    setSignOutOthersError(null);
+    try {
+      await signOutOtherSessions();
+      toast.success(t("signOutOthersToast"));
+    } catch {
+      // GoTrue's message is English and technical; the row keeps a localized
+      // failure in place so the person knows the other devices are still open.
+      setSignOutOthersError(t("signOutOthersError"));
+    } finally {
+      setSigningOutOthers(false);
     }
   };
 
@@ -391,6 +418,58 @@ export function AccountSecuritySection() {
           </div>
         )}
       </SettingsGroup>
+
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountSessions}
+        title={t("sessionsTitle")}
+      >
+        <SettingsRow
+          label={t("signOutOthersLabel")}
+          hint={t("signOutOthersHint")}
+          control={
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={signingOutOthers}
+              onClick={() => setSignOutOthersOpen(true)}
+            >
+              {signingOutOthers && <Spinner />}
+              {t("signOutOthersButton")}
+            </Button>
+          }
+        >
+          {signOutOthersError && (
+            <p role="alert" className="text-sm text-destructive">
+              {signOutOthersError}
+            </p>
+          )}
+        </SettingsRow>
+      </SettingsGroup>
+
+      <AlertDialog open={signOutOthersOpen} onOpenChange={setSignOutOthersOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("signOutOthersConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("signOutOthersConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={signingOutOthers}>{tc("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={signingOutOthers}
+              onClick={(e) => {
+                e.preventDefault();
+                setSignOutOthersOpen(false);
+                void signOutOthers();
+              }}
+            >
+              {t("signOutOthersButton")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={disableOpen} onOpenChange={setDisableOpen}>
         <AlertDialogContent>

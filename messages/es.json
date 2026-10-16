@@ -2602,7 +2602,15 @@
     "enabledCardTitle": "La autenticación de dos factores está activada",
     "mfaInvalidCode": "Ese código no funcionó. Puede haber caducado; prueba el siguiente que muestra tu aplicación.",
     "mfaTooManyAttempts": "Espera un momento, y luego vuelve a intentarlo.",
-    "mfaGenericError": "No se ha podido verificar el código."
+    "mfaGenericError": "No se ha podido verificar el código.",
+    "sessionsTitle": "Sesiones",
+    "signOutOthersLabel": "Cerrar sesión en otros dispositivos",
+    "signOutOthersHint": "Termina todos los demás inicios de sesión en esta cuenta. Este dispositivo sigue conectado.",
+    "signOutOthersButton": "Cerrar sesión",
+    "signOutOthersConfirmTitle": "¿Cerrar sesión en otros dispositivos?",
+    "signOutOthersConfirmDescription": "Todos los demás navegadores y apps de escritorio conectados a esta cuenta vuelven a la pantalla de inicio de sesión. Este dispositivo sigue conectado.",
+    "signOutOthersToast": "Se cerró la sesión en los otros dispositivos.",
+    "signOutOthersError": "No se pudo cerrar la sesión en los otros dispositivos. Siguen conectados; inténtalo de nuevo."
   },
   "Agent": {
     "engineWorking": "{agent} está trabajando…",

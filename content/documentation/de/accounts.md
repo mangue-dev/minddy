@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
@@ -59,12 +59,13 @@
       "app/api/account/route.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-691-session-expiry.md"
+      "content/documentation/reviews/min-691-session-expiry.md",
+      "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-691 session-expiry claim source review; hosted Auth limits read back; unchanged controls retain prior capture evidence)",
+    "revision": 10,
+    "fact": "agent:/root (sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (de changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -98,7 +99,7 @@
       "src": "/documentation/de/account-security-workflow.png",
       "alt": "Karte zur Zwei-Faktor-Authentifizierung mit Aktivieren-Schaltfläche.",
       "caption": "Beginne hier, bestätige anschließend den Authenticator und bewahre die Wiederherstellungscodes sicher auf.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -115,7 +116,7 @@
       "src": "/documentation/de/profile-and-preferences-workflow.png",
       "alt": "Profileinstellungen mit Avatar, Benutzername und schreibgeschützter E-Mail-Adresse.",
       "caption": "Speichere die geprüften Profiländerungen. Die E-Mail-Adresse bleibt schreibgeschützt.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -132,7 +133,7 @@
       "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
       "alt": "Sprachauswahl und Schalter für helles, dunkles und Systemdesign.",
       "caption": "Die Kontosprache und die Sprache der öffentlichen Website werden getrennt eingestellt.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -149,7 +150,7 @@
       "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
       "alt": "Löschvorschau mit eigenen Projekten, Tickets und Mitgliedern, die Zugriff verlieren.",
       "caption": "Lies die Vorschau und exportiere gewünschte Daten, bevor du die Löschbestätigung öffnest.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -186,6 +187,8 @@ Kehre zur vorgesehenen Anwendung zurück und melde dich an. Ein neu angemeldetes
 Öffne das Kontomenü, wähle die Abmeldung und bestätige sie. In der Desktop-App ist das Schließen eines Tabs oder Fensters nicht mit einer Abmeldung gleichzusetzen. Verwende das Kontomenü, wenn du die Sitzung beenden möchtest.
 
 Eine Sitzung bleibt angemeldet, solange du minddy nutzt, höchstens ein Jahr, und endet nach 30 Tagen ohne Nutzung. Endet sie oder wird sie auf einem anderen Gerät beendet, kehrt minddy mit dem Hinweis, dass deine Sitzung abgelaufen ist, zur Anmeldung zurück. Melde dich erneut an, um dort weiterzumachen, wo du warst.
+
+Um alle anderen Sitzungen zu beenden, etwa auf einem verlorenen Laptop oder einem gemeinsam genutzten Computer, öffne in den Kontoeinstellungen den Tab **Sicherheit**, wähle in der Gruppe **Sitzungen** die Option **Andere Geräte abmelden** und bestätige. Jeder andere Browser und jede Desktop-App, die bei deinem Konto angemeldet sind, kehren zur Anmeldung zurück; das Gerät, das du gerade nutzt, bleibt angemeldet. Apps, die du unter **minddy-MCP** → **Verbundene Apps** autorisiert hast, behalten ihren Zugriff, bis du ihn dort widerrufst.
 
 Kommt keine E-Mail an, prüfe Adresse, Spamordner und die Identität der Instanz. Bei Selbsthosting muss der Betreiber einen funktionierenden E-Mail-Versand für Auth eingerichtet haben; optionale Benachrichtigungs-E-Mails der Anwendung und die Auth-Bestätigung sind getrennte Funktionen. Eine abgelaufene Bestätigungsseite führt zurück zur Anmeldung, um einen neuen Link anzufordern. Leite Bestätigungs- oder Wiederherstellungslinks nicht zur Fehlerdiagnose weiter: Sie ermöglichen den Kontozugriff.
 
