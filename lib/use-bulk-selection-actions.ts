@@ -32,6 +32,10 @@ import {
   type IssuePromptInput,
 } from "@/lib/issue-prompt";
 import {
+  loadIssuePromptContext,
+  UNAVAILABLE_FORGE_CONTEXT,
+} from "@/lib/issue-prompt-context";
+import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
@@ -112,12 +116,16 @@ export function useBulkSelectionActions({
         moved.add(issue.id);
       }
     }
+    // One bounded read for the whole selection: pull requests and repository
+    // per issue (MIN-719); an issue it could not load says so in its block.
+    const forge = await loadIssuePromptContext(issues.map((issue) => issue.id));
     const prompt = buildMultiIssuePrompt(
-      issues.map((issue) =>
-        buildInputRef.current(
+      issues.map((issue) => ({
+        ...buildInputRef.current(
           moved.has(issue.id) ? { ...issue, status: "in_progress" } : issue,
         ),
-      ),
+        ...(forge.get(issue.id) ?? UNAVAILABLE_FORGE_CONTEXT),
+      })),
     );
     await navigator.clipboard.writeText(prompt);
     if (moved.size > 0) {

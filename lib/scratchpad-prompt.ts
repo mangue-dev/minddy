@@ -50,7 +50,7 @@ export function sectionHeadingChain(
     deepest = level;
     const text = headings[i].text.trim();
     if (text) chain.unshift(`${"#".repeat(level)} ${text}`);
-    if (level === 1) break; // rien n'englobe un titre de premier rang
+    if (level === 1) break; // nothing encloses a first-level heading
   }
   return chain;
 }
@@ -128,8 +128,8 @@ export function splitTaskSection(notes: string): {
 }
 
 /**
- * L'ouverture que produit `buildScratchpadPrompt` : « Work through … » suivi du
- * bloc <notes>. Elle sert de SIGNATURE — voir l'idempotence ci-dessous.
+ * The opening `buildScratchpadPrompt` produces: “Work through …” followed by
+ * the <notes> block. It serves as a SIGNATURE — see idempotence below.
  */
 const BUILT_PROMPT_OPENING = /^Work through [^\n]*\n\n<notes>\n/;
 
@@ -144,6 +144,15 @@ const BUILT_PROMPT_OPENING = /^Work through [^\n]*\n\n<notes>\n/;
 export function isScratchpadPrompt(text: string): boolean {
   return BUILT_PROMPT_OPENING.test(text.trim());
 }
+
+/** A `<notes>` or `</notes>` typed in the notes must not end the block early;
+ *  any other markup stays as written. */
+const NOTES_TAG = /<(\/?)notes(?=[\s/>]|$)/gi;
+
+/** Shared with the issue prompts (lib/issue-prompt.ts), in a to-do list's
+ *  terms: items are often small, not always code. */
+const WORK_INSTRUCTIONS =
+  "When an item involves code, follow the repository's own instructions and conventions, read the relevant code before changing it, keep changes focused, and run the relevant checks. Report what you did, what you left undone and anything you could not verify.";
 
 export function buildScratchpadPrompt(
   notes: string,
@@ -176,17 +185,19 @@ export function buildScratchpadPrompt(
     ? `Optionally, if the minddy MCP tools are available in your environment:
 - These notes are one section of a larger personal scratchpad. Read the full, current notes with \`minddy_get_scratchpad\` before changing anything.
 - If you update them, save the WHOLE document with \`minddy_set_scratchpad\` and preserve every other section — only tick off what you finished here.
-If the minddy MCP tools are not available, that's fine — just work from the section above.`
+If the minddy MCP tools are not available, that's fine — just work from the section above, and don't claim the notes were updated.`
     : `Optionally, if the minddy MCP tools are available in your environment:
 - Read the current version of these notes with \`minddy_get_scratchpad\` first — they may have changed since this was copied.
 - As you finish items, tick them off and save the updated notes with \`minddy_set_scratchpad\` so the list stays in sync.
-If the minddy MCP tools are not available, that's fine — just work from the notes above.`;
+If the minddy MCP tools are not available, that's fine — just work from the notes above, and don't claim the notes were updated.`;
 
   return `Work through ${target}.
 
 <notes>
-${body}
+${body.replace(NOTES_TAG, "&lt;$1notes")}
 </notes>
 ${sectionNote}
-These are rough, personal working notes — a quick to-do list I jotted down, not a formal spec. Checkbox lines are to-do items: '- [ ]' means to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. An indented checkbox line is a sub-task of the line above it, at any depth: finishing a parent means finishing everything nested under it. Some items may be terse or ambiguous. If anything is unclear or you need more detail before acting, ask me first rather than guessing.${withMcp ? `\n\n${mcpBlock}` : ""}`;
+These are rough, personal working notes — a quick to-do list I jotted down, not a formal spec. Checkbox lines are to-do items: '- [ ]' means to do, '- [~]' in progress, '- [x]' done, '- [-]' dropped. An indented checkbox line is a sub-task of the line above it, at any depth: finishing a parent means finishing everything nested under it. Some items may be terse or ambiguous. If anything is unclear or you need more detail before acting, ask me first rather than guessing.
+
+${WORK_INSTRUCTIONS}${withMcp ? `\n\n${mcpBlock}` : ""}`;
 }

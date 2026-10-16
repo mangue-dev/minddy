@@ -91,6 +91,7 @@ import {
   buildIssuePrompt,
   buildIssueVerifyPrompt,
 } from "@/lib/issue-prompt";
+import { loadOneIssuePromptContext } from "@/lib/issue-prompt-context";
 import { useAskNumoTarget } from "@/lib/ask-numo-context";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useCategoryCreateOption } from "@/lib/use-picker-create";
@@ -1196,6 +1197,7 @@ const IssueCardContent = memo(function IssueCardContent({
       projectKey,
       resourceCount: issue.resource_count,
       ...promptContext(),
+      ...(await loadOneIssuePromptContext(issue.id)),
     });
     await navigator.clipboard.writeText(prompt);
     if (autoStart) {
@@ -1211,6 +1213,7 @@ const IssueCardContent = memo(function IssueCardContent({
   // rereading when the plan exists. No automatic start: schedule
   // is not starting.
   const copyPlanPrompt = async () => {
+    const forge = await loadOneIssuePromptContext(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
         issue,
@@ -1218,6 +1221,7 @@ const IssueCardContent = memo(function IssueCardContent({
         projectKey,
         resourceCount: issue.resource_count,
         ...promptContext(),
+        ...forge,
       }),
     );
     toast.success(
@@ -1229,6 +1233,7 @@ const IssueCardContent = memo(function IssueCardContent({
   // automatic: we reread work already done, we don’t start it — and a
   // Ticket remaining upstream must not advance because a check is requested.
   const copyVerifyPrompt = async () => {
+    const forge = await loadOneIssuePromptContext(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
         issue,
@@ -1236,6 +1241,7 @@ const IssueCardContent = memo(function IssueCardContent({
         projectKey,
         resourceCount: issue.resource_count,
         ...promptContext(),
+        ...forge,
       }),
     );
     toast.success(t("verifyPromptCopied"));
@@ -1256,6 +1262,7 @@ const IssueCardContent = memo(function IssueCardContent({
       );
       return;
     }
+    const forge = await loadOneIssuePromptContext(issue.id);
     await navigator.clipboard.writeText(
       buildIssueCustomPrompt(
         {
@@ -1264,6 +1271,7 @@ const IssueCardContent = memo(function IssueCardContent({
           projectKey,
           resourceCount: issue.resource_count,
           ...promptContext(),
+          ...forge,
         },
         instructions,
       ),
