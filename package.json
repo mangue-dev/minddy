@@ -161,7 +161,7 @@
     "frimousse": "^0.4.0",
     "input-otp": "^1.5.0",
     "jose": "6.2.12",
-    "jsdom": "^26.1.0",
+    "jsdom": "^30.1.2",
     "lowlight": "^3.3.0",
     "mangue-ui": "^0.8.0",
     "mcp-handler": "^2.2.0",
