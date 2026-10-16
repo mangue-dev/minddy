@@ -10,7 +10,7 @@ import { loadPullRequestDetailSurface, preparedPullRequestDetailSurface } from "
 import { useRouter } from "next/navigation";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { canConsumePrDeepLink } from "@/lib/pr-navigation";
-import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
 import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import {
@@ -44,6 +44,7 @@ import {
 } from "@/lib/pull-request-sections";
 import { checkedProps } from "@/components/search-select";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
+import { usePrContextActions } from "@/components/pull-requests/pr-context-actions";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import {
   PROJECT_GROUP_INDENT,
@@ -215,6 +216,7 @@ function PrRow({
       type="button"
       data-sidebar-filter-result
       data-navigation-href={`/pull-requests?pr=${encodeURIComponent(pr.prId)}`}
+      data-pr-id={pr.prId}
       onClick={onSelect}
       // The DERIVED selection of the page, not the CLICKS state: both
       // diverge in the two most common opening cases — upon arrival
@@ -373,6 +375,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const router = useRouter();
+  const tabActive = useAppTabActive();
   const navigation = useOptionalAppTabNavigation();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const queryClient = useQueryClient();
@@ -533,6 +536,35 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   );
 
   /**
+   * "Merge" from a row's menu opens that pull request on its merge dialog
+   * (MIN-685). The request is held here until the detail has handled it;
+   * a browsed list carries it in the address (`&action=merge`) instead.
+   */
+  const actionParam = browse ? null : searchParams.get("action");
+  const [mergeIntentPrId, setMergeIntentPrId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!tabActive || actionParam !== "merge" || !prParam) return;
+    setMergeIntentPrId(prParam);
+    const remaining = new URLSearchParams(searchParams);
+    remaining.delete("action");
+    router.replace(`/pull-requests${remaining.size ? `?${remaining}` : ""}`, { scroll: false });
+  }, [tabActive, actionParam, prParam, router, searchParams]);
+  const prContext = usePrContextActions({
+    pullRequests,
+    onOptimisticStateChange: applyOptimisticState,
+    onStateChange: applyConfirmedState,
+    onRefetchList: () => void refetch(),
+    onMerge: (prId) => {
+      if (browse) {
+        browse.onSelect(`/pull-requests?pr=${encodeURIComponent(prId)}&action=merge`);
+        return;
+      }
+      setSelectedPrId(prId);
+      setMergeIntentPrId(prId);
+    },
+  });
+
+  /**
    * What the column DISPLAYS. Distinct from `filtered`, the selection of which is
    * derived: the text filter must not move it. Otherwise each keystroke
    * would drop the detail onto the first remaining line — and start again
@@ -670,6 +702,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const sidebar = (
       <CollectionSidebar browse={browse}
         title={t("title")}
+        itemContextActions={prContext.itemContextActions}
+        onItemContextMenu={prContext.onItemContextMenu}
         hiddenOnMobile
         filter={{
           value: query,
@@ -771,7 +805,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       </CollectionSidebar>
   );
 
-  if (browse) return sidebar;
+  if (browse) return <>{sidebar}{prContext.dialog}</>;
 
   if (!loading && readFailed) {
     return (
@@ -822,6 +856,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             onOptimisticStateChange={applyOptimisticState}
             onStateChange={applyConfirmedState}
             onOpenIssue={(issueId, projectId) => setPanel({ projectId, issueId })}
+            mergeIntent={mergeIntentPrId === selected.prId}
+            onMergeIntentConsumed={() => setMergeIntentPrId(null)}
           />
         ) : loading ? (
           <PrDetailSkeleton />
@@ -831,6 +867,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           </div>
         )}
       </div>
+
+      {prContext.dialog}
 
       {/* Linked issue side panel — overlay over the page (no nav). */}
       {panel ? (

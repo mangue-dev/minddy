@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,17 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-677-editor-captures.json",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
+      "components/routines/routines-panel.tsx",
+      "components/routines/use-routine-actions.tsx",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; es translation of removal edits; no operational rerun)",
-    "language": "agent:/root (es translation, label and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 8,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; es translation of removal edits; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 8; es translation of added passages; no operational rerun)",
+    "language": "agent:/root (es translation, label and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [],
   "aliases": [],
@@ -58,7 +61,7 @@
       "src": "/documentation/es/scheduled-routines-workflow.png",
       "alt": "Modos Programado y Evento, un grupo de condiciones, iconos de la aplicación y botones de información discretos.",
       "caption": "Demostración local del editor real de desencadenantes. No se guardó ni ejecutó ninguna rutina.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -104,6 +107,8 @@ Una entrada sin su propiedad obligatoria espera hasta que una edición cumpla el
 ## Gestionar y comprobar ejecuciones {#runs}
 
 Abre la rutina para ver sus esperas, cambiar instrucciones o desencadenante, pausarla o leer sus ejecuciones. Pausar, eliminar o modificar su configuración invalida las esperas. Reactivar escucha eventos futuros sin repetir llegadas antiguas. El inicio manual funciona con todos los desencadenantes sin esperar su evento y también consume presupuesto.
+
+Haz clic derecho en una rutina de la lista para abrir su última ejecución sin seleccionarla primero; **Abrir la última ejecución** no está disponible hasta que la rutina se haya ejecutado. El propietario del proyecto también puede elegir **Ejecutar ahora**, **Pausar** o **Reactivar**, **Editar** o **Mover a la papelera** en el mismo menú. **Reactivar** no está disponible cuando la instancia no puede programar rutinas. Los demás miembros solo ven entradas que no modifican la rutina. Para crear una rutina, haz clic derecho en **Rutinas** en la barra lateral y elige **Nueva rutina**.
 
 Cada ejecución usa el presupuesto de IA del propietario con un límite predeterminado del 15 % del presupuesto mensual, incluidas todas las llamadas a Numo de esa ejecución. Abre su conversación para ver el origen, el resultado y las preguntas. Si necesitas responder, hazlo en esa conversación; se conserva el presupuesto restante. Revisa los resultados guardados antes de cambiar el límite o volver a intentarlo. Tras un cambio de propietario, la rutina anterior no puede iniciar nuevo trabajo; crea una como propietario actual.
 

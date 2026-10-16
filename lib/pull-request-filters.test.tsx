@@ -50,7 +50,7 @@ vi.mock("./use-agent-runs", async () => {
 });
 vi.mock("./app-tab-navigation-context", () => ({ useOptionalAppTabNavigation: () => null }));
 vi.mock("./projects-context", () => ({ useProjects: () => ({ projects: [{ id: "project" }], loading: false }) }));
-vi.mock("./assistant-panel-context", () => ({ useAssistantContext: () => {} }));
+vi.mock("./assistant-panel-context", () => ({ useAssistantContext: () => {}, useAssistantPanelActions: () => ({ openIntent: () => {} }) }));
 vi.mock("./current-view-context", () => ({ usePublishCurrentView: () => {} }));
 vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => false }));
 vi.mock("./use-my-avatar", () => ({ useMyAvatarSource: () => null }));

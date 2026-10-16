@@ -18,6 +18,7 @@ import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectConte
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
 import { type NavSection, type NavItem } from "mangue-ui";
 import type { Project } from "@/lib/types";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useMobileSecondarySidebar } from "@/lib/secondary-sidebar-context";
 
 export type MobileMenuPanel = {
@@ -29,7 +30,7 @@ export type MobileMenuPanel = {
   render?: (navigation: MobileMenuNavigation) => ReactNode;
 };
 export type MobileMenuSection = Omit<NavSection, "items"> & {
-  items: (NavItem & { panel?: MobileMenuPanel })[];
+  items: (NavItem & { panel?: MobileMenuPanel; contextActions?: ContextMenuAction[] })[];
 };
 export type MobileMenuNavigation = { onBrowse: (panel: MobileMenuPanel) => void; onNavigate: () => void; headerHost?: HTMLElement | null };
 

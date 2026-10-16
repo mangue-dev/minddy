@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained)",
+    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained); MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,17 @@
       "components/pull-requests/pr-detail.tsx",
       "components/pull-requests/pr-unresolved-conversations.tsx",
       "lib/server/agent/pr-mention.ts",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
+      "components/pull-requests/pr-context-actions.tsx",
+      "lib/pr-context-menu.ts",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution); agent:/root/min721_docs (MIN-721 source review inherited from en revision 9; it translation of removal edits; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 10,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root/native_hosting_terms (private worker selection controls and fail-closed recovery source/UI-test review; no paid Claude execution or new provider rehearsal claimed); agent:/root/native_identity_docs (frozen identity and proactive context source review; prior operational evidence retained, no new provider execution); agent:/root (account organization and official hosted-auth restriction source review; no provider rerun); agent:/root (native model controls and frozen launch source review; live auth outcomes recorded separately); agent:/root (worker card, explicit validation, PR handoff and footer source/component review; no new provider execution); agent:/root/min721_docs (MIN-721 source review inherited from en revision 9; it translation of removal edits; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 10; it translation of added passages; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/native_hosting_terms (localized worker selection additions and equivalent meaning; agent review, no human acceptance claimed); agent:/root/native_identity_docs (localized additions and complete equivalent meaning; agent review, no human acceptance claimed); agent:/root (complete six-locale meaning review; agent review, not human acceptance); agent:/root (six-locale model-control meaning review; not human acceptance); agent:/root (six-locale card controls and delivery wording review; not human acceptance); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "issues",
@@ -67,7 +70,7 @@
       "src": "/documentation/it/review-pull-requests-workflow.png",
       "alt": "Scheda Modifiche della PR dimostrativa aperta, con il diff di greeting e l’avviso di autorizzazione GitHub non disponibile.",
       "caption": "PR dimostrativa che rimane aperta, senza merge. Il diff rimuove gli spazi intorno al nome e usa World quando il valore è vuoto. Questa istanza non può richiedere l’autorizzazione dell’utente su GitHub: lo stato di disponibilità non concede il permesso di merge né dimostra che la CI del fornitore sia riuscita.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,3 +121,5 @@ Menziona `@numo` in un commento della pull request per chiedere a Numo una revis
 Richiedi un reviewer quando serve un secondo controllo. Controlla stato di bozza o pronto per revisione, discussioni aperte, revisioni richieste e regole di merge del fornitore.
 
 Esegui il merge solo dopo i controlli e le revisioni richiesti, con un account del fornitore autorizzato. **Unisci con Numo** lascia a Numo la stesura del titolo e della descrizione del commit di merge a partire dalla pull request, poi esegue il merge non appena sono pronti. Il fornitore può comunque rifiutare un’azione visibile. Se lo stato mostrato è obsoleto, aggiorna e controlla la piattaforma prima di ripetere un’azione. Un’anteprima collegata richiede un deployment reale del fornitore.
+
+Fai clic con il tasto destro su una pull request dell’elenco per cambiarne lo stato, unirla o chiedere una correzione senza aprirla. Una pull request aperta offre **Converti in bozza** e **Chiudi pull request**, una bozza offre **Pronta per la revisione** e **Chiudi pull request**, e una chiusa offre **Riapri**; ogni cambio chiede una conferma. Una pull request unita non offre alcun cambio di stato. Le azioni di scrittura compaiono solo quando il tuo account del fornitore può scrivere nel repository e restano non disponibili finché il menu non ha riletto la pull request. **Unisci** compare quando la pull request è aperta, non è una bozza ed è pronta per il merge; apre la pull request sulla sua consueta conferma di merge. **Copia prompt di correzione** e **Correggi con Numo** compaiono quando un controllo fallisce, una conversazione non è risolta, oppure il branch ha conflitti o non è aggiornato. **Correggi con Numo** invia quel prompt a Numo con la pull request come contesto. Permessi e possibilità di merge vengono verificati di nuovo alla conferma.

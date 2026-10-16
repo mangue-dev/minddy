@@ -3,12 +3,12 @@
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Calendar01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Calendar01Icon, Clock01Icon, Delete02Icon, Edit04Icon, PauseCircleIcon, PlayCircleIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Skeleton, cn } from "mangue-ui";
+import { Button, Skeleton, cn, toast } from "mangue-ui";
 import { EmptyScene } from "@/components/empty-scene";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -27,6 +27,9 @@ import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { Routine } from "@/lib/routines-api";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
+import type { RoutineDetailIntent } from "@/components/routines/routine-detail";
+import { RoutineTrashDialog, useRoutineActions } from "@/components/routines/use-routine-actions";
 import {
   Tooltip,
   TooltipContent,
@@ -68,23 +71,38 @@ export function RoutinesPanel({
   selectedId,
   onSelect,
   browse,
+  intent,
+  onIntentConsumed,
+  onIntent,
+  createIntent = false,
+  onCreateIntentConsumed,
 }: {
   browse?: SidebarBrowseTarget;
   selectedId: string | null;
   onSelect: (routineId: string | null) => void;
+  /** The pending sidebar request for the selected routine, if any. */
+  intent?: RoutineDetailIntent | null;
+  onIntentConsumed?: () => void;
+  /** Open a routine on its editor or latest run; absent while browsing. */
+  onIntent?: (routineId: string, action: RoutineDetailIntent) => void;
+  /** The sidebar's "New routine" entry asked to open the wizard once. */
+  createIntent?: boolean;
+  onCreateIntentConsumed?: () => void;
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
   const locale = useLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { projects } = useProjects();
+  const { projects, loading: projectsLoading } = useProjects();
   const { routines, loading } = useRoutinesQuery();
   const {
     routineSchedulingConfigured,
     loading: agentCapabilitiesLoading,
   } = useAgentModelsQuery();
 
+  const actions = useRoutineActions({ schedulingConfigured: routineSchedulingConfigured });
+  const [trashTarget, setTrashTarget] = useState<Routine | null>(null);
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardMounted, setWizardMounted] = useState(false);
@@ -266,6 +284,98 @@ export function RoutinesPanel({
     setWizardOpen(true);
   };
 
+  // "New routine" from the Routines row of the sidebar: wait for the
+  // scheduler and project ownership to be known, then open the wizard — or
+  // say why no routine can be created here.
+  useEffect(() => {
+    if (!createIntent || agentCapabilitiesLoading || projectsLoading) return;
+    if (anyEligible) openWizard();
+    else if (emptyReason) toast.error(t(emptyReason as "emptyNoRepo"));
+    onCreateIntentConsumed?.();
+  }, [createIntent, agentCapabilitiesLoading, projectsLoading, anyEligible]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openIntent = (routine: Routine, action: RoutineDetailIntent) => {
+    if (onIntent) onIntent(routine.id, action);
+    else browse?.onSelect(`/routines?routine=${encodeURIComponent(routine.id)}&action=${action}`);
+  };
+
+  /**
+   * The right-click menu of a routine row (MIN-685), built from the row
+   * under the pointer — not from the selection. Members read runs; only the
+   * owner gets the gestures that write or spend (same rule as the pane).
+   */
+  const itemContextActions = (target: Element): ContextMenuAction[] => {
+    const id = target.closest<HTMLElement>("[data-routine-id]")?.dataset.routineId;
+    const routine = id ? routines.find((r) => r.id === id) : undefined;
+    if (!routine) return [];
+    const owner = projectById.get(routine.project_id)?.owner_id === user?.id;
+    const pending = actions.isPending(routine.id);
+    const menu: ContextMenuAction[] = [];
+    menu.push({
+      id: "routine-latest-run",
+      label: t("openLatestRun"),
+      icon: <HugeiconsIcon icon={Clock01Icon} className="size-4" />,
+      disabled: !routine.last_run_at,
+      onSelect: () => openIntent(routine, "latest-run"),
+    });
+    if (!owner) return menu;
+    menu.push(
+      {
+        id: "routine-run-now",
+        label: t("runNow"),
+        icon: <HugeiconsIcon icon={PlayIcon} className="size-4" />,
+        disabled: pending,
+        onSelect: () => void actions.runNow(routine),
+      },
+      routine.enabled
+        ? {
+            id: "routine-pause",
+            label: t("pause"),
+            icon: <HugeiconsIcon icon={PauseCircleIcon} className="size-4" />,
+            disabled: pending || agentCapabilitiesLoading,
+            onSelect: () => actions.toggleEnabled(routine, false),
+          }
+        : {
+            id: "routine-resume",
+            label: t("resume"),
+            icon: <HugeiconsIcon icon={PlayCircleIcon} className="size-4" />,
+            disabled: pending || agentCapabilitiesLoading || !routineSchedulingConfigured,
+            onSelect: () => actions.toggleEnabled(routine, true),
+          },
+      {
+        id: "routine-edit",
+        label: tCommon("edit"),
+        icon: <HugeiconsIcon icon={Edit04Icon} className="size-4" />,
+        onSelect: () => openIntent(routine, "edit"),
+      },
+      {
+        id: "routine-trash",
+        label: tCommon("moveToTrash"),
+        icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+        variant: "destructive",
+        disabled: pending,
+        transfersFocus: true,
+        onSelect: () => setTrashTarget(routine),
+      },
+    );
+    return menu;
+  };
+
+  const trashDialog = (
+    <RoutineTrashDialog
+      routine={trashTarget}
+      open={trashTarget !== null}
+      onOpenChange={(open) => { if (!open) setTrashTarget(null); }}
+      onConfirm={() => {
+        const routine = trashTarget;
+        if (!routine) return;
+        void actions.remove(routine).then((removed) => {
+          if (removed && routine.id === selectedId) onSelect(null);
+        });
+      }}
+    />
+  );
+
   const list = loading ? (
     <div className="flex flex-col gap-2 px-2 pt-2">
       {[0, 1].map((g) => (
@@ -373,6 +483,7 @@ export function RoutinesPanel({
   const sidebar = (
       <CollectionSidebar browse={browse}
         title={t("title")}
+        itemContextActions={itemContextActions}
         hiddenOnMobile
         filter={{
           value: query,
@@ -418,7 +529,7 @@ export function RoutinesPanel({
         />
       ) : null;
 
-  if (browse) return <>{sidebar}{wizard}</>;
+  if (browse) return <>{sidebar}{wizard}{trashDialog}</>;
 
   return (
     <>
@@ -438,6 +549,8 @@ export function RoutinesPanel({
               onSelect(null);
               void refresh();
             }}
+            intent={intent}
+            onIntentConsumed={onIntentConsumed}
           />
         ) : loading ? (
           /* Nothing while loading: the column already shows its skeletons,
@@ -475,6 +588,7 @@ export function RoutinesPanel({
       </div>
 
       {wizard}
+      {trashDialog}
     </>
   );
 }
@@ -518,6 +632,7 @@ function RoutineRow({
       data-sidebar-filter-result
       aria-current={selected ? "true" : undefined}
       data-navigation-href={`/routines?routine=${encodeURIComponent(routine.id)}`}
+      data-routine-id={routine.id}
       onClick={onSelect}
       className={cn(
         // `pr-3` and not `pr-2`: the status point (paused, missed passage)

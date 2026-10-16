@@ -616,6 +616,8 @@ export function PrDetail({
   onOptimisticStateChange,
   onStateChange,
   onOpenIssue,
+  mergeIntent = false,
+  onMergeIntentConsumed,
 }: {
   item: PullRequestListItem;
   onRefetchList: () => void;
@@ -628,6 +630,13 @@ export function PrDetail({
   onStateChange: (prId: string, state: PullRequestListItem["pr_state"]) => void;
   /** Opens the linked issue in the side panel, above the page (no navigation). */
   onOpenIssue: (issueId: string, projectId: string) => void;
+  /**
+   * The sidebar menu asked to merge this pull request (MIN-685): open the
+   * merge dialog once a fresh read confirms it is still allowed, then
+   * report through `onMergeIntentConsumed`.
+   */
+  mergeIntent?: boolean;
+  onMergeIntentConsumed?: () => void;
 }) {
   const t = useTranslations("PullRequests");
   const { open: openAssistant } = useAssistantPanelActions();
@@ -1014,6 +1023,19 @@ export function PrDetail({
     },
     [commits, item.provider, mergePolicy, pr],
   );
+
+  useEffect(() => {
+    if (!mergeIntent || readState === "loading" || readState === "refreshing") return;
+    const method = effectiveReadiness?.preferredMethod ?? effectiveReadiness?.methods[0];
+    if (readState === "fresh" && canWrite && !isDraft && effectiveReadiness?.mergeAllowed && method) {
+      openMergeConfirmation(method);
+    } else {
+      // The read moved on since the menu was built (a new blocker, lost
+      // rights): the readiness control on screen now says why.
+      toast.error(t("mergeNoLongerAllowed"));
+    }
+    onMergeIntentConsumed?.();
+  }, [mergeIntent, readState, canWrite, isDraft, effectiveReadiness, openMergeConfirmation, onMergeIntentConsumed, t]);
 
   useEffect(() => {
     if (confirmAction?.kind !== "merge" || !pr || mergeCommitDraftEdited) return;

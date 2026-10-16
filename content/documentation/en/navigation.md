@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,19 @@
       "components/issue-field-shortcuts.tsx",
       "lib/keyboard/shortcuts.ts",
       "lib/keyboard/keyboard-context.tsx",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "components/project-context-actions.tsx",
+      "lib/sidebar-context-actions.ts",
+      "components/routines/routines-panel.tsx",
+      "components/pull-requests/pr-context-actions.tsx",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en changed-passage parity and label review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en changed-passage parity and label review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "views",
@@ -68,7 +73,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +89,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -111,6 +116,18 @@ The main navigation gives access to personal work and your projects. Select a pr
 Personal cycles and cross-project views span projects you can access. Project objectives, wiki and feedback belong to one project. Check the active project before creating work or changing settings.
 
 ![Project navigation beside the demonstration issue board.](/documentation/en/work-navigation.png)
+
+### Act from a sidebar row {#sidebar-menus}
+
+Right-click a row in the sidebar to act on what it represents without opening it first. Link rows also offer **Open in a new tab** and **Copy link**. An action that moves something to the trash always comes last, after a separator.
+
+- The **All issues** row offers **New issue**, and the **Routines** row offers **New routine** when you own a project.
+- A project row, or the project name at the top of its panel, offers **New** (an issue, objective or page in that project) and **Project settings**. The project owner also sees **Move to trash**, which asks for the same confirmation as the project settings.
+- A project tab offers its own creation entry: **New issue** on Issues, **New objective** on Objectives, **New page** on Pages and **New feedback** on Feedback, which opens the internal feedback composer.
+- A routine row offers **Open latest run** and, to the project owner, **Run now**, **Pause** or **Resume**, **Edit** and **Move to trash**. See [Manage and verify runs](/docs/scheduled-routines#runs).
+- A pull request row offers the state changes its current state allows, **Merge** when it is ready, and fix actions when something blocks it. See [Review and merge](/docs/code-work#decision).
+
+The action applies to the row you clicked, even when another project or item is open.
 
 ### Panels and mobile navigation {#panels}
 

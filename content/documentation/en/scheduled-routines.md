@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,17 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-677-editor-captures.json",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
+      "components/routines/routines-panel.tsx",
+      "components/routines/use-routine-actions.tsx",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review: code delegation and code routine templates removed; routine examples are now triage, stale issues and weekly summary; no operational rerun)",
-    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 8,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review: code delegation and code routine templates removed; routine examples are now triage, stale issues and weekly summary; no operational rerun); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [],
   "aliases": [],
@@ -58,7 +61,7 @@
       "src": "/documentation/en/scheduled-routines-workflow.png",
       "alt": "Scheduled and event modes, one condition group, app icons and discreet information buttons.",
       "caption": "Local demonstration of the actual trigger editor. No routine was saved or executed.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -104,6 +107,8 @@ An entry created without its required property stays waiting until an edit satis
 ## Manage and verify runs {#runs}
 
 Open the routine to inspect waiting conditions, change its instruction or trigger, pause it, or review occurrences. Pausing, deleting or changing its configuration invalidates waiting items. Re-enabling listens to future events without replaying old arrivals. A manual run can start any trigger type without waiting for its event and also consumes usage.
+
+Right-click a routine in the list to open its latest run without selecting it first; **Open latest run** stays unavailable until the routine has run. The project owner can also choose **Run now**, **Pause** or **Resume**, **Edit** or **Move to trash** from the same menu. **Resume** is unavailable when the instance cannot schedule routines. Other members only see entries that leave the routine unchanged. To create a routine, right-click **Routines** in the sidebar and choose **New routine**.
 
 Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by default, including every Numo call of that occurrence. Open its conversation to inspect the source, outcome and questions. When owner input is required, answer in that same conversation; the remaining occurrence budget is retained. Inspect saved results before adjusting a cap or retrying. After an ownership change, the previous owner's routine cannot start new work; create a routine as the current owner.
 

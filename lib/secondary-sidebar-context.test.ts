@@ -14,7 +14,7 @@ describe("routeHasSecondaryNav", () => {
   it("offers navigation actions for links and declared row destinations", () => {
     const sidebar = readFileSync("components/secondary-sidebar.tsx", "utf8");
     expect(sidebar).toContain('"a[href], [data-navigation-href]"');
-    expect(sidebar).toContain("useNavigationContextActions(navigationMenu?.href)");
+    expect(sidebar).toContain("useNavigationContextActions(menu?.href)");
   });
 });
 

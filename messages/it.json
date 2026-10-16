@@ -3927,7 +3927,10 @@
     "searchReviewers": "Cerca revisori",
     "noReviewersFound": "Nessun revisore disponibile",
     "reviewerRequestSent": "Revisione richiesta a {reviewer}",
-    "reviewerRequestFailed": "Impossibile richiedere la revisione. Riprova."
+    "reviewerRequestFailed": "Impossibile richiedere la revisione. Riprova.",
+    "copyFixPrompt": "Copia prompt di correzione",
+    "fixWithNumo": "Correggi con Numo",
+    "mergeNoLongerAllowed": "Questa pull request non può più essere unita così com'è."
   },
   "Triage": {
     "projectNotFound": "Progetto non trovato",
@@ -6020,7 +6023,10 @@
     "runStatusWorking": "Lavoro",
     "runStatusIdle": "Scadenza",
     "runStatusFailed": "Errore",
-    "runStatusCanceled": "Annullata"
+    "runStatusCanceled": "Annullata",
+    "openLatestRun": "Apri l'ultima esecuzione",
+    "pause": "Metti in pausa",
+    "resume": "Riattiva"
   },
   "McpClients": {
     "title": "MCP per Numo",

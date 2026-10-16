@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained)",
+    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained); MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,17 @@
       "components/pull-requests/pr-detail.tsx",
       "components/pull-requests/pr-unresolved-conversations.tsx",
       "lib/server/agent/pr-mention.ts",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
+      "components/pull-requests/pr-context-actions.tsx",
+      "lib/pr-context-menu.ts",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture)",
-    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 10,
+    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "issues",
@@ -67,7 +70,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,3 +121,5 @@ Mention `@numo` in a pull request comment to ask Numo for a read-only review in 
 Request a reviewer when a second review is needed. Check the draft or ready-for-review state, unresolved discussions, requested reviews and provider merge policy.
 
 Merge only after the applicable checks and reviews are satisfied and your provider account has permission. **Merge with Numo** lets Numo write the merge commit title and description from the pull request, then merges as soon as they are ready. A visible action can still be rejected by the forge. If the displayed state is stale, refresh and inspect the provider before repeating an action. A linked preview depends on a real provider deployment.
+
+Right-click a pull request in the list to change its state, merge it or ask for a fix without opening it. An open pull request offers **Convert to draft** and **Close pull request**, a draft offers **Ready for review** and **Close pull request**, and a closed one offers **Reopen**; each change asks for confirmation. A merged pull request offers no state change. Write actions appear only when your provider account can write to the repository, and stay unavailable until the menu has re-read the pull request. **Merge** appears when the pull request is open, not a draft and ready to merge; it opens the pull request on its usual merge confirmation. **Copy fix prompt** and **Fix with Numo** appear when a check fails, a conversation is unresolved, or the branch conflicts or is out of date. **Fix with Numo** sends that prompt to Numo with the pull request as context. Permissions and mergeability are checked again when you confirm.
