@@ -12,6 +12,12 @@ updates:
       - dependencies
     commit-message:
       prefix: deps
+    ignore:
+      # jsdom 27+ requires ESM-only packages, and Vercel functions run with
+      # --no-experimental-require-module, so page tools fail only in
+      # production. See lib/server/pages-projection.ts before lifting this.
+      - dependency-name: jsdom
+        versions: [">=27"]
     groups:
       minor-and-patch:
         patterns:
