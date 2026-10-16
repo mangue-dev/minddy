@@ -607,6 +607,7 @@
     "loginSubtitle": "Inicia sesión en tu cuenta.",
     "redirecting": "Redirigiendo…",
     "welcomeBack": "Bienvenido de nuevo",
+    "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión para continuar.",
     "continueWithGoogle": "Continuar con Google",
     "continueWithGitHub": "Continuar con GitHub",
     "orContinueWithEmail": "o continuar con el correo electrónico",

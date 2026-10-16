@@ -607,6 +607,7 @@
     "loginSubtitle": "Sign in to your account.",
     "redirecting": "Redirecting…",
     "welcomeBack": "Welcome back",
+    "sessionExpired": "Your session has expired. Sign in again to continue.",
     "continueWithGoogle": "Continue with Google",
     "continueWithGitHub": "Continue with GitHub",
     "orContinueWithEmail": "or continue with email",

@@ -43,7 +43,8 @@ export function ReadFailureNotice({
       <p>{kind === "signedOut" ? t("readSessionEnded") : kind === "secondFactor" ? t("readSecondFactor") : message}</p>
       {session ? (
         <Button variant="ghost" size="sm" onClick={() => {
-          window.location.assign(signInRedirectAfterSignOut(window.location.pathname, window.location.search) ?? "/login");
+          window.location.assign(signInRedirectAfterSignOut(window.location.pathname, window.location.search,
+            { expired: kind === "signedOut" }) ?? "/login");
         }}>{t("readSignInAgain")}</Button>
       ) : (
         <Button variant="ghost" size="sm" disabled={waiting} onClick={onRetry}>{retryLabel}</Button>
