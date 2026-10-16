@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
@@ -59,12 +59,15 @@
       "app/api/account/route.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-691-session-expiry.md"
+      "content/documentation/reviews/min-691-session-expiry.md",
+      "supabase/migrations/20270109200046_list_auth_sessions.sql",
+      "supabase/migrations/20270109200047_revoke_auth_session.sql",
+      "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-691 session-expiry claim source review; hosted Auth limits read back; unchanged controls retain prior capture evidence)",
+    "revision": 10,
+    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (en changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -98,7 +101,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -115,7 +118,7 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile controls for avatar, username and read-only email.",
       "caption": "Save profile edits after validation; the email address remains read-only.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -132,7 +135,7 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector and light, dark and system theme controls.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -149,7 +152,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -192,6 +195,8 @@ Return to the intended application and sign in. A newly authenticated account ca
 Open the account menu, choose sign out and confirm. In the desktop app, closing a tab or window leaves your session active.
 
 A session stays signed in while you use minddy, for up to one year, and ends after 30 days without use. When it ends, or is closed from another device, minddy returns to the sign-in screen with a message that your session has expired. Sign in again to continue where you were.
+
+The **Sessions** group in account settings' **Security** tab lists the browsers and desktop apps signed in to your account, with the device you use marked and when each other one was last active. To end every other session, for example on a lost laptop or a shared computer, choose **Sign out all** in the **Sign out other devices** row and confirm. To end one session only, choose **Sign out** on its row and confirm. Every other browser and desktop app signed in to your account returns to the sign-in screen; the device you use stays signed in. Apps you authorized under **minddy MCP** → **Connected apps** keep their access until you revoke them there.
 
 If mail does not arrive, check the address, spam folder and instance identity. A self-hosted operator must have configured working Auth email delivery; optional application notification email and Auth confirmation are separate concerns. An expired confirmation page provides a route back to login to request a new link. Do not forward confirmation or recovery links as diagnostic evidence: they authorize account access.
 

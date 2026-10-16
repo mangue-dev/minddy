@@ -1,4 +1,5 @@
 import { appTabsQueryKey } from "./use-app-tabs-query";
+import { authSessionsQueryKey } from "./use-auth-sessions-query";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { isPersistableKey, wasRestoredBeforeMount } from "./query-provider";
@@ -69,6 +70,10 @@ describe("isPersistableKey", () => {
   it("excludes billing so entitlements and quotas restart from the server", () => {
     expect(isPersistableKey(["billing", "status"])).toBe(false);
     expect(isPersistableKey(["billing", "usage"])).toBe(false);
+  });
+
+  it("excludes the account's live sessions so a revoked device never reappears from disk", () => {
+    expect(isPersistableKey(authSessionsQueryKey)).toBe(false);
   });
 
   it("excludes the deployment SHA so the update banner stays dismissed after reload", () => {

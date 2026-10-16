@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
@@ -59,12 +59,15 @@
       "app/api/account/route.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-691-session-expiry.md"
+      "content/documentation/reviews/min-691-session-expiry.md",
+      "supabase/migrations/20270109200046_list_auth_sessions.sql",
+      "supabase/migrations/20270109200047_revoke_auth_session.sql",
+      "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-691 session-expiry claim source review; hosted Auth limits read back; unchanged controls retain prior capture evidence)",
+    "revision": 10,
+    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (es changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -98,7 +101,7 @@
       "src": "/documentation/es/account-security-workflow.png",
       "alt": "Tarjeta de autenticación de dos factores con botón de activación.",
       "caption": "Empieza aquí, verifica después el autenticador y guarda los códigos de recuperación de forma privada.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -115,7 +118,7 @@
       "src": "/documentation/es/profile-and-preferences-workflow.png",
       "alt": "Controles del perfil para avatar, nombre de usuario y correo de solo lectura.",
       "caption": "Guarda los cambios del perfil tras validarlos; el correo sigue siendo de solo lectura.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -132,7 +135,7 @@
       "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
       "alt": "Selector de idioma y controles de tema claro, oscuro y del sistema.",
       "caption": "El idioma de la cuenta se configura por separado del idioma del sitio público.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -149,7 +152,7 @@
       "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
       "alt": "Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.",
       "caption": "Lee la vista previa y exporta los datos que quieras conservar antes de abrir la confirmación.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -186,6 +189,8 @@ Vuelve a la aplicación que quieres utilizar e inicia sesión. Una cuenta recié
 Abre el menú de la cuenta, elige cerrar sesión y confirma. En la aplicación de escritorio, cerrar una pestaña o ventana no equivale a cerrar sesión. Utiliza el menú de la cuenta si quieres terminar la sesión.
 
 Una sesión permanece iniciada mientras uses minddy, hasta un año, y termina tras 30 días sin uso. Cuando termina, o se cierra desde otro dispositivo, minddy vuelve a la pantalla de inicio de sesión con un mensaje que indica que tu sesión ha caducado. Vuelve a iniciar sesión para continuar donde estabas.
+
+El grupo **Sesiones** de la pestaña **Seguridad** de los ajustes de la cuenta muestra los navegadores y apps de escritorio conectados a tu cuenta, marca el dispositivo que usas e indica cuándo estuvo activo por última vez cada uno de los demás. Para cerrar todas las demás sesiones, por ejemplo en un portátil perdido o un ordenador compartido, elige **Cerrar todas** en la fila **Cerrar sesión en otros dispositivos** y confirma. Para cerrar una sola sesión, elige **Cerrar sesión** en su fila y confirma. Todos los demás navegadores y apps de escritorio conectados a tu cuenta vuelven a la pantalla de inicio de sesión; el dispositivo que usas sigue conectado. Las aplicaciones que autorizaste en **MCP de minddy** → **Aplicaciones conectadas** conservan su acceso hasta que lo revoques allí.
 
 Si el correo no llega, comprueba la dirección, la carpeta de spam y la identidad de la instancia. El operador de una instancia autoalojada debe haber configurado un envío de correo de Auth que funcione; el correo opcional de notificaciones de la aplicación y la confirmación de Auth son funciones distintas. Una página de confirmación caducada permite volver al inicio de sesión para solicitar un enlace nuevo. No reenvíes enlaces de confirmación o recuperación como prueba para diagnosticar un problema: autorizan el acceso a la cuenta.
 

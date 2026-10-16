@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-16",
   "compatibility": {
@@ -59,12 +59,15 @@
       "app/api/account/route.ts",
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
-      "content/documentation/reviews/min-691-session-expiry.md"
+      "content/documentation/reviews/min-691-session-expiry.md",
+      "supabase/migrations/20270109200046_list_auth_sessions.sql",
+      "supabase/migrations/20270109200047_revoke_auth_session.sql",
+      "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-691 session-expiry claim source review; hosted Auth limits read back; unchanged controls retain prior capture evidence)",
+    "revision": 10,
+    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (it changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -98,7 +101,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -115,7 +118,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Controlli del profilo per avatar, nome utente ed email di sola lettura.",
       "caption": "Salva le modifiche al profilo dopo la validazione; l’indirizzo email rimane di sola lettura.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -132,7 +135,7 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua e controlli del tema chiaro, scuro e di sistema.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -149,7 +152,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -188,6 +191,8 @@ Torna all’applicazione prevista e accedi. Un account appena autenticato può c
 Apri il menu dell’account, scegli di uscire e conferma. Nell’app desktop, chiudere una scheda o una finestra non equivale a uscire dall’account. Usa il menu dell’account se vuoi terminare la sessione.
 
 Una sessione resta attiva finché usi minddy, fino a un anno, e termina dopo 30 giorni di inutilizzo. Quando termina, o viene chiusa da un altro dispositivo, minddy torna alla schermata di accesso con un messaggio che indica che la sessione è scaduta. Accedi di nuovo per riprendere da dove eri rimasto.
+
+Il gruppo **Sessioni** nella scheda **Sicurezza** delle impostazioni dell’account elenca i browser e le app desktop connessi al tuo account, segnala il dispositivo che stai usando e indica l’ultima attività di ciascuno degli altri. Per chiudere tutte le altre sessioni, per esempio su un portatile smarrito o un computer condiviso, scegli **Disconnetti tutti** nella riga **Disconnetti gli altri dispositivi** e conferma. Per chiudere una sola sessione, scegli **Disconnetti** nella sua riga e conferma. Ogni altro browser e app desktop connessi al tuo account torna alla schermata di accesso; il dispositivo che stai usando resta connesso. Le app autorizzate in **MCP di minddy** → **Apps connesse** mantengono l’accesso finché non lo revochi da lì.
 
 Se l’email non arriva, controlla indirizzo, cartella dello spam e identità dell’istanza. L’operatore di un’istanza autonoma deve aver configurato un invio email funzionante per Auth; le notifiche email opzionali dell’applicazione e la conferma di Auth sono funzioni distinte. Una pagina di conferma scaduta permette di tornare all’accesso per richiedere un nuovo collegamento. Non inoltrare collegamenti di conferma o recupero come prova diagnostica: autorizzano l’accesso all’account.
 

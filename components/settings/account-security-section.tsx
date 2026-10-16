@@ -1,17 +1,20 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Download01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { CheckIcon, ComputerIcon, Copy01Icon, Download01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import {useState} from "react";
-import {useTranslations} from "next-intl";
+import {useFormatter, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
 import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Badge, Button, Checkbox, Spinner, toast} from "mangue-ui";
 import {useAuth} from "@/lib/auth-context";
-import {SettingsGroup, SettingsEmpty} from "@/components/settings/settings-ui";
+import {SettingsGroup, SettingsEmpty, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {mfaStatusQueryKey, useMfaStatusQuery} from "@/lib/use-mfa-status";
 import {mfaVerifyErrorKey} from "@/lib/mfa";
 import {OtpInput} from "@/components/otp-input";
+import {isMobileDeviceLabel} from "@/lib/device-label";
+import {authSessionsQueryKey, revokeAuthSessionApi, useAuthSessionsQuery} from "@/lib/use-auth-sessions-query";
+import type {AuthSessionSummary} from "@/lib/types";
 
 /**
  * Account settings → “Second factor” (MIN-132).
@@ -39,6 +42,15 @@ import {OtpInput} from "@/components/otp-input";
  * settings page places a sticker on the tab, so that the recommendation exists
  * also when you have not come to get it. Once activated, the insert is silent:
  * it notes, it does not congratulate.
+ *
+ * ## Sessions
+ *
+ * A session lasts up to a year while it is used, and signing out only ends the
+ * session of this device (`scope: "local"`). The “Sessions” group lists the
+ * account's live sessions (`/api/account/sessions`). Each other session can be
+ * ended on its own, and one explicit gesture ends every other one at once,
+ * apart from the automatic cut when two-factor authentication is turned on. This device stays signed in:
+ * `scope: "others"` keeps the current refresh token.
  */
 
 type Stage = "idle" | "enrolling" | "codes";
@@ -46,6 +58,7 @@ type Stage = "idle" | "enrolling" | "codes";
 export function AccountSecuritySection() {
   const t = useTranslations("AccountSecurity");
   const tc = useTranslations("Common");
+  const format = useFormatter();
   const { user, enrollTotp, verifyTotp, unenrollTotp, refreshUser, signOutOtherSessions } =
     useAuth();
   const queryClient = useQueryClient();
@@ -68,6 +81,17 @@ export function AccountSecuritySection() {
 
   const [disableOpen, setDisableOpen] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
+
+  const [signOutOthersOpen, setSignOutOthersOpen] = useState(false);
+  const [toRevoke, setToRevoke] = useState<AuthSessionSummary | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [signingOutOthers, setSigningOutOthers] = useState(false);
+  const [signOutOthersError, setSignOutOthersError] = useState<string | null>(null);
+  const {
+    sessions,
+    loading: sessionsLoading,
+    failed: sessionsFailed,
+  } = useAuthSessionsQuery();
 
   const provider = (user?.app_metadata?.provider as string | undefined) ?? "email";
   const providerLabel = provider === "google" ? "Google" : provider === "github" ? "GitHub" : null;
@@ -190,6 +214,65 @@ export function AccountSecuritySection() {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Only the list proves there is nothing to end; while it loads or fails,
+  // the gesture stays available.
+  const noOtherSession =
+    !sessionsLoading && !sessionsFailed && sessions.every((session) => session.current);
+
+  const sessionName = (session: AuthSessionSummary) =>
+    session.browser && session.platform
+      ? t("sessionDevice", { browser: session.browser, platform: session.platform })
+      : (session.browser ?? session.platform ?? t("sessionUnknownDevice"));
+
+  const sessionSubtitle = (session: AuthSessionSummary) => {
+    const signedIn = t("sessionSignedIn", {
+      date: format.dateTime(new Date(session.created_at), { dateStyle: "medium" }),
+    });
+    const activity = session.current
+      ? t("sessionCurrent")
+      : t("sessionLastActive", {
+          date: format.dateTime(new Date(session.last_active_at), {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        });
+    return `${activity} · ${signedIn}`;
+  };
+
+  const revokeSession = async (session: AuthSessionSummary) => {
+    setRevokingId(session.id);
+    try {
+      await revokeAuthSessionApi(session.id);
+      toast.success(t("signOutSessionToast", { device: sessionName(session) }));
+    } catch (e) {
+      // 404: the session ended in the meantime, which is the outcome asked for.
+      if ((e as Error).message === "revoke_404") {
+        toast.success(t("signOutSessionToast", { device: sessionName(session) }));
+      } else {
+        toast.error(t("signOutSessionError"));
+      }
+    } finally {
+      setRevokingId(null);
+      void queryClient.invalidateQueries({ queryKey: authSessionsQueryKey });
+    }
+  };
+
+  const signOutOthers = async () => {
+    setSigningOutOthers(true);
+    setSignOutOthersError(null);
+    try {
+      await signOutOtherSessions();
+      toast.success(t("signOutOthersToast"));
+      void queryClient.invalidateQueries({ queryKey: authSessionsQueryKey });
+    } catch {
+      // GoTrue's message is English and technical; the row keeps a localized
+      // failure in place so the person knows the other devices are still open.
+      setSignOutOthersError(t("signOutOthersError"));
+    } finally {
+      setSigningOutOthers(false);
     }
   };
 
@@ -391,6 +474,119 @@ export function AccountSecuritySection() {
           </div>
         )}
       </SettingsGroup>
+
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountSessions}
+        title={t("sessionsTitle")}
+      >
+        <SettingsRow
+          label={t("signOutOthersLabel")}
+          hint={t("signOutOthersHint")}
+          control={
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={signingOutOthers || noOtherSession}
+              onClick={() => setSignOutOthersOpen(true)}
+            >
+              {signingOutOthers && <Spinner />}
+              {t("signOutOthersButton")}
+            </Button>
+          }
+        >
+          {signOutOthersError && (
+            <p role="alert" className="text-sm text-destructive">
+              {signOutOthersError}
+            </p>
+          )}
+        </SettingsRow>
+        {sessionsLoading ? (
+          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+        ) : sessionsFailed ? (
+          <SettingsEmpty>{t("sessionsLoadError")}</SettingsEmpty>
+        ) : (
+          sessions.map((session) => (
+            <SettingsListRow
+              key={session.id}
+              icon={isMobileDeviceLabel(session.platform) ? SmartPhone01Icon : ComputerIcon}
+              title={sessionName(session)}
+              subtitle={sessionSubtitle(session)}
+              action={
+                !session.current && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={revokingId === session.id}
+                    onClick={() => setToRevoke(session)}
+                  >
+                    {revokingId === session.id && <Spinner />}
+                    {t("signOutSessionButton")}
+                  </Button>
+                )
+              }
+            />
+          ))
+        )}
+      </SettingsGroup>
+
+      <AlertDialog
+        open={toRevoke !== null}
+        onOpenChange={(open) => {
+          if (!open) setToRevoke(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("signOutSessionConfirmTitle", {
+                device: toRevoke ? sessionName(toRevoke) : "",
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("signOutSessionConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={(e) => {
+                e.preventDefault();
+                const session = toRevoke;
+                setToRevoke(null);
+                if (session) void revokeSession(session);
+              }}
+            >
+              {t("signOutSessionButton")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={signOutOthersOpen} onOpenChange={setSignOutOthersOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("signOutOthersConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("signOutOthersConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={signingOutOthers}>{tc("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={signingOutOthers}
+              onClick={(e) => {
+                e.preventDefault();
+                setSignOutOthersOpen(false);
+                void signOutOthers();
+              }}
+            >
+              {t("signOutOthersButton")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={disableOpen} onOpenChange={setDisableOpen}>
         <AlertDialogContent>

@@ -284,6 +284,21 @@ export interface MyNotification {
  * lib/server/push/columns.ts). `endpoint` comes out — this is what the client
  * compares to his own to recognize “this device”.
  */
+/**
+ * A live sign-in to the account, listed in Security settings. The server
+ * reduces the user agent to a browser and platform name and never returns the
+ * IP address (lib/server/auth-sessions.ts).
+ */
+export interface AuthSessionSummary {
+  id: string;
+  /** The session that made the request: “This device”. */
+  current: boolean;
+  browser: string | null;
+  platform: string | null;
+  created_at: string;
+  last_active_at: string;
+}
+
 export interface PushDevice {
   id: string;
   endpoint: string;

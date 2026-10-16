@@ -504,7 +504,8 @@ export function AuthProvider({
     // tokens from ALL devices in the account. Disconnect from your workstation
     // dev therefore also closed production, telephone and preview. Close one
     // session closes ONE session; cutting off others is a distinct gesture, and it
-    // already has its call (`signOutOtherSessions`, upon activation of 2FA).
+    // already has its call (`signOutOtherSessions`: the Security settings'
+    // “Sign out other devices” control, and upon activation of 2FA).
     const { error } = await getSupabase().auth.signOut({ scope: "local" });
     if (error) {
       explicitSignOut.current = false;
