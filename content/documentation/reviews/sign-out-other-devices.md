@@ -32,6 +32,16 @@ their evidence.
   user agent nor the IP address reaches the browser.
 - The list shows "This device" for the current session and "Last active" for
   the others; the action is disabled when this device is the only session.
+- `supabase/migrations/20270109200047_revoke_auth_session.sql` and
+  `app/api/account/sessions/[id]/route.ts`: **Sign out** on a session row ends
+  that session alone by deleting its row, as GoTrue's logout does; refresh
+  tokens follow by cascade. The function refuses the caller's own session and
+  another account's. Applied to the hosted project on 2026-10-16 and exercised
+  there with a disposable account signed in twice: revoking its own session
+  returned `false`, revoking the other returned `true`, the list then held one
+  session, the revoked refresh token was refused with 400 and the remaining one
+  refreshed with 200. The account was deleted afterwards.
+- The **Sign out all** action sits above the list.
 - `lib/auth-context.tsx`: `signOutOtherSessions` calls
   `auth.signOut({ scope: "others" })`, which ends every other session of the
   account and keeps the current one. Explicit sign-out stays `scope: "local"`.

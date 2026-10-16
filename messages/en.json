@@ -2606,7 +2606,7 @@
     "sessionsTitle": "Sessions",
     "signOutOthersLabel": "Sign out other devices",
     "signOutOthersHint": "Ends every other sign-in to this account. This device stays signed in.",
-    "signOutOthersButton": "Sign out",
+    "signOutOthersButton": "Sign out all",
     "signOutOthersConfirmTitle": "Sign out other devices?",
     "signOutOthersConfirmDescription": "Every other browser and desktop app signed in to this account returns to the sign-in screen. This device stays signed in.",
     "signOutOthersToast": "Other devices are signed out.",
@@ -2616,7 +2616,12 @@
     "sessionCurrent": "This device",
     "sessionLastActive": "Last active {date}",
     "sessionSignedIn": "Signed in {date}",
-    "sessionsLoadError": "Couldn't load your sessions."
+    "sessionsLoadError": "Couldn't load your sessions.",
+    "signOutSessionButton": "Sign out",
+    "signOutSessionConfirmTitle": "Sign out {device}?",
+    "signOutSessionConfirmDescription": "That device returns to the sign-in screen. This device stays signed in.",
+    "signOutSessionToast": "{device} is signed out.",
+    "signOutSessionError": "Couldn't sign out that device. Try again."
   },
   "Agent": {
     "engineWorking": "{agent} is working…",

@@ -20,3 +20,11 @@ export function useAuthSessionsQuery() {
   });
   return { sessions: data ?? [], loading: isPending, failed: isError };
 }
+
+/** Ends one other session of the account. */
+export async function revokeAuthSessionApi(sessionId: string): Promise<void> {
+  const response = await fetch(`/api/account/sessions/${encodeURIComponent(sessionId)}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error(`revoke_${response.status}`);
+}

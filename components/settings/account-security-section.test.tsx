@@ -18,6 +18,8 @@ const h = vi.hoisted(() => ({
   invalidate: vi.fn(),
   sessions: [] as AuthSessionSummary[],
   sessionsFailed: false,
+  fetch: vi.fn(),
+  revokeStatus: 204,
 }));
 // The real AuthProvider runs, so the assertion reaches the SDK call itself.
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => ({ auth: {
@@ -37,7 +39,8 @@ vi.mock("@/lib/runtime-config-provider", () => ({ browserRuntimeConfig: () => ({
 vi.mock("@/lib/interface-locale", () => ({ readInterfaceLocale: () => "en" }));
 vi.mock("@/lib/signed-out-redirect", () => ({ leaveProtectedScreenAfterSignOut: h.leaveProtectedScreen }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: h.invalidate }) }));
-vi.mock("@/lib/use-auth-sessions-query", () => ({
+vi.mock("@/lib/use-auth-sessions-query", async (importActual) => ({
+  revokeAuthSessionApi: (await importActual<typeof import("@/lib/use-auth-sessions-query")>()).revokeAuthSessionApi,
   authSessionsQueryKey: ["auth-sessions"],
   useAuthSessionsQuery: () => ({ sessions: h.sessions, loading: false, failed: h.sessionsFailed }),
 }));
@@ -51,7 +54,8 @@ vi.mock("@/components/settings/settings-ui", () => ({
   SettingsRow: ({ label, hint, control, children }: { label: ReactNode; hint: ReactNode; control: ReactNode; children: ReactNode }) =>
     <article>{label}{hint}{control}{children}</article>,
   SettingsEmpty: ({ children }: { children: ReactNode }) => <p>{children}</p>,
-  SettingsListRow: ({ title, subtitle }: { title: ReactNode; subtitle: ReactNode }) => <li>{title} — {subtitle}</li>,
+  SettingsListRow: ({ title, subtitle, action }: { title: ReactNode; subtitle: ReactNode; action: ReactNode }) =>
+    <li><span>{title} — {subtitle}</span>{action}</li>,
 }));
 vi.mock("mangue-ui", () => {
   const Dialog = createContext<(open: boolean) => void>(() => {});
@@ -94,7 +98,10 @@ function SessionProbe() {
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ external: {} })));
+  h.fetch = vi.fn(async (url: string, init?: RequestInit) =>
+    init?.method === "DELETE" ? new Response(null, { status: h.revokeStatus }) : Response.json({ external: {} }));
+  h.revokeStatus = 204;
+  vi.stubGlobal("fetch", h.fetch);
   h.signOut.mockResolvedValue({ error: null });
   h.sessionsFailed = false;
   h.sessions = [
@@ -105,7 +112,7 @@ beforeEach(async () => {
   document.body.append(host);
   root = createRoot(host);
   await act(async () => root.render(
-    <NextIntlClientProvider locale="en" messages={messages}>
+    <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
       <AuthProvider><SessionProbe /><AccountSecuritySection /></AuthProvider>
     </NextIntlClientProvider>,
   ));
@@ -128,7 +135,7 @@ async function click(target: HTMLElement) {
 }
 async function rerender() {
   await act(async () => root.render(
-    <NextIntlClientProvider locale="en" messages={messages}>
+    <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
       <AuthProvider><SessionProbe /><AccountSecuritySection /></AuthProvider>
     </NextIntlClientProvider>,
   ));
@@ -137,7 +144,7 @@ async function rerender() {
 it("lists the live sessions and marks this device", async () => {
   h.sessions = [...h.sessions, session({ id: "unknown" })];
   await rerender();
-  const rows = [...host.querySelectorAll("li")].map(li => li.textContent ?? "");
+  const rows = [...host.querySelectorAll("li > span")].map(span => span.textContent ?? "");
 
   expect(rows).toHaveLength(3);
   expect(rows[0]).toMatch(/^Chrome on macOS — This device · Signed in /);
@@ -145,10 +152,34 @@ it("lists the live sessions and marks this device", async () => {
   expect(rows[2]).toMatch(/^Unknown device — /);
 });
 
+it("signs out one other device after confirmation, never this one", async () => {
+  const rows = [...host.querySelectorAll("li")];
+  expect(rows[0].querySelector("button")).toBeNull();
+
+  await click(button("Sign out", rows[1]));
+  expect(dialog()?.textContent).toContain("Sign out Firefox on Windows?");
+  await click(button("Sign out", dialog()!));
+
+  const deletes = h.fetch.mock.calls.filter(([, init]) => init?.method === "DELETE");
+  expect(deletes.map(([url]) => url)).toEqual(["/api/account/sessions/laptop"]);
+  expect(h.signOut).not.toHaveBeenCalled();
+  expect(h.toastSuccess).toHaveBeenCalledWith("Firefox on Windows is signed out.");
+  expect(h.invalidate).toHaveBeenCalledWith({ queryKey: ["auth-sessions"] });
+});
+
+it("reports a failed single sign-out", async () => {
+  h.revokeStatus = 500;
+  await click(button("Sign out", host.querySelectorAll("li")[1]));
+  await click(button("Sign out", dialog()!));
+
+  expect(h.toastError).toHaveBeenCalledWith(messages.AccountSecurity.signOutSessionError);
+  expect(h.toastSuccess).not.toHaveBeenCalled();
+});
+
 it("disables the action when this device is the only session", async () => {
   h.sessions = [session({ id: "current", current: true })];
   await rerender();
-  expect(button("Sign out").disabled).toBe(true);
+  expect(button("Sign out all").disabled).toBe(true);
 });
 
 it("keeps the action available when the list cannot be loaded", async () => {
@@ -156,15 +187,15 @@ it("keeps the action available when the list cannot be loaded", async () => {
   h.sessionsFailed = true;
   await rerender();
   expect(host.textContent).toContain(messages.AccountSecurity.sessionsLoadError);
-  expect(button("Sign out").disabled).toBe(false);
+  expect(button("Sign out all").disabled).toBe(false);
 });
 
 it("signs out the other sessions once, after confirmation, and keeps this one", async () => {
-  await click(button("Sign out"));
+  await click(button("Sign out all"));
   expect(h.signOut).not.toHaveBeenCalled();
   expect(dialog()?.textContent).toContain(messages.AccountSecurity.signOutOthersConfirmTitle);
 
-  await click(button("Sign out", dialog()!));
+  await click(button("Sign out all", dialog()!));
 
   expect(h.signOut).toHaveBeenCalledTimes(1);
   expect(h.signOut).toHaveBeenCalledWith({ scope: "others" });
@@ -176,7 +207,7 @@ it("signs out the other sessions once, after confirmation, and keeps this one", 
 });
 
 it("does nothing when the confirmation is cancelled", async () => {
-  await click(button("Sign out"));
+  await click(button("Sign out all"));
   await click(button(messages.Common.cancel, dialog()!));
 
   expect(dialog()).toBeNull();
@@ -186,13 +217,13 @@ it("does nothing when the confirmation is cancelled", async () => {
 it("shows the failure in place and leaves the current session signed in", async () => {
   h.signOut.mockResolvedValue({ error: new Error("AuthApiError: session_not_found") });
 
-  await click(button("Sign out"));
-  await click(button("Sign out", dialog()!));
+  await click(button("Sign out all"));
+  await click(button("Sign out all", dialog()!));
 
   expect(h.signOut).toHaveBeenCalledTimes(1);
   expect(host.querySelector("[role=alert]")?.textContent).toBe(messages.AccountSecurity.signOutOthersError);
   expect(h.toastSuccess).not.toHaveBeenCalled();
   expect(token).toBe("token-current");
   expect(h.leaveProtectedScreen).not.toHaveBeenCalled();
-  expect(button("Sign out").disabled).toBe(false);
+  expect(button("Sign out all").disabled).toBe(false);
 });

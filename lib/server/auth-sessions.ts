@@ -35,3 +35,24 @@ export async function listAuthSessions(
     last_active_at: row.last_active_at,
   }));
 }
+
+/**
+ * Ends one other session of the account. Returns `false` when the session is
+ * the caller's own, belongs to someone else, or no longer exists: the caller
+ * cannot tell these apart, so another account's session ids reveal nothing.
+ */
+export async function revokeAuthSession(
+  userId: string,
+  sessionId: string,
+  currentSessionId: string,
+): Promise<boolean> {
+  const { data, error } = await getServiceClient()
+    .rpc("revoke_auth_session", {
+      p_user: userId,
+      p_session: sessionId,
+      p_current_session: currentSessionId,
+    })
+    .abortSignal(AbortSignal.timeout(BACKEND_REQUEST_TIMEOUT_MS));
+  if (error) throw new Error("auth_session_revoke_failed");
+  return data === true;
+}

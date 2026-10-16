@@ -2606,7 +2606,7 @@
     "sessionsTitle": "Sessões",
     "signOutOthersLabel": "Sair dos outros dispositivos",
     "signOutOthersHint": "Encerra todos os outros acessos a esta conta. Este dispositivo continua conectado.",
-    "signOutOthersButton": "Sair",
+    "signOutOthersButton": "Sair de todos",
     "signOutOthersConfirmTitle": "Sair dos outros dispositivos?",
     "signOutOthersConfirmDescription": "Todos os outros navegadores e apps de desktop conectados a esta conta voltam para a tela de login. Este dispositivo continua conectado.",
     "signOutOthersToast": "Você saiu dos outros dispositivos.",
@@ -2616,7 +2616,12 @@
     "sessionCurrent": "Este dispositivo",
     "sessionLastActive": "Última atividade {date}",
     "sessionSignedIn": "Entrou em {date}",
-    "sessionsLoadError": "Não foi possível carregar suas sessões."
+    "sessionsLoadError": "Não foi possível carregar suas sessões.",
+    "signOutSessionButton": "Sair",
+    "signOutSessionConfirmTitle": "Sair de {device}?",
+    "signOutSessionConfirmDescription": "Esse dispositivo volta para a tela de entrada. O dispositivo que você está usando continua conectado.",
+    "signOutSessionToast": "Você saiu de {device}.",
+    "signOutSessionError": "Não foi possível sair desse dispositivo. Tente de novo."
   },
   "Agent": {
     "engineWorking": "{agent} está trabalhando…",

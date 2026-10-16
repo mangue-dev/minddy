@@ -2606,7 +2606,7 @@
     "sessionsTitle": "Sessions",
     "signOutOthersLabel": "Déconnecter les autres appareils",
     "signOutOthersHint": "Met fin à toutes les autres connexions à ce compte. Cet appareil reste connecté.",
-    "signOutOthersButton": "Déconnecter",
+    "signOutOthersButton": "Tout déconnecter",
     "signOutOthersConfirmTitle": "Déconnecter les autres appareils ?",
     "signOutOthersConfirmDescription": "Chaque autre navigateur et chaque app de bureau connectés à ce compte reviennent à l’écran de connexion. Cet appareil reste connecté.",
     "signOutOthersToast": "Les autres appareils sont déconnectés.",
@@ -2616,7 +2616,12 @@
     "sessionCurrent": "Cet appareil",
     "sessionLastActive": "Dernière activité {date}",
     "sessionSignedIn": "Connecté le {date}",
-    "sessionsLoadError": "Impossible de charger vos sessions."
+    "sessionsLoadError": "Impossible de charger vos sessions.",
+    "signOutSessionButton": "Déconnecter",
+    "signOutSessionConfirmTitle": "Déconnecter {device} ?",
+    "signOutSessionConfirmDescription": "Cet appareil revient à l’écran de connexion. L’appareil que vous utilisez reste connecté.",
+    "signOutSessionToast": "{device} est déconnecté.",
+    "signOutSessionError": "Impossible de déconnecter cet appareil. Réessayez."
   },
   "Agent": {
     "engineWorking": "{agent} travaille…",

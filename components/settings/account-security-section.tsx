@@ -13,7 +13,7 @@ import {mfaStatusQueryKey, useMfaStatusQuery} from "@/lib/use-mfa-status";
 import {mfaVerifyErrorKey} from "@/lib/mfa";
 import {OtpInput} from "@/components/otp-input";
 import {isMobileDeviceLabel} from "@/lib/device-label";
-import {authSessionsQueryKey, useAuthSessionsQuery} from "@/lib/use-auth-sessions-query";
+import {authSessionsQueryKey, revokeAuthSessionApi, useAuthSessionsQuery} from "@/lib/use-auth-sessions-query";
 import type {AuthSessionSummary} from "@/lib/types";
 
 /**
@@ -47,9 +47,9 @@ import type {AuthSessionSummary} from "@/lib/types";
  *
  * A session lasts up to a year while it is used, and signing out only ends the
  * session of this device (`scope: "local"`). The “Sessions” group lists the
- * account's live sessions (`/api/account/sessions`) and carries the one explicit
- * gesture that ends every other one, apart from the automatic cut when
- * two-factor authentication is turned on. This device stays signed in:
+ * account's live sessions (`/api/account/sessions`). Each other session can be
+ * ended on its own, and one explicit gesture ends every other one at once,
+ * apart from the automatic cut when two-factor authentication is turned on. This device stays signed in:
  * `scope: "others"` keeps the current refresh token.
  */
 
@@ -83,6 +83,8 @@ export function AccountSecuritySection() {
   const [regenerateOpen, setRegenerateOpen] = useState(false);
 
   const [signOutOthersOpen, setSignOutOthersOpen] = useState(false);
+  const [toRevoke, setToRevoke] = useState<AuthSessionSummary | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
   const [signingOutOthers, setSigningOutOthers] = useState(false);
   const [signOutOthersError, setSignOutOthersError] = useState<string | null>(null);
   const {
@@ -238,6 +240,24 @@ export function AccountSecuritySection() {
           }),
         });
     return `${activity} · ${signedIn}`;
+  };
+
+  const revokeSession = async (session: AuthSessionSummary) => {
+    setRevokingId(session.id);
+    try {
+      await revokeAuthSessionApi(session.id);
+      toast.success(t("signOutSessionToast", { device: sessionName(session) }));
+    } catch (e) {
+      // 404: the session ended in the meantime, which is the outcome asked for.
+      if ((e as Error).message === "revoke_404") {
+        toast.success(t("signOutSessionToast", { device: sessionName(session) }));
+      } else {
+        toast.error(t("signOutSessionError"));
+      }
+    } finally {
+      setRevokingId(null);
+      void queryClient.invalidateQueries({ queryKey: authSessionsQueryKey });
+    }
   };
 
   const signOutOthers = async () => {
@@ -459,20 +479,6 @@ export function AccountSecuritySection() {
         anchor={SETTINGS_SECTIONS.accountSessions}
         title={t("sessionsTitle")}
       >
-        {sessionsLoading ? (
-          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
-        ) : sessionsFailed ? (
-          <SettingsEmpty>{t("sessionsLoadError")}</SettingsEmpty>
-        ) : (
-          sessions.map((session) => (
-            <SettingsListRow
-              key={session.id}
-              icon={isMobileDeviceLabel(session.platform) ? SmartPhone01Icon : ComputerIcon}
-              title={sessionName(session)}
-              subtitle={sessionSubtitle(session)}
-            />
-          ))
-        )}
         <SettingsRow
           label={t("signOutOthersLabel")}
           hint={t("signOutOthersHint")}
@@ -494,7 +500,68 @@ export function AccountSecuritySection() {
             </p>
           )}
         </SettingsRow>
+        {sessionsLoading ? (
+          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+        ) : sessionsFailed ? (
+          <SettingsEmpty>{t("sessionsLoadError")}</SettingsEmpty>
+        ) : (
+          sessions.map((session) => (
+            <SettingsListRow
+              key={session.id}
+              icon={isMobileDeviceLabel(session.platform) ? SmartPhone01Icon : ComputerIcon}
+              title={sessionName(session)}
+              subtitle={sessionSubtitle(session)}
+              action={
+                !session.current && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={revokingId === session.id}
+                    onClick={() => setToRevoke(session)}
+                  >
+                    {revokingId === session.id && <Spinner />}
+                    {t("signOutSessionButton")}
+                  </Button>
+                )
+              }
+            />
+          ))
+        )}
       </SettingsGroup>
+
+      <AlertDialog
+        open={toRevoke !== null}
+        onOpenChange={(open) => {
+          if (!open) setToRevoke(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("signOutSessionConfirmTitle", {
+                device: toRevoke ? sessionName(toRevoke) : "",
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("signOutSessionConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={(e) => {
+                e.preventDefault();
+                const session = toRevoke;
+                setToRevoke(null);
+                if (session) void revokeSession(session);
+              }}
+            >
+              {t("signOutSessionButton")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={signOutOthersOpen} onOpenChange={setSignOutOthersOpen}>
         <AlertDialogContent>

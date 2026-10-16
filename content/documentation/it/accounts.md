@@ -61,12 +61,13 @@
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-691-session-expiry.md",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
+      "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root (session list and sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
+    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (it changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -191,7 +192,7 @@ Apri il menu dell’account, scegli di uscire e conferma. Nell’app desktop, ch
 
 Una sessione resta attiva finché usi minddy, fino a un anno, e termina dopo 30 giorni di inutilizzo. Quando termina, o viene chiusa da un altro dispositivo, minddy torna alla schermata di accesso con un messaggio che indica che la sessione è scaduta. Accedi di nuovo per riprendere da dove eri rimasto.
 
-Il gruppo **Sessioni** nella scheda **Sicurezza** delle impostazioni dell’account elenca i browser e le app desktop connessi al tuo account, segnala il dispositivo che stai usando e indica l’ultima attività di ciascuno degli altri. Per chiudere tutte le altre sessioni, per esempio su un portatile smarrito o un computer condiviso, scegli lì **Disconnetti gli altri dispositivi** e conferma. Ogni altro browser e app desktop connessi al tuo account torna alla schermata di accesso; il dispositivo che stai usando resta connesso. Le app autorizzate in **MCP di minddy** → **Apps connesse** mantengono l’accesso finché non lo revochi da lì.
+Il gruppo **Sessioni** nella scheda **Sicurezza** delle impostazioni dell’account elenca i browser e le app desktop connessi al tuo account, segnala il dispositivo che stai usando e indica l’ultima attività di ciascuno degli altri. Per chiudere tutte le altre sessioni, per esempio su un portatile smarrito o un computer condiviso, scegli **Disconnetti tutti** nella riga **Disconnetti gli altri dispositivi** e conferma. Per chiudere una sola sessione, scegli **Disconnetti** nella sua riga e conferma. Ogni altro browser e app desktop connessi al tuo account torna alla schermata di accesso; il dispositivo che stai usando resta connesso. Le app autorizzate in **MCP di minddy** → **Apps connesse** mantengono l’accesso finché non lo revochi da lì.
 
 Se l’email non arriva, controlla indirizzo, cartella dello spam e identità dell’istanza. L’operatore di un’istanza autonoma deve aver configurato un invio email funzionante per Auth; le notifiche email opzionali dell’applicazione e la conferma di Auth sono funzioni distinte. Una pagina di conferma scaduta permette di tornare all’accesso per richiedere un nuovo collegamento. Non inoltrare collegamenti di conferma o recupero come prova diagnostica: autorizzano l’accesso all’account.
 

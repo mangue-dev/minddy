@@ -61,12 +61,13 @@
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-691-session-expiry.md",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
+      "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "content/documentation/reviews/sign-out-other-devices.md"
     ]
   },
   "review": {
     "revision": 10,
-    "fact": "agent:/root (session list and sign-out-other-devices control source and test review; unchanged controls retain prior capture evidence)",
+    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
     "language": "agent:/root (fr changed-text and retained-meaning self-review)",
     "date": "2026-10-16"
   },
@@ -195,7 +196,7 @@ Ouvrez le menu du compte, choisissez la déconnexion et confirmez. Dans l’appl
 
 Une session reste connectée tant que vous utilisez minddy, jusqu’à un an, et se termine après 30 jours sans utilisation. Quand elle se termine, ou qu’elle est fermée depuis un autre appareil, minddy revient à l’écran de connexion avec un message indiquant que votre session a expiré. Reconnectez-vous pour reprendre là où vous étiez.
 
-Le groupe **Sessions** de l’onglet **Sécurité** des réglages du compte liste les navigateurs et applications desktop connectés à votre compte, signale l’appareil que vous utilisez et indique la dernière activité de chacun des autres. Pour fermer toutes les autres sessions, par exemple sur un ordinateur perdu ou partagé, choisissez **Déconnecter les autres appareils** à cet endroit, puis confirmez. Chaque autre navigateur et chaque application desktop connectés à votre compte reviennent à l’écran de connexion ; l’appareil que vous utilisez reste connecté. Les applications autorisées dans **MCP minddy** → **Applications connectées** gardent leur accès jusqu’à ce que vous le révoquiez à cet endroit.
+Le groupe **Sessions** de l’onglet **Sécurité** des réglages du compte liste les navigateurs et applications desktop connectés à votre compte, signale l’appareil que vous utilisez et indique la dernière activité de chacun des autres. Pour fermer toutes les autres sessions, par exemple sur un ordinateur perdu ou partagé, choisissez **Tout déconnecter** sur la ligne **Déconnecter les autres appareils**, puis confirmez. Pour fermer une seule session, choisissez **Déconnecter** sur sa ligne, puis confirmez. Chaque autre navigateur et chaque application desktop connectés à votre compte reviennent à l’écran de connexion ; l’appareil que vous utilisez reste connecté. Les applications autorisées dans **MCP minddy** → **Applications connectées** gardent leur accès jusqu’à ce que vous le révoquiez à cet endroit.
 
 Si le message n’arrive pas, vérifiez l’adresse, les indésirables et l’instance. En auto-hébergement, l’opérateur doit configurer l’envoi des messages Auth ; les notifications optionnelles de l’application sont un service distinct. Une confirmation expirée propose de revenir à la connexion pour demander un nouveau lien. Ne transmettez pas de lien de confirmation ou de récupération dans un diagnostic : il autorise l’accès au compte.
 
