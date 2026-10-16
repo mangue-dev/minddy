@@ -1,5 +1,6 @@
 "use client";
 
+import { objectiveFeedbackCountOptions } from "@/lib/secondary-view-queries";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "@/components/app-link";
@@ -10,14 +11,8 @@ export function ObjectiveFeedbackSection({ projectId, objectiveId }: {
   objectiveId: string;
 }) {
   const t = useTranslations("Relations");
-  const { data, isPending, error } = useQuery({
-    queryKey: ["objective-feedback", projectId, objectiveId, "count"],
-    queryFn: async (): Promise<{ count: number }> => {
-      const response = await fetch(`/api/objectives/${objectiveId}/feedback?count=1`, { cache: "no-store" });
-      if (!response.ok) throw new Error("Unable to load objective feedback");
-      return response.json();
-    },
-  });
+  const { data, isPending, error } = useQuery(objectiveFeedbackCountOptions(projectId, objectiveId));
+
   const tc = useTranslations("Common");
   const te = useTranslations("ApiErrors");
   return (

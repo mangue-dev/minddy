@@ -124,8 +124,6 @@ describe("board drag architecture", () => {
     expect(issueCard).not.toContain("useSortable");
     for (const source of columns)
       expect(source).not.toContain("SortableContext");
-    for (const source of columns)
-      expect(source).toContain("BoardDropLandingPlaceholder");
     for (const source of boards) {
       expect(source).toContain("captureBoardDragPreview");
       expect(source).not.toContain("<IssueCardBody");

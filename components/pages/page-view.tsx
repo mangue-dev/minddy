@@ -7,10 +7,9 @@ import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 // An open PAGE (MIN-270): its header, its body, and what links them to the
 // base.
 //
-// This component is reassembled at each page change (`key={pageId}` at its
-// appellant). This is intentional: tiptap does not reread its `content` after editing,
-// and a page whose body changed under the editor would not be able to keep the
-// cursor nor the undo stack anyway.
+// Each document has its own keyed React surface. The project shell can retain
+// two small documents; Activity suspends their hidden effects and Tiptap
+// recreates its editor. Autosave rebinds the reconciled document to that editor.
 //
 // The BACKUP is VERSIONED (MIN-271): each body writing says on
 // which `version` it relies on, the server refuses if the page has moved, and the
@@ -45,9 +44,6 @@ import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 
 import {
   discardPageOnUnload,
-  fetchPageApi,
-  fetchPageBacklinksApi,
-  fetchPageEventsApi,
   updatePageOnUnload,
 } from "@/lib/pages-api";
 import {
@@ -57,12 +53,13 @@ import {
   markDraftPage,
   scheduleDraftDiscard,
 } from "@/lib/pages-draft";
-import { ancestorsOf, descendantIds } from "@/lib/pages";
+import { ancestorsOf, descendantIds, type Page } from "@/lib/pages";
 import {
-  isPreparedPageData,
   PAGE_NAVIGATION_FRESH_MS,
   pageKey,
   usePageSurfaceReady,
+  createPageSurfaceRead,
+  PageWriteBasisError,
   usePagesQuery,
 } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -100,11 +97,7 @@ import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
 import { usePageWatch } from "@/lib/use-page-watch";
-import {
-  PAGE_ACTIVITY_FRESH_MS,
-  pageBacklinksKey,
-  pageEventsKey,
-} from "@/lib/page-activity-cache";
+import { usePageActivityWarmup } from "@/lib/page-activity-cache";
 import {
   pageHref,
   pagesHref,
@@ -330,46 +323,43 @@ function PageSurface({
     [mentionSources]
   );
 
-  // The editor reads its document only once. Cached bodies therefore refetch on
-  // every ordinary mount; the sole exception is the short window immediately
-  // after an intent prefetch or optimistic creation. That response is already
-  // the navigation's fresh read, so requesting it again would recreate the delay
-  // the prefetch just removed.
+  // Display an accepted, scoped body immediately. Mount validation still
+  // acquires the fresh write basis unless explicit preparation supplied it.
+  const surfaceRead = useMemo(() => createPageSurfaceRead(queryClient, projectId, pageId), [queryClient, projectId, pageId]);
   const {
-    data: page,
+    data: cachedPage,
     dataUpdatedAt,
     isPending,
     isFetchedAfterMount,
-    error,
+    error: queryError,
   } = useQuery({
     queryKey: pageKey(pageId),
-    queryFn: () => fetchPageApi(projectId, pageId),
+    queryFn: surfaceRead.queryFn,
     staleTime: PAGE_NAVIGATION_FRESH_MS,
     refetchOnMount: (query) =>
-      isPreparedPageData(pageId, query.state.dataUpdatedAt) ? false : "always",
+      !query.state.isInvalidated && surfaceRead.canUsePrepared(query.state.data as Page | undefined, query.state.dataUpdatedAt) ? false : "always",
   });
+  const page = cachedPage?.id === pageId && cachedPage.project_id === projectId && cachedPage.version > 0
+    ? cachedPage : undefined;
+  // Optimistic setQueryData clears Query.error without validating access. Keep
+  // read failures visible until an actual accepted response repairs this surface.
+  const lastReadError = useRef<unknown>(undefined);
+  const hadReadError = useRef(false);
+  surfaceRead.observeFailure(queryError);
+  const observedError = queryError ?? surfaceRead.failure();
+  if (observedError) lastReadError.current = observedError;
+  else if (surfaceRead.hasAccepted(page)) lastReadError.current = undefined;
+  const error = observedError ?? lastReadError.current;
+  if (error) hadReadError.current = true;
   const readyForThisSurface = usePageSurfaceReady(
     pageId,
     dataUpdatedAt,
-    isFetchedAfterMount,
+    isFetchedAfterMount && surfaceRead.hasAccepted(page),
+    queryClient.getQueryState(pageKey(pageId))?.isInvalidated,
+    surfaceRead.canUsePrepared(page, dataUpdatedAt),
   );
 
-  const warmPageActivity = useCallback(() => {
-    void queryClient.prefetchQuery({
-      queryKey: pageEventsKey(pageId),
-      queryFn: () => fetchPageEventsApi(projectId, pageId),
-      staleTime: PAGE_ACTIVITY_FRESH_MS,
-    });
-    void queryClient.prefetchQuery({
-      queryKey: pageBacklinksKey(pageId),
-      queryFn: () => fetchPageBacklinksApi(projectId, pageId),
-      staleTime: PAGE_ACTIVITY_FRESH_MS,
-    });
-  }, [pageId, projectId, queryClient]);
-
-  useEffect(() => {
-    if (page) warmPageActivity();
-  }, [page, warmPageActivity]);
+  const warmPageActivity = usePageActivityWarmup(projectId, pageId, page);
 
   // The LIST line is the source of the displayed title and icon: it is
   // it that the sidebar, the breadcrumbs and the subpage block read, and the
@@ -424,26 +414,24 @@ function PageSurface({
   }, []);
   const onSaveError = useCallback(
     (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : t("saveFailed"));
+      toast.error(err instanceof Error && !(err instanceof PageWriteBasisError) ? err.message : t("saveFailed"));
     },
     [t]
   );
   const autosave = usePageAutosave({
     pageId,
     page,
-    // The `version` which serves as a safeguard is NOT caught in the cache: it
-    // only makes sense when it comes from the server, and from this montage.
-    fresh: readyForThisSurface,
+    // Cached display captures a local draft; only a validated base authorizes
+    // its merged, versioned write. A flush joins the ordinary mounted read.
+    fresh: readyForThisSurface && !error && (!hadReadError.current || surfaceRead.hasAccepted(page)),
+    acquireFresh: surfaceRead.acquire,
+    readError: error,
     delayMs: SAVE_DELAY_MS,
     save: updatePage,
     editorRef,
     onError: onSaveError,
   });
-  const { schedule, flush, takePending, reconcileRemote } = autosave;
-
-  useEffect(() => {
-    if (page && readyForThisSurface) reconcileRemote(page);
-  }, [page, readyForThisSurface, reconcileRemote]);
+  const { schedule, flush, takePending, resumeEditor } = autosave;
 
   /* ── Departure: write, or act as if nothing had happened ───────────────
      Leave the page WRITE what remained — otherwise, type then click immediately
@@ -874,6 +862,10 @@ function PageSurface({
   // the container that scrolls (to know where we are, and to get there).
   const scrollRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const onEditor = useCallback((next: Editor | null) => {
+    if (next && !next.isDestroyed) resumeEditor();
+    setEditor(next);
+  }, [resumeEditor]);
 
   /* ── Comment on a passage (MIN-282) ───────────────────────────────────── */
   //
@@ -924,17 +916,9 @@ function PageSurface({
     );
   }
 
-  // We are waiting for the response from THIS montage, and not just “one” piece of data.
-  //
-  // This is the counterpart of the model: tiptap never rereads its `content`, so
-  // the document on which the editor mounts is the one he will keep on the screen
-  // until dismantling. Paint the cover first – the reflex everywhere else
-  // in the app, and what rehydration does from the disk to
-  // reloading — put on the screen an expired body that the response arrived one
-  // moment later could no longer correct. Hence the wait: on a
-  // document, a skeleton moment is better than a previous version
-  // displayed with the aplomb of the maid.
-  if (isPending || !page || !readyForThisSurface) {
+  // Network reconciliation does not hide an accepted body. Autosave separately
+  // waits for its fresh basis, preserving immediate typing in the local overlay.
+  if (isPending || !page) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <Spinner />
@@ -943,7 +927,7 @@ function PageSurface({
   }
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div data-page-surface-id={pageId} className="relative flex min-h-0 flex-1 flex-col">
       {/* A structural, non-scrolling header: breadcrumb on the left; presence,
           versions, comments, and document actions on the right. */}
       {!panel && <AppContentHeader contentClassName="gap-2">
@@ -1084,7 +1068,7 @@ function PageSurface({
                 mentions={mentions}
                 mentionLinks={mentionSources.links}
                 editorRef={editorRef}
-                onEditor={setEditor}
+                onEditor={onEditor}
                 onSubpagesRemoved={onSubpagesRemoved}
                 onLeaveTop={focusTitleEnd}
                 onComment={onComment}

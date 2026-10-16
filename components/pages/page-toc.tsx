@@ -5,10 +5,10 @@
 // It is placed at the top right of the panel, out of the flow and out of the
 // scroll, and it is read at two distances: at rest, a pile of TRAITS
 // whose length indicates the level of the title and whose position indicates where we are
-// East ; on hover, a bordered panel which bears the titles themselves, and more
-// single line. This is Notion's gesture, and what makes it good is precisely this
-// qu'il ne fait pas au repos — il ne prend pas de place, il ne prend pas de
-// name, it does not ask to be read.
+// is; on hover, a bordered panel which bears the titles themselves, one line
+// each. This is Notion's gesture, and what makes it good is precisely what it
+// does not do at rest: it takes no room, it bears no names, it does not ask to
+// be read.
 //
 // Clicking goes there AND turns the block back on: after scrolling, nothing distinguishes the
 // title that we asked for from our neighbors who arrived on the screen at the same time.
@@ -23,6 +23,7 @@
 // the screen, and where should you scroll to get it there.
 
 import {
+  memo,
   useCallback,
   useEffect,
   useRef,
@@ -39,7 +40,7 @@ import { readHeadings, sameHeadings, type TocEntry } from "@/lib/pages-toc";
 /** Below, the table does not appear: see the header. */
 const MIN_HEADINGS = 2;
 
-/** Longueur du trait au repos, par niveau de titre. */
+/** Length of the dash at rest, by heading level. */
 const DASH_WIDTH: Record<number, string> = { 1: "w-4", 2: "w-3", 3: "w-2" };
 
 /** Removing the unfolded title, by level. */
@@ -54,7 +55,11 @@ function headingElement(editor: Editor, pos: number): HTMLElement | null {
   return dom instanceof HTMLElement ? dom : null;
 }
 
-export function PageToc({
+/**
+ * Memoized: the page re-renders while its document is typed, and the table
+ * reads the document itself. Its two props are the editor and a ref.
+ */
+export const PageToc = memo(function PageToc({
   editor,
   scrollRef,
 }: {
@@ -65,6 +70,10 @@ export function PageToc({
   const t = useTranslations("Pages");
   const [entries, setEntries] = useState<TocEntry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Every keystroke above a heading moves its position, but only measuring
+  // and scrolling need it. Positions live here, refreshed on each update, so
+  // typing re-renders the table only when the headings themselves change.
+  const positions = useRef(new Map<string, number>());
 
   // Which entries the row actually clips. A tooltip on an entry whose text
   // already fits would repeat what is on the screen, and — worse — stand
@@ -72,8 +81,9 @@ export function PageToc({
   const [clipped, setClipped] = useState<Record<string, boolean>>({});
 
   // Ref callback per entry label. Its identity changes at each render, so
-  // React re-runs it after every paint — but it only writes state on a real
-  // flip, so typing in the document does not churn the panel.
+  // React re-runs it whenever the table renders (headings or the active entry
+  // change, never a keystroke in the text) and it only writes state on a real
+  // flip.
   const trackClipped = (id: string) => (el: HTMLSpanElement | null) => {
     if (!el) return;
     const isClipped = el.scrollWidth > el.clientWidth;
@@ -86,6 +96,7 @@ export function PageToc({
     if (!editor) return;
     const read = () => {
       const next = readHeadings(editor.state.doc);
+      positions.current = new Map(next.map((entry) => [entry.id, entry.pos]));
       setEntries((current) => (sameHeadings(current, next) ? current : next));
     };
     read();
@@ -112,7 +123,8 @@ export function PageToc({
       const line = root.getBoundingClientRect().top + SCROLL_MARGIN * 3;
       let current = entries[0].id;
       for (const entry of entries) {
-        const element = headingElement(editor, entry.pos);
+        const pos = positions.current.get(entry.id);
+        const element = pos === undefined ? null : headingElement(editor, pos);
         if (element && element.getBoundingClientRect().top <= line) {
           current = entry.id;
         }
@@ -146,9 +158,10 @@ export function PageToc({
   );
 
   const goTo = useCallback(
-    (pos: number) => {
+    (id: string) => {
       const container = scrollRef.current;
-      if (!editor || !container) return;
+      const pos = positions.current.get(id);
+      if (!editor || !container || pos === undefined) return;
       // Go there AND turn it on: `revealBlock` holds the two together, and says
       // why the scrolling there is DRY — a blink played for a
       // soft scrolling is a blink that no one sees.
@@ -253,7 +266,7 @@ neither of the two layers having to reorganize itself. */}
                 // hover; keyboard navigation (Tab) still keeps it open,
                 // which is what `focus-within` exists for.
                 event.currentTarget.blur();
-                goTo(entry.pos);
+                goTo(entry.id);
               }}
               className={cn(
                 "flex h-7 w-full shrink-0 items-center rounded-md px-2 outline-none",
@@ -289,4 +302,4 @@ neither of the two layers having to reorganize itself. */}
       </nav>
     </div>
   );
-}
+});

@@ -3,10 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
-import {
-  getProjectFeedbackPost,
-  requireProjectMember,
-} from "@/lib/server/feedback/team-guard";
+import { requireFeedbackMember } from "@/lib/server/feedback/team-guard";
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
@@ -15,14 +12,11 @@ type RouteContext = { params: Promise<{ id: string; postId: string }> };
  deny-all, access checks live here, like the rest of the team channel. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  // Membership and the post's presence in this project are both settled
+  // before any event is read or decoded.
+  const guard = await requireFeedbackMember(request, id, postId);
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
-
-  const post = await getProjectFeedbackPost(id, postId);
-  if (!post) {
-    return NextResponse.json({ error: t("feedbackNotFound") }, { status: 404 });
-  }
 
   const service = getServiceClient();
   const { data, error } = await readIssueEvents(service, { feedback_post_id: postId }, { projectId: id, actorId: guard.userId, integrations: true });

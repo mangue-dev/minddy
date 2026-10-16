@@ -71,6 +71,7 @@ import {
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { useScrollFade } from "@/lib/use-scroll-fade";
+import { secondarySelectionId, triageSelectionItems } from "@/lib/secondary-view-selection";
 import type { Issue, IssueUpdateInput } from "@/lib/types";
 
 /** Linear-style triage: pending issues on the left, full issue view on the
@@ -108,13 +109,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const mentions = useDescriptionMentions(projectId, members);
   const { openIntent } = useAssistantPanelActions();
 
-  const triageIssues = useMemo(
-    () =>
-      issues
-        .filter((i) => i.status === "triage")
-        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    [issues]
-  );
+  const triageIssues = useMemo(() => triageSelectionItems(issues), [issues]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useMobileCollectionState(`/projects/${projectId}/triage`, "query", "");
@@ -302,13 +297,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // Keep a valid selection: default to the first pending issue, and when the
   // selected one leaves triage (accepted/declined/duplicate) move on to the next.
   useEffect(() => {
-    if (triageIssues.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !triageIssues.some((i) => i.id === selectedId)) {
-      setSelectedId(triageIssues[0].id);
-    }
+    const next = secondarySelectionId(triageIssues, null, selectedId);
+    if (next !== selectedId) setSelectedId(next);
   }, [triageIssues, selectedId]);
 
   // Deep link from the “To be sorted” section of the home page (MIN-104):
@@ -320,7 +310,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     // We wait until the ticket is really in the list: purge the parameter
     // before the tickets arrive would let the above effect fall on the
     // first in line, and the deep link would be lost cold.
-    if (!triageIssues.some((i) => i.id === issueParam)) return;
+    if (secondarySelectionId(triageIssues, issueParam) !== issueParam) return;
     setSelectedId(issueParam);
     const params = new URLSearchParams(searchParams);
     params.delete("issue");

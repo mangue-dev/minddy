@@ -5,6 +5,10 @@ import {
   desktopTitleBarOverlay,
   MACOS_TRAFFIC_LIGHT_POSITION,
   desktopDocumentChrome,
+  parseRememberedWindowChrome,
+  rememberableWindowChrome,
+  startupIntegratedChrome,
+  windowChromeReplacement,
 } from "./window-frame";
 
 describe("desktopWindowFrameOptions", () => {
@@ -57,5 +61,58 @@ describe("desktopTitleBarOverlay", () => {
     ["dark", "#191a1b", "#eeeeee"],
   ] as const)("preserves the Linux %s caption colors", (theme, color, symbolColor) => {
     expect(desktopTitleBarOverlay("linux", theme)).toEqual({ color, symbolColor, height: 44 });
+  });
+});
+
+describe("remembered window chrome", () => {
+  const origin = "https://minddy.example.test";
+  const integrated = { origin, integrated: true };
+
+  it.each(["win32", "linux"] as const)(
+    "creates the first %s window with the frame the same origin last asked for",
+    (platform) => {
+      expect(startupIntegratedChrome(platform, integrated, origin)).toBe(true);
+      expect(startupIntegratedChrome(platform, integrated, `${origin}/`)).toBe(true);
+      expect(startupIntegratedChrome(platform, { origin, integrated: false }, origin)).toBe(false);
+    },
+  );
+
+  it.each(["win32", "linux"] as const)("starts native on %s without an observation of this origin", (platform) => {
+    expect(startupIntegratedChrome(platform, null, origin)).toBe(false);
+    expect(startupIntegratedChrome(platform, integrated, "https://other.example.test")).toBe(false);
+    expect(startupIntegratedChrome(platform, integrated, "http://127.0.0.1:3000")).toBe(false);
+  });
+
+  it("leaves the single macOS frame unchanged", () => {
+    expect(startupIntegratedChrome("darwin", integrated, origin)).toBe(false);
+  });
+
+  it("forgets malformed or foreign data read from disk", () => {
+    expect(parseRememberedWindowChrome({ origin: `${origin}/home`, integrated: true })).toEqual(integrated);
+    for (const raw of [null, "text", [], { origin }, { integrated: true }, { origin: "not a url", integrated: true },
+      { origin, integrated: "1" }]) {
+      expect(parseRememberedWindowChrome(raw)).toBeNull();
+    }
+  });
+
+  it("remembers only a successful main document from the selected origin", () => {
+    const response = {
+      url: `${origin}/home`, resourceType: "mainFrame", statusCode: 200,
+      responseHeaders: { "x-minddy-desktop-chrome": ["1"] },
+    };
+    expect(rememberableWindowChrome(response, origin)).toEqual(integrated);
+    expect(rememberableWindowChrome({ ...response, responseHeaders: {} }, origin)).toEqual({ origin, integrated: false });
+    expect(rememberableWindowChrome({ ...response, statusCode: 503, responseHeaders: {} }, origin)).toBeNull();
+    expect(rememberableWindowChrome({ ...response, statusCode: 302 }, origin)).toBeNull();
+    expect(rememberableWindowChrome({ ...response, resourceType: "subFrame" }, origin)).toBeNull();
+    expect(rememberableWindowChrome({ ...response, url: "https://other.example.test/home" }, origin)).toBeNull();
+  });
+
+  it("still replaces a window whose document disagrees with the remembered frame", () => {
+    // A rolled-back server stops advertising the header: back to native.
+    expect(windowChromeReplacement(false, true)).toBe(false);
+    expect(windowChromeReplacement(true, false)).toBe(true);
+    expect(windowChromeReplacement(true, true)).toBeNull();
+    expect(windowChromeReplacement(undefined, true)).toBeNull();
   });
 });

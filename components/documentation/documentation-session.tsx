@@ -43,7 +43,7 @@ export function DocumentationSession({ children, locale, selfHosting }: { childr
   const config = useRuntimeConfig();
   const session = <Session locale={locale} selfHosting={selfHosting}>{children}</Session>;
   if (!config.supabaseUrl || !config.supabaseAnonKey) return session;
-  return <AuthProvider><AccountQueryProvider>{session}</AccountQueryProvider></AuthProvider>;
+  return <AuthProvider discoverOAuthProviders={false}><AccountQueryProvider>{session}</AccountQueryProvider></AuthProvider>;
 }
 
 export function DocumentationAccountActions({ currentId, sections, locale }: { currentId: string | null; sections: DocumentationArticle["sections"]; locale: Locale }) {

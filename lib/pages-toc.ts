@@ -49,7 +49,7 @@ export function readHeadings(doc: Node): TocEntry[] {
         text,
       });
     }
-    // Un titre n'en contient pas d'autre : inutile d'y descendre.
+    // A heading never contains another one: no need to descend into it.
     return false;
   });
   return entries;
@@ -60,7 +60,8 @@ export function readHeadings(doc: Node): TocEntry[] {
  *
  * The reading is redone with EACH keystroke: without this comparison, typing a
  * letter in a paragraph would re-render the entire table, with its transitions
- * width, for content identical.
+ * width, for content identical. Positions are left out: any keystroke above a
+ * heading moves them, and the table keeps them aside for measuring.
  */
 export function sameHeadings(a: TocEntry[], b: TocEntry[]): boolean {
   return (
@@ -68,7 +69,6 @@ export function sameHeadings(a: TocEntry[], b: TocEntry[]): boolean {
     a.every(
       (entry, i) =>
         entry.id === b[i].id &&
-        entry.pos === b[i].pos &&
         entry.level === b[i].level &&
         entry.text === b[i].text
     )

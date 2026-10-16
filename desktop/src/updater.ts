@@ -1,5 +1,7 @@
 import { app, dialog, type BrowserWindow } from "electron";
-import { autoUpdater } from "electron-updater";
+import type { AppUpdater } from "electron-updater";
+
+import { requireAutoUpdater } from "./updater-module";
 
 import {
   updatePromptChoice,
@@ -36,22 +38,30 @@ import {
  */
 
 /**
- * ⚠ **NAMED import, and only at the point of use.** Two traps stand here, and both are ONLY seen in the packaged app:
- *
- * 1. `electron-updater` declares itself `__esModule: true` but **does not export from
- * `default`**. A `import electronUpdater from "electron-updater"` compiles
- * without a word and returns `undefined` at runtime — the main process dies on
- * loading, on a box "A JavaScript error occurred in the main
- * process" and nothing else.
- * 2. `autoUpdater` is a **lazy getter** that constructs a `MacUpdater` on
- * first access, and this constructor calls `app.getVersion()`. Reading it at
- * module level (`const { autoUpdater } = …`) would therefore cause it to execute
- * before Electron is ready. The named import is compiled into an access to
- * property at the place where it is used: it is never triggered before.
+ * `electron-updater`, loaded on first use only (see updater-module.ts): once
+ * automatic updates are allowed and the window has settled, or for a manual
+ * check. Unpackaged runs never load it.
  */
+let loadedUpdater: AppUpdater | null = null;
+
+function autoUpdater(): AppUpdater {
+  loadedUpdater ??= requireAutoUpdater();
+  return loadedUpdater;
+}
 
 /** Six o'clock. A shell that moves twice a year doesn't need anything better. */
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * The first automatic check waits for the window to settle: loading the
+ * updater, fetching the feed and parsing it would otherwise compete with the
+ * first navigation. An available update shows up a few seconds later.
+ */
+export const FIRST_UPDATE_CHECK_DELAY_MS = 20_000;
+
+/** Whether this launch keeps the shell updated on its own. */
+let automaticUpdates = false;
+let automaticUpdatesWired = false;
 
 /** The window to attach the install proposal to, when there is one. */
 let ownerWindow: () => BrowserWindow | null = () => null;
@@ -124,14 +134,53 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
       appImagePath: process.env.APPIMAGE,
     })
   ) return;
+  automaticUpdates = true;
+
+  // ⚠ `checkForUpdates()` reports TWICE: the `error` event, AND
+  // a rejected promise. Subscribing to one does not exempt you from catching the other —
+  // a `void` left a `UnhandledPromiseRejectionWarning` for each
+  // offline verification, and Node reserves the right to make them fatal. Measure
+  // in the packaged app, not inferred.
+  const check = () => {
+    let updater: AppUpdater;
+    try {
+      updater = autoUpdater();
+    } catch (error) {
+      // A broken install must not crash the shell from a timer: say it in
+      // the log and keep the app running without updates.
+      console.error("[updater] load_failed", error);
+      return;
+    }
+    wireAutomaticUpdates(updater);
+    void updater.checkForUpdates().then((result) => {
+      // The check resolves before its download. Observe that separate rejection;
+      // the updater's error event publishes the state but does not consume it.
+      void result?.downloadPromise?.catch(() => {});
+    }).catch(() => {});
+  };
+
+  setTimeout(() => {
+    check();
+    setInterval(check, CHECK_INTERVAL_MS);
+  }, FIRST_UPDATE_CHECK_DELAY_MS);
+}
+
+/**
+ * The automatic download and its events, attached once to the loaded updater.
+ * A manual check that loads it first attaches them too, so its download
+ * still reaches the sidebar and the install proposal.
+ */
+function wireAutomaticUpdates(updater: AppUpdater): void {
+  if (!automaticUpdates || automaticUpdatesWired) return;
+  automaticUpdatesWired = true;
 
   // We download alone, but we don't IMPOSE anything: the installation is REQUIRED
   // once the download is finished (`update-downloaded` below), and a refusal
   // leave it to the next ⌘Q. Restarting the app under the fingers of someone who
   // writing a ticket is the kind of gesture you can't forgive in a gaming app
   // bureau.
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  updater.autoDownload = true;
+  updater.autoInstallOnAppQuit = true;
 
   // **The net of `autoInstallOnAppQuit` was not enough, and this is the form of
   // the app that says it**: ⌘W the CACHE, the red light too (main.ts). An app of
@@ -143,7 +192,7 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
   // nothing prevents electron-updater from redownloading after an error
   // resume. Propose the same version every six hours to someone who has
   // saying “later” transforms it into an interruption.
-  autoUpdater.on("update-downloaded", (info) => {
+  updater.on("update-downloaded", (info) => {
     // The state, ALWAYS: it’s what brings the sidebar line to life
     // long after the box has been returned. Only the box is holding back.
     publish({ kind: "downloaded", version: info.version });
@@ -156,7 +205,7 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
   // temporarily absent, hotel Wi-Fi. We journal it and try again
   // next turn, without ever displaying it — otherwise the only thing the app says to
   // someone offline means it couldn't update.
-  autoUpdater.on("error", (error) => {
+  updater.on("error", (error) => {
     console.error("[updater]", error);
     // The page doesn't say anything either: `reduceUpdateStatus` removes the line
     // of the current download and LEAVE that of a version already ready.
@@ -166,23 +215,9 @@ export function startAutoUpdates(owner: () => BrowserWindow | null): void {
   // Detection, even before the file is there: it is the first of the two
   // states that the sidebar shows. Nothing to click at that moment — but we
   // sees that something is happening, and the wait ceases to be silence.
-  autoUpdater.on("update-available", (info) => {
+  updater.on("update-available", (info) => {
     publish({ kind: "available", version: info.version });
   });
-
-  // ⚠ `checkForUpdates()` reports TWICE: the `error` event above, AND
-  // a rejected promise. Subscribing to one does not exempt you from catching the other —
-  // a `void` left a `UnhandledPromiseRejectionWarning` for each
-  // offline verification, and Node reserves the right to make them fatal. Measure
-  // in the packaged app, not inferred.
-  const check = () => autoUpdater.checkForUpdates().then((result) => {
-    // The check resolves before its download. Observe that separate rejection;
-    // the updater's error event publishes the state but does not consume it.
-    void result?.downloadPromise?.catch(() => {});
-  }).catch(() => {});
-
-  void check();
-  setInterval(check, CHECK_INTERVAL_MS);
 }
 
 /** The version already proposed, so as not to repropose it every round. */
@@ -220,7 +255,7 @@ function promptInstall(version: string): Promise<void> {
         : dialog.showMessageBox(copy));
       if (updatePromptChoice(response) !== "install") return;
       installScheduled = true;
-      setImmediate(() => autoUpdater.quitAndInstall());
+      setImmediate(() => autoUpdater().quitAndInstall());
     } catch (error) {
       // A closing window can reject its native sheet. Keep the ready update and
       // allow a later explicit request, rather than leaking a rejected promise.
@@ -274,7 +309,9 @@ export async function checkForUpdatesManually(): Promise<void> {
       return;
     }
 
-    const result = await autoUpdater.checkForUpdates();
+    const updater = autoUpdater();
+    wireAutomaticUpdates(updater);
+    const result = await updater.checkForUpdates();
     // `updateInfo.version` names the release; `downloadPromise` only exists
     // when the updater has selected an update for download.
     if (result?.downloadPromise) {

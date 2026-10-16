@@ -35,6 +35,8 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
 import { forgeFor, isForgeApiError, type Forge, type MergeMethod } from "./forge";
 import { withGithubReadScope } from "./github-read-flight";
+import { GithubApiError } from "./pr";
+import { GitlabApiError } from "./mr";
 import { encodePullRequestContent, shouldEncryptPullRequestContent } from
   "./pull-request-content";
 import {
@@ -141,6 +143,8 @@ export interface PrScope {
   actor: () => Promise<ForgeActor>;
 }
 
+type ReadinessBatchReadControl = { beforeRead: () => void; onError: (error: unknown) => void };
+
 /**
  * Resolves access from `userId` to `pr` and mint a forge token, or null if it doesn't have
  * no project that links this repository (calling it makes it a 404).
@@ -150,6 +154,7 @@ export async function resolvePrScope(
   pr: PullRequestRow,
   shareReads = false,
   readNotBefore = performance.now(),
+  batch?: ReadinessBatchReadControl,
 ): Promise<PrScope | null> {
   const provider = rowProvider(pr);
   const target = await resolveRepoCloneTargetForRepo({
@@ -192,7 +197,14 @@ export async function resolvePrScope(
         userId,
         provider: target.provider,
         repoFullName: target.repoFullName,
-      }).catch(() => {
+        ...(batch ? { readControl: { beforeRead: batch.beforeRead,
+          onRateLimit: (status: 403 | 429, retryAfter: string | null) => {
+            batch.onError(target.provider === "github"
+              ? new GithubApiError("Forge reads are paused", status, retryAfter)
+              : Object.assign(new GitlabApiError("Forge reads are paused", status), { retryAfter }));
+          } } } : {}),
+      }).catch((error) => {
+        batch?.onError(error);
         console.error("[pr-actions] actor_unresolved");
         return { kind: "none", reason: "noAccount" } as ForgeActor;
       })),
@@ -458,16 +470,20 @@ const READINESS_BATCH_CONCURRENCY = 4;
 async function readPullRequestReadiness(
   scope: PrScope,
   pr: PullRequestRef,
+  batch?: ReadinessBatchReadControl,
 ): Promise<PullRequestReadinessResult> {
+  batch?.beforeRead();
   const { forge, call } = scope;
   // Policy and its dependent checks do not depend on reviews or actor lookup.
   const policyAndChecks = async () => {
     let mergePolicy: RepositoryMergePolicy;
     try {
+      batch?.beforeRead();
       mergePolicy = pr.base
         ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
         : unavailableMergePolicy(scope.target.provider, "unknown");
     } catch (error) {
+      batch?.onError(error);
       mergePolicy = unavailableMergePolicy(
         scope.target.provider,
         isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
@@ -478,6 +494,7 @@ async function readPullRequestReadiness(
     let checksError: "forbidden" | "unknown" | null = null;
     if (pr.headSha) {
       try {
+        batch?.beforeRead();
         checks = await forge.listChecks({
           ...call,
           sha: pr.headSha,
@@ -485,14 +502,15 @@ async function readPullRequestReadiness(
           checksRequired: mergePolicy.checksMustPass,
         });
       } catch (error) {
+        batch?.onError(error);
         checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
       }
     }
     return { mergePolicy, checks, checksError };
   };
   const [reviews, reviewThreads, viewer, { mergePolicy, checks, checksError }] = await Promise.all([
-    forge.listReviews(call).catch(() => null),
-    forge.listReviewThreads(call).catch(() => null),
+    forge.listReviews(call).catch((error) => { batch?.onError(error); return null; }),
+    forge.listReviewThreads(call).catch((error) => { batch?.onError(error); return null; }),
     resolveViewer(scope),
     policyAndChecks(),
   ]);
@@ -624,21 +642,45 @@ export async function prReadinessBatchResponse(
   const readiness: Record<string, PullRequestReadiness> = {};
   const unavailablePrIds: string[] = [];
   let nextIndex = 0;
+  let quota: { error: unknown; status: 403 | 429; until: number } | undefined;
+  const deadlines = new Map<unknown, number>();
+  const observeQuota = (error: unknown): boolean => {
+    if (!isForgeApiError(error)) return false;
+    const retryAfter = "retryAfter" in error && typeof error.retryAfter === "string" ? error.retryAfter : null;
+    if (error.status !== 429 && !(error.status === 403 && retryAfter?.trim())) return false;
+    let until = deadlines.get(error);
+    if (until === undefined) {
+      const now = Date.now();
+      const seconds = retryAfter?.trim() ? Number(retryAfter) : NaN;
+      const parsed = Number.isFinite(seconds) ? now + Math.max(0, seconds) * 1000 : Date.parse(retryAfter ?? "");
+      until = Number.isFinite(parsed) ? parsed : now + 60_000;
+      deadlines.set(error, until);
+    }
+    if (!quota || until > quota.until) quota = { error, status: error.status as 403 | 429, until };
+    return true;
+  };
+  const beforeRead = () => { if (quota) throw quota.error; };
 
   const readNext = async () => {
-    while (nextIndex < prIds.length) {
+    while (!quota && nextIndex < prIds.length) {
       const prId = prIds[nextIndex++];
       try {
+        let rowQuota: unknown;
+        const batch = { beforeRead, onError: (error: unknown) => { if (observeQuota(error)) rowQuota = error; } };
         const pr = await findPullRequest(prId);
-        const scope = pr ? await resolvePrScope(userId, pr, true, readNotBefore) : null;
+        beforeRead();
+        const scope = pr ? await resolvePrScope(userId, pr, true, readNotBefore, batch) : null;
+        beforeRead();
         if (!pr || !scope) {
           unavailablePrIds.push(prId);
           continue;
         }
         const forgePr = await scope.forge.getPullRequest(scope.call);
-        const result = await readPullRequestReadiness(scope, forgePr);
+        const result = await readPullRequestReadiness(scope, forgePr, batch);
+        if (rowQuota) throw rowQuota;
         readiness[prId] = result.readiness;
-      } catch {
+      } catch (error) {
+        observeQuota(error);
         console.error("[pr-actions] readiness_unavailable", prId);
         unavailablePrIds.push(prId);
       }
@@ -652,7 +694,10 @@ export async function prReadinessBatchResponse(
     ),
   );
 
-  return NextResponse.json({ readiness, unavailablePrIds });
+  unavailablePrIds.push(...prIds.slice(nextIndex));
+  // Completed rows remain usable; unavailable rows never acquire readiness.
+  return NextResponse.json({ readiness, unavailablePrIds, ...(quota ? { retryStatus: quota.status } : {}) },
+    quota ? { headers: { "Retry-After": String(Math.max(0, Math.ceil((quota.until - Date.now()) / 1000))) } } : undefined);
 }
 
 // ── Commits ──────────────────────────────────────────────────────────────────

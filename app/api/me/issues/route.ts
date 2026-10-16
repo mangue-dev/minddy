@@ -1,8 +1,8 @@
-import { issueStore } from "@/lib/server/issue-store";
+import { loadGlobalBoardIssues } from "@/lib/server/global-board-issues";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { mapIssueRow } from "@/lib/server/issue-mapper";
 
 /**
  * GET /api/me/issues — the authoritative issue slice of the global board.
@@ -12,16 +12,14 @@ import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
  * `/api/me/board` also resolves members, integrations, relations, and cycles;
  * that is useful reconciliation work, but it can take several seconds and must
  * not leave stale card positions visible in the meantime. This route performs
- * the single RLS-scoped read needed to make both Kanban caches trustworthy.
+ * a complete RLS-scoped issue read needed to make both Kanban caches trustworthy.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await issueStore(auth.supabase).select(ISSUE_SELECT)
-    .order("position", { ascending: true })
-    .order("number", { ascending: true });
+  const { data, error } = await loadGlobalBoardIssues(auth.supabase, auth.user.id);
 
   if (error) {
     console.error("[api/me/issues] load failed:", error.message);

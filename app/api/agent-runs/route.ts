@@ -162,15 +162,20 @@ export async function GET(request: NextRequest) {
     "conversation:agent_conversations(title, visibility)",
     "conversation:agent_conversations(title, title_ciphertext, title_encryption_version, visibility)",
   );
-  let { data, error } = await readRuns(`${encryptedColumns}, encrypted_launch_content, launch_encryption_version, title_ciphertext, title_encryption_version`);
-  if (legacyAgentLaunchSchema(error)) ({ data, error } = await readRuns(baseColumns));
+  // Pins depend only on the caller, so they are read alongside the runs. A runs
+  // failure still takes precedence over a pins failure.
+  const [{ data, error }, { data: pinRows, error: pinsError }] = await Promise.all([
+    (async () => {
+      const current = await readRuns(`${encryptedColumns}, encrypted_launch_content, launch_encryption_version, title_ciphertext, title_encryption_version`);
+      return legacyAgentLaunchSchema(current.error) ? readRuns(baseColumns) : current;
+    })(),
+    auth.supabase
+      .from("agent_conversation_pins")
+      .select("conversation_id")
+      .eq("user_id", auth.user.id),
+  ]);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const { data: pinRows, error: pinsError } = await auth.supabase
-    .from("agent_conversation_pins")
-    .select("conversation_id")
-    .eq("user_id", auth.user.id);
 
   if (pinsError) return NextResponse.json({ error: pinsError.message }, { status: 500 });
 

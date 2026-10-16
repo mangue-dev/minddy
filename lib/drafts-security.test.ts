@@ -53,3 +53,16 @@ it("keeps the persisted snapshot on an unsuccessful new save and expires old dra
   await upsertDraft("issue", { ...draft("old"), updatedAt: Date.now() - 31 * 24 * 60 * 60 * 1000 });
   expect((await readDrafts("issue")).map((item) => item.id)).toEqual(["retained"]);
 });
+it("commits a sealed draft to desktop disk before acknowledging the save", async () => {
+  const flushed: (string | null)[] = [];
+  window.minddy = { flushStorage: async () => { flushed.push(localStorage.getItem("minddy:drafts:issue")); } } as never;
+  try {
+    await upsertDraft("issue", draft("durable"));
+    expect(flushed).toHaveLength(1);
+    expect(flushed[0]).toContain("durable");
+    window.minddy = { flushStorage: async () => { throw new Error("older shell"); } } as never;
+    await expect(deleteDraft("issue", "durable")).resolves.toEqual([]);
+  } finally {
+    delete window.minddy;
+  }
+});

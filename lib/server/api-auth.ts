@@ -1,4 +1,7 @@
-import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
+import {
+  supabaseServerFetchWithTimeout as supabaseServerFetch,
+  withSupabaseAuthorizationGate,
+} from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
@@ -19,6 +22,7 @@ import {
   isBackendUnavailableError,
 } from "@/lib/backend-availability";
 import { getServiceClient } from "@/lib/supabase-service";
+import { noteVerifiedSigningKey, verificationJwks } from "@/lib/server/auth-jwks";
 
 export { createCookieSink, type CookieSink };
 
@@ -97,9 +101,11 @@ export type AuthedResult =
        */
       claims: Record<string, unknown>;
     }
-  | { ok: false; response: NextResponse };
+  | AuthFailure;
 
-async function serviceUnavailableResult(): Promise<AuthedResult> {
+type AuthFailure = { ok: false; response: NextResponse };
+
+async function serviceUnavailableResult(): Promise<AuthFailure> {
   const t = await getTranslations("ApiErrors");
   return {
     ok: false,
@@ -110,7 +116,7 @@ async function serviceUnavailableResult(): Promise<AuthedResult> {
   };
 }
 
-async function mfaRequiredResult(): Promise<AuthedResult> {
+async function mfaRequiredResult(): Promise<AuthFailure> {
   const t = await getTranslations("ApiErrors");
   return {
     ok: false,
@@ -203,16 +209,33 @@ export async function getAuthedUser(
     };
   }
 
-  const supabase = createSupabaseFromRequest(request);
+  return authorizeUserClient(createSupabaseFromRequest(request), options);
+}
+
+type SessionClaims = NonNullable<
+  Awaited<ReturnType<SupabaseClient["auth"]["getClaims"]>>["data"]
+>["claims"];
+type VerifiedSession = { ok: true; claims: SessionClaims; sessionId: string };
+
+/** Verify the signed session locally; this performs no live lookup. */
+async function verifySessionClaims(
+  supabase: SupabaseClient,
+): Promise<VerifiedSession | AuthFailure> {
   let authResult: Awaited<ReturnType<typeof supabase.auth.getClaims>>;
   try {
-    authResult = await supabase.auth.getClaims();
+    // A process-wide key set fetched once for concurrent requests; without
+    // one, the SDK performs its own lookup.
+    const jwks = await verificationJwks();
+    authResult = jwks
+      ? await supabase.auth.getClaims(undefined, { jwks })
+      : await supabase.auth.getClaims();
   } catch {
     console.error("[api-auth] claims_verification_failed");
     return serviceUnavailableResult();
   }
   const { data, error } = authResult;
   const claims = data?.claims;
+  if (claims?.sub) noteVerifiedSigningKey(data?.header);
   if (!claims?.sub) {
     if (isBackendUnavailableError(error)) return serviceUnavailableResult();
     return {
@@ -228,7 +251,30 @@ export async function getAuthedUser(
       response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     };
   }
+  return { ok: true, claims, sessionId };
+}
 
+// Reconstruct the partial User object that callers expect from verified JWT
+// claims without another account lookup.
+function userFromClaims(claims: SessionClaims): User {
+  return {
+    id: claims.sub,
+    email: typeof claims.email === "string" ? claims.email : undefined,
+    phone: typeof claims.phone === "string" ? claims.phone : undefined,
+    role: typeof claims.role === "string" ? claims.role : undefined,
+    aud: claims.aud,
+    app_metadata: claims.app_metadata ?? {},
+    user_metadata: claims.user_metadata ?? {},
+    created_at: "",
+  } as unknown as User;
+}
+
+/** Map the live session and MFA state to the route's authorization result. */
+async function authorizeVerifiedSession(
+  supabase: SupabaseClient,
+  { claims, sessionId }: VerifiedSession,
+  options?: { allowAal1?: boolean },
+): Promise<AuthedResult> {
   let liveState: { sessionActive: boolean; mfaAllowed: boolean };
   try {
     liveState = await liveAuthorizationState(
@@ -252,17 +298,85 @@ export async function getAuthedUser(
     return mfaRequiredResult();
   }
 
-  // Reconstruct the partial User object that callers expect from verified JWT
-  // claims without another account lookup.
-  const user = {
-    id: claims.sub,
-    email: typeof claims.email === "string" ? claims.email : undefined,
-    phone: typeof claims.phone === "string" ? claims.phone : undefined,
-    role: typeof claims.role === "string" ? claims.role : undefined,
-    aud: claims.aud,
-    app_metadata: claims.app_metadata ?? {},
-    user_metadata: claims.user_metadata ?? {},
-    created_at: "",
-  } as unknown as User;
+  const user = userFromClaims(claims);
   return { ok: true, user, supabase, claims: claims as unknown as Record<string, unknown> };
+}
+
+/**
+ * Share the verified claims, live-session and MFA boundary with request-scoped
+ * server components. The caller supplies its cookie-backed, RLS-enforced client;
+ * this does not authorize a service client or weaken the route origin guard.
+ */
+export async function authorizeUserClient(
+  supabase: SupabaseClient,
+  options?: { allowAal1?: boolean },
+): Promise<AuthedResult> {
+  const verified = await verifySessionClaims(supabase);
+  if (!verified.ok) return verified;
+  return authorizeVerifiedSession(supabase, verified, options);
+}
+
+/** Reads that may start before the live check, through the RLS client only. */
+export type RlsReads<T> = (verified: { user: User; supabase: SupabaseClient }) => Promise<T> | null;
+
+export type AuthedReadsResult<T> =
+  | (Extract<AuthedResult, { ok: true }> & { reads: Promise<T> | null })
+  | AuthFailure;
+
+/**
+ * `getAuthedUser` for a read-only handler whose first queries use the user's
+ * RLS client. PostgREST already runs its pre-request hook
+ * (`public.enforce_mfa_aal`: MFA and live session) on those queries, so they
+ * start while the Node live check is in flight instead of after it.
+ *
+ * The live result still decides the response. Until it succeeds, the reads
+ * deliver no response and other Supabase clients send nothing (see
+ * `withSupabaseAuthorizationGate`), so no body, header, log, decryption or
+ * service-role read can depend on them. A denial aborts them and returns the
+ * same 401, 403 MFA or 503 response as `getAuthedUser`.
+ *
+ * `readRls` receives the claims-derived user and the RLS client only. It must
+ * not write or use the service client. It returns null to start nothing, for
+ * example when a write such as cycle reconciliation must precede the reads.
+ * The caller awaits the returned `reads`, which is the promise already started.
+ */
+export async function getAuthedUserWithRlsReads<T>(
+  request: NextRequest,
+  readRls: RlsReads<T>,
+): Promise<AuthedReadsResult<T>> {
+  if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
+    console.error("[api-auth] cross_origin_request_refused");
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  const supabase = createSupabaseFromRequest(request);
+  const verified = await verifySessionClaims(supabase);
+  if (!verified.ok) return verified;
+  // Start the live lookup before, and therefore outside, the gate it controls.
+  const live = authorizeVerifiedSession(supabase, verified);
+  const authorized = live.then((result) => result.ok, () => false);
+  const abort = new AbortController();
+  const reads = withSupabaseAuthorizationGate(authorized, abort.signal, () => {
+    // Even a synchronous failure must not answer before the live result.
+    try {
+      return readRls({ user: userFromClaims(verified.claims), supabase });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  });
+  // The caller that awaits `reads` receives its failure; it is never unhandled.
+  reads?.catch(() => undefined);
+
+  const result = await live.catch((error: unknown) => {
+    abort.abort();
+    throw error;
+  });
+  if (!result.ok) {
+    abort.abort();
+    return result;
+  }
+  return { ...result, reads };
 }

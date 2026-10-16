@@ -71,9 +71,7 @@ describe("cold retained-board request scheduling", () => {
     expect(client.getQueryData(viewsKey)).toEqual([]);
   });
 
-  it("waits for restoration and skips non-board routes and existing restored data", async () => {
-    await render({ restoring: true });
-    expect(fetchMock).not.toHaveBeenCalled();
+  it("skips non-board routes and existing restored data", async () => {
     await render({ active: false });
     expect(fetchMock).not.toHaveBeenCalled();
     client.setQueryData(GLOBAL_BOARD_KEY, board, { updatedAt: 1 });

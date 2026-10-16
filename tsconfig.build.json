@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "desktop",
+    "tools/oxlint",
+    "output",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "test"
+  ]
+}

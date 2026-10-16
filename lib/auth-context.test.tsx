@@ -40,9 +40,13 @@ let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let mounted: boolean;
 let providers: string[];
+let renders: number;
+let lastUser: unknown;
 function Snapshot() {
   const { user, session, loading, oauthProviders } = useAuth();
   providers = oauthProviders;
+  renders++;
+  lastUser = user;
   return <output>{JSON.stringify({ owner: user?.id ?? null, token: session?.access_token ?? null, loading })}</output>;
 }
 const snapshot = () => JSON.parse(host.textContent!);
@@ -62,6 +66,7 @@ beforeEach(async () => {
   h.getSession.mockReset().mockResolvedValue(result());
   h.sdk = null;
   h.clearCache.mockClear(); h.clearTabs.mockClear(); h.unsubscribe.mockClear();
+  renders = 0;
   host = document.createElement("div"); document.body.append(host);
   root = createRoot(host); mounted = true;
   await act(async () => { root.render(<AuthProvider><Snapshot /></AuthProvider>); });
@@ -288,6 +293,45 @@ describe("browser session recovery", () => {
       expect(snapshot().owner).toBeNull();
     },
   );
+
+  it("keeps consumers still when a foreground read returns the same account", async () => {
+    await emit("INITIAL_SESSION", savedSession());
+    const settled = lastUser;
+    const before = renders;
+    h.getSession.mockImplementation(async () => result(savedSession()));
+    await dispatch("focus");
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    await dispatch("online");
+    expect(h.getSession).toHaveBeenCalledTimes(3);
+    expect(lastUser).toBe(settled);
+    expect(renders).toBe(before);
+
+    const saved = savedSession();
+    const updated = { ...saved, user: { ...saved.user, user_metadata: { locale: "en", onboarding_done: true } } };
+    await emit("USER_UPDATED", updated);
+    expect(lastUser).not.toBe(settled);
+    expect((lastUser as typeof updated.user).user_metadata).toEqual({ locale: "en", onboarding_done: true });
+    await emit("SIGNED_IN", savedSession("other"));
+    expect(snapshot().owner).toBe("other");
+    await emit("SIGNED_OUT", null);
+    expect(lastUser).toBeNull();
+  });
+
+  it("skips provider discovery when the shell does not show provider buttons", async () => {
+    await act(async () => { root.unmount(); });
+    const settings = vi.fn(async () => Response.json({ external: { google: true } }));
+    vi.stubGlobal("fetch", settings);
+    root = createRoot(host);
+    await act(async () => {
+      root.render(<AuthProvider discoverOAuthProviders={false}><Snapshot /></AuthProvider>);
+    });
+    h.getSession.mockResolvedValue(result(savedSession()));
+    await emit("INITIAL_SESSION", savedSession());
+    await dispatch("online"); await dispatch("focus"); await advance(16_000);
+    expect(settings).not.toHaveBeenCalled();
+    expect(providers).toEqual([]);
+    expect(snapshot().owner).toBe("owner");
+  });
 
   it("removes recovery listeners and retry timers when the provider unmounts", async () => {
     h.getSession.mockResolvedValueOnce(result(null, transientFailure()));

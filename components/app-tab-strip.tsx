@@ -46,6 +46,7 @@ import { usePlanGates } from "@/lib/use-billing-query";
 import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
+import { AppTabSkeleton } from "./app-tab-skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { KbdSequence } from "./ui/kbd";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
@@ -211,14 +212,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const TAB_GAP = 4;
   // The trailing button (⋯ or +) sits right after the last tab, never pushed
   // to the right edge: the rail is content-sized, capped so this button (and
-  // the error buttons, when present) keep their room. The loading spinner
-  // rides inside the tab row, so it costs room too.
+  // the error buttons, when present) keep their room.
   const BUTTON_W = 28;
-  const SPINNER_W = 20;
   const buttonReserve = BUTTON_W + TAB_GAP
     + ((loadError || error) ? BUTTON_W + TAB_GAP : 0)
     + (error === "destination_unavailable" ? BUTTON_W + TAB_GAP : 0)
-    + (loading ? SPINNER_W : 0)
     // Dynamic margin the fit never eats into: the measurement is not trusted
     // to the last pixel, and a row that ends flush at the container edge
     // leaves no room for the trailing buttons to breathe. Reaching the margin
@@ -314,7 +312,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           })()}
         </DragOverlay>
         </DndContext>
-        {loading && <HugeiconsIcon icon={LoaderCircleIcon} aria-label={t("loading")} className="size-4 shrink-0 animate-spin" />}
+        {loading && tabs.length === 0 && <AppTabSkeleton label={t("loading")} />}
       </div>
       {hidden.length > 0 ? (
         <DropdownMenu>

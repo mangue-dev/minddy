@@ -6,12 +6,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FilterIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import {
-  useParams,
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
+import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import {
@@ -52,6 +48,7 @@ import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
+import { matchesObjectiveState, secondarySelectionId } from "@/lib/secondary-view-selection";
 import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 import {
   Tooltip,
@@ -76,13 +73,7 @@ const ObjectiveDialog = dynamic(
  */
 type ObjectiveStateFilter = "active" | ObjectiveStatus | "all";
 
-function matchesState(objective: Objective, filter: ObjectiveStateFilter) {
-  if (filter === "all") return true;
-  if (filter === "active") {
-    return objective.status === "planned" || objective.status === "in_progress";
-  }
-  return objective.status === filter;
-}
+const matchesState = matchesObjectiveState;
 
 /**
  * The title of the empty column when it is THIS state, and only this state, which empties it —
@@ -274,12 +265,17 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const tSeed = useTranslations("Seed");
-  const params = useParams<{ id: string }>();
-  const projectId = browseProjectId ?? params.id;
-  const livePathname = usePathname();
+  const { projectId: routeProjectId, pathname: livePathname, searchParams } = useAppTabRoute();
+  const projectId = browseProjectId ?? routeProjectId!;
   const pathname = browse ? `/projects/${projectId}/objectives` : livePathname;
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const active = useAppTabActive();
+  const navigation = useOptionalAppTabNavigation();
+  const consumeSelection = useCallback(() => {
+    if (active && window.location.pathname === pathname &&
+        (!navigation || navigation.session.getSnapshot().activeId === navigation.activeId)) {
+      window.history.replaceState(null, "", pathname);
+    }
+  }, [active, navigation, pathname]);
   const newParam = browse ? null : searchParams.get("new");
   const openParam = browse ? null : searchParams.get("open");
 
@@ -388,22 +384,17 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   // Keep a valid selection: the first objective by default, and the next
   // when the one that was open disappears (deletion, change of filter).
   useEffect(() => {
-    if (filtered.length === 0) {
-      if (selectedId !== null) setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !filtered.some((o) => o.id === selectedId)) {
-      setSelectedId(filtered[0].id);
-    }
+    const next = secondarySelectionId(filtered, null, selectedId);
+    if (next !== selectedId) setSelectedId(next);
   }, [filtered, selectedId]);
 
   // The New objective command opens the create dialog through ?new=1.
   useEffect(() => {
-    if (newParam === "1") {
+    if (active && newParam === "1") {
       setDialogOpen(true);
-      router.replace(pathname);
+      consumeSelection();
     }
-  }, [newParam, pathname, router]);
+  }, [active, newParam, consumeSelection]);
 
   useEffect(() => {
     if (dialogOpen) setDialogMounted(true);
@@ -418,8 +409,8 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   // Keep the current lens when it already contains the target. Completed or
   // canceled objectives still widen it so the deep link always opens.
   useEffect(() => {
-    if (!openParam) return;
-    if (!objectives.some((o) => o.id === openParam)) return;
+    if (!active || !openParam) return;
+    if (secondarySelectionId(objectives, openParam) !== openParam) return;
     if (
       deepLinkNeedsAllFilter(
         objectives,
@@ -430,8 +421,8 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       setState("all");
     }
     setSelectedId(openParam);
-    router.replace(pathname);
-  }, [openParam, objectives, pathname, router, state]);
+    consumeSelection();
+  }, [active, openParam, objectives, consumeSelection, state]);
 
   // “Save current view” (⌘K): The open lens in the view pane
   // right is a SELECTION on the page, not an overlay — it makes
@@ -668,12 +659,12 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 }
 
 export function ObjectivesCollection(props: { projectId: string; browse: SidebarBrowseTarget }) {
-  return <ObjectivesInner {...props} />;
+  return <AppTabRouteBoundary><ObjectivesInner {...props} /></AppTabRouteBoundary>;
 }
 
 export default function ObjectivesPage() {
   return (
-    <Suspense
+    <AppTabRouteBoundary><Suspense
       fallback={
         <div className="px-6 py-10">
           <Skeleton className="h-8 w-64" />
@@ -681,6 +672,6 @@ export default function ObjectivesPage() {
       }
     >
       <ObjectivesInner />
-    </Suspense>
+    </Suspense></AppTabRouteBoundary>
   );
 }

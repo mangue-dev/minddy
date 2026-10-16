@@ -47,9 +47,9 @@ import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
 import {
   pageHref,
   pagesHref,
-  pushPagesHistory,
   replacePagesHistory,
 } from "@/lib/pages-navigation";
+import { usePaletteDataGroups, useWikiPageNavigation } from "@/lib/use-palette-data-groups";
 import {
   useOpenPullRequestCountQuery,
 } from "@/lib/use-agent-runs";
@@ -66,8 +66,8 @@ import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSe
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
 import { useAccountActions } from "@/components/mobile-account";
 import { AppTopBar } from "@/components/app-top-bar";
-import { AppTabViewHost } from "@/components/app-tab-view-host";
-import { useOptionalAppTabNavigation } from "@/lib/app-tabs-context";
+import { AppTabPanel } from "@/components/app-tab-view-host";
+import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
@@ -91,13 +91,11 @@ import { useBranchCleanupTargets } from "@/lib/use-branch-cleanup-targets";
 import { useCommandPaletteLauncher } from "@/lib/use-command-palette-launcher";
 import type {
   BranchCleanupTarget,
-  PageSearchHit,
   Project,
   SearchIndexIssue,
   SearchIndexObjective,
   SearchIndexPage,
 } from "@/lib/types";
-import { usePageContentSearch } from "@/lib/use-page-search";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { draftIconUrl, draftOrbSeed } from "@/lib/project-draft";
@@ -257,6 +255,12 @@ function identifierBadge(id: string) {
   );
 }
 
+/** Activation closes transient surfaces without rendering the whole shell. */
+function AppTabChangeEffect({ onChange }: { onChange: () => void }) {
+  useAppTabChange(onChange);
+  return null;
+}
+
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   useMobileViewport();
   // A root marker keeps application typography scoped without repeatedly
@@ -284,8 +288,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tPages = useTranslations("Pages");
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   const pathname = usePathname();
-  const appTabs = useOptionalAppTabNavigation();
-  const activeAppTabId = appTabs?.activeId;
+  // The stable session: activation re-renders only the tab panel below.
+  const appTabSession = useOptionalAppTabSession();
   const searchParams = useSearchParams();
   const router = useAppRouter();
   const openDestination = useAppNavigation();
@@ -305,7 +309,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     closeIssue: closeIssuePanel,
   } = useIssuePanelActions();
   const previousPathname = useRef(pathname);
-  useAppTabChange(closeIssuePanel);
   useEffect(() => {
     if (previousPathname.current !== pathname) closeIssuePanel();
     previousPathname.current = pathname;
@@ -314,18 +317,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // display, and nothing else reports them once you leave the home.
   const { invitations } = useMyInvitations();
   const inboxCount = unreadCount + invitations.length;
-  const navigateToWikiPage = useCallback(
-    (projectId: string, pageId: string) => {
-      const href = pageHref(projectId, pageId);
-      const base = pagesHref(projectId);
-      if (pathname === base || pathname.startsWith(`${base}/`)) {
-        openDestination(href, () => pushPagesHistory(href));
-      } else {
-        router.push(href);
-      }
-    },
-    [pathname, router, openDestination]
-  );
+  const navigateToWikiPage = useWikiPageNavigation(pathname, router, openDestination);
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
   const { hidden: sidebarHidden } = useSidebarVisibility();
   const mobileLayout = useMobileLayout() === true;
@@ -427,12 +419,12 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     pathname,
     searchParams.get("objective"),
   );
+  const objectivesProjectId =
+    currentProjectId && (paletteOpen || !!objectiveBoardId)
+      ? currentProjectId
+      : null;
   const { objectives: projectObjectives, loading: objectivesLoading } =
-    useObjectivesQuery(
-      currentProjectId && (paletteOpen || !!objectiveBoardId)
-        ? currentProjectId
-        : null,
-    );
+    useObjectivesQuery(objectivesProjectId);
   // The current project wiki pages, for ⌘K (MIN-270). Same cache as
   // the tree of the Pages tab: opening the tab does not ask for anything, and a page
   // fame there changes name in the palette without going back and forth.
@@ -513,11 +505,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [searchIndex, currentProjectId, wikiPages]
   );
 
-  // And what titles cannot give: pages whose CONTENT
-  // answers. A request to the server, late on typing, which enriches the
-  // list already displayed instead of making it wait.
-  const pageContentHits = usePageContentSearch(paletteOpen);
-
   const paletteObjectives = useMemo<SearchIndexObjective[]>(
     () =>
       mergeByProject(
@@ -526,10 +513,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         // An empty array means "this project has none" — but it also means "not
         // loaded yet", and replacing the index's rows with that would blink the
         // current project's objectives out of the list. Keep the index until the
-        // real answer lands.
-        objectivesLoading ? null : projectObjectives
+        // real answer lands. A disabled query has no answer either: its empty
+        // list is new on every render and would rebuild the closed model.
+        objectivesLoading || !objectivesProjectId ? null : projectObjectives
       ),
-    [searchIndex, currentProjectId, projectObjectives, objectivesLoading]
+    [searchIndex, currentProjectId, projectObjectives, objectivesLoading, objectivesProjectId]
   );
 
   // Triage is a hidden issue status — the sidebar counter derives from the
@@ -1059,6 +1047,29 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     return groups;
   }, [settingsSections, currentProject, user, router, t]);
 
+  // One wiki row, shared by the index model below and by the palette for pages
+  // that only the content search found.
+  const buildPageItem = useCallback(
+    (page: SearchIndexPage): PaletteItem | null => {
+      const project = projectById.get(page.project_id);
+      if (!project) return null;
+      return {
+        key: `wiki-${page.id}`,
+        label: page.title || tPages("untitled"),
+        icon: page.icon ? emojiIcon(page.icon) : File02Icon,
+        keywords: [project.name, project.key],
+        meta: projectChip(project),
+        metaText: project.name,
+        entityType: "page",
+        contextId: page.project_id,
+        data: page,
+        href: `/projects/${page.project_id}/pages/${page.id}`,
+        onSelect: () => navigateToWikiPage(page.project_id, page.id),
+      };
+    },
+    [projectById, navigateToWikiPage, tPages]
+  );
+
   // ── Data groups: tickets + objectives, all projects combined (MIN-91) ────
   // Separated from the command groups above because they are the only ones
   // weigh: a few thousand lines, each with its React elements
@@ -1070,8 +1081,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     (
       issues: SearchIndexIssue[],
       objectives: SearchIndexObjective[],
-      pages: SearchIndexPage[],
-      contentHits: PageSearchHit[] = []
+      pages: SearchIndexPage[]
     ): PaletteGroup[] => {
       const groups: PaletteGroup[] = [];
 
@@ -1137,89 +1147,33 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
       // ── The wiki, ALL PROJECTS (MIN-270, cross-project since MIN-276) ───
       //
-      // Two sources in one list, and that's intentional. The TITLES come from
-      // the index (filtered as you type, serverless); the CONTENT comes from
-      // Postgres, with the snippet that says why the page exits. The extract is
-      // placed in `description`: the palette engine classifies a match of
-      // title above a description match, so "found by its
-      // title” passes before “cited in a body” without having to sort.
-      // The row's right-aligned context stays the PROJECT NAME — the excerpt
-      // is for ranking, never for display.
-      //
-      // A page found by its content but missing from the index (ceiling
-      // reached, snapshot expired) is added to the list: the server comes
-      // to say that it exists and that it responds.
-      const excerptById = new Map(
-        contentHits.map((hit) => [hit.id, hit.excerpt] as const)
-      );
-      const known = new Set(pages.map((p) => p.id));
-      const extras: SearchIndexPage[] = contentHits
-        .filter((hit) => !known.has(hit.id))
-        .map((hit) => ({
-          id: hit.id,
-          project_id: hit.project_id,
-          title: hit.title,
-          icon: hit.icon,
-          updated_at: hit.updated_at,
-        }));
-
-      const allPages = [...pages, ...extras];
-      if (allPages.length > 0) {
-        groups.push({
-          key: "wiki-pages",
-          heading: t("pages"),
-          items: allPages.flatMap((page) => {
-            const project = projectById.get(page.project_id);
-            if (!project) return [];
-            const excerpt = excerptById.get(page.id) ?? "";
-            return [
-              {
-                key: `wiki-${page.id}`,
-                label: page.title || tPages("untitled"),
-                icon: page.icon ? emojiIcon(page.icon) : File02Icon,
-                description: excerpt,
-                keywords: [project.name, project.key],
-                meta: projectChip(project),
-                metaText: project.name,
-                entityType: "page",
-                contextId: page.project_id,
-                data: page,
-                href: `/projects/${page.project_id}/pages/${page.id}`,
-                onSelect: () => navigateToWikiPage(page.project_id, page.id),
-              },
-            ];
-          }),
-        });
-      }
+      // The TITLES come from the index (filtered as you type, serverless). The
+      // CONTENT hits are applied inside the palette (withPageContentHits), so
+      // a search result never rebuilds this model. The group is always present
+      // so a page found only by its content keeps the Pages category.
+      groups.push({
+        key: "wiki-pages",
+        heading: t("pages"),
+        items: pages.flatMap((page) => {
+          const row = buildPageItem(page);
+          return row ? [row] : [];
+        }),
+      });
 
       return groups;
     },
-    [projectById, navigateToWikiPage, openIssuePanel, t, ti, tPages]
+    [projectById, buildPageItem, openIssuePanel, t, ti]
   );
 
   // Prepare the full model during the palette's idle warmup and retain it
   // between openings. Narrow windows also need the full model when a keyboard
   // shortcut opens the palette.
-  const desktopDataGroups = useMemo(
-    () =>
-      paletteMounted && (!mobileLayout || paletteOpen)
-        ? buildDataGroups(
-            paletteIssues,
-            paletteObjectives,
-            palettePages,
-            pageContentHits
-          )
-        : [],
-    [
-      paletteMounted,
-      mobileLayout,
-      paletteOpen,
-      buildDataGroups,
-      paletteIssues,
-      paletteObjectives,
-      palettePages,
-      pageContentHits,
-    ]
+  const desktopDataGroups = usePaletteDataGroups(
+    { mounted: paletteMounted, mobileLayout, open: paletteOpen },
+    buildDataGroups,
+    paletteIssues,
+    paletteObjectives,
+    palettePages,
   );
 
 
@@ -1560,18 +1514,18 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const handleDestinationSelect = useCallback((href: string) => {
     setPaletteOpen(false);
     setPaletteMode("default");
-    void appTabs?.session.create(href);
-  }, [appTabs?.session]);
+    void appTabSession?.create(href);
+  }, [appTabSession]);
   // Hovering a destination row is the intent to open it: the same prefetch
   // an existing tab label already gets (fourth pass MIN-540).
   const handleDestinationPrefetch = useCallback((href: string) => {
-    appTabs?.session.prefetch(href);
-  }, [appTabs?.session]);
+    appTabSession?.prefetch(href);
+  }, [appTabSession]);
 
   return (
     <div className="app-workspace relative flex h-dvh w-full min-w-0 flex-col overflow-hidden">
       <AppTopBar
-        ready={Boolean(appTabs)}
+        ready={Boolean(appTabSession)}
         hidden={sidebarHidden}
         inbox={inboxItem}
         onSearch={() => handlePaletteOpenChange(true)}
@@ -1620,7 +1574,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       }
     >
-      <div id="app-tab-content" role={appTabs ? "tabpanel" : undefined} aria-labelledby={activeAppTabId ? `app-tab-${activeAppTabId}` : undefined} className="h-full min-h-0"><AppTabViewHost>{children}</AppTabViewHost></div>
+      <AppTabChangeEffect onChange={closeIssuePanel} />
+      <AppTabPanel>{children}</AppTabPanel>
       <ContentToaster />
       {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
@@ -1636,6 +1591,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           destinationOnly={paletteMode === "destination"}
           onDestinationSelect={handleDestinationSelect}
           onPrefetchDestination={handleDestinationPrefetch}
+          pageItem={buildPageItem}
         />
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />

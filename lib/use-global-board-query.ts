@@ -25,7 +25,11 @@ import {
   addIssueRelationApi,
   removeIssueRelationApi,
 } from "./issue-relations-api";
-import { addRelationOptimistically, persistedRelationId } from "./optimistic/relation-writes";
+import {
+  addRelationOptimistically,
+  beginRelationRemoval,
+  persistedRelationId,
+} from "./optimistic/relation-writes";
 import { buildOptimisticIssue } from "./optimistic-issue";
 import { leavesCycleOnStatus } from "./cycle";
 import type { RelationKinds } from "./use-issue-relations-query";
@@ -89,16 +93,6 @@ export function useGlobalBoardQuery() {
       // The aggregate query mounted above remains the fallback.
     });
   }, [queryClient]);
-
-  const invalidate = useCallback(
-    (projectId?: string) => {
-      void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
-      if (projectId) {
-        void queryClient.invalidateQueries({ queryKey: ["issues", projectId] });
-      }
-    },
-    [queryClient]
-  );
 
   // Self-assign on start — claim an unassigned issue moved into in_progress
   // (Account → Preferences), unless the same patch already sets an assignee.
@@ -274,6 +268,12 @@ export function useGlobalBoardQuery() {
       // the aggregate cache carries both the issues and the relation rows.
       const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
       const target = board?.issues.find((i) => i.id === issueId);
+      // Removed from both caches up front and registered first (MIN-156): a
+      // read already in flight cannot bring the card back, and the trash
+      // broadcast is recognized as our own echo instead of refetching the
+      // whole aggregate.
+      const handle = issueWrites.begin({ kind: "remove", id: issueId });
+      removeIssueEverywhere(queryClient, projectId, issueId);
       const request = deleteIssueApi(issueId, { surface: "global_board" });
       const rec =
         target && board
@@ -304,13 +304,15 @@ export function useGlobalBoardQuery() {
           : null;
       try {
         await request;
+        issueWrites.settle(handle);
       } catch (err) {
+        issueWrites.fail(handle);
         rec?.retract();
+        if (target) insertIssueEverywhere(queryClient, projectId, target);
         throw err;
       }
-      invalidate(projectId);
     },
-    [queryClient, invalidate, record]
+    [queryClient, record]
   );
 
   // Optimistic (MIN-40): inserts the card in the aggregate board AND in the cache
@@ -394,7 +396,8 @@ export function useGlobalBoardQuery() {
           target_type: created.target_type,
         },
       });
-      void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+      // The board's relation slice already holds the server row: refetching
+      // the whole aggregate would only confirm it.
       void queryClient.invalidateQueries({ queryKey: ["issue-relations", projectId] });
     },
     [queryClient, record]
@@ -405,6 +408,9 @@ export function useGlobalBoardQuery() {
       relationId = await persistedRelationId(queryClient, relationId);
       const previous = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
       const removed = previous?.relations.find((r) => r.id === relationId);
+      // Registered first, so a board read already in flight cannot bring the
+      // row back once the DELETE is confirmed.
+      const removal = beginRelationRemoval(queryClient, projectId, relationId);
       queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (old) =>
         old
           ? { ...old, relations: old.relations.filter((r) => r.id !== relationId) }
@@ -412,6 +418,7 @@ export function useGlobalBoardQuery() {
       );
       try {
         await removeIssueRelationApi(relationId);
+        removal.settle();
         if (removed) {
           record({
             kind: "relation-remove",
@@ -426,11 +433,11 @@ export function useGlobalBoardQuery() {
             },
           });
         }
-        void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
         void queryClient.invalidateQueries({
           queryKey: ["issue-relations", projectId],
         });
       } catch (err) {
+        removal.fail();
         if (previous) queryClient.setQueryData(GLOBAL_BOARD_KEY, previous);
         throw err;
       }

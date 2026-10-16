@@ -34,7 +34,7 @@ const historicalForbiddenPaths = [
   /^captures\/world\/world\.md$/,
   /^dev\.log$/,
   /^problems\.md$/,
-  /^tsconfig\.tsbuildinfo$/,
+  /^tsconfig(?:\.build)?\.tsbuildinfo$/,
   /^copy-audit.*\.(?:json|md)$/,
   /^copy-fix-report\.md$/,
   /^docs\/harness-2026-08\.md$/,

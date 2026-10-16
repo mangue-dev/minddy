@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { QueryClient, dehydrate, useIsRestoring, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, dehydrate, useQueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppQueryProvider, clearPersistedQueryCache, QUERY_CACHE_STORAGE_KEY } from "./query-provider";
 import { AccountQueryProvider } from "./account-query-provider";
@@ -19,11 +19,9 @@ vi.mock("./local-snapshots", async (original) => ({
 
 let root: Root;
 let client: QueryClient;
-const restoring: boolean[] = [];
 
 function Consumer() {
   client = useQueryClient();
-  restoring.push(useIsRestoring());
   return null;
 }
 
@@ -31,7 +29,6 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   window.localStorage.clear();
-  restoring.length = 0;
   account.id = "account-a";
   root = createRoot(document.createElement("div"));
 });
@@ -79,7 +76,6 @@ describe("query provider persistence lifecycle", () => {
     expect(client).not.toBe(departing);
     expect(client.getQueryData(["projects"])).toBeUndefined();
     expect(client.getQueryData(iconKey)).toBeUndefined();
-    expect(restoring.at(-1)).toBe(false);
     client.setQueryData(["projects"], [{ id: "private-b" }]);
     window.dispatchEvent(new Event("pagehide"));
     const snapshot = JSON.parse(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)!).value;
@@ -96,8 +92,6 @@ describe("query provider persistence lifecycle", () => {
     } }));
     previous.clear();
     await mount();
-    expect(restoring[0]).toBe(true);
-    expect(restoring.at(-1)).toBe(false);
     expect(client.getQueryData(["projects"])).toEqual([{ id: "saved-project" }]);
     expect(client.getQueryState(["projects"])?.isInvalidated).toBe(true);
   });

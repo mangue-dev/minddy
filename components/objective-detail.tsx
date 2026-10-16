@@ -224,6 +224,7 @@ export function ObjectiveDetail({
   // Mounts with the objectives page: warm the editor chunk once painted.
   useIdleMarkdownEditorPreload();
   const [name, setName] = useState(objective.name);
+  const nameEdited = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Remount the markdown editor when the description is rewritten under it
   // (dictation) — it only reads `value` when editing and only commits when blurring.
@@ -247,12 +248,21 @@ export function ObjectiveDetail({
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
     useObjectiveTimeline(objective.id);
 
+  const previousObjectiveId = useRef(objective.id);
   useEffect(() => {
+    if (previousObjectiveId.current === objective.id) return;
+    previousObjectiveId.current = objective.id;
     setName(objective.name);
+    nameEdited.current = false;
     shownDescription.current = objective.description ?? "";
     descriptionEdited.current = false;
     setEditorKey((k) => k + 1);
   }, [objective.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Accepted remote names may update a clean field without discarding local typing.
+  useEffect(() => {
+    if (!nameEdited.current) setName(objective.name);
+  }, [objective.id, objective.name]);
 
   // ⌘O / Ctrl+O: the “view tickets” button without the mouse. He wears a
   // modify because the page is FULL of fields — name, description,
@@ -334,7 +344,10 @@ export function ObjectiveDetail({
 
   // A different objective = a fresh dictation session: drop the history and
   // abort any in-flight request.
+  const dictationObjectiveId = useRef(objective.id);
   useEffect(() => {
+    if (dictationObjectiveId.current === objective.id) return;
+    dictationObjectiveId.current = objective.id;
     resetDictation();
   }, [objective.id, resetDictation]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -362,6 +375,7 @@ export function ObjectiveDetail({
   const mentions = useDescriptionMentions(projectId, members);
 
   const commitName = () => {
+    nameEdited.current = false;
     const trimmed = name.trim();
     if (trimmed && trimmed !== objective.name) void patch({ name: trimmed });
     else if (!trimmed) setName(objective.name);
@@ -477,7 +491,7 @@ export function ObjectiveDetail({
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           <AutoTextarea
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { nameEdited.current = true; setName(e.target.value); }}
             onBlur={commitName}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

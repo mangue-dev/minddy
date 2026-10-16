@@ -280,6 +280,10 @@ const bridge: DesktopBridge = {
     >;
   },
 
+  flushStorage() {
+    return ipcRenderer.invoke("minddy:storage:flush") as Promise<void>;
+  },
+
 };
 
 contextBridge.exposeInMainWorld("minddy", bridge);

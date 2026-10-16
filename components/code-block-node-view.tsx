@@ -12,7 +12,7 @@ import { withCodeBlockNodeView } from "@/components/code-block-lowlight";
 import {
   CODE_LANGUAGE_OPTIONS,
   codeBlockLowlight,
-} from "@/components/code-block-language-catalog";
+} from "@/components/code-block-full-language-catalog";
 import { SearchSelect } from "@/components/search-select";
 import {
   CodeBlockLanguageTrigger,

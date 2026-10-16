@@ -50,6 +50,13 @@ const h = vi.hoisted(() => ({
   beforeDiscard: null as (() => void) | null,
   beforeRestore: null as (() => void) | null,
   updateError: null as { code: string; message: string } | null,
+  pageListCap: 1000,
+  pageListLaterError: false,
+  /** Page reads and access checks, in the order they were sent. */
+  trace: [] as string[],
+  /** Holds every access answer, or every single-page read, until released. */
+  accessHold: null as Promise<void> | null,
+  pageReadHold: null as Promise<void> | null,
   seq: 0,
 }));
 
@@ -73,11 +80,15 @@ vi.mock("@/lib/supabase-service", () => {
     let payload: Record<string, unknown> | Record<string, unknown>[] = {};
     let orderColumn: string | null = null;
     let ascending = true;
+    let counted = false;
+    let requestedLimit = 1000;
+    let afterId: string | null = null;
 
     const all = () => (pages ? h.rows : h.versions);
     const matching = () => all().filter((row) => filters.every((f) => f(row)));
 
-    const run = (): { data: Record<string, unknown>[] | null; error: { code: string; message: string } | null } => {
+    const run = (): { data: Record<string, unknown>[] | null; error: { code: string; message: string } | null; count?: number } => {
+      if (pages && mode === "select") h.trace.push(orderColumn === "id" ? "pages:list" : "pages:read");
       if (mode === "insert") {
         // An object OR an array: duplication writes an entire branch of a
         // shot (MIN-272), and a half-posed copy would be a false tree.
@@ -86,7 +97,7 @@ vi.mock("@/lib/supabase-service", () => {
             h.seq += 1;
             const row = pages
               ? {
-                  id: `page-${h.seq}`,
+                  id: `33333333-3333-4333-8333-${String(h.seq).padStart(12, "0")}`,
                   parent_id: null,
                   title: "",
                   icon: null,
@@ -152,11 +163,16 @@ vi.mock("@/lib/supabase-service", () => {
       // be the object that the next write will mutate. Without that, the state “before”
       // that the kernel keeps in hand for archiving (MIN-277) was modified
       // by the writing it precedes — an alias that the real base does not have.
+      if (pages && orderColumn === "id") {
+        if (afterId && h.pageListLaterError) return { data: null, error: { code: "XX000", message: "Later batch failed" } };
+        return { data: rows.slice(0, Math.min(requestedLimit, h.pageListCap)).map((row) => ({ ...row })), error: null,
+          ...(counted ? { count: rows.length } : {}) };
+      }
       return { data: rows.map((row) => ({ ...row })), error: null };
     };
 
     const query: Record<string, unknown> = {};
-    query.select = () => query;
+    query.select = (_columns?: string, options?: { count?: string }) => { counted = options?.count === "exact"; return query; };
     query.insert = (row: Record<string, unknown> | Record<string, unknown>[]) => {
       mode = "insert";
       payload = row;
@@ -187,6 +203,11 @@ vi.mock("@/lib/supabase-service", () => {
       filters.push((row) => String(row[column] ?? "") >= String(value));
       return query;
     };
+    query.gt = (column: string, value: unknown) => {
+      if (column === "id") afterId = String(value);
+      filters.push((row) => String(row[column] ?? "") > String(value));
+      return query;
+    };
     query.in = (column: string, values: unknown[]) => {
       filters.push((row) => values.includes(row[column]));
       return query;
@@ -204,12 +225,13 @@ vi.mock("@/lib/supabase-service", () => {
       ascending = options?.ascending !== false;
       return query;
     };
-    query.limit = () => query;
+    query.limit = (limit: number) => { requestedLimit = limit; return query; };
     query.single = async () => {
       const { data } = run();
       return { data: data?.[0] ?? null, error: data?.length ? null : new Error("no row") };
     };
     query.maybeSingle = async () => {
+      if (pages && h.pageReadHold) await h.pageReadHold;
       const { data, error } = run();
       return { data: data?.[0] ?? null, error };
     };
@@ -331,8 +353,11 @@ vi.mock("@/lib/server/page-mentions", () => ({
 }));
 
 vi.mock("@/lib/server/project-access", () => ({
-  getProjectAccess: async (_userId: string, projectId: string) =>
-    h.access.has(projectId) ? { project: { id: projectId }, isOwner: true, isMember: true } : null,
+  getProjectAccess: async (_userId: string, projectId: string) => {
+    h.trace.push(`access:${projectId}`);
+    if (h.accessHold) await h.accessHold;
+    return h.access.has(projectId) ? { project: { id: projectId }, isOwner: true, isMember: true } : null;
+  },
 }));
 
 /**
@@ -390,6 +415,11 @@ beforeEach(() => {
   h.beforeDiscard = null;
   h.beforeRestore = null;
   h.updateError = null;
+  h.pageListCap = 1000;
+  h.pageListLaterError = false;
+  h.trace = [];
+  h.accessHold = null;
+  h.pageReadHold = null;
   h.access = new Set([PROJECT]);
   announce.recordPageEvent.mockClear();
   announce.notifyAgentPageWrite.mockClear();
@@ -492,13 +522,13 @@ describe("createPage", () => {
 });
 
 describe("listPages", () => {
-  it("rend les pages vivantes à plat, de quoi rebâtir l'arbre", async () => {
+  it("returns the complete living collection for rebuilding its tree", async () => {
     const parent = await create("Guide");
     await create("Installation", parent);
     await create("Notes");
 
     const result = await listPages(PROJECT, ACTOR);
-    if (!result.ok) throw new Error("liste refusée");
+    if (!result.ok) throw new Error("Page listing failed");
 
     expect(result.pages).toHaveLength(3);
     const tree = buildPageTree(result.pages.map((p) => ({ ...p, content: null })));
@@ -506,14 +536,74 @@ describe("listPages", () => {
     expect(tree.find((n) => n.id === parent)?.children).toHaveLength(1);
   });
 
-  it("n'inclut pas les pages corbeillées", async () => {
+  it("excludes trashed pages", async () => {
     const kept = await create("Guide");
     const gone = await create("Brouillon");
     await trashPage(gone, ACTOR);
 
     const result = await listPages(PROJECT, ACTOR);
-    if (!result.ok) throw new Error("liste refusée");
+    if (!result.ok) throw new Error("Page listing failed");
     expect(result.pages.map((p) => p.id)).toEqual([kept]);
+  });
+
+  it("reads past a lowered database cap and restores the ordinary tree order", async () => {
+    const ids = [await create("First"), await create("Second"), await create("Third")];
+    h.pageListCap = 1;
+    Object.assign(rowOf(ids[0]), { position: "a2" });
+    Object.assign(rowOf(ids[1]), { position: "a0" });
+    Object.assign(rowOf(ids[2]), { position: "a1" });
+    const result = await listPages(PROJECT, ACTOR);
+    expect(result.ok && result.pages.map(({ id }) => id)).toEqual([ids[1], ids[2], ids[0]]);
+  });
+
+  it("rejects the entire collection when a later batch fails", async () => {
+    await create("First"); await create("Second");
+    h.pageListCap = 1;
+    h.pageListLaterError = true;
+    expect(await listPages(PROJECT, ACTOR)).toEqual({ ok: false, status: 500, errorKey: "databaseError" });
+  });
+
+  it("returns every authorized living summary above the default database cap", async () => {
+    const seed = rowOf(await create("Template"));
+    const ids = Array.from({ length: 1006 }, (_, index) => `44444444-4444-4444-8444-${String(index).padStart(12, "0")}`);
+    h.rows = ids.map((id, index) => ({ ...seed, id, position: `a${String(1006 - index).padStart(4, "0")}` }));
+    h.rows.push({ ...seed, id: "55555555-5555-4555-8555-555555555555", project_id: "another-project" });
+    h.rows.push({ ...seed, id: "66666666-6666-4666-8666-666666666666", deleted_at: "2026-10-14T00:00:00Z" });
+    h.pageListCap = 400;
+    const result = await listPages(PROJECT, ACTOR);
+    expect(result.ok && result.pages.map(({ id }) => id)).toEqual(ids.toReversed());
+    if (result.ok) expect(result.pages.every((page) => !("content" in page))).toBe(true);
+  });
+
+  it("returns no partial tree if a later summary cannot be decoded", async () => {
+    await create("First");
+    const invalid = await create("Second");
+    h.pageListCap = 1;
+    Object.assign(rowOf(invalid), { encryption_version: 0, encrypted_content: "invalid-legacy-state" });
+    expect(await listPages(PROJECT, ACTOR)).toEqual({ ok: false, status: 500, errorKey: "databaseError" });
+  });
+
+  it("starts the first batch beside the access check and reads on only after access", async () => {
+    const ids = [await create("First"), await create("Second"), await create("Third")];
+    h.pageListCap = 1; h.trace = [];
+    let release!: () => void;
+    h.accessHold = new Promise((resolve) => { release = resolve; });
+    const pending = listPages(PROJECT, ACTOR);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(h.trace).toEqual(["pages:list", `access:${PROJECT}`]);
+    release();
+    const result = await pending;
+    expect(result.ok && result.pages.map(({ id }) => id).sort()).toEqual([...ids].sort());
+    expect(h.trace.filter((entry) => entry === "pages:list")).toHaveLength(3);
+  });
+
+  it("answers a denied list from its access check without decoding or reading on", async () => {
+    const undecodable = await create("First");
+    await create("Second");
+    Object.assign(rowOf(undecodable), { encryption_version: 0, encrypted_content: "invalid-legacy-state" });
+    h.pageListCap = 1; h.access = new Set(); h.trace = [];
+    expect(await listPages(PROJECT, ACTOR)).toEqual({ ok: false, status: 404, errorKey: "projectNotFound" });
+    expect(h.trace).toEqual(["pages:list", `access:${PROJECT}`]);
   });
 });
 
@@ -891,6 +981,28 @@ describe("getPage", () => {
       status: 404,
       errorKey: "pageNotFound",
     });
+  });
+
+  it("checks the route's project beside the page read, once", async () => {
+    const id = await create("A");
+    h.trace = [];
+    let release!: () => void;
+    h.pageReadHold = new Promise((resolve) => { release = resolve; });
+    const pending = getPage(id, ACTOR, { projectId: PROJECT });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(h.trace).toEqual([`access:${PROJECT}`]);
+    release();
+    expect(await pending).toMatchObject({ ok: true, page: { id } });
+    expect(h.trace).toEqual([`access:${PROJECT}`, "pages:read"]);
+  });
+
+  it.each([
+    { name: "still serves a page through its own project when the route names another", granted: [PROJECT], ok: true },
+    { name: "hides a page of an inaccessible project behind an accessible route project", granted: ["other-project"], ok: false },
+  ])("$name", async ({ granted, ok }) => {
+    const id = await create("A");
+    h.access = new Set(granted);
+    expect((await getPage(id, ACTOR, { projectId: "other-project" })).ok).toBe(ok);
   });
 });
 

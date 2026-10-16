@@ -3,10 +3,10 @@
 import { fetchClientRead } from "./client-read";
 
 import { applyPendingRelations } from "./optimistic/relation-writes";
-import { applyPendingBoard } from "./optimistic/issue-writes";
+import { applyPendingBoard, GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fresherGlobalIssueSnapshot, mergeIssueSnapshot } from "./global-issues-api";
 import type { QueryClient } from "@tanstack/react-query";
-import type { GlobalBoardResponse } from "./types";
+import type { GlobalBoardResponse, Issue } from "./types";
 
 export function browserTimeZone(): string {
   try {
@@ -44,6 +44,25 @@ export async function fetchGlobalBoardApi(
 }
 
 /**
+ * The board endpoint does not carry `resource_count`. A count a project read
+ * already gave the cached row survives, as in mergeIssueSnapshot, so the row
+ * keeps its identity under structural sharing instead of losing the count.
+ */
+function keepResourceCounts(client: QueryClient | undefined, issues: Issue[]): Issue[] {
+  const counts = new Map<string, number>();
+  for (const issue of client?.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)?.issues ?? []) {
+    if (issue.resource_count !== undefined) counts.set(issue.id, issue.resource_count);
+  }
+  if (counts.size === 0) return issues;
+  return issues.map((issue) => {
+    const count = counts.get(issue.id);
+    return count === undefined || issue.resource_count !== undefined
+      ? issue
+      : { ...issue, resource_count: count };
+  });
+}
+
+/**
  * The `queryFn` of `["me","board"]`, shared by its three observers (the
  * board “All tickets”, the mentionables of Numo, the picker of the page
  * Agents). As for project tickets: starting time retained,
@@ -56,7 +75,11 @@ export async function globalBoardQueryFn({
 }: { signal?: AbortSignal; client?: QueryClient } = {}): Promise<GlobalBoardResponse> {
   const startedAt = Date.now();
   const fetched = await fetchGlobalBoardApi(signal);
-  const board = { ...fetched, relations: applyPendingRelations(client, fetched.relations, startedAt) };
+  const board = {
+    ...fetched,
+    issues: keepResourceCounts(client, fetched.issues),
+    relations: applyPendingRelations(client, fetched.relations, startedAt),
+  };
   const snapshot = fresherGlobalIssueSnapshot(client, startedAt);
   return applyPendingBoard(
     snapshot

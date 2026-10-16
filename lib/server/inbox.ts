@@ -140,6 +140,41 @@ export async function readInboxNotifications({
     ...new Set(readable.map((n) => n.page_id).filter(Boolean)),
   ] as string[];
 
+  // Attribution reads only map IDs to users. They start with the hydration
+  // batch for every readable notification; the in-memory project checks below
+  // still decide which actor or key is shown for a live target.
+  const readProjectMembers = (users: string[]) =>
+    projectIds.length && users.length
+      ? service
+          .from("project_members")
+          .select("project_id, user_id")
+          .in("project_id", projectIds)
+          .in("user_id", users)
+      : Promise.resolve({ data: [] as { project_id: string; user_id: string }[] });
+  const candidateActorIds = [
+    ...new Set(readable.map((n) => n.actor_id).filter(Boolean)),
+  ] as string[];
+  const candidateKeyIds = [
+    ...new Set(
+      [
+        ...readable.map((n) => n.api_key_id),
+        ...(comments ?? []).map((comment) => comment.api_key_id),
+      ].filter(Boolean),
+    ),
+  ] as string[];
+  const readKeyAttribution = async () => {
+    const { data: keyOwners } = candidateKeyIds.length
+      ? await service
+          .from("api_keys")
+          .select("id, user_id")
+          .in("id", candidateKeyIds)
+      : { data: [] as { id: string; user_id: string }[] };
+    const { data: keyOwnerMembers } = await readProjectMembers([
+      ...new Set((keyOwners ?? []).map((key) => key.user_id as string)),
+    ]);
+    return { keyOwners, keyOwnerMembers };
+  };
+
   const [
     { data: issues },
     { data: agentConversations },
@@ -151,6 +186,8 @@ export async function readInboxNotifications({
     { data: projects },
     { data: projectLinks },
     { data: delegatedWork },
+    { data: actorMembers },
+    { keyOwners, keyOwnerMembers },
   ] = await Promise.all([
     issueIds.length && projectIds.length
       ? issueStore(service).select("id, project_id, number, title")
@@ -267,6 +304,8 @@ export async function readInboxNotifications({
             updated_at: string;
           }[],
         }),
+    readProjectMembers(candidateActorIds),
+    readKeyAttribution(),
   ]);
   if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
 
@@ -390,39 +429,11 @@ export async function readInboxNotifications({
     (!n.comment_id || comments === null || !!commentFor(n));
 
   const scopedNotifications = readable.filter(targetAlive);
-  const candidateActorIds = [
-    ...new Set(scopedNotifications.map((n) => n.actor_id).filter(Boolean)),
-  ] as string[];
-  const candidateKeyIds = [
-    ...new Set(
-      [
-        ...scopedNotifications.map((n) => n.api_key_id),
-        ...scopedNotifications.map((n) => commentFor(n)?.api_key_id),
-      ].filter(Boolean),
-    ),
-  ] as string[];
-  const { data: keyOwners } = candidateKeyIds.length
-    ? await service
-        .from("api_keys")
-        .select("id, user_id")
-        .in("id", candidateKeyIds)
-    : { data: [] as { id: string; user_id: string }[] };
   const keyOwnerMap = new Map(
     (keyOwners ?? []).map((key) => [key.id as string, key.user_id as string]),
   );
-  const attributionUserIds = [
-    ...new Set([...candidateActorIds, ...keyOwnerMap.values()]),
-  ];
-  const { data: projectMembers } =
-    projectIds.length && attributionUserIds.length
-      ? await service
-          .from("project_members")
-          .select("project_id, user_id")
-          .in("project_id", projectIds)
-          .in("user_id", attributionUserIds)
-      : { data: [] as { project_id: string; user_id: string }[] };
   const projectMemberSet = new Set(
-    (projectMembers ?? []).map(
+    [...(actorMembers ?? []), ...(keyOwnerMembers ?? [])].map(
       (member) => `${member.project_id}\u0000${member.user_id}`,
     ),
   );
@@ -454,14 +465,11 @@ export async function readInboxNotifications({
         .map((n) => n.actor_id as string),
     ),
   ];
-  const [actorsById, actorSeeds] = await Promise.all([
+  const [actorsById, actorSeeds, keyActors] = await Promise.all([
     fetchAuthUsersById(service, actorIds),
     fetchAvatarSeeds(service, actorIds),
+    resolveApiKeyActors(scopedNotifications.filter(keyAllowedFor).map(keyIdFor)),
   ]);
-
-  const keyActors = await resolveApiKeyActors(
-    scopedNotifications.filter(keyAllowedFor).map(keyIdFor),
-  );
 
   const notifications: MyNotification[] = scopedNotifications
     .map((n) => {

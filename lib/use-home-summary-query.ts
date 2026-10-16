@@ -39,10 +39,11 @@ async function fetchHomeSummaryApi(): Promise<HomeSummaryResponse> {
   return data as HomeSummaryResponse;
 }
 
-export function useHomeSummaryQuery() {
+export function useHomeSummaryQuery({ enabled = true }: { enabled?: boolean } = {}) {
   const { data, isPending } = useQuery({
     queryKey: HOME_SUMMARY_KEY,
     queryFn: fetchHomeSummaryApi,
+    enabled,
   });
 
   return {
@@ -56,6 +57,7 @@ export function useHomeSummaryQuery() {
     newFeedbackTotal: data?.newFeedbackTotal ?? 0,
     relations: data?.relations ?? [],
     blockerStatuses: data?.blockerStatuses ?? {},
-    loading: isPending,
+    // A disabled query stays pending: it is not loading.
+    loading: enabled && isPending,
   };
 }

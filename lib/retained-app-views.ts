@@ -1,13 +1,34 @@
 import type { AppTabRouteSnapshot } from "./app-tab-route-context";
 import { normalizeAppTabLocation } from "./app-tab-location";
 
-/** Maximum view count; the weighted budget also bounds large boards. */
-export const RETAINED_APP_VIEW_LIMIT = 6;
-export const RETAINED_APP_VIEW_BUDGET = 6;
+/**
+ * Maximum view count, Home included. It matches the restored-tab preparation
+ * horizon (RESTORED_TAB_PREPARATION_LIMIT), so cycling through a typical
+ * restored window reveals views instead of remounting them; with six, a
+ * ten-tab rotation evicted on every switch.
+ *
+ * The weighted budget still bounds what stays mounted. One unit is about 200
+ * mounted board cards, one small Page document with its editor, or 200
+ * mounted PR diff files; large Pages cost two.
+ */
+export const RETAINED_APP_VIEW_LIMIT = 10;
+export const RETAINED_APP_VIEW_BUDGET = 10;
+/** The earlier capacity, used once the JS heap passes half of its limit. */
+export const RETAINED_APP_VIEW_HEAP_BUDGET = 6;
+/** The last resort, past 70% of the heap limit. */
+export const RETAINED_APP_VIEW_PRESSURED_BUDGET = 3;
+
+/** Weighted budget for the current heap. Browsers without `performance.memory` keep the full budget. */
+export function retainedAppViewBudget(memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number }): number {
+  if (!memory || !(memory.jsHeapSizeLimit > 0)) return RETAINED_APP_VIEW_BUDGET;
+  const used = memory.usedJSHeapSize / memory.jsHeapSizeLimit;
+  if (used > 0.7) return RETAINED_APP_VIEW_PRESSURED_BUDGET;
+  return used > 0.5 ? RETAINED_APP_VIEW_HEAP_BUDGET : RETAINED_APP_VIEW_BUDGET;
+}
 export interface RetainedAppView {
   key: string;
   tabId: string | null;
-  kind: "global-board" | "project-board" | "pages" | "pull-requests" | "feedback" | "triage";
+  kind: "home" | "global-board" | "project-board" | "pages" | "pull-requests" | "feedback" | "triage" | "routines" | "objectives";
   route: AppTabRouteSnapshot;
   /** Published selection may outlive a consumed ?view= URL instruction. */
   href?: string;
@@ -25,7 +46,8 @@ export function retainedAppViewKind(pathname: string): RetainedAppView["kind"] |
   if (pathname === "/all") return "global-board";
   if (/^\/projects\/[^/]+$/.test(pathname)) return "project-board";
   if (pathname === "/pull-requests") return "pull-requests";
-  const section = pathname.match(/^\/projects\/[^/]+\/(pages(?:\/[^/]+)?|feedback|triage)$/)?.[1]?.split("/")[0];
+  if (pathname === "/routines") return "routines";
+  const section = pathname.match(/^\/projects\/[^/]+\/(pages(?:\/[^/]+)?|feedback|triage|objectives)$/)?.[1]?.split("/")[0];
   return (section as RetainedAppView["kind"] | undefined) ?? null;
 }
 
@@ -44,23 +66,35 @@ export function retainAppView(
 ): RetainedAppView[] {
   const retained = previous.filter((view) => view.tabId === null || openTabs.has(view.tabId));
   const kind = retainedAppViewKind(route.pathname);
-  if (!kind) return retained;
+  if (!kind) return retained.length === previous.length ? previous : retained;
   const existing = retained.find((view) => (view.route.pathname === route.pathname || (kind === "pages" && view.kind === kind && view.route.projectId === route.projectId)) && (view.tabId === tabId || view.tabId === null));
-  const active: RetainedAppView = {
-    key: existing?.key ?? `${tabId ?? "startup"}:${route.pathname}`,
-    tabId,
-    kind,
-    href: policy?.href,
-    route: existing && existing.route.pathname === route.pathname && existing.route.search === route.search ? existing.route : route,
-  };
+  const activeRoute = existing && existing.route.pathname === route.pathname && existing.route.search === route.search ? existing.route : route;
+  // An unchanged active view keeps its identity, so memoized hosts and
+  // view-keyed effects do not replay for an unrelated recomputation.
+  const active: RetainedAppView = existing && existing.tabId === tabId && existing.kind === kind &&
+    existing.href === policy?.href && existing.route === activeRoute ? existing : {
+      key: existing?.key ?? `${tabId ?? "startup"}:${route.pathname}`,
+      tabId,
+      kind,
+      href: policy?.href,
+      route: activeRoute,
+    };
   const candidates = retained.filter((view) => view.key !== active.key);
-  const cost = policy?.cost ?? ((view: RetainedAppView) => view.kind === "global-board" ? 3 : 1);
+  const estimate = policy?.cost ?? ((view: RetainedAppView) => view.kind === "global-board" ? 3 : 1);
+  // Costs may inspect retained DOM: measure each view once per call.
+  const costs = new Map<string, number>();
+  const cost = (view: RetainedAppView) => {
+    let value = costs.get(view.key);
+    if (value === undefined) costs.set(view.key, value = estimate(view));
+    return value;
+  };
   const visits = policy?.visits ?? [];
   // The same bounded weight estimates reconstruction work as well as retained
   // DOM cost. Frequency alone can evict an expensive frequent board in favor
   // of several cheap views, repeatedly paying its full mount cost.
-  const score = (view: RetainedAppView) => Math.max(1, cost(view)) * visits.reduce((sum, id, index) =>
-    sum + (id === view.tabId ? (index + 1) / visits.length : 0), 0);
+  const scores = new Map(candidates.map((view) => [view.key, Math.max(1, cost(view)) * visits.reduce((sum, id, index) =>
+    sum + (id === view.tabId ? (index + 1) / visits.length : 0), 0)]));
+  const score = (view: RetainedAppView) => scores.get(view.key)!;
   // Stable recency breaks equal-frequency ties. Always reserve the active view,
   // even if that single view exceeds the budget; speculation never displaces it.
   candidates.sort((a, b) => score(b) - score(a) || retained.indexOf(b) - retained.indexOf(a));
@@ -72,5 +106,6 @@ export function retainAppView(
     selected.push(view);
     remaining -= weight;
   }
-  return [...retained.filter((view) => selected.includes(view)), active];
+  const next = [...retained.filter((view) => selected.includes(view)), active];
+  return next.length === previous.length && next.every((view, index) => view === previous[index]) ? previous : next;
 }

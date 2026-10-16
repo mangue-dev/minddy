@@ -18,16 +18,21 @@ const h = vi.hoisted(() => ({
   fetchList: vi.fn(),
   replace: vi.fn(),
   merge: vi.fn<() => Promise<void>>(),
+  prepared: vi.fn<() => typeof PrDetail | undefined>(),
+}));
+vi.mock("./app-tab-surfaces", async () => ({
+  ...await vi.importActual<typeof import("./app-tab-surfaces")>("./app-tab-surfaces"),
+  preparedPullRequestDetailSurface: h.prepared,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: h.replace }) }));
 vi.mock("next/dynamic", () => ({
   default: () => function Detail({ item, onOptimisticStateChange, onStateChange, onRefetchList }: ComponentProps<typeof PrDetail>) {
-    return <button onClick={async () => {
+    return <section data-dynamic-detail><input aria-label="Unsent PR draft" /><button onClick={async () => {
       onOptimisticStateChange?.(item.prId, "merged");
       await h.merge();
       onStateChange?.(item.prId, "merged");
       onRefetchList();
-    }}>Merge {item.title}</button>;
+    }}>Merge {item.title}</button></section>;
   },
 }));
 vi.mock("./agent-api", async () => ({
@@ -139,6 +144,7 @@ async function refetch() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.prepared.mockReturnValue(undefined);
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
@@ -162,6 +168,39 @@ afterEach(async () => {
   Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+function PreparedDetail() {
+  return <section data-prepared-detail><input aria-label="Unsent PR draft" /></section>;
+}
+
+describe("prepared pull request renderer", () => {
+  it("mounts prepared detail directly and keeps its draft and DOM across tab returns", async () => {
+    h.prepared.mockReturnValue(PreparedDetail);
+    client.setQueryData(allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr", run: null }), response(rows));
+    await render(); await flush();
+    const input = container.querySelector<HTMLInputElement>("[data-prepared-detail] input")!;
+    expect(input).not.toBeNull();
+    expect(container.querySelector("[data-dynamic-detail]")).toBeNull();
+    input.value = "Unsent prepared draft";
+    h.prepared.mockReturnValue(undefined);
+    await render(false); await render(); await flush();
+    expect(container.querySelector("[data-prepared-detail] input")).toBe(input);
+    expect(input.value).toBe("Unsent prepared draft");
+  });
+
+  it("keeps a mounted dynamic detail when preparation finishes later", async () => {
+    client.setQueryData(allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr", run: null }), response(rows));
+    await render(); await flush();
+    const input = container.querySelector<HTMLInputElement>("[data-dynamic-detail] input")!;
+    expect(input).not.toBeNull();
+    input.value = "Unsent cold draft";
+    h.prepared.mockReturnValue(PreparedDetail);
+    await render(false); await render(); await flush();
+    expect(container.querySelector("[data-dynamic-detail] input")).toBe(input);
+    expect(input.value).toBe("Unsent cold draft");
+    expect(container.querySelector("[data-prepared-detail]")).toBeNull();
+  });
 });
 
 describe("Pull Requests completed filter", () => {

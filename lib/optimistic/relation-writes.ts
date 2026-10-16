@@ -16,19 +16,29 @@ interface Write {
   result: Promise<IssueRelation>;
 }
 
-const writes = new WeakMap<QueryClient, Set<Write>>();
+interface Removal {
+  projectId: string;
+  id: string;
+  settledAt: number | null;
+}
 
-function pendingWrites(client: QueryClient): Set<Write> {
-  let pending = writes.get(client);
+const writes = new WeakMap<QueryClient, Set<Write>>();
+const removals = new WeakMap<QueryClient, Set<Removal>>();
+
+function retained<T extends { settledAt: number | null }>(registry: WeakMap<QueryClient, Set<T>>, client: QueryClient): Set<T> {
+  let pending = registry.get(client);
   if (!pending) {
     pending = new Set();
-    writes.set(client, pending);
+    registry.set(client, pending);
   }
-  for (const write of pending) {
-    if (write.settledAt !== null && write.settledAt <= Date.now() - retentionMs) pending.delete(write);
+  for (const entry of pending) {
+    if (entry.settledAt !== null && entry.settledAt <= Date.now() - retentionMs) pending.delete(entry);
   }
   return pending;
 }
+
+const pendingWrites = (client: QueryClient) => retained(writes, client);
+const pendingRemovals = (client: QueryClient) => retained(removals, client);
 
 function sameRelation(a: IssueRelation, b: IssueRelation): boolean {
   const left = normalizeRelation({ id: a.source_id, type: a.source_type }, a.type, { id: a.target_id, type: a.target_type });
@@ -52,7 +62,42 @@ export function applyPendingRelations(client: QueryClient | undefined, rows: Iss
     if (write.settledAt !== null && write.settledAt <= startedAt) continue;
     result = mergeRelation(result, write.row);
   }
+  for (const removal of pendingRemovals(client)) {
+    if (projectId && removal.projectId !== projectId) continue;
+    if (removal.settledAt !== null && removal.settledAt <= startedAt) continue;
+    if (result.some((row) => row.id === removal.id)) result = result.filter((row) => row.id !== removal.id);
+  }
   return result;
+}
+
+/**
+ * Keep a removed row out of project and aggregate GET responses that started
+ * before the DELETE was confirmed, so the caller can drop the row locally
+ * without refetching to outrun such a response.
+ */
+export function beginRelationRemoval(client: QueryClient, projectId: string, id: string): { settle(): void; fail(): void } {
+  const removal: Removal = { projectId, id, settledAt: null };
+  pendingRemovals(client).add(removal);
+  return {
+    settle: () => { removal.settledAt = Date.now(); },
+    fail: () => { pendingRemovals(client).delete(removal); },
+  };
+}
+
+/**
+ * Whether a relation broadcast echoes a write this client made and already
+ * holds in its caches: an addition in flight for the same endpoints, an
+ * acknowledged addition with this id, or a removal of this id.
+ */
+export function isOwnRelationEcho(client: QueryClient, change: { operation: string; record: Record<string, unknown> | null; old_record: Record<string, unknown> | null }): boolean {
+  if (change.operation === "DELETE") {
+    const id = (change.old_record ?? change.record)?.id;
+    return typeof id === "string" && [...pendingRemovals(client)].some((removal) => removal.id === id);
+  }
+  const row = change.record as IssueRelation | null;
+  if (change.operation !== "INSERT" || !row || typeof row.id !== "string") return false;
+  return [...pendingWrites(client)].some((write) =>
+    write.row.id === row.id || (write.settledAt === null && sameRelation(write.row, row)));
 }
 
 function updateCaches(client: QueryClient, projectId: string, update: (rows: IssueRelation[]) => IssueRelation[]): void {
@@ -71,7 +116,8 @@ export function addRelationOptimistically(client: QueryClient, projectId: string
   if (duplicate) return duplicate.result;
 
   void client.cancelQueries({ queryKey: relationsKey(projectId) });
-  void client.cancelQueries({ queryKey: boardKey });
+  // The aggregate read is not cancelled: its query function applies this
+  // write, and restarting it would repeat a multi-second server read.
   const write: Write = { projectId, row, settledAt: null, result: Promise.resolve(row) };
   pending.add(write);
   updateCaches(client, projectId, (rows) => mergeRelation(rows, row));

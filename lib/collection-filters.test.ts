@@ -1,4 +1,4 @@
-import { feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-query";
+import { feedbackNormalFiltersForDestination, feedbackQueryOptions } from "./feedback-query";
 import { describe, expect, it } from "vitest";
 import { collectionFilterParams, matchesCollectionFilters, matchesFeedbackFilters, readCollectionFilters } from "./collection-filters";
 
@@ -33,8 +33,8 @@ describe("triage property filters", () => {
 
 it("prepares objective feedback with all statuses and ordinary feedback with unresolved statuses", () => {
   const goal = "11111111-1111-4111-8111-111111111111";
-  expect(feedbackFiltersForDestination(`/projects/p/feedback?objective=${goal}`)).toEqual({ objective: [goal] });
-  expect(feedbackFiltersForDestination("/projects/p/feedback")).toEqual({ statuses: ["open", "planned", "in_progress"] });
-  expect(feedbackFiltersForDestination("/projects/p/feedback?post=selected")).toEqual({});
+  expect(feedbackNormalFiltersForDestination(`/projects/p/feedback?objective=${goal}`)).toEqual({ objective: [goal] });
+  expect(feedbackNormalFiltersForDestination("/projects/p/feedback")).toEqual({ statuses: ["open", "planned", "in_progress"] });
+  expect(feedbackNormalFiltersForDestination("/projects/p/feedback?post=selected")).toEqual({ statuses: ["open", "planned", "in_progress"] });
   expect(feedbackQueryOptions("p").queryKey).toEqual(["feedback", "p", { statuses: ["open", "planned", "in_progress"] }]);
 });

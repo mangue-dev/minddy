@@ -8,7 +8,7 @@ import { CommandGroup, CommandItem } from "mangue-ui";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { mcpPresetForUrl } from "@/lib/mcp-catalog";
-import { mcpConnectionNeedsAuth, mcpSettingsHref } from "@/lib/mcp-client";
+import { mcpConnectionNeedsAuth, mcpSettingsHref } from "@/lib/mcp-connection";
 import { useMcpConnections } from "@/lib/use-mcp-connections";
 
 /** Mounted with the add menu so closed composers do not fetch the catalog. */

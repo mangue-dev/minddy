@@ -2,10 +2,11 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { PageSummary } from "./pages-api";
 import type { Page } from "./pages";
 import { isPageCreationPending } from "./page-creation-settlement";
+import { isNewerPageMetadata } from "./page-read-receipts";
 
 type Field = keyof Page | `value:${string}`;
-type Layer = { fields: Field[]; apply: (page: PageSummary) => PageSummary };
-type Entry = { base: PageSummary; layers: Layer[] };
+type Layer = { fields: Field[]; apply: (page: PageSummary) => PageSummary; preservePageReads?: boolean };
+type Entry = { base: PageSummary; layers: Layer[]; server?: PageSummary };
 const clients = new WeakMap<
   QueryClient,
   {
@@ -17,6 +18,18 @@ const clients = new WeakMap<
     >;
   }
 >();
+
+const ordinaryPageFields = new Set<Field>(["title", "icon", "parent_id", "position", "favorite"]);
+const ordinaryPageSummary = (page: PageSummary): PageSummary => {
+  const { content: _body, database_schema: _schema, database_revision: _revision,
+    database_title_name: _titleName, property_values: _values, ...summary } = page as Page;
+  return summary;
+};
+
+function newerPageSummary(candidate: PageSummary, current: PageSummary): boolean {
+  return isNewerPageMetadata({ version: candidate.version, updatedAt: candidate.updated_at },
+    { version: current.version, updatedAt: current.updated_at });
+}
 
 function copyFields<T extends PageSummary>(
   target: T,
@@ -88,6 +101,56 @@ function stateFor(client: QueryClient) {
   return state;
 }
 
+type AcceptedEcho = { version: number; updatedAt: string; labels: boolean; at: number };
+const ECHO_RETENTION_MS = 30_000;
+const ECHOES_PER_PAGE = 8;
+const acceptedEchoes = new WeakMap<QueryClient, Map<string, AcceptedEcho[]>>();
+const labelFields = new Set<string>(["title", "icon", "parent_id"]);
+
+/**
+ * Remember an accepted PATCH by its server stamps. Its realtime echo carries
+ * the same id, version and updated_at; any other writer produces another stamp.
+ */
+export function recordAcceptedPageWrite(client: QueryClient, page: Pick<PageSummary, "id" | "version" | "updated_at">,
+  fields: readonly string[]): void {
+  if (!(page.version > 0) || typeof page.updated_at !== "string") return;
+  let pages = acceptedEchoes.get(client);
+  if (!pages) acceptedEchoes.set(client, pages = new Map());
+  const now = Date.now();
+  const kept = (pages.get(page.id) ?? []).filter((echo) => now - echo.at < ECHO_RETENTION_MS);
+  kept.push({ version: page.version, updatedAt: page.updated_at, labels: fields.some((field) => labelFields.has(field)), at: now });
+  pages.set(page.id, kept.slice(-ECHOES_PER_PAGE));
+}
+
+/**
+ * Whether a broadcast row only echoes a PATCH this client already ingested.
+ * The acknowledgement wrote the body and the list row; tab labels also hold
+ * unless that write changed a title, icon or parent.
+ */
+export function isAcceptedPageEcho(client: QueryClient, record: unknown, includesLabels: boolean): boolean {
+  if (!record || typeof record !== "object") return false;
+  const { id, version, updated_at: updatedAt } = record as { id?: unknown; version?: unknown; updated_at?: unknown };
+  if (typeof id !== "string" || typeof version !== "number" || typeof updatedAt !== "string") return false;
+  if (!Number.isFinite(Date.parse(updatedAt))) return false;
+  const now = Date.now(), broadcast = { version, updatedAt };
+  // Same instant to the microsecond, whatever the timestamp's textual offset.
+  return acceptedEchoes.get(client)?.get(id)?.some((echo) => now - echo.at < ECHO_RETENTION_MS &&
+    echo.version === version && Number.isFinite(Date.parse(echo.updatedAt)) &&
+    !isNewerPageMetadata(echo, broadcast) && !isNewerPageMetadata(broadcast, echo) &&
+    !(includesLabels && echo.labels)) ?? false;
+}
+
+/** Capture an accepted current GET summary before Query success reapplies local layers. */
+export function acceptPageReadSummary(client: QueryClient, projectId: string, page: Page): void {
+  if (page.project_id !== projectId) return;
+  const entry = clients.get(client)?.entries.get(page.id);
+  if (!entry || !entry.layers.some((layer) => layer.preservePageReads) ||
+      entry.base.version > page.version || (entry.server && !newerPageSummary(page, entry.server))) return;
+  const summary = ordinaryPageSummary(page);
+  entry.server = summary;
+  entry.base = copyFields(entry.base, summary, entry.layers.filter((layer) => layer.preservePageReads).flatMap((layer) => layer.fields));
+}
+
 /** Serialize dependent requests while publishing every local edit immediately. */
 export function queuePageWrite<T>(
   client: QueryClient,
@@ -119,7 +182,11 @@ export function beginPageWrite(
   page: PageSummary,
   fields: Field[],
   apply: Layer["apply"],
+  options: { preserveNewerPageRead?: boolean } = {},
 ) {
+  // Database fields have their own revision domain and retain their existing
+  // field-scoped settlement independently of ordinary document versions.
+  const ordinary = options.preserveNewerPageRead === true && fields.every((field) => ordinaryPageFields.has(field));
   const { entries } = stateFor(client);
   const existing = entries.get(page.id);
   const chained =
@@ -132,13 +199,13 @@ export function beginPageWrite(
       ?.find((row) => row.id === page.id) ??
     client.getQueryData<Page>(["page", page.id]) ??
     page;
-  const entry = existing ?? { base: cached, layers: [] };
+  const entry: Entry = existing ?? { base: cached, layers: [] };
   // Newly owned fields start from the latest cache, not an unrelated older edit.
   const newFields = fields.filter(
     (field) => !entry.layers.some((layer) => layer.fields.includes(field)),
   );
-  entry.base = copyFields(entry.base, cached, newFields);
-  const layer = { fields, apply };
+  entry.base = copyFields(entry.base, ordinary ? entry.server ?? cached : cached, newFields);
+  const layer = { fields, apply, preservePageReads: ordinary };
   entry.layers.push(layer);
   entries.set(page.id, entry);
   const publish = (owned: Field[]) => {
@@ -165,10 +232,21 @@ export function beginPageWrite(
       void client.cancelQueries({ queryKey: ["pages", projectId] });
       if (!isPageCreationPending(page.id))
         void client.cancelQueries({ queryKey: ["page", page.id] });
-      if (server) entry.base = copyFields(entry.base, server, fields);
+      if (server) {
+        if (ordinary) {
+          const summary = ordinaryPageSummary(server);
+          if (!entry.server || newerPageSummary(summary, entry.server)) entry.server = summary;
+          entry.base = copyFields(entry.base, entry.server, fields);
+        } else entry.base = copyFields(entry.base, server, fields);
+      }
       entry.layers.splice(entry.layers.indexOf(layer), 1);
-      publish([...fields, ...entry.layers.flatMap((item) => item.fields)]);
+      const owned = [...fields, ...entry.layers.flatMap((item) => item.fields)];
+      publish(owned);
+      const projected = entry.layers.reduce((base, item) => item.apply(base), entry.base);
+      const settled = ordinary && entry.server ? copyFields(entry.server, projected,
+        owned.filter((field) => ordinaryPageFields.has(field))) : undefined;
       if (!entry.layers.length) entries.delete(page.id);
+      return settled;
     },
   };
 }

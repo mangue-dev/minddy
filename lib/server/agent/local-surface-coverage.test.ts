@@ -92,12 +92,16 @@ const COQUILLE = {
     "settles macOS permission requests and Settings failures; request admission remains in " +
     "@/lib/desktop/media-guard, with native callback regressions in @/lib/desktop/microphone-access.test",
   "updater.ts": "wires electron-updater; decisions live in @/lib/desktop/update-*",
+  "updater-module.ts":
+    "loads electron-updater on first use; load timing regressions live in @/lib/desktop/updater.test",
   "hide-window.ts": "wires hideWindowStep from @/lib/desktop/hide-window",
   "channel-store.ts": "reads and writes the channel file; parsing lives in @/lib/desktop/channel",
   "push-installation-store.ts":
     "reads and writes the APNs identity; validation lives in @/lib/desktop/push-installation",
   "repo-store.ts": "reads and writes attachments; parsing lives in @/lib/desktop/local-repo",
   "server-store.ts": "reads and writes the selected server; validation lives in @/lib/desktop/server-origin",
+  "window-chrome-store.ts":
+    "reads and writes the last observed window frame; parsing and the startup decision live in @/lib/desktop/window-frame",
   "server-picker.ts":
     "composes the native server picker window; validation lives in @/lib/desktop/server-origin",
   "server-picker-preload.ts": "closed IPC bridge for the server picker window",

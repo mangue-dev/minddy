@@ -6,6 +6,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import {
   applyPendingIssues,
   GLOBAL_BOARD_KEY,
+  issueWrites,
 } from "./optimistic/issue-writes";
 import type { GlobalBoardResponse, Issue } from "./types";
 
@@ -74,22 +75,167 @@ export function mergeIssueSnapshot(
   return concurrentInsertions.length > 0 ? [...merged, ...concurrentInsertions] : merged;
 }
 
-/** A successful project GET also makes that project's global slice current. */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length &&
+      a.every((value, index) => sameValue(value, b[index]));
+  }
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const key of keys) if (!sameValue(left[key], right[key])) return false;
+  return true;
+}
+
+/**
+ * Whether a project row leaves the cached board row as it is. The board
+ * endpoint never carries `resource_count`, so a board row without one is not
+ * replaced only to gain it; a count the board already holds stays current.
+ */
+function sameBoardRow(cached: Issue, fetched: Issue): boolean {
+  const keys = new Set([...Object.keys(cached), ...Object.keys(fetched)]);
+  for (const key of keys) {
+    if (key === "resource_count" && cached.resource_count === undefined) continue;
+    if (!sameValue(cached[key as keyof Issue], fetched[key as keyof Issue])) return false;
+  }
+  return true;
+}
+
+/**
+ * A successful project GET also makes that project's global slice current.
+ *
+ * Rows are replaced where they stand, and unchanged rows keep their identity:
+ * the board stays in server order and an identical read re-renders nothing.
+ * An unchanged slice leaves the query untouched, since writing it would also
+ * clear an invalidation another event left armed.
+ */
 export function reconcileProjectIssuesInGlobalCache(
   queryClient: QueryClient,
   projectId: string,
   issues: Issue[]
 ): void {
+  let changed = false;
   queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (current) => {
-    if (!current) return current;
-    const others = current.issues.filter((issue) => issue.project_id !== projectId);
-    return { ...current, issues: [...others, ...issues] };
+    if (!current) return undefined;
+    const fetchedById = new Map(issues.map((issue) => [issue.id, issue]));
+    const placed = new Set<string>();
+    const next: Issue[] = [];
+    for (const cached of current.issues) {
+      const fetched = fetchedById.get(cached.id);
+      if (!fetched || placed.has(cached.id)) {
+        if (!fetched && cached.project_id !== projectId) next.push(cached);
+        else changed = true;
+        continue;
+      }
+      placed.add(cached.id);
+      if (sameBoardRow(cached, fetched)) {
+        next.push(cached);
+      } else {
+        next.push(fetched);
+        changed = true;
+      }
+    }
+    for (const issue of issues) {
+      if (placed.has(issue.id)) continue;
+      placed.add(issue.id);
+      next.push(issue);
+      changed = true;
+    }
+    return changed ? { ...current, issues: next } : undefined;
   });
+  if (!changed) return;
   // The issue slice is current, but the aggregate metadata was not refreshed.
   void queryClient.invalidateQueries({
     queryKey: GLOBAL_BOARD_KEY,
     exact: true,
     refetchType: "none",
+  });
+}
+
+/** Most ticket reads one coalesced window may use instead of a full board read. */
+export const MAX_BOARD_ISSUE_READS = 8;
+
+/** One ticket through the panel reader (same RLS and codec); null once it is hidden or trashed. */
+async function fetchBoardIssue(id: string): Promise<Issue | null> {
+  const response = await fetchClientRead(`/api/issues/${encodeURIComponent(id)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Request failed");
+  const data = (await response.json()) as (Issue & { github_metadata?: unknown }) | null;
+  if (!data || typeof data !== "object" || data.id !== id) throw new Error("Invalid response");
+  // Only the panel shows GitHub sync metadata; board rows never carry it.
+  const { github_metadata: _metadata, ...issue } = data;
+  return issue as Issue;
+}
+
+/**
+ * Bring the aggregate board up to date for a few remotely changed tickets by
+ * reading only those tickets. A board read already in flight may predate the
+ * change, so it is awaited rather than restarted and the ticket rows land on
+ * top of it. Anything this cannot prove falls back to the full board refetch:
+ * no observed board, too many tickets, or any failed read.
+ */
+export async function refreshBoardIssues(
+  queryClient: QueryClient,
+  ids: readonly string[]
+): Promise<void> {
+  const fullRead = () => queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
+  const board = queryClient.getQueryCache().find<GlobalBoardResponse>({ queryKey: GLOBAL_BOARD_KEY, exact: true });
+  const idle = board?.state.fetchStatus === "idle";
+  if (!board || board.getObserversCount() === 0 || (idle && board.state.data === undefined) ||
+      ids.length === 0 || ids.length > MAX_BOARD_ISSUE_READS) {
+    return fullRead();
+  }
+  const startedAt = Date.now();
+  let rows: (Issue | null)[];
+  try {
+    [rows] = await Promise.all([
+      Promise.all(ids.map(fetchBoardIssue)),
+      idle ? undefined : board.promise?.catch(() => undefined),
+    ]);
+  } catch {
+    return fullRead();
+  }
+  if (queryClient.getQueryData(GLOBAL_BOARD_KEY) === undefined) return fullRead();
+  const hidden = new Set(ids.filter((id, index) => rows[index] === null && !issueWrites.hasUnsettledInsert(id)));
+  const fetched = applyPendingIssues(rows.filter((row): row is Issue => row !== null), startedAt);
+  const fetchedById = new Map(fetched.map((issue) => [issue.id, issue]));
+  queryClient.setQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY, (current) => {
+    if (!current) return undefined;
+    let changed = false;
+    const placed = new Set<string>();
+    const next: Issue[] = [];
+    for (const cached of current.issues) {
+      if (hidden.has(cached.id)) {
+        changed = true;
+        continue;
+      }
+      const issue = fetchedById.get(cached.id);
+      if (!issue || placed.has(cached.id)) {
+        next.push(cached);
+        continue;
+      }
+      placed.add(cached.id);
+      // A row written after this read started (a later echo, a local edit) wins.
+      const merged = Date.parse(cached.updated_at) > Date.parse(issue.updated_at)
+        ? cached
+        : { ...cached, ...issue };
+      if (merged === cached || sameValue(cached, merged)) {
+        next.push(cached);
+      } else {
+        next.push(merged);
+        changed = true;
+      }
+    }
+    for (const id of ids) {
+      const issue = fetchedById.get(id);
+      if (!issue || placed.has(id)) continue;
+      placed.add(id);
+      next.push(issue);
+      changed = true;
+    }
+    return changed ? { ...current, issues: next } : undefined;
   });
 }
 
@@ -156,27 +302,6 @@ export async function refreshGlobalIssueSnapshot(
   });
   reconcileGlobalIssueSnapshot(queryClient, snapshot);
   return snapshot;
-}
-
-/**
- * Whether the catch-up should fire the issue snapshot for the aggregate board.
- *
- * The snapshot re-reads every issue (~1.3 MB on a rich account). Its job is to
- * close a missed-broadcast gap FAST for the issue slice only. When the board
- * query has no data at all, its own read is already in flight and will carry
- * the same rows: firing the snapshot then duplicates that whole read without
- * closing any gap the board response doesn't close. Reconnect/resume paths see
- * a board WITH data and keep the snapshot, exactly as before.
- */
-export function shouldRefreshGlobalIssueSnapshot(
-  board: { getObserversCount(): number; state: { data?: unknown } } | null | undefined
-): boolean {
-  return (
-    !!board &&
-    board.getObserversCount() > 0 &&
-    board.state.data !== undefined &&
-    board.state.data !== null
-  );
 }
 
 /** A snapshot completed after a slow board request started wins its issue slice. */

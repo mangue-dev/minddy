@@ -58,6 +58,13 @@ export class ApiError extends Error {
   }
 }
 
+function retryAfterDeadline(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  const deadline = Number.isFinite(seconds) ? Date.now() + Math.max(0, seconds) * 1000 : Date.parse(value);
+  return Number.isFinite(deadline) ? deadline : undefined;
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
   let data: unknown = null;
@@ -75,12 +82,7 @@ async function parseJson<T>(response: Response): Promise<T> {
     const message = payload?.error || text.trim() || "Request failed";
     const error = new ApiError(message, payload?.code, payload?.modelLimit);
     error.status = response.status;
-    const retryAfter = response.headers.get("retry-after");
-    if (retryAfter) {
-      const seconds = Number(retryAfter);
-      const retryAt = Number.isFinite(seconds) ? Date.now() + Math.max(0, seconds) * 1000 : Date.parse(retryAfter);
-      if (Number.isFinite(retryAt)) error.retryAt = retryAt;
-    }
+    error.retryAt = retryAfterDeadline(response.headers.get("retry-after"));
     throw error;
   }
   return data as T;
@@ -603,6 +605,9 @@ export interface PullRequestReadinessResponse {
 export interface PullRequestReadinessBatchResponse {
   readiness: Record<string, PullRequestReadiness>;
   unavailablePrIds: string[];
+  retryStatus?: 403 | 429;
+  /** Client-anchored transport deadline, never content freshness or write authority. */
+  retryAt?: number;
 }
 
 export async function fetchPullRequestReadinessApi(
@@ -616,7 +621,11 @@ export async function fetchPullRequestReadinessBatchApi(
 ): Promise<PullRequestReadinessBatchResponse> {
   const params = new URLSearchParams();
   for (const prId of prIds) params.append("pr", prId);
-  return parseJson(await fetchClientRead(`/api/pull-requests/readiness?${params}`));
+  const response = await fetchClientRead(`/api/pull-requests/readiness?${params}`);
+  const data = await parseJson<PullRequestReadinessBatchResponse>(response);
+  return data.retryStatus === 403 || data.retryStatus === 429
+    ? { ...data, retryAt: retryAfterDeadline(response.headers.get("retry-after")) ?? Date.now() + 60_000 }
+    : data;
 }
 
 /**
@@ -958,7 +967,7 @@ export async function fetchAllPullRequestsApi(input: {
   limit: number;
   offset?: number;
   pin?: { pr?: string | null; run?: string | null };
-}): Promise<PullRequestListResponse> {
+}, signal?: AbortSignal): Promise<PullRequestListResponse> {
   const params = new URLSearchParams({
     state: input.state,
     limit: String(input.limit),
@@ -966,7 +975,7 @@ export async function fetchAllPullRequestsApi(input: {
   if (input.offset != null) params.set("offset", String(input.offset));
   if (input.pin?.pr) params.set("pr", input.pin.pr);
   if (input.pin?.run) params.set("run", input.pin.run);
-  return parseJson(await fetchClientRead(`/api/pull-requests?${params}`));
+  return parseJson(await fetchClientRead(`/api/pull-requests?${params}`, { signal }));
 }
 
 /** Lightweight open-PR count used by the persistent app shell. */
@@ -985,12 +994,12 @@ export async function fetchOpenPullRequestCountApi(): Promise<{ count: number }>
  * did not know how to give it” as much as “nothing happened”. The thread then makes
  * his messages, as before.
  */
-export async function fetchPullRequestCommentsApi(prId: string): Promise<{
+export async function fetchPullRequestCommentsApi(prId: string, signal?: AbortSignal): Promise<{
   comments: PullRequestComment[];
   timeline: PrTimelineEvent[];
   reactions: ReviewCommentReaction[];
 }> {
-  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/comments`));
+  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/comments`, { signal }));
 }
 
 /**
@@ -1039,8 +1048,9 @@ export interface PullRequestCommit {
  */
 export async function fetchPullRequestCommitsApi(
   prId: string,
+  signal?: AbortSignal,
 ): Promise<{ commits: PullRequestCommit[]; truncated: boolean }> {
-  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/commits`));
+  return parseJson(await fetchClientRead(`${prEndpoint(prId)}/commits`, { signal }));
 }
 
 /** An account of the forge, as the commentary composer suggests. */
@@ -1154,12 +1164,12 @@ export interface PullRequestReviewComment {
  * exist — the forge was unable to tell the state, and the UI then does not offer
  * “Resolve” button rather than announcing “open” blindly.
  */
-export async function fetchPrReviewCommentsApi(endpoint: PrEndpoint): Promise<{
+export async function fetchPrReviewCommentsApi(endpoint: PrEndpoint, signal?: AbortSignal): Promise<{
   comments: PullRequestReviewComment[];
   threads: ReviewThreadState[];
   reactions: ReviewCommentReaction[];
 }> {
-  return parseJson(await fetchClientRead(`${endpoint}/review-comments`));
+  return parseJson(await fetchClientRead(`${endpoint}/review-comments`, { signal }));
 }
 
 /**

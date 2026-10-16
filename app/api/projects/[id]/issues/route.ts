@@ -1,11 +1,9 @@
-import { issueStore } from "@/lib/server/issue-store";
+import { loadProjectIssues } from "@/lib/server/project-working-set-readers";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { createIssueForProject } from "@/lib/server/create-issue";
-import { ISSUE_SELECT } from "@/lib/server/issue-mapper";
-import { buildProjectIssueResponse } from "@/lib/server/project-issue-response";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -18,44 +16,13 @@ export const maxDuration = 60;
 /** GET /api/projects/[id]/issues — all issues of an accessible project. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getAuthedUser(request);
+  // The RLS reads overlap the live session check. Their responses, and so
+  // every decryption and the response body, still wait for it.
+  const auth = await getAuthedUserWithRlsReads(request, ({ user, supabase }) => loadProjectIssues({ supabase, user }, id));
   if (!auth.ok) return auth.response;
-
-  // The issue rows and their resource counts are independent reads. Running
-  // them together removes one database round trip from every cold board load.
-  const [t, issuesResult, resourcesResult] = await Promise.all([
-    getTranslations("ApiErrors"),
-    // RLS issues_select scopes to accessible projects; ordering by position then
-    // number gives a stable per-column order.
-    issueStore(auth.supabase).select(ISSUE_SELECT)
-      .eq("project_id", id)
-      .order("position", { ascending: true })
-      .order("number", { ascending: true }),
-    auth.supabase
-      .from("attachments")
-      .select("issue_id")
-      .eq("project_id", id)
-      .is("comment_id", null),
-  ]);
-  const { data, error } = issuesResult;
-
-  if (error) {
-    console.error("[api/issues] list failed:", error.message);
-    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  }
-
-  // Issue-level resource counts, files and links alike (the ones on comments
-  // excluded) — one indexed query, folded onto each issue so « copy the
-  // prompt » can flag resources in the XML without a per-card fetch. Failure is
-  // non-fatal: the board still renders, just without the counts.
-  const { data: resourceRows, error: resourceError } = resourcesResult;
-  if (resourceError) {
-    console.error("[api/issues] resource counts failed:", resourceError.message);
-  }
-
-  return NextResponse.json(
-    buildProjectIssueResponse(data ?? [], resourceError ? [] : (resourceRows ?? [])),
-  );
+  const [t, result] = await Promise.all([getTranslations("ApiErrors"), auth.reads ?? loadProjectIssues(auth, id)]);
+  if (!result.ok) return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
+  return NextResponse.json(result.data);
 }
 
 /** POST /api/projects/[id]/issues — create an issue (assigns KEY-number atomically). */

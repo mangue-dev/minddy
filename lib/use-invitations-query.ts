@@ -5,9 +5,8 @@ import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
 import { useAuth } from "./auth-context";
-import { fetchMyInvitationsApi, respondInvitationApi } from "./invitations-api";
-
-const MY_INVITATIONS_KEY = ["my-invitations"] as const;
+import { myInvitationsQueryOptions, respondInvitationApi } from "./invitations-api";
+const MY_INVITATIONS_KEY = myInvitationsQueryOptions.queryKey;
 
 /** The caller's pending invitations (drives the Home banner and the inbox). */
 export function useMyInvitations() {
@@ -17,8 +16,7 @@ export function useMyInvitations() {
 
   const enabled = !!userId;
   const { data, isPending } = useQuery({
-    queryKey: MY_INVITATIONS_KEY,
-    queryFn: fetchMyInvitationsApi,
+    ...myInvitationsQueryOptions,
     enabled,
   });
 

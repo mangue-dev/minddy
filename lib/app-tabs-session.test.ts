@@ -26,6 +26,76 @@ function setup(initial: AppTab[] = [createHomeTab("owner"), createHomeTab("owner
 }
 
 describe("application tab sessions", () => {
+  it("recovers a unique published view when refresh precedes the active-window snapshot", async () => {
+    const board = { ...createHomeTab("owner"), href: "/all?view=saved" };
+    const home = createHomeTab("owner", undefined, 1);
+    const { session, transport, navigate, rows } = setup([board, home]);
+    try {
+      await session.initialize("/all");
+      expect(session.getSnapshot().activeId).toBe(board.id);
+      expect(session.getActiveHref()).toBe(board.href);
+      expect(navigate).toHaveBeenCalledWith(board.href);
+      expect(transport.create).not.toHaveBeenCalled();
+      expect(transport.patch).not.toHaveBeenCalled();
+      expect(rows()).toEqual([board, home]);
+    } finally { session.dispose(); }
+  });
+
+  it.each(["/all?view=other", "/all?objective=other"])("preserves an explicit selection instead of recovering a published view: %s", async (href) => {
+    const board = { ...createHomeTab("owner"), href: "/all?view=saved" };
+    const { session, transport, rows } = setup([board]);
+    try {
+      await session.initialize(href);
+      await vi.waitFor(() => expect(transport.create).toHaveBeenCalledOnce());
+      expect(session.getActiveHref()).toBe(href);
+      expect(rows().find((tab) => tab.id === board.id)).toEqual(board);
+    } finally { session.dispose(); }
+  });
+
+  it("does not guess between two published views without remembered identity", async () => {
+    const boards = ["first", "second"].map((view, index) => ({ ...createHomeTab("owner", undefined, index), href: `/all?view=${view}` }));
+    const { session, transport, rows } = setup(boards);
+    try {
+      await session.initialize("/all");
+      await vi.waitFor(() => expect(transport.create).toHaveBeenCalledOnce());
+      expect(session.getActiveHref()).toBe("/all");
+      expect(rows().filter((tab) => boards.some((board) => board.id === tab.id))).toEqual(boards);
+    } finally { session.dispose(); }
+  });
+
+  it("navigates a prepared project in the active tab and persists only after route observation", async () => {
+    const board = { ...createHomeTab("owner"), href: "/projects/first" };
+    const other = { ...createHomeTab("owner", undefined, 1), href: "/home" };
+    const { session, transport, navigate, rows } = setup([board, other]);
+    try {
+      await session.initialize(board.href);
+      expect(session.navigateInCurrentTab("/projects/second")).toBe(true);
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith("/projects/second"));
+      expect(session.getSnapshot().activeId).toBe(board.id);
+      expect(session.getActiveHref()).toBe("/projects/second");
+      expect(transport.patch).not.toHaveBeenCalled();
+      session.observe("/projects/second", null); session.onPageHide();
+      await vi.waitFor(() => expect(rows().find((tab) => tab.id === board.id)?.href).toBe("/projects/second"));
+      expect(rows().find((tab) => tab.id === other.id)).toEqual(other);
+      expect(transport.create).not.toHaveBeenCalled();
+    } finally { session.dispose(); }
+  });
+
+  it("does not leave an unsaved Page when a prepared navigation guard fails", async () => {
+    const { session, navigate } = setup();
+    try {
+      await session.initialize("/home");
+      let finish!: (saved: boolean) => void;
+      session.registerDeparture(() => new Promise((resolve) => { finish = resolve; }));
+      expect(session.navigateInCurrentTab("/projects/second")).toBe(true);
+      await vi.waitFor(() => expect(finish).toBeDefined());
+      expect(navigate).not.toHaveBeenCalled(); finish(false);
+      await vi.waitFor(() => expect(session.getSnapshot().error).toBe("save_failed"));
+      expect(session.getActiveHref()).toBe("/home");
+      expect(navigate).not.toHaveBeenCalled();
+      expect(session.navigateInCurrentTab("https://example.com")).toBe(false);
+    } finally { session.dispose(); }
+  });
   it.each([true, false])("keeps Home when entering desktop with an existing Home row: %s", async (hasHome) => {
     const board = { ...createHomeTab("owner"), href: "/all" };
     const home = createHomeTab("owner", undefined, 1);
@@ -502,6 +572,83 @@ describe("application tab sessions", () => {
     expect(session.getSnapshot().activeId).toBe(second.id);
     expect(transport.patch).toHaveBeenLastCalledWith(expect.objectContaining({ id: second.id }), { href: "/all?view=a" });
     expect(session.getSnapshot().tabs).toHaveLength(1); session.dispose();
+  });
+  it("does not rewrite a location the server row already holds", async () => {
+    const all = { ...createHomeTab("owner"), href: "/all?view=x" };
+    const other = { ...createHomeTab("owner", undefined, 1), href: "/routines" };
+    const { session, transport, navigate, rows } = setup([all, other]);
+    try {
+      await session.initialize("/home");
+      expect(navigate).toHaveBeenCalledWith(all.href);
+      // Restoration acknowledgement, then the board consumes `?view=` and
+      // republishes it: the layout pass briefly sees the bare URL.
+      session.observe(all.href, null);
+      session.observe("/all", null);
+      session.observe("/all", all.href);
+      await session.activate(other.id);
+      session.observe(other.href, null);
+      session.onPageHide(); await session.retry();
+      expect(transport.patch).not.toHaveBeenCalled();
+      expect(rows().map((row) => row.revision)).toEqual([1, 1]);
+      expect(session.getSnapshot().tabs.map((tab) => tab.href)).toEqual([all.href, other.href]);
+    } finally { session.dispose(); }
+  });
+  it("still writes a location that only matches a row's superseded href", async () => {
+    const all = { ...createHomeTab("owner"), href: "/all?view=x" };
+    const { session, transport, replace, rows } = setup([all]);
+    try {
+      await session.initialize("/home");
+      session.observe(all.href, null); await session.retry();
+      expect(transport.patch).not.toHaveBeenCalled();
+      replace([{ ...rows()[0], href: "/projects/p", revision: 2 }]);
+      // A stale list must not restore the superseded href as the server value.
+      session.receive([all]);
+      session.observe("/all", null);
+      session.observe("/all", all.href); await session.retry();
+      expect(transport.patch).toHaveBeenCalledOnce();
+      expect(transport.patch).toHaveBeenLastCalledWith(expect.objectContaining({ id: all.id, revision: 2 }), { href: all.href });
+      expect(rows()[0]).toMatchObject({ href: all.href, revision: 3 });
+    } finally { session.dispose(); }
+  });
+  it("activates without busy renders when no departure guard can wait", async () => {
+    const all = { ...createHomeTab("owner", undefined, 1), href: "/all" };
+    const { session } = setup([createHomeTab("owner"), all]);
+    try {
+      await session.initialize("/home");
+      const listener = vi.fn();
+      const stop = session.subscribe(listener);
+      await session.activate(all.id);
+      expect(session.getSnapshot()).toMatchObject({ activeId: all.id, busy: false });
+      expect(listener).toHaveBeenCalledOnce();
+      // A registered guard can wait: the strip still drops input meanwhile.
+      let finish!: (allowed: boolean) => void;
+      const unregister = session.registerDeparture(() => new Promise((resolve) => { finish = resolve; }));
+      const activation = session.activate(session.getSnapshot().tabs[0].id);
+      await vi.waitFor(() => expect(session.getSnapshot().busy).toBe(true));
+      finish(true); await activation;
+      expect(session.getSnapshot().busy).toBe(false);
+      unregister(); stop();
+    } finally { session.dispose(); }
+  });
+  it("acknowledges an activated destination without another render", async () => {
+    const all = { ...createHomeTab("owner", undefined, 1), href: "/all?view=a" };
+    const { session } = setup([createHomeTab("owner"), all]);
+    try {
+      await session.initialize("/home");
+      await session.activate(all.id);
+      const before = session.getSnapshot();
+      const listener = vi.fn();
+      const stop = session.subscribe(listener);
+      session.observe(all.href, null);
+      expect(listener).not.toHaveBeenCalled();
+      expect(session.getSnapshot()).toBe(before);
+      // A refined selection still publishes its new location.
+      session.observe("/all?view=b", null);
+      expect(listener).toHaveBeenCalled();
+      expect(session.getActiveHref()).toBe("/all?view=b");
+      expect(session.getSnapshot().tabs.find((tab) => tab.id === all.id)?.href).toBe("/all?view=b");
+      stop();
+    } finally { session.dispose(); }
   });
   it("keeps a conflicting destination pending until retry uses the canonical revision", async () => {
     const { session, transport, rows } = setup(); await session.initialize("/home");

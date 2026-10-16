@@ -21,8 +21,8 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-export async function fetchMembersApi(projectId: string): Promise<MembersResponse> {
-  return parseJson<MembersResponse>(await fetchClientRead(`/api/projects/${projectId}/members`));
+export async function fetchMembersApi(projectId: string, signal?: AbortSignal): Promise<MembersResponse> {
+  return parseJson<MembersResponse>(await fetchClientRead(`/api/projects/${projectId}/members`, { signal }));
 }
 
 export async function inviteMemberApi(projectId: string, email: string): Promise<void> {

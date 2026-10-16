@@ -1,13 +1,19 @@
-import { issueStore } from "@/lib/server/issue-store";
+import {
+  createAllStartupTiming,
+  measureAllStartupPhase,
+  type AllStartupTiming,
+} from "@/lib/server/all-startup-timing";
+import { loadGlobalBoardIssues } from "@/lib/server/global-board-issues";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeIntegrationField } from "@/lib/server/integration-content";
 import { buildMembersByProject } from "@/lib/server/project-members";
-import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
+import { mapIssueRow } from "@/lib/server/issue-mapper";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
 import type {
@@ -20,6 +26,28 @@ import type {
 
 /** How many closed cycles the header's date-selector lists. */
 const PAST_CYCLES_SHOWN = 8;
+
+function cyclePrefsOf(user: User) {
+  return resolveCyclePrefs(
+    (user.user_metadata ?? null) as Record<string, unknown> | null
+  );
+}
+
+/** The board's RLS reads. They use the user's client only, never the service role. */
+function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined) {
+  return Promise.all([
+    measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(supabase, actorId, timing)),
+    measureAllStartupPhase(timing, "projects", () => supabase.from("projects").select("id, owner_id").is("deleted_at", null)),
+    measureAllStartupPhase(timing, "categories", () => categoryStore(supabase, actorId).select("*")),
+    measureAllStartupPhase(timing, "objectives", () => objectiveStore(supabase).select("*")),
+    // ALL relation types: `blocks` feeds the cycle reco ordering, and the
+    // full set powers the cards' relation chips + the side panel (RLS scopes
+    // the rows to my projects).
+    measureAllStartupPhase(timing, "relations", () => supabase
+      .from("issue_relations")
+      .select("id, source_id, target_id, type, source_type, target_type")),
+  ]);
+}
 
 /**
  * GET /api/me/board — everything the cross-project "My/All" kanban needs, so it
@@ -38,24 +66,27 @@ const PAST_CYCLES_SHOWN = 8;
  * lib/server/cycles.ts) using `?tz=` to resolve the user's calendar day.
  */
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  const timing = createAllStartupTiming(request);
+  // Without cycles, the RLS reads overlap the live session check; the response
+  // and every service-role read still wait for it. Cycle reconciliation writes
+  // through the service client first, so that path starts the reads afterwards.
+  const auth = await measureAllStartupPhase(timing, "auth", () => getAuthedUserWithRlsReads(request,
+    ({ user, supabase }) => cyclePrefsOf(user).enabled ? null : readBoardRows(supabase, user.id, timing)));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
   const service = getServiceClient();
 
   // Cycles first: the reconciliation may move issues around (rollover,
   // auto-fill), and the issues read below must reflect it.
-  const prefs = resolveCyclePrefs(
-    (auth.user.user_metadata ?? null) as Record<string, unknown> | null
-  );
+  const prefs = cyclePrefsOf(auth.user);
   let cycles: BoardCycles = { enabled: false, current: null, upcoming: [], past: [] };
   if (prefs.enabled) {
-    const ensured = await ensureCycles({
+    const ensured = await measureAllStartupPhase(timing, "cycles", () => ensureCycles({
       service,
       userId: auth.user.id,
       prefs,
       today: todayInTz(request.nextUrl.searchParams.get("tz")),
-    });
+    }));
     cycles = {
       enabled: true,
       current: ensured.current ? toCycleInfo(ensured.current) : null,
@@ -65,20 +96,7 @@ export async function GET(request: NextRequest) {
   }
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
-    await Promise.all([
-      issueStore(auth.supabase).select(ISSUE_SELECT)
-        .order("position", { ascending: true })
-        .order("number", { ascending: true }),
-      auth.supabase.from("projects").select("id, owner_id").is("deleted_at", null),
-      categoryStore(auth.supabase, auth.user.id).select("*"),
-      objectiveStore(auth.supabase).select("*"),
-      // ALL relation types: `blocks` feeds the cycle reco ordering, and the
-      // full set powers the cards' relation chips + the side panel (RLS scopes
-      // the rows to my projects).
-      auth.supabase
-        .from("issue_relations")
-        .select("id, source_id, target_id, type, source_type, target_type"),
-    ]);
+    await (auth.reads ?? readBoardRows(auth.supabase, auth.user.id, timing));
 
   const firstError =
     issuesRes.error ||
@@ -118,27 +136,29 @@ export async function GET(request: NextRequest) {
   // depend on member or avatar resolution. Start both branches together.
   const projectIds = projectRows.map((project) => project.id);
   const [{ members }, { data: integrationRows }] = await Promise.all([
-    buildMembersByProject(service, projectRows),
-    projectIds.length
+    measureAllStartupPhase(timing, "members", () => buildMembersByProject(service, projectRows, timing)),
+    measureAllStartupPhase<{ data: IntegrationRef[] | null }>(timing, "integrations", () => projectIds.length
       ? service
           .from("integrations")
           .select("id, name, project_id, kind, revoked_at")
           .in("project_id", projectIds)
           .order("id", { ascending: true })
-      : Promise.resolve({ data: [] as IntegrationRef[] }),
+      : Promise.resolve({ data: [] as IntegrationRef[] })),
   ]);
 
   const integrations: Record<string, IntegrationRef[]> = {};
-  for (const row of (integrationRows ?? []) as IntegrationRef[]) {
-    (integrations[row.project_id] ??= []).push({...row,
-      name:(await decodeIntegrationField(row,"name",row.name))!});
-  }
+  await measureAllStartupPhase(timing, "integrations_decode", async () => {
+    for (const row of (integrationRows ?? []) as IntegrationRef[]) {
+      (integrations[row.project_id] ??= []).push({...row,
+        name:(await decodeIntegrationField(row,"name",row.name))!});
+    }
+  });
   for(const rows of Object.values(integrations))
     rows.sort((a,b)=>a.name.localeCompare(b.name));
 
   const relations = (relationsRes.data ?? []) as IssueRelation[];
 
-  return NextResponse.json({
+  const serialize = () => NextResponse.json({
     issues,
     members,
     categories,
@@ -147,4 +167,6 @@ export async function GET(request: NextRequest) {
     relations,
     cycles,
   });
+  const response = timing ? timing.sync("json", serialize) : serialize();
+  return timing ? timing.decorate(response) : response;
 }

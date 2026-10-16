@@ -23,9 +23,12 @@ import { projectIdFromPath } from "./project-id-from-path";
 import { projectTopicIds } from "./realtime-topics";
 import { adoptRemoteRow, remoteEchoOf } from "./optimistic/remote-echo";
 import {
+  applyProjectCounterBump,
   isOwnEcho,
   keysForProjectEvent,
+  projectCounterBump,
   keysForUserEvent,
+  ownEchoCheck,
   projectScopeKeys,
   USER_SCOPE_KEYS,
   type BroadcastChange,
@@ -41,15 +44,16 @@ import {
   INITIAL_CATCH_UP_COALESCE_MS,
   type CatchUpQueue,
 } from "./realtime-catch-up";
-import { refreshGlobalIssueSnapshot, shouldRefreshGlobalIssueSnapshot } from "./global-issues-api";
-import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { refreshBoardIssues } from "./global-issues-api";
 import { trace } from "./desktop/trace";
+import { openRealtimeCoverage } from "./realtime-coverage";
 import { getDesktopBridge } from "./desktop/bridge";
 import type { Project } from "./types";
 import {
-  onRealtimeRekey,
   resolveRealtimeTopic,
   signalRealtimeRekey,
+  signalRealtimeRevalidate,
+  watchRealtimeTopic,
 } from "./realtime-topic";
 
 /**
@@ -155,30 +159,57 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   // Trailing per-key coalescing: the first event schedules the invalidation,
   // followers within the window ride along.
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // `echoes` is null as soon as one coalesced event is not a possible own echo.
+  // `issueIds` is null as soon as one coalesced board event names no ticket.
+  const timers = useRef(new Map<string, {
+    timer: ReturnType<typeof setTimeout>;
+    echoes: ((client: QueryClient) => boolean)[] | null;
+    issueIds: Set<string> | null;
+  }>());
   useEffect(() => {
     const map = timers.current;
     return () => {
-      for (const t of map.values()) clearTimeout(t);
+      for (const t of map.values()) clearTimeout(t.timer);
       map.clear();
     };
   }, []);
   const invalidateCoalesced = useCallback(
-    ({ key, refetch }: Invalidation) => {
+    ({ key, refetch, issueId }: Invalidation, ownEcho?: (client: QueryClient) => boolean) => {
       // The mode is part of the coalescing identity: a "none" event must never
       // swallow a pending "active" one for the same key.
       const k = `${refetch}:${JSON.stringify(key)}`;
-      if (timers.current.has(k)) return;
-      timers.current.set(
-        k,
-        setTimeout(() => {
+      const pending = timers.current.get(k);
+      if (pending) {
+        if (pending.echoes) {
+          if (ownEcho) pending.echoes.push(ownEcho);
+          else pending.echoes = null;
+        }
+        if (pending.issueIds) {
+          if (issueId) pending.issueIds.add(issueId);
+          else pending.issueIds = null;
+        }
+        return;
+      }
+      const entry = {
+        echoes: ownEcho ? [ownEcho] : null,
+        issueIds: issueId ? new Set([issueId]) : null,
+        timer: setTimeout(() => {
           timers.current.delete(k);
+          // Every coalesced event must echo an accepted own write; one remote
+          // change in the window keeps the refetch.
+          if (entry.echoes?.every((echo) => echo(queryClient))) return;
+          // Remote ticket changes only: read those tickets, not the whole board.
+          if (entry.issueIds) {
+            void refreshBoardIssues(queryClient, [...entry.issueIds]);
+            return;
+          }
           void queryClient.invalidateQueries({
             queryKey: key,
             refetchType: refetch,
           });
-        }, INVALIDATE_COALESCE_MS)
-      );
+        }, INVALIDATE_COALESCE_MS),
+      };
+      timers.current.set(k, entry);
     },
     [queryClient]
   );
@@ -225,20 +256,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         keys: keys.length,
         cache: queryClient.getQueryCache().getAll().length,
       });
-      const coversGlobalBoard = keys.some(
-        (key) =>
-          key.length === GLOBAL_BOARD_KEY.length &&
-          key.every((part, index) => part === GLOBAL_BOARD_KEY[index])
-      );
-      const globalBoard = queryClient.getQueryCache().find({
-        queryKey: GLOBAL_BOARD_KEY,
-        exact: true,
-      });
-      if (coversGlobalBoard && shouldRefreshGlobalIssueSnapshot(globalBoard)) {
-        void refreshGlobalIssueSnapshot(queryClient).catch(() => {
-          // The normal aggregate refetch remains the fallback.
-        });
-      }
+      // No separate all-issue snapshot here: a board covered by the catch-up
+      // is refetched by it whenever it is observed, and reading every issue
+      // twice doubled the server work of each resume.
       const queue = initialSubscription
         ? initialCatchUpQueue.current
         : catchUpQueue.current;
@@ -262,11 +282,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // a write committed between the initial GET and SUBSCRIBED is never seen.
       let needsCatchUp = true;
       let hasSubscribed = false;
+      // Reveal freshness trusts a cache only while this scope is joined.
+      const coverage = openRealtimeCoverage();
       let authRetry: ReturnType<typeof setTimeout> | null = null;
       let authAttempts = 0;
       let connectVersion = 0;
       let accessDenied = false;
       let authorization: AbortController | null = null;
+      let resolved: string | null = null;
 
       // Deterministically push the session token to the socket before joining:
       // supabase-js only re-sends it on SIGNED_IN/TOKEN_REFRESHED, never on
@@ -290,6 +313,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             if (cancelled || version !== connectVersion) return;
             accessDenied = false;
             authAttempts = 0;
+            resolved = resolvedTopic;
             const next = supabase.channel(resolvedTopic, {
               config: { private: true },
             });
@@ -303,7 +327,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 // the user sees), the refresh then.
                 apply?.(change);
                 for (const invalidation of keysFor(change)) {
-                  invalidateCoalesced(invalidation);
+                  invalidateCoalesced(invalidation, ownEchoCheck(change, invalidation));
                 }
               });
             }
@@ -319,18 +343,21 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                   needsCatchUp = false;
                   catchUp(scopeKeys, initialSubscription);
                 }
+                coverage.joined();
               } else if (
                 status === "CHANNEL_ERROR" ||
                 status === "TIMED_OUT" ||
                 status === "CLOSED"
               ) {
                 needsCatchUp = true;
+                coverage.dropped();
               }
             });
             channel = next;
           } catch (error) {
             if (cancelled || version !== connectVersion) return;
             needsCatchUp = true;
+            coverage.dropped();
             catchUp(scopeKeys);
             if (error && typeof error === "object" && "code" in error &&
                 error.code === "42501") {
@@ -352,6 +379,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         accessDenied = false;
         needsCatchUp = true;
+        coverage.dropped();
         connectVersion += 1;
         authorization?.abort();
         if (authRetry) {
@@ -372,14 +400,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             queueMicrotask(reconnect);
           }
         });
-      const stopRekey = onRealtimeRekey(reconnect);
+      // After an absence, a channel still joined on the current generation
+      // missed nothing the resume catch-up does not already cover, so it stays.
+      // Leaving it would force a second catch-up wave once rejoined.
+      const stopWatching = watchRealtimeTopic(supabase, topic,
+        () => ({ resolved, channel, version: connectVersion }), reconnect);
       connect();
 
       return () => {
         cancelled = true;
         connectVersion += 1;
+        coverage.close();
         authorization?.abort();
-        stopRekey();
+        stopWatching();
         authSubscription.unsubscribe();
         if (authRetry) clearTimeout(authRetry);
         if (channel) void getSupabase().removeChannel(channel);
@@ -390,8 +423,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!userId) return;
-    return openScope(`user:${userId}`, keysForUserEvent, USER_SCOPE_KEYS);
-  }, [userId, openScope]);
+    return openScope(`user:${userId}`, keysForUserEvent, USER_SCOPE_KEYS, (change) => {
+      // A counter-only project UPDATE has no invalidation; refetch the list
+      // only when the row it names is not in it.
+      if (projectCounterBump(change) && !applyProjectCounterBump(queryClient, change)) {
+        void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      }
+    });
+  }, [userId, openScope, queryClient]);
 
   // One channel per project, reconciled in place: joining a new project or
   // leaving one only opens/closes that channel, so navigating between projects
@@ -451,8 +490,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       const realtime = getSupabase().realtime;
       catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)]);
       // Re-resolve versioned topics in case a rekey broadcast was missed while
-      // this client was suspended or offline.
-      signalRealtimeRekey();
+      // this client was suspended or offline; only changed or broken channels
+      // reconnect (and catch up again once joined).
+      signalRealtimeRevalidate();
       if (probe) clearTimeout(probe);
       probe = wakeRealtime(realtime);
     };

@@ -16,7 +16,10 @@ import { PrBackgroundSync } from "./use-pr-background";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { NavigationContext, useOptionalAppTabNavigation } from "./app-tab-navigation-context";
 import { SessionContext, useOptionalAppTabSession } from "./app-tab-session-context";
-import { removeLocalSnapshot, restoreLocalSnapshot, saveLocalSnapshot } from "./local-snapshots";
+import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
+import { createWindowSelectionPersistence } from "./window-selection-persistence";
+import { createRestoredTabStartupAdmission } from "./restored-tab-startup-admission";
+import { INITIAL_ACCOUNT_CACHE_SCOPE, nextAccountCacheScope } from "./account-query-provider";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -36,7 +39,7 @@ const noSubscription = () => () => {};
 type QueryState = { session: AppTabsSession; loading: boolean; loadError: boolean; reload: () => void };
 
 export function AppTabsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const mobile = useMobileLayout();
   const client = useQueryClient();
   const router = useRouter();
@@ -44,6 +47,11 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   const freshSession = !previous.current || previous.current.owner !== user?.id;
   const resumeAtCurrentRoute = !freshSession && previous.current?.mobile === true;
   const owner = user?.id;
+  // Like the account query cache: the first auth resolution keeps the tree
+  // mounted before it, and every later identity change remounts it.
+  const [scope, setScope] = useState(INITIAL_ACCOUNT_CACHE_SCOPE);
+  const nextScope = nextAccountCacheScope(scope, loading, owner ?? null);
+  if (nextScope !== scope) setScope(nextScope);
   const desktop = mobile === false && !!owner;
   // Only the desktop controller owns account queries, restoration and writes.
   const session = useMemo(() => desktop && owner ? createAccountSession(owner, client) : null, [desktop, owner, client]);
@@ -85,7 +93,7 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   } : null, [session, snapshot, queryState]);
   const navigation = useMemo(() => session ? { session, activeId: snapshot?.activeId ?? null } : null, [session, snapshot?.activeId]);
   // Keep the provider topology and descendant drafts stable across layout changes.
-  return <SessionContext.Provider key={owner ?? "signed-out"} value={session}><NavigationContext.Provider value={navigation}>
+  return <SessionContext.Provider key={nextScope.key} value={session}><NavigationContext.Provider value={navigation}>
     <Context.Provider value={value}><MobileNavigationContext.Provider value={owner && mobile === true ? mobileNavigation : null}>
       {session && owner ? <AccountTabSync key={owner} owner={owner} session={session} resumeAtCurrentRoute={resumeAtCurrentRoute} onQueryState={setQueryState} /> : null}
       {session ? <PrBackgroundSync /> : null}
@@ -99,13 +107,52 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
   </NavigationContext.Provider></SessionContext.Provider>;
 }
 
+/** Run after the next paint. A hidden document paints nothing: wait one task. */
+function afterPaint(work: () => void): () => void {
+  let frame: number | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  if (typeof requestAnimationFrame === "function" && document.visibilityState === "visible") {
+    frame = requestAnimationFrame(() => { frame = undefined; timer = setTimeout(work, 0); });
+  } else timer = setTimeout(work, 0);
+  return () => { if (frame !== undefined) cancelAnimationFrame(frame); clearTimeout(timer); };
+}
+
+/** How long a successful write waits for its own realtime echo before reading the list itself. */
+const ECHO_FALLBACK_MS = 2_000;
+
 function createAccountSession(owner: string, client: QueryClient) {
   const key = appTabsQueryKey(owner);
   const abort = new AbortController();
+  let fallback: ReturnType<typeof setTimeout> | undefined;
   async function write<T>(operation: () => Promise<T>): Promise<T> {
+    const interrupted = client.isFetching({ queryKey: key }) > 0;
     await client.cancelQueries({ queryKey: key });
-    try { return await operation(); }
-    finally { void client.invalidateQueries({ queryKey: key }); }
+    const before = client.getQueryState(key);
+    let succeeded = false;
+    try {
+      const result = await operation();
+      succeeded = true;
+      return result;
+    } finally {
+      const after = client.getQueryState(key);
+      // A read cancelled here, or one that ran during the write, may hold the
+      // rows from before it: supersede it now. Otherwise the session already
+      // applied the acknowledgement and the write's own broadcast refetches
+      // the list; reading it here too only raced that echo.
+      const overlapped = interrupted || !before || !after || after.fetchStatus !== "idle" || after.isInvalidated ||
+        after.dataUpdatedAt !== before.dataUpdatedAt || after.errorUpdatedAt !== before.errorUpdatedAt;
+      if (!succeeded || overlapped) void client.invalidateQueries({ queryKey: key });
+      else {
+        // The trigger may drop its broadcast, or the user channel may be down.
+        const acknowledgedAt = Date.now();
+        clearTimeout(fallback);
+        fallback = setTimeout(() => {
+          const state = client.getQueryState(key);
+          if (abort.signal.aborted || !state || state.fetchStatus !== "idle" || state.dataUpdatedAt >= acknowledgedAt) return;
+          void client.invalidateQueries({ queryKey: key });
+        }, ECHO_FALLBACK_MS);
+      }
+    }
   }
   const controller = new AppTabsSession(owner, {
     create: (ensure, id) => write(() => createAppTab(ensure, id, abort.signal)),
@@ -113,7 +160,7 @@ function createAccountSession(owner: string, client: QueryClient) {
     close: (tab) => write(() => deleteAppTab(tab, abort.signal)),
     move: (tab, beforeId) => write(() => moveAppTab(tab, beforeId, abort.signal)),
   });
-  controller.onDispose = () => abort.abort();
+  controller.onDispose = () => { abort.abort(); clearTimeout(fallback); };
   return controller;
 }
 
@@ -126,41 +173,87 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
   const router = useRouter();
   const query = useAppTabsQuery(owner);
   const storageKey = appTabsStorageKey(owner);
+  const lifetime = useMemo(() => {
+    let storage: Storage | undefined;
+    try { if (typeof window !== "undefined") storage = window.sessionStorage; }
+    catch { /* Window selection persistence is optional. */ }
+    return { active: false, writer: createWindowSelectionPersistence(storage, storageKey, owner) };
+  }, [session, storageKey, owner]);
+  const startupAdmission = useMemo(() => createRestoredTabStartupAdmission(client), [client, owner, session]);
+  const preparationRef = useRef<ReturnType<typeof createPrTabPreparation> | null>(null);
+  useLayoutEffect(() => startupAdmission.mount(), [startupAdmission]);
+  useEffect(() => {
+    if (query.isError && !query.isFetching) startupAdmission.fail();
+  }, [query.isError, query.isFetching, startupAdmission]);
   useLayoutEffect(() => {
     onQueryState({ session, loading: query.isPending, loadError: query.isError, reload: () => { void query.refetch(); } });
   }, [session, query.isPending, query.isError, query.refetch, onQueryState]);
-  const mounted = useRef(false);
   useEffect(() => {
     const preparation = createPrTabPreparation(client);
-    let previous = "";
-    const visit = () => {
+    preparationRef.current = preparation;
+    // `published`: the destination preparation protects; `selected`: it was
+    // published without the full pass that ranks and rebuilds the working set.
+    let previous = "", published = "", selected = false;
+    let cancel: (() => void) | undefined;
+    const current = () => {
       const state = session.getSnapshot();
       const active = state.tabs.find((tab) => tab.id === state.activeId);
-      if (!active) return;
-      const identity = `${active.id}:${active.href}`;
-      if (identity === previous) return;
-      previous = identity;
-      preparation.visit(active.href, state.tabs.map((tab) => tab.href));
+      if (!active) return null;
+      const hrefs = state.tabs.map((tab) => tab.href);
+      return { href: active.href, hrefs, identity: JSON.stringify([active.id, active.href, hrefs]) };
     };
-    const stop = session.subscribe(visit);
+    const visit = () => {
+      cancel = undefined;
+      const next = current();
+      if (!next || (next.identity === previous && !selected)) return;
+      previous = next.identity; published = next.href; selected = false;
+      startupAdmission.handoff(() => preparation.visit(next.href, next.hrefs));
+    };
+    // The startup visit hands admission over synchronously. After that, a
+    // switch publishes its destination at once, before the incoming view's
+    // foreground reads start, and the full pass follows its paint.
+    const changed = () => {
+      if (!previous) { visit(); return; }
+      const next = current();
+      if (!next || (next.identity === previous && !selected)) return;
+      if (next.href !== published) {
+        published = next.href; selected = true;
+        preparation.select(next.href);
+      }
+      cancel ??= afterPaint(visit);
+    };
+    const stop = session.subscribe(changed);
     visit();
-    return () => { stop(); preparation.dispose(); };
-  }, [client, session]);
-  useEffect(() => {
-    mounted.current = true;
     return () => {
-      mounted.current = false;
-      // Strict Mode replays effects with the same session. Dispose only after
-      // an actual unmount so in-flight work cannot affect another account.
-      queueMicrotask(() => { if (!mounted.current) session.dispose(); });
+      stop(); cancel?.(); preparation.dispose();
+      if (preparationRef.current === preparation) preparationRef.current = null;
     };
-  }, [session]);
+  }, [client, session, startupAdmission]);
+  useEffect(() => {
+    lifetime.active = true;
+    return () => {
+      lifetime.active = false;
+      // Effect replay retains this exact writer. A replacement session has a
+      // separate lifetime and cannot keep the retired account's writer alive.
+      queueMicrotask(() => {
+        if (lifetime.active) return;
+        lifetime.writer.dispose();
+        session.dispose();
+      });
+    };
+  }, [session, lifetime]);
   useEffect(() => {
     // One warmup attempt per href (tab label, palette row): prefetchQuery
     // itself respects staleTime, so a fresh cache costs nothing anyway.
     const attempted = new Set<string>();
     session.prefetch = (href) => {
-      router.prefetch(href);
+      // A local surface already owns this route. Preparing its server entry
+      // again can reconstruct an unused tree while the user activates it.
+      const retained = session.getSnapshot().tabs.some((tab) => tab.href === href && session.isRetainedDestination(tab.id, href));
+      if (!retained && !isPreparedAppTabDestination(client, href)) router.prefetch(href);
+      // The hover's own prefetches must not cancel this destination's
+      // in-flight preparation reads, only other destinations' reads.
+      preparationRef.current?.intend(href);
       prefetchAppTabDestination(client, href, attempted);
     };
     session.navigate = (href) => {
@@ -172,12 +265,15 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       else router.push(href, { scroll: false });
     };
     session.remember = (id, href) => {
-      void saveLocalSnapshot(sessionStorage, storageKey, "window-tabs", { id, href }).catch(() => {});
+      if (lifetime.active) lifetime.writer.remember(id, href);
     };
-  }, [router, session, storageKey, client]);
+  }, [router, session, client, lifetime]);
   useEffect(() => {
     if (!query.data) return;
     session.receive(query.data);
+    // An empty canonical scope has no restored working set to reserve. Its
+    // ordinary first-tab creation must not hold optional admission indefinitely.
+    if (!session.getSnapshot().tabs.length) startupAdmission.fail();
     // Server tab reconciliation is ongoing; the window snapshot is startup-only.
     // Reopening it after each location PATCH repeats authorization/decryption
     // even though initialize already has an active destination and does nothing.
@@ -195,14 +291,26 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
           }
         }
       } catch { /* Server-backed tab destinations remain available. */ }
-      if (!cancelled) await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
+      if (!cancelled && lifetime.active) {
+        try {
+          await session.initialize(window.location.pathname + window.location.search + window.location.hash, restored, keepCurrentRoute);
+        } finally {
+          // initialize reports normal failures on the session and resolves.
+          // An empty/failed startup still releases optional admission.
+          if (!cancelled && lifetime.active && !session.getSnapshot().activeId) startupAdmission.fail();
+        }
+      }
     })();
     return () => { cancelled = true; };
-  }, [query.data, session, storageKey, keepCurrentRoute]);
-  // A refresh hides the page first: push the pending location write out
-  // immediately, or the next load restores a destination the session outgrew.
+  }, [query.data, session, storageKey, keepCurrentRoute, lifetime, startupAdmission]);
+  // Flush the newest location and encrypted window selection on a real hide.
+  // Unload cannot guarantee receipt of the optional snapshot's final ACK.
   useEffect(() => {
-    const onHide = () => session.onPageHide();
+    const onHide = () => {
+      if (!lifetime.active) return;
+      session.onPageHide();
+      void lifetime.writer.flush();
+    };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") onHide();
     };
@@ -212,7 +320,7 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       window.removeEventListener("pagehide", onHide);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [session]);
+  }, [session, lifetime]);
   return null;
 }
 

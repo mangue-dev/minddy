@@ -17,6 +17,20 @@ import type {
 /** Prefix of every cache variant of the global list (per filter, page, pin). */
 export const ALL_PULL_REQUESTS_QUERY_KEY = ["pull-requests", "all"] as const;
 
+/** A pin already in the same list can remain visible while its key revalidates. */
+export function cachedPullRequestListForPin(
+  client: QueryClient,
+  state: string,
+  limit: number,
+  pin: { pr?: string | null; run?: string | null } | undefined,
+): PullRequestListResponse | undefined {
+  if (!pin?.pr && !pin?.run) return;
+  const cached = client.getQueryState<PullRequestListResponse>([...ALL_PULL_REQUESTS_QUERY_KEY, state, limit, null, null]);
+  if (cached?.status !== "success" || cached.isInvalidated) return;
+  return cached.data?.pullRequests.some((item) => pin.pr ? item.prId === pin.pr
+    : item.runId === pin.run || item.runIds.includes(pin.run!)) ? cached.data : undefined;
+}
+
 /** `open` understands drafts, like the filter served by the API. */
 export function matchesStateFilter(
   state: PullRequestListItem["pr_state"],

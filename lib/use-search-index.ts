@@ -27,6 +27,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { navigationPreparationPending, subscribeNavigationPreparation } from "./navigation-preparation-priority";
 import type {
   SearchIndexIssue,
   SearchIndexObjective,
@@ -49,6 +50,11 @@ export interface SearchIndexArmScheduler {
   cancelIdleCallback?: (handle: number) => void;
 }
 
+export interface SearchIndexArmGate {
+  pending(): boolean;
+  subscribe(changed: () => void): () => void;
+}
+
 /**
  * Keep background indexing out of the initial API burst. Explicit palette
  * opens bypass this scheduler through `armNow()`.
@@ -56,19 +62,35 @@ export interface SearchIndexArmScheduler {
 export function scheduleSearchIndexArm(
   scheduler: SearchIndexArmScheduler,
   arm: () => void,
+  navigation?: SearchIndexArmGate,
 ): () => void {
+  let cancelled = false;
   let idleHandle: number | null = null;
+  let stopPriority: (() => void) | undefined;
+  const ready = () => {
+    if (cancelled) return;
+    if (navigation?.pending()) {
+      // Wait for an actual priority transition, without polling or restarting
+      // the startup delay. Explicit palette intent uses armNow instead.
+      stopPriority ??= navigation.subscribe(ready);
+      return;
+    }
+    stopPriority?.(); stopPriority = undefined;
+    arm();
+  };
   const delayHandle = scheduler.setTimeout(() => {
     if (scheduler.requestIdleCallback) {
-      idleHandle = scheduler.requestIdleCallback(arm, {
+      idleHandle = scheduler.requestIdleCallback(ready, {
         timeout: SEARCH_INDEX_IDLE_TIMEOUT_MS,
       });
       return;
     }
-    arm();
+    ready();
   }, SEARCH_INDEX_ARM_DELAY_MS);
 
   return () => {
+    cancelled = true;
+    stopPriority?.(); stopPriority = undefined;
     scheduler.clearTimeout(delayHandle);
     if (idleHandle !== null) scheduler.cancelIdleCallback?.(idleHandle);
   };
@@ -105,8 +127,11 @@ export function useSearchIndex() {
   // with the page's critical API requests unless the user explicitly opens it.
   useEffect(() => {
     if (armed) return;
-    return scheduleSearchIndexArm(window, () => setArmed(true));
-  }, [armed]);
+    return scheduleSearchIndexArm(window, () => setArmed(true), {
+      pending: () => navigationPreparationPending(queryClient),
+      subscribe: (changed) => subscribeNavigationPreparation(queryClient, changed),
+    });
+  }, [armed, queryClient]);
 
   const { data } = useQuery({
     queryKey: SEARCH_INDEX_KEY,

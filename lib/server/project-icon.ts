@@ -216,12 +216,21 @@ export async function clearProjectIcon(projectId: string): Promise<void> {
 export async function downloadProjectIcon(projectId: string): Promise<{
   bytes: Buffer; mimeType: string;
 } | null> {
-  const service = getServiceClient();
-  const { data, error } = await service.from("projects")
+  const { data, error } = await getServiceClient().from("projects")
     .select("icon_url,icon_storage_path").eq("id", projectId).maybeSingle();
   if (error) throw new Error("Unable to read project icon reference");
+  return downloadProjectIconFromReference(projectId, data);
+}
+
+/** `downloadProjectIcon` for a caller that read the icon reference with its
+ access decision. */
+export async function downloadProjectIconFromReference(projectId: string,
+  data: { icon_url: unknown; icon_storage_path: unknown } | null): Promise<{
+  bytes: Buffer; mimeType: string;
+} | null> {
+  const service = getServiceClient();
   if (!data?.icon_url) return null;
-  if (data.icon_storage_path) {
+  if (typeof data.icon_storage_path === "string" && data.icon_storage_path) {
     return downloadProtectedProjectIcon(service, projectId,
       data.icon_storage_path);
   }

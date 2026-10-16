@@ -27,13 +27,30 @@ export function legacyRoutineProposals(rules: AutomationRule[], metadata: Record
   });
 }
 
-export async function prepareLegacyRoutineProposals(projectId: string, ownerId: string): Promise<void> {
+/**
+ * Turn the archived automations of owned project rows into paused proposals.
+ * The caller reads the rows whole under the owner and live filters; rows of
+ * another owner or in the trash are ignored here as well. Decodes run in
+ * parallel; creation stays sequential so routine limits and source-key
+ * de-duplication see each previous insert. Returns whether a routine was created.
+ */
+export async function prepareLegacyRoutineProposals(rows: Record<string, unknown>[], ownerId: string): Promise<boolean> {
+  const archived = await Promise.all(rows.map(async row => {
+    if (row.owner_id !== ownerId || row.deleted_at != null) return null;
+    if (!row.automations_enabled && !row.encrypted_content && !parseAutomations(row.automations).length) return null;
+    const project = await decodeProject(row, ownerId);
+    return project.automations_enabled || parseAutomations(project.automations).length ? project : null;
+  }));
+  let created = false;
+  for (const [index, project] of archived.entries()) {
+    if (project && await createLegacyRoutineProposals(rows[index].id as string, ownerId, project)) created = true;
+  }
+  return created;
+}
+
+async function createLegacyRoutineProposals(projectId: string, ownerId: string, archived: Record<string, unknown>): Promise<boolean> {
   const service = getServiceClient();
-  const { data: row, error } = await service.from("projects").select("*").eq("id", projectId).eq("owner_id", ownerId).is("deleted_at", null).maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!row || !row.automations_enabled && !row.encrypted_content && !parseAutomations(row.automations).length) return;
-  const archived = await decodeProject(row, ownerId);
-  if (!archived.automations_enabled && !parseAutomations(archived.automations).length) return;
+  let created = false;
   const identity = await service.auth.admin.getUserById(ownerId);
   if (identity.error) throw new Error(identity.error.message);
   const metadata = identity.data.user?.user_metadata ?? null;
@@ -50,5 +67,7 @@ export async function prepareLegacyRoutineProposals(projectId: string, ownerId: 
         timezone: "UTC", enabled: false, maxSpendPercent: 15, legacySourceKey: proposal.sourceKey });
     }
     if (!result.ok && result.errorKey !== "databaseError") throw new Error(`Archived routine proposal: ${result.errorKey}`);
+    if (result.ok) created = true;
   }
+  return created;
 }

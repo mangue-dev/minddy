@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import { observeRetainedBoardData } from "./retained-board-data";
+import { createRetainedBoardData, observeRetainedBoardData } from "./retained-board-data";
 import type { RetainedAppView } from "./retained-app-views";
 
 const global: RetainedAppView = { key: "global", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } };
@@ -52,6 +52,37 @@ describe("retained board data ownership", () => {
     await client.invalidateQueries({ queryKey: ["issues", "p"] });
     expect(read).toHaveBeenCalledTimes(1);
     stop(); client.clear();
+  });
+
+  it("keeps observers through reordered views and attaches new scopes before releasing old ones", async () => {
+    const client = new QueryClient();
+    let finish!: (value: string[]) => void;
+    const aborted = vi.fn();
+    client.setQueryDefaults(["issues", "p"], { queryFn: ({ signal }) => new Promise<string[]>((resolve) => {
+      signal.addEventListener("abort", aborted);
+      finish = resolve;
+    }) });
+    client.setQueryDefaults(["issues", "q"], { queryFn: async () => ["q"] });
+    client.setQueryData(["issues", "p"], ["old"]);
+    client.setQueryData(["issues", "q"], ["q"]);
+    const observers = (id: string) => client.getQueryCache().find({ queryKey: ["issues", id] })!.getObserversCount();
+    const other: RetainedAppView = { ...project, key: "other", tabId: "q", route: { pathname: "/projects/q", search: "", projectId: "q" } };
+    const data = createRetainedBoardData(client);
+    data.update([global, project]);
+    const read = client.invalidateQueries({ queryKey: ["issues", "p"] });
+    data.update([project, global]);
+    data.update([{ ...project, route: { ...project.route } }, other]);
+    expect(aborted).not.toHaveBeenCalled();
+    expect(observers("p")).toBe(1);
+    expect(observers("q")).toBe(1);
+    finish(["fresh"]); await read;
+    expect(client.getQueryData(["issues", "p"])).toEqual(["fresh"]);
+    data.update([other]);
+    expect(observers("p")).toBe(0);
+    expect(observers("q")).toBe(1);
+    data.dispose();
+    expect(observers("q")).toBe(0);
+    client.clear();
   });
 
   it("shares pending reads and forgets removed data on account cleanup", async () => {

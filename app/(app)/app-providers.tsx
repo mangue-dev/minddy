@@ -63,7 +63,9 @@ function DeferredKeyboardCheatsheet() {
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
+    // Provider buttons only appear on the auth screens, which mount their own
+    // AuthProvider.
+    <AuthProvider discoverOAuthProviders={false}>
       {/* Adopts the ACCOUNT theme at sign-in (and migrates legacy accounts):
           renders nothing, sits here to see both Auth and Theme providers. */}
       <ThemeAccountSync />

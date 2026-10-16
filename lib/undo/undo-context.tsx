@@ -44,6 +44,7 @@ import {
 import {
   GLOBAL_BOARD_KEY,
   issueWrites,
+  mergeServerIssue,
   patchIssueEverywhere,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
@@ -236,9 +237,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
  the writing was successful (the responses left after it are authentic), forgotten
  when it failed (the invalidation which follows restores the truth). */
   const closePending = useCallback(
-    (pending: PendingHandle | null, outcome: "settled" | "failed") => {
+    (pending: PendingHandle | null, outcome: "settled" | "failed", serverRow?: Issue) => {
       if (!pending) return;
-      if (outcome === "settled") issueWrites.settle(pending);
+      if (outcome === "settled") issueWrites.settle(pending, serverRow);
       else issueWrites.fail(pending);
     },
     []
@@ -336,22 +337,28 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     [readdRelation]
   );
 
+  /** Returns the server row of a replayed field update, merged into the caches. */
   const applyServer = useCallback(
-    async (entry: UndoEntry, direction: "undo" | "redo") => {
+    async (entry: UndoEntry, direction: "undo" | "redo"): Promise<Issue | undefined> => {
       const alias = aliasRef.current;
       switch (entry.kind) {
-        case "update":
-          await updateIssueApi(
+        // Like a direct edit (use-global-board-query writeIssue): the server
+        // row, or the category set just written, makes both issue caches
+        // exact, so refetching the multi-second aggregate would only confirm it.
+        case "update": {
+          const issue = await updateIssueApi(
             resolveAliased(alias, entry.issueId),
             direction === "undo" ? entry.before : entry.after
           );
-          break;
+          mergeServerIssue(queryClient, entry.projectId, issue);
+          return issue;
+        }
         case "categories":
           await setIssueCategoriesApi(
             resolveAliased(alias, entry.issueId),
             direction === "undo" ? entry.before : entry.after
           );
-          break;
+          return undefined;
         case "create":
           if (direction === "undo") {
             await deleteIssueApi(resolveAliased(alias, entry.issueId));
@@ -400,8 +407,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           break;
       }
       invalidate(entry);
+      return undefined;
     },
-    [invalidate, recreate, readdRelation]
+    [queryClient, invalidate, recreate, readdRelation]
   );
 
   const run = useCallback(
@@ -433,11 +441,11 @@ export function UndoProvider({ children }: { children: ReactNode }) {
         try {
           // Never overtake the mutation being replayed (it may still be in flight).
           if (queued.settled) await queued.settled;
-          await applyServer(queued, direction);
-          // Closed AFTER the invalidation of `applyServer`: a refetch left
-          // before this point keeps the overlay, so cannot replay the state
-          // before replay.
-          closePending(pending, "settled");
+          const serverRow = await applyServer(queued, direction);
+          // Closed AFTER the merge or invalidation of `applyServer`: a refetch
+          // left before this point keeps the overlay, so cannot replay the
+          // state before replay.
+          closePending(pending, "settled", serverRow);
         } catch (err) {
           // Entry dropped: it no longer applies (e.g. deleted elsewhere) and
           // keeping it would wedge the stack; invalidation restores the truth.

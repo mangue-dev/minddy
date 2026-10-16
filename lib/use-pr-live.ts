@@ -6,9 +6,9 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 import { parsePrLiveParts, prLiveQueryKeys, pullRequestTopic } from "./pr-live";
 import {
-  onRealtimeRekey,
   resolveRealtimeTopic,
   signalRealtimeRekey,
+  watchRealtimeTopic,
 } from "./realtime-topic";
 
 /**
@@ -48,6 +48,8 @@ interface Listener {
 
 interface Entry {
   channel: RealtimeChannel | null;
+  /** Generation the channel joined, kept by a resume revalidation. */
+  topic: string | null;
   listeners: Set<Listener>;
   closed: boolean;
   connectVersion: number;
@@ -62,6 +64,7 @@ function subscribePr(prId: string, listener: Listener): () => void {
   if (!entry) {
     const fresh: Entry = {
       channel: null,
+      topic: null,
       listeners: new Set(),
       closed: false,
       connectVersion: 0,
@@ -98,12 +101,14 @@ function subscribePr(prId: string, listener: Listener): () => void {
           channel.on("broadcast", { event: "rekey" }, signalRealtimeRekey);
           channel.subscribe();
           fresh.channel = channel;
+          fresh.topic = topic;
         } catch {
           // Forge-backed queries refresh on focus and remain authoritative.
         }
       })();
     };
-    fresh.stopRekey = onRealtimeRekey(connect);
+    fresh.stopRekey = watchRealtimeTopic(supabase, pullRequestTopic(prId),
+      () => ({ resolved: fresh.topic, channel: fresh.channel, version: fresh.connectVersion }), connect);
     connect();
   }
   entry.listeners.add(listener);

@@ -6,6 +6,7 @@ import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   getProjectFeedbackPost,
+  requireFeedbackMember,
   requireProjectMember,
 } from "@/lib/server/feedback/team-guard";
 import {
@@ -45,14 +46,11 @@ const MAX_MENTIONS = 50;
     never sees more than a pseudonym-seeded avatar. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  // Membership and the post's presence in this project are both settled
+  // before any comment is read or decoded.
+  const guard = await requireFeedbackMember(request, id, postId);
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
-
-  const post = await getProjectFeedbackPost(id, postId);
-  if (!post) {
-    return NextResponse.json({ error: t("feedbackNotFound") }, { status: 404 });
-  }
 
   const service = getServiceClient();
   const { data, error } = await commentStore(service, "comments", guard.userId)

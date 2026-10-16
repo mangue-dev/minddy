@@ -60,6 +60,19 @@ export function withAcknowledgedStep(
   return ONBOARDING_STEPS.filter((id) => acknowledged.has(id));
 }
 
+/**
+ * Whether the account-wide issue count can still change the onboarding outcome:
+ * it completes a started journey's tickets step and decides whether an
+ * unstarted account without projects is eligible. Pass `null` while projects load.
+ */
+export function onboardingNeedsIssueCount(
+  meta: Record<string, unknown> | null | undefined,
+  projectCount: number | null,
+): boolean {
+  if (meta?.[ONBOARDING_STARTED_META_KEY] === true) return !readAcknowledgedSteps(meta).has("tickets");
+  return projectCount === 0;
+}
+
 export function resolveOnboardingState({
   meta, projectCount, issueCount, cyclesEnabled,
 }: OnboardingSignals & { meta: Record<string, unknown> | null | undefined }): OnboardingState {

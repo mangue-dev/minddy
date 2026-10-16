@@ -1716,7 +1716,7 @@ export function PrDetail({
       disabled={!!acting || isWorking || readState !== "fresh"}
       onChange={(state) => setConfirmAction({ kind: "state", state })} />
     {!isTerminal ? (
-      <PrReadinessMenuItem readiness={isDraft ? null : effectiveReadiness}
+      <PrReadinessMenuItem readiness={effectiveReadiness} unavailable={readState === "error"}
         disabled={isDraft || !effectiveReadiness} onSelect={openReadinessFromMenu} />
     ) : null}
   </>;
@@ -1983,7 +1983,8 @@ export function PrDetail({
                 onOpenChecks={() => setChecksDetailsOpen(true)}
               />
             ) : (
-              <PrReadinessBadge readiness={null} className="hidden app-desktop:inline-flex" />
+              <PrReadinessBadge readiness={effectiveReadiness} unavailable={readState === "error"}
+                className="hidden app-desktop:inline-flex" />
             )}
           </div>
         )}

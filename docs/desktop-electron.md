@@ -169,9 +169,8 @@ localStorage query snapshot. Only the active tab's restoration metadata is store
 in account-scoped sessionStorage and removed on sign-out.
 
 macOS uses native traffic lights at x=19, y=15, independently of sidebar state.
-Modal holds and fullscreen acknowledgements remain in place. Windows and Linux
-start with the native frame for compatibility with older self-hosted renderers.
-Only a main document from the selected origin advertising
+Modal holds and fullscreen acknowledgements remain in place. On Windows and
+Linux, only a main document from the selected origin advertising
 `x-minddy-desktop-chrome: 1` opts into Electron's hidden title bar with a 44 px native title-bar overlay, theme
 synchronization, and Chromium's title-bar safe-area geometry. A bare Alt opens the
 main-process application menu, including server recovery actions, even when the
@@ -179,7 +178,18 @@ remote server cannot load. The separate server-picker frame is unchanged.
 When the document capability changes, the shell replaces the window after the
 load completes, preserving committed session cookies, bounds, visibility, and
 maximized/fullscreen state. The replacement has the appropriate frame before it
-is shown; no capability is inferred from the origin or app version.
+is shown.
+
+Frame style is a constructor option, so a replacement loads the document a
+second time. To avoid that on every launch, the shell keeps the frame that the
+selected origin's last successful (2xx) main document asked for in
+`window-chrome.json` under `userData`, and creates the first window with it
+when the origin is the same. A first launch, another origin (channel switch,
+custom server, local runtime) or a missing or unreadable file starts with the
+native frame for compatibility with older self-hosted renderers. The stored
+value is a cached observation of that origin's own document; no capability is
+inferred from the origin name or app version, and a document that disagrees
+still triggers the replacement above.
 
 Login, signup, and the server-unavailable screen have minimal native-control
 clearance and a drag surface, without application tabs. Interactive controls,

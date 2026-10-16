@@ -2,26 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 /**
  * We only test here the KEYS of `PROVIDER_LOGOS`, which are literals of the
- * file — the components opposite are of no use for this test. Hence the two
- * stubs: the barrel of `@lobehub/icons` pulls emoji-mart and its JSON (unreadable
- * without `import attributes` in node environment), and that of mango-ui does
- * similarly. A Proxy responds to any mark, including `.Color`, which
- * avoids listing thirty imports which would change with each addition.
+ * file. The logos are imported per variant, so they load as plain React
+ * components; the mangue-ui barrel is stubbed because it does not load in a
+ * node environment.
  */
-// The marks are listed because vitest wants a real module object (a
-// Proxy is refused). Keeping the list up to date costs nothing: add an import
-// in `model-logo` without adding it here causes this file to fail on import, with
-// the missing name in plain text.
-vi.mock("@lobehub/icons", () => {
-  const icon: unknown = new Proxy(() => null, { get: () => icon });
-  const brands = [
-    "Ai21", "AionLabs", "Arcee", "Bedrock", "ByteDance", "Claude", "Cohere", "DeepSeek",
-    "Gemini", "Grok", "IBM", "Inception", "Kwaipilot", "Liquid", "LongCat", "Meta",
-    "Minimax", "Mistral", "Moonshot", "Nvidia", "OpenAI", "OpenCode", "OpenRouter", "Perplexity",
-    "Poolside", "Qwen", "Relace", "Stepfun", "Tencent", "Upstage", "XiaomiMiMo", "Zhipu",
-  ];
-  return Object.fromEntries(brands.map((b) => [b, icon]));
-});
 vi.mock("mangue-ui", () => ({ cn: (...parts: unknown[]) => parts.filter(Boolean).join(" ") }));
 
 import { DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels } from "@/lib/recommended-models";

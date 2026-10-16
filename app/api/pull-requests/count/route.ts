@@ -1,5 +1,6 @@
-import { after, NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
+import { afterOrNow } from "@/lib/server/after-safe";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import {
   countPullRequestsForUser,
@@ -16,8 +17,8 @@ import { sweepRepo } from "@/lib/server/agent/pull-requests-sweep";
  *
  * The count itself is a `head: true` aggregate — nothing to sweep before
  * answering, the response is instant. The out-of-band work is what makes the
- * badge self-healing: repositories whose `synced_at` left the TTL window get
- * swept in `after()`, the same out-of-band catch-up the Pull Requests page
+ * badge self-healing: after the response, repositories whose `synced_at` left
+ * the TTL window get swept, the same out-of-band catch-up the Pull Requests page
  * runs. A PR opened (or merged) at the forge without a webhook therefore
  * enters the count within a TTL window, WITHOUT the user visiting the PR page —
  * the exact complaint MIN-595 records. The row write then broadcasts on the
@@ -38,15 +39,25 @@ export async function GET(request: NextRequest) {
 
     // Out-of-band catch-up, deduplicated by the `pull_request_syncs` stamp:
     // concurrent readers of the same window coalesce into one forge read.
-    const syncs = await readRepoSyncStates(repos);
-    const seen = new Set<string>();
-    for (const repo of repos) {
-      const key = repoSyncKey(repo.provider, repo.repoFullName);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (!needsRepoSync(syncs.get(key))) continue;
-      after(() => sweepRepo(auth.user.id, repo));
-    }
+    // Reading the stamps only decides which sweeps to start, so it does not
+    // hold the count back either.
+    const userId = auth.user.id;
+    if (repos.length > 0) afterOrNow(async () => {
+      const syncs = await readRepoSyncStates(repos);
+      const seen = new Set<string>();
+      const sweeps: Promise<boolean>[] = [];
+      for (const repo of repos) {
+        const key = repoSyncKey(repo.provider, repo.repoFullName);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (!needsRepoSync(syncs.get(key))) continue;
+        sweeps.push(sweepRepo(userId, repo));
+      }
+      // Every sweep keeps the invocation alive; a failure is still reported.
+      const failed = (await Promise.allSettled(sweeps))
+        .find((result) => result.status === "rejected");
+      if (failed) throw failed.reason;
+    });
 
     return NextResponse.json({ count });
   } catch (error) {

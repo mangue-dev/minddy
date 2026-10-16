@@ -496,9 +496,14 @@ function resolvePlatformAgentEndpoint(): ResolvedAgentEndpoint {
 export async function resolveAgentApiKey(
   userId: string,
   surface: Extract<AiSurface, "agent" | "assistant" | "automations"> = "agent",
-  options: { allowLocal?: boolean; requireByok?: boolean } = {},
+  options: {
+    allowLocal?: boolean;
+    requireByok?: boolean;
+    /** This request's `getUserByok(userId, surface)`, when the caller already started it. */
+    byok?: Promise<UserByok | null>;
+  } = {},
 ): Promise<ResolvedAgentEndpoint> {
-  const byok = await getUserByok(userId, surface);
+  const byok = await (options.byok ?? getUserByok(userId, surface));
   if (byok) {
     if (isLocalAgentProvider(byok.provider) && !options.allowLocal) {
       throw new LocalEndpointRequiresLocalRunError();

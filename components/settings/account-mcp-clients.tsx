@@ -20,8 +20,8 @@ import {
   MCP_REGISTRY_SEARCH_MIN_LENGTH,
   useMcpRegistrySearch,
 } from "@/lib/use-mcp-registry-search";
-import {mcpConnectionNeedsAuth} from "@/lib/mcp-client";
-import type {McpConnection} from "@/lib/mcp-client";
+import {mcpConnectionNeedsAuth} from "@/lib/mcp-connection";
+import type {McpConnection} from "@/lib/mcp-connection";
 import {MCP_AUTHORIZATION_PARAM, MCP_DESKTOP_PARAM, prepareMcpAuthorization} from "@/lib/mcp-authorization";
 import {getDesktopBridge} from "@/lib/desktop/bridge";
 import {useAuth} from "@/lib/auth-context";

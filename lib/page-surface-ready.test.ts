@@ -13,7 +13,7 @@ import {
 afterEach(() => vi.restoreAllMocks());
 
 describe("prepared page surface", () => {
-  it("keeps the editor mounted when a menu opens after navigation freshness expires", () => {
+  it("keeps an authorized editor mounted when a menu opens after navigation freshness expires", () => {
     const initialTime = 10_000_000;
     const now = vi.spyOn(Date, "now").mockReturnValue(initialTime);
     preparePageNavigation("prepared-page", initialTime);
@@ -26,8 +26,8 @@ describe("prepared page surface", () => {
       }, []);
       return createElement("div", { contentEditable: true, suppressContentEditableWarning: true }, "Unsaved document");
     }
-    function Surface({ menuOpen = false }: { menuOpen?: boolean }) {
-      const ready = usePageSurfaceReady("prepared-page", initialTime, false);
+    function Surface({ menuOpen = false, preparedAuthorized = true }: { menuOpen?: boolean; preparedAuthorized?: boolean }) {
+      const ready = usePageSurfaceReady("prepared-page", initialTime, false, false, preparedAuthorized);
       return createElement("section", { "data-menu-open": menuOpen },
         ready ? createElement(Document) : "Loading");
     }
@@ -38,7 +38,7 @@ describe("prepared page surface", () => {
       const editor = host.querySelector("[contenteditable]");
       expect(mounted).toHaveBeenCalledTimes(1);
       now.mockReturnValue(initialTime + PAGE_NAVIGATION_FRESH_MS + 1);
-      flushSync(() => root.render(createElement(Surface, { menuOpen: true })));
+      flushSync(() => root.render(createElement(Surface, { menuOpen: true, preparedAuthorized: false })));
       expect(host.querySelector("[contenteditable]")).toBe(editor);
       expect(host.textContent).toBe("Unsaved document");
       expect(unmounted).not.toHaveBeenCalled();
@@ -65,5 +65,21 @@ describe("prepared page surface", () => {
     } finally {
       flushSync(() => root.unmount());
     }
+  });
+
+  it("requires a new read when a prepared body has been invalidated", () => {
+    const initialTime = 30_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(initialTime);
+    preparePageNavigation("invalidated-page", initialTime);
+    function Surface({ fetched }: { fetched: boolean }) {
+      return createElement("div", null, usePageSurfaceReady("invalidated-page", initialTime, fetched, true, true) ? "Document" : "Loading");
+    }
+    const host = document.createElement("div"); const root = createRoot(host);
+    try {
+      flushSync(() => root.render(createElement(Surface, { fetched: false })));
+      expect(host.textContent).toBe("Loading");
+      flushSync(() => root.render(createElement(Surface, { fetched: true })));
+      expect(host.textContent).toBe("Document");
+    } finally { flushSync(() => root.unmount()); }
   });
 });

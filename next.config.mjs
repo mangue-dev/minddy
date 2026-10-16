@@ -281,6 +281,10 @@ const nextConfig = {
   // packages functions through its adapter; combining its adapter with Next 16.3's
   // standalone finalizer omits the root trace manifest that the finalizer expects.
   output: process.env.VERCEL === "1" ? undefined : "standalone",
+  // The build checks application code only. Tests import Electron sources, whose
+  // dependencies live in `desktop/node_modules`, which Vercel does not install;
+  // `npm run typecheck` still covers them with the root configuration.
+  typescript: { tsconfigPath: "tsconfig.build.json" },
   // Pin the workspace root to this app so Turbopack doesn't walk up into the
   // sibling mangue-ui monorepo (mangue-ui is a `file:` dependency).
   turbopack: { root: dir },

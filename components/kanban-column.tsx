@@ -2,15 +2,13 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
-import { Fragment, memo, useCallback, useRef } from "react";
+import { memo, useCallback, useRef } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "mangue-ui";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
 import type { DropPreview } from "@/lib/board-drag";
 import {
-  BoardDropIndicator,
-  BoardDropLandingPlaceholder,
   type BoardLandingPreview,
   useRevealDropIndicator,
 } from "@/components/board-drop-indicator";
@@ -26,6 +24,7 @@ import type {
 } from "@/lib/types";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
+import { BoardWindowedItems } from "@/components/board-windowed-items";
 import { IssueCard } from "@/components/issue-card";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
@@ -159,19 +158,19 @@ export const KanbanColumn = memo(function KanbanColumn({
           onScroll={scrollProps.onScroll}
           className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2"
         >
-          {issues.map((issue) => {
-            const parent = issue.parent_id
-              ? (issueMap.get(issue.parent_id) ?? null)
-              : null;
-            return (
-              <Fragment key={issue.id}>
-                {landingHere && landingPreview.beforeIssueId === issue.id && (
-                  <BoardDropLandingPlaceholder height={landingPreview.height} />
-                )}
-                {dropPreview?.beforeIssueId === issue.id && (
-                  <BoardDropIndicator count={dropPreview.count} />
-                )}
+          <BoardWindowedItems
+            issues={issues}
+            status={status.value}
+            scrollerRef={scrollerRef}
+            dropPreview={dropPreview}
+            landingPreview={landingPreview}
+            renderIssue={(issue, onInteractionChange) => {
+              const parent = issue.parent_id
+                ? (issueMap.get(issue.parent_id) ?? null)
+                : null;
+              return (
                 <IssueCard
+                  onInteractionChange={onInteractionChange}
                   onNavigate={router.push}
                   issue={issue}
                   projectId={projectId}
@@ -200,16 +199,9 @@ export const KanbanColumn = memo(function KanbanColumn({
                     !!currentCycleId && issue.cycle_id === currentCycleId
                   }
                 />
-              </Fragment>
-            );
-          })}
-          {/* `beforeIssueId === null`: the packet is placed at the end of the column. */}
-          {dropPreview && dropPreview.beforeIssueId === null && (
-            <BoardDropIndicator count={dropPreview.count} />
-          )}
-          {landingHere && landingPreview.beforeIssueId === null && (
-            <BoardDropLandingPlaceholder height={landingPreview.height} />
-          )}
+              );
+            }}
+          />
 
           <button
             type="button"
