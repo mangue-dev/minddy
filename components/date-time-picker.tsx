@@ -6,7 +6,8 @@
 // and renders one of four triggers via `variant`. Values are ISO strings
 // (local wall-clock time preserved); `null` means unset.
 
-import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/components/ui/responsive-popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
+import { PointerAnchor } from "@/components/pointer-anchor";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DateTimeIcon, RepeatIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
@@ -426,13 +427,7 @@ export function DateTimePicker({
   const popover = (
     <Popover open={open} onOpenChange={setOpen}>
       {variant === "anchored" ? (
-        <PopoverAnchor asChild>
-          <span
-            aria-hidden
-            style={{ position: "fixed", left: anchor?.x ?? 0, top: anchor?.y ?? 0,
-            }}
-          />
-        </PopoverAnchor>
+        <PointerAnchor position={anchor ?? { x: 0, y: 0 }} />
       ) : (
         // The `TooltipTrigger` is there even without a tooltip (MIN-313): it is
         // the opening which varies, the more the shape of the tree. The variant

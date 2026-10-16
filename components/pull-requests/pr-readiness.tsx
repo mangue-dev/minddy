@@ -14,13 +14,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Popover,
-  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
   Spinner,
   cn,
 } from "mangue-ui";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { PointerAnchor } from "@/components/pointer-anchor";
 import { ChecksDonut } from "@/components/pull-requests/pr-insights";
 import type { ChecksSummary } from "@/lib/agent-api";
 
@@ -331,7 +331,7 @@ export function PrReadinessControl({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       {position ? (
-        <PopoverAnchor asChild><span aria-hidden style={{ position: "fixed", left: position.x, top: position.y }} /></PopoverAnchor>
+        <PointerAnchor position={position} />
       ) : <PopoverTrigger asChild>
         <Button
           data-testid="pr-readiness-control"
