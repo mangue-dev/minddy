@@ -182,6 +182,11 @@ export interface DecisionOutcome {
    */
   confidence: number;
   fallbackReason: DecisionFallbackReason | null;
+  /**
+   * The LLM fallback failed and only Jev answers that individually met the
+   * confidence floor were kept (MIN-687). Opt-in per caller.
+   */
+  partial?: boolean;
 }
 
 /** Clamp a 0–1 number; anything non-numeric or out of range folds into the bound. */
@@ -189,6 +194,21 @@ export function clamp01(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : Number.parseFloat(String(value));
   if (!Number.isFinite(parsed)) return null;
   return Math.min(1, Math.max(0, parsed));
+}
+
+/**
+ * The answers whose own confidence (or probability, when the engine gave no
+ * confidence) meets the floor. An answer carrying neither is not kept:
+ * unknown confidence is not confidence. Pure; the runner uses it to salvage
+ * a low-confidence Jev decision when the LLM fallback fails.
+ */
+export function confidentAnswers(answers: DecisionAnswers, floor: number): DecisionAnswers {
+  const kept: DecisionAnswers = {};
+  for (const [key, answer] of Object.entries(answers)) {
+    const value = clamp01(answer.confidence) ?? clamp01(answer.probability);
+    if (value !== null && value >= floor) kept[key] = answer;
+  }
+  return kept;
 }
 
 /**

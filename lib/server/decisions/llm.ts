@@ -3,6 +3,7 @@ import "server-only";
 import type { ByokModelKey } from "@/lib/ai-surfaces";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AiFeature } from "@/lib/server/ai-usage-shape";
+import { loadOpenRouterIndex } from "@/lib/server/agent/openrouter-index";
 import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/decisions/types";
@@ -159,6 +160,17 @@ export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>):
     }
   }
   return answers;
+}
+
+/**
+ * Start loading the model catalog while Jev answers (MIN-687), so a
+ * fallback on a fresh instance already knows whether reasoning can be
+ * disabled. Fire-and-forget: `forcedToolCall` shares the in-flight load and
+ * bounds any remaining wait itself.
+ */
+export function warmLlmDecision(spec: DecisionSpec): void {
+  if (!LLM_PASSES[spec.useCase].preferNonReasoning) return;
+  void loadOpenRouterIndex().catch(() => {});
 }
 
 /**

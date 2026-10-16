@@ -390,19 +390,44 @@ export async function runSmartFill({
   try {
     const config = await getAppConfigValues(["smart_fill_enabled"]);
     const enabled = (config["smart_fill_enabled"] ?? aiModelFallback("smart_fill_enabled")) !== "false";
-    if (!enabled) return {};
+    if (!enabled) {
+      console.warn("[smart-fill] skipped: platform_disabled");
+      return {};
+    }
     // The budget of THE ONE WHO ARMED the scale, as for dictation. Dry, we
     // does not fill out — and the ticket is still born.
-    if (!(await hasUsageBudget(billToUserId, "automations", "smart_fill_model"))) return {};
+    if (!(await hasUsageBudget(billToUserId, "automations", "smart_fill_model"))) {
+      console.warn("[smart-fill] skipped: budget_exhausted");
+      return {};
+    }
 
-    const ctx = await gatherContext(projectId);
+    const ctx = await gatherContext(projectId).catch(() => null);
+    if (!ctx) {
+      console.error("[smart-fill] fill failed: context_unavailable");
+      return {};
+    }
     const spec = buildSmartFillSpec({ projectName, title, description, ctx });
-    const outcome = await runDecision(spec, { billTo: { userId: billToUserId }, projectId });
+    // A failed LLM fallback keeps the Jev fields that met the floor on their
+    // own (MIN-687): a partly filled ticket beats an empty one.
+    const outcome = await runDecision(spec, {
+      billTo: { userId: billToUserId },
+      projectId,
+      keepConfidentJevAnswers: true,
+    });
     // `null` (both engines down) and an outcome without answers land on the
     // same empty patch: the ticket is born as it was written.
-    return sanitizeSmartFill(outcome ? smartFillAnswersToRaw(outcome.answers) : null, ctx);
-  } catch (err) {
-    console.error("[smart-fill] fill failed:", (err as Error).message);
+    const patch = sanitizeSmartFill(outcome ? smartFillAnswersToRaw(outcome.answers) : null, ctx);
+    if (!outcome || outcome.partial || Object.keys(patch).length === 0) {
+      // Fixed codes and field names only, so an unfilled ticket is attributable.
+      console.warn(
+        `[smart-fill] outcome: ${outcome ? `${outcome.engine}${outcome.partial ? "_partial" : ""}` : "no_decision"} fields=${
+          Object.keys(patch).join(",") || "none"
+        }`
+      );
+    }
+    return patch;
+  } catch {
+    console.error("[smart-fill] fill failed: unexpected_error");
     return {};
   }
 }

@@ -57,6 +57,7 @@ vi.mock("@/lib/server/decisions/jev", () => ({
 }));
 vi.mock("@/lib/server/decisions/llm", () => ({
   runLlmDecision: runLlmDecisionMock,
+  warmLlmDecision: () => {},
 }));
 vi.mock("@/lib/server/issue-events", () => ({
   insertEvents: insertEventsMock,
