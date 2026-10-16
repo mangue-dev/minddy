@@ -11,7 +11,7 @@ import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
 import { useLocale, useNow, useTranslations, useFormatter } from "next-intl";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -644,6 +644,19 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useMobileCollectionState(`/projects/${projectId}/feedback`, "query", "");
+  // `?new=1` (the sidebar's "New feedback" entry) opens the composer once.
+  // Only the active route consumes it: a retained tab or a browsed sidebar
+  // list must not open a dialog meant for another tab. The other parameters
+  // (filters, `post`) stay in the address.
+  const active = useAppTabActive();
+  const newParam = browse ? null : searchParams.get("new");
+  useEffect(() => {
+    if (!active || newParam !== "1") return;
+    setCreateOpen(true);
+    const remaining = new URLSearchParams(searchParams);
+    remaining.delete("new");
+    router.replace(pathname + (remaining.size ? `?${remaining}` : ""));
+  }, [active, newParam, pathname, router, searchParams]);
 
   // We arrive on this page to decide what is not decided: the
   // column therefore opens on the open returns, and not on the hundreds

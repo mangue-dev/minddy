@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,17 @@
       "content/documentation/reviews/visual-refresh-captures-2026-10-09.json",
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-677-editor-captures.json",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
+      "components/routines/routines-panel.tsx",
+      "components/routines/use-routine-actions.tsx",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; pt-BR translation of removal edits; no operational rerun)",
-    "language": "agent:/root (pt-BR translation, label and retained-meaning self-review); agent:/root/min721_pt-BR (pt-BR translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 8,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; pt-BR translation of removal edits; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 8; pt-BR translation of added passages; no operational rerun)",
+    "language": "agent:/root (pt-BR translation, label and retained-meaning self-review); agent:/root/min721_pt-BR (pt-BR translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [],
   "aliases": [],
@@ -58,7 +61,7 @@
       "src": "/documentation/pt-BR/scheduled-routines-workflow.png",
       "alt": "Modos Agendado e Evento, um grupo de condições, ícones do aplicativo e botões de informação discretos.",
       "caption": "Demonstração local do editor real de gatilhos. Nenhuma rotina foi salva ou executada.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -104,6 +107,8 @@ Uma entrada sem a propriedade exigida aguarda uma edição que satisfaça o filt
 ## Gerenciar e verificar execuções {#runs}
 
 Abra a rotina para consultar as esperas, mudar instruções ou gatilho, pausar ou ler as execuções. Pausar, excluir ou mudar a configuração invalida as esperas. Reativar passa a ouvir eventos futuros sem repetir chegadas antigas. A execução manual funciona com qualquer gatilho sem aguardar seu evento e também consome orçamento.
+
+Clique com o botão direito em uma rotina da lista para abrir a última execução sem selecioná-la primeiro; **Abrir a última execução** fica indisponível até a rotina ter sido executada. O proprietário do projeto também pode escolher **Executar agora**, **Pausar** ou **Reativar**, **Editar** ou **Mover para a lixeira** no mesmo menu. **Reativar** fica indisponível quando a instância não pode agendar rotinas. Os outros membros só veem entradas que não alteram a rotina. Para criar uma rotina, clique com o botão direito em **Rotinas** na barra lateral e escolha **Nova rotina**.
 
 Cada execução usa o orçamento de IA do proprietário com limite padrão de 15 % do orçamento mensal, incluindo todas as chamadas ao Numo dessa execução. Abra a conversa para ver origem, resultado e perguntas. Quando sua resposta for necessária, responda nessa conversa; o orçamento restante é mantido. Consulte os resultados salvos antes de mudar o limite ou tentar novamente. Após mudar o proprietário, a rotina do antigo proprietário não pode iniciar novo trabalho; crie outra como proprietário atual.
 

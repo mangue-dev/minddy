@@ -3927,7 +3927,10 @@
     "searchReviewers": "Search reviewers",
     "noReviewersFound": "No reviewers available",
     "reviewerRequestSent": "Review requested from {reviewer}",
-    "reviewerRequestFailed": "Could not request the review. Try again."
+    "reviewerRequestFailed": "Could not request the review. Try again.",
+    "copyFixPrompt": "Copy fix prompt",
+    "fixWithNumo": "Fix with Numo",
+    "mergeNoLongerAllowed": "This pull request can no longer be merged as it stands."
   },
   "Triage": {
     "projectNotFound": "Project not found",
@@ -6020,7 +6023,10 @@
     "runStatusWorking": "Working",
     "runStatusIdle": "Idle",
     "runStatusFailed": "Failed",
-    "runStatusCanceled": "Canceled"
+    "runStatusCanceled": "Canceled",
+    "openLatestRun": "Open latest run",
+    "pause": "Pause",
+    "resume": "Resume"
   },
   "McpClients": {
     "title": "MCP for Numo",

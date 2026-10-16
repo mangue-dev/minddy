@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,19 @@
       "components/issue-field-shortcuts.tsx",
       "lib/keyboard/shortcuts.ts",
       "lib/keyboard/keyboard-context.tsx",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "components/project-context-actions.tsx",
+      "lib/sidebar-context-actions.ts",
+      "components/routines/routines-panel.tsx",
+      "components/pull-requests/pr-context-actions.tsx",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (es changed-passage parity and label review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (es changed-passage parity and label review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "views",
@@ -68,7 +73,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +89,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -111,6 +116,18 @@ La navegación principal da acceso a tu trabajo personal y a tus proyectos. Sele
 Los ciclos personales y las vistas entre proyectos abarcan los proyectos a los que tienes acceso. Los objetivos, la wiki y las sugerencias de un proyecto pertenecen a un único proyecto. Comprueba el proyecto activo antes de crear trabajo o modificar ajustes.
 
 ![Navegación del proyecto junto al tablero de incidencias de demostración.](/documentation/es/work-navigation.png)
+
+### Actuar desde una fila de la barra lateral {#sidebar-menus}
+
+Haz clic derecho en una fila de la barra lateral para actuar sobre lo que representa sin abrirlo primero. Las filas de enlace también ofrecen **Abrir en una pestaña nueva** y **Copiar enlace**. Una acción que mueve algo a la papelera siempre aparece al final, tras un separador.
+
+- La fila **Todas las incidencias** ofrece **Nueva incidencia**, y la fila **Rutinas** ofrece **Nueva rutina** si eres propietario de un proyecto.
+- Una fila de proyecto, o el nombre del proyecto en la parte superior de su panel, ofrece **Nuevo** (una incidencia, un objetivo o una página en ese proyecto) y **Configuración del proyecto**. El propietario del proyecto también ve **Mover a la papelera**, que pide la misma confirmación que la configuración del proyecto.
+- Una pestaña de proyecto ofrece su propia creación: **Nueva incidencia** en Incidencias, **Nuevo objetivo** en Objetivos, **Nueva página** en Páginas y **Nueva sugerencia** en Sugerencias, que abre el formulario interno de sugerencias.
+- Una fila de rutina ofrece **Abrir la última ejecución** y, al propietario del proyecto, **Ejecutar ahora**, **Pausar** o **Reactivar**, **Editar** y **Mover a la papelera**. Consulta [Gestionar y comprobar ejecuciones](/es/documentacion/scheduled-routines#runs).
+- Una fila de pull request ofrece los cambios que permite su estado actual, **Fusionar** cuando está lista y acciones de corrección cuando algo la bloquea. Consulta [Revisión y fusión](/es/documentacion/code-work#decision).
+
+La acción se aplica a la fila en la que hiciste clic, aunque haya otro proyecto o elemento abierto.
 
 ### Paneles y navegación móvil {#panels}
 

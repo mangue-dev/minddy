@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import { useAppRouter } from "@/lib/use-app-router";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button, ConfirmDeleteDialog, toast } from "mangue-ui";
+import { Button } from "mangue-ui";
+import { ProjectTrashDialog } from "@/components/projects/project-trash-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -25,7 +26,6 @@ import {
   PROJECT_SETTINGS_DEFAULT_TAB,
   SETTINGS_SECTIONS,
 } from "@/lib/settings-sections";
-import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
@@ -34,13 +34,12 @@ import { SmartAssignIcon } from "@/components/smart-icons";
 
 export default function ProjectSettingsPage({ browse, projectId }: { browse?: SidebarBrowseTarget; projectId?: string } = {}) {
   const t = useTranslations("Settings");
-  const tc = useTranslations("Common");
   const tRecurrence = useTranslations("Recurrence");
   const params = useParams<{ id: string }>();
   const id = projectId ?? params.id;
   const router = useAppRouter();
   const { user } = useAuth();
-  const { projects, loading: projectsLoading, deleteProject } = useProjects();
+  const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === id);
   useAssistantContext(
     !browse && project ? { projectId: project.id, settings: "project" } : null,
@@ -80,11 +79,6 @@ export default function ProjectSettingsPage({ browse, projectId }: { browse?: Si
 
   const isOwner = project.owner_id === user?.id;
 
-  const handleDelete = async () => {
-    await deleteProject(project.id);
-    toast.success(t("projectDeleted", { name: project.name }));
-    router.replace("/home");
-  };
 
   const tabs: SettingsTab[] = [
     {
@@ -195,14 +189,11 @@ export default function ProjectSettingsPage({ browse, projectId }: { browse?: Si
         audience={isOwner ? "owner" : "member"}
       />
 
-      <ConfirmDeleteDialog
+      <ProjectTrashDialog
+        project={project}
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={t("deleteProjectTitle", { name: project.name })}
-        description={t("deleteProjectDescription", { days: TRASH_RETENTION_DAYS })}
-        confirmLabel={tc("moveToTrash")}
-        cancelLabel={tc("cancel")}
-        onConfirm={handleDelete}
+        onTrashed={() => router.replace("/home")}
       />
     </>
   );

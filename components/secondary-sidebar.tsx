@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -19,6 +20,7 @@ import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { normalizeAppTabLocation } from "@/lib/app-tab-location";
 import { IssueContextMenu, type ContextMenuAction } from "@/components/issue-context-menu";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
+import { composeSidebarContextActions } from "@/lib/sidebar-context-actions";
 
 /**
  * Width of the column the primary sidebar takes when it hosts this bar
@@ -34,6 +36,47 @@ export const SECONDARY_WIDTH = 320;
  */
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+type SidebarMenuState = { x: number; y: number; href: string; target: Element | null };
+
+/**
+ * The right-click menu of a collection list, shared by every rendering of it
+ * (route-owned desktop bar, mobile menu portal, browsed level): resolve the
+ * row under the pointer, build its actions, and keep the shared navigation
+ * entries between the object's actions and its destructive ones.
+ */
+function useCollectionContextMenu(
+  itemContextActions: ((target: Element) => ContextMenuAction[]) | undefined,
+  onItemContextMenu: ((target: Element | null) => void) | undefined,
+) {
+  const [menu, setMenu] = useState<SidebarMenuState | null>(null);
+  const navigationActions = useNavigationContextActions(menu?.href);
+  const actions = useMemo(
+    () => composeSidebarContextActions(
+      menu?.target ? itemContextActions?.(menu.target) ?? [] : [],
+      navigationActions,
+    ),
+    [menu, itemContextActions, navigationActions],
+  );
+  const onContextMenu = useCallback((event: MouseEvent<HTMLElement>) => {
+    if (event.defaultPrevented || !(event.target instanceof Element)) return;
+    const target = event.target.closest<HTMLElement>("a[href], [data-navigation-href]");
+    if (!target || !event.currentTarget.contains(target)) return;
+    const href = target.dataset.navigationHref ?? target.getAttribute("href");
+    const destination = normalizeAppTabLocation(href);
+    if (!destination) return;
+    // The gesture opens the menu only: no selection, no navigation.
+    event.preventDefault();
+    event.stopPropagation();
+    setMenu({ x: event.clientX, y: event.clientY, href: destination, target });
+    onItemContextMenu?.(target);
+  }, [onItemContextMenu]);
+  const close = useCallback(() => {
+    setMenu(null);
+    onItemContextMenu?.(null);
+  }, [onItemContextMenu]);
+  return { menu, actions, onContextMenu, close };
+}
 
 /**
  * The navigation column of a page — list of pull requests, sessions
@@ -54,6 +97,7 @@ export function SecondarySidebar({
   actions,
   hiddenOnMobile,
   itemContextActions,
+  onItemContextMenu,
   children,
 }: {
   /**
@@ -93,6 +137,12 @@ export function SecondarySidebar({
    * link” entries, which always close the menu.
    */
   itemContextActions?: (target: Element) => ContextMenuAction[];
+  /**
+   * Told which row's menu opened (`null` once it closed), for lists whose
+   * actions depend on a read started at that moment. The menu re-reads
+   * `itemContextActions` whenever the caller passes a new one.
+   */
+  onItemContextMenu?: (target: Element | null) => void;
   children: ReactNode;
 }) {
   const { headerSlot, slot, register, hosting, mobileHost } = useSecondarySidebar();
@@ -102,17 +152,12 @@ export function SecondarySidebar({
   // sidebar's route-level panel anyway (routeHasSecondaryNav), and
   // teleporting before knowing where it goes would diverge the hydration.
   const [mounted, setMounted] = useState(false);
-  const [navigationMenu, setNavigationMenu] = useState<{
-    x: number;
-    y: number;
-    href: string;
-    target: Element | null;
-  } | null>(null);
-  const navigationActions = useNavigationContextActions(navigationMenu?.href);
-  const itemActions = useMemo(
-    () => (navigationMenu?.target ? itemContextActions?.(navigationMenu.target) ?? [] : []),
-    [navigationMenu, itemContextActions],
-  );
+  const {
+    menu: navigationMenu,
+    actions: menuActions,
+    onContextMenu,
+    close: closeMenu,
+  } = useCollectionContextMenu(itemContextActions, onItemContextMenu);
 
   useIsoLayoutEffect(() => {
     setMounted(true);
@@ -120,8 +165,8 @@ export function SecondarySidebar({
   }, [register]);
   useEffect(() => {
     // The menu portals to body, outside the hidden panel's inert subtree.
-    if (!isMobileLayout && !hosting) setNavigationMenu(null);
-  }, [hosting, isMobileLayout]);
+    if (!isMobileLayout && !hosting) closeMenu();
+  }, [hosting, isMobileLayout, closeMenu]);
 
   if (!mounted) return null;
 
@@ -139,18 +184,7 @@ export function SecondarySidebar({
       aria-label={title}
       data-sidebar-navigation
       className="flex min-h-0 flex-1 flex-col"
-      onContextMenu={(event: MouseEvent<HTMLElement>) => {
-        if (event.defaultPrevented || !(event.target instanceof Element)) return;
-        const target = event.target.closest<HTMLElement>(
-          "a[href], [data-navigation-href]",
-        );
-        if (!target || !event.currentTarget.contains(target)) return;
-        const href = target.dataset.navigationHref ?? target.getAttribute("href");
-        const destination = normalizeAppTabLocation(href);
-        if (!destination) return;
-        event.preventDefault();
-        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination, target });
-      }}
+      onContextMenu={onContextMenu}
     >
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
         {children}
@@ -161,10 +195,11 @@ export function SecondarySidebar({
   if (isMobileLayout && mobileHost?.route === pathname) {
     return <>
       {createPortal(header, mobileHost.header)}
-      {createPortal(<div data-mobile-collection-navigation onClick={(event) => {
+      {createPortal(<div data-mobile-collection-navigation onContextMenu={onContextMenu} onClick={(event) => {
         if (event.defaultPrevented || !(event.target instanceof Element)) return;
         if (event.target.closest("a[href], [data-navigation-href], [data-sidebar-navigation-item]")) mobileHost.onNavigate();
       }}>{children}</div>, mobileHost.body)}
+      <IssueContextMenu position={navigationMenu} onClose={closeMenu} actions={menuActions} searchable={false} />
     </>;
   }
 
@@ -177,8 +212,8 @@ export function SecondarySidebar({
             {body}
             <IssueContextMenu
               position={hosting ? navigationMenu : null}
-              onClose={() => setNavigationMenu(null)}
-              actions={[...itemActions, ...navigationActions]}
+              onClose={closeMenu}
+              actions={menuActions}
               searchable={false}
             />
           </>,
@@ -201,18 +236,7 @@ export function SecondarySidebar({
         "w-full shrink-0 app-desktop:flex app-desktop:w-80 app-desktop:border-r",
         hiddenOnMobile ? "hidden" : "flex",
       )}
-      onContextMenu={(event: MouseEvent<HTMLElement>) => {
-        if (event.defaultPrevented || !(event.target instanceof Element)) return;
-        const target = event.target.closest<HTMLElement>(
-          "a[href], [data-navigation-href]",
-        );
-        if (!target || !event.currentTarget.contains(target)) return;
-        const href = target.dataset.navigationHref ?? target.getAttribute("href");
-        const destination = normalizeAppTabLocation(href);
-        if (!destination) return;
-        event.preventDefault();
-        setNavigationMenu({ x: event.clientX, y: event.clientY, href: destination, target });
-      }}
+      onContextMenu={onContextMenu}
     >
       {header}
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -220,8 +244,8 @@ export function SecondarySidebar({
       </div>
       <IssueContextMenu
         position={navigationMenu}
-        onClose={() => setNavigationMenu(null)}
-        actions={[...itemActions, ...navigationActions]}
+        onClose={closeMenu}
+        actions={menuActions}
         searchable={false}
       />
     </aside>
@@ -263,6 +287,14 @@ export function CollectionSidebar({ browse, children, ...props }: ComponentProps
   browse?: SidebarBrowseTarget;
 }) {
   if (!browse) return <SecondarySidebar {...props}>{children}</SecondarySidebar>;
+  return <BrowsedCollection browse={browse} {...props}>{children}</BrowsedCollection>;
+}
+
+/** A collection shown while browsing another level: same rows, same right-click menu. */
+function BrowsedCollection({ browse, children, ...props }: ComponentProps<typeof SecondarySidebar> & {
+  browse: SidebarBrowseTarget;
+}) {
+  const { menu, actions, onContextMenu, close } = useCollectionContextMenu(props.itemContextActions, props.onItemContextMenu);
   return <>
     {browse.headerHost && createPortal(<SecondarySidebarHeader title={props.title} filter={props.filter} actions={props.actions} />, browse.headerHost)}
     <div data-sidebar-browse-collection onClickCapture={(event) => {
@@ -274,6 +306,7 @@ export function CollectionSidebar({ browse, children, ...props }: ComponentProps
       event.preventDefault();
       event.stopPropagation();
       browse.onSelect(href);
-    }}>{children}</div>
+    }} onContextMenu={onContextMenu}>{children}</div>
+    <IssueContextMenu position={menu} onClose={close} actions={actions} searchable={false} />
   </>;
 }

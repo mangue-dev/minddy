@@ -43,12 +43,6 @@ import { useSearchIndex } from "@/lib/use-search-index";
 import { mergeByProject } from "@/lib/palette-index-merge";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
-import { forgetDraftPage, markDraftPage } from "@/lib/pages-draft";
-import {
-  pageHref,
-  pagesHref,
-  replacePagesHistory,
-} from "@/lib/pages-navigation";
 import { usePaletteDataGroups, useWikiPageNavigation } from "@/lib/use-palette-data-groups";
 import {
   useOpenPullRequestCountQuery,
@@ -71,6 +65,7 @@ import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { HeaderWindowButtonsSlot } from "@/components/desktop-window-buttons";
 import { ProjectOrb, projectOrbIcon } from "@/components/project-orb";
+import { ProjectContextActionsProvider, useCreateProjectPage, useProjectContextActions } from "@/components/project-context-actions";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { NumoIcon } from "@/components/numo-icon";
 import {
@@ -404,7 +399,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // The current project wiki pages, for ⌘K (MIN-270). Same cache as
   // the tree of the Pages tab: opening the tab does not ask for anything, and a page
   // fame there changes name in the palette without going back and forth.
-  const { pages: wikiPages, createPage: createWikiPage } =
+  const { pages: wikiPages } =
     usePagesQuery(paletteOpen ? currentProjectId : null);
 
   /**
@@ -419,31 +414,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
    * `markDraftPage`, like everywhere else: a created page is not a page
    * saved, and leaving without writing a letter in it makes it disappear.
    */
-  const createPageFromPalette = useCallback(
-    (projectId: string) => {
-      void (async () => {
-        try {
-          const page = await createWikiPage({});
-          markDraftPage(page.id);
-          navigateToWikiPage(projectId, page.id);
-          void page.settled.catch((err: unknown) => {
-            forgetDraftPage(page.id);
-            if (window.location.pathname === pageHref(projectId, page.id)) {
-              replacePagesHistory(pagesHref(projectId));
-            }
-            toast.error(
-              err instanceof Error ? err.message : tPages("createFailed")
-            );
-          });
-        } catch (err) {
-          toast.error(
-            err instanceof Error ? err.message : tPages("createFailed")
-          );
-        }
-      })();
-    },
-    [createWikiPage, navigateToWikiPage, tPages]
-  );
+  const createPageFromPalette = useCreateProjectPage(navigateToWikiPage);
+  const projectContext = useProjectContextActions({ createProjectPage: createPageFromPalette });
 
   // Cross-project search (MIN-91): every ticket and objective of every project,
   // so ⌘K finds them from any page. Loaded once per tab on browser idle (or on
@@ -1163,6 +1135,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     descends: true,
     disabled: !agentsAllowed,
     tooltip: agentsAllowed ? undefined : tBilling("agentsGateTitle"),
+    // Only an owner can schedule a routine; the page checks the scheduler.
+    contextActions: agentsAllowed && projects.some((p) => p.owner_id === user?.id) ? [{
+      id: "routines-new",
+      label: tRoutines("newRoutine"),
+      icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />,
+      transfersFocus: true,
+      onSelect: () => router.push("/routines?new=1"),
+    }] : undefined,
   };
 
   /**
@@ -1185,6 +1165,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             href: "/all",
             active: pathname === "/all",
             shortcut: "B",
+            contextActions: projects.length > 0 ? [{
+              id: "all-new-issue",
+              label: t("newIssue"),
+              icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
+              transfersFocus: true,
+              onSelect: () => openCreateIssue(),
+            }] : undefined,
           },
           {
             key: "home",
@@ -1212,6 +1199,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               // Entering a project swaps the whole sidebar the same way a
               // level-2 page does: the row says so with its chevron.
               descends: true,
+              contextActions: projectContext.projectActions(p),
               ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
             };
           }),
@@ -1253,7 +1241,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pathname, inboxCount, openPrCount, projects, projectDrafts, openProjectDraft, deleteProjectDraft, triageCounts, openCreateProject, agentsAllowed, projectLimitReached, smartAssignBadge, t, tProjects]
+    [pathname, inboxCount, openPrCount, projects, projectDrafts, openProjectDraft, deleteProjectDraft, triageCounts, openCreateProject, openCreateIssue, agentsAllowed, projectLimitReached, smartAssignBadge, projectContext.projectActions, user?.id, t, tProjects]
   );
 
   const sections = useMemo<AppNavSection[]>(() => {
@@ -1284,6 +1272,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               active: pathname === base && !objectiveBoardId,
               // P (project) — B is the all-project board, from a project too.
               shortcut: "P",
+              contextActions: projectContext.tabActions(currentProject, "tickets"),
             },
             {
               key: "objectives",
@@ -1294,6 +1283,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 pathname.startsWith(`${base}/objectives`) || !!objectiveBoardId,
               shortcut: "O",
               descends: true,
+              contextActions: projectContext.tabActions(currentProject, "objectives"),
             },
             // Between Objectives and Triage: the project wiki can be read with what
             // says WHERE the project is GOING, and not with the files that we empty. Sorting,
@@ -1307,6 +1297,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               active: pathname.startsWith(`${base}/pages`),
               shortcut: "W",
               descends: true,
+              contextActions: projectContext.tabActions(currentProject, "pages"),
             },
             {
               key: "triage",
@@ -1329,6 +1320,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               active: pathname.startsWith(`${base}/feedback`),
               shortcut: "F",
               descends: true,
+              contextActions: projectContext.tabActions(currentProject, "feedback"),
               ...countBadges(
                 feedbackCount,
                 t("feedbackBadge", { count: feedbackCount })
@@ -1347,7 +1339,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         },
       ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProject, homeSections, pathname, objectiveBoardId, triageCount, feedbackCount, homeBadge, t]);
+  }, [currentProject, homeSections, pathname, objectiveBoardId, triageCount, feedbackCount, homeBadge, projectContext.tabActions, t]);
 
   // Inbox is a compact top control on desktop. Mobile keeps the regular row,
   // where there is no primary sidebar to host that control.
@@ -1404,11 +1396,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind === "pages" && pathname.startsWith(`${base}/pages`) ? pathname : `${base}/${kind}`,
         render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} /> });
       panels.set(project.id, { key: `project-${project.id}`, title: project.name, project, sections: [{ items: [
-        { key: "tickets", label: t("tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
-        { key: "objectives", label: t("objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
-        { key: "pages", label: t("pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
+        { key: "tickets", label: t("tickets"), contextActions: projectContext.tabActions(project, "tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
+        { key: "objectives", label: t("objectives"), contextActions: projectContext.tabActions(project, "objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
+        { key: "pages", label: t("pages"), contextActions: projectContext.tabActions(project, "pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
         { key: "triage", label: t("triage"), icon: menuIcon(TriageNavIcon), panel: resource("triage"), active: pathname.startsWith(`${base}/triage`), ...countBadges(triageCounts[project.id]?.triage ?? 0, t("triageBadge", {count: triageCounts[project.id]?.triage ?? 0})) },
-        { key: "feedback", label: t("feedback"), icon: menuIcon(MessageMultiple01Icon), panel: resource("feedback"), active: pathname.startsWith(`${base}/feedback`), ...countBadges(triageCounts[project.id]?.feedback ?? 0, t("feedbackBadge", {count: triageCounts[project.id]?.feedback ?? 0})) },
+        { key: "feedback", label: t("feedback"), contextActions: projectContext.tabActions(project, "feedback"), icon: menuIcon(MessageMultiple01Icon), panel: resource("feedback"), active: pathname.startsWith(`${base}/feedback`), ...countBadges(triageCounts[project.id]?.feedback ?? 0, t("feedbackBadge", {count: triageCounts[project.id]?.feedback ?? 0})) },
         { key: "settings", label: t("projectSettings"), icon: menuIcon(Settings01Icon), panel: settingsPanel(project), active: pathname.startsWith(`${base}/settings`) },
       ] }] });
     });
@@ -1425,7 +1417,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
       ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname } : undefined);
     return { sections: root, projects, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
-  }, [projects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, t]);
+  }, [projects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).
@@ -1468,6 +1460,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   }, [appTabSession]);
 
   return (
+    <ProjectContextActionsProvider value={projectContext.projectActions}>
     <div className="app-workspace relative flex h-dvh w-full min-w-0 flex-col overflow-hidden">
       <AppTopBar
         ready={Boolean(appTabSession)}
@@ -1551,7 +1544,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           defaultProjectId={currentProjectId}
         />
       )}
+      {projectContext.dialog}
     </AppShell>
     </div>
+    </ProjectContextActionsProvider>
   );
 }

@@ -366,6 +366,100 @@ export interface UsePagesResult {
 /** An optimistic summary plus the authoritative result of its creation POST. */
 export type PageCreation = PageSummary & { settled: Promise<Page> };
 
+/**
+ * Create a page in an explicit project. The pages hook binds creation to the
+ * project it reads; sidebar rows act on whichever project was right-clicked,
+ * so they call this through `useCreatePage` instead.
+ */
+export async function createProjectPage(
+  queryClient: QueryClient,
+  pid: string,
+  input: CreatePageInput = {},
+): Promise<PageCreation> {
+  // Markdown projection only exists on the server. This path is used by the
+  // project wizard, not by the blank-page gestures optimized below.
+  if (input.markdown !== undefined && input.content === undefined) {
+    const page = await createPageApi(pid, input);
+    const { content: _content, ...summary } = page;
+    await hushPages(queryClient, pid);
+    const current = readPages(queryClient, pid);
+    if (current) writePages(queryClient, pid, [...current, summary]);
+    else void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+    queryClient.setQueryData(pageKey(page.id), page);
+    return { ...summary, settled: Promise.resolve(page) };
+  }
+
+  const cached = readPages(queryClient, pid);
+  const current = cached ?? [];
+  const needsListRefresh = cached === undefined;
+  const optimistic = buildOptimisticPage(
+    pid,
+    { ...input, id: input.id ?? createUuid() },
+    current,
+  );
+  const { content: _content, ...summary } = optimistic;
+
+  // Cancellation starts synchronously, before the optimistic row is written,
+  // so an older list response cannot erase the new page afterwards.
+  void queryClient.cancelQueries({ queryKey: pagesKey(pid) });
+  const finishPresence = beginPagePresence(queryClient, pid, [summary], true);
+  preparePageNavigation(optimistic.id);
+  queryClient.setQueryData(pageKey(optimistic.id), optimistic);
+
+  // The POST owns the page query while it is in flight. PageView observes the
+  // optimistic body immediately, then receives the canonical server row on
+  // the same key without issuing a second GET.
+  const request = trackPageCreation(
+    optimistic.id,
+    queryClient.fetchQuery({
+      queryKey: pageKey(optimistic.id),
+      queryFn: () => fetchPageCreationData(queryClient, pid, optimistic.id, async () => {
+        if (optimistic.parent_id)
+          await waitForPageCreation(optimistic.parent_id);
+        return createPageApi(
+          pid,
+          { ...input, id: optimistic.id },
+          // Blank-page payloads are tiny enough for the browser's keepalive
+          // budget. Rich JSON bodies may exceed that budget and stay regular.
+          { keepalive: input.content === undefined },
+        );
+      }),
+      staleTime: 0,
+      retry: false,
+    }),
+  );
+  void request
+    .then((page) => {
+      const { content: _serverContent, ...serverSummary } = page;
+      const visibleSummary = withPreview(serverSummary);
+      finishPresence(true, [visibleSummary]);
+      if (needsListRefresh) {
+        void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+      }
+    })
+    .catch(() => {
+      finishPresence(false);
+      queryClient.removeQueries({ queryKey: pageKey(optimistic.id) });
+      if (needsListRefresh) {
+        void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
+      }
+    });
+  // This async function deliberately has no await on the optimistic path:
+  // callers can navigate next microtask, while dependent work can await the
+  // attached settlement and receive creation failures.
+  return { ...summary, settled: request };
+}
+
+/** Page creation keyed by the target project rather than by a pages query. */
+export function useCreatePage(): (projectId: string, input?: CreatePageInput) => Promise<PageCreation> {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (projectId: string, input: CreatePageInput = {}) =>
+      createProjectPage(queryClient, projectId, input),
+    [queryClient]
+  );
+}
+
 export function usePagesQuery(projectId: string | null): UsePagesResult {
   const queryClient = useQueryClient();
   const enabled = !!projectId;
@@ -384,81 +478,8 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   );
 
   const createPage = useCallback(
-    async (input: CreatePageInput = {}) => {
-      const pid = projectId as string;
-      // Markdown projection only exists on the server. This path is used by the
-      // project wizard, not by the blank-page gestures optimized below.
-      if (input.markdown !== undefined && input.content === undefined) {
-        const page = await createPageApi(pid, input);
-        const { content: _content, ...summary } = page;
-        await hushPages(queryClient, pid);
-        const current = readPages(queryClient, pid);
-        if (current) writePages(queryClient, pid, [...current, summary]);
-        else void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
-        queryClient.setQueryData(pageKey(page.id), page);
-        return { ...summary, settled: Promise.resolve(page) };
-      }
-
-      const cached = readPages(queryClient, pid);
-      const current = cached ?? [];
-      const needsListRefresh = cached === undefined;
-      const optimistic = buildOptimisticPage(
-        pid,
-        { ...input, id: input.id ?? createUuid() },
-        current,
-      );
-      const { content: _content, ...summary } = optimistic;
-
-      // Cancellation starts synchronously, before the optimistic row is written,
-      // so an older list response cannot erase the new page afterwards.
-      void queryClient.cancelQueries({ queryKey: pagesKey(pid) });
-      const finishPresence = beginPagePresence(queryClient, pid, [summary], true);
-      preparePageNavigation(optimistic.id);
-      queryClient.setQueryData(pageKey(optimistic.id), optimistic);
-
-      // The POST owns the page query while it is in flight. PageView observes the
-      // optimistic body immediately, then receives the canonical server row on
-      // the same key without issuing a second GET.
-      const request = trackPageCreation(
-        optimistic.id,
-        queryClient.fetchQuery({
-          queryKey: pageKey(optimistic.id),
-          queryFn: () => fetchPageCreationData(queryClient, pid, optimistic.id, async () => {
-            if (optimistic.parent_id)
-              await waitForPageCreation(optimistic.parent_id);
-            return createPageApi(
-              pid,
-              { ...input, id: optimistic.id },
-              // Blank-page payloads are tiny enough for the browser's keepalive
-              // budget. Rich JSON bodies may exceed that budget and stay regular.
-              { keepalive: input.content === undefined },
-            );
-          }),
-          staleTime: 0,
-          retry: false,
-        }),
-      );
-      void request
-        .then((page) => {
-          const { content: _serverContent, ...serverSummary } = page;
-          const visibleSummary = withPreview(serverSummary);
-          finishPresence(true, [visibleSummary]);
-          if (needsListRefresh) {
-            void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
-          }
-        })
-        .catch(() => {
-          finishPresence(false);
-          queryClient.removeQueries({ queryKey: pageKey(optimistic.id) });
-          if (needsListRefresh) {
-            void queryClient.invalidateQueries({ queryKey: pagesKey(pid) });
-          }
-        });
-      // This async function deliberately has no await on the optimistic path:
-      // callers can navigate next microtask, while dependent work can await the
-      // attached settlement and receive creation failures.
-      return { ...summary, settled: request };
-    },
+    (input: CreatePageInput = {}) =>
+      createProjectPage(queryClient, projectId as string, input),
     [projectId, queryClient]
   );
 

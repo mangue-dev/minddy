@@ -47,6 +47,8 @@ import {
   type ContextMenuAction,
 } from "@/components/issue-context-menu";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
+import { useProjectRowActions } from "@/components/project-context-actions";
+import { composeSidebarContextActions } from "@/lib/sidebar-context-actions";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
@@ -170,7 +172,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
   const active = item.active;
   const tk = useTranslations("Keyboard");
   const navigationActions = useNavigationContextActions(item.href);
-  const contextActions = [...navigationActions, ...(item.contextActions ?? [])];
+  const contextActions = composeSidebarContextActions(item.contextActions ?? [], navigationActions);
   // While a G-chord is armed, surface this row's second key as a Kbd hint
   // (AutoKap-style) — takes the trailing slot over the badge for the moment.
   const chordPrefix = useChordPrefix();
@@ -227,8 +229,9 @@ function SidebarRow({ item }: { item: AppNavItem }) {
       }
     : undefined;
 
-  // Right click: the same menu anchored to the pointer as the board cards, on the
-  // only lines that carry actions (today project drafts).
+  // Right click: the same menu anchored to the pointer as the board cards, on
+  // every row that has something to offer — its object's actions (projects,
+  // project tabs, drafts) and, for a link, the shared navigation entries.
   const [menuPosition, setMenuPosition] = useState<{
     x: number;
     y: number;
@@ -392,6 +395,13 @@ export function ProjectContextRow({
   const session = useOptionalAppTabSession();
   const homeActions = useNavigationContextActions(homeItem.href);
   const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  // The project trigger answers a right click with the project's own menu
+  // (MIN-685), the same one its row offers in the home panel. A left click
+  // still opens the project switcher.
+  const projectNavigationActions = useNavigationContextActions(`/projects/${currentProject.id}`);
+  const projectObjectActions = useProjectRowActions(currentProject);
+  const projectActions = composeSidebarContextActions(projectObjectActions, projectNavigationActions);
+  const [projectMenuPosition, setProjectMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const ProjectTrigger = onProjectSelect ? "button" : DropdownMenuTrigger;
@@ -402,6 +412,10 @@ export function ProjectContextRow({
       aria-haspopup={onProjectSelect ? "dialog" : undefined}
       aria-expanded={onProjectSelect ? pickerOpen : undefined}
       aria-label={currentProject.name}
+      onContextMenu={projectActions.length ? (event: MouseEvent) => {
+        event.preventDefault();
+        setProjectMenuPosition({ x: event.clientX, y: event.clientY });
+      } : undefined}
       className={cn(
         "flex h-9 items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
         "min-w-0 flex-1 gap-2 px-2.5 text-left",
@@ -471,6 +485,12 @@ export function ProjectContextRow({
         </MobileSheetScrollArea>
       </DialogContent>
     </Dialog>
+    <IssueContextMenu
+      position={projectMenuPosition}
+      onClose={() => setProjectMenuPosition(null)}
+      actions={projectActions}
+      searchable={false}
+    />
   </>;
 
   return (
@@ -514,6 +534,12 @@ export function ProjectContextRow({
       position={homeMenuPosition}
       onClose={() => setHomeMenuPosition(null)}
       actions={homeActions}
+      searchable={false}
+    />
+    <IssueContextMenu
+      position={projectMenuPosition}
+      onClose={() => setProjectMenuPosition(null)}
+      actions={projectActions}
       searchable={false}
     />
     </>

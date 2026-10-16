@@ -9,11 +9,9 @@ import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHoriz
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
   Button,
-  ConfirmDeleteDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,17 +34,11 @@ import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fi
 import { SpendCapCombobox } from "@/components/routines/spend-cap-combobox";
 import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import {
-  deleteRoutineApi,
-  runRoutineNowApi,
   updateRoutineApi,
   type Routine,
 } from "@/lib/routines-api";
-import {
-  patchRoutineInCache,
-  routineRunsQueryKey,
-  routinesQueryKey,
-  useRoutineRunsQuery,
-} from "@/lib/use-routines-query";
+import { useRoutineRunsQuery } from "@/lib/use-routines-query";
+import { RoutineTrashDialog, useRoutineActions } from "@/components/routines/use-routine-actions";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import type { AssistantMention } from "@/lib/assistant-types";
@@ -56,7 +48,6 @@ import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { calendarDaysBetween } from "@/lib/due-date";
 import {
   describeSchedule,
-  nextRunAt,
   weekdayName,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
@@ -101,12 +92,17 @@ import {
  * in his conversation, at the end of his thread: it's interrupted work, not
  * a missed appointment, and he has things to show.
  */
+/** What the sidebar menu can ask a routine pane to open. */
+export type RoutineDetailIntent = "edit" | "latest-run";
+
 export function RoutineDetail({
   routine,
   project,
   isOwner,
   onChanged,
   onDeleted,
+  intent,
+  onIntentConsumed,
 }: {
   routine: Routine;
   /** The supporting project — its orb opens the header, like a conversation:
@@ -121,15 +117,22 @@ export function RoutineDetail({
   isOwner: boolean;
   onChanged: () => void;
   onDeleted: () => void;
+  /**
+   * A one-shot request from the sidebar menu (MIN-685): open the editor, or
+   * the most recent run. Handled once, then reported through
+   * `onIntentConsumed` so a later render never replays it.
+   */
+  intent?: RoutineDetailIntent | null;
+  onIntentConsumed?: () => void;
 }) {
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
-  const queryClient = useQueryClient();
   const {
     routineSchedulingConfigured,
     loading: agentCapabilitiesLoading,
   } = useAgentModelsQuery();
+  const actions = useRoutineActions({ schedulingConfigured: routineSchedulingConfigured });
 
   const { runs, loading } = useRoutineRunsQuery(routine.id);
   /**
@@ -157,6 +160,7 @@ export function RoutineDetail({
   const listFade = useScrollFade<HTMLDivElement>();
 
   const editing = draft !== null && isOwner;
+  const gesturePending = busy || actions.isPending(routine.id);
 
   // Activity reconnects effects on return; only a different routine resets local work.
   const previousRoutineId = useRef(routine.id);
@@ -181,6 +185,25 @@ export function RoutineDetail({
   const openRoutineRun = (run: RoutineRunSummary) => {
     setOpenRunId(run.id);
   };
+
+  // Consume the sidebar's intent once its data is there: the editor needs
+  // only the routine; the latest run waits for the run list, and an empty
+  // or refused list simply leaves the run list on screen.
+  useEffect(() => {
+    if (!intent) return;
+    if (intent === "edit") {
+      if (isOwner) {
+        draftSource.current = routine;
+        setDraft(draftFrom(routine));
+      }
+      onIntentConsumed?.();
+      return;
+    }
+    if (loading) return;
+    const latest = runs[0];
+    if (latest) setOpenRunId(latest.id);
+    onIntentConsumed?.();
+  }, [intent, loading, runs, isOwner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * The next passage reads in the LIST of executions, at the head — it is
@@ -229,77 +252,10 @@ export function RoutineDetail({
     setDraft(null);
   };
 
-  const runNow = async () => {
-    setBusy(true);
-    try {
-      await runRoutineNowApi(routine.id);
-      // The passage has just been born: the list of executions does not know it
-      // again, and it only pollutes from the moment it has one.
-      await queryClient.invalidateQueries({
-        queryKey: routineRunsQueryKey(routine.id),
-      });
-      toast.success(t("runStarted"));
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  /**
-   * L'interrupteur bascule TOUT DE SUITE.
-   *
-   * It's a STATE, and a state is reversed with a finger: wait for the writing then
-   * reloading the list left two seconds of switch frozen on
-   * the old position, during which the gesture seemed to have served no purpose
-   * Nothing. So we write to the cache first — the column and this pane read the
-   * same input, everything moves in the same rendering - we then send, and we
-   * RESETS the snapshot from before if the server refuses (403 from a member, cadence
-   * become illegible), with its message.
-   *
-   * `next_run_at` follows in the same movement: deactivating it disarms
-   * the deadline, reactivating it recalculates it — with the SAME function as the
-   * server, otherwise the “next execution” line would display a date for
-   * show another one a second later.
-   */
-  const toggleSeq = useRef(0);
-  const toggleEnabled = (enabled: boolean) => {
-    if (
-      enabled &&
-      !routineSchedulingConfigured
-    ) {
-      toast.error(t("unavailableScheduler"));
-      return;
-    }
-    const seq = ++toggleSeq.current;
-    const previous = patchRoutineInCache(queryClient, routine.id, {
-      enabled,
-      next_run_at: optimisticNextRunAt(routine, enabled),
-    });
-    void updateRoutineApi(routine.id, { enabled })
-      .then(({ routine: saved }) => {
-        // A more recent switch has left in the meantime: its answer is authentic,
-        // not this one — two quick clicks shouldn't end up upside down.
-        if (seq === toggleSeq.current)
-          patchRoutineInCache(queryClient, saved.id, saved);
-      })
-      .catch((err) => {
-        if (seq !== toggleSeq.current) return;
-        if (previous) queryClient.setQueryData(routinesQueryKey(), previous);
-        toast.error((err as Error).message);
-      });
-  };
-
+  const runNow = () => actions.runNow(routine);
+  const toggleEnabled = (enabled: boolean) => actions.toggleEnabled(routine, enabled);
   const remove = async () => {
-    setBusy(true);
-    try {
-      await deleteRoutineApi(routine.id);
-      onDeleted();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    if (await actions.remove(routine)) onDeleted();
   };
 
   /**
@@ -430,7 +386,7 @@ export function RoutineDetail({
               <Switch
                 checked={routine.enabled}
                 disabled={
-                  busy ||
+                  gesturePending ||
                   agentCapabilitiesLoading ||
                   (!routine.enabled &&
                     !routineSchedulingConfigured)
@@ -450,7 +406,7 @@ export function RoutineDetail({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  disabled={busy}
+                  disabled={gesturePending}
                   onSelect={() => void runNow()}
                 >
                   <HugeiconsIcon icon={PlayIcon} className="size-4" />
@@ -686,13 +642,10 @@ export function RoutineDetail({
         </div>
       )}
 
-      <ConfirmDeleteDialog
+      <RoutineTrashDialog
+        routine={routine}
         open={confirmingDelete}
         onOpenChange={setConfirmingDelete}
-        title={t("deleteTitle", { title: routine.title })}
-        description={t("deleteDescription")}
-        confirmLabel={tCommon("moveToTrash")}
-        cancelLabel={tCommon("cancel")}
         onConfirm={() => void remove()}
       />
     </div>
@@ -886,29 +839,8 @@ function runStatusKey(
   return "runStatusIdle";
 }
 
-/**
- * The deadline that the server WILL write, calculated here so as not to wait for it:
- * `null` when the routine is paused (the deadline is disarmed), the
- * next occurrence when we wake her up. It is `updateRoutine` which does
- * faith, but it does exactly this calculation, with this function.
- *
- * A cadence that `nextRunAt` refuses (time zone removed from ICU, tinkered data) does not
- * cannot be guessed: we keep the value in place and let the answer be decided.
- */
-function optimisticNextRunAt(
-  routine: Routine,
-  enabled: boolean,
-): string | null {
-  if (!enabled || routine.trigger?.type !== "schedule" && routine.trigger != null) return null;
-  try {
-    return nextRunAt(routineSchedule(routine), new Date()).toISOString();
-  } catch {
-    return routine.next_run_at;
-  }
-}
-
 /** The cadence of a routine, such as calculation and sentence awaits it. */
-function routineSchedule(routine: Routine): RoutineSchedule {
+export function routineSchedule(routine: Routine): RoutineSchedule {
   return {
     frequency: routine.frequency,
     hour: routine.hour,

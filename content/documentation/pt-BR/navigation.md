@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,19 @@
       "components/issue-field-shortcuts.tsx",
       "lib/keyboard/shortcuts.ts",
       "lib/keyboard/keyboard-context.tsx",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "components/project-context-actions.tsx",
+      "lib/sidebar-context-actions.ts",
+      "components/routines/routines-panel.tsx",
+      "components/pull-requests/pr-context-actions.tsx",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR changed-passage parity and label review)",
-    "date": "2026-10-11"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR changed-passage parity and label review); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "views",
@@ -68,7 +73,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -84,7 +89,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -111,6 +116,18 @@ A navegação principal dá acesso ao seu trabalho pessoal e aos seus projetos. 
 Os ciclos pessoais e as visualizações entre projetos abrangem os projetos aos quais você tem acesso. Objetivos, wiki e feedback de um projeto pertencem a um único projeto. Confira o projeto ativo antes de criar trabalho ou alterar configurações.
 
 ![Navegação do projeto ao lado do quadro de tickets de demonstração.](/documentation/pt-BR/work-navigation.png)
+
+### Agir a partir de uma linha da barra lateral {#sidebar-menus}
+
+Clique com o botão direito em uma linha da barra lateral para agir sobre o que ela representa sem abri-la primeiro. As linhas de link também oferecem **Abrir em uma nova aba** e **Copiar link**. Uma ação que move algo para a lixeira sempre aparece por último, depois de um separador.
+
+- A linha **Todos os problemas** oferece **Novo problema**, e a linha **Rotinas** oferece **Nova rotina** quando você é proprietário de um projeto.
+- Uma linha de projeto, ou o nome do projeto no topo do painel dele, oferece **Novo** (um problema, objetivo ou página nesse projeto) e **Configurações do projeto**. O proprietário do projeto também vê **Mover para a lixeira**, que pede a mesma confirmação das configurações do projeto.
+- Uma aba de projeto oferece sua própria criação: **Novo problema** em Problemas, **Novo objetivo** em Objetivos, **Nova página** em Páginas e **Novo feedback** em Feedback, que abre o formulário interno de feedback.
+- Uma linha de rotina oferece **Abrir a última execução** e, ao proprietário do projeto, **Executar agora**, **Pausar** ou **Reativar**, **Editar** e **Mover para a lixeira**. Veja [Gerenciar e verificar execuções](/pt-br/documentacao/scheduled-routines#runs).
+- Uma linha de pull request oferece as mudanças que o estado atual permite, **Mesclar** quando ela está pronta e ações de correção quando algo a bloqueia. Veja [Revisão e merge](/pt-br/documentacao/code-work#decision).
+
+A ação se aplica à linha em que você clicou, mesmo quando outro projeto ou item está aberto.
 
 ### Painéis e navegação no celular {#panels}
 

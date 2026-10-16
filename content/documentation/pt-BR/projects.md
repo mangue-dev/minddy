@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,17 @@
       "lib/server/update-project.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-light-review-2026-10-10.md",
-      "lib/project-key.ts"
+      "lib/project-key.ts",
+      "components/project-context-actions.tsx",
+      "components/projects/project-trash-dialog.tsx",
+      "content/documentation/reviews/min-685-sidebar-context-actions.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "issues",
@@ -71,7 +74,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Configurações gerais do projeto com nome, chave, ícone e ação separada para a lixeira.",
       "caption": "Confira o nome e a chave antes de salvar. Mover o projeto para a lixeira é uma ação separada.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -87,7 +90,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Convite por email e três membros de demonstração, com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -123,6 +126,8 @@ As outras seções gerenciam colaboradores, problemas recorrentes, Git, importa�
 Um membro pode usar a ação de sair para remover seu próprio acesso. Peça ao proprietário um novo convite se precisar do projeto mais tarde. Sair não exclui o projeto para todos.
 
 A exclusão do projeto é uma ação do proprietário na zona de perigo. Leia as consequências e a confirmação antes de usá-la, especialmente se o projeto contiver problemas, páginas, arquivos ou integrações. Se um salvamento normal falhar, preserve os valores desejados, leia o erro e atualize o projeto antes de tentar novamente. Evite repetir uma ação destrutiva enquanto o primeiro resultado for incerto.
+
+O proprietário também pode clicar com o botão direito no projeto na barra lateral e escolher **Mover para a lixeira**. A mesma confirmação aparece, e apenas o projeto em que você clicou é afetado.
 
 ## Convidar pessoas para um projeto {#project-members}
 

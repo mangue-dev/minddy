@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePageAutosave, type PageAutosave } from "./use-page-autosave";
 import { buildOptimisticPage } from "@/lib/optimistic-page";
 import { PageApiError, createPageApi, duplicatePageApi, fetchPageApi, fetchPagesApi, updatePageApi, type UpdatePageInput } from "@/lib/pages-api";
-import { createPageSurfaceRead, fetchPageNavigationData, pageKey, pagesKey, usePagesQuery, usePageSurfaceReady,
+import { createPageSurfaceRead, fetchPageNavigationData, pageKey, pagesKey, useCreatePage, usePagesQuery, usePageSurfaceReady,
   type PageCreation, type UsePagesResult } from "@/lib/use-pages-query";
 import { observePageReadFailures, pageReadState } from "@/lib/page-read-receipts";
 import type { Page } from "@/lib/pages";
@@ -34,6 +34,27 @@ function deferred<T>() {
 }
 const body: PageDocJSON = { type: "doc", content: [{ type: "paragraph", attrs: { blockId: "local" },
   content: [{ type: "text", text: "Local draft before creation settles" }] }] };
+
+describe("project-scoped Page creation", () => {
+  it("creates into the project it is given while another project's pages are on screen", async () => {
+    const viewed = buildOptimisticPage("project-a", { id: "viewed", title: "Viewed" }, []);
+    vi.mocked(createPageApi).mockImplementation(async (projectId, input) =>
+      ({ ...buildOptimisticPage(projectId, { ...input, id: input?.id ?? "created" }, []), version: 1 }) as Page);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(pagesKey("project-a"), [viewed]);
+    client.setQueryData(pagesKey("project-b"), []);
+    let create!: ReturnType<typeof useCreatePage>;
+    function Surface() { usePagesQuery("project-a"); create = useCreatePage(); return null; }
+    root = createRoot(document.body.appendChild(document.createElement("div")));
+    await act(async () => root!.render(createElement(QueryClientProvider, { client, children: createElement(Surface) })));
+    let created!: PageCreation;
+    await act(async () => { created = await create("project-b"); await created.settled; });
+    expect(vi.mocked(createPageApi).mock.calls[0]?.[0]).toBe("project-b");
+    expect(client.getQueryData<{ id: string }[]>(pagesKey("project-b"))?.map((page) => page.id)).toEqual([created.id]);
+    expect(client.getQueryData<{ id: string }[]>(pagesKey("project-a"))?.map((page) => page.id)).toEqual(["viewed"]);
+  });
+});
 
 describe("normal Page creation write authority", () => {
   it.each(["queue", "creation"])("does not dispatch a retired autosave after the %s wait", async (waiting) => {

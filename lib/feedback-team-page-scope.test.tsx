@@ -312,4 +312,22 @@ describe("FeedbackTeamPage requested-post query scope", () => {
     expect(requests).toEqual([]);
   });
 
+  it("opens the composer once for ?new=1 and keeps the other parameters", async () => {
+    seedNormal(); initialSearch = "new=1&sort=recent";
+    const composerOpen = () => container.textContent?.includes("FeedbackBoard.internalDialogTitle") ?? false;
+    await render(); await settle();
+    expect(composerOpen()).toBe(true);
+    expect(state.replace).toHaveBeenCalledExactlyOnceWith(`${pathname}?sort=recent`);
+    await render(); await settle();
+    expect(state.replace).toHaveBeenCalledOnce();
+  });
+
+  it("leaves ?new=1 to the active tab while its retained Activity is hidden", async () => {
+    seedNormal(); initialSearch = "new=1";
+    await render(true); await settle();
+    expect(state.replace).not.toHaveBeenCalled();
+    await render(false); await settle();
+    expect(state.replace).toHaveBeenCalledExactlyOnceWith(pathname);
+  });
+
 });
