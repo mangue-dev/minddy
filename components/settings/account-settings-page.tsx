@@ -11,6 +11,7 @@ import { AccountSecuritySection } from "@/components/settings/account-security-s
 import { AccountDesktopSection } from "@/components/settings/account-desktop-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
+import { AccountHiddenProjectsSection } from "@/components/settings/account-hidden-projects-section";
 import { AccountNotificationsSection } from "@/components/settings/account-notifications-section";
 import { AccountPushDevicesSection } from "@/components/settings/account-push-devices-section";
 import {
@@ -62,6 +63,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       content: (
         <>
           <AccountPreferencesSection />
+          <AccountHiddenProjectsSection />
           <AccountDesktopSection />
         </>
       ),

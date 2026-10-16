@@ -1822,7 +1822,9 @@
     "deleteSavedView": "Olvidar esta vista",
     "savedViewDeleted": "«{name}» olvidada",
     "nameThisView": "Ponle un nombre a esta vista",
-    "documentation": "Documentación"
+    "documentation": "Documentación",
+    "hideProject": "Ocultar proyecto",
+    "showProject": "Mostrar proyecto"
   },
   "CommandPaletteActions": {
     "copied": "Copiado",
@@ -2475,7 +2477,11 @@
     "numoDefaultModelHint": "Guardado para su cuenta y este proveedor. Cada conversación puede usar otro modelo.",
     "numoApplicationDefault": "Predeterminado de la app",
     "numoModelSaveError": "No se pudo guardar el modelo de Numo. Inténtelo de nuevo.",
-    "numoModelLoadError": "No se pudo cargar el modelo de Numo. Recargue los ajustes."
+    "numoModelLoadError": "No se pudo cargar el modelo de Numo. Recargue los ajustes.",
+    "hiddenProjectsTitle": "Proyectos ocultos",
+    "hiddenProjectsHelp": "Los proyectos ocultos ya no aparecen en tu barra lateral ni en tu inicio. Tu acceso, los demás miembros y la actividad del proyecto no cambian.",
+    "hiddenProjectsEmpty": "No hay proyectos ocultos. Oculta uno desde su configuración o su menú en la barra lateral.",
+    "hiddenProjectsOpen": "Abrir"
   },
   "AccountData": {
     "importTitle": "Transferir datos de otra instancia de minddy",
@@ -2765,7 +2771,11 @@
     "draftCloseDescription": "Lo encontrarás en la barra lateral, y lo recogerás en este paso.",
     "draftCloseCancel": "Volver",
     "draftCloseDiscard": "Desechar",
-    "draftCloseConfirm": "Guardar"
+    "draftCloseConfirm": "Guardar",
+    "hiddenToast": "«{name}» está oculto en tu barra lateral. Encuéntralo en Configuración de la cuenta → Proyectos ocultos.",
+    "shownToast": "«{name}» vuelve a estar en tu barra lateral.",
+    "hideFailed": "No se pudo ocultar el proyecto. Inténtalo de nuevo.",
+    "showFailed": "No se pudo mostrar el proyecto. Inténtalo de nuevo."
   },
   "Settings": {
     "title": "Configuración del proyecto",
@@ -3089,7 +3099,14 @@
     "localRepoAttach": "Adjuntar una carpeta",
     "localRepoChange": "Cambio",
     "localRepoDetach": "Desmontaje",
-    "localRepoWarning": "Un agente que se ejecute aquí leerá y escribirá en esta carpeta con tu propia cuenta. Lo que haga en ella —sus comandos, los archivos que toque y fragmentos de lo que lea— se enviará a minddy, se conservará durante 30 días y podrá verlo cualquier miembro del proyecto. Lo que lea fuera de esta carpeta no se enviará: permanecerá en este Mac. La carpeta solo se vincula aquí y ningún otro miembro del proyecto puede verla."
+    "localRepoWarning": "Un agente que se ejecute aquí leerá y escribirá en esta carpeta con tu propia cuenta. Lo que haga en ella —sus comandos, los archivos que toque y fragmentos de lo que lea— se enviará a minddy, se conservará durante 30 días y podrá verlo cualquier miembro del proyecto. Lo que lea fuera de esta carpeta no se enviará: permanecerá en este Mac. La carpeta solo se vincula aquí y ningún otro miembro del proyecto puede verla.",
+    "visibilityTitle": "Visibilidad para ti",
+    "hideProjectLabel": "Ocultar de tu barra lateral",
+    "hideProjectHint": "Solo para ti. Los demás miembros lo siguen viendo, y sus rutinas y notificaciones siguen funcionando.",
+    "projectHiddenLabel": "Oculto en tu barra lateral",
+    "projectHiddenHint": "Puedes seguir abriéndolo y editándolo. Muéstralo para recuperarlo en tu barra lateral.",
+    "hideProject": "Ocultar",
+    "showProject": "Mostrar"
   },
   "Seed": {
     "emptyBoardCta": "Habla con Numo",

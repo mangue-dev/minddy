@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 7,
+  "revision": 9,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,13 +43,18 @@
       "lib/project-key.ts",
       "components/project-context-actions.tsx",
       "components/projects/project-trash-dialog.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "components/settings/project-visibility-section.tsx",
+      "components/settings/account-hidden-projects-section.tsx",
+      "lib/use-hidden-projects.ts",
+      "lib/server/hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (de pre-merge wording, correction and retained-meaning review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -74,7 +79,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Allgemeine Projekteinstellungen mit Name, Schlüssel, Symbol und eigener Papierkorbaktion.",
       "caption": "Prüfe Namen und Schlüssel vor dem Speichern. Das Verschieben in den Papierkorb ist eine eigene Aktion.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +95,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "E-Mail-Einladung und drei Demomitglieder mit Kennzeichnung des Eigentümers.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,7 +117,7 @@ Ein Projekt verbindet Probleme, Ziele, Seiten und Mitglieder. Sein Eigentümer v
 
 ## Ein Projekt einrichten {#project-settings}
 
-Öffne das Projekt und anschließend seine Einstellungen. Administrative Einstellungen unterliegen der Projekteigentümerschaft. Mitglieder können den allgemeinen Bereich ansehen und das Projekt verlassen, erhalten aber nicht die Bearbeitungsfunktionen des Eigentümers.
+Öffne das Projekt und anschließend seine Einstellungen. Administrative Einstellungen unterliegen der Projekteigentümerschaft. Mitglieder können den allgemeinen Bereich ansehen, das Projekt für sich ausblenden und es verlassen, erhalten aber nicht die Bearbeitungsfunktionen des Eigentümers.
 
 Gib als Eigentümer einen nicht leeren Namen und einen gültigen Projektschlüssel ein und speichere. Der Schlüssel wird in Großbuchstaben umgewandelt und besteht aus 2 bis 5 ASCII-Buchstaben. Prüfe nach einer Änderung die entstandenen Kennungen. Verwende Symbol- und Darstellungsfunktionen, um das Projekt in der Navigation zu unterscheiden; diese visuellen Entscheidungen verändern die Mitgliedschaft nicht.
 
@@ -120,6 +125,14 @@ Weitere Bereiche verwalten Mitwirkende, wiederkehrende Probleme, Git, Import, In
 
 
 ![Allgemeine Projekteinstellungen mit Name, Schlüssel, Symbol und eigener Papierkorbaktion.](/documentation/de/project-general.png)
+
+### Ein Projekt für dich ausblenden {#hide-project}
+
+Blende ein Projekt aus, das du nicht mehr täglich verfolgst, damit es aus deiner Seitenleiste und deiner Startseite verschwindet, ohne dass du es verlässt. Wähle in den allgemeinen Projekteinstellungen unter **Sichtbarkeit für dich** die Option **Ausblenden**, oder klicke das Projekt in der Seitenleiste mit der rechten Maustaste an und wähle **Projekt ausblenden**. Jedes Mitglied kann ein Projekt ausblenden, auch der Eigentümer.
+
+Das Ausblenden ändert nur deine eigene Navigation. Die Einstellung wird in deinem Konto gespeichert und gilt daher auch nach einer erneuten Anmeldung und auf deinen anderen Geräten. Du behältst deinen Zugriff und kannst das Projekt weiterhin über einen direkten Link oder über **Kontoeinstellungen** → **Einstellungen** → **Ausgeblendete Projekte** öffnen und bearbeiten. Andere Mitglieder sehen das Projekt weiterhin, und seine Routinen, Integrationen und Benachrichtigungen laufen weiter. Das Öffnen eines ausgeblendeten Projekts bringt es nicht in deine Seitenleiste zurück.
+
+Um es wieder anzuzeigen, wähle **Einblenden** unter **Ausgeblendete Projekte** oder in den allgemeinen Projekteinstellungen, oder wähle **Projekt einblenden** im Menü der Seitenleiste. Kann die Änderung nicht gespeichert werden, erscheint ein Fehler und das Projekt kehrt in seinen vorherigen Zustand zurück; versuche es erneut. Anders als Verlassen oder In den Papierkorb verschieben entfernt das Ausblenden nie Zugriff oder Inhalte.
 
 ### Verlassen und löschen {#project-removal}
 

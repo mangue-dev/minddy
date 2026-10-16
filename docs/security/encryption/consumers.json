@@ -1494,154 +1494,161 @@
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 208,
+    "line": 210,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 226,
+    "line": 228,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
+    "resource": "hidden_projects",
+    "line": 234,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_numo_preferences",
-    "line": 260,
+    "line": 268,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 276,
+    "line": 284,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "page_files",
-    "line": 287,
+    "line": 295,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 299,
+    "line": 307,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "views",
-    "line": 314,
+    "line": 322,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "saved_views",
-    "line": 315,
+    "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 317,
+    "line": 325,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "cycles",
-    "line": 319,
+    "line": 327,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 321,
+    "line": 329,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 326,
+    "line": 334,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 338,
+    "line": 346,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 344,
+    "line": 352,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 356,
-    "storage": false
-  },
-  {
-    "file": "lib/server/account-export.ts",
-    "operation": "from",
-    "resource": "api_keys",
     "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
+    "resource": "api_keys",
+    "line": 372,
+    "storage": false
+  },
+  {
+    "file": "lib/server/account-export.ts",
+    "operation": "from",
     "resource": "oauth_grants",
-    "line": 369,
+    "line": 377,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_connections",
-    "line": 374,
+    "line": 382,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "git_user_identities",
-    "line": 381,
+    "line": 389,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "user_ai_keys",
-    "line": 386,
+    "line": 394,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 400,
+    "line": 408,
     "storage": false
   },
   {
     "file": "lib/server/account-export.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 430,
+    "line": 438,
     "storage": false
   },
   {
@@ -6493,6 +6500,34 @@
     "operation": "from",
     "resource": "project_git_links",
     "line": 162,
+    "storage": false
+  },
+  {
+    "file": "lib/server/hidden-projects.ts",
+    "operation": "from",
+    "resource": "hidden_projects",
+    "line": 26,
+    "storage": false
+  },
+  {
+    "file": "lib/server/hidden-projects.ts",
+    "operation": "from",
+    "resource": "hidden_projects",
+    "line": 47,
+    "storage": false
+  },
+  {
+    "file": "lib/server/hidden-projects.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 57,
+    "storage": false
+  },
+  {
+    "file": "lib/server/hidden-projects.ts",
+    "operation": "from",
+    "resource": "hidden_projects",
+    "line": 66,
     "storage": false
   },
   {

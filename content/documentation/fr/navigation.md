@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,13 +45,15 @@
       "lib/sidebar-context-actions.ts",
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "lib/use-hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr changed-passage parity and label review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr changed-passage parity and label review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -73,7 +75,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -89,7 +91,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -122,7 +124,7 @@ Les cycles personnels et les vues transversales couvrent les projets accessibles
 Faites un clic droit sur une ligne de la barre latérale pour agir sur ce qu’elle représente sans l’ouvrir d’abord. Les lignes de lien proposent aussi **Ouvrir dans un nouvel onglet** et **Copier le lien**. Une action qui place un élément dans la corbeille vient toujours en dernier, après un séparateur.
 
 - La ligne **Tous les tickets** propose **Nouveau ticket**, et la ligne **Routines** propose **Nouvelle routine** si vous êtes propriétaire d’un projet.
-- Une ligne de projet, ou le nom du projet en haut de son panneau, propose **Nouveau** (un ticket, un objectif ou une page dans ce projet) et **Paramètres du projet**. Le propriétaire du projet voit aussi **Déplacer vers la corbeille**, qui demande la même confirmation que les paramètres du projet.
+- Une ligne de projet, ou le nom du projet en haut de son panneau, propose **Nouveau** (un ticket, un objectif ou une page dans ce projet) et **Paramètres du projet**. Le propriétaire du projet voit aussi **Déplacer vers la corbeille**, qui demande la même confirmation que les paramètres du projet. Le même menu propose aussi **Masquer le projet**, ou **Réafficher le projet** pour un projet que vous avez masqué ; voir [Masquer un projet pour vous](/docs/projects#hide-project).
 - Un onglet de projet propose sa propre création : **Nouveau ticket** sur Tickets, **Nouvel objectif** sur Objectifs, **Nouvelle page** sur Pages et **Nouveau retour** sur Retours, qui ouvre le formulaire de retour interne.
 - Une ligne de routine propose **Ouvrir la dernière exécution** et, pour le propriétaire du projet, **Lancer maintenant**, **Mettre en pause** ou **Réactiver**, **Modifier** et **Déplacer vers la corbeille**. Voir [Gérer et vérifier les exécutions](/fr/documentation/scheduled-routines#runs).
 - Une ligne de pull request propose les changements que son état actuel autorise, **Fusionner** lorsqu’elle est prête, et des actions de correction lorsqu’un problème la bloque. Voir [Revue et fusion](/fr/documentation/code-work#decision).

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,13 +45,15 @@
       "lib/sidebar-context-actions.ts",
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "lib/use-hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it changed-passage parity and label review); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it changed-passage parity and label review); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -73,7 +75,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -89,7 +91,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -122,7 +124,7 @@ I cicli personali e le viste tra progetti comprendono i progetti a cui hai acces
 Fai clic con il tasto destro su una riga della barra laterale per agire su ciò che rappresenta senza aprirlo prima. Le righe di collegamento offrono anche **Apri in una nuova scheda** e **Copia link**. Un’azione che sposta qualcosa nel cestino compare sempre per ultima, dopo un separatore.
 
 - La riga **Tutti i ticket** offre **Nuovo ticket** e la riga **Routine** offre **Nuova routine** se sei proprietario di un progetto.
-- Una riga di progetto, o il nome del progetto in cima al suo pannello, offre **Nuovo** (un ticket, un obiettivo o una pagina in quel progetto) e **Impostazioni del progetto**. Il proprietario del progetto vede anche **Spostati nel cestino**, che chiede la stessa conferma delle impostazioni del progetto.
+- Una riga di progetto, o il nome del progetto in cima al suo pannello, offre **Nuovo** (un ticket, un obiettivo o una pagina in quel progetto) e **Impostazioni del progetto**. Il proprietario del progetto vede anche **Spostati nel cestino**, che chiede la stessa conferma delle impostazioni del progetto. Lo stesso menu offre anche **Nascondi progetto**, oppure **Mostra progetto** per un progetto che hai nascosto; vedi [Nascondere un progetto per te](/docs/projects#hide-project).
 - Una scheda di progetto offre la propria creazione: **Nuovo ticket** su Ticket, **Nuovo obiettivo** su Obiettivi, **Nuova pagina** su Pagine e **Nuovi commenti** su Feedback, che apre il modulo interno per i feedback.
 - Una riga di routine offre **Apri l’ultima esecuzione** e, al proprietario del progetto, **Correte adesso**, **Metti in pausa** o **Riattiva**, **Modifica** e **Spostati nel cestino**. Vedi [Gestire e verificare le esecuzioni](/it/documentazione/scheduled-routines#runs).
 - Una riga di pull request offre i cambi consentiti dal suo stato attuale, **Unisci** quando è pronta e azioni di correzione quando qualcosa la blocca. Vedi [Revisione e merge](/it/documentazione/code-work#decision).

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,13 +45,15 @@
       "lib/sidebar-context-actions.ts",
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "lib/use-hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en changed-passage parity and label review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en changed-passage parity and label review); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -73,7 +75,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -89,7 +91,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -122,7 +124,7 @@ Personal cycles and cross-project views span projects you can access. Project ob
 Right-click a row in the sidebar to act on what it represents without opening it first. Link rows also offer **Open in a new tab** and **Copy link**. An action that moves something to the trash always comes last, after a separator.
 
 - The **All issues** row offers **New issue**, and the **Routines** row offers **New routine** when you own a project.
-- A project row, or the project name at the top of its panel, offers **New** (an issue, objective or page in that project) and **Project settings**. The project owner also sees **Move to trash**, which asks for the same confirmation as the project settings.
+- A project row, or the project name at the top of its panel, offers **New** (an issue, objective or page in that project) and **Project settings**. The project owner also sees **Move to trash**, which asks for the same confirmation as the project settings. The same menu also offers **Hide project**, or **Show project** for a project you hid; see [Hide a project for yourself](/docs/projects#hide-project).
 - A project tab offers its own creation entry: **New issue** on Issues, **New objective** on Objectives, **New page** on Pages and **New feedback** on Feedback, which opens the internal feedback composer.
 - A routine row offers **Open latest run** and, to the project owner, **Run now**, **Pause** or **Resume**, **Edit** and **Move to trash**. See [Manage and verify runs](/docs/scheduled-routines#runs).
 - A pull request row offers the state changes its current state allows, **Merge** when it is ready, and fix actions when something blocks it. See [Review and merge](/docs/code-work#decision).

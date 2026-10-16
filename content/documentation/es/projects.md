@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 7,
+  "revision": 9,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,13 +43,18 @@
       "lib/project-key.ts",
       "components/project-context-actions.tsx",
       "components/projects/project-trash-dialog.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "components/settings/project-visibility-section.tsx",
+      "components/settings/account-hidden-projects-section.tsx",
+      "lib/use-hidden-projects.ts",
+      "lib/server/hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -74,7 +79,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Configuración general del proyecto con nombre, clave, icono y una acción separada para la papelera.",
       "caption": "Comprueba el nombre y la clave antes de guardar. Mover el proyecto a la papelera es una acción separada.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +95,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Invitación por correo y tres miembros de demostración, con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,7 +117,7 @@ Un proyecto reúne incidencias, objetivos, páginas y miembros. Su propietario g
 
 ## Configurar un proyecto {#project-settings}
 
-Abre el proyecto y después sus ajustes. La propiedad del proyecto determina el acceso a los ajustes administrativos. Los miembros pueden consultar la sección general y abandonar el proyecto, pero no obtienen los controles de edición del propietario.
+Abre el proyecto y después sus ajustes. La propiedad del proyecto determina el acceso a los ajustes administrativos. Los miembros pueden consultar la sección general, ocultar el proyecto para sí mismos y abandonarlo, pero no obtienen los controles de edición del propietario.
 
 Como propietario, introduce un nombre que no esté vacío y una clave de proyecto válida, y guarda. La clave se normaliza a mayúsculas y utiliza de 2 a 5 letras ASCII. Revisa los identificadores resultantes después de cambiarla. Usa los controles de icono y apariencia para distinguir el proyecto en la navegación; estas elecciones visuales no modifican la pertenencia al proyecto.
 
@@ -120,6 +125,14 @@ Otras secciones gestionan colaboradores, incidencias recurrentes, Git, importaci
 
 
 ![Configuración general del proyecto con nombre, clave, icono y una acción separada para la papelera.](/documentation/es/project-general.png)
+
+### Ocultar un proyecto para ti {#hide-project}
+
+Oculta un proyecto que ya no sigues a diario para quitarlo de tu barra lateral y de tu inicio sin abandonarlo. En la configuración general del proyecto, elige **Ocultar** en **Visibilidad para ti**, o haz clic derecho en el proyecto en la barra lateral y elige **Ocultar proyecto**. Cualquier miembro puede ocultar un proyecto, incluido el propietario.
+
+Ocultarlo solo cambia tu propia navegación. La preferencia se guarda en tu cuenta, así que se mantiene al volver a iniciar sesión y en tus otros dispositivos. Conservas tu acceso y puedes seguir abriendo y editando el proyecto desde un enlace directo o desde **Configuración de la cuenta** → **Preferencias** → **Proyectos ocultos**. Los demás miembros siguen viendo el proyecto, y sus rutinas, integraciones y notificaciones siguen funcionando. Abrir un proyecto oculto no lo devuelve a tu barra lateral.
+
+Para recuperarlo, elige **Mostrar** en **Proyectos ocultos** o en la configuración general del proyecto, o elige **Mostrar proyecto** en su menú de la barra lateral. Si el cambio no se puede guardar, aparece un error y el proyecto vuelve a su estado anterior; inténtalo de nuevo. A diferencia de abandonar el proyecto o moverlo a la papelera, ocultarlo nunca retira acceso ni contenido.
 
 ### Abandonar y eliminar {#project-removal}
 

@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,13 +43,18 @@
       "lib/project-key.ts",
       "components/project-context-actions.tsx",
       "components/projects/project-trash-dialog.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "components/settings/project-visibility-section.tsx",
+      "components/settings/account-hidden-projects-section.tsx",
+      "lib/use-hidden-projects.ts",
+      "lib/server/hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -74,7 +79,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Configurações gerais do projeto com nome, chave, ícone e ação separada para a lixeira.",
       "caption": "Confira o nome e a chave antes de salvar. Mover o projeto para a lixeira é uma ação separada.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +95,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Convite por email e três membros de demonstração, com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,7 +117,7 @@ Um projeto reúne problemas, objetivos, páginas e membros. O proprietário gere
 
 ## Configurar um projeto {#project-settings}
 
-Abra o projeto e depois suas configurações. A propriedade do projeto determina o acesso às configurações administrativas. Os membros podem consultar a seção geral e sair do projeto, mas não recebem os controles de edição do proprietário.
+Abra o projeto e depois suas configurações. A propriedade do projeto determina o acesso às configurações administrativas. Os membros podem consultar a seção geral, ocultar o projeto para si e sair dele, mas não recebem os controles de edição do proprietário.
 
 Como proprietário, informe um nome não vazio e uma chave de projeto válida, depois salve. A chave é normalizada para maiúsculas e usa de 2 a 5 letras ASCII. Revise os identificadores resultantes depois de alterá-la. Use os controles de ícone e aparência para distinguir o projeto na navegação; essas escolhas visuais não mudam a participação no projeto.
 
@@ -120,6 +125,14 @@ As outras seções gerenciam colaboradores, problemas recorrentes, Git, importa�
 
 
 ![Configurações gerais do projeto com nome, chave, ícone e ação separada para a lixeira.](/documentation/pt-BR/project-general.png)
+
+### Ocultar um projeto para você {#hide-project}
+
+Oculte um projeto que você não acompanha mais no dia a dia para tirá-lo da sua barra lateral e do seu início sem sair dele. Nas configurações gerais do projeto, escolha **Ocultar** em **Visibilidade para você**, ou clique com o botão direito no projeto na barra lateral e escolha **Ocultar projeto**. Qualquer membro pode ocultar um projeto, inclusive o proprietário.
+
+Ocultar muda apenas a sua própria navegação. A preferência é salva na sua conta, então continua valendo depois de entrar novamente e nos seus outros dispositivos. Você mantém seu acesso e ainda pode abrir e editar o projeto por um link direto ou em **Configurações da conta** → **Preferências** → **Projetos ocultos**. Os outros membros continuam vendo o projeto, e as rotinas, integrações e notificações dele continuam funcionando. Abrir um projeto oculto não o traz de volta para a sua barra lateral.
+
+Para trazê-lo de volta, escolha **Mostrar** em **Projetos ocultos** ou nas configurações gerais do projeto, ou escolha **Mostrar projeto** no menu dele na barra lateral. Se a alteração não puder ser salva, aparece um erro e o projeto volta ao estado anterior; tente novamente. Diferentemente de sair do projeto ou movê-lo para a lixeira, ocultar nunca remove acesso nem conteúdo.
 
 ### Sair e excluir {#project-removal}
 

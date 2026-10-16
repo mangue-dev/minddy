@@ -13,12 +13,14 @@ import {isValidKey, normalizeKey} from "@/lib/project-key";
 import {projectOrbSeed} from "@/lib/project-orb-colors";
 import {ProjectIconPicker} from "@/components/project-icon-picker";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {ProjectVisibilitySection} from "@/components/settings/project-visibility-section";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import type { Project } from "@/lib/types";
 
 /**
- * “General” tab of a project's settings: its identity (name, key, icon)
- * and the danger zone. Two branches — owner, which modifies and deletes ;
+ * “General” tab of a project's settings: its identity (name, key, icon),
+ * the personal Hide project preference (both branches, MIN-692) and the
+ * danger zone. Two branches — owner, which modifies and deletes ;
  * member, which reads and exits. Excerpt from page (MIN-167), where he lived in JSX
  * inline with its own form state.
  */
@@ -113,6 +115,8 @@ export function ProjectGeneralSection({
           />
         </SettingsGroup>
 
+        <ProjectVisibilitySection project={project} />
+
         {/* The gesture lives in the header: the group has only one action, and a
  row that repeats word for word the title above it. */}
         <SettingsGroup
@@ -197,6 +201,8 @@ export function ProjectGeneralSection({
           />
         </SettingsGroup>
       </form>
+
+      <ProjectVisibilitySection project={project} />
 
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectDanger}

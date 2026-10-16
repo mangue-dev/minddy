@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,13 +43,18 @@
       "lib/project-key.ts",
       "components/project-context-actions.tsx",
       "components/projects/project-trash-dialog.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "components/settings/project-visibility-section.tsx",
+      "components/settings/account-hidden-projects-section.tsx",
+      "lib/use-hidden-projects.ts",
+      "lib/server/hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -74,7 +79,7 @@
       "src": "/documentation/it/project-general.png",
       "alt": "Impostazioni generali del progetto con nome, chiave, icona e azione separata per il cestino.",
       "caption": "Controlla nome e chiave prima di salvare. Spostare il progetto nel cestino è un’azione separata.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +95,7 @@
       "src": "/documentation/it/project-members.png",
       "alt": "Invito via email e tre membri dimostrativi, con il proprietario identificato.",
       "caption": "Invita con l’email dell’account e identifica il proprietario prima di rimuovere l’accesso di un membro.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,7 +117,7 @@ Un progetto raccoglie ticket, obiettivi, pagine e membri. Il proprietario gestis
 
 ## Configurare un progetto {#project-settings}
 
-Apri il progetto e poi le sue impostazioni. La proprietà del progetto determina l’accesso alle impostazioni amministrative. I membri possono consultare la sezione generale e lasciare il progetto, ma non ottengono i controlli di modifica del proprietario.
+Apri il progetto e poi le sue impostazioni. La proprietà del progetto determina l’accesso alle impostazioni amministrative. I membri possono consultare la sezione generale, nascondere il progetto per sé e lasciarlo, ma non ottengono i controlli di modifica del proprietario.
 
 Come proprietario, inserisci un nome non vuoto e una chiave di progetto valida, quindi salva. La chiave viene convertita in maiuscolo e usa da 2 a 5 lettere ASCII. Dopo averla cambiata, controlla gli identificativi risultanti. Usa i controlli di icona e aspetto per distinguere il progetto nella navigazione; queste scelte visive non cambiano l’appartenenza al progetto.
 
@@ -120,6 +125,14 @@ Le altre sezioni gestiscono collaboratori, ticket ricorrenti, Git, importazione,
 
 
 ![Impostazioni generali del progetto con nome, chiave, icona e azione separata per il cestino.](/documentation/it/project-general.png)
+
+### Nascondere un progetto per te {#hide-project}
+
+Nascondi un progetto che non segui più ogni giorno per toglierlo dalla tua barra laterale e dalla tua home senza lasciarlo. Nelle impostazioni generali del progetto, scegli **Nascondi** in **Visibilità per te**, oppure fai clic con il tasto destro sul progetto nella barra laterale e scegli **Nascondi progetto**. Ogni membro può nascondere un progetto, proprietario compreso.
+
+Nascondere cambia solo la tua navigazione. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o da **Impostazioni account** → **Preferenze** → **Progetti nascosti**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
+
+Per ritrovarlo, scegli **Mostra** in **Progetti nascosti** o nelle impostazioni generali del progetto, oppure scegli **Mostra progetto** dal suo menu nella barra laterale. Se la modifica non può essere salvata, compare un errore e il progetto torna allo stato precedente; riprova. A differenza di lasciare il progetto o spostarlo nel cestino, nasconderlo non rimuove mai accesso o contenuti.
 
 ### Lasciare ed eliminare {#project-removal}
 

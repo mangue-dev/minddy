@@ -36,7 +36,8 @@ describe("primary sidebar project context", () => {
   it("keeps project data and menu state wired through the persistent sidebar", () => {
     expect(shell.match(/<AppSidebar\s/g)).toHaveLength(1);
     expect(shell.match(/currentProject=\{currentProject\}/g)).toHaveLength(1);
-    expect(shell.match(/projects=\{projects\}/g)).toHaveLength(1);
+    // The switcher lists my visible projects plus the one on screen (MIN-692).
+    expect(shell.match(/projects=\{switcherProjects\}/g)).toHaveLength(1);
     // Two nav panels share the wiring: the project panel of the route, and
     // the home panel the back rows lift to from a project page.
     expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(2);

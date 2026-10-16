@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,13 +45,15 @@
       "lib/sidebar-context-actions.ts",
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "lib/use-hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -73,7 +75,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -89,7 +91,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -122,7 +124,7 @@ Persönliche Zyklen und projektübergreifende Ansichten umfassen Projekte, auf d
 Klicke mit der rechten Maustaste auf eine Zeile der Seitenleiste, um auf das dargestellte Element zu wirken, ohne es zuerst zu öffnen. Linkzeilen bieten außerdem **In neuem Tab öffnen** und **Link kopieren**. Eine Aktion, die etwas in den Papierkorb verschiebt, steht immer zuletzt, nach einem Trennstrich.
 
 - Die Zeile **Alle Probleme** bietet **Neues Problem**, und die Zeile **Routinen** bietet **Neue Routine**, wenn Sie Eigentümer eines Projekts sind.
-- Eine Projektzeile oder der Projektname oben im Panel des Projekts bietet **Neu** (ein Problem, ein Ziel oder eine Seite in diesem Projekt) und **Projekteinstellungen**. Der Projekteigentümer sieht außerdem **In den Papierkorb verschieben**; dabei erscheint dieselbe Bestätigung wie in den Projekteinstellungen.
+- Eine Projektzeile oder der Projektname oben im Panel des Projekts bietet **Neu** (ein Problem, ein Ziel oder eine Seite in diesem Projekt) und **Projekteinstellungen**. Der Projekteigentümer sieht außerdem **In den Papierkorb verschieben**; dabei erscheint dieselbe Bestätigung wie in den Projekteinstellungen. Dasselbe Menü bietet außerdem **Projekt ausblenden** oder, für ein ausgeblendetes Projekt, **Projekt einblenden**; siehe [Ein Projekt für dich ausblenden](/docs/projects#hide-project).
 - Ein Projekt-Tab bietet seinen eigenen Erstellungseintrag: **Neues Problem** unter Probleme, **Neues Ziel** unter Ziele, **Neue Seite** unter Seiten und **Neues Feedback** unter Feedback, das das interne Feedback-Formular öffnet.
 - Eine Routinezeile bietet **Letzte Ausführung öffnen** und dem Projekteigentümer zusätzlich **Jetzt ausführen**, **Pausieren** oder **Fortsetzen**, **Bearbeiten** und **In den Papierkorb verschieben**. Siehe [Ausführungen verwalten und prüfen](/de/dokumentation/scheduled-routines#runs).
 - Eine Pull-Request-Zeile bietet die Statusänderungen, die ihr aktueller Status erlaubt, **Zusammenführen**, wenn sie bereit ist, und Korrekturaktionen, wenn etwas sie blockiert. Siehe [Review und Merge](/de/dokumentation/code-work#decision).

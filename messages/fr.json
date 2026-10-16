@@ -1822,7 +1822,9 @@
     "deleteSavedView": "Oublier cette vue",
     "savedViewDeleted": "« {name} » oubliée",
     "nameThisView": "Donner un nom à la vue",
-    "documentation": "Documentation"
+    "documentation": "Documentation",
+    "hideProject": "Masquer le projet",
+    "showProject": "Réafficher le projet"
   },
   "CommandPaletteActions": {
     "copied": "Copié",
@@ -2475,7 +2477,11 @@
     "numoDefaultModelHint": "Enregistré pour votre compte et ce fournisseur. Chaque conversation peut choisir un autre modèle.",
     "numoApplicationDefault": "Par défaut de l’app",
     "numoModelSaveError": "Impossible d’enregistrer le modèle Numo. Réessayez.",
-    "numoModelLoadError": "Impossible de charger le modèle Numo. Rechargez les paramètres."
+    "numoModelLoadError": "Impossible de charger le modèle Numo. Rechargez les paramètres.",
+    "hiddenProjectsTitle": "Projets masqués",
+    "hiddenProjectsHelp": "Les projets masqués n'apparaissent plus dans votre barre latérale ni sur votre accueil. Votre accès, les autres membres et l'activité du projet ne changent pas.",
+    "hiddenProjectsEmpty": "Aucun projet masqué. Masquez-en un depuis ses paramètres ou son menu dans la barre latérale.",
+    "hiddenProjectsOpen": "Ouvrir"
   },
   "AccountData": {
     "importTitle": "Transférer des données depuis une autre instance minddy",
@@ -2765,7 +2771,11 @@
     "draftCloseDescription": "Vous le retrouverez dans la barre latérale, et reprendrez à cette étape.",
     "draftCloseCancel": "Revenir",
     "draftCloseDiscard": "Abandonner",
-    "draftCloseConfirm": "Enregistrer"
+    "draftCloseConfirm": "Enregistrer",
+    "hiddenToast": "« {name} » est masqué de votre barre latérale. Retrouvez-le dans Paramètres du compte → Projets masqués.",
+    "shownToast": "« {name} » est de retour dans votre barre latérale.",
+    "hideFailed": "Impossible de masquer le projet. Réessayez.",
+    "showFailed": "Impossible de réafficher le projet. Réessayez."
   },
   "Settings": {
     "title": "Paramètres du projet",
@@ -3089,7 +3099,14 @@
     "localRepoAttach": "Attacher un dossier",
     "localRepoChange": "Changer",
     "localRepoDetach": "Détacher",
-    "localRepoWarning": "Un agent qui tourne ici lit et écrit dans ce dossier avec votre compte. Ce qu'il y fait — ses commandes, les fichiers qu'il touche, des extraits de ce qu'il lit — est envoyé à minddy, conservé 30 jours et lisible par tous les membres du projet. Ce qu'il lit hors de ce dossier, non : cela reste sur ce Mac. Le dossier lui-même n'est attaché qu'ici, et personne d'autre dans le projet ne le voit."
+    "localRepoWarning": "Un agent qui tourne ici lit et écrit dans ce dossier avec votre compte. Ce qu'il y fait — ses commandes, les fichiers qu'il touche, des extraits de ce qu'il lit — est envoyé à minddy, conservé 30 jours et lisible par tous les membres du projet. Ce qu'il lit hors de ce dossier, non : cela reste sur ce Mac. Le dossier lui-même n'est attaché qu'ici, et personne d'autre dans le projet ne le voit.",
+    "visibilityTitle": "Visibilité pour vous",
+    "hideProjectLabel": "Masquer de votre barre latérale",
+    "hideProjectHint": "Pour vous seul. Les autres membres le voient toujours, et ses routines et notifications continuent.",
+    "projectHiddenLabel": "Masqué de votre barre latérale",
+    "projectHiddenHint": "Vous pouvez toujours l'ouvrir et le modifier. Réaffichez-le pour le retrouver dans votre barre latérale.",
+    "hideProject": "Masquer",
+    "showProject": "Réafficher"
   },
   "Seed": {
     "emptyBoardCta": "Discuter avec Numo",

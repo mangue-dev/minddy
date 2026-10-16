@@ -2538,6 +2538,20 @@ their frozen configuration. Apply migration `20270109200040` before enabling the
 updated application. This change was exercised only against the local Docker
 pilot; no remote database migration or production activation is claimed.
 
+## Hidden projects (MIN-692)
+
+`hidden_projects` records which projects a user keeps out of their own
+navigation: a `(user_id, project_id)` key and a `hidden_at` timestamp, with no
+project or user content. The encryption policy classifies the identifiers as
+clear routing identity and the timestamp as a timestamp. Authenticated RLS
+limits reads and deletes to the row's user, and inserts additionally require
+`can_access_project`. Rows cascade with the account and the project. A row
+left by an ended membership grants nothing; the client only applies it to
+projects RLS still returns. The account export lists the rows; account
+transfer does not copy them, because project ids are rebound on import.
+Migration `20270109200050` is additive and was not applied to a remote database
+by this change.
+
 ## Numo worker completion authority (2026-10-11)
 
 Migration `20270109200041` moves the worker-generation check into the service-only

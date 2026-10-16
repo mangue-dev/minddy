@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -45,13 +45,15 @@
       "lib/sidebar-context-actions.ts",
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "lib/use-hidden-projects.ts",
+      "content/documentation/reviews/min-692-hidden-projects.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR changed-passage parity and label review); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR changed-passage parity and label review); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -73,7 +75,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -89,7 +91,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -122,7 +124,7 @@ Os ciclos pessoais e as visualizações entre projetos abrangem os projetos aos 
 Clique com o botão direito em uma linha da barra lateral para agir sobre o que ela representa sem abri-la primeiro. As linhas de link também oferecem **Abrir em uma nova aba** e **Copiar link**. Uma ação que move algo para a lixeira sempre aparece por último, depois de um separador.
 
 - A linha **Todos os problemas** oferece **Novo problema**, e a linha **Rotinas** oferece **Nova rotina** quando você é proprietário de um projeto.
-- Uma linha de projeto, ou o nome do projeto no topo do painel dele, oferece **Novo** (um problema, objetivo ou página nesse projeto) e **Configurações do projeto**. O proprietário do projeto também vê **Mover para a lixeira**, que pede a mesma confirmação das configurações do projeto.
+- Uma linha de projeto, ou o nome do projeto no topo do painel dele, oferece **Novo** (um problema, objetivo ou página nesse projeto) e **Configurações do projeto**. O proprietário do projeto também vê **Mover para a lixeira**, que pede a mesma confirmação das configurações do projeto. O mesmo menu também oferece **Ocultar projeto**, ou **Mostrar projeto** para um projeto que você ocultou; consulte [Ocultar um projeto para você](/docs/projects#hide-project).
 - Uma aba de projeto oferece sua própria criação: **Novo problema** em Problemas, **Novo objetivo** em Objetivos, **Nova página** em Páginas e **Novo feedback** em Feedback, que abre o formulário interno de feedback.
 - Uma linha de rotina oferece **Abrir a última execução** e, ao proprietário do projeto, **Executar agora**, **Pausar** ou **Reativar**, **Editar** e **Mover para a lixeira**. Veja [Gerenciar e verificar execuções](/pt-br/documentacao/scheduled-routines#runs).
 - Uma linha de pull request oferece as mudanças que o estado atual permite, **Mesclar** quando ela está pronta e ações de correção quando algo a bloqueia. Veja [Revisão e merge](/pt-br/documentacao/code-work#decision).
