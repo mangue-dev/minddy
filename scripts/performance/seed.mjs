@@ -27,7 +27,7 @@ export function workload(userId) {
   }));
   const pages = projects.flatMap((p, pi) => Array.from({ length: 20 }, (_, i) => {
     const pageId = id(`page-${pi}-${i}`);
-    return { id: pageId, project_id: p.id, title: `Performance guide ${pi + 1}.${i + 1}`, position: `a${String(i).padStart(3, "0")}`, created_by: userId, updated_by: userId, search_text: paragraph, content: { type: "doc", content: Array.from({ length: 80 }, (_, block) => ({ type: block % 10 === 0 ? "heading" : "paragraph", attrs: { blockId: id(`page-${pi}-${i}-block-${block}`), ...(block % 10 === 0 ? { level: 2 } : {}) }, content: [{ type: "text", text: block % 10 === 0 ? `Workflow ${block / 10 + 1}` : paragraph }] })) } };
+    return { id: pageId, project_id: p.id, title: `Performance guide ${pi + 1}.${i + 1}`, position: `a${String(i).padStart(3, "0")}`, created_by: userId, updated_by: userId, search_text: paragraph, content: { type: "doc", content: Array.from({ length: 80 }, (_, block) => ({ type: block % 10 === 0 ? "heading" : "paragraph", attrs: { id: `perf-${pi}-${i}-${block}`, ...(block % 10 === 0 ? { level: 2 } : {}) }, content: [{ type: "text", text: block % 10 === 0 ? `Workflow ${block / 10 + 1}` : paragraph }] })) } };
   }));
   return { projects, issues, pages,
     comments: issues.flatMap((issue) => Array.from({ length: 2 }, (_, i) => ({ id: id(`comment-${issue.id}-${i}`), issue_id: issue.id, author_id: userId, body: `Review note ${i + 1}. ${paragraph}`, created_at: now }))),
