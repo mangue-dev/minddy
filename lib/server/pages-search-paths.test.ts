@@ -147,12 +147,14 @@ function scan() {
         if (writesBody) writes.add(enclosingFunction(node));
       }
     }
-    if (
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === "queueSearchText"
-    ) {
-      syncs.add(enclosingFunction(node));
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      const callee = node.expression.text;
+      // The operation authority (MIN-688): a stream commit writes the body,
+      // and `afterStreamCommit` is where its catch-up lives.
+      if (callee === "commitPageStreams") writes.add(enclosingFunction(node));
+      if (callee === "queueSearchText" || callee === "afterStreamCommit") {
+        syncs.add(enclosingFunction(node));
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -160,6 +162,25 @@ function scan() {
 
   return { writes, syncs };
 }
+
+/** Calls made directly inside one named function of lib/server/pages.ts. */
+function callsIn(name: string): Set<string> {
+  const calls = new Set<string>();
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        enclosingFunction(node) === name) calls.add(node.expression.text);
+    ts.forEachChild(node, visit);
+  };
+  visit(parsePages());
+  return calls;
+}
+
+/**
+ * The canonical INITIALIZATION of a live page (MIN-688) is the named
+ * exception: it gives an empty body its block and IDs without changing a
+ * word of its text, so there is nothing to reproject.
+ */
+const INITIALIZATION = "readPageCollaborationSnapshot";
 
 describe("les chemins d'écriture du corps d'une page", () => {
   it("écrivent tous leur texte de recherche", () => {
@@ -169,7 +190,7 @@ describe("les chemins d'écriture du corps d'une page", () => {
     // invisible to analysis would let it pass silently.
     expect(writes.size).toBeGreaterThanOrEqual(4);
 
-    const missing = [...writes].filter((fn) => !syncs.has(fn));
+    const missing = [...writes].filter((fn) => fn !== INITIALIZATION && !syncs.has(fn));
     expect(
       missing,
       `Ces fonctions de lib/server/pages.ts écrivent le corps d'une page sans ` +
@@ -178,11 +199,21 @@ describe("les chemins d'écriture du corps d'une page", () => {
     ).toEqual([]);
   });
 
+  it("reproject typing batches as well as replacements (MIN-688)", () => {
+    // Both branches of the stream side effects must reach the search text:
+    // immediately for a replacement, after a quiet period while typing.
+    const after = callsIn("afterStreamCommit");
+    expect(after.has("queueSearchText")).toBe(true);
+    expect(after.has("queueTypingProjections")).toBe(true);
+    expect(callsIn("queueTypingProjections").has("syncPagesSearchText")).toBe(true);
+  });
+
   it("couvrent les quatre gestes connus", () => {
     const { writes } = scan();
     // A guardrail of the guardrail: if one of these names disappears, it is because the
     // module has moved, and the rule above should be reread rather than believed.
-    for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody"]) {
+    for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody",
+      "updatePageThroughStreams", "submitPageCollaboration"]) {
       expect(writes.has(fn), `${fn} n'est plus vu comme un chemin d'écriture`).toBe(
         true
       );

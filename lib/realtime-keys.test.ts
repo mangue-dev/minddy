@@ -21,6 +21,7 @@ import {
   projectScopeKeys,
   type BroadcastChange,
 } from "./realtime-keys";
+import { emitPageRow, onPageStreamHeads } from "./page-collaboration-signals";
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 const PAGE = "44444444-4444-4444-8444-444444444444";
@@ -129,6 +130,56 @@ describe("keysForProjectEvent — pages", () => {
     ).toBe("none");
     // A page is not a ticket: nothing to ask again from `/api/me/board`.
     expect(hasKey(keys, ["me", "board"])).toBe(false);
+  });
+
+  it("does not reload the page list for a batch that only advanced the body stream (MIN-688)", () => {
+    const keys = keysForProjectEvent(
+      change("pages", {
+        operation: "UPDATE",
+        record: pageRow({ body_revision: 8, title_revision: 2, version: 4 }),
+        old_record: pageRow({ body_revision: 7, title_revision: 2, version: 3 }),
+      }),
+      PROJECT
+    );
+    expect(hasKey(keys, ["pages", PROJECT])).toBe(false);
+    expect(hasKey(keys, ["app-tab-metadata"])).toBe(false);
+    // Without a live session here, the open document still refetches.
+    expect(hasKey(keys, ["page", PAGE])).toBe(true);
+  });
+
+  it("still reloads the list when the title stream moved", () => {
+    const keys = keysForProjectEvent(
+      change("pages", {
+        operation: "UPDATE",
+        record: pageRow({ body_revision: 7, title_revision: 3 }),
+        old_record: pageRow({ body_revision: 7, title_revision: 2 }),
+      }),
+      PROJECT
+    );
+    expect(hasKey(keys, ["pages", PROJECT])).toBe(true);
+  });
+
+  it("leaves the document of a page open in a live session to that session (MIN-688)", () => {
+    const stop = onPageStreamHeads(PAGE, () => {});
+    try {
+      const typing = keysForProjectEvent(
+        change("pages", { operation: "UPDATE", record: pageRow({ body_revision: 2 }), old_record: pageRow({ body_revision: 1 }) }),
+        PROJECT
+      );
+      expect(hasKey(typing, ["page", PAGE])).toBe(false);
+      // Trashing it still reaches the surface.
+      const trashed = keysForProjectEvent(
+        change("pages", {
+          operation: "UPDATE",
+          record: pageRow({ deleted_at: "2026-10-17T10:00:00Z" }),
+          old_record: pageRow(),
+        }),
+        PROJECT
+      );
+      expect(hasKey(trashed, ["page", PAGE])).toBe(true);
+    } finally {
+      stop();
+    }
   });
 
   it("rattrape l'arbre après une coupure", () => {
@@ -418,5 +469,17 @@ describe("routine realtime", () => {
     expect(sql).toContain("execute function public.broadcast_agent_routine_row()");
     expect(sql).not.toContain("to_jsonb(new)");
     expect(sql).not.toContain("new.prompt");
+  });
+});
+
+describe("page stream wake-ups (MIN-688)", () => {
+  it("hands each live session its page's stream heads, and only those", () => {
+    const seen: unknown[] = [];
+    const stop = onPageStreamHeads(PAGE, (heads) => seen.push(heads));
+    emitPageRow({ id: PAGE, body_revision: 5, title_revision: 1 });
+    emitPageRow({ id: "55555555-5555-4555-8555-555555555555", body_revision: 9 });
+    stop();
+    emitPageRow({ id: PAGE, body_revision: 6 });
+    expect(seen).toEqual([{ pageId: PAGE, body: 5, title: 1 }]);
   });
 });

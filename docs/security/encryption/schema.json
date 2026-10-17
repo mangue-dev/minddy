@@ -165,6 +165,16 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "body_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "title_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -3117,6 +3127,97 @@
         "table": "pages",
         "column": "project_id",
         "targetColumn": "project_id"
+      },
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "page_collaboration_batches": {
+    "columns": {
+      "page_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "field": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "base_revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "step_count": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "batch_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "client_id": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "author_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "author_kind": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "author_api_key_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "steps": {
+        "type": "jsonb",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "page_id",
+      "field",
+      "base_revision"
+    ],
+    "foreignKeys": [
+      {
+        "table": "pages",
+        "column": "page_id",
+        "targetColumn": "id"
       },
       {
         "table": "projects",

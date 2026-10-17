@@ -190,6 +190,12 @@ const rules = [
     allowed: new Set(["lib/server/page-version-store.ts", "lib/server/retention.ts"]),
   },
   {
+    // The live collaboration journal (MIN-688) holds page text, deleted text
+    // included: only its store reads or writes it, after access checks.
+    access: /\.\s*from\s*\(\s*["'`]page_collaboration_batches["'`]\s*\)|\.\s*rpc\s*\(\s*["'`](?:commit|reset)_page_collaboration["'`]/,
+    allowed: new Set(["lib/server/page-collaboration.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]stat_events["'`]\s*\)/,
     allowed: new Set(["lib/server/stat-events.ts", "lib/server/encryption/stat-events-backfill.ts"]),
   },

@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,13 +67,17 @@
       "lib/use-semantic-mentions.ts",
       "components/markdown-mention.tsx",
       "components/mention-textarea.tsx",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "docs/page-collaboration.md",
+      "lib/use-page-collaboration.ts",
+      "lib/page-collaboration-stream.ts",
+      "content/documentation/reviews/min-688-live-collaboration.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (pt-BR changed-text and retained-meaning self-review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (pt-BR changed-text and retained-meaning self-review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_pt-BR with agent:/root (pt-BR MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -110,7 +114,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -126,7 +130,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +146,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página com uma edição de demonstração e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -158,7 +162,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -174,7 +178,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -190,7 +194,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -206,7 +210,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -222,7 +226,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Remover.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -275,7 +279,9 @@ Use menções para vincular problemas, objetivos, pessoas ou páginas relevantes
 
 ### Salvamento e portabilidade {#editor-save}
 
-Observe o indicador de salvamento antes de sair de uma edição importante. Se outra edição criar um conflito, use os controles de recuperação exibidos e preserve seu texto; não suponha que ambas foram mescladas. O histórico pode ajudar a inspecionar versões salvas anteriormente.
+A página é salva enquanto você digita: cada alteração chega ao servidor em instantes, e o indicador de salvamento mostra o salvamento em andamento até o servidor aceitá-la. Várias pessoas podem editar a mesma página ao mesmo tempo, inclusive o mesmo parágrafo ou o título. As alterações de cada pessoa aparecem para as outras enquanto ela digita, assim como as edições que o Numo ou um agente conectado por MCP fazem na página.
+
+Se a conexão cair, mantenha a página aberta. As alterações não salvas permanecem na página e são enviadas quando a conexão volta; as alterações dos outros chegam ao mesmo tempo e se mesclam com as suas. Abrir outra página continua enviando essas alterações enquanto o minddy estiver aberto. Fechar a aba ou o aplicativo com alterações ainda não salvas as descarta, e o navegador pede uma confirmação antes. Quando o servidor recusa uma alteração, por exemplo um título com mais de 500 caracteres ou um link cujo protocolo não é permitido, o minddy desfaz essa alteração e exibe uma mensagem. O histórico pode ajudar a inspecionar versões salvas anteriormente.
 
 Exportações Markdown e leituras de páginas por agentes preservam ícones e cores dos avisos na representação compatível. Os formatos de exportação diferem na fidelidade e no tratamento de anexos, então confira o documento resultante antes de substituir uma fonte original. Use blocos de código para comandos literais e preserve os pré-requisitos e avisos no texto ao redor.
 
@@ -283,14 +289,14 @@ Exportações Markdown e leituras de páginas por agentes preservam ícones e co
 
 Abra uma página do projeto e os controles de comentários. Selecione o conteúdo relevante ao criar um comentário ancorado, explique a pergunta ou mudança proposta e use menções para envolver um membro. Um leitor pode comentar quando o proprietário ativou **Pode comentar** para ele. Responda na discussão para manter a decisão junto ao contexto. Resolva a discussão quando a pergunta tiver sido realmente atendida.
 
-Avatares de presença identificam quem está vendo a página. Eles não provam que o texto não salvo de outra pessoa chegou ao servidor nem que edições simultâneas sejam mescladas automaticamente. Leia o estado atual de salvamento antes de sair.
+Avatares de presença identificam quem está vendo a página. Enquanto alguém edita, o cursor e a seleção dessa pessoa aparecem no corpo e no título, em uma cor própria e identificados com o nome dela. O cursor de um leitor não é exibido. Um cursor mostra onde alguém está trabalhando, não que o texto dessa pessoa esteja salvo: o indicador de salvamento reflete apenas as suas alterações.
 
 
 ![Atividade da página com uma edição de demonstração e campo de comentário vazio.](/documentation/pt-BR/page-comments.png)
 
 ### Recuperar um conflito de salvamento {#page-conflict}
 
-O minddy combina edições de blocos diferentes no primeiro nível do documento quando consegue preservar as duas alterações. Ele não mescla caractere por caractere edições simultâneas dentro do mesmo bloco. Se as duas pessoas alteraram esse bloco, o documento mantém a versão remota e um aviso oferece seu bloco anterior para análise.
+Edições simultâneas são mescladas automaticamente, caractere por caractere, inclusive dentro do mesmo parágrafo. Um aviso de conflito ainda pode aparecer quando o minddy precisa recarregar a página enquanto você tem alterações não salvas: depois de uma desconexão durante a qual muitas alterações foram feitas, ou depois de uma alteração feita sem edição ao vivo, como uma importação em um banco de dados. Se as suas alterações e a versão recarregada modificaram o mesmo bloco de primeiro nível, o documento mantém a versão recarregada desse bloco e o aviso oferece a sua para análise.
 
 Compare o bloco identificado com o documento atual. Escolha restaurar sua versão apenas quando realmente quiser substituir esse bloco por ela. Se sua ação em conflito foi uma exclusão, a opção de excluí-lo novamente aplica essa exclusão de forma explícita. Dispensar o aviso mantém o documento adotado e fecha o alerta; não restaura sua versão. Preserve o texto que deseja recuperar antes de dispensar e use o histórico para examinar versões salvas quando precisar de uma recuperação mais ampla. Essas escolhas afetam o bloco identificado, sem substituir toda a página às cegas.
 

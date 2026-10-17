@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,13 +67,17 @@
       "lib/use-semantic-mentions.ts",
       "components/markdown-mention.tsx",
       "components/mention-textarea.tsx",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "docs/page-collaboration.md",
+      "lib/use-page-collaboration.ts",
+      "lib/page-collaboration-stream.ts",
+      "content/documentation/reviews/min-688-live-collaboration.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (fr changed-text and retained-meaning self-review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (fr changed-text and retained-meaning self-review); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min688_fr with agent:/root (fr MIN-688 translation of the rewritten saving, presence and conflict passages; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -109,7 +113,7 @@
       "src": "/documentation/fr/page-create-menu.png",
       "alt": "Menu de création proposant Nouvelle page et Nouvelle base de données.",
       "caption": "Les contrôles des pages du projet permettent de choisir un document ou une base de données.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -125,7 +129,7 @@
       "src": "/documentation/fr/page-editor.png",
       "alt": "Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.",
       "caption": "Les titres, blocs de tâches et la mention AUR-2 structurent la page. Ce contenu est un exemple de démonstration.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -141,7 +145,7 @@
       "src": "/documentation/fr/page-comments.png",
       "alt": "Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.",
       "caption": "Lisez l’activité et rédigez un commentaire dans le champ. Aucun commentaire n’a été envoyé dans cet exemple.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -157,7 +161,7 @@
       "src": "/documentation/fr/page-file-states.png",
       "alt": "Page de démonstration avec un envoi inachevé et un fichier enregistré de 67 octets proposant Télécharger.",
       "caption": "Vérifiez l’état réel du fichier : la seconde pièce jointe est disponible, contrairement au premier envoi inachevé.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -173,7 +177,7 @@
       "src": "/documentation/fr/page-history-preview.png",
       "alt": "Onglet Versions avec un état antérieur déplié, son auteur, Restaurer et l’indication de conservation pendant 30 jours.",
       "caption": "Prévisualisez un état enregistré et comparez-le à la page actuelle avant de le restaurer.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -189,7 +193,7 @@
       "src": "/documentation/fr/page-publish.png",
       "alt": "Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.",
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -205,7 +209,7 @@
       "src": "/documentation/fr/page-export.png",
       "alt": "Menu d’export du document avec Markdown (.md) et Imprimer / PDF.",
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -221,7 +225,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Retirer.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -274,7 +278,9 @@ Les mentions relient tickets, objectifs, personnes ou pages. Tapez `@` suivi d�
 
 ### Enregistrement et portabilité {#editor-save}
 
-Surveillez l’indicateur d’enregistrement avant de quitter une modification importante. En cas de conflit, utilisez les commandes de récupération et conservez votre texte ; ne supposez pas que les deux modifications ont fusionné. L’historique aide à inspecter les versions enregistrées.
+Une page s’enregistre pendant la saisie : chaque modification parvient au serveur en quelques instants, et l’indicateur d’enregistrement affiche l’enregistrement en cours jusqu’à ce que le serveur l’ait acceptée. Plusieurs personnes peuvent modifier la même page en même temps, y compris le même paragraphe ou le titre. Les modifications de chacun apparaissent chez les autres au fil de la saisie, tout comme celles que Numo ou un agent connecté par MCP apporte à la page.
+
+Si la connexion est coupée, gardez la page ouverte. Les modifications non enregistrées restent sur la page et sont envoyées au retour de la connexion ; celles des autres arrivent en même temps et fusionnent avec les vôtres. Ouvrir une autre page n’interrompt pas leur envoi tant que minddy reste ouvert. Fermer l’onglet ou l’application alors que des modifications ne sont pas encore enregistrées les abandonne, et le navigateur vous demande d’abord de confirmer. Lorsque le serveur refuse une modification, par exemple un titre de plus de 500 caractères ou un lien dont le protocole n’est pas autorisé, minddy annule cette modification et affiche un message. L’historique aide à inspecter les versions enregistrées.
 
 Les exports Markdown et les lectures par des agents préservent les icônes et couleurs des encadrés dans leur représentation prise en charge. La fidélité du contenu et le traitement des pièces jointes varient selon le format ; vérifiez le résultat avant de remplacer la source. Utilisez des blocs de code pour les commandes littérales et gardez les prérequis et les avertissements autour d’elles.
 
@@ -282,14 +288,14 @@ Les exports Markdown et les lectures par des agents préservent les icônes et c
 
 Ouvrez une page du projet et ses commentaires. Sélectionnez le contenu concerné pour créer un commentaire ancré, expliquez votre question ou votre proposition et mentionnez le membre à solliciter. Un lecteur peut commenter lorsque le propriétaire a activé **Peut commenter** pour lui. Répondez dans le fil pour garder la décision près du contexte. Résolvez-le lorsque la question est effectivement traitée.
 
-Les `avatars` de présence indiquent les personnes qui consultent la page. Ils ne prouvent pas que le texte non enregistré d’une autre personne a atteint le serveur ou que les modifications simultanées fusionnent automatiquement. Vérifiez l’enregistrement avant de quitter.
+Les `avatars` de présence indiquent les personnes qui consultent la page. Pendant qu’une personne modifie la page, son curseur et sa sélection apparaissent dans le corps et dans le titre, dans une couleur qui lui est propre et accompagnés de son nom. Le curseur d’un lecteur n’est pas affiché. Un curseur montre où quelqu’un travaille, pas que son texte est enregistré : l’indicateur d’enregistrement ne reflète que vos propres modifications.
 
 
 ![Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.](/documentation/fr/page-comments.png)
 
 ### Résoudre un conflit d’enregistrement {#page-conflict}
 
-minddy fusionne les modifications de blocs de premier niveau différents lorsqu’il peut conserver les deux changements. Il ne fusionne pas caractère par caractère les textes écrits simultanément dans un même bloc. Si les deux personnes ont modifié ce bloc, le document garde la version distante et une bannière propose votre ancien bloc pour examen.
+Les modifications simultanées fusionnent automatiquement, caractère par caractère, y compris à l’intérieur d’un même paragraphe. Une bannière de conflit peut toutefois apparaître lorsque minddy doit recharger la page alors que vous avez des modifications non enregistrées : après une déconnexion pendant laquelle de nombreuses modifications ont eu lieu, ou après une modification faite sans édition en direct, comme un import dans une base de données. Si vos modifications et la version rechargée ont changé le même bloc de premier niveau, le document garde la version rechargée de ce bloc et la bannière vous propose la vôtre pour examen.
 
 Comparez le bloc désigné avec le document actuel. Choisissez Restaurer la mienne seulement si vous voulez le remplacer par votre version. Si votre action en conflit était une suppression, Le supprimer à nouveau applique explicitement cette suppression. Fermer conserve le document adopté et ferme l’avertissement ; cette action ne restaure pas votre version. Conservez le texte à garder avant de fermer et consultez l’historique si une récupération plus large est nécessaire. Ces choix ciblent le bloc identifié plutôt que de remplacer aveuglément toute la page.
 

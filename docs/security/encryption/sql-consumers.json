@@ -114,7 +114,7 @@
       "functionReferences": []
     },
     "guard_mcp_content()": {
-      "sha256": "e88e2b82620ff9c78bea9d4484999f7037fb87d6bd8a96ad3efe925e64389f70",
+      "sha256": "93287d8f3ee1693323a420438f00ff5bd52dd8da4b530449bd4d783f2f46bf38",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -145,7 +145,7 @@
       "functionReferences": []
     },
     "guard_page_content()": {
-      "sha256": "8612e33c977afc4362b054ddc6307ab32f6c5baa0e45e486e3876c0e6b76613f",
+      "sha256": "ede1ee6e41958cbcc752c5c07e0903f6bd6e3624f4c84de27e54763dca9a9e0f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -161,7 +161,7 @@
       "functionReferences": []
     },
     "guard_push_content()": {
-      "sha256": "9e6aabdafaf0b6418973250dafb88df03391e4d9df5b9367e54044fa1235fc1c",
+      "sha256": "7095dba1b98432547083496fb1a2763a4247f1792a81515525cf39aca96a6eb3",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -177,7 +177,7 @@
       ]
     },
     "guard_view_content()": {
-      "sha256": "251a47675d3bb2776f82d061145fda3d12475c7bfd3bf371c0fdc18a7f262b43",
+      "sha256": "2ff3cda618f012df5d79437130fe0e812705401f488e4f466c4a9cbf15d2324f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -473,7 +473,7 @@
       "functionReferences": []
     },
     "guard_api_key_content()": {
-      "sha256": "cffabb9e4a1788eab8d6766c8a96e2a68da57de6370bd087d0e2ba860477734b",
+      "sha256": "b4235e49676758916eb68023bb8a71f43d72d0684c89d72cfd5056660f6f133e",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -486,7 +486,7 @@
       "functionReferences": []
     },
     "guard_app_tab_content()": {
-      "sha256": "e228c5fc4990f11b8ebc6f9f1b68efba13348aea60427cad2d75185f8a6cfc93",
+      "sha256": "7768a605a5f2f8d9f9a993eff0212107a5b183167c965cec11afecfe47aefb2f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -501,7 +501,7 @@
       ]
     },
     "guard_project_content()": {
-      "sha256": "558f414a1d93aca580698d1aa9958f4276d070eefacf8bab6c50cb4af47c6646",
+      "sha256": "e1c4b6d2771fe7a518ee2d5182dea93b347b01e9fb18a7c878b14817d7edbb89",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -662,7 +662,7 @@
       "functionReferences": []
     },
     "guard_billing_identity()": {
-      "sha256": "8fc1e7b1ed63c797dcf648bba70a787f645a10779204d288ae10ab81636a78ff",
+      "sha256": "0a61cef2b6b3998c0deae8bfb8978cee14c2535eab56abdfebe307cc69a1ca12",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1101,7 +1101,7 @@
       "functionReferences": []
     },
     "guard_oauth_code_content()": {
-      "sha256": "43306340c88177763481684765de4cf1ad2bf0904736c8286655ced3cb9668a3",
+      "sha256": "e776a5b4c04188ab205128964b6e2551c95fc8fd5a6d72b433075d7893eb204c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1354,7 +1354,7 @@
       "functionReferences": []
     },
     "guard_integration_content()": {
-      "sha256": "50b01add58709093a8d85c62c37a54141d2a00e20458a03b04970f9bef8a41dd",
+      "sha256": "1a05c5630ae76fcec042217fadba939f488f998c4a9c7e27fffc9804de9cbd8d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1382,7 +1382,7 @@
       "functionReferences": []
     },
     "guard_saved_view_bookmark()": {
-      "sha256": "dd7f14ff224ead749ba250873f1fb8bcd39dcbb19e48d05bd91d98285e025e8a",
+      "sha256": "2ddbe2e0e0a4e84a922558bfb802e787b09c4722e460621c21a8169d73ac95e1",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1395,7 +1395,7 @@
       "functionReferences": []
     },
     "guard_user_ai_key_content()": {
-      "sha256": "e959d00cc346318ae857fadeed218df4127b30a7fc882e4add2cfde9482120e6",
+      "sha256": "5ccb18a45480e8570fae5e18386f1c60fdb75c315f712e1ee0643731a08a42af",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1498,13 +1498,14 @@
       ]
     },
     "current_realtime_topic(text)": {
-      "sha256": "0aaef96bea2bdb4a5d268092fa46db54eb874a4f6a4b23d5aa88caa1298bb7ea",
+      "sha256": "d6597da0b4725b65c67b09fa3a7eeab42a32aba08996fac65a41bd7a4bcef4e7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
+        "pages",
         "issues",
         "comments",
         "projects",
@@ -1517,6 +1518,7 @@
         "project_realtime_generations"
       ],
       "protectedRelations": [
+        "pages",
         "issues",
         "comments",
         "projects",
@@ -1557,7 +1559,7 @@
       "functionReferences": []
     },
     "guard_forge_default_branch()": {
-      "sha256": "9d613dee864b1f7a717c44fa219a2bf75a9c7890c32c19e9a011e2cf1acbd05f",
+      "sha256": "85ca8c045e1ce979673cf6fb7d0233c061f6501c983bfd5b9610dd3f1e71a01c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1583,7 +1585,7 @@
       "functionReferences": []
     },
     "guard_oauth_client_content()": {
-      "sha256": "fe026209d75397391b093d43dc01d4551e49f085f2e4a62f266e012a01c81ad1",
+      "sha256": "bcee7aa321a5438e55447e81925a3128184fbeb1b22b1154a810b668f24c253c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1659,14 +1661,18 @@
       "functionReferences": []
     },
     "resolve_realtime_topic(text)": {
-      "sha256": "f159504f5778c948dd27410595a196adeb56238fe66d81a48ae4c57edf6705a2",
+      "sha256": "112d3152e826abba7606e0f754cb1a5c44fba8d4a9da14213af2c960b92574b7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-      "relations": [],
-      "protectedRelations": [],
+      "relations": [
+        "pages"
+      ],
+      "protectedRelations": [
+        "pages"
+      ],
       "functionReferences": [
         "mfa_aal_ok",
         "topic_uuid",
@@ -1835,7 +1841,7 @@
       "functionReferences": []
     },
     "guard_agent_routine_content()": {
-      "sha256": "6f5fcaa78e9b75ec461462524dff582fa42b323840a140e91cd977fda73c0f50",
+      "sha256": "64a66090dabeaac2aa86fae3181314ba13c404139bd01c4d9b1f9bf49b7bc958",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2085,7 +2091,7 @@
       "functionReferences": []
     },
     "guard_project_icon_reference()": {
-      "sha256": "227bbd68df30b47cdf9c8192cad515651b6f0645d9b7a02bc2894afeb37d71a8",
+      "sha256": "ddd65f0e8c7e0834acdc4742733d25d8b8e7fa8579e63621cead0de274e87118",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2113,7 +2119,7 @@
       "functionReferences": []
     },
     "guard_stripe_webhook_payload()": {
-      "sha256": "2653df97bddb544b4d3f9661eb7867691134ae949b7241c0c2984559f06861e4",
+      "sha256": "18fa5973c882ee30fc4f14e7dce114fc3de9adb86499c24130a6dbf6ae541e68",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2603,13 +2609,14 @@
       "functionReferences": []
     },
     "realtime_topic_project_ids(text)": {
-      "sha256": "140a5c496c096f50a13d201d3a0f8775357efda60f7a02c302481d2fc0f79c68",
+      "sha256": "38efd1341c5125b308b21a676f8a25e19fcb7ad579c735c2272cd4c03d6ba86e",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres}",
       "relations": [
+        "pages",
         "issues",
         "comments",
         "objectives",
@@ -2619,6 +2626,7 @@
         "project_git_links"
       ],
       "protectedRelations": [
+        "pages",
         "issues",
         "comments",
         "objectives",
@@ -2658,7 +2666,7 @@
       "functionReferences": []
     },
     "version_realtime_message_topic()": {
-      "sha256": "b35c4740fa5217809c152550b322fc986767265ab444a5abccca676814acc26e",
+      "sha256": "1e49c9ec9f7344b10b12afd7ed2537ea4d2801fb31cf61325ea1f2e63dcb80e8",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2783,7 +2791,7 @@
       "functionReferences": []
     },
     "guard_encryption_snapshot_write()": {
-      "sha256": "09df0a54a28d717ccff1ad2117b443c0633170feaa88d00c4c2ac58a7c409664",
+      "sha256": "e893c6a946ede8a987cc8c4301bd76fa0b9eb317409353188c36cb88550e366f",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2841,7 +2849,7 @@
       "functionReferences": []
     },
     "guard_forge_oauth_token_content()": {
-      "sha256": "28acfb124917a387c83c9f82634a4151c2afe09f9b1bbcd2bdd816cbc053f96a",
+      "sha256": "809518d6c4e55f49b1df17670aabf0004a3fdc124cc75f9c157bdcdec7f7041c",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2861,7 +2869,7 @@
       ]
     },
     "guard_forge_repository_identity()": {
-      "sha256": "4b6a5332aa478c65a0ba3bda0e4f85bd0915f57ad3872039422229241399f811",
+      "sha256": "409e04a5d2448ee2e7763a4aef630aa459955f14ab989b8702f3c997fce61f9a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3029,7 +3037,7 @@
       "functionReferences": []
     },
     "guard_project_git_webhook_secret()": {
-      "sha256": "5c1cbd22ebe0cdaad13bfe07ab5255a8243d27b6e6e09d0f9e96454baf0b0b86",
+      "sha256": "567486607e51239e568fea82e8fe12bbb438202ca250681284715d1675e7599a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3132,7 +3140,7 @@
       "functionReferences": []
     },
     "guard_invitation_email_transition()": {
-      "sha256": "47fa03d010bcd1179703713c4a417fa63edb04e91e6d2d502ad5258c2cc1ceb9",
+      "sha256": "35f753898c5757c54a2fa8dc99af80fe642075ec7c5ff1815e1a7c0744683a44",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3270,7 +3278,7 @@
       "functionReferences": []
     },
     "guard_forge_attachment_object_path()": {
-      "sha256": "4b5d8f060d7f364dc021ad8eb5f58f5a0295237221ca4f09e6064340b2e58351",
+      "sha256": "3e6004991304141bf2abab1dc9d7d79da75cb9d69a9bf2e114bab6a9114d5bf5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3301,7 +3309,7 @@
       "functionReferences": []
     },
     "guard_forge_relay_instance_content()": {
-      "sha256": "7dc3d90fd0be8eeb8acd298ee9d11a825c539a84f17a6885252e091e8feaefba",
+      "sha256": "26af96629b1bf15d81dd9f94feb7330ddc5b294f0cbe689ae4d763b23a1e542a",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3314,7 +3322,7 @@
       "functionReferences": []
     },
     "guard_private_project_icon_storage()": {
-      "sha256": "908176393b59f40be49d2b69a351a1c90896f3119752cd91d56ad4c25f36bec4",
+      "sha256": "cf177ab3c0530d8c65031420b2fbb89b3c7f17d53f8e11d7528ab0fa5a0a613d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3581,7 +3589,7 @@
       ]
     },
     "guard_ai_decision_evaluation_content()": {
-      "sha256": "069cdc03de693a3f66ff6c53fe4ecca487e2081da8465b816305aec6abd26375",
+      "sha256": "efb4d4791058ed1cb2e954ce500cee939ec1cb74b710874bed72598cdbac0997",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3792,7 +3800,7 @@
       "functionReferences": []
     },
     "guard_attachment_object_snapshot_write()": {
-      "sha256": "7dd7ed2d5b08a460624298773fa760703c70b2b15ebe2ec40c69e3db76f0821d",
+      "sha256": "e1d6625d5f125e8b72254e68694d88000eb06524535a3e2d72943678b339edac",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3810,7 +3818,7 @@
       ]
     },
     "guard_forge_relay_provisioning_content()": {
-      "sha256": "69a5f741eff3bf49f8fa1eda36693c32b364d0bff85f3a92d1b8b442ae829400",
+      "sha256": "06d4c0e868143711d5153a489be72fabb1bc28e7f51bb6247646a986670b68cc",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -4007,7 +4015,7 @@
       "functionReferences": []
     },
     "guard_forge_relay_user_delivery_content()": {
-      "sha256": "84bf191c0363cde667e26593a565d983ba232976199ac615d4936dda3ffd009c",
+      "sha256": "951348308ae9d9f61045fe6a53b3dd3da8bfbcd6217a87aa1c8d083a580087fe",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6755,6 +6763,84 @@
         "github_issue_comment_syncs"
       ],
       "functionReferences": []
+    },
+    "guard_page_collaboration()": {
+      "sha256": "945845aa2e0ca0987cc881ca6d3ae298b58647e1cb73f23c5b7545375fcdf214",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "page_collaboration_batches"
+      ],
+      "protectedRelations": [
+        "page_collaboration_batches"
+      ],
+      "functionReferences": []
+    },
+    "reset_page_collaboration(uuid)": {
+      "sha256": "5d89e8deb08549d3e571b9f6019d2fe798f78f027845ef5480e4b8c172ad9911",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages"
+      ],
+      "protectedRelations": [
+        "pages"
+      ],
+      "functionReferences": []
+    },
+    "guard_page_collaboration_batch()": {
+      "sha256": "5d08614cc84a5e3f97d4dd2106e2de627254d4f890cfb91f143d1ec6b6dfdfb6",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages",
+        "page_content_encryption_scope"
+      ],
+      "protectedRelations": [
+        "pages"
+      ],
+      "functionReferences": []
+    },
+    "prune_page_collaboration_batches(integer)": {
+      "sha256": "b8f1e1fa551774e64a27bde06d3fc6620d7172236b6a7d760e404e63ee68ca06",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "page_collaboration_batches"
+      ],
+      "protectedRelations": [
+        "page_collaboration_batches"
+      ],
+      "functionReferences": []
+    },
+    "commit_page_collaboration(uuid,bigint,jsonb,jsonb)": {
+      "sha256": "77c8b3898cd868b74d021239d48f94f0fe43ddf8aa8bd06db84f1f4a7a8f3044",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages",
+        "page_collaboration_batches"
+      ],
+      "protectedRelations": [
+        "pages",
+        "page_collaboration_batches"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {
@@ -6836,7 +6922,7 @@
     },
     "pages.pages_broadcast_update": {
       "function": "broadcast_page_row()",
-      "definition": "CREATE TRIGGER pages_broadcast_update AFTER UPDATE ON pages FOR EACH ROW WHEN (old.encrypted_content IS DISTINCT FROM new.encrypted_content OR old.title IS DISTINCT FROM new.title OR old.icon IS DISTINCT FROM new.icon OR old.parent_id IS DISTINCT FROM new.parent_id OR old.\"position\" IS DISTINCT FROM new.\"position\" OR old.favorite IS DISTINCT FROM new.favorite OR old.deleted_at IS DISTINCT FROM new.deleted_at OR old.deleted_root_id IS DISTINCT FROM new.deleted_root_id OR old.parent_block_removed IS DISTINCT FROM new.parent_block_removed OR old.content IS DISTINCT FROM new.content OR old.database_schema IS DISTINCT FROM new.database_schema OR old.database_title_name IS DISTINCT FROM new.database_title_name OR old.property_values IS DISTINCT FROM new.property_values) EXECUTE FUNCTION broadcast_page_row()"
+      "definition": "CREATE TRIGGER pages_broadcast_update AFTER UPDATE ON pages FOR EACH ROW WHEN (old.encrypted_content IS DISTINCT FROM new.encrypted_content OR old.title IS DISTINCT FROM new.title OR old.icon IS DISTINCT FROM new.icon OR old.parent_id IS DISTINCT FROM new.parent_id OR old.\"position\" IS DISTINCT FROM new.\"position\" OR old.favorite IS DISTINCT FROM new.favorite OR old.deleted_at IS DISTINCT FROM new.deleted_at OR old.deleted_root_id IS DISTINCT FROM new.deleted_root_id OR old.parent_block_removed IS DISTINCT FROM new.parent_block_removed OR old.content IS DISTINCT FROM new.content OR old.database_schema IS DISTINCT FROM new.database_schema OR old.database_title_name IS DISTINCT FROM new.database_title_name OR old.property_values IS DISTINCT FROM new.property_values OR old.body_revision IS DISTINCT FROM new.body_revision OR old.title_revision IS DISTINCT FROM new.title_revision) EXECUTE FUNCTION broadcast_page_row()"
     },
     "issues.issues_purge_relations": {
       "function": "purge_issue_relations()",
@@ -8233,6 +8319,18 @@
     "github_issue_sync_metadata.github_issue_sync_metadata_content_encryption_checked_at_attemp": {
       "function": "rotate_encryption_backfill_attempt()",
       "definition": "CREATE TRIGGER github_issue_sync_metadata_content_encryption_checked_at_attemp BEFORE UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
+    },
+    "pages.pages_b_collaboration_guard": {
+      "function": "guard_page_collaboration()",
+      "definition": "CREATE TRIGGER pages_b_collaboration_guard BEFORE UPDATE ON pages FOR EACH ROW EXECUTE FUNCTION guard_page_collaboration()"
+    },
+    "page_collaboration_batches.a_min591_fence_c92d5d4040f97b81": {
+      "function": "guard_encryption_snapshot_write()",
+      "definition": "CREATE TRIGGER a_min591_fence_c92d5d4040f97b81 BEFORE INSERT OR UPDATE ON page_collaboration_batches FOR EACH ROW EXECUTE FUNCTION guard_encryption_snapshot_write('page_content_encryption_scope', 'global')"
+    },
+    "page_collaboration_batches.page_collaboration_batches_guard": {
+      "function": "guard_page_collaboration_batch()",
+      "definition": "CREATE TRIGGER page_collaboration_batches_guard BEFORE INSERT OR UPDATE ON page_collaboration_batches FOR EACH ROW EXECUTE FUNCTION guard_page_collaboration_batch()"
     }
   }
 }

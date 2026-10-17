@@ -389,8 +389,10 @@ export function registerPageTools(server: McpServer): void {
         "is already there, and without re-sending the document — a new section, a " +
         "decision that just landed, a note. This is the cheap write: prefer it to " +
         "minddy_update_page, which rewrites the whole body. Send ONLY what is new. " +
-        "The append is refused (page_stale) if someone wrote the page between your " +
-        "read and this call, so nothing of theirs is lost.",
+        "It lands at the end of the page as it is when you write, live in every " +
+        "editor that has the page open: text someone typed meanwhile is kept. It " +
+        "fails with page_stale only if the page keeps changing across several " +
+        "attempts; read it again and retry.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,
@@ -428,8 +430,10 @@ export function registerPageTools(server: McpServer): void {
         "Every other byte is left alone. This is how a sentence gets corrected or " +
         "a section rewritten without re-emitting the whole page — and it is the " +
         "safe way round: a full rewrite silently overwrites whatever someone else " +
-        "changed meanwhile, a stale old_string fails loudly. To ADD text use " +
-        "minddy_append_to_page. Returns a unified diff of what changed.",
+        "changed meanwhile, a stale old_string fails loudly. Only the words you " +
+        "change are written, merged with what people type meanwhile like a second " +
+        "person editing in parallel; untouched blocks keep their formatting and anchors. " +
+        "To ADD text use minddy_append_to_page. Returns a unified diff of what changed.",
       inputSchema: z.object({
         project_id: PROJECT_ID,
         page_id: PAGE_ID,

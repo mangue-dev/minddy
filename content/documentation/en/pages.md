@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles; MIN-718 hybrid issue search; MIN-688 live collaboration",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -67,13 +67,17 @@
       "lib/use-semantic-mentions.ts",
       "components/markdown-mention.tsx",
       "components/mention-textarea.tsx",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "docs/page-collaboration.md",
+      "lib/use-page-collaboration.ts",
+      "lib/page-collaboration-stream.ts",
+      "content/documentation/reviews/min-688-live-collaboration.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-688 live collaboration: source, convergence/authority unit tests and a rollback-only database probe; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-688 rewritten saving, presence and conflict passages; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -109,7 +113,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -125,7 +129,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -141,7 +145,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -157,7 +161,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -173,7 +177,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -189,7 +193,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -205,7 +209,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -221,7 +225,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -274,7 +278,9 @@ Use mentions to link relevant issues, objectives, people or pages. Type `@` foll
 
 ### Saving and portability {#editor-save}
 
-Watch the save indicator before navigating away from a substantial edit. If another edit creates a conflict, use the displayed recovery controls and preserve your text; do not assume that both edits merged. Page history can help inspect earlier saved versions.
+A page saves as you type: each change reaches the server within a moment, and the save indicator shows saving until the server has accepted it. Several people can edit the same page at the same time, including the same paragraph or the title. Each person's changes appear for the others as they type, and so do the edits Numo or an MCP-connected agent makes to the page.
+
+If the connection drops, keep the page open. Unsaved changes stay on the page and are sent when the connection returns; changes from others arrive at the same time and merge with yours. Opening another page keeps sending them while minddy stays open. Closing the tab or the app while changes are still unsaved discards them, and the browser asks you to confirm first. When the server refuses a change, for example a title longer than 500 characters or a link whose protocol is not allowed, minddy undoes that change and shows a message. Page history can help inspect earlier saved versions.
 
 Markdown exports and agent page reads preserve callout icons and colors in their supported representation. Export formats have different fidelity and attachment handling, so check the resulting document before replacing an original source. Use code blocks for literal commands and retain their prerequisites and warnings in the surrounding text.
 
@@ -282,14 +288,14 @@ Markdown exports and agent page reads preserve callout icons and colors in their
 
 Open a project page and its comment controls. Select relevant content when creating an anchored comment, explain the question or proposed change, and use mentions to involve a project member. A reader can comment when the owner turned on **Can comment** for them. Reply in the thread to keep the decision with the context it concerns. Resolve a thread when its question has actually been addressed.
 
-Presence `avatars` identify people viewing the page. They do not prove that another person's unsaved text has reached the server or that simultaneous edits are merged automatically. Read the current save state before navigating away.
+Presence `avatars` identify people viewing the page. While someone edits, their caret and selection appear in the body and in the title, in a color of their own and labeled with their name. A reader's caret is not shown. A caret shows where someone is working, not that their text is saved: the save indicator reflects your own changes only.
 
 
 ![Page activity dialog with a demonstration edit event and an empty comment composer.](/documentation/en/page-comments.png)
 
 ### Recover a save conflict {#page-conflict}
 
-minddy merges edits to different top-level document blocks when it can preserve both changes. It does not merge simultaneous text edits inside the same block character by character. If both people changed that block, the document retains the remote version and a banner offers your previous block for review.
+Simultaneous edits merge automatically, character by character, including inside the same paragraph. A conflict banner can still appear when minddy has to reload the page while you have unsaved changes: after a disconnection during which many changes were made, or after a change made without live editing, such as an import into a database. If your changes and the reloaded version altered the same top-level block, the document keeps the reloaded version of that block and the banner offers yours for review.
 
 Compare the named block with the current document. Choose Restore mine only when replacing that block with your version is intended. If your conflicting action was a deletion, Delete it again applies that deletion explicitly. Dismiss keeps the adopted document and closes the warning; it does not restore your version. Preserve any wanted text before dismissing, and use history to inspect saved versions when a broader recovery is needed. These choices affect the identified block rather than blindly replacing the whole page.
 

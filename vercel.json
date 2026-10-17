@@ -1,5 +1,6 @@
 {
   "buildCommand": "npm run check:deployment-db && npm run build",
+  "regions": ["dub1"],
   "git": {
     "deploymentEnabled": {
       "**": false,

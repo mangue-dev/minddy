@@ -5,6 +5,13 @@ import { fetchClientRead } from "./client-read";
 import type { Page, PageVersion } from "./pages";
 import type { IssueEvent, PageBacklink, PageShare } from "./types";
 import type { PageComment } from "./page-comments";
+import type {
+  CollabCatchUp,
+  CollabField,
+  CollabSubmission,
+  CollabSubmitResult,
+  PageCollaborationSnapshot,
+} from "./page-collaboration";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 
@@ -570,4 +577,64 @@ export async function downloadPageExportApi(
   anchor.remove();
   // Revoked on next tick: Safari reads the URL AFTER the click.
   setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/* ── Live collaboration (MIN-688) ─────────────────────────────────────────── */
+
+const collaborationUrl = (projectId: string, pageId: string) =>
+  `/api/projects/${projectId}/pages/${pageId}/collaboration`;
+
+/** The session snapshot: both streams of the page, from one server read. */
+export async function fetchPageCollaborationApi(
+  projectId: string,
+  pageId: string,
+  signal?: AbortSignal
+): Promise<PageCollaborationSnapshot> {
+  return json(
+    await fetchClientRead(collaborationUrl(projectId, pageId), { signal }),
+    "Request failed"
+  );
+}
+
+/** Accepted steps of a stream after `since`, or a reset with a fresh snapshot. */
+export async function fetchPageCollaborationStepsApi(
+  projectId: string,
+  pageId: string,
+  field: CollabField,
+  since: number,
+  signal?: AbortSignal
+): Promise<CollabCatchUp> {
+  const query = new URLSearchParams({ field, since: String(since) });
+  return json(
+    await fetchClientRead(`${collaborationUrl(projectId, pageId)}?${query}`, { signal }),
+    "Request failed"
+  );
+}
+
+/**
+ * Sends one batch. `behind` and `refused` are answers, not failures; anything
+ * else (network, authorization, server error) throws, and the session decides
+ * whether the batch may have been accepted before it retries.
+ */
+export async function submitPageCollaborationApi(
+  projectId: string,
+  pageId: string,
+  submission: CollabSubmission,
+  { keepalive = false }: { keepalive?: boolean } = {}
+): Promise<CollabSubmitResult> {
+  const response = await fetch(collaborationUrl(projectId, pageId), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(submission),
+    keepalive,
+  });
+  if (response.ok || response.status === 409 || response.status === 422 ||
+      response.status === 413) {
+    const data = (await response.json().catch(() => null)) as CollabSubmitResult | null;
+    if (data && (data.status === "accepted" || data.status === "behind" || data.status === "refused")) {
+      return data;
+    }
+  }
+  await ok(response, "Update failed");
+  throw new PageApiError("Update failed", response.status);
 }

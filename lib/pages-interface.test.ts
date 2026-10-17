@@ -94,7 +94,7 @@ describe("page interface regressions", () => {
     const editor = source("components/pages/page-editor.tsx");
     const view = source("components/pages/page-view.tsx");
 
-    expect(editor).toContain("hydrateMentions(editor, scan)");
+    expect(editor).toContain("hydrateMentions(editor, scan, { exact: !!collaboration })");
     expect(editor).toContain("transaction.getMeta(MENTION_HYDRATION_META)");
     expect(view).toContain("scan: mentionSources.scan");
   });

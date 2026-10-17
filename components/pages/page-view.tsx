@@ -114,6 +114,7 @@ import {
   type PageSaveState,
 } from "@/components/pages/use-page-autosave";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
+import { usePageCollaboration } from "@/lib/use-page-collaboration";
 import {
   Tooltip,
   TooltipContent,
@@ -377,7 +378,26 @@ function PageSurface({
     title?: string;
     icon?: string | null;
   }>({});
-  const title = edited.title ?? summary?.title ?? page?.title ?? "";
+
+  /* ── The live session (MIN-688) ─────────────────────────────────────────
+     Body and title are edited together with every collaborator, Numo and the
+     MCP: steps go to the page's operation authority and come back in order,
+     with each collaborator's caret. When the session cannot start, the surface
+     falls back to the snapshot saving below — which the server routes through
+     the same authority, so the others still see those edits live. */
+  const collaboration = usePageCollaboration({
+    projectId,
+    pageId,
+    userId: user?.id ?? null,
+    canWrite,
+    active,
+    members,
+    onRefused: () => toast.error(t("liveEditRefused")),
+    onFatal: () => toast.error(t("saveFailed")),
+  });
+  const live = collaboration.status === "ready";
+  const liveTitle = live ? collaboration.title : null;
+  const title = liveTitle?.value ?? edited.title ?? summary?.title ?? page?.title ?? "";
   const icon =
     edited.icon !== undefined ? edited.icon : (summary?.icon ?? page?.icon ?? null);
 
@@ -433,8 +453,21 @@ function PageSurface({
     save: updatePage,
     editorRef,
     onError: onSaveError,
+    collaborative: live,
   });
-  const { schedule, flush, takePending, resumeEditor } = autosave;
+  const { schedule, flush: flushSnapshot, takePending, resumeEditor } = autosave;
+  const collaborationFlush = collaboration.flush;
+  // Everything this surface still has to save: metadata through the PATCH,
+  // body and title through the live session.
+  const flush = useCallback(async () => {
+    await flushSnapshot();
+    await collaborationFlush();
+  }, [flushSnapshot, collaborationFlush]);
+  const autosaveBeforeNavigation = autosave.flushBeforeNavigation;
+  const flushBeforeNavigation = useCallback(async () => {
+    const saved = await autosaveBeforeNavigation();
+    return (await collaborationFlush()) && saved;
+  }, [autosaveBeforeNavigation, collaborationFlush]);
 
   /* ── Departure: write, or act as if nothing had happened ───────────────
      Leave the page WRITE what remained — otherwise, type then click immediately
@@ -445,8 +478,8 @@ function PageSurface({
      rendering, and the editor can already be unmounted. */
   const flushRef = useRef(flush);
   flushRef.current = flush;
-  useAppTabDeparture(autosave.flushBeforeNavigation);
-  useEffect(() => { onNavigationReady?.(autosave.flushBeforeNavigation); }, [onNavigationReady, autosave.flushBeforeNavigation]);
+  useAppTabDeparture(flushBeforeNavigation);
+  useEffect(() => { onNavigationReady?.(flushBeforeNavigation); }, [onNavigationReady, flushBeforeNavigation]);
   const titleRef = useRef(title);
   titleRef.current = title;
   const iconRef = useRef(icon);
@@ -497,6 +530,8 @@ function PageSurface({
   // `visibilitychange` completes the table: move to another written tab
   // right away, with a normal PATCH, rather than waiting for a response that may
   // never arrive.
+  const collaborationBeacon = collaboration.beacon;
+  const collaborationUnsaved = collaboration.hasUnsavedChanges;
   useEffect(() => {
     const onHide = () => {
       // Same rule as for disassembly: an empty draft does not go to base, it
@@ -514,6 +549,9 @@ function PageSurface({
           updatePageOnUnload(projectId, pageId, patch)
         );
       }
+      // Live steps leave with keepalive too. Delivery is not confirmation:
+      // the unsaved-work guard below still warns while they are pending.
+      collaborationBeacon();
     };
     const onVisibility = () => {
       if (
@@ -523,13 +561,20 @@ function PageSurface({
         void flushRef.current();
       }
     };
+    const protectLive = (event: BeforeUnloadEvent) => {
+      if (!collaborationUnsaved()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
     window.addEventListener("pagehide", onHide);
+    window.addEventListener("beforeunload", protectLive);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("beforeunload", protectLive);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [projectId, pageId, takePending]);
+  }, [projectId, pageId, takePending, collaborationBeacon, collaborationUnsaved]);
 
   // ⌘S / Ctrl+S now writes, as in the notebook. The recording is
   // already automatic: what the gesture brings is not safeguarding, it is
@@ -911,6 +956,12 @@ function PageSurface({
     };
   }, [loaded, pageId, editor]);
 
+  const saveState: PageSaveState = !live ? autosave.state
+    : autosave.state === "error" || collaboration.saveState === "error" ? "error"
+      : autosave.state === "saving" || collaboration.saveState === "saving" ? "saving"
+        : autosave.state === "conflict" || collaboration.conflicts.length > 0 ? "conflict"
+          : "saved";
+
   if (error) {
     return (
       <p className="px-6 py-16 text-center text-sm text-muted-foreground">
@@ -921,7 +972,9 @@ function PageSurface({
 
   // Network reconciliation does not hide an accepted body. Autosave separately
   // waits for its fresh basis, preserving immediate typing in the local overlay.
-  if (isPending || !page) {
+  // The editor is built on the session's snapshot: wait for it (or for its
+  // failure, which falls back to the snapshot editor) rather than remounting.
+  if (isPending || !page || collaboration.status === "loading") {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
         <Spinner />
@@ -944,7 +997,7 @@ function PageSurface({
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <PagePresence userIds={present} members={members} />
           <PageStatus
-            state={autosave.state}
+            state={saveState}
             updatedAt={autosave.savedAt ?? summary?.updated_at ?? page.updated_at}
             lastEdit={
               lastEditName && lastEditAt
@@ -1017,14 +1070,17 @@ function PageSurface({
             // three components and navigation.
             autoFocus={canWrite && !title && isEmptyDoc(page.content)}
             readOnly={!canWrite}
+            live={liveTitle}
             onTitleChange={(next) => {
               if (next.trim()) forgetDraftPage(pageId);
-              setEdited((current) => ({ ...current, title: next }));
               // The sidebar, breadcrumbs and subpage block read the cache
               // of the LIST: without this local writing, they only moved one
               // second later, at group recording — we typed a title
               // looking at the old one in the left column.
               previewPage(pageId, { title: next });
+              // A live title already travels as steps.
+              if (liveTitle) return;
+              setEdited((current) => ({ ...current, title: next }));
               schedule({ title: next });
             }}
             onIconChange={(next) => {
@@ -1043,9 +1099,9 @@ function PageSurface({
               silent is exactly what we refuse — it only closes when
               gesture from its reader. */}
           <PageConflictBanner
-            conflicts={autosave.conflicts}
-            onRestore={autosave.restore}
-            onDismiss={autosave.dismiss}
+            conflicts={live ? collaboration.conflicts : autosave.conflicts}
+            onRestore={live ? collaboration.restoreConflict : autosave.restore}
+            onDismiss={live ? collaboration.dismissConflicts : autosave.dismiss}
           />
           {page.parent_id && byId.get(page.parent_id)?.database_schema != null && (
             <fieldset disabled={!canWrite} className="contents">
@@ -1063,12 +1119,19 @@ function PageSurface({
               flush={flush}
             >
               <PageEditor
+                // A new session (another page, a role change) builds a new editor.
+                key={collaboration.body?.clientId ?? "snapshot"}
                 editable={canWrite}
-                initialContent={(page.content as JSONContent | null) ?? null}
+                initialContent={
+                  live && collaboration.snapshot
+                    ? collaboration.snapshot.body.doc
+                    : ((page.content as JSONContent | null) ?? null)
+                }
+                collaboration={collaboration.body}
                 onChange={(content) => {
                   if (!isEmptyDoc(content)) forgetDraftPage(pageId);
                   contentRef.current = content;
-                  schedule({ content });
+                  if (!live) schedule({ content });
                 }}
                 pages={lookup}
                 uploads={uploads}

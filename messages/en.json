@@ -2170,6 +2170,7 @@
     "noEmoji": "No matching emoji",
     "saving": "Saving…",
     "saveFailed": "Could not save the page.",
+    "liveEditRefused": "A change could not be saved and was undone.",
     "createFailed": "Could not create the page.",
     "deleteFailed": "Could not delete the page.",
     "loadFailed": "Could not load the page.",

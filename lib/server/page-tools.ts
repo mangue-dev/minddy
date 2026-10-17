@@ -3,6 +3,7 @@ import "server-only";
 import type { JSONContent } from "@tiptap/core";
 import {
   createPage,
+  editPageBodyLive,
   getPage,
   listPages,
   searchProjectPages,
@@ -13,6 +14,7 @@ import {
   bodyFromMarkdownServer,
   markdownToPageServer,
   pageBodyToMarkdownServer,
+  reconcileBodyBlocksServer,
 } from "@/lib/server/pages-projection";
 import { editTextPassage } from "@/lib/server/text-edit";
 import {
@@ -793,23 +795,18 @@ export async function appendToPageForAgent({
     };
   }
 
-  const current = await readPageForAgent({
+  // Appending means "at the end of the page as it is NOW": a body that moved
+  // since the read (someone typing in it live) is read again, and the block
+  // appended to that, rather than refusing the agent.
+  return writeDerivedBody({
     pageId,
     projectId,
     actorId,
-    withBacklinks: false,
-  });
-  if (!current.ok) return current;
-
-  const body = current.data.markdown.trim();
-  const next = body ? `${body}\n\n${markdown.trim()}` : markdown.trim();
-
-  return writeBody({
-    pageId,
-    actorId,
-    markdown: next,
-    version: current.data.version,
     mcpKeyId,
+    derive: (current) => {
+      const body = current.trim();
+      return { ok: true, markdown: body ? `${body}\n\n${markdown.trim()}` : markdown.trim() };
+    },
   });
 }
 
@@ -838,84 +835,93 @@ export async function editPageTextForAgent({
 }): Promise<
   PageToolResult<PageWritten & { diff: string; additions: number; deletions: number }>
 > {
-  const current = await readPageForAgent({
+  // The passage is matched on the page as it is when the write happens: if
+  // the body moved since the read (a collaborator typing), the edit is
+  // recomputed on the fresh text — and refused exactly as before when
+  // `old_string` no longer matches there, or matches ambiguously.
+  let summary: { diff: string; additions: number; deletions: number } | null = null;
+  const written = await writeDerivedBody({
     pageId,
     projectId,
     actorId,
-    withBacklinks: false,
-  });
-  if (!current.ok) return current;
-
-  const edit = editTextPassage({
-    field: "body",
-    subject: "page",
-    current: current.data.markdown,
-    oldString,
-    newString,
-    replaceAll,
-    read: tools.read,
-    otherWay: `Use ${tools.replaceWhole} to write the whole body.`,
-  });
-  if (!edit.ok) return { ok: false, code: edit.code, message: edit.message };
-
-  const written = await writeBody({
-    pageId,
-    actorId,
-    markdown: edit.content,
-    version: current.data.version,
     mcpKeyId,
+    derive: (current) => {
+      const edit = editTextPassage({
+        field: "body",
+        subject: "page",
+        current,
+        oldString,
+        newString,
+        replaceAll,
+        read: tools.read,
+        otherWay: `Use ${tools.replaceWhole} to write the whole body.`,
+      });
+      if (!edit.ok) return { ok: false, code: edit.code, message: edit.message };
+      summary = { diff: edit.diff, additions: edit.additions, deletions: edit.deletions };
+      return { ok: true, markdown: edit.content };
+    },
   });
   if (!written.ok) return written;
-  return {
-    ok: true,
-    data: {
-      ...written.data,
-      diff: edit.diff,
-      additions: edit.additions,
-      deletions: edit.deletions,
-    },
-  };
+  const { diff, additions, deletions } = summary!;
+  return { ok: true, data: { ...written.data, diff, additions, deletions } };
 }
 
-/** The body alone, written on a read version. The title and the icon do not move
-: a `# ` at the top of an addition is CONTENT, not a renaming. */
-async function writeBody({
+/**
+ * Derives a new body from the current one's Markdown and writes it LIVE, the
+ * way a second person typing would (MIN-688, `editPageBodyLive`): only the
+ * words and blocks the derivation changed become steps, and they are rebased
+ * onto whatever collaborators type meanwhile instead of being refused by a
+ * version check. Untouched blocks keep their IDs, pills and attributes.
+ */
+async function writeDerivedBody({
   pageId,
+  projectId,
   actorId,
-  markdown,
-  version,
   mcpKeyId,
+  derive,
 }: {
   pageId: string;
+  projectId?: string;
   actorId: string;
-  markdown: string;
-  version: number;
   mcpKeyId?: string | null;
+  derive: (markdown: string) =>
+    | { ok: true; markdown: string }
+    | { ok: false; code: PageToolCode; message: string };
 }): Promise<PageToolResult<PageWritten>> {
-  if (markdown.length > MAX_PAGE_MARKDOWN) {
-    return {
-      ok: false,
-      code: "page_too_large",
-      message:
-        `The page body would reach ${markdown.length} characters, over the ` +
-        `${MAX_PAGE_MARKDOWN} cap; split it into subpages.`,
-    };
-  }
-  const content = await bodyFromMarkdownServer(markdown);
-  const result = await updatePage({
+  let markdownLength = 0;
+  const result = await editPageBodyLive<{ ok: false; code: PageToolCode; message: string }>({
     pageId,
+    projectId,
     actorId,
     kind: "agent",
     mcpKeyId,
-    input: { content, version },
+    derive: async (current) => {
+      const derived = derive(await pageBodyToMarkdownServer(current));
+      if (!derived.ok) return { refusal: derived };
+      if (derived.markdown.length > MAX_PAGE_MARKDOWN) {
+        return {
+          refusal: {
+            ok: false,
+            code: "page_too_large",
+            message:
+              `The page body would reach ${derived.markdown.length} characters, over the ` +
+              `${MAX_PAGE_MARKDOWN} cap; split it into subpages.`,
+          },
+        };
+      }
+      markdownLength = derived.markdown.trim().length;
+      const parsed = await bodyFromMarkdownServer(derived.markdown);
+      return { doc: await reconcileBodyBlocksServer(current, parsed) };
+    },
   });
+  if ("refusal" in result) return result.refusal;
   if (!result.ok) return refuse(result.errorKey);
   return {
     ok: true,
     data: {
       ...entry(result.page),
       version: result.page.version,
-      markdown_length: markdown.trim().length,
+      markdown_length: markdownLength,
     },
   };
 }

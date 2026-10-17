@@ -44,6 +44,8 @@ const h = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
   /** HISTORY (MIN-277) — `page_versions`, the second table of the module. */
   versions: [] as Record<string, unknown>[],
+  /** The live collaboration journal (MIN-688) — `page_collaboration_batches`. */
+  batches: [] as Record<string, unknown>[],
   /** Projects to which the actor has access. Empty = everything is “not found”. */
   access: new Set<string>(),
   /** Projects among `access` where the actor is only a reader (MIN-693). */
@@ -68,7 +70,8 @@ const h = vi.hoisted(() => ({
  * Each request is "thenable" like those of postgrest-js, which allows
  * wait for it directly or end it with `single()` / `maybeSingle()`.
  */
-vi.mock("@/lib/supabase-service", () => {
+vi.mock("@/lib/supabase-service", async () => {
+  const { fakeCommitPageCollaboration } = await import("@/test/fake-page-collaboration");
   type Filter = (row: Record<string, unknown>) => boolean;
 
   // Two tables, and you need two: a history line carries a
@@ -77,6 +80,7 @@ vi.mock("@/lib/supabase-service", () => {
   // rather than code.
   const from = (table: string) => {
     const pages = table === "pages";
+    const journal = table === "page_collaboration_batches";
     const filters: Filter[] = [];
     let mode: "select" | "insert" | "update" | "delete" = "select";
     let payload: Record<string, unknown> | Record<string, unknown>[] = {};
@@ -86,7 +90,7 @@ vi.mock("@/lib/supabase-service", () => {
     let requestedLimit = 1000;
     let afterId: string | null = null;
 
-    const all = () => (pages ? h.rows : h.versions);
+    const all = () => (pages ? h.rows : journal ? h.batches : h.versions);
     const matching = () => all().filter((row) => filters.every((f) => f(row)));
 
     const run = (): { data: Record<string, unknown>[] | null; error: { code: string; message: string } | null; count?: number } => {
@@ -202,7 +206,9 @@ vi.mock("@/lib/supabase-service", () => {
       return query;
     };
     query.gte = (column: string, value: unknown) => {
-      filters.push((row) => String(row[column] ?? "") >= String(value));
+      filters.push((row) => typeof value === "number"
+        ? Number(row[column] ?? 0) >= value
+        : String(row[column] ?? "") >= String(value));
       return query;
     };
     query.gt = (column: string, value: unknown) => {
@@ -242,6 +248,17 @@ vi.mock("@/lib/supabase-service", () => {
   };
 
   const rpc = async (name: string, args: Record<string, unknown>) => {
+    // The operation authority's commit (MIN-688), with the SQL function's
+    // rules: receipts first, then stream heads, then the envelope token; the
+    // projection, the journal and the heads move together.
+    if (name === "commit_page_collaboration") {
+      if (h.updateError && "parent_id" in (args.p_values as object)) {
+        const error = h.updateError;
+        h.updateError = null;
+        return { data: null, error };
+      }
+      return fakeCommitPageCollaboration(h, args);
+    }
     if (name === "restore_page_guarded") {
       h.beforeRestore?.();
       h.beforeRestore = null;
@@ -386,10 +403,17 @@ import {
   getPage,
   listPages,
   discardPage,
+  editPageBodyLive,
+  readPageCollaborationSnapshot,
+  readPageCollaborationSteps,
   restorePage,
+  submitPageCollaboration,
   trashPage,
   updatePage,
 } from "./pages";
+import { Node as PMNode } from "@tiptap/pm/model";
+import { Transform } from "@tiptap/pm/transform";
+import { pageBodySchema, pageTitleSchema, titleDocFromText } from "@/lib/page-collaboration-document";
 import {
   getPageVersion,
   listPageVersions,
@@ -416,6 +440,7 @@ const rowOf = (id: string) => h.rows.find((row) => row.id === id) as unknown as 
 beforeEach(() => {
   h.rows = [];
   h.versions = [];
+  h.batches = [];
   h.seq = 0;
   h.beforeDiscard = null;
   h.beforeRestore = null;
@@ -521,9 +546,20 @@ describe("createPage", () => {
       input: { content, markdown: "## ignoré" },
     });
     expect(result.ok).toBe(true);
-    expect(rowOf((result as { page: { id: string } }).page.id).content).toEqual(
-      content
-    );
+    // Stored canonical (MIN-688): the same blocks, each with its block ID.
+    expect(rowOf((result as { page: { id: string } }).page.id).content).toMatchObject({
+      type: "doc",
+      content: [{ type: "paragraph", attrs: { blockId: expect.any(String) }, content: [{ type: "text", text: "natif" }] }],
+    });
+  });
+
+  it("stores a new empty page as one identified paragraph, the canonical live basis", async () => {
+    const result = await createPage({ projectId: PROJECT, actorId: ACTOR, input: {} });
+    expect(result.ok).toBe(true);
+    expect(rowOf((result as { page: { id: string } }).page.id).content).toEqual({
+      type: "doc",
+      content: [{ type: "paragraph", attrs: { blockId: expect.any(String) } }],
+    });
   });
 });
 
@@ -1938,5 +1974,206 @@ describe("project roles (MIN-693)", () => {
     h.readOnly = new Set();
     const page = await getPage(id, ACTOR);
     expect(page).toMatchObject({ ok: true, page: { title: "Guide" } });
+  });
+});
+
+describe("live collaboration authority (MIN-688)", () => {
+  const paragraph = (text: string, blockId: string) => ({
+    type: "paragraph",
+    attrs: { blockId },
+    content: [{ type: "text", text }],
+  });
+
+  async function livePage(blocks: Record<string, unknown>[]) {
+    const created = await createPage({
+      projectId: PROJECT,
+      actorId: ACTOR,
+      input: { title: "Live", content: { type: "doc", content: blocks } },
+    });
+    if (!created.ok) throw new Error("creation refused");
+    const snapshot = await readPageCollaborationSnapshot(PROJECT, created.page.id, ACTOR);
+    if (!snapshot.ok) throw new Error("snapshot refused");
+    return { id: created.page.id, snapshot: snapshot.snapshot };
+  }
+
+  /** Steps an editor would send: built on the snapshot document. */
+  function bodySteps(doc: unknown, edit: (tr: Transform) => void) {
+    const tr = new Transform(PMNode.fromJSON(pageBodySchema(), doc));
+    edit(tr);
+    return tr.steps.map((step) => step.toJSON());
+  }
+
+  const submission = (base: number, steps: unknown[], extra: Record<string, unknown> = {}) => ({
+    field: "body" as const,
+    base,
+    batchId: crypto.randomUUID(),
+    clientId: "browser-session-1",
+    steps,
+    ...extra,
+  });
+
+  it("accepts steps at the head, journals them and signs the page once", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    const version = rowOf(id).version;
+    const result = await submitPageCollaboration({
+      projectId: PROJECT,
+      pageId: id,
+      actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text(" world")))),
+    });
+    expect(result).toEqual({ ok: true, result: { status: "accepted", revision: 1 } });
+    expect(JSON.stringify(rowOf(id).content)).toContain("Hello world");
+    expect(rowOf(id).version).toBe(version + 1);
+    expect(rowOf(id).updated_by).toBe(ACTOR);
+    expect(h.batches).toHaveLength(1);
+    expect(h.batches[0]).toMatchObject({ field: "body", base_revision: 0, step_count: 1, client_id: "browser-session-1" });
+  });
+
+  it("answers `behind` for a stale base and writes nothing", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("A")))),
+    });
+    const before = JSON.stringify(rowOf(id).content);
+    const stale = await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("B")))),
+    });
+    expect(stale).toEqual({ ok: true, result: { status: "behind", head: 1 } });
+    expect(JSON.stringify(rowOf(id).content)).toBe(before);
+  });
+
+  it("acknowledges a retried batch once, without writing it twice", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    const once = submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!"))));
+    await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, submission: once });
+    const again = await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, submission: once });
+    expect(again).toEqual({ ok: true, result: { status: "accepted", revision: 1 } });
+    expect(h.batches).toHaveLength(1);
+    expect(JSON.stringify(rowOf(id).content)).toContain("Hello!");
+    expect(JSON.stringify(rowOf(id).content)).not.toContain("Hello!!");
+  });
+
+  it("refuses steps whose result the content gate would change", async () => {
+    const { id, snapshot } = await livePage([paragraph("Link", "b1")]);
+    const hostile = bodySteps(snapshot.body.doc, (tr) =>
+      tr.addMark(1, 5, pageBodySchema().marks.link.create({ href: "javascript:alert(1)" })));
+    const result = await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR, submission: submission(0, hostile),
+    });
+    expect(result).toMatchObject({ ok: true, result: { status: "refused" } });
+    expect(h.batches).toHaveLength(0);
+  });
+
+  it("refuses a presentation batch that changes what the page says", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    const result = await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("X"))), { presentation: true }),
+    });
+    expect(result).toEqual({ ok: true, result: { status: "refused", reason: "presentation-changed" } });
+  });
+
+  it("refuses a reader's steps", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    h.readOnly = new Set([PROJECT]);
+    const result = await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("X")))),
+    });
+    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "readOnlyProject" });
+  });
+
+  it("initializes an empty stored body once, without signing the page", async () => {
+    const created = await createPage({ projectId: PROJECT, actorId: ACTOR, input: { title: "Old" } });
+    if (!created.ok) throw new Error("creation refused");
+    // A page stored before MIN-688: no block at all, written by someone else.
+    Object.assign(rowOf(created.page.id), { content: { type: "doc", content: [] }, updated_by: "user-2" });
+    const version = rowOf(created.page.id).version;
+    const first = await readPageCollaborationSnapshot(PROJECT, created.page.id, ACTOR);
+    const second = await readPageCollaborationSnapshot(PROJECT, created.page.id, ACTOR);
+    if (!first.ok || !second.ok) throw new Error("snapshot refused");
+    expect(first.snapshot.body.doc).toEqual(second.snapshot.body.doc);
+    expect(first.snapshot.body.doc.content).toHaveLength(1);
+    expect(first.snapshot.body.revision).toBe(1);
+    expect(rowOf(created.page.id)).toMatchObject({ updated_by: "user-2", version });
+  });
+
+  it("returns accepted steps with their sessions, and a reset across a gap", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!")))),
+    });
+    const caught = await readPageCollaborationSteps({ projectId: PROJECT, pageId: id, actorId: ACTOR, field: "body", since: 0 });
+    expect(caught).toMatchObject({ ok: true, catchUp: { kind: "steps", from: 0, to: 1, head: 1, clientIds: ["browser-session-1"] } });
+
+    // A writer that recorded no steps (the database guard opens the gap).
+    (rowOf(id) as unknown as Record<string, unknown>).body_revision = 2;
+    const reset = await readPageCollaborationSteps({ projectId: PROJECT, pageId: id, actorId: ACTOR, field: "body", since: 1 });
+    expect(reset).toMatchObject({ ok: true, catchUp: { kind: "reset", reason: "gap", snapshot: { body: { revision: 2 } } } });
+  });
+
+  it("expresses a whole-body replacement as a replacement of the changed block only", async () => {
+    const { id } = await livePage([paragraph("One", "b1"), paragraph("Two", "b2"), paragraph("Three", "b3")]);
+    const result = await updatePage({
+      pageId: id,
+      actorId: ACTOR,
+      kind: "agent",
+      input: { content: { type: "doc", content: [paragraph("One", "b1"), paragraph("Deux", "b2"), paragraph("Three", "b3")] } },
+    });
+    expect(result.ok).toBe(true);
+    expect(h.batches).toHaveLength(1);
+    const [step] = h.batches[0].steps as { from: number; to: number }[];
+    // Inside the second paragraph: the first and third are not replaced.
+    expect(step.from).toBeGreaterThan(5);
+    expect(step.to).toBeLessThan(13);
+    expect(rowOf(id)).toMatchObject({ updated_kind: "agent", body_revision: 1 });
+  });
+
+  it("rebases an agent edit onto a person typing meanwhile, without refusing it", async () => {
+    const { id, snapshot } = await livePage([paragraph("Agent edits here.", "b1"), paragraph("Person types here.", "b2")]);
+    const result = await editPageBodyLive({
+      pageId: id,
+      projectId: PROJECT,
+      actorId: ACTOR,
+      derive: async (current) => {
+        // While the agent derives its edit, a person types in the second block.
+        if (h.batches.length === 0) {
+          const typed = bodySteps(snapshot.body.doc, (tr) => tr.insert(37, pageBodySchema().text(", live")));
+          await submitPageCollaboration({
+            projectId: PROJECT, pageId: id, actorId: "user-2",
+            submission: { ...submission(snapshot.body.revision, typed), clientId: "browser-session-2" },
+          });
+        }
+        const body = current as { content: Record<string, unknown>[] };
+        return {
+          doc: {
+            type: "doc",
+            content: [paragraph("Agent edited here.", "b1"), body.content[1]],
+          },
+        };
+      },
+    });
+    expect(result.ok).toBe(true);
+    const text = JSON.stringify(rowOf(id).content);
+    expect(text).toContain("Agent edited here.");
+    expect(text).toContain("Person types here, live.");
+    // Two batches: the person's, then the agent's rebased one.
+    expect(h.batches.map((batch) => batch.author_kind)).toEqual(["human", "agent"]);
+  });
+
+  it("keeps a renamed title on its own stream", async () => {
+    const { id, snapshot } = await livePage([paragraph("Body", "b1")]);
+    const tr = new Transform(titleDocFromText(snapshot.title.text));
+    tr.insert(snapshot.title.text.length, pageTitleSchema.text(" notes"));
+    const result = await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: { ...submission(0, tr.steps.map((step) => step.toJSON())), field: "title" as const },
+    });
+    expect(result).toEqual({ ok: true, result: { status: "accepted", revision: 1 } });
+    expect(rowOf(id)).toMatchObject({ title: "Live notes", title_revision: 1, body_revision: snapshot.body.revision });
+    expect(pageTitleSchema.nodes.doc).toBeDefined();
   });
 });

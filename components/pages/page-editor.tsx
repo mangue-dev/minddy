@@ -19,7 +19,7 @@
 // What is NOT here: the versioned backup, which is MIN-271 — this
 // editor just renders its JSON on each keystroke.
 
-import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import {
   EditorContent,
   useEditor,
@@ -83,6 +83,12 @@ import {
 } from "@/components/pages/pages-lookup";
 import { TitleBridge } from "@/components/pages/title-bridge";
 import { MarkdownLinkMenu } from "@/components/markdown-link-menu";
+import {
+  PageCollaboration,
+  pageCaretsKey,
+  type BodyCollaboration,
+} from "@/components/pages/page-collaboration";
+import { isCollabRemoteTransaction } from "@/lib/page-collaboration-origin";
 
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
 
@@ -176,6 +182,7 @@ export function PageEditor({
   onSubpagesRemoved,
   onLeaveTop,
   onComment,
+  collaboration = null,
   editable = true,
   className,
 }: {
@@ -230,6 +237,15 @@ export function PageEditor({
  * only and where there is nothing to discuss.
  */
   onComment?: (anchor: PageCommentAnchor) => void;
+  /**
+   * The live session of this document (MIN-688). With it, every local
+   * transaction becomes steps for the operation authority, collaborators'
+   * steps arrive as transactions, and their carets are drawn. Its identity
+   * must stay stable for the editor's lifetime: it is read when the editor is
+   * built. Without it — a version preview, a public page — the editor is the
+   * plain snapshot surface it always was.
+   */
+  collaboration?: BodyCollaboration | null;
   /**
  * READ-ONLY (MIN-277): the preview of a version of the history.
  *
@@ -297,6 +313,8 @@ export function PageEditor({
   const extensions = useMemo(
     () =>
       [
+        // Steps and carets of the live session (MIN-688), when there is one.
+        ...(collaboration ? [PageCollaboration.configure({ binding: collaboration })] : []),
         // The DIAGRAM of the page, the same one that the markdown projection shows
         // (components/pages/page-extensions.ts). The editor adds his chrome,
         // and nothing that affects the document.
@@ -321,6 +339,10 @@ export function PageEditor({
             callout: calloutNodeView(),
           },
           extensions: { codeBlock: codeBlockEditorExtension() },
+          uniqueIdFilter: collaboration
+            ? (transaction) => !isCollabRemoteTransaction(transaction)
+            : undefined,
+          trailingNode: !collaboration,
         }),
         ...(mentionSuggest ? [mentionSuggest] : []),
         // “->” becomes “→” under the fingers, as in the notebook and in
@@ -345,7 +367,7 @@ export function PageEditor({
         // takes ⌫ and ↑ only if no one else wanted them (title-bridge.ts).
         TitleBridge.configure({ onLeaveTop: leaveTop }),
       ] as unknown as Extensions,
-    [placeholderFor, slashItems, mentionSuggest, leaveTop]
+    [placeholderFor, slashItems, mentionSuggest, leaveTop, collaboration]
   );
 
   // Activity destroys editor instances while retaining React refs. Keep the
@@ -403,9 +425,14 @@ export function PageEditor({
     []
   );
 
+  // A live editor stays read-only until its session is attached: a recreated
+  // editor waits while the stream finishes the batch its predecessor had in
+  // flight and rebases it (MIN-688).
+  const [attached, setAttached] = useState(() => !collaboration || collaboration.stream.attached);
+  const canEdit = editable && (attached || !collaboration);
   const editor = useEditor({
     immediatelyRender: false,
-    editable,
+    editable: canEdit,
     extensions,
     content: documentRef.current,
     editorProps,
@@ -415,7 +442,26 @@ export function PageEditor({
       editor.options.content = documentRef.current;
     },
     onTransaction: ({ editor, transaction }) => {
-      if (transaction.docChanged) documentRef.current = editor.getJSON();
+      if (!transaction.docChanged) return;
+      documentRef.current = editor.getJSON();
+      // Only a gesture made HERE is sent; received steps, resets and rebases
+      // already belong to the authority's history.
+      if (collaboration && !isCollabRemoteTransaction(transaction)) {
+        collaboration.stream.noteLocalChange();
+      }
+    },
+    onSelectionUpdate: ({ editor }) => {
+      if (!collaboration?.canSend || !editor.isFocused) return;
+      const { anchor, head } = editor.state.selection;
+      collaboration.publishCaret({ anchor, head });
+    },
+    onFocus: ({ editor }) => {
+      if (!collaboration?.canSend) return;
+      const { anchor, head } = editor.state.selection;
+      collaboration.publishCaret({ anchor, head });
+    },
+    onBlur: () => {
+      collaboration?.publishCaret(null);
     },
     onUpdate: ({ editor, transaction }) => {
       // Rebuilding mention pills is presentation-only. Persisting that
@@ -429,14 +475,60 @@ export function PageEditor({
   // Agent writes round-trip mentions through Markdown, where they intentionally
   // become plain text. Rebuild their editor nodes once the mention index is
   // available so the page renders the same pills as a human-authored document.
+  //
+  // In a live session (MIN-688) that rebuild IS a change of the shared
+  // document, so it is sent — as a presentation-only batch the authority
+  // verifies against the Markdown projection and records without signing the
+  // page. It therefore needs a writer, and nothing else pending: a reader's
+  // screen must never drift from the document every other step applies to.
   const scan = mentions?.scan;
   useEffect(() => {
     if (!editor || !scan || editor.isFocused) return;
+    if (collaboration && (!collaboration.canSend || !attached)) return;
     queueMicrotask(() => {
       if (editor.isDestroyed || editor.isFocused) return;
-      hydrateMentions(editor, scan);
+      if (collaboration && (collaboration.stream.hasPending() || !collaboration.canHydrate())) return;
+      hydrateMentions(editor, scan, { exact: !!collaboration });
     });
-  }, [editor, scan]);
+  }, [editor, scan, collaboration, attached]);
+
+  // The live session drives this editor while it is mounted. Detaching keeps
+  // what was not yet confirmed: the stream carries it on its own and rebases
+  // the next editor onto it (Activity recreates editors while hidden).
+  useEffect(() => {
+    if (!editor || !collaboration) return;
+    const host = {
+      getState: () => editor.state,
+      dispatch: (transaction: Parameters<typeof editor.view.dispatch>[0]) => {
+        if (!editor.isDestroyed) editor.view.dispatch(transaction);
+      },
+      ready: () => !editor.view.composing,
+    };
+    const stopAttached = collaboration.onAttachedChange(setAttached);
+    collaboration.stream.attach(host);
+    setAttached(collaboration.stream.attached);
+    const stopCarets = collaboration.onCaretsChange(() => {
+      if (!editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta(pageCaretsKey, true));
+    });
+    return () => {
+      stopCarets();
+      stopAttached();
+      collaboration.publishCaret(null);
+      collaboration.stream.detach(host);
+    };
+  }, [editor, collaboration]);
+
+
+
+  // `useEditor` reads `editable` only when it creates the editor: on later
+  // renders it reapplies the options but keeps the instance's own editability.
+  // The live editor is created before its session attaches, so the switch to
+  // editable must be made on the instance itself.
+  useEffect(() => {
+    if (editor && !editor.isDestroyed && editor.isEditable !== canEdit) {
+      editor.setEditable(canEdit, false);
+    }
+  }, [editor, canEdit]);
 
   // The other half of the rule above: moving the pointer refreshes it.
   // The listener lives as long as the editor is mounted.

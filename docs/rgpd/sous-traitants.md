@@ -74,10 +74,10 @@ response, duration, IP address) are kept there according to the retention of the
   ~5 min of inactivity, but its **filesystem is kept in snapshot for
   7 days** (`SANDBOX_SNAPSHOT_EXPIRATION_MS`), for a conversation to resume
   hot. After this period, the snapshot is deleted and the repository re-cloned if necessary.
-- **To watch**: the execution region. Functions can be set to
-  a European region (`fra1`, `cdg1`); sandboxes, **no** — Vercel
-  Sandbox only exists in `iad1` (United States). The point is open for
-  functions, closed for sandboxes as long as the offer does not change.
+- **Execution region**: functions run in `dub1` (Dublin), set by `regions`
+  in `vercel.json`, next to the Supabase database (`eu-west-1`). Sandboxes
+  cannot follow: Vercel Sandbox only exists in `iad1` (United States), which
+  stays a transfer as long as the offer does not change.
 
 ### Stripe
 

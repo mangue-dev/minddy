@@ -2649,3 +2649,46 @@ updated in the retained inventory; the application consumer inventory removes
 parent-wide worker writes. No columns, encryption targets, views, triggers or
 public grants change. Apply the migration before the updated application;
 no remote migration or production activation was performed.
+
+## Live page collaboration journal (MIN-688)
+
+`page_collaboration_batches` journals the ProseMirror steps accepted for a
+page's body and title streams (migration `20270109200054`, applied). Steps can
+carry text, deleted text included, so `steps` is an encryption target sealed
+with the page's project content key through `EncryptedRowCodec`; only a legacy
+plaintext page journals plaintext steps. The commit RPC refuses a plaintext
+batch for a sealed page, `guard_page_collaboration_batch` refuses plaintext
+once page protection is active or the page is sealed, the page guard deletes a
+page's plaintext rows when it becomes sealed, and the table shares the page
+content marker fence. Journal access is restricted to
+`lib/server/page-collaboration.ts` by `scripts/check-encrypted-column-access.mjs`.
+Rows are pruned to 2,000 revisions per stream and seven days, by each commit
+and by the nightly retention sweep, and cascade with the page and project.
+Design and limits: [docs/page-collaboration.md](../../page-collaboration.md).
+
+## Shared writer fences (MIN-688)
+
+Migration `20270109200055` (applied) changes the writer side of the
+encryption fences from exclusive to shared advisory locks: the 27 content
+guards that take their family's activation lock (`guard_page_content`,
+`guard_project_content`, `guard_view_content`…), the three locks of
+`guard_encryption_snapshot_write`, and the object branch of
+`guard_attachment_object_snapshot_write`. The activation side keeps exclusive
+locks: every `activate_*` function, `guard_encryption_marker_change`,
+`guard_envelope_key_activation`, the key registry functions and the marker
+branch of the attachment guard. A writer therefore still waits for an
+activation and is still waited for by it; writers no longer wait for one
+another, which serialized every page write of the application (about 35 to
+185 commits per second in total, measured on production). Unchanged on
+purpose: the Numo content guards, whose activation locks have no
+activation-side function in this schema, and every per-entity lock.
+
+Verification: a rollback-only replay on the production schema confirmed the
+29 rewritten functions, unchanged activation, marker and Numo locks, and that
+a page write plus a collaboration commit hold only shared advisory locks apart
+from the per-page routine event lock. The 29 function records and the
+migration hash were refreshed from the live definitions; relations and grants
+are unchanged. The two-session fence test
+(`scripts/encryption-snapshot-write-fences.integration.test.mjs`) checks
+writer versus activation in both directions, which shared writer locks
+preserve; it was not run, because it needs an isolated database.

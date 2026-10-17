@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { pruneCollaborationJournal } from "@/lib/server/page-collaboration";
 import { attachmentPaths, type TrashType } from "@/lib/server/trash";
 import {
   forgeAttachmentPathsForProjects,
@@ -382,6 +383,10 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       purgeForgeWebhookDeliveries(service, now)
     ),
     await step("page_versions", () => purgePageVersions(service, now)),
+    // The live collaboration journal (MIN-688): commits prune their own
+    // page's stream; this catches the pages nobody edits anymore. Steps carry
+    // text, deleted text included, and must not outlive their seven days.
+    await step("page_collaboration_batches", () => pruneCollaborationJournal(service)),
     // BEFORE the trash, and the order has a reason: purging a page takes away its
     // files itself (lib/server/trash.ts). Going here first avoids
     // reread lines which will be sent in the second, and above all to count

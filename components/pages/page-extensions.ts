@@ -18,6 +18,7 @@
 // only renders a reference, not a tiptap extension.
 
 import type { AnyExtension, Extensions, NodeViewRenderer } from "@tiptap/core";
+import type { Transaction } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { MarkdownLinkMark } from "@/components/markdown-link-mark";
 import UniqueID from "@tiptap/extension-unique-id";
@@ -61,6 +62,22 @@ export interface PageExtensionsOptions {
   /** Optional browser-side replacements for extensions that need a richer
    * runtime configuration, such as the complete code grammar catalog. */
   extensions?: Record<string, AnyExtension>;
+
+  /**
+   * Which transactions `UniqueID` may stamp. A live editor (MIN-688) excludes
+   * steps received from collaborators: their blocks already carry the IDs
+   * their author's editor gave them, and stamping them again here would give
+   * each collaborator a different ID for the same block.
+   */
+  uniqueIdFilter?: (transaction: Transaction) => boolean;
+
+  /**
+   * StarterKit's trailing paragraph. Off in a live editor (MIN-688): it is
+   * appended from `appendTransaction`, so every collaborator would add their
+   * own after a remote edit ends the page on another block. The reserve below
+   * the body adds that paragraph on demand instead (`focusDocumentEnd`).
+   */
+  trailingNode?: boolean;
 }
 
 export function pageExtensions(
@@ -71,6 +88,8 @@ export function pageExtensions(
     mention = MentionNodeBase,
     nodeViews,
     extensions,
+    uniqueIdFilter,
+    trailingNode = true,
   } = options;
 
   return [
@@ -87,6 +106,7 @@ export function pageExtensions(
       orderedList: false,
       listItem: false,
       link: false,
+      ...(trailingNode ? {} : { trailingNode: false }),
     }),
     MarkdownLinkMark,
     ...blockExtensions({ headless, nodeViews, extensions }),
@@ -99,6 +119,7 @@ export function pageExtensions(
     UniqueID.configure({
       attributeName: BLOCK_ID_ATTRIBUTE,
       types: BLOCK_ID_TYPES,
+      ...(uniqueIdFilter ? { filterTransaction: uniqueIdFilter } : {}),
     }),
     Markdown.configure({
       // `true`: the leaflet and the subpage are projected in minimal HTML

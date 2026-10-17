@@ -22,9 +22,14 @@
 // silence: it comes out in `conflicts`, and the screen says it.
 //
 // Realtime arrives here as a content-free signal: PageView refetches the page,
-// then this hook merges the newer document into the screen. It is not
-// character-level collaboration; `prosemirror-collab` remains the path for
-// concurrent edits inside the same block.
+// then this hook merges the newer document into the screen.
+//
+// With a LIVE session (MIN-688, `collaborative`), the body and the title are
+// the session's: they travel as steps (lib/use-page-collaboration.ts), merge at
+// character level and never come through here. This hook then only saves the
+// remaining metadata (the icon) and never adopts a document into the editor —
+// `setContent` would desynchronize the steps the session is based on. Without a
+// session (it could not start), it is the snapshot saving it always was.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Editor, JSONContent } from "@tiptap/react";
@@ -93,6 +98,7 @@ export function usePageAutosave({
   save,
   editorRef,
   onError,
+  collaborative = false,
 }: {
   pageId: string;
   /** The page as it was read: the BASIS of the first writing. */
@@ -115,7 +121,11 @@ export function usePageAutosave({
   save: (pageId: string, input: UpdatePageInput, canDispatch?: () => boolean) => Promise<Page>;
   editorRef: React.MutableRefObject<Editor | null>;
   onError: (error: unknown) => void;
+  /** A live session owns the body and the title: never merge or adopt them. */
+  collaborative?: boolean;
 }): PageAutosave {
+  const collaborativeRef = useRef(collaborative);
+  collaborativeRef.current = collaborative;
   /** The last known SERVER version: its body and its counter. This is the
       basis of the merger, and it advances with each accepted write. */
   const base = useRef<{ content: PageDocJSON | null; version: number }>({
@@ -194,6 +204,7 @@ export function usePageAutosave({
   const adopt = useCallback(
     (doc: PageDocJSON) => {
       screen.current = doc;
+      if (collaborativeRef.current) return;
       const editor = editorRef.current;
       if (!editor || editor.isDestroyed) return;
       const at = editor.state.selection.from;
@@ -214,6 +225,11 @@ export function usePageAutosave({
           remote.version < base.current.version) return;
       basisReady.current = true;
       if (remote.version === base.current.version) return;
+      if (collaborativeRef.current) {
+        base.current = { content: (remote.content as PageDocJSON | null) ?? null, version: remote.version };
+        setSavedAt(remote.updated_at);
+        return;
+      }
 
       const theirs = (remote.content as PageDocJSON | null) ?? null;
       const merged = mergeDocs(base.current.content, screen.current, theirs);
@@ -332,6 +348,12 @@ export function usePageAutosave({
       err: PageConflictError,
       sent: UpdatePageInput
     ): UpdatePageInput | null {
+      if (collaborativeRef.current) {
+        // Only metadata goes through here in a live session: replay it.
+        base.current = { content: (err.page.content as PageDocJSON | null) ?? null, version: err.page.version };
+        const { content: _content, version: _version, title: _title, ...rest } = sent;
+        return Object.keys(rest).length > 0 ? rest : null;
+      }
       const theirs = (err.page.content as PageDocJSON | null) ?? null;
       const mine = screen.current ?? (sent.content as PageDocJSON | null);
       const merged = mergeDocs(base.current.content, mine, theirs);

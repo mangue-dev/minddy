@@ -1,3 +1,4 @@
+import { isCollabRemoteTransaction } from "@/lib/page-collaboration-origin";
 import { Node } from "@tiptap/core";
 import { FileTextIcon as FileText } from "@hugeicons/core-free-icons";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
@@ -125,7 +126,11 @@ export const Subpage = Node.create<Record<string, never>, SubpageStorage>({
    */
   onUpdate({ editor, transaction }) {
     const removed = this.storage.removed;
-    if (!removed || !transaction.docChanged) return;
+    // A block removed by a COLLABORATOR (MIN-688) arrives as a received
+    // transaction: it was their gesture, confirmed on their screen, and the
+    // page already went to the trash with it. Asking here would open a second
+    // confirmation for a deletion this reader never made.
+    if (!removed || !transaction.docChanged || isCollabRemoteTransaction(transaction)) return;
 
     const before = subpageIdsInDoc(transaction.before);
     if (before.size === 0) return;
