@@ -2587,6 +2587,16 @@ removes the vector together with the issue. A vector of former text is deleted
 as soon as the issue's content changes, in every index version, even when no
 new vector can be created.
 
+Search by meaning (MIN-718) reads the same vectors and stores nothing new
+per issue. `lib/server/issue-semantic-search.ts` decrypts the vectors of one
+index version, for projects the searching user can read, and ranks them in
+the server; the route returns issue ids and project ids only, never titles or
+fingerprints. The query vector, derived from the user's own typed text, is
+kept in process memory for 15 minutes, keyed by user and embedding target.
+Decrypted issue vectors are not cached. Migration `20270109200053` only
+widens `ai_usage_feature_check` with `issue_search`; it was applied to the
+production database on 2026-10-17 after a dry run and verified there.
+
 Migration `20270109200052` is additive. It was applied to the production
 database on 2026-10-17, after a dry run, and the result was verified there:
 both tables have RLS on, no policies and no anon or authenticated grants, and

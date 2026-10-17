@@ -447,6 +447,7 @@
     "historyFeatureSmartTriage": "Triage inteligente",
     "historyFeatureIssueEmbedding": "Smart-fill · índice de incidencias",
     "historyFeatureIssueRelation": "Smart-fill · relaciones",
+    "historyFeatureIssueSearch": "Búsqueda de incidencias",
     "agentsGateTitle": "El trabajo con Numo no está disponible",
     "agentsGateDescription": "El trabajo con Numo no está activado en esta cuenta.",
     "agentsGateCta": "Ver los planes",
@@ -2256,6 +2257,7 @@
     "exportFailed": "No se pudo exportar esta página."
   },
   "Picker": {
+    "relatedByMeaning": "Relacionadas por el sentido",
     "createNamed": "Crear «{name}»",
     "noResults": "No hay resultados",
     "search": "Buscar…"
@@ -2380,7 +2382,7 @@
     "smartFillRelationsLabel": "Vincular incidencias relacionadas",
     "smartFillRelationsDesc": "Después de guardar una incidencia, la vincula con las incidencias relacionadas y las dependencias que tiene claramente. Puedes quitar cualquier vínculo; un vínculo quitado no se vuelve a añadir.",
     "issueIndexingLabel": "Indexar incidencias",
-    "issueIndexingDesc": "Convierte el título y la descripción de tus incidencias en vectores privados para encontrar incidencias relacionadas. Desactivado, no se crea ningún vector y la búsqueda de incidencias relacionadas usa solo palabras.",
+    "issueIndexingDesc": "Convierte el título y la descripción de tus incidencias en vectores privados para encontrar incidencias relacionadas y buscar incidencias por el sentido. Desactivado, no se crea ningún vector y la búsqueda solo compara palabras.",
     "numoStatusTitle": "Estado de las incidencias que crea Numo",
     "numoStatusDesc": "Triage añade un paso de revisión manual; Backlog y Todo lo saltan.",
     "promptAutoStartDesc": "Sólo se aplica a las incidencias y tareas de cuaderno que aún no han comenzado.",
@@ -4347,7 +4349,8 @@
         "jev_decision": "Decisiones de IA",
         "jev_shadow": "Verificaciones de decisiones",
         "issue_embedding": "Embeddings de incidencias",
-        "issue_relation": "Relaciones de Smart-fill"
+        "issue_relation": "Relaciones de Smart-fill",
+        "issue_search": "Búsqueda de incidencias"
       },
       "stripeHidden": "Los ingresos de Stripe están ocultos: la facturación no está conectada en esta instancia."
     },

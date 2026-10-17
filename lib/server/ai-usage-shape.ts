@@ -114,7 +114,13 @@ export type AiFeature =
    * — ONE call per changed issue that has candidates, answering every
    * candidate at once. The decision-model half rides `jev_decision`.
    */
-  | "issue_relation";
+  | "issue_relation"
+  /**
+   * Issue search by meaning (MIN-718): one embeddings call per distinct query
+   * typed in an issue picker, billed to the searching user. Cached per user,
+   * so a repeated query is not billed again.
+   */
+  | "issue_search";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

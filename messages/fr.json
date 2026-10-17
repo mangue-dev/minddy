@@ -447,6 +447,7 @@
     "historyFeatureSmartTriage": "Tri intelligent",
     "historyFeatureIssueEmbedding": "Smart-fill · index des tickets",
     "historyFeatureIssueRelation": "Smart-fill · relations",
+    "historyFeatureIssueSearch": "Recherche de tickets",
     "agentsGateTitle": "Le travail avec Numo n’est pas disponible",
     "agentsGateDescription": "Le travail avec Numo n’est pas activé sur ce compte.",
     "agentsGateCta": "Voir les plans",
@@ -2256,6 +2257,7 @@
     "exportFailed": "Impossible d'exporter cette page."
   },
   "Picker": {
+    "relatedByMeaning": "Liés par le sens",
     "createNamed": "Créer « {name} »",
     "noResults": "Aucun résultat",
     "search": "Rechercher…"
@@ -2380,7 +2382,7 @@
     "smartFillRelationsLabel": "Relier les tickets liés",
     "smartFillRelationsDesc": "Après l'enregistrement d'un ticket, le relie aux tickets liés et aux dépendances qu'il a clairement. Vous pouvez retirer chaque lien ; un lien retiré n'est pas remis.",
     "issueIndexingLabel": "Indexer les tickets",
-    "issueIndexingDesc": "Transforme le titre et la description de vos tickets en vecteurs privés, utilisés pour trouver les tickets liés. Désactivé, aucun vecteur n'est créé et la recherche de tickets liés se fait sur les mots.",
+    "issueIndexingDesc": "Transforme le titre et la description de vos tickets en vecteurs privés, utilisés pour trouver les tickets liés et chercher des tickets par le sens. Désactivé, aucun vecteur n'est créé et la recherche ne compare que les mots.",
     "numoStatusTitle": "Statut des tickets créés par Numo",
     "numoStatusDesc": "« Triage » ajoute une étape de validation manuelle ; « Backlog » et « À faire » la sautent.",
     "promptAutoStartDesc": "Ne s'applique qu'aux tickets et aux tâches du carnet pas encore démarrés.",
@@ -4347,7 +4349,8 @@
         "jev_decision": "Décisions IA",
         "jev_shadow": "Contrôles des décisions",
         "issue_embedding": "Embeddings des tickets",
-        "issue_relation": "Relations Smart-fill"
+        "issue_relation": "Relations Smart-fill",
+        "issue_search": "Recherche de tickets"
       },
       "stripeHidden": "Les revenus Stripe sont masqués : la facturation n'est pas connectée sur cette instance."
     },

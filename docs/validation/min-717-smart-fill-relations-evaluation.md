@@ -78,3 +78,41 @@ Every charge is recorded under the payer's usage:
 - Retrieval scans and decrypts a project's vectors in the server, the same
   approach as feedback search. Its latency on large projects still has to be
   measured on staging before rollout.
+
+## MIN-718: hybrid issue search (2026-10-17)
+
+The second case of the same harness (`-t "hybrid issue search"`) uses the same
+corpus of 12 issues. It runs 9 queries that describe one issue without reusing
+its words, some of them in French, German or Spanish, plus 2 off-topic
+queries. The text-only baseline is the substring match the pickers and
+`searchIssues` used before this change. The hybrid order is text matches
+first, then meaning matches not already shown, which is what the pickers
+display.
+
+| Measure | Value |
+| --- | --- |
+| Text only: intended issue first | 0 / 9 |
+| Hybrid: intended issue first | 9 / 9 |
+| Hybrid: intended issue in the top 5 | 9 / 9 |
+| Off-topic queries with any meaning match (floor 0.3) | 0 / 2 |
+| Mean query embedding latency (workstation) | 742 ms |
+| Cost of 11 query embeddings | $0.0000015 |
+
+The intended issue scored between 0.37 and 0.73 in cosine similarity. The best
+wrong candidate scored at most 0.39 for a positive query, and no candidate
+reached 0.3 for an off-topic query.
+
+**What a person sees.** Text results appear at once. Results by meaning
+follow about 0.35 s of debounce plus the embedding call: 0.4 to 1.1 s here,
+and none at all for a repeated query, which the per-user cache answers. The
+server-side decryption and ranking of a project's vectors was not timed on
+production-sized data; it still has to be measured on staging, like the
+relation pass.
+
+**Limits.**
+- Issues that are not indexed are reachable by text only. That covers issues
+  whose author turned indexing off, and issues waiting for the backfill or for
+  reindexing after a model change.
+- Queries shorter than two words, or a single word of fewer than six letters,
+  never leave the browser.
+- Identifiers are always answered by text.

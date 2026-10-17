@@ -215,6 +215,8 @@ export const BILLABLE_FEATURES = [
   // LLM fallback. Same segment as Smart Fill below: the same gesture.
   "issue_embedding",
   "issue_relation",
+  // Issue search by meaning (MIN-718): the query embeddings of the pickers.
+  "issue_search",
 ] as const;
 
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
@@ -290,6 +292,7 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
       "jev_shadow",
       "issue_embedding",
       "issue_relation",
+      "issue_search",
     ],
     barClass: "bg-fuchsia-500",
   },

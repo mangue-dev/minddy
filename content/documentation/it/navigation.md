@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,13 +47,19 @@
       "components/pull-requests/pr-context-actions.tsx",
       "content/documentation/reviews/min-685-sidebar-context-actions.md",
       "lib/use-hidden-projects.ts",
-      "content/documentation/reviews/min-692-hidden-projects.md"
+      "content/documentation/reviews/min-692-hidden-projects.md",
+      "lib/issue-semantic-query.ts",
+      "lib/use-semantic-issue-search.ts",
+      "lib/server/issue-semantic-search.ts",
+      "app/api/issues/semantic-search/route.ts",
+      "lib/use-semantic-mentions.ts",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it changed-passage parity and label review); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; it translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (it changed-passage parity and label review); agent:/root (it translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (it translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -75,7 +81,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +97,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -154,6 +160,20 @@ Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei com
 Usa la guida delle scorciatoie per esaminare i comandi disponibili sulla tua piattaforma. minddy distingue scorciatoie dell’applicazione, azioni sulle proprietà dei ticket e scorciatoie native per schede o finestre desktop. Controlla dove si trova il focus prima di usare un comando: scrivere dentro un editor e agire sul ticket circostante sono contesti diversi.
 
 ![Risultati della ricerca dell’identificativo di un ticket dimostrativo.](/documentation/it/work-search.png)
+
+### Cercare i ticket per significato {#search-by-meaning}
+
+Quando una ricerca descrive il lavoro invece di nominarlo, la ricerca dei ticket trova anche ticket di significato vicino, anche se usano altre parole. Per esempio, «l’accesso non riesce dopo il ripristino della password» può trovare un ticket intitolato «Sessione persa al cambio della password». Vale per la palette dei comandi, le menzioni `@` nelle descrizioni, nelle pagine, nei commenti e nel compositore di Numo, i selettori delle relazioni, **Segna come duplicato...** nel triage, **Collega un ticket** su una pull request, il menu **Aggiungi contesto** → **Ticket** di Numo e **Collegamento a un ticket esistente** sui feedback.
+
+Le corrispondenze testuali e gli identificativi esatti vengono sempre per primi e mantengono il loro ordine. Poco dopo che hai smesso di scrivere, al massimo cinque ticket trovati per significato si aggiungono dopo di essi sotto **Correlati per significato**. Un ticket già mostrato non viene ripetuto e la riga evidenziata non si sposta. Ogni selettore mantiene le proprie regole, quindi compaiono solo ticket che poteva già proporre: un selettore delle relazioni, per esempio, continua a proporre solo ticket dello stesso progetto non ancora collegati. La palette dei comandi cerca nei progetti che puoi leggere, fino ai 25 aggiornati più di recente; le sue azioni di selezione multipla non usano la ricerca per significato.
+
+La ricerca per significato ha questi limiti:
+
+- La ricerca deve contenere almeno due parole, o una parola di almeno sei lettere. Gli identificativi come `MIN-42`, `#42` o `42`, e le ricerche molto brevi, usano solo la ricerca testuale.
+- Si basa sull’indice che Riempimento intelligente costruisce dal titolo e dalla descrizione dei ticket. Un ticket non ancora indicizzato, o il cui autore ha disattivato [**Indicizza i ticket**](/docs/issues#smart-fill-preferences), viene trovato solo tramite le sue parole. I ticket nel cestino non compaiono mai.
+- Se hai disattivato **Indicizza i ticket** in **Impostazioni account** → **Preferenze**, le tue ricerche confrontano solo le parole. Lo stesso accade quando l’amministrazione dell’istanza ha disattivato **Relazioni di Smart Fill**, quando il tuo budget IA è esaurito o quando il provider non risponde entro pochi secondi. I risultati testuali restano e non viene mostrato alcun errore.
+
+Ogni nuova ricerca usa una chiamata IA, conteggiata nella tua quota **Automazioni** e mostrata nella cronologia di utilizzo come **Ricerca dei ticket**. Una ricerca ripetuta entro circa 15 minuti di norma non viene addebitata di nuovo.
 
 ### Usare un controllo visibile equivalente {#shortcut-alternatives}
 

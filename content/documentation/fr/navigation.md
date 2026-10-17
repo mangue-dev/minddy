@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,13 +47,19 @@
       "components/pull-requests/pr-context-actions.tsx",
       "content/documentation/reviews/min-685-sidebar-context-actions.md",
       "lib/use-hidden-projects.ts",
-      "content/documentation/reviews/min-692-hidden-projects.md"
+      "content/documentation/reviews/min-692-hidden-projects.md",
+      "lib/issue-semantic-query.ts",
+      "lib/use-semantic-issue-search.ts",
+      "lib/server/issue-semantic-search.ts",
+      "app/api/issues/semantic-search/route.ts",
+      "lib/use-semantic-mentions.ts",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr changed-passage parity and label review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; fr translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr changed-passage parity and label review); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -75,7 +81,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +97,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -154,6 +160,20 @@ Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette
 Consultez l’aide des raccourcis pour votre plateforme. minddy distingue raccourcis de l’application, actions de propriétés des tickets et commandes natives d’onglets ou de fenêtres desktop. Vérifiez le focus avant une commande : saisir dans un éditeur et agir sur le ticket environnant sont des contextes différents.
 
 ![Résultats de recherche pour l’identifiant d’un ticket de démonstration.](/documentation/fr/work-search.png)
+
+### Chercher des tickets par le sens {#search-by-meaning}
+
+Quand une requête décrit le travail au lieu de le nommer, la recherche de tickets trouve aussi les tickets de sens proche, même s’ils emploient d’autres mots. Par exemple, « la connexion échoue après une réinitialisation du mot de passe » peut trouver un ticket intitulé « Session perdue au changement de mot de passe ». C’est le cas dans la palette de commandes, les mentions `@` des descriptions, des pages, des commentaires et du compositeur de Numo, les sélecteurs de relation, **Marquer comme doublon…** dans le triage, **Lier un ticket** sur une pull request, le menu **Ajouter du contexte** → **Ticket** de Numo et **Lier à un ticket existant** sur un feedback.
+
+Les correspondances textuelles et les identifiants exacts passent toujours en premier et gardent leur ordre. Peu après la fin de la saisie, au plus cinq tickets trouvés par le sens s’ajoutent à leur suite sous **Liés par le sens**. Un ticket déjà affiché n’est pas répété et la ligne en surbrillance ne bouge pas. Chaque sélecteur garde ses propres règles : seuls les tickets qu’il pouvait déjà proposer apparaissent. Un sélecteur de relation, par exemple, ne propose toujours que des tickets du même projet qui ne sont pas encore liés. La palette de commandes cherche dans les projets que vous pouvez lire, jusqu’aux 25 mis à jour le plus récemment ; ses actions de sélection groupée n’utilisent pas la recherche par le sens.
+
+La recherche par le sens a ces limites :
+
+- La requête doit compter au moins deux mots, ou un mot d’au moins six lettres. Les identifiants comme `MIN-42`, `#42` ou `42`, ainsi que les requêtes très courtes, n’utilisent que la recherche textuelle.
+- Elle s’appuie sur l’index que Smart-fill construit à partir du titre et de la description des tickets. Un ticket pas encore indexé, ou dont l’auteur a désactivé [**Indexer les tickets**](/docs/issues#smart-fill-preferences), n’est trouvé que par ses mots. Les tickets de la corbeille n’apparaissent jamais.
+- Si vous avez désactivé **Indexer les tickets** dans **Paramètres du compte** → **Préférences**, vos recherches ne comparent que les mots. Il en va de même quand l’administrateur de l’instance a désactivé **Relations Smart Fill**, quand votre budget IA est épuisé ou quand le fournisseur ne répond pas en quelques secondes. Les résultats textuels restent et aucune erreur n’est affichée.
+
+Chaque nouvelle requête utilise un appel d’IA, compté dans votre part **Automatisations** et affiché dans l’historique d’usage sous **Recherche de tickets**. Une requête répétée dans les 15 minutes environ n’est normalement pas facturée à nouveau.
 
 ### Utiliser une commande visible équivalente {#shortcut-alternatives}
 

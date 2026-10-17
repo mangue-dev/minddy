@@ -447,6 +447,7 @@
     "historyFeatureSmartTriage": "Smart-Triage",
     "historyFeatureIssueEmbedding": "Smart-fill · Problemindex",
     "historyFeatureIssueRelation": "Smart-fill · Beziehungen",
+    "historyFeatureIssueSearch": "Problemsuche",
     "agentsGateTitle": "Numo-Arbeit ist nicht verfügbar",
     "agentsGateDescription": "Numo-Arbeit ist für dieses Konto nicht aktiviert.",
     "agentsGateCta": "Pläne anzeigen",
@@ -2256,6 +2257,7 @@
     "exportFailed": "Diese Seite konnte nicht exportiert werden."
   },
   "Picker": {
+    "relatedByMeaning": "Inhaltlich verwandt",
     "createNamed": "„{name}“ erstellen",
     "noResults": "Keine Ergebnisse",
     "search": "Suchen…"
@@ -2380,7 +2382,7 @@
     "smartFillRelationsLabel": "Verwandte Vorgänge verknüpfen",
     "smartFillRelationsDesc": "Verknüpft einen Vorgang nach dem Speichern mit verwandten Vorgängen und eindeutigen Abhängigkeiten. Sie können jede Verknüpfung entfernen; eine entfernte Verknüpfung wird nicht erneut angelegt.",
     "issueIndexingLabel": "Vorgänge indexieren",
-    "issueIndexingDesc": "Wandelt Titel und Beschreibung Ihrer Vorgänge in private Vektoren um, mit denen verwandte Vorgänge gefunden werden. Ausgeschaltet wird kein Vektor erstellt und die Suche nach verwandten Vorgängen nutzt nur Wörter.",
+    "issueIndexingDesc": "Wandelt Titel und Beschreibung Ihrer Vorgänge in private Vektoren um, mit denen verwandte Vorgänge gefunden und Vorgänge inhaltlich gesucht werden. Ausgeschaltet wird kein Vektor erstellt und die Suche vergleicht nur Wörter.",
     "numoStatusTitle": "Status für Probleme, die Numo erstellt",
     "numoStatusDesc": "Triage fügt einen manuellen Überprüfungsschritt hinzu; Backlog und Todo überspringen es.",
     "promptAutoStartDesc": "Gilt nur für Probleme und Notebook-Aufgaben, die noch nicht begonnen haben.",
@@ -4347,7 +4349,8 @@
         "jev_decision": "KI-Entscheidungen",
         "jev_shadow": "Entscheidungsprüfungen",
         "issue_embedding": "Problem-Embeddings",
-        "issue_relation": "Smart-fill-Beziehungen"
+        "issue_relation": "Smart-fill-Beziehungen",
+        "issue_search": "Problemsuche"
       },
       "stripeHidden": "Stripe Umsatz ist ausgeblendet: Abrechnung ist auf dieser Instanz nicht verbunden."
     },

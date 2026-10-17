@@ -1,4 +1,5 @@
 import { objectiveStore } from "@/lib/server/objective-store";
+import { searchIssuesSemantically } from "@/lib/server/issue-semantic-search";
 import { commentStore } from "@/lib/server/comment-store";
 import { decodeIssue } from "@/lib/server/issue-store";
 import { decodeGithubIssueMetadata, legacyGithubIssueMetadataSchema } from
@@ -34,7 +35,7 @@ import type {
 // therefore safe on any client.
 
 export interface ReadContext {
-  /** Client de lecture — RLS (Numo) ou service (MCP). */
+  /** Read client: RLS (Numo) or service (MCP). */
   db: SupabaseClient;
   /** Customer service (name resolution via auth admin). */
   service: SupabaseClient;
@@ -530,6 +531,36 @@ export async function searchIssues(
       }
     }
     if (page.length < 200) break;
+  }
+
+  // Hybrid search (MIN-718): lexical matches stay first, and an exact
+  // identifier never reaches this point. Issues found by meaning fill the
+  // remaining slots, read through the same client and project filter, and
+  // say how they were found. No actor (an integration), no query vector.
+  if (matches.length < limit && ctx.actorId) {
+    const semantic = await searchIssuesSemantically({
+      userId: ctx.actorId,
+      query,
+      projectIds: [ctx.projectId],
+      limit,
+      service: ctx.service,
+    });
+    const known = new Set(matches.map((issue) => issue.id));
+    const ids = semantic.hits.map((hit) => hit.id).filter((id) => !known.has(id));
+    if (ids.length > 0) {
+      const { data } = await ctx.db.from("issues")
+        .select("*, issue_categories(category_id)")
+        .is("deleted_at", null).eq("project_id", ctx.projectId)
+        .in("id", ids);
+      const byId = new Map(((data ?? []) as Record<string, unknown>[]).map((row) => [row.id as string, row]));
+      for (const id of ids) {
+        const stored = byId.get(id);
+        if (!stored) continue;
+        const row = await decodeIssue(stored, ctx.actorId ?? null);
+        matches.push({ ...compactIssue(row, ctx.projectKey), match: "semantic" });
+        if (matches.length === limit) break;
+      }
+    }
   }
   return { issues: matches };
 }

@@ -59,6 +59,7 @@ export const FEATURE_LABEL_KEYS: Record<UsageHistoryFeature, MessageKey<"Billing
   smart_triage: "historyFeatureSmartTriage",
   issue_embedding: "historyFeatureIssueEmbedding",
   issue_relation: "historyFeatureIssueRelation",
+  issue_search: "historyFeatureIssueSearch",
 };
 
 /**

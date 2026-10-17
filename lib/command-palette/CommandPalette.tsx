@@ -52,6 +52,14 @@ export interface CommandPaletteProps {
   onClose: () => void;
   /** All available items. */
   items: PaletteItem[];
+  /**
+   * Results found outside the text engine (e.g. by meaning). Appended after
+   * the ordered results, in their own category, while a query is typed: the
+   * existing rows keep their position, so the active row never jumps. Items
+   * already in the results (same id) are skipped. `categories` restricts the
+   * filter tabs they appear under (besides "all").
+   */
+  supplemental?: { items: PaletteItem[]; categories?: string[] };
 
   // === Behavior ===
   /** Action providers supplying contextual actions per entity type. */
@@ -118,6 +126,7 @@ export interface CommandPaletteProps {
 
 export function CommandPalette({
   isOpen,
+  supplemental,
   onClose,
   items,
   providers,
@@ -293,6 +302,7 @@ export function CommandPalette({
     return (
       <SearchView
         items={items}
+        supplemental={supplemental}
         actionContext={execContext}
         onClose={handleClose}
         onSelectItem={handleSelectWithUsage}

@@ -13,6 +13,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Book02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
@@ -54,6 +55,18 @@ export interface MentionOption {
   detail?: string;
   /** Search terms in addition to the label (email, project key, title). */
   keywords?: string[];
+  /** Appended because it matches the query by meaning (MIN-718), not by text. */
+  semantic?: boolean;
+}
+
+/** "Related by meaning" divider, shown once before the first semantic option. */
+export function SemanticMentionDivider() {
+  const t = useTranslations("Picker");
+  return (
+    <div role="presentation" className="px-2 pb-0.5 pt-1.5 text-xs font-medium text-muted-foreground">
+      {t("relatedByMeaning")}
+    </div>
+  );
 }
 
 /** The options that match the query typed after the “@”. */
@@ -216,14 +229,40 @@ export function MentionSuggestions({
       )}
     >
       {options.map((option, index) => (
-        <MentionOptionRow
+        <MentionRowWithDivider
           key={`${option.type}:${option.id}`}
-          option={option}
-          active={index === activeIndex}
-          onPick={() => onPick(option)}
-          onHover={() => onHover(index)}
-        />
+          options={options}
+          index={index}
+        >
+          <MentionOptionRow
+            option={option}
+            active={index === activeIndex}
+            onPick={() => onPick(option)}
+            onHover={() => onHover(index)}
+          />
+        </MentionRowWithDivider>
       ))}
     </div>
+  );
+}
+
+/** A row, preceded by the "Related by meaning" divider when it is the first semantic one. */
+export function MentionRowWithDivider({
+  options,
+  index,
+  children,
+}: {
+  options: readonly { semantic?: boolean }[];
+  index: number;
+  children: React.ReactNode;
+}) {
+  // The divider holds the translation: menus without semantic rows (and
+  // their tests) never need the intl context for it.
+  const first = options[index]?.semantic && !options[index - 1]?.semantic;
+  return (
+    <>
+      {first && <SemanticMentionDivider />}
+      {children}
+    </>
   );
 }

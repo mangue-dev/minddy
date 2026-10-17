@@ -447,6 +447,7 @@
     "historyFeatureSmartTriage": "Triage intelligente",
     "historyFeatureIssueEmbedding": "Smart-fill · indice dei ticket",
     "historyFeatureIssueRelation": "Smart-fill · relazioni",
+    "historyFeatureIssueSearch": "Ricerca dei ticket",
     "agentsGateTitle": "Il lavoro con Numo non è disponibile",
     "agentsGateDescription": "Il lavoro con Numo non è attivo per questo account.",
     "agentsGateCta": "Visualizza piani",
@@ -585,7 +586,7 @@
     "skillPreviewError": "Impossibile caricare questa skill. Chiudi l’anteprima e riprova.",
     "addContextMember": "Membro della squadra",
     "addContextProject": "Progetto",
-    "addContextIssue": "Fascicolo",
+    "addContextIssue": "Ticket",
     "addContextObjective": "Obiettivo",
     "addContextPage": "Pagina",
     "addContextMemberSearch": "Cerca un membro...",
@@ -1509,12 +1510,12 @@
     "desktopHint": "Questa versione dell'app desktop non può abilitare le notifiche su questo dispositivo. Aggiorna minddy per ripristinare il supporto di notifica."
   },
   "Issue": {
-    "entity": "Fascicolo",
+    "entity": "Ticket",
     "entityPlural": "Ticket",
     "subEntityPlural": "Sotto-ticket"
   },
   "IssueUI": {
-    "titlePlaceholder": "Titolo del rilascio",
+    "titlePlaceholder": "Titolo del ticket",
     "descriptionPlaceholder": "Aggiungi una descrizione...",
     "issueDeletedToast": "Ticket spostato nel cestino.",
     "deleteDialogTitle": "Trasferire questo ticket nel cestino?",
@@ -2256,6 +2257,7 @@
     "exportFailed": "Impossibile esportare questa pagina."
   },
   "Picker": {
+    "relatedByMeaning": "Correlati per significato",
     "createNamed": "Crea «{name}»",
     "noResults": "Nessun risultato",
     "search": "Ricerca..."
@@ -2380,7 +2382,7 @@
     "smartFillRelationsLabel": "Collega i ticket correlati",
     "smartFillRelationsDesc": "Dopo il salvataggio di un ticket, lo collega ai ticket correlati e alle dipendenze evidenti. Puoi rimuovere ogni collegamento; un collegamento rimosso non viene aggiunto di nuovo.",
     "issueIndexingLabel": "Indicizza i ticket",
-    "issueIndexingDesc": "Trasforma titolo e descrizione dei tuoi ticket in vettori privati, usati per trovare i ticket correlati. Disattivato, nessun vettore viene creato e la ricerca dei ticket correlati usa solo le parole.",
+    "issueIndexingDesc": "Trasforma titolo e descrizione dei tuoi ticket in vettori privati, usati per trovare i ticket correlati e cercare i ticket per significato. Disattivato, nessun vettore viene creato e la ricerca confronta solo le parole.",
     "numoStatusTitle": "Stato per i ticket che crea Numo",
     "numoStatusDesc": "Triage aggiunge un passo di revisione manuale; Backlog e Todo saltarlo.",
     "promptAutoStartDesc": "Si applica solo ai ticket e alle attività del notebook che non sono ancora iniziate.",
@@ -3153,9 +3155,9 @@
     "countIssues": "{count, plural, one {# ticket} other {# ticket}}",
     "countObjectives": "{count, plural, one {# obiettivo} other {# obiettivi}}",
     "noObjective": "Nessun obiettivo",
-    "titleLabel": "Titolo del rilascio",
+    "titleLabel": "Titolo del ticket",
     "createButton": "{count, plural, one {Crea # ticket} other {Crea # ticket}}",
-    "createHint": "Atterrano nel ritardo.",
+    "createHint": "Finiscono nel Backlog.",
     "createdToast": "{count, plural, one {# edizione creata} other {# ticket creati}}",
     "createdReply": "{count, plural, one {Ho creato il # Il ticket che hai proposto.} other {Ho creato il # - Le cose che hai proposto.}}"
   },
@@ -4347,7 +4349,8 @@
         "jev_decision": "Decisioni IA",
         "jev_shadow": "Verifiche delle decisioni",
         "issue_embedding": "Embedding dei ticket",
-        "issue_relation": "Relazioni Smart-fill"
+        "issue_relation": "Relazioni Smart-fill",
+        "issue_search": "Ricerca dei ticket"
       },
       "stripeHidden": "Il ricavo di Stripe è nascosto: la fatturazione non è collegata in questa istanza."
     },

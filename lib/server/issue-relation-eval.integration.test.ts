@@ -15,6 +15,9 @@ import { describe, expect, it, vi } from "vitest";
  *   MINDDY_RELATION_EVAL=true OPENROUTER_API_KEY=… MINDDY_EDITION=cloud MINDDY_MANAGED_AI=1 \
  *     npx vitest run lib/server/issue-relation-eval.integration.test.ts
  *
+ * The second case measures hybrid issue search (MIN-718) against the text-only
+ * baseline; MINDDY_SEARCH_EVAL_OUT=<file.json> writes its report.
+ *
  * Optional: MINDDY_RELATION_EVAL_OUT=<file.json> writes the full report, and
  * MINDDY_RELATION_EVAL_ENGINE=llm measures the LLM fallback alone.
  * The default suite skips this file; it spends a few cents per run.
@@ -195,5 +198,87 @@ describe.skipIf(!enabled)("Smart Fill relations evaluation (MIN-717)", () => {
     }
     // A conservative pass: no relation on a pair that should have none.
     expect(falsePositive).toBe(0);
+  }, 180_000);
+
+  it("measures hybrid issue search against the text-only baseline (MIN-718)", async () => {
+    const { requestEmbeddings } = await import("@/lib/server/embeddings");
+    const { embeddingText } = await import("@/lib/server/issue-relation-inference");
+    const { rankHits } = await import("@/lib/server/issue-semantic-search");
+    const { isSemanticQuery } = await import("@/lib/issue-semantic-query");
+
+    // What a person types, and the issue they mean (null = nothing should match by meaning).
+    const QUERIES: { query: string; expected: string | null }[] = [
+      { query: "users cannot log in with their company account", expected: "auth-provider" },
+      { query: "night theme for widgets", expected: "dark-mode" },
+      { query: "spreadsheet of paid bills for accounting", expected: "billing-export" },
+      { query: "too many requests overload the database", expected: "rate-limit" },
+      { query: "application plante en ouvrant une notification", expected: "mobile-crash" },
+      { query: "Datenbank auf neue Hauptversion aktualisieren", expected: "db-upgrade" },
+      { query: "resumen semanal por correo", expected: "email-digest" },
+      { query: "guide new users through their first project", expected: "onboarding-tour" },
+      { query: "invoice document with the customer logo", expected: "pdf-invoice" },
+      { query: "kubernetes cluster autoscaling policy", expected: null },
+      { query: "recipe ideas for a team lunch", expected: null },
+    ];
+
+    const lexical = (query: string) => {
+      const needle = query.toLocaleLowerCase();
+      return CORPUS.filter((c) => `${c.title}\n${c.description}`.toLocaleLowerCase().includes(needle)).map((c) => c.id);
+    };
+
+    const corpusBatch = await requestEmbeddings(CORPUS.map((c) => embeddingText(c.title, c.description)), {
+      modelKey: "issue_embedding_model", surface: "automations", feature: "issue_embedding",
+      billedUserId: null, allowPlatformWithoutUser: true, record: { billTo: { platform: true } as never },
+      dimensions: "any", xTitle: "Issue search eval",
+    });
+    expect(corpusBatch).not.toBeNull();
+    const rows = CORPUS.map((c, i) => ({ issue_id: c.id, project_id: "eval", embedding: corpusBatch!.vectors[i]! }));
+
+    const report: Record<string, unknown>[] = [];
+    let lexicalTop1 = 0, hybridTop1 = 0, hybridTop5 = 0, negativeHits = 0, queryMs = 0, embedded = 0;
+    for (const { query, expected } of QUERIES) {
+      const text = lexical(query);
+      let semantic: { id: string; score: number }[] = [];
+      if (isSemanticQuery(query)) {
+        const started = performance.now();
+        const batch = await requestEmbeddings([query], {
+          modelKey: "issue_embedding_model", surface: "automations", feature: "issue_search",
+          billedUserId: null, allowPlatformWithoutUser: true, record: { billTo: { platform: true } as never },
+          dimensions: "any", xTitle: "Issue search eval",
+        });
+        queryMs += performance.now() - started;
+        embedded++;
+        semantic = batch?.vectors[0] ? rankHits(batch.vectors[0], rows) : [];
+      }
+      // Hybrid order: text matches first, then meaning matches not already shown.
+      const hybrid = [...text, ...semantic.map((h) => h.id).filter((id) => !text.includes(id))];
+      if (expected) {
+        if (text[0] === expected) lexicalTop1++;
+        if (hybrid[0] === expected) hybridTop1++;
+        if (hybrid.slice(0, 5).includes(expected)) hybridTop5++;
+      } else if (semantic.length > 0) {
+        negativeHits++;
+      }
+      report.push({ query, expected, text, semantic: semantic.slice(0, 3).map((h) => `${h.id}:${h.score.toFixed(3)}`) });
+    }
+    const positives = QUERIES.filter((q) => q.expected).length;
+    const cost = (feature: string) =>
+      ledger.filter((row) => row.feature === feature).reduce((sum, row) => sum + (row.cost ?? 0), 0);
+    const summary = {
+      positives,
+      negatives: QUERIES.length - positives,
+      textOnlyTop1: lexicalTop1 / positives,
+      hybridTop1: hybridTop1 / positives,
+      hybridTop5: hybridTop5 / positives,
+      negativeQueriesWithAnyMeaningHit: negativeHits,
+      meanQueryEmbeddingMs: Math.round(queryMs / Math.max(embedded, 1)),
+      queryEmbeddingCostUsd: cost("issue_search"),
+      embeddedQueries: embedded,
+    };
+    console.log(JSON.stringify({ summary, report }, null, 2));
+    if (process.env.MINDDY_SEARCH_EVAL_OUT) {
+      writeFileSync(process.env.MINDDY_SEARCH_EVAL_OUT, JSON.stringify({ summary, report }, null, 2));
+    }
+    expect(hybridTop5).toBeGreaterThanOrEqual(lexicalTop1);
   }, 180_000);
 });

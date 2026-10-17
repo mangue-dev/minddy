@@ -447,6 +447,7 @@
     "historyFeatureSmartTriage": "Smart Triage",
     "historyFeatureIssueEmbedding": "Smart-fill · issue index",
     "historyFeatureIssueRelation": "Smart-fill · relations",
+    "historyFeatureIssueSearch": "Issue search",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
     "agentsGateCta": "View plans",
@@ -2256,6 +2257,7 @@
     "exportFailed": "Could not export this page."
   },
   "Picker": {
+    "relatedByMeaning": "Related by meaning",
     "createNamed": "Create “{name}”",
     "noResults": "No results",
     "search": "Search…"
@@ -2380,7 +2382,7 @@
     "smartFillRelationsLabel": "Link related issues",
     "smartFillRelationsDesc": "After you save an issue, links it to related issues and dependencies it plainly has. You can remove any link; a removed link is not added again.",
     "issueIndexingLabel": "Index issues",
-    "issueIndexingDesc": "Turns your issues' titles and descriptions into private vectors, used to find related issues. Off, no vector is created and related-issue search uses words only.",
+    "issueIndexingDesc": "Turns your issues' titles and descriptions into private vectors, used to find related issues and to search issues by meaning. Off, no vector is created and search compares words only.",
     "numoStatusTitle": "Status for issues Numo creates",
     "numoStatusDesc": "Triage adds a manual review step; Backlog and Todo skip it.",
     "promptAutoStartDesc": "Only applies to issues and notebook tasks that haven't started yet.",
@@ -4347,7 +4349,8 @@
         "jev_decision": "AI decisions",
         "jev_shadow": "Decision checks",
         "issue_embedding": "Issue embeddings",
-        "issue_relation": "Smart-fill relations"
+        "issue_relation": "Smart-fill relations",
+        "issue_search": "Issue search"
       },
       "stripeHidden": "Stripe revenue is hidden: billing is not connected on this instance."
     },

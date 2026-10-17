@@ -7,6 +7,7 @@
 // by a +X trigger whose popover shows the complete message context.
 
 import { HugeiconsIcon } from "@hugeicons/react";
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { AtIcon, Book02Icon, FileAttachmentIcon, Folder01Icon, Target01Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -320,6 +321,41 @@ function AddContextButton({
                 );
               })}
           </CommandGroup>
+        )}
+        {/* Issues of every readable project, found by meaning (MIN-718). */}
+        {kind === "issue" && (
+          <SemanticIssueGroup
+            projectId={null}
+            candidates={issues}
+            idOf={(issue) => issue.id}
+            textOf={(issue) => {
+              const project = projectById.get(issue.project_id);
+              return { value: `${issueIdentifier(project?.key ?? "", issue.number)} ${issue.title} ${project?.name ?? ""}` };
+            }}
+            onSelect={(issue) => {
+              const project = projectById.get(issue.project_id);
+              pick({
+                kind: "issue",
+                id: issue.id,
+                label: issueIdentifier(project?.key ?? "", issue.number),
+                detail: issue.title,
+              });
+            }}
+            renderItem={(issue) => {
+              const project = projectById.get(issue.project_id);
+              return (
+                <>
+                  <StatusIndicator status={issue.status} className="size-4" />
+                  <span className="truncate">
+                    <span className="text-muted-foreground">
+                      {issueIdentifier(project?.key ?? "", issue.number)}
+                    </span>{" "}
+                    {issue.title}
+                  </span>
+                </>
+              );
+            }}
+          />
         )}
       </SearchMenu>
     </div>

@@ -65,6 +65,7 @@ import {
   filterMentionItems,
   findActiveMentionQuery,
 } from "@/lib/mention-menu";
+import { useSemanticMentions } from "@/lib/use-semantic-mentions";
 import { assistantDraftHtml } from "@/lib/assistant-composer-draft";
 import {
   findActiveComposerMenuQuery,
@@ -368,6 +369,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const isSend = useIsSendShortcut();
     const modKey = useModKey();
     const tAttach = useTranslations("Resources");
+    const tPicker = useTranslations("Picker");
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -467,9 +469,16 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [onMentionQuery],
     );
 
-    const addContextOptions = useMemo(
+    const addContextTextOptions = useMemo(
       () => filterMentionItems(mentionables ?? [], addMenuQuery),
       [addMenuQuery, mentionables],
+    );
+    // Issues found by meaning (MIN-718), after the text matches.
+    const addContextOptions = useSemanticMentions(
+      addContextTextOptions,
+      mentionables ?? [],
+      addMenuQuery,
+      addMenuOpen,
     );
 
     const handleAttachShortcut = useCallback(
@@ -634,12 +643,20 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       };
     }, []);
 
-    const mentionOptions = useMemo(
+    const mentionTextOptions = useMemo(
       () =>
         mentionQuery === null || !mentionables?.length
           ? []
           : filterMentions(mentionables, mentionQuery),
       [mentionQuery, mentionables],
+    );
+    // Issues found by meaning (MIN-718): appended last, and the highlight
+    // resets on the query only, so a late answer never moves it.
+    const mentionOptions = useSemanticMentions(
+      mentionTextOptions,
+      mentionables ?? [],
+      mentionQuery ?? "",
+      mentionQuery !== null,
     );
     const mentionOpen = mentionOptions.length > 0;
     const activeMention = Math.min(
@@ -1579,10 +1596,32 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                           (addMenuSkillOptions.length > 0 || hasMcpMenu) && <CommandSeparator />}
                         {addContextOptions.length > 0 && (
                           <CommandGroup>
-                            {addContextOptions.map((option) => (
+                            {addContextOptions.filter((option) => !option.semantic).map((option) => (
                               <CommandItem
                                 key={`${option.type}:${option.id}`}
                                 value={`${option.label} ${option.detail ?? ""} ${(option.keywords ?? []).join(" ")}`}
+                                onSelect={() => addContextOption(option)}
+                                className="gap-2"
+                              >
+                                <MentionFigure option={option} />
+                                <span className="min-w-0 truncate">
+                                  {option.label}
+                                  {option.detail && (
+                                    <span className="ml-1.5 text-muted-foreground">
+                                      {option.detail}
+                                    </span>
+                                  )}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                        {addContextOptions.some((option) => option.semantic) && (
+                          <CommandGroup heading={tPicker("relatedByMeaning")}>
+                            {addContextOptions.filter((option) => option.semantic).map((option) => (
+                              <CommandItem
+                                key={`semantic:${option.type}:${option.id}`}
+                                value={`semantic:${option.id}`}
                                 onSelect={() => addContextOption(option)}
                                 className="gap-2"
                               >

@@ -1417,6 +1417,14 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
   max-height: none !important;
 }
 
+/* Issue pickers (MIN-718): matches by meaning are force-mounted rows, which
+   cmdk's own count ignores — its "No results" line would sit right above a
+   result. The semantic group carries a marker; while it is there, the empty
+   line goes. */
+[cmdk-list]:has([data-semantic-group]) [cmdk-empty] {
+  display: none;
+}
+
 /* ─── Selection of chat bubble text (agent + Numo) ────────
    Two rules prevent selection: the global reset `user-select: none` of
    mango-ui, AND — above all — Streamdown (markdown rendering of the wizard) which poses

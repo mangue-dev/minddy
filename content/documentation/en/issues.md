@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -102,13 +102,17 @@
       "lib/server/issue-relation-decision.ts",
       "lib/server/issue-embedding-store.ts",
       "components/settings/account-preferences-section.tsx",
-      "content/documentation/reviews/min-717-smart-fill-relations.md"
+      "content/documentation/reviews/min-717-smart-fill-relations.md",
+      "lib/issue-semantic-query.ts",
+      "lib/server/issue-semantic-search.ts",
+      "components/relation-target-picker.tsx",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review: Numo implementation and verification actions removed; copy-prompt submenu and auto-start preference verified; bulk-actions screenshot removed because it showed the retired Implement with Numo action; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (en new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-717 added passages with catalog UI labels; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review: Numo implementation and verification actions removed; copy-prompt submenu and auto-start preference verified; bulk-actions screenshot removed because it showed the retired Implement with Numo action; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-717 added passages with catalog UI labels; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -154,7 +158,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft with a localized title and description and manually available properties.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -170,7 +174,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -186,7 +190,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -202,7 +206,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -218,7 +222,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -234,7 +238,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -250,7 +254,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -266,7 +270,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -282,7 +286,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -299,7 +303,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -356,7 +360,7 @@ Smart-fill preferences belong to your account. Open **Account settings** → **P
 - **Enable Smart Fill** turns Smart-fill on or off for your account. It fills missing priority, effort, categories and objective; status, assignee and due date stay yours. The next three switches depend on it.
 - **Fill created issues** and **Fill triage issues** choose which new issues it fills: the issues you create, and the triage issues you own.
 - **Link related issues**, on by default, lets Smart-fill [add relations](#smart-fill-relations) after an issue is saved.
-- **Index issues**, on by default and independent of Smart-fill, turns the titles and descriptions of the issues you create or edit into private vectors used to find related issues. Background indexing of a project's existing issues follows both the project owner's switch and the author's: an issue whose author turned it off is never indexed. Vectors are encrypted with the project, like the issue; vectors stored before the project started encrypting are converted by the background job. When the switch is off, no vector is created for your issues, even when someone else edits them, and the related-issue search compares words only. Vectors already created stay while the text is unchanged; they are deleted as soon as the text changes, or with the issue.
+- **Index issues**, on by default and independent of Smart-fill, turns the titles and descriptions of the issues you create or edit into private vectors used to find related issues and to [search issues by meaning](/docs/navigation#search-by-meaning). Background indexing of a project's existing issues follows both the project owner's switch and the author's: an issue whose author turned it off is never indexed. Vectors are encrypted with the project, like the issue; vectors stored before the project started encrypting are converted by the background job. When the switch is off, no vector is created for your issues, even when someone else edits them, and the related-issue search compares words only. Your own searches then use text only, without search by meaning. Vectors already created stay while the text is unchanged; they are deleted as soon as the text changes, or with the issue.
 
 Turning a switch off also cancels the passes that have not run yet. Numo can change these preferences when you ask it to.
 
@@ -366,7 +370,7 @@ Use the list filters to narrow incoming tickets by priority, effort, assignee, o
 
 Open the project's Triage destination. Read the incoming issue and its source context before accepting it into planned work. Check whether an existing issue already represents the request. Clarify the expected outcome, project, assignee, priority and effort as needed.
 
-Choose Accept and confirm to move a retained issue to backlog. Choose Decline and confirm to set it to canceled. For a duplicate, use the duplicate picker to select the retained issue; the incoming issue becomes duplicate and points to that issue. After an item leaves triage, the next item is selected. Verify the resulting status or duplicate link in the issue itself. Moving between cards without taking one of these actions does not close the issue.
+Choose Accept and confirm to move a retained issue to backlog. Choose Decline and confirm to set it to canceled. For a duplicate, use the duplicate picker to select the retained issue; the incoming issue becomes duplicate and points to that issue. Describing the request in the picker's search also lists similar issues under **Related by meaning**, after the text matches; see [Search issues by meaning](/docs/navigation#search-by-meaning). After an item leaves triage, the next item is selected. Verify the resulting status or duplicate link in the issue itself. Moving between cards without taking one of these actions does not close the issue.
 
 ### Sorting and limits {#triage-order}
 
@@ -432,7 +436,7 @@ Check that an uploaded resource appears and can be opened after the operation. I
 
 ## Link dependencies and related issues {#issue-dependencies}
 
-Open an issue's relations controls and find the other issue by title or identifier. Choose a blocking relation when one task must finish before another can proceed. If A blocks B, A is the prerequisite and B is blocked by A. A related relation adds context without imposing that order.
+Open an issue's relations controls and find the other issue by title or identifier. A descriptive query also lists, after the text matches, issues of the same project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**. Choose a blocking relation when one task must finish before another can proceed. If A blocks B, A is the prerequisite and B is blocked by A. A related relation adds context without imposing that order.
 
 Read both issue identifiers and the displayed direction before confirming. For example, “Prepare the endpoint” blocks “Connect the client”, rather than the reverse. A dependency does not make either issue a sub-issue, and a parent-child relation is not a substitute for a blocking relation.
 
@@ -456,7 +460,7 @@ Smart-fill compares the issue with at most five candidates from the same project
 
 Links added this way appear in the issue's relations like any other, and the timeline names Smart-fill as their author. Check the direction of a dependency as you would for your own. To remove a link, use the relations controls: Smart-fill does not add a removed link back for that pair. To stop new links, turn off **Link related issues** in [your preferences](#smart-fill-preferences). Issues created before this feature, imported issues and issues synced from a repository are indexed gradually in the background, but they never receive links automatically.
 
-Indexing and relation decisions use AI. They count toward the **Automations** share of the account that owns the pass: the account charged for the new issue's Smart-fill, usually its creator; the editor for an edit; and the project owner for background indexing. Usage history lists indexing as **Smart-fill · issue index**. A relation decision appears as **AI decision** when the decision model answers it, and as **Smart-fill · relations** when the fallback model does. If that budget is exhausted or the provider fails, the pass is skipped and the issue stays unchanged. The instance administrator can also turn the feature off for everyone.
+Indexing and relation decisions use AI. They count toward the **Automations** share of the account that owns the pass: the account charged for the new issue's Smart-fill, usually its creator; the editor for an edit; and the project owner for background indexing. Usage history lists indexing as **Smart-fill · issue index**. A relation decision appears as **AI decision** when the decision model answers it, and as **Smart-fill · relations** when the fallback model does. If that budget is exhausted or the provider fails, the pass is skipped and the issue stays unchanged. The instance administrator can also turn the feature off for everyone. [Searching issues by meaning](/docs/navigation#search-by-meaning) uses the same index: each new query counts toward the searching account's **Automations** share and appears as **Issue search**.
 
 ## Split an issue into sub-issues {#sub-issues}
 

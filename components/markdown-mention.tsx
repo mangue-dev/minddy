@@ -40,9 +40,11 @@ import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { useMentionLinks } from "@/components/mention-links";
 import {
   MentionOptionRow,
+  MentionRowWithDivider,
   filterMentions,
   type MentionOption,
 } from "@/components/mention-suggest";
+import { useSemanticMentions } from "@/lib/use-semantic-mentions";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { findActiveMentionQuery } from "@/lib/mention-menu";
@@ -166,6 +168,12 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
 ) {
   const [selected, setSelected] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  // Issues found by meaning (MIN-718) are appended HERE, after tiptap's text
+  // matches: a late answer extends the list without resetting the selection,
+  // which only follows tiptap's own items.
+  const allOptions = (props.editor.extensionManager.extensions.find((extension) => extension.name === "mentionSuggest")
+    ?.options as MentionSuggestOptions | undefined)?.items() ?? [];
+  const items = useSemanticMentions(props.items, allOptions, props.query);
   useEffect(() => setSelected(0), [props.items]);
   useEffect(() => {
     listRef.current
@@ -174,13 +182,13 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
   }, [selected, props.items]);
 
   const choose = (index: number) => {
-    const item = props.items[index];
+    const item = items[index];
     if (item) props.command(item);
   };
 
   useImperativeHandle(ref, () => ({
     onKeyDown: (event) => {
-      const n = props.items.length;
+      const n = items.length;
       if (n === 0) return false;
       if (event.key === "ArrowUp") {
         setSelected((s) => (s - 1 + n) % n);
@@ -198,7 +206,7 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
     },
   }));
 
-  if (props.items.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <div
@@ -207,14 +215,15 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
       data-floating-surface
       className="scrollbar-quiet max-h-56 w-72 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-1 shadow-lg"
     >
-      {props.items.map((option, index) => (
-        <MentionOptionRow
-          key={`${option.type}:${option.id}`}
-          option={option}
-          active={index === selected}
-          onPick={() => choose(index)}
-          onHover={() => setSelected(index)}
-        />
+      {items.map((option, index) => (
+        <MentionRowWithDivider key={`${option.type}:${option.id}`} options={items} index={index}>
+          <MentionOptionRow
+            option={option}
+            active={index === selected}
+            onPick={() => choose(index)}
+            onHover={() => setSelected(index)}
+          />
+        </MentionRowWithDivider>
       ))}
     </div>
   );

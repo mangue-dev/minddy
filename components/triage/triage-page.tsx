@@ -514,6 +514,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     if (id) void markDuplicate(selected, id);
                   }}
                   options={duplicateOptions}
+                  semanticIssues={{ projectId }}
                   align="end"
                   trigger={
                     <Button variant="outline" size="sm">

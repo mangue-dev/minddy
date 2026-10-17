@@ -13,6 +13,7 @@
 // the menu chains two overlays instead, which it can afford — there's no Dialog
 // around a card.)
 
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import {
   Tooltip,
   TooltipContent,
@@ -251,6 +252,29 @@ export function RelationsSection({
                   ))}
                 </CommandGroup>
               )}
+              {/* Same eligible candidates, found by meaning (MIN-718). */}
+              <SemanticIssueGroup
+                projectId={issue.project_id}
+                candidates={candidates}
+                idOf={(candidate) => candidate.id}
+                textOf={(candidate) => ({
+                  value: candidate.id,
+                  keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],
+                })}
+                onSelect={(candidate) => {
+                  onAddRelation(issue.id, step, candidate.id);
+                  close();
+                }}
+                renderItem={(candidate) => (
+                  <>
+                    <StatusIndicator status={candidate.status} className="size-4" />
+                    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                      {issueIdentifier(projectKey, candidate.number)}
+                    </span>
+                    <span className="truncate">{candidate.title}</span>
+                  </>
+                )}
+              />
             </>
           )}
         </SearchMenu>

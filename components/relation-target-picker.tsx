@@ -4,6 +4,7 @@ import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { CommandAnchor } from "@/components/command-anchor";
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { issueIdentifier } from "@/lib/issue-constants";
 import type { Issue, IssueRelationType, Objective, RelationEndpointType } from "@/lib/types";
@@ -69,6 +70,26 @@ export function RelationTargetPicker({
           ))}
         </CommandGroup>
       )}
+      {/* Same eligible issues, found by meaning (MIN-718). */}
+      <SemanticIssueGroup
+        projectId={issues[0]?.project_id ?? null}
+        candidates={issues}
+        idOf={(issue) => issue.id}
+        textOf={(issue) => ({ value: issue.id, keywords: [issueIdentifier(projectKey, issue.number), issue.title] })}
+        onSelect={(issue) => {
+          onClose();
+          onSelect(issue.id, "issue");
+        }}
+        renderItem={(issue) => (
+          <>
+            <StatusIndicator status={issue.status} className="size-4" />
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+              {issueIdentifier(projectKey, issue.number)}
+            </span>
+            <span className="truncate">{issue.title}</span>
+          </>
+        )}
+      />
     </CommandAnchor>
   );
 }

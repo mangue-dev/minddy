@@ -15,6 +15,7 @@ import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useMemo, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -221,6 +222,31 @@ export function ObjectiveRelationsSection({
                   ))}
                 </CommandGroup>
               )}
+              {/* Same eligible issues, found by meaning (MIN-718). */}
+              <SemanticIssueGroup
+                projectId={projectId}
+                candidates={issueCandidates}
+                idOf={(candidate) => candidate.id}
+                textOf={(candidate) => ({
+                  value: candidate.id,
+                  keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],
+                })}
+                onSelect={(candidate) => {
+                  void addRelation(objective.id, step, candidate.id, {
+                    sourceType: "objective",
+                  }).catch((err) => toast.error((err as Error).message));
+                  close();
+                }}
+                renderItem={(candidate) => (
+                  <>
+                    <StatusIndicator status={candidate.status} className="size-4" />
+                    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                      {issueIdentifier(projectKey, candidate.number)}
+                    </span>
+                    <span className="truncate">{candidate.title}</span>
+                  </>
+                )}
+              />
             </>
           )}
         </SearchMenu>

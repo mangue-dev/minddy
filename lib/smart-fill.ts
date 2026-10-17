@@ -51,8 +51,9 @@ export function resolveSmartFillScope(
  *   switch like the creation scopes: Smart Fill off means no relations.
  * - `issue_indexing`: whether the account's issues may be turned into
  *   embedding vectors at all. It is NOT under the Smart Fill switch: the same
- *   index will serve semantic search, which must not force automatic
- *   relations, and a refusal of vectors must hold whatever else is enabled.
+ *   index serves search by meaning (MIN-718), which must not force automatic
+ *   relations, and a refusal of vectors must hold whatever else is enabled:
+ *   with it off, no query vector is created for the user either.
  *   With indexing off, relation inference falls back to lexical candidates
  *   and no vector is generated or billed.
  *

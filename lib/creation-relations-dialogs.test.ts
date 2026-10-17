@@ -84,6 +84,8 @@ vi.mock("@/components/issue-indicators", () => ({ RelationIcon: () => null, Stat
 vi.mock("@/components/relation-objective-label", () => ({ RelationObjectiveLabel: ({ objective }: { objective: Objective }) => React.createElement("span", null, objective.name) }));
 vi.mock("@/components/date-time-picker", () => ({ DateTimePicker: () => null }));
 vi.mock("@/components/search-select", () => ({ SearchSelect: () => null }));
+// The semantic group needs a real cmdk Command; it has its own test (lib/semantic-issue-group.test.tsx).
+vi.mock("@/components/semantic-issue-group", () => ({ SemanticIssueGroup: () => null }));
 vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => null }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/agent-beam", () => ({ AgentBeamOverlay: () => null }));

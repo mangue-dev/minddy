@@ -8,6 +8,7 @@ import { CommandGroup, CommandItem, Spinner, cn } from "mangue-ui";
 import { SearchMenu } from "@/components/search-menu";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_TYPES } from "@/lib/relation-constants";
@@ -163,6 +164,26 @@ export function CreationRelationsCompact({
               ))}
             </CommandGroup>
           )}
+          {/* Same eligible candidates, found by meaning (MIN-718). */}
+          <SemanticIssueGroup
+            projectId={projectId}
+            candidates={issueCandidates}
+            idOf={(issue) => issue.id}
+            textOf={(issue) => ({ value: issue.id, keywords: [issueIdentifier(projectKey, issue.number), issue.title] })}
+            onSelect={(issue) => {
+              const identifier = issueIdentifier(projectKey, issue.number);
+              select(issue.id, "issue", `${identifier} ${issue.title}`);
+            }}
+            renderItem={(candidate) => (
+                  <>
+                    <StatusIndicator status={candidate.status} className="size-4" />
+                    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                      {issueIdentifier(projectKey, candidate.number)}
+                    </span>
+                    <span className="truncate">{candidate.title}</span>
+                  </>
+                )}
+          />
         </>
       )}
     </SearchMenu>

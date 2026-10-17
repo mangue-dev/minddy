@@ -63,6 +63,8 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 export interface SearchViewProps {
   /** All available items (unfiltered). */
   items: PaletteItem[];
+  /** Extra results appended after the scored ones (see CommandPaletteProps). */
+  supplemental?: { items: PaletteItem[]; categories?: string[] };
   /** Context for action execution. */
   actionContext: ActionExecutionContext;
   /** Callback when the palette should close. */
@@ -100,6 +102,7 @@ export interface SearchViewProps {
 
 export function SearchView({
   items,
+  supplemental,
   actionContext,
   onClose,
   onSelectItem,
@@ -255,8 +258,15 @@ export function SearchView({
     // Group by category order so visual order matches array order (critical for
     // keyboard navigation: activeIndex === globalIndex). This stays linear for
     // the thousands of issue rows shown by an empty-query palette.
-    return orderByCategoryRank(filteredItems, categoryOrder);
-  }, [filteredItems, categoryOrder]);
+    const ordered = orderByCategoryRank(filteredItems, categoryOrder);
+    // Supplemental results go LAST, never between scored rows: when they
+    // arrive, every row already shown keeps its index.
+    const extra = supplemental?.items ?? [];
+    if (!debouncedQuery.trim() || extra.length === 0) return ordered;
+    if (categoryFilter !== "all" && !(supplemental?.categories ?? []).includes(categoryFilter)) return ordered;
+    const shown = new Set(ordered.map((item) => item.id));
+    return [...ordered, ...extra.filter((item) => !shown.has(item.id))];
+  }, [filteredItems, categoryOrder, supplemental, debouncedQuery, categoryFilter]);
 
   // Group items for the virtualized list
   const groups = useMemo<ItemGroup[]>(() => {

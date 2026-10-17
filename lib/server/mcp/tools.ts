@@ -1054,7 +1054,7 @@ export function registerMinddyTools(
           .string()
           .optional()
           .describe(
-            "Text search (title/description) or exact identifier/number.",
+            "Text search (title/description) or exact identifier/number. Text matches come first; a descriptive query may add issues found by meaning, marked match: \"semantic\".",
           ),
         status: z
           .array(z.enum(ISSUE_STATUSES))

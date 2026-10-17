@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate with the global decision model (MIN-694); MIN-717 Smart Fill relations",
+    "version": "0.11.1 candidate with the global decision model (MIN-694); MIN-717 Smart Fill relations; MIN-718 hybrid issue search",
     "editions": [
       "self-hosted"
     ],
@@ -43,13 +43,15 @@
       "lib/server/issue-relation-inference.ts",
       "lib/server/model-capability-validation.ts",
       "app/api/cron/issue-index/route.ts",
-      "content/documentation/reviews/min-717-smart-fill-relations.md"
+      "content/documentation/reviews/min-717-smart-fill-relations.md",
+      "lib/server/issue-semantic-search.ts",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-694 decision model selector, save validation and fallback source and test review; live decision probes recorded in docs/plans/min-694-decision-model-selection.md; existing figures unchanged); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 6; fr translation of added passages; no browser walkthrough)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-694 six-locale decision model section meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-694 decision model selector, save validation and fallback source and test review; live decision probes recorded in docs/plans/min-694-decision-model-selection.md; existing figures unchanged); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 6; fr translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-694 six-locale decision model section meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -67,7 +69,7 @@
       "src": "/documentation/fr/instance-administration-overview.png",
       "alt": "Vue d’ensemble administrateur avec indicateurs agrégés des comptes, de l’accueil et du contenu.",
       "caption": "Vue d’ensemble affiche les indicateurs agrégés de l’instance. Finances est absent sur ce profil de démonstration, car aucune clé OpenRouter gérée n’est configurée.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -83,7 +85,7 @@
       "src": "/documentation/fr/instance-administration-models.png",
       "alt": "Réglages des modèles IA et du raisonnement de l’instance.",
       "caption": "Modèles règle les valeurs par défaut et les usages dédiés. La capture montre la configuration existante ; aucun réglage de modèle ou de fournisseur n’a été modifié.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -123,8 +125,8 @@ Les nouvelles décisions utilisent le modèle enregistré en une minute environ 
 
 Après l’enregistrement d’un ticket, Smart Fill peut l’indexer et le relier aux tickets liés. Trois champs de **Modèles**, section **Automatisations**, encadrent ce travail :
 
-- **Relations Smart Fill** est l’interrupteur de l’instance. Désactivé, il arrête partout l’indexation des tickets et l’inférence de relations, y compris l’indexation en arrière-plan des tickets existants ; la création et la modification des tickets ne sont pas affectées. L’inférence de relations s’arrête aussi tant que l’interrupteur **Smart-fill** du même groupe est désactivé.
-- **Embeddings des tickets** choisit le modèle qui transforme le titre et la description des tickets en vecteurs. La valeur par défaut est `openai/text-embedding-3-small`. Le changer démarre une nouvelle version de l’index : anciens et nouveaux vecteurs ne sont jamais comparés. La tâche horaire `/api/cron/issue-index` indexe ensuite les tickets existants, 100 par exécution, en facturant le propriétaire de chaque projet ; elle ne crée jamais de relation. Tant qu’un ticket n’est pas réindexé, la recherche de tickets liés ne l’atteint que par ses mots. La même tâche convertit en vecteurs chiffrés ceux enregistrés en clair dès que leur projet est chiffré, même quand la fonctionnalité est désactivée.
+- **Relations Smart Fill** est l’interrupteur de l’instance. Désactivé, il arrête partout l’indexation des tickets, l’inférence de relations et la [recherche par le sens](/docs/navigation#search-by-meaning), y compris l’indexation en arrière-plan des tickets existants ; la création et la modification des tickets ne sont pas affectées. L’inférence de relations s’arrête aussi tant que l’interrupteur **Smart-fill** du même groupe est désactivé.
+- **Embeddings des tickets** choisit le modèle qui transforme le titre et la description des tickets en vecteurs. La valeur par défaut est `openai/text-embedding-3-small`. Le changer démarre une nouvelle version de l’index : anciens et nouveaux vecteurs ne sont jamais comparés. La tâche horaire `/api/cron/issue-index` indexe ensuite les tickets existants, 100 par exécution, en facturant le propriétaire de chaque projet ; elle ne crée jamais de relation. Le même modèle transforme chaque requête de recherche par le sens en vecteur, avec les réglages de fournisseur IA du membre qui cherche, et les requêtes ne sont comparées qu’aux vecteurs de la version actuelle de l’index. Tant qu’un ticket n’est pas réindexé, la recherche de tickets liés et la recherche par le sens ne l’atteignent que par ses mots. La même tâche convertit en vecteurs chiffrés ceux enregistrés en clair dès que leur projet est chiffré, même quand la fonctionnalité est désactivée.
 - **Modèle de décision des relations** est le modèle LLM de repli qui répond aux décisions de relation quand le [modèle de décision](#decision-model) échoue ou n’est pas sûr, comme le modèle LLM propre à chaque fonctionnalité. La valeur par défaut est `deepseek/deepseek-v4-flash`.
 
 Les champs d’embedding et de transcription refusent à l’enregistrement un modèle de la mauvaise famille, par exemple un modèle de conversation dans un champ d’embeddings, et le modèle actuel reste utilisé. Cette vérification nécessite le catalogue de la plateforme : quand il ne peut pas être chargé, comme sur une instance auto-hébergée sans IA gérée, le choix ne peut pas être vérifié et il est accepté. Pour les membres qui exécutent les automatisations avec leur propre clé, les valeurs par défaut par fournisseur comprennent `issue_embedding_model` : `text-embedding-3-small` pour OpenAI et `gemini-embedding-001` pour Google.

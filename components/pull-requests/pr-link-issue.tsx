@@ -1,5 +1,6 @@
 "use client";
 
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
@@ -146,6 +147,25 @@ export function PrLinkIssue({
             </CommandItem>
           ))}
         </CommandGroup>
+        {/* Same eligible issues, found by meaning (MIN-718). */}
+        <SemanticIssueGroup
+          projectId={projectId}
+          candidates={options}
+          idOf={(option) => option.value}
+          textOf={(option) => ({ value: option.value, keywords: [option.label, ...(option.keywords ?? [])] })}
+          onSelect={(option) => {
+            const issue = issues.find((candidate) => candidate.id === option.value);
+            if (!issue) return;
+            setPending({ id: issue.id, identifier: issueIdentifier(projectKey, issue.number) });
+            setOpen(false);
+          }}
+          renderItem={(option) => (
+            <>
+              {option.icon}
+              <span className="truncate">{option.label}</span>
+            </>
+          )}
+        />
       </SearchMenu>
 
       {/* Confirm the status change before linking. */}

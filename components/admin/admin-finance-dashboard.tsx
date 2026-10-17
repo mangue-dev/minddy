@@ -113,6 +113,8 @@ const FEATURES = [
   // the relation decision. Read apart from Smart Fill's own field pass.
   "issue_embedding",
   "issue_relation",
+  // Issue search by meaning (MIN-718): one query embedding per distinct search.
+  "issue_search",
   // Landing Dictation Demo (MIN-150): the ONLY line that no one
   // pays — a visitor without an account, to whom the platform offers passage. A
   // run = a demo played, so “average cost/run” is the price of a run.
