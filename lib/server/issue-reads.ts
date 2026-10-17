@@ -516,7 +516,7 @@ export async function searchIssues(
   // Collect a wider pool than `limit`, so the status order below (MIN-726:
   // work under way first, triage and closed issues last) is not decided by
   // recency alone; recency still orders issues within a tier.
-  const pool = Math.min(limit * 5, 500);
+  const pool = Math.min(limit * 2, 200);
   let matches: Array<Record<string, unknown>> = [];
   const needle = query.toLocaleLowerCase();
   for (let offset = 0; matches.length < pool; offset += 200) {

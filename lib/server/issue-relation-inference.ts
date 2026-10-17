@@ -634,7 +634,17 @@ export async function runIssueAiPass(input: {
       return { ...result, skipped: "stale_content" };
     }
 
-    const blockingEdges = existing.relations
+    // Relations are read again right before writing: one added meanwhile —
+    // the creation dialog posts its chosen relations after the response, a
+    // teammate links the pair — wins over the pass, and the cycle check sees
+    // the current graph.
+    const latest = await listIssueRelations(service, input.projectId);
+    if ("error" in latest) return { ...result, skipped: "relations_unavailable" };
+    for (const rel of latest.relations) {
+      if (rel.source_id === subject.id) linked.add(rel.target_id);
+      if (rel.target_id === subject.id) linked.add(rel.source_id);
+    }
+    const blockingEdges = latest.relations
       .filter((rel) => rel.type === "blocks")
       .map((rel) => ({ source_id: rel.source_id, target_id: rel.target_id }));
     const now = new Date().toISOString();
@@ -647,6 +657,7 @@ export async function runIssueAiPass(input: {
       const edge = storedBlockingEdge(subject.id, entry.candidate.id, verdict);
       if (
         verdict !== "none" &&
+        !linked.has(entry.candidate.id) &&
         result.applied < MAX_APPLIED_RELATIONS &&
         !(edge && wouldCloseBlockingCycle(blockingEdges, edge.source_id, edge.target_id))
       ) {
@@ -665,11 +676,12 @@ export async function runIssueAiPass(input: {
           if (edge) blockingEdges.push(edge);
         }
       }
-      // New verdicts are cached for their content versions (a lexical
-      // candidate without a vector has a throwaway version: its row is never
-      // a cache hit, only dismissal memory once applied). A cached verdict is
-      // rewritten only when it was applied now.
-      if (!cachedIds.has(entry.candidate.id) || relationId) {
+      // New verdicts are cached for their content versions; a cached verdict
+      // is rewritten only when it was applied now.
+      // Rows under a throwaway version can never be a cache hit: they are
+      // kept only when they carry an applied link (the dismissal memory).
+      const reusable = entry.version === vectorRows.get(entry.candidate.id)?.content_version && !!own;
+      if ((!cachedIds.has(entry.candidate.id) && reusable) || relationId) {
         rows.push({
           project_id: input.projectId,
           issue_id: subject.id,

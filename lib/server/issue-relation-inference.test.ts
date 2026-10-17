@@ -449,6 +449,31 @@ describe("runIssueAiPass", () => {
   });
 });
 
+describe("runIssueAiPass — review fixes", () => {
+  it("leaves a pair someone linked while the decision ran", async () => {
+    issue("c2", "Single sign-on for enterprise customers");
+    indexRow("c2", [0.95, 0.05, 0]);
+    h.decision = { candidate_1: { value: "related", probability: null, confidence: null } };
+    h.runDecision.mockImplementation(async () => {
+      // The creation dialog posts its chosen relation meanwhile.
+      h.relations = [{ id: "manual", source_id: "subject", target_id: "c2", type: "blocks" }];
+      return { engine: "llm", answers: h.decision, confidence: 1, fallbackReason: null };
+    });
+    const result = await pass();
+    expect(result.applied).toBe(0);
+    expect(h.addIssueRelation).not.toHaveBeenCalled();
+  });
+
+  it("does not store unreusable verdicts of throwaway versions", async () => {
+    h.meta = { issue_indexing: false };
+    issue("c3", "SSO login provider migration", "Switch the sign-in auth provider.");
+    h.decision = { candidate_1: { value: "none", probability: null, confidence: null } };
+    await pass();
+    expect(h.runDecision).toHaveBeenCalledTimes(1);
+    expect(h.upserts).toEqual([]);
+  });
+});
+
 describe("runIssueIndexBackfill", () => {
   it("indexes for the project owner, skips authors who refused, re-encodes clear rows and saves its cursor", async () => {
     issue("c2", "Second issue", null, "todo", "member");

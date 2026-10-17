@@ -177,6 +177,7 @@ La ricerca per significato ha questi limiti:
 - La ricerca deve contenere almeno due parole, o una parola di almeno sei lettere. Gli identificativi come `MIN-42`, `#42` o `42`, e le ricerche molto brevi, usano solo la ricerca testuale.
 - Si basa sull’indice che Riempimento intelligente costruisce dal titolo e dalla descrizione dei ticket. Un ticket non ancora indicizzato, o il cui autore ha disattivato [**Indicizza i ticket**](/docs/issues#smart-fill-preferences), viene trovato solo tramite le sue parole. I ticket nel cestino non compaiono mai.
 - Se hai disattivato **Indicizza i ticket** in **Impostazioni account** → **Preferenze**, le tue ricerche confrontano solo le parole. Lo stesso accade quando l’amministrazione dell’istanza ha disattivato **Relazioni di Smart Fill**, quando il tuo budget IA è esaurito o quando il provider non risponde entro pochi secondi. I risultati testuali restano e non viene mostrato alcun errore.
+- Una ricerca `@` il cui testo corrisponde già a una persona, un progetto o una pagina non viene cercata per significato. In un progetto con più di 3.000 ticket indicizzati, vengono confrontati solo i 3.000 indicizzati più di recente; gli altri si trovano tramite le loro parole.
 
 Ogni nuova ricerca usa una chiamata IA, conteggiata nella tua quota **Automazioni** e mostrata nella cronologia di utilizzo come **Ricerca dei ticket**. Una ricerca ripetuta entro circa 15 minuti di norma non viene addebitata di nuovo.
 

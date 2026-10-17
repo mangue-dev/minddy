@@ -177,6 +177,7 @@ La recherche par le sens a ces limites :
 - La requête doit compter au moins deux mots, ou un mot d’au moins six lettres. Les identifiants comme `MIN-42`, `#42` ou `42`, ainsi que les requêtes très courtes, n’utilisent que la recherche textuelle.
 - Elle s’appuie sur l’index que Smart-fill construit à partir du titre et de la description des tickets. Un ticket pas encore indexé, ou dont l’auteur a désactivé [**Indexer les tickets**](/docs/issues#smart-fill-preferences), n’est trouvé que par ses mots. Les tickets de la corbeille n’apparaissent jamais.
 - Si vous avez désactivé **Indexer les tickets** dans **Paramètres du compte** → **Préférences**, vos recherches ne comparent que les mots. Il en va de même quand l’administrateur de l’instance a désactivé **Relations Smart Fill**, quand votre budget IA est épuisé ou quand le fournisseur ne répond pas en quelques secondes. Les résultats textuels restent et aucune erreur n’est affichée.
+- Une requête `@` dont le texte correspond déjà à une personne, un projet ou une page n’est pas cherchée par le sens. Dans un projet de plus de 3 000 tickets indexés, seuls les 3 000 indexés le plus récemment sont comparés ; les autres sont trouvés par leurs mots.
 
 Chaque nouvelle requête utilise un appel d’IA, compté dans votre part **Automatisations** et affiché dans l’historique d’usage sous **Recherche de tickets**. Une requête répétée dans les 15 minutes environ n’est normalement pas facturée à nouveau.
 

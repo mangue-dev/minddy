@@ -177,6 +177,7 @@ Für die inhaltliche Suche gelten diese Grenzen:
 - Die Suchanfrage braucht mindestens zwei Wörter oder ein Wort mit mindestens sechs Buchstaben. Kennungen wie `MIN-42`, `#42` oder `42` sowie sehr kurze Anfragen nutzen nur die Textsuche.
 - Sie stützt sich auf den Index, den Smart-Fill aus Titel und Beschreibung der Probleme aufbaut. Ein noch nicht indexiertes Problem oder eines, dessen Autor [**Vorgänge indexieren**](/docs/issues#smart-fill-preferences) ausgeschaltet hat, wird nur über seine Wörter gefunden. Probleme im Papierkorb erscheinen nie.
 - Hast du **Vorgänge indexieren** unter **Kontoeinstellungen** → **Einstellungen** ausgeschaltet, vergleichen deine Suchen nur Wörter. Dasselbe gilt, wenn die Administration der Instanz **Smart-Fill-Beziehungen** ausgeschaltet hat, wenn dein KI-Budget erschöpft ist oder wenn der Anbieter nicht innerhalb weniger Sekunden antwortet. Die Textergebnisse bleiben, und es wird kein Fehler angezeigt.
+- Eine `@`-Suche, deren Text bereits zu einer Person, einem Projekt oder einer Seite passt, wird nicht inhaltlich gesucht. In einem Projekt mit mehr als 3.000 indexierten Problemen werden nur die 3.000 zuletzt indexierten verglichen; die übrigen werden über ihre Wörter gefunden.
 
 Jede neue Suchanfrage nutzt einen KI-Aufruf, der zu deinem Anteil **Automatisierungen** zählt und im Nutzungsverlauf als **Problemsuche** erscheint. Eine innerhalb von etwa 15 Minuten wiederholte Anfrage wird normalerweise nicht erneut berechnet.
 

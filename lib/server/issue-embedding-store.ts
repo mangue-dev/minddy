@@ -218,7 +218,9 @@ export async function listIssueEmbeddings(
 }
 
 /**
- * Every row of one index version in a project, decoded in pages of 200.
+ * The rows of one index version in a project, decoded in pages of 200, most
+ * recently written first and at most `maxRows` (larger projects are searched
+ * on their most recent vectors; the rest stay reachable by text).
  * Rows that fail to decode are skipped (a key rotation in progress must not
  * break retrieval); only the same version is ever returned, so two embedding
  * spaces are never compared.
@@ -237,6 +239,10 @@ export async function listProjectEmbeddings(
       .select(SELECT_COLUMNS)
       .eq("project_id", projectId)
       .eq("index_version", indexVersion)
+      // Past `maxRows`, the most recently (re)indexed issues are the ones
+      // kept: an issue someone touches is the one being looked for. The id
+      // keeps the page boundaries stable.
+      .order("updated_at", { ascending: false })
       .order("issue_id", { ascending: true })
       .range(offset, offset + pageSize - 1);
     if (error) throw new Error("Unable to list issue embeddings");

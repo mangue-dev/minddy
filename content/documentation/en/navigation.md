@@ -177,6 +177,7 @@ Search by meaning has these limits:
 - The query needs at least two words, or one word of at least six letters. Identifiers such as `MIN-42`, `#42` or `42`, and very short queries, use text search only.
 - It relies on the index that Smart-fill builds from issue titles and descriptions. An issue not indexed yet, or whose author turned off [**Index issues**](/docs/issues#smart-fill-preferences), is found by its words only. Issues in the trash never appear.
 - If you turned off **Index issues** in **Account settings** → **Preferences**, your searches compare words only. The same applies when the instance administrator turned off **Smart Fill relations**, when your AI budget is exhausted, or when the provider does not answer within a few seconds. The text results remain and no error is shown.
+- An `@` query whose text already matches a person, a project or a page is not searched by meaning. In a project with more than 3,000 indexed issues, only the 3,000 most recently indexed are compared; the others are found by their words.
 
 Each new query uses one AI call, counted in your **Automations** share and listed in usage history as **Issue search**. A query repeated within about 15 minutes is normally not charged again.
 

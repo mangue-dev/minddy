@@ -82,7 +82,12 @@ export function issueAwareFilter(
     const tier = Number(tierKeyword.slice(TIER_TOKEN.length));
     // Only an identifier typed in full jumps the tiers; an exact title does not.
     const exact = visible?.some((keyword) => IDENTIFIER.test(keyword) && isExactIssueQuery(search, keyword)) ?? false;
-    // Relevance stays within (0, 1]; each tier step weighs more than any relevance.
-    return (exact ? 10 : 0) + (2 - (Number.isFinite(tier) ? tier : 1)) * 2 + base;
+    // The result stays in cmdk's (0, 1] range, so the issue group keeps its
+    // usual rank among the other groups (cmdk sorts groups by their best
+    // item). Inside it, a tier step (1/3) outweighs any relevance gap (< 1/3),
+    // and an identifier typed in full scores 1, above every tier.
+    if (exact) return 1;
+    const lift = 2 - (Number.isFinite(tier) ? Math.min(2, Math.max(0, tier)) : 1);
+    return Math.min(0.99, (lift + base * 0.99) / 3 + 0.001);
   };
 }

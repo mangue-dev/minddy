@@ -177,6 +177,7 @@ A busca pelo sentido tem estes limites:
 - A busca precisa de pelo menos duas palavras, ou de uma palavra com pelo menos seis letras. Identificadores como `MIN-42`, `#42` ou `42`, e buscas muito curtas, usam apenas a busca por texto.
 - Ela se apoia no índice que o Preenchimento inteligente monta a partir do título e da descrição dos problemas. Um problema ainda não indexado, ou cujo autor desligou [**Indexar tickets**](/docs/issues#smart-fill-preferences), só é encontrado pelas palavras. Problemas na lixeira nunca aparecem.
 - Se você desligou **Indexar tickets** em **Configurações da conta** → **Preferências**, suas buscas comparam apenas palavras. O mesmo acontece quando a administração da instância desligou **Relações do Smart Fill**, quando seu orçamento de IA acabou ou quando o provedor não responde em poucos segundos. Os resultados de texto permanecem e nenhum erro é exibido.
+- Uma busca `@` cujo texto já corresponde a uma pessoa, um projeto ou uma página não é buscada pelo sentido. Em um projeto com mais de 3.000 problemas indexados, só os 3.000 indexados mais recentemente são comparados; os outros são encontrados pelas palavras.
 
 Cada busca nova usa uma chamada de IA, contada na sua parcela **Automações** e exibida no histórico de uso como **Busca de problemas**. Uma busca repetida em cerca de 15 minutos normalmente não é cobrada de novo.
 

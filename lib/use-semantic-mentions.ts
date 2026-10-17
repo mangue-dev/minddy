@@ -13,7 +13,9 @@ import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
  * user's access); only its issue options can be appended, so a mention menu
  * never offers an issue it could not offer by typing its title. Appended rows
  * carry `semantic: true` for the "Related by meaning" divider, and come last,
- * so the highlighted row never moves when they arrive.
+ * so the highlighted row never moves when they arrive. A query whose text
+ * already matches a non-issue option (a person, a project, a page) is not
+ * sent at all.
  */
 export function useSemanticMentions<T extends { type: string; id: string }>(
   filtered: readonly T[],
@@ -21,7 +23,10 @@ export function useSemanticMentions<T extends { type: string; id: string }>(
   query: string,
   enabled = true,
 ): (T & { semantic?: boolean })[] {
-  const { ids } = useSemanticIssueSearch(query, { projectId: null, enabled });
+  // A query that already names a person, a project or a page by its text is
+  // not a description of work: `@Marie Dupont` must not cost an embedding.
+  const namesSomethingElse = filtered.some((option) => option.type !== "issue");
+  const { ids } = useSemanticIssueSearch(query, { projectId: null, enabled: enabled && !namesSomethingElse });
   return useMemo(() => {
     if (ids.length === 0) return [...filtered];
     const eligible = new Map(all.filter((option) => option.type === "issue").map((option) => [option.id, option]));

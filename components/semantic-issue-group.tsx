@@ -45,7 +45,8 @@ export function SemanticIssueGroup<T>({
 }) {
   const t = useTranslations("Picker");
   const search = useCommandState((state) => state.search);
-  const { ids } = useSemanticIssueSearch(search, { projectId });
+  // No eligible issue, nothing to show: no query embedding is paid for.
+  const { ids } = useSemanticIssueSearch(search, { projectId, enabled: candidates.length > 0 });
 
   const extras = React.useMemo(() => {
     if (ids.length === 0) return [];
