@@ -1,5 +1,6 @@
 import "server-only";
 
+import { materializePendingPages } from "@/lib/server/pages";
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
@@ -338,6 +339,9 @@ export async function getPublicShareTarget(
     // A trashed page ceases to be public immediately: the link
     // responds 404 without having to unpublish manually. The dividing line,
     // it survives — restoring the page returns the link, with the same token.
+    // Typing still pending in the collaboration journal is written into the
+    // row first: a public reader sees the latest text (MIN-688).
+    await materializePendingPages(service, [row.page_id as string]);
     const { data: page } = await service
       .from("pages")
       .select("*")

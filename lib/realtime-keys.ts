@@ -373,10 +373,11 @@ export function keysForProjectEvent(
           change.operation === "UPDATE" &&
           (change.record?.deleted_at ?? null) === (change.old_record?.deleted_at ?? null);
         const openPage = typeof pageId === "string" && !liveSession ? [active(["page", pageId])] : [];
-        // A batch that only advanced the BODY stream changes nothing the list
-        // shows — title, icon, tree position, pin and trash state are other
-        // fields. Without this, every member with the project open would
-        // reload the whole page list several times a second while someone types.
+        // A write that only advanced the materialized BODY revision (a
+        // materialization of typing, an agent's body edit) changes nothing the
+        // list shows — title, icon, tree position, pin and trash state are
+        // other fields. Without this, every member with the project open would
+        // reload the whole page list each time someone's typing is written.
         const record = change.record;
         const old = change.old_record;
         const bodyOnly = change.operation === "UPDATE" && !!record && !!old &&
@@ -402,6 +403,22 @@ export function keysForProjectEvent(
         active(["me", "trash"]),
       ];
       }
+    // A stream head moved (MIN-688): typing that is journaled, not yet in the
+    // page row. A live session reads the steps itself; an open page without
+    // one refetches. A title also changes what the list, the tabs and the
+    // palette show; the list reads pending title steps.
+    case "page_collaboration_heads": {
+      const pageId = change.record?.page_id;
+      if (typeof pageId !== "string") return [];
+      const openPage = hasLivePageSession(pageId) ? [] : [active(["page", pageId])];
+      if (change.record?.field !== "title") return openPage;
+      return [
+        active(["pages", projectId]),
+        active(["app-tab-metadata"]),
+        ...openPage,
+        { key: SEARCH_INDEX_KEY, refetch: "none" },
+      ];
+    }
     case "categories": // renames/deletes also affect chips on cached issues
       return [
         active(["categories", projectId]),

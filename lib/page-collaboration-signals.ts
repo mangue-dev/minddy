@@ -3,10 +3,10 @@
 /**
  * Wake-ups for live page sessions (MIN-688).
  *
- * The database already broadcasts every page row change on the project topic,
- * without content (`broadcast_page_row`). Since MIN-688 that row carries the
- * stream heads (`body_revision`, `title_revision`), which is all a session
- * needs: the realtime bridge hands each pages event here, and a session whose
+ * Each move of a stream head is broadcast on the project topic, without
+ * content (`page_collaboration_heads`: page, field, revision). Typing batches
+ * no longer rewrite the page row, so the head event is the only signal a
+ * session needs: the realtime bridge hands it here, and a session whose
  * revision is behind reads the missing steps over HTTP. No document travels
  * through Realtime.
  *
@@ -47,12 +47,17 @@ export function hasLivePageSession(pageId: string): boolean {
 const revision = (value: unknown): number | null =>
   typeof value === "number" && Number.isSafeInteger(value) ? value : null;
 
-/** Called by the realtime bridge for each `pages` row event. */
-export function emitPageRow(record: Record<string, unknown> | null | undefined): void {
-  const pageId = typeof record?.id === "string" ? record.id : null;
+/** Called by the realtime bridge for each `page_collaboration_heads` event. */
+export function emitPageHead(record: Record<string, unknown> | null | undefined): void {
+  const pageId = typeof record?.page_id === "string" ? record.page_id : null;
   if (!pageId) return;
   const set = listeners.get(pageId);
   if (!set) return;
-  const heads = { pageId, body: revision(record?.body_revision), title: revision(record?.title_revision) };
+  const head = revision(record?.revision);
+  const heads = {
+    pageId,
+    body: record?.field === "body" ? head : null,
+    title: record?.field === "title" ? head : null,
+  };
   for (const listener of set) listener(heads);
 }

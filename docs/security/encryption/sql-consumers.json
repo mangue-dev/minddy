@@ -2490,14 +2490,15 @@
       "functionReferences": []
     },
     "discard_blank_page_guarded(uuid)": {
-      "sha256": "2690761d3b510b59e5eaa9916a4f19ef49b4391ec551a188c4e8fc552367bf09",
+      "sha256": "4ccdedd5c89d4dbc4234dcd478386bac00aed32c716b75b5d65fffc70ea4f8d8",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
-        "pages"
+        "pages",
+        "page_collaboration_heads"
       ],
       "protectedRelations": [
         "pages"
@@ -6765,7 +6766,7 @@
       "functionReferences": []
     },
     "guard_page_collaboration()": {
-      "sha256": "945845aa2e0ca0987cc881ca6d3ae298b58647e1cb73f23c5b7545375fcdf214",
+      "sha256": "2c00483e9167cc4f55551b266484ab38bb3baaba2d45e391c1185504ae4bcd96",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6777,10 +6778,12 @@
       "protectedRelations": [
         "page_collaboration_batches"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "open_page_collaboration_gap"
+      ]
     },
     "reset_page_collaboration(uuid)": {
-      "sha256": "5d89e8deb08549d3e571b9f6019d2fe798f78f027845ef5480e4b8c172ad9911",
+      "sha256": "c160e0b9234610a597eba1d8f6925663fc4fa3fa2ac437273faba6a50ae216ca",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6792,7 +6795,9 @@
       "protectedRelations": [
         "pages"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "open_page_collaboration_gap"
+      ]
     },
     "guard_page_collaboration_batch()": {
       "sha256": "5d08614cc84a5e3f97d4dd2106e2de627254d4f890cfb91f143d1ec6b6dfdfb6",
@@ -6811,22 +6816,91 @@
       "functionReferences": []
     },
     "prune_page_collaboration_batches(integer)": {
-      "sha256": "b8f1e1fa551774e64a27bde06d3fc6620d7172236b6a7d760e404e63ee68ca06",
+      "sha256": "2678a32375edccc7ab4904f23ae42ad6e435baa8a55ccd7a199057ac56a0de9b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
+        "pages",
         "page_collaboration_batches"
       ],
       "protectedRelations": [
+        "pages",
         "page_collaboration_batches"
       ],
       "functionReferences": []
     },
-    "commit_page_collaboration(uuid,bigint,jsonb,jsonb)": {
-      "sha256": "77c8b3898cd868b74d021239d48f94f0fe43ddf8aa8bd06db84f1f4a7a8f3044",
+    "broadcast_page_collaboration_head()": {
+      "sha256": "e98002df7d2efd6f6cbb7d5feba5384302613ca4ba4758ea63e06bf34760381d",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "page_collaboration_grant(uuid,uuid)": {
+      "sha256": "1f2e890e0743cdebf8938ff30ef0fe0be3aa7af338db97d8670ef761dc7b1e8a",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "projects",
+        "project_members",
+        "project_realtime_generations"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
+    },
+    "initialize_page_collaboration_heads()": {
+      "sha256": "2512231ef6a1cf3c6a439c8f26b2cfdc8586c5267696683ed2f2f75f3eb13a4f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "page_collaboration_heads"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "pending_page_collaborations(integer,integer)": {
+      "sha256": "53b53a1c24dd5aa7fff85ebda2dd0a6769d6d2e79592bf4017a54de15477813e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "page_collaboration_heads"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "open_page_collaboration_gap(uuid,text,bigint)": {
+      "sha256": "ec5a9fc11ba1faf33f529ec9b33549df11e9f1b4bb7e29cb1091ec4416b21a06",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "page_collaboration_heads"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "append_page_collaboration(uuid,uuid,bigint,jsonb)": {
+      "sha256": "7fa102f29c72ada24f3fad96a4716078de26bc87340cde8618fc2cbab17da601",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6834,6 +6908,46 @@
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages",
+        "page_collaboration_heads",
+        "page_collaboration_batches",
+        "project_realtime_generations"
+      ],
+      "protectedRelations": [
+        "pages",
+        "page_collaboration_batches"
+      ],
+      "functionReferences": []
+    },
+    "commit_page_collaboration(uuid,bigint,jsonb,jsonb,jsonb)": {
+      "sha256": "deefe770ee6284d454f9fc40d2bfeb67940dd98e068817ece9e99d7b539a10d5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages",
+        "page_collaboration_heads",
+        "page_collaboration_batches"
+      ],
+      "protectedRelations": [
+        "pages",
+        "page_collaboration_batches"
+      ],
+      "functionReferences": [
+        "write_page_collaboration_projection"
+      ]
+    },
+    "write_page_collaboration_projection(uuid,jsonb,bigint,bigint)": {
+      "sha256": "e56c6e8f5a190e5d83515f7fc86d363d0abcf749940b8fe629b820cdd464278e",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages",
+        "page_collaboration_heads",
         "page_collaboration_batches"
       ],
       "protectedRelations": [
@@ -6841,6 +6955,24 @@
         "page_collaboration_batches"
       ],
       "functionReferences": []
+    },
+    "materialize_page_collaboration(uuid,bigint,jsonb,bigint,bigint)": {
+      "sha256": "eba34346430aa070eec7afb0ce4eb98d2cd8de09322ea261c45299eb58a46a3c",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "pages",
+        "page_collaboration_heads"
+      ],
+      "protectedRelations": [
+        "pages"
+      ],
+      "functionReferences": [
+        "write_page_collaboration_projection"
+      ]
     }
   },
   "triggers": {
@@ -8331,6 +8463,14 @@
     "page_collaboration_batches.page_collaboration_batches_guard": {
       "function": "guard_page_collaboration_batch()",
       "definition": "CREATE TRIGGER page_collaboration_batches_guard BEFORE INSERT OR UPDATE ON page_collaboration_batches FOR EACH ROW EXECUTE FUNCTION guard_page_collaboration_batch()"
+    },
+    "page_collaboration_heads.page_collaboration_heads_broadcast": {
+      "function": "broadcast_page_collaboration_head()",
+      "definition": "CREATE TRIGGER page_collaboration_heads_broadcast AFTER UPDATE ON page_collaboration_heads FOR EACH ROW WHEN (old.revision IS DISTINCT FROM new.revision) EXECUTE FUNCTION broadcast_page_collaboration_head()"
+    },
+    "pages.pages_initialize_collaboration_heads": {
+      "function": "initialize_page_collaboration_heads()",
+      "definition": "CREATE TRIGGER pages_initialize_collaboration_heads AFTER INSERT ON pages FOR EACH ROW EXECUTE FUNCTION initialize_page_collaboration_heads()"
     }
   }
 }

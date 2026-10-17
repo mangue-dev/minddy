@@ -21,7 +21,7 @@ import {
   projectScopeKeys,
   type BroadcastChange,
 } from "./realtime-keys";
-import { emitPageRow, onPageStreamHeads } from "./page-collaboration-signals";
+import { emitPageHead, onPageStreamHeads } from "./page-collaboration-signals";
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 const PAGE = "44444444-4444-4444-8444-444444444444";
@@ -132,7 +132,7 @@ describe("keysForProjectEvent — pages", () => {
     expect(hasKey(keys, ["me", "board"])).toBe(false);
   });
 
-  it("does not reload the page list for a batch that only advanced the body stream (MIN-688)", () => {
+  it("does not reload the page list for a write that only advanced the materialized body (MIN-688)", () => {
     const keys = keysForProjectEvent(
       change("pages", {
         operation: "UPDATE",
@@ -473,13 +473,42 @@ describe("routine realtime", () => {
 });
 
 describe("page stream wake-ups (MIN-688)", () => {
+  const head = (field: "body" | "title", revision: number, pageId = PAGE) =>
+    change("page_collaboration_heads", {
+      operation: "UPDATE",
+      record: { page_id: pageId, field, revision },
+      old_record: { page_id: pageId, field, revision: revision - 1 },
+    });
+
   it("hands each live session its page's stream heads, and only those", () => {
     const seen: unknown[] = [];
     const stop = onPageStreamHeads(PAGE, (heads) => seen.push(heads));
-    emitPageRow({ id: PAGE, body_revision: 5, title_revision: 1 });
-    emitPageRow({ id: "55555555-5555-4555-8555-555555555555", body_revision: 9 });
+    emitPageHead({ page_id: PAGE, field: "body", revision: 5 });
+    emitPageHead({ page_id: PAGE, field: "title", revision: 1 });
+    emitPageHead({ page_id: "55555555-5555-4555-8555-555555555555", field: "body", revision: 9 });
     stop();
-    emitPageRow({ id: PAGE, body_revision: 6 });
-    expect(seen).toEqual([{ pageId: PAGE, body: 5, title: 1 }]);
+    emitPageHead({ page_id: PAGE, field: "body", revision: 6 });
+    expect(seen).toEqual([
+      { pageId: PAGE, body: 5, title: null },
+      { pageId: PAGE, body: null, title: 1 },
+    ]);
+  });
+
+  it("refetches an open page without a live session, and the list only for a title", () => {
+    const body = keysForProjectEvent(head("body", 3), PROJECT);
+    expect(hasKey(body, ["page", PAGE])).toBe(true);
+    expect(hasKey(body, ["pages", PROJECT])).toBe(false);
+    const title = keysForProjectEvent(head("title", 2), PROJECT);
+    expect(hasKey(title, ["pages", PROJECT])).toBe(true);
+    expect(hasKey(title, ["app-tab-metadata"])).toBe(true);
+  });
+
+  it("leaves a live session's document to the session", () => {
+    const stop = onPageStreamHeads(PAGE, () => {});
+    try {
+      expect(keysForProjectEvent(head("body", 3), PROJECT)).toEqual([]);
+    } finally {
+      stop();
+    }
   });
 });

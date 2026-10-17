@@ -2663,8 +2663,46 @@ page's plaintext rows when it becomes sealed, and the table shares the page
 content marker fence. Journal access is restricted to
 `lib/server/page-collaboration.ts` by `scripts/check-encrypted-column-access.mjs`.
 Rows are pruned to 2,000 revisions per stream and seven days, by each commit
-and by the nightly retention sweep, and cascade with the page and project.
+or materialization and by the nightly retention sweep, never below the
+revision the page row reflects, and cascade with the page and project.
 Design and limits: [docs/page-collaboration.md](../../page-collaboration.md).
+
+### Journal-only commits and stream heads (MIN-688 follow-up)
+
+Migrations `20270109200057` and `20270109200058` (applied) let a typing batch
+journal its sealed steps without rewriting the page row; the envelope is
+re-sealed once per burst by a materialization. Encryption consequences:
+
+- Pending steps stay sealed in `page_collaboration_batches` until a
+  materialization re-seals the page envelope from the stored page plus those
+  steps. No plaintext copy of pending text is written anywhere; the batch
+  guard, the plaintext refusal and the sealed-page purge are unchanged, and a
+  plaintext append now holds a share lock on the page row so that the page
+  cannot be sealed underneath it.
+- The new `authored` column is bounded metadata (whether a batch signs the
+  page). `page_collaboration_heads` (`page_id`, `field`, `project_id`,
+  `revision`, `pending_since`) carries no content: routing identity, bounded
+  metadata and a timestamp. RLS without policies; the service role may only
+  read it, and every write goes through `SECURITY DEFINER` functions with an
+  empty search path and service-only `EXECUTE`.
+- Writers that re-seal an envelope outside the collaboration functions
+  (database cells, schema and conversions, metadata-only page updates) start
+  from the stored page, never the live view, and keep the envelope CAS.
+- Decrypted stream values may stay in the memory of the instance that
+  validated a batch (`lib/server/page-collaboration-cache.ts`, at most 128
+  streams, one minute idle), never in a log, a client store or a token.
+  Collaboration tokens carry identifiers, a write decision, a membership
+  generation and an expiry, signed with a key derived from the server secret.
+- `scripts/check-encrypted-column-access.mjs` restricts the append, commit,
+  materialize and reset RPCs, with the journal, to
+  `lib/server/page-collaboration.ts`.
+
+Verification: rollback-only probes of both migrations on the production schema
+before they were applied (heads backfill, append, materialize, commit, gap,
+reset, discard, cascade, retention, privileges, grant decisions). The
+inventory records of the changed and new functions and triggers were
+refreshed from the live definitions with `scripts/encryption-schema-audit.sql`;
+other records were left as they were.
 
 ## Shared writer fences (MIN-688)
 

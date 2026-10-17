@@ -3187,6 +3187,11 @@
         "nullable": true,
         "generated": false
       },
+      "authored": {
+        "type": "boolean",
+        "nullable": false,
+        "generated": false
+      },
       "steps": {
         "type": "jsonb",
         "nullable": true,
@@ -3212,6 +3217,51 @@
       "page_id",
       "field",
       "base_revision"
+    ],
+    "foreignKeys": [
+      {
+        "table": "pages",
+        "column": "page_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "page_collaboration_heads": {
+    "columns": {
+      "page_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "field": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "revision": {
+        "type": "bigint",
+        "nullable": false,
+        "generated": false
+      },
+      "pending_since": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "page_id",
+      "field"
     ],
     "foreignKeys": [
       {

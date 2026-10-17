@@ -1,4 +1,5 @@
 import "server-only";
+import { materializePendingPages } from "@/lib/server/pages";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import { decodePageProjection } from "@/lib/server/page-content";
 
@@ -112,6 +113,8 @@ export async function getPublicPageBundle(
       if (!data || data.length < 200) break;
     }
     const inBranch = descendantIds(hierarchy, root.id);
+    // Pending typing of the branch is written into its rows first (MIN-688).
+    await materializePendingPages(service, inBranch);
     const all: Array<PublicPageNode & { position: string }> = [];
     for (let offset = 0; offset < inBranch.length; offset += 100) {
       const { data, error } = await service.from("pages")
@@ -133,6 +136,7 @@ export async function getPublicPageBundle(
   const targetId = pageId ?? root.id;
   if (!pages.some((p) => p.id === targetId)) return null;
 
+  if (targetId !== root.id) await materializePendingPages(service, [targetId]);
   const { data: storedPage } = await service
     .from("pages")
     .select("id, project_id, parent_id, title, icon, content, updated_at, database_schema, property_values, created_at, encrypted_content, encryption_version")

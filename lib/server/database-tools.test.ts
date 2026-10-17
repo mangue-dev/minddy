@@ -8,7 +8,7 @@ vi.mock("@/lib/server/project-access", async importOriginal => ({
   getProjectAccess: h.access,
 }));
 // The role-based write refusal (MIN-693) belongs to the pages core; these tests assert dispatch.
-vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage, pageWriteRefusal: async () => null }));
+vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage, getStoredPage: h.getPage, pageWriteRefusal: async () => null }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({ rpc: h.rpc }) }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: (fn: () => Promise<void>) => fn() }));
 vi.mock("@/lib/server/page-activity", () => ({ recordPageEvent: h.event }));

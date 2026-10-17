@@ -1,4 +1,5 @@
 import { issueStore } from "@/lib/server/issue-store";
+import { materializePendingProjectPages } from "@/lib/server/pages";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
@@ -237,6 +238,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     .eq("user_id", userId)
     .order("hidden_at"));
 
+  // Page typing still pending in the collaboration journal is written into
+  // the rows first, so the export holds the latest text (MIN-688).
+  await materializePendingProjectPages(service, ownedIds);
   const [
     numoPreferences,
     memberships,

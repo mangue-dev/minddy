@@ -28,6 +28,16 @@ const db = {
 
 const signed = vi.fn(async (_service: unknown, path: string) => `https://signed/${path}`);
 
+/** Pending collaboration typing is materialized before reading (MIN-688). */
+const materialized = vi.hoisted(() => ({
+  pages: vi.fn(async (_service: unknown, _ids: readonly string[]) => 0),
+  projects: vi.fn(async (_service: unknown, _ids: readonly string[]) => 0),
+}));
+vi.mock("@/lib/server/pages", () => ({
+  materializePendingPages: materialized.pages,
+  materializePendingProjectPages: materialized.projects,
+}));
+
 vi.mock("@/lib/server/attachments", () => ({
   signedAttachmentUrl: (...args: unknown[]) =>
     signed(args[0], args[1] as string),

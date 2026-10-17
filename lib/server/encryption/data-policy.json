@@ -2595,6 +2595,7 @@
     ],
     "clear": {
       "bounded_metadata": [
+        "authored",
         "base_revision",
         "step_count"
       ],
@@ -2616,6 +2617,28 @@
       "encryption_metadata": [
         "encrypted_content",
         "encryption_version"
+      ]
+    }
+  },
+  "page_collaboration_heads": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "revision"
+      ],
+      "operational_configuration": [
+        "field"
+      ],
+      "routing_identity": [
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "pending_since"
       ]
     }
   },

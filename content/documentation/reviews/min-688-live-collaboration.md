@@ -77,3 +77,19 @@ sequence restarted with each channel handle. No figure was captured from it.
 
 `npm run check:documentation`, `npm run check:knowledge`,
 `npm run check:owned-english` and `git diff --check`.
+
+## Follow-up: journal-only commits (same day)
+
+Typing batches now only journal their steps; a materialization writes them
+into the page a few seconds later, with a cron safety net. Reader-visible
+behavior is unchanged: every reader sees the latest text (see
+`docs/page-collaboration.md#readers`). The only public documentation change
+is the self-hosted schedule: `instance-configuration`, section `schedules`,
+gains `/api/cron/page-materialization` (`* * * * *`) in `en`, `fr`, `de`,
+`es`, `it` and `pt-BR`, matching `vercel.json` and
+`deploy/self-hosted/scheduler.mjs`. The `pages` article was reviewed against
+the new behavior (saving, offline work, history, refusals) and needs no edit:
+history still records versions at the same five-minute granularity per
+author. No figure changes. Checks: `npm run check:documentation`,
+`npm run check:knowledge`, `npm run check:owned-english` and
+`git diff --check`.

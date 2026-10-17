@@ -584,16 +584,28 @@ export async function downloadPageExportApi(
 const collaborationUrl = (projectId: string, pageId: string) =>
   `/api/projects/${projectId}/pages/${pageId}/collaboration`;
 
+/**
+ * The latest collaboration token per page: every collaboration answer may
+ * renew it, and a batch sends it so the server can skip its access queries.
+ * It expires within a minute; a stale one only costs the server a check.
+ */
+const COLLAB_TOKEN_HEADER = "x-minddy-collab-token";
+const collaborationTokens = new Map<string, string>();
+
+function keepCollaborationToken(pageId: string, response: Response): void {
+  const token = response.headers.get(COLLAB_TOKEN_HEADER);
+  if (token) collaborationTokens.set(pageId, token);
+}
+
 /** The session snapshot: both streams of the page, from one server read. */
 export async function fetchPageCollaborationApi(
   projectId: string,
   pageId: string,
   signal?: AbortSignal
 ): Promise<PageCollaborationSnapshot> {
-  return json(
-    await fetchClientRead(collaborationUrl(projectId, pageId), { signal }),
-    "Request failed"
-  );
+  const response = await fetchClientRead(collaborationUrl(projectId, pageId), { signal });
+  keepCollaborationToken(pageId, response);
+  return json(response, "Request failed");
 }
 
 /** Accepted steps of a stream after `since`, or a reset with a fresh snapshot. */
@@ -605,10 +617,9 @@ export async function fetchPageCollaborationStepsApi(
   signal?: AbortSignal
 ): Promise<CollabCatchUp> {
   const query = new URLSearchParams({ field, since: String(since) });
-  return json(
-    await fetchClientRead(`${collaborationUrl(projectId, pageId)}?${query}`, { signal }),
-    "Request failed"
-  );
+  const response = await fetchClientRead(`${collaborationUrl(projectId, pageId)}?${query}`, { signal });
+  keepCollaborationToken(pageId, response);
+  return json(response, "Request failed");
 }
 
 /**
@@ -622,12 +633,17 @@ export async function submitPageCollaborationApi(
   submission: CollabSubmission,
   { keepalive = false }: { keepalive?: boolean } = {}
 ): Promise<CollabSubmitResult> {
+  const token = collaborationTokens.get(pageId);
   const response = await fetch(collaborationUrl(projectId, pageId), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { [COLLAB_TOKEN_HEADER]: token } : {}),
+    },
     body: JSON.stringify(submission),
     keepalive,
   });
+  keepCollaborationToken(pageId, response);
   if (response.ok || response.status === 409 || response.status === 422 ||
       response.status === 413) {
     const data = (await response.json().catch(() => null)) as CollabSubmitResult | null;

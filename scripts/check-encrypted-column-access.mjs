@@ -191,8 +191,9 @@ const rules = [
   },
   {
     // The live collaboration journal (MIN-688) holds page text, deleted text
-    // included: only its store reads or writes it, after access checks.
-    access: /\.\s*from\s*\(\s*["'`]page_collaboration_batches["'`]\s*\)|\.\s*rpc\s*\(\s*["'`](?:commit|reset)_page_collaboration["'`]/,
+    // included: only its store reads or writes it, or runs the RPCs that
+    // journal it and write its projection, after access checks.
+    access: /\.\s*from\s*\(\s*["'`]page_collaboration_batches["'`]\s*\)|\.\s*rpc\s*\(\s*["'`](?:append|commit|materialize|reset)_page_collaboration["'`]/,
     allowed: new Set(["lib/server/page-collaboration.ts"]),
   },
   {

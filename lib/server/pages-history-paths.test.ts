@@ -160,14 +160,19 @@ function scan() {
       const callee = node.expression.text;
       const fn = enclosingFunction(node);
       // The operation authority (MIN-688): `commitPageStreams` writes the body
-      // and signs it itself; `afterStreamCommit` archives and announces.
+      // and signs it itself; `afterStreamCommit` archives and announces. A
+      // materialization writes appended typing, signed with its authors, and
+      // `materializationEffects` archives and announces it.
       if (callee === "commitPageStreams") {
         writes.add(fn);
         signed.add(fn);
       }
+      if (callee === "materializeCollaboration") writes.add(fn);
       if (callee === "writtenBy") signed.add(fn);
-      if (callee === "stampPageWrite" || callee === "afterStreamCommit") archived.add(fn);
-      if (callee === "announcePageWrite" || callee === "afterStreamCommit") announced.add(fn);
+      if (callee === "stampPageWrite" || callee === "afterStreamCommit" ||
+          callee === "materializationEffects") archived.add(fn);
+      if (callee === "announcePageWrite" || callee === "afterStreamCommit" ||
+          callee === "materializationEffects") announced.add(fn);
     }
     ts.forEachChild(node, visit);
   };
@@ -252,8 +257,10 @@ describe("les chemins d'écriture du corps d'une page", () => {
   it("keep the four rules on the operation authority's path (MIN-688)", () => {
     expect(callsIn("commitPageStreams").has("writtenBy")).toBe(true);
     const after = callsIn("afterStreamCommit");
+    const materialized = callsIn("materializationEffects");
     for (const rule of ["stampPageWrite", "announcePageWrite"]) {
       expect(after.has(rule), `afterStreamCommit no longer calls ${rule}`).toBe(true);
+      expect(materialized.has(rule), `materializationEffects no longer calls ${rule}`).toBe(true);
     }
   });
 
@@ -262,7 +269,7 @@ describe("les chemins d'écriture du corps d'une page", () => {
     // A guardrail of the guardrail: if one of these names disappears, it is because the
     // module has moved, and the rule above should be reread rather than believed.
     for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody",
-      "updatePageThroughStreams", "submitPageCollaboration"]) {
+      "updatePageThroughStreams", "materializePage"]) {
       expect(writes.has(fn), `${fn} n'est plus vu comme un chemin d'écriture`).toBe(
         true
       );

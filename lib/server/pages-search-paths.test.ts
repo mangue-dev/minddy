@@ -149,10 +149,14 @@ function scan() {
     }
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
       const callee = node.expression.text;
-      // The operation authority (MIN-688): a stream commit writes the body,
-      // and `afterStreamCommit` is where its catch-up lives.
-      if (callee === "commitPageStreams") writes.add(enclosingFunction(node));
-      if (callee === "queueSearchText" || callee === "afterStreamCommit") {
+      // The operation authority (MIN-688): a stream commit or a
+      // materialization writes the body; `afterStreamCommit` and
+      // `materializationEffects` are where their catch-ups live.
+      if (callee === "commitPageStreams" || callee === "materializeCollaboration") {
+        writes.add(enclosingFunction(node));
+      }
+      if (callee === "queueSearchText" || callee === "afterStreamCommit" ||
+          callee === "materializationEffects") {
         syncs.add(enclosingFunction(node));
       }
     }
@@ -200,12 +204,14 @@ describe("les chemins d'écriture du corps d'une page", () => {
   });
 
   it("reproject typing batches as well as replacements (MIN-688)", () => {
-    // Both branches of the stream side effects must reach the search text:
-    // immediately for a replacement, after a quiet period while typing.
-    const after = callsIn("afterStreamCommit");
-    expect(after.has("queueSearchText")).toBe(true);
-    expect(after.has("queueTypingProjections")).toBe(true);
-    expect(callsIn("queueTypingProjections").has("syncPagesSearchText")).toBe(true);
+    // Both kinds of stream write must reach the search text: a commit at
+    // once, appended typing when it is materialized.
+    expect(callsIn("afterStreamCommit").has("queueSearchText")).toBe(true);
+    expect(callsIn("materializationEffects").has("queueSearchText")).toBe(true);
+    expect(callsIn("materializePage").has("materializationEffects")).toBe(true);
+    // An appended batch has a materialization scheduled for it.
+    expect(callsIn("submitPageCollaboration").has("scheduleMaterialization")).toBe(true);
+    expect(callsIn("runMaterialization").has("materializePage")).toBe(true);
   });
 
   it("couvrent les quatre gestes connus", () => {
@@ -213,7 +219,7 @@ describe("les chemins d'écriture du corps d'une page", () => {
     // A guardrail of the guardrail: if one of these names disappears, it is because the
     // module has moved, and the rule above should be reread rather than believed.
     for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody",
-      "updatePageThroughStreams", "submitPageCollaboration"]) {
+      "updatePageThroughStreams", "materializePage"]) {
       expect(writes.has(fn), `${fn} n'est plus vu comme un chemin d'écriture`).toBe(
         true
       );

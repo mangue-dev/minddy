@@ -389,7 +389,7 @@ export function usePageCollaboration({
     const stopTitle = title.subscribe(setTitleValue);
     setTitleValue(title.value);
 
-    // Wake-ups: the page row's stream heads, on the project broadcast.
+    // Wake-ups: stream head events, on the project broadcast.
     const stopHeads = onPageStreamHeads(pageId, (heads) => {
       if (heads.body !== null) body.noteRemoteHead(heads.body);
       if (heads.title !== null) title.stream.noteRemoteHead(heads.title);

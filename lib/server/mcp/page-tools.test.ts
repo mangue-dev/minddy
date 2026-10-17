@@ -22,14 +22,15 @@ const h = vi.hoisted(() => ({
   comments: [] as Record<string, unknown>[],
   access: new Set<string>(),
   seq: 0,
-  /** The live collaboration journal (MIN-688). */
+  /** The live collaboration journal and stream heads (MIN-688). */
   batches: [] as Record<string, unknown>[],
+  heads: [] as Record<string, unknown>[],
   /** A concurrent write injected once, just before the next stream commit. */
   beforeCommit: null as (() => void) | null,
 }));
 
 vi.mock("@/lib/supabase-service", async () => {
-  const { fakeCommitPageCollaboration } = await import("@/test/fake-page-collaboration");
+  const fake = await import("@/test/fake-page-collaboration");
   type Filter = (row: Record<string, unknown>) => boolean;
 
   const from = (table = "pages") => {
@@ -39,7 +40,9 @@ vi.mock("@/lib/supabase-service", async () => {
     let orderColumn: string | null = null;
     const comments = table === "page_comments";
     const journal = table === "page_collaboration_batches";
-    const store = () => (comments ? h.comments : journal ? h.batches : h.rows);
+    const headsTable = table === "page_collaboration_heads";
+    const pages = !comments && !journal && !headsTable;
+    const store = () => (comments ? h.comments : journal ? h.batches : headsTable ? h.heads : h.rows);
 
     const matching = () => store().filter((row) => filters.every((f) => f(row)));
 
@@ -78,6 +81,7 @@ vi.mock("@/lib/supabase-service", async () => {
               ...values,
             };
             h.rows.push(row);
+            fake.fakeInsertPageHeads(h, row);
             return row;
           }
         );
@@ -96,11 +100,16 @@ vi.mock("@/lib/supabase-service", async () => {
           String(a[orderColumn!]) < String(b[orderColumn!]) ? -1 : 1
         );
       }
-      return { data: rows, error: null };
+      // Page reads carry their stream heads (`COLLAB_COLUMNS`).
+      return { data: pages && mode === "select" ? rows.map((row) => fake.withEmbeddedHeads(h, row)) : rows, error: null };
     };
 
     const query: Record<string, unknown> = {};
     query.select = () => query;
+    query.not = (column: string, _operator: string, value: unknown) => {
+      filters.push((row) => (row[column] ?? null) !== value);
+      return query;
+    };
     query.insert = (row: Record<string, unknown> | Record<string, unknown>[]) => {
       mode = "insert";
       payload = row;
@@ -163,8 +172,9 @@ vi.mock("@/lib/supabase-service", async () => {
       const race = h.beforeCommit;
       h.beforeCommit = null;
       race?.();
-      return fakeCommitPageCollaboration(h, args);
+      return fake.fakeCommitPageCollaboration(h, args);
     }
+    if (name === "materialize_page_collaboration") return fake.fakeMaterializePageCollaboration(h, args);
     if (name !== "search_pages") throw new Error(`rpc inconnu : ${name}`);
     const tokens = String(args.p_query ?? "")
       .toLowerCase()
@@ -329,6 +339,7 @@ async function waitForIndex() {
 beforeEach(() => {
   h.rows = [];
   h.batches = [];
+  h.heads = [];
   h.beforeCommit = null;
   h.comments = [];
   h.seq = 0;

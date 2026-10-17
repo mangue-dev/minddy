@@ -55,7 +55,7 @@ import {
   signalRealtimeRevalidate,
   watchRealtimeTopic,
 } from "./realtime-topic";
-import { emitPageRow } from "./page-collaboration-signals";
+import { emitPageHead } from "./page-collaboration-signals";
 
 /**
  * Single realtime bridge for the whole app. The DB broadcasts every relevant
@@ -112,10 +112,10 @@ function applyProjectEvent(
   change: BroadcastChange,
   projectId: string
 ): void {
-  // Live page sessions read their missing steps from the stream heads this
-  // row carries (MIN-688), our own echoes included: an acknowledgement and a
-  // broadcast can race, and the session sorts them out by revision.
-  if (change.table === "pages") emitPageRow(change.record);
+  // Live page sessions read their missing steps when a stream head moves
+  // (MIN-688), our own echoes included: an acknowledgement and a broadcast
+  // can race, and the session sorts them out by revision.
+  if (change.table === "page_collaboration_heads") emitPageHead(change.record);
   if (isOwnEcho(change)) return;
   adoptRemoteRow(queryClient, projectId, remoteEchoOf(change));
 }

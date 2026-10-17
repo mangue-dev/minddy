@@ -9,8 +9,16 @@ import type { PageWriteKind } from "@/lib/pages";
 import type { CollabField, CollabJournalBatch } from "@/lib/page-collaboration";
 
 /**
- * The OPERATION AUTHORITY's storage layer (MIN-688): the step journal and the
- * one RPC that commits a batch.
+ * The OPERATION AUTHORITY's storage layer (MIN-688): the step journal, the
+ * stream heads and the RPCs that move them.
+ *
+ * Two kinds of commit exist. A session's typing batch is APPENDED: its sealed
+ * steps are journaled and its stream head advances, without touching the page
+ * row (`appendCollaboration`). The page row is rewritten once per burst by a
+ * MATERIALIZATION (`materializeCollaboration`), which writes the projection of
+ * the pending steps. Whole-document writers, agents and the canonical
+ * initialization still COMMIT steps and projection together
+ * (`commitCollaboration`).
  *
  * This module knows nothing of pages as documents — the decoded page, its
  * side effects (history, activity, search, links) and the access rules live in
@@ -26,8 +34,49 @@ import type { CollabField, CollabJournalBatch } from "@/lib/page-collaboration";
 
 type Service = SupabaseClient;
 
-/** The stream columns read alongside a page. */
-export const COLLAB_COLUMNS = "body_revision, title_revision";
+/**
+ * The stream columns read alongside a page: the MATERIALIZED revisions on the
+ * row (what its projection reflects) and the stream heads, embedded so one
+ * statement returns a consistent pair.
+ */
+export const COLLAB_COLUMNS =
+  "body_revision, title_revision, page_collaboration_heads(field, revision)";
+
+/** Materialized revisions and heads of both streams, from a row read with `COLLAB_COLUMNS`. */
+export interface StreamRevisions {
+  materialized: Record<CollabField, number>;
+  head: Record<CollabField, number>;
+}
+
+/**
+ * Reads the revisions a `COLLAB_COLUMNS` row carries, and removes the embedded
+ * heads so they never reach a page payload. A missing head row (a page
+ * created by a writer that bypassed the insert trigger) is the materialized
+ * revision: nothing pending.
+ */
+export function takeStreamRevisions(row: Record<string, unknown>): StreamRevisions {
+  const materialized = {
+    body: Number(row.body_revision ?? 0),
+    title: Number(row.title_revision ?? 0),
+  };
+  const head = { ...materialized };
+  const embedded = row.page_collaboration_heads;
+  delete row.page_collaboration_heads;
+  for (const entry of Array.isArray(embedded) ? embedded : []) {
+    const field = (entry as { field?: unknown }).field;
+    const revision = Number((entry as { revision?: unknown }).revision);
+    if ((field === "body" || field === "title") && Number.isSafeInteger(revision)) {
+      head[field] = Math.max(revision, materialized[field]);
+    }
+  }
+  return { materialized, head };
+}
+
+/** Whether any accepted step is not reflected by the page row yet. */
+export function hasPendingSteps(revisions: StreamRevisions): boolean {
+  return revisions.head.body > revisions.materialized.body ||
+    revisions.head.title > revisions.materialized.title;
+}
 
 /** Journal rows read per catch-up query: 2,000 steps fit in far fewer. */
 const JOURNAL_ROWS_PER_READ = 200;
@@ -53,6 +102,9 @@ export interface CollabBatchInput {
   authorId: string | null;
   authorKind: PageWriteKind;
   authorApiKeyId: string | null;
+  /** False for presentation and initialization batches: their
+   *  materialization neither signs the page nor counts a body version. */
+  authored: boolean;
 }
 
 async function sealBatch(
@@ -76,6 +128,7 @@ async function sealBatch(
     author_id: batch.authorId ?? "",
     author_kind: batch.authorKind,
     author_api_key_id: batch.authorApiKeyId ?? "",
+    authored: batch.authored,
   };
   if (!protect) {
     return { ...wire, steps: batch.steps, encrypted_content: null, encryption_version: 0 };
@@ -125,39 +178,7 @@ export type CommitOutcome =
   | { status: "batch_reused" }
   | { status: "missing" };
 
-/**
- * Commits batches and the page columns they produce, atomically
- * (`commit_page_collaboration`). `values` are the page's new columns as the
- * caller encoded them: plaintext fields on a legacy page, the re-sealed
- * envelope on a protected one. `protect` says which form the journal takes,
- * and must match the page as it will be after this write.
- */
-export async function commitCollaboration(service: Service, {
-  pageId,
-  projectId,
-  contentRevision,
-  values,
-  batches,
-  protect,
-  sealed: presealed,
-}: {
-  pageId: string;
-  projectId: string;
-  contentRevision: number;
-  values: Record<string, unknown>;
-  batches: CollabBatchInput[];
-  protect: boolean;
-  /** `batches` already sealed (`sealCollabBatches`) with this same `protect`. */
-  sealed?: Record<string, unknown>[];
-}): Promise<CommitOutcome> {
-  const sealed = presealed ?? await sealCollabBatches(pageId, projectId, batches, protect);
-  const { data, error } = await service.rpc("commit_page_collaboration", {
-    p_page_id: pageId,
-    p_expected_content_revision: contentRevision,
-    p_values: values,
-    p_batches: sealed,
-  });
-  if (error) throw new CollabCommitError(error.code, error.message);
+function readCommitOutcome(data: unknown, rpc: string): CommitOutcome | { status: "revoked" } {
   const result = (data ?? {}) as Record<string, unknown>;
   switch (result.status) {
     case "accepted":
@@ -176,10 +197,157 @@ export async function commitCollaboration(service: Service, {
     case "retry":
     case "batch_reused":
     case "missing":
+    case "revoked":
       return { status: result.status };
     default:
-      throw new Error("commit_page_collaboration returned an unknown status");
+      throw new Error(`${rpc} returned an unknown status`);
   }
+}
+
+/**
+ * Commits batches and the page projection at the new heads, atomically
+ * (`commit_page_collaboration`). `values` are the page's new columns as the
+ * caller encoded them: plaintext fields on a legacy page, the re-sealed
+ * envelope on a protected one. `materialized` gives, for a stream without a
+ * batch here, the revision `values` reflect. `protect` says which form the
+ * journal takes, and must match the page as it will be after this write.
+ */
+export async function commitCollaboration(service: Service, {
+  pageId,
+  projectId,
+  contentRevision,
+  values,
+  batches,
+  materialized,
+  protect,
+  sealed: presealed,
+}: {
+  pageId: string;
+  projectId: string;
+  contentRevision: number;
+  values: Record<string, unknown>;
+  batches: CollabBatchInput[];
+  materialized: Record<CollabField, number>;
+  protect: boolean;
+  /** `batches` already sealed (`sealCollabBatches`) with this same `protect`. */
+  sealed?: Record<string, unknown>[];
+}): Promise<CommitOutcome> {
+  const sealed = presealed ?? await sealCollabBatches(pageId, projectId, batches, protect);
+  const { data, error } = await service.rpc("commit_page_collaboration", {
+    p_page_id: pageId,
+    p_expected_content_revision: contentRevision,
+    p_values: values,
+    p_batches: sealed,
+    p_materialized: materialized,
+  });
+  if (error) throw new CollabCommitError(error.code, error.message);
+  const outcome = readCommitOutcome(data, "commit_page_collaboration");
+  if (outcome.status === "revoked") throw new Error("commit_page_collaboration returned revoked");
+  return outcome;
+}
+
+export type AppendOutcome =
+  | {
+      status: "accepted";
+      bodyRevision: number;
+      titleRevision: number;
+      /** Steps of both streams not materialized yet, this batch included. */
+      pending: number;
+      /** Age of the oldest of them. */
+      pendingMs: number;
+    }
+  | Exclude<CommitOutcome, { status: "accepted" }>
+  | { status: "revoked" };
+
+/**
+ * Journals already sealed batches and advances their heads
+ * (`append_page_collaboration`), without writing the page row. `generation`
+ * is the project membership generation the caller's access decision was made
+ * at; the database answers `revoked` when membership changed since.
+ */
+export async function appendCollaboration(service: Service, {
+  pageId,
+  projectId,
+  generation,
+  sealed,
+}: {
+  pageId: string;
+  projectId: string;
+  generation: number;
+  sealed: Record<string, unknown>[];
+}): Promise<AppendOutcome> {
+  const { data, error } = await service.rpc("append_page_collaboration", {
+    p_page_id: pageId,
+    p_project_id: projectId,
+    p_generation: generation,
+    p_batches: sealed,
+  });
+  if (error) throw new CollabCommitError(error.code, error.message);
+  const outcome = readCommitOutcome(data, "append_page_collaboration");
+  if (outcome.status !== "accepted") return outcome;
+  const result = data as Record<string, unknown>;
+  return {
+    ...outcome,
+    status: "accepted",
+    pending: Number(result.pending ?? 0),
+    pendingMs: Number(result.pending_ms ?? 0),
+  };
+}
+
+export type MaterializeOutcome =
+  | { status: "materialized"; pending: number }
+  | { status: "unchanged" }
+  | { status: "retry" }
+  | { status: "missing" };
+
+/**
+ * Writes the projection of the pending steps up to `revisions`
+ * (`materialize_page_collaboration`), under the envelope CAS.
+ */
+export async function materializeCollaboration(service: Service, {
+  pageId,
+  contentRevision,
+  values,
+  revisions,
+}: {
+  pageId: string;
+  contentRevision: number;
+  values: Record<string, unknown>;
+  revisions: Record<CollabField, number>;
+}): Promise<MaterializeOutcome> {
+  const { data, error } = await service.rpc("materialize_page_collaboration", {
+    p_page_id: pageId,
+    p_expected_content_revision: contentRevision,
+    p_values: values,
+    p_body_revision: revisions.body,
+    p_title_revision: revisions.title,
+  });
+  if (error) throw new CollabCommitError(error.code, error.message);
+  const result = (data ?? {}) as Record<string, unknown>;
+  switch (result.status) {
+    case "materialized":
+      return { status: "materialized", pending: Number(result.pending ?? 0) };
+    case "unchanged":
+    case "retry":
+    case "missing":
+      return { status: result.status };
+    default:
+      throw new Error("materialize_page_collaboration returned an unknown status");
+  }
+}
+
+/** Pages whose oldest pending step is older than `olderThanMs`. */
+export async function listPendingCollaborations(
+  service: Service,
+  olderThanMs: number,
+  limit: number
+): Promise<string[]> {
+  const { data, error } = await service.rpc("pending_page_collaborations", {
+    p_older_than_ms: Math.max(0, Math.round(olderThanMs)),
+    p_limit: limit,
+  });
+  if (error) throw new Error(`pending_page_collaborations failed: ${error.message}`);
+  return Array.isArray(data) ? data.filter((id): id is string => typeof id === "string") : [];
 }
 
 /**
@@ -213,7 +381,8 @@ export async function findCollaborationReceipt(service: Service, {
   };
 }
 
-/** Opens a gap on both streams after a write that recorded no steps. */
+/** Opens a gap on both streams after a write that recorded no steps: heads
+ *  jump past every accepted step, pending ones included. */
 export async function resetCollaboration(service: Service, pageId: string): Promise<void> {
   const { error } = await service.rpc("reset_page_collaboration", { p_page_id: pageId });
   if (error) throw new Error(`reset_page_collaboration failed: ${error.message}`);
@@ -224,6 +393,15 @@ export async function pruneCollaborationJournal(service: Service, limit = 5_000)
   const { data, error } = await service.rpc("prune_page_collaboration_batches", { p_limit: limit });
   if (error) throw new Error(`prune_page_collaboration_batches failed: ${error.message}`);
   return typeof data === "number" ? data : 0;
+}
+
+/** A decrypted journal row with its author, as the materializer needs it. */
+export interface JournalBatch extends CollabJournalBatch {
+  authorId: string | null;
+  authorKind: PageWriteKind;
+  authorApiKeyId: string | null;
+  authored: boolean;
+  createdAt: string;
 }
 
 /** Journal rows from `since`, still sealed. Nothing is decrypted here. */
@@ -240,7 +418,7 @@ export async function fetchCollaborationJournal(service: Service, {
 }): Promise<Record<string, unknown>[]> {
   const { data, error } = await service
     .from("page_collaboration_batches")
-    .select("page_id, project_id, field, base_revision, step_count, client_id, steps, encrypted_content, encryption_version")
+    .select("page_id, project_id, field, base_revision, step_count, client_id, author_id, author_kind, author_api_key_id, authored, created_at, steps, encrypted_content, encryption_version")
     .eq("page_id", pageId)
     .eq("project_id", projectId)
     .eq("field", field)
@@ -260,8 +438,9 @@ export async function fetchCollaborationJournal(service: Service, {
 export async function decodeCollaborationJournal(
   rows: readonly Record<string, unknown>[],
   projectId: string,
-  actorId: string
-): Promise<CollabJournalBatch[]> {
+  /** `null` for the materializer, which reads as the system. */
+  actorId: string | null
+): Promise<JournalBatch[]> {
   // Built only for sealed rows: a legacy page's journal needs no key.
   let codec: EncryptedRowCodec | null = null;
   return Promise.all(rows.map(async (row) => {
@@ -283,6 +462,11 @@ export async function decodeCollaborationJournal(
       stepCount: Number(row.step_count),
       clientId: String(row.client_id),
       steps,
+      authorId: typeof row.author_id === "string" ? row.author_id : null,
+      authorKind: row.author_kind === "agent" ? "agent" : "human",
+      authorApiKeyId: typeof row.author_api_key_id === "string" ? row.author_api_key_id : null,
+      authored: row.authored !== false,
+      createdAt: typeof row.created_at === "string" ? row.created_at : new Date(0).toISOString(),
     };
   }));
 }
@@ -293,8 +477,8 @@ export async function readCollaborationJournal(service: Service, input: {
   projectId: string;
   field: CollabField;
   since: number;
-  actorId: string;
-}): Promise<CollabJournalBatch[]> {
+  actorId: string | null;
+}): Promise<JournalBatch[]> {
   return decodeCollaborationJournal(
     await fetchCollaborationJournal(service, input), input.projectId, input.actorId);
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * MIN-266 — the server surface of the pages, over a table in memory.
@@ -46,6 +46,12 @@ const h = vi.hoisted(() => ({
   versions: [] as Record<string, unknown>[],
   /** The live collaboration journal (MIN-688) — `page_collaboration_batches`. */
   batches: [] as Record<string, unknown>[],
+  /** Stream heads (MIN-688) — `page_collaboration_heads`. */
+  heads: [] as Record<string, unknown>[],
+  /** Project membership generations, compared by every appended batch. */
+  generations: new Map<string, number>(),
+  /** Collaboration access decisions made, in order. */
+  grants: 0,
   /** Projects to which the actor has access. Empty = everything is “not found”. */
   access: new Set<string>(),
   /** Projects among `access` where the actor is only a reader (MIN-693). */
@@ -71,7 +77,7 @@ const h = vi.hoisted(() => ({
  * wait for it directly or end it with `single()` / `maybeSingle()`.
  */
 vi.mock("@/lib/supabase-service", async () => {
-  const { fakeCommitPageCollaboration } = await import("@/test/fake-page-collaboration");
+  const fake = await import("@/test/fake-page-collaboration");
   type Filter = (row: Record<string, unknown>) => boolean;
 
   // Two tables, and you need two: a history line carries a
@@ -81,6 +87,7 @@ vi.mock("@/lib/supabase-service", async () => {
   const from = (table: string) => {
     const pages = table === "pages";
     const journal = table === "page_collaboration_batches";
+    const headsTable = table === "page_collaboration_heads";
     const filters: Filter[] = [];
     let mode: "select" | "insert" | "update" | "delete" = "select";
     let payload: Record<string, unknown> | Record<string, unknown>[] = {};
@@ -90,7 +97,7 @@ vi.mock("@/lib/supabase-service", async () => {
     let requestedLimit = 1000;
     let afterId: string | null = null;
 
-    const all = () => (pages ? h.rows : journal ? h.batches : h.versions);
+    const all = () => (pages ? h.rows : journal ? h.batches : headsTable ? h.heads : h.versions);
     const matching = () => all().filter((row) => filters.every((f) => f(row)));
 
     const run = (): { data: Record<string, unknown>[] | null; error: { code: string; message: string } | null; count?: number } => {
@@ -137,6 +144,7 @@ vi.mock("@/lib/supabase-service", async () => {
                   ...values,
                 };
             all().push(row);
+            if (pages) fake.fakeInsertPageHeads(h, row);
             return row;
           }
         );
@@ -155,6 +163,9 @@ vi.mock("@/lib/supabase-service", async () => {
         if (pages) h.rows = h.rows.filter((row) => !rows.includes(row));
         else h.versions = h.versions.filter((row) => !rows.includes(row));
       }
+      // The stream heads embedded in a page read (`COLLAB_COLUMNS`).
+      const copy = (row: Record<string, unknown>) =>
+        pages && mode === "select" ? fake.withEmbeddedHeads(h, row) : { ...row };
       if (orderColumn) {
         rows.sort((a, b) => {
           const [x, y] = [a[orderColumn!], b[orderColumn!]];
@@ -171,10 +182,10 @@ vi.mock("@/lib/supabase-service", async () => {
       // by the writing it precedes — an alias that the real base does not have.
       if (pages && orderColumn === "id") {
         if (afterId && h.pageListLaterError) return { data: null, error: { code: "XX000", message: "Later batch failed" } };
-        return { data: rows.slice(0, Math.min(requestedLimit, h.pageListCap)).map((row) => ({ ...row })), error: null,
+        return { data: rows.slice(0, Math.min(requestedLimit, h.pageListCap)).map(copy), error: null,
           ...(counted ? { count: rows.length } : {}) };
       }
-      return { data: rows.map((row) => ({ ...row })), error: null };
+      return { data: rows.map(copy), error: null };
     };
 
     const query: Record<string, unknown> = {};
@@ -257,8 +268,12 @@ vi.mock("@/lib/supabase-service", async () => {
         h.updateError = null;
         return { data: null, error };
       }
-      return fakeCommitPageCollaboration(h, args);
+      return fake.fakeCommitPageCollaboration(h, args);
     }
+    if (name === "append_page_collaboration") return fake.fakeAppendPageCollaboration(h, args);
+    if (name === "materialize_page_collaboration") return fake.fakeMaterializePageCollaboration(h, args);
+    if (name === "reset_page_collaboration") return fake.fakeResetPageCollaboration(h, args);
+    if (name === "pending_page_collaborations") return fake.fakePendingPageCollaborations(h);
     if (name === "restore_page_guarded") {
       h.beforeRestore?.();
       h.beforeRestore = null;
@@ -286,6 +301,11 @@ vi.mock("@/lib/supabase-service", async () => {
         candidate.id === args.p_page_id && candidate.deleted_at === null,
     );
     if (!row) return { data: { status: "not_found" }, error: null };
+    // Typing still pending in the journal: the page is not blank.
+    if (h.heads.some((head) => head.page_id === row.id &&
+        Number(head.revision) > Number(row[`${head.field}_revision`] ?? 0))) {
+      return { data: { status: "not_empty" }, error: null };
+    }
 
     const blocks = (row.content as { content?: unknown[] } | null)?.content;
     const only = Array.isArray(blocks) ? blocks[0] as {
@@ -371,6 +391,20 @@ vi.mock("@/lib/server/page-mentions", () => ({
   notifyPageMentions: announce.notifyPageMentions,
 }));
 
+/** Collaboration access decisions, from the same access table. */
+vi.mock("@/lib/server/page-collaboration-token", async (importActual) => ({
+  ...(await importActual<typeof import("./page-collaboration-token")>()),
+  decideCollaborationGrant: async (_service: unknown,
+    ids: { userId: string; pageId: string; projectId: string }) => {
+    h.grants += 1;
+    h.trace.push(`grant:${ids.projectId}`);
+    if (h.accessHold) await h.accessHold;
+    if (!h.access.has(ids.projectId)) return null;
+    return { ...ids, canWrite: !h.readOnly.has(ids.projectId),
+      generation: h.generations.get(ids.projectId) ?? 0, expiresAt: Date.now() + 45_000 };
+  },
+}));
+
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async (_userId: string, projectId: string) => {
     h.trace.push(`access:${projectId}`);
@@ -404,6 +438,8 @@ import {
   listPages,
   discardPage,
   editPageBodyLive,
+  materializePage,
+  materializeStalePages,
   readPageCollaborationSnapshot,
   readPageCollaborationSteps,
   restorePage,
@@ -420,6 +456,9 @@ import {
   restorePageVersion,
 } from "./page-versions";
 import { buildPageTree } from "@/lib/pages";
+import { getServiceClient } from "@/lib/supabase-service";
+import { mintCollaborationToken } from "./page-collaboration-token";
+import { forgetStreamValues } from "./page-collaboration-cache";
 
 const ACTOR = "user-1";
 const PROJECT = "project-1";
@@ -436,11 +475,20 @@ async function create(title: string, parentId: string | null = null) {
 }
 
 const rowOf = (id: string) => h.rows.find((row) => row.id === id) as unknown as Row;
+const headOf = (id: string, field: "body" | "title") =>
+  h.heads.find((head) => head.page_id === id && head.field === field) as Record<string, unknown>;
 
 beforeEach(() => {
   h.rows = [];
   h.versions = [];
   h.batches = [];
+  h.heads = [];
+  h.generations = new Map();
+  h.grants = 0;
+  // Collaboration tokens are signed with a key derived from a server secret.
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+  // Page ids repeat from one test to the next: no stream value may survive.
+  forgetStreamValues();
   h.seq = 0;
   h.beforeDiscard = null;
   h.beforeRestore = null;
@@ -1978,6 +2026,16 @@ describe("project roles (MIN-693)", () => {
 });
 
 describe("live collaboration authority (MIN-688)", () => {
+  // A batch schedules its materialization two quiet seconds later; these
+  // tests materialize explicitly and drop those timers.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
   const paragraph = (text: string, blockId: string) => ({
     type: "paragraph",
     attrs: { blockId },
@@ -2012,45 +2070,71 @@ describe("live collaboration authority (MIN-688)", () => {
     ...extra,
   });
 
-  it("accepts steps at the head, journals them and signs the page once", async () => {
+  it("journals an accepted batch without rewriting the page, and the materialization signs it once", async () => {
     const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
-    const version = rowOf(id).version;
+    const { version, content_revision: envelope } = rowOf(id) as unknown as Record<string, number>;
     const result = await submitPageCollaboration({
       projectId: PROJECT,
       pageId: id,
       actorId: ACTOR,
       submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text(" world")))),
     });
-    expect(result).toEqual({ ok: true, result: { status: "accepted", revision: 1 } });
-    expect(JSON.stringify(rowOf(id).content)).toContain("Hello world");
-    expect(rowOf(id).version).toBe(version + 1);
-    expect(rowOf(id).updated_by).toBe(ACTOR);
+    expect(result).toMatchObject({ ok: true, result: { status: "accepted", revision: 1 } });
+    // The row is untouched: only the journal and the head moved.
+    expect(JSON.stringify(rowOf(id).content)).not.toContain("Hello world");
+    expect(rowOf(id)).toMatchObject({ version, content_revision: envelope });
+    expect(Number((rowOf(id) as unknown as Record<string, unknown>).body_revision ?? 0)).toBe(0);
+    expect(headOf(id, "body")).toMatchObject({ revision: 1 });
+    expect(headOf(id, "body").pending_since).not.toBeNull();
     expect(h.batches).toHaveLength(1);
-    expect(h.batches[0]).toMatchObject({ field: "body", base_revision: 0, step_count: 1, client_id: "browser-session-1" });
+    expect(h.batches[0]).toMatchObject({ field: "body", base_revision: 0, step_count: 1,
+      client_id: "browser-session-1", authored: true });
+
+    expect(await materializePage(getServiceClient(), id)).toBe("materialized");
+    expect(JSON.stringify(rowOf(id).content)).toContain("Hello world");
+    expect(rowOf(id)).toMatchObject({ version: version + 1, updated_by: ACTOR, body_revision: 1,
+      content_revision: envelope + 1 });
+    expect(headOf(id, "body").pending_since).toBeNull();
+    expect(await materializePage(getServiceClient(), id)).toBe("unchanged");
   });
 
-  it("answers `behind` for a stale base and writes nothing", async () => {
+  it("answers `behind` for a stale base and journals nothing", async () => {
     const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
     await submitPageCollaboration({
       projectId: PROJECT, pageId: id, actorId: ACTOR,
       submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("A")))),
     });
-    const before = JSON.stringify(rowOf(id).content);
     const stale = await submitPageCollaboration({
       projectId: PROJECT, pageId: id, actorId: ACTOR,
       submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("B")))),
     });
-    expect(stale).toEqual({ ok: true, result: { status: "behind", head: 1 } });
-    expect(JSON.stringify(rowOf(id).content)).toBe(before);
+    expect(stale).toMatchObject({ ok: true, result: { status: "behind", head: 1 } });
+    expect(h.batches).toHaveLength(1);
   });
 
-  it("acknowledges a retried batch once, without writing it twice", async () => {
+  it("answers `behind` from another instance's cache too", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("A")))),
+    });
+    // This instance never saw revision 1: the stale base is answered from the row.
+    forgetStreamValues(id);
+    const stale = await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("B")))),
+    });
+    expect(stale).toMatchObject({ ok: true, result: { status: "behind", head: 1 } });
+  });
+
+  it("acknowledges a retried batch once, without journaling it twice", async () => {
     const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
     const once = submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!"))));
     await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, submission: once });
     const again = await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, submission: once });
-    expect(again).toEqual({ ok: true, result: { status: "accepted", revision: 1 } });
+    expect(again).toMatchObject({ ok: true, result: { status: "accepted", revision: 1 } });
     expect(h.batches).toHaveLength(1);
+    await materializePage(getServiceClient(), id);
     expect(JSON.stringify(rowOf(id).content)).toContain("Hello!");
     expect(JSON.stringify(rowOf(id).content)).not.toContain("Hello!!");
   });
@@ -2072,7 +2156,7 @@ describe("live collaboration authority (MIN-688)", () => {
       projectId: PROJECT, pageId: id, actorId: ACTOR,
       submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("X"))), { presentation: true }),
     });
-    expect(result).toEqual({ ok: true, result: { status: "refused", reason: "presentation-changed" } });
+    expect(result).toMatchObject({ ok: true, result: { status: "refused", reason: "presentation-changed" } });
   });
 
   it("refuses a reader's steps", async () => {
@@ -2110,7 +2194,9 @@ describe("live collaboration authority (MIN-688)", () => {
     expect(caught).toMatchObject({ ok: true, catchUp: { kind: "steps", from: 0, to: 1, head: 1, clientIds: ["browser-session-1"] } });
 
     // A writer that recorded no steps (the database guard opens the gap).
+    await materializePage(getServiceClient(), id);
     (rowOf(id) as unknown as Record<string, unknown>).body_revision = 2;
+    headOf(id, "body").revision = 2;
     const reset = await readPageCollaborationSteps({ projectId: PROJECT, pageId: id, actorId: ACTOR, field: "body", since: 1 });
     expect(reset).toMatchObject({ ok: true, catchUp: { kind: "reset", reason: "gap", snapshot: { body: { revision: 2 } } } });
   });
@@ -2172,8 +2258,220 @@ describe("live collaboration authority (MIN-688)", () => {
       projectId: PROJECT, pageId: id, actorId: ACTOR,
       submission: { ...submission(0, tr.steps.map((step) => step.toJSON())), field: "title" as const },
     });
-    expect(result).toEqual({ ok: true, result: { status: "accepted", revision: 1 } });
+    expect(result).toMatchObject({ ok: true, result: { status: "accepted", revision: 1 } });
+    // The list reads the pending title before it reaches the row.
+    const list = await listPages(PROJECT, ACTOR);
+    expect(list.ok && list.pages.find((page) => page.id === id)?.title).toBe("Live notes");
+    expect(rowOf(id).title).toBe("Live");
+    await materializePage(getServiceClient(), id);
     expect(rowOf(id)).toMatchObject({ title: "Live notes", title_revision: 1, body_revision: snapshot.body.revision });
-    expect(pageTitleSchema.nodes.doc).toBeDefined();
   });
+
+  it("serves pending steps to every reader before they are materialized", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: "user-2",
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text(" there")))),
+    });
+    const read = await getPage(id, ACTOR);
+    expect(read.ok && JSON.stringify(read.page.content)).toContain("Hello there");
+    expect(read.ok && read.page).toMatchObject({ version: rowOf(id).version + 1, updated_by: "user-2" });
+    expect(read.ok && Object.keys(read.page)).not.toContain("page_collaboration_heads");
+    // A new session starts at the head, with the pending text.
+    const fresh = await readPageCollaborationSnapshot(PROJECT, id, ACTOR);
+    expect(fresh).toMatchObject({ ok: true, snapshot: { body: { revision: 1 } } });
+    expect(fresh.ok && JSON.stringify(fresh.snapshot.body.doc)).toContain("Hello there");
+    // A copy takes the latest text: the source is materialized first.
+    const copy = await duplicatePage(id, ACTOR);
+    expect(copy.ok && JSON.stringify(rowOf(copy.page.id).content)).toContain("Hello there");
+    expect((rowOf(id) as unknown as Record<string, unknown>).body_revision).toBe(1);
+  });
+
+  it("refuses to discard a page whose typing is still pending", async () => {
+    const created = await createPage({ projectId: PROJECT, actorId: ACTOR, input: { title: "" } });
+    if (!created.ok) throw new Error("creation refused");
+    const snapshot = await readPageCollaborationSnapshot(PROJECT, created.page.id, ACTOR);
+    if (!snapshot.ok) throw new Error("snapshot refused");
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: created.page.id, actorId: ACTOR,
+      submission: submission(snapshot.snapshot.body.revision,
+        bodySteps(snapshot.snapshot.body.doc, (tr) => tr.insert(1, pageBodySchema().text("Draft")))),
+    });
+    expect(await discardPage(created.page.id, ACTOR)).toMatchObject({ ok: false, status: 409, errorKey: "pageNotEmpty" });
+    expect(rowOf(created.page.id)).toBeDefined();
+  });
+
+  it("materializes several batches with one envelope write, one history line and one activity line", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    // Someone else wrote the stored state: the first typist covers it.
+    Object.assign(rowOf(id), { updated_by: "user-2" });
+    const envelope = Number((rowOf(id) as unknown as Record<string, unknown>).content_revision);
+    let doc = snapshot.body.doc as unknown;
+    for (const [base, text] of ["a", "b", "c"].entries()) {
+      const steps = bodySteps(doc, (tr) => tr.insert(6 + base, pageBodySchema().text(text)));
+      doc = new Transform(PMNode.fromJSON(pageBodySchema(), doc)).insert(6 + base, pageBodySchema().text(text)).doc.toJSON();
+      await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, submission: submission(base, steps) });
+    }
+    announce.recordPageEvent.mockClear();
+    const versions = h.versions.length;
+    await materializePage(getServiceClient(), id);
+    expect(JSON.stringify(rowOf(id).content)).toContain("Helloabc");
+    expect((rowOf(id) as unknown as Record<string, unknown>).content_revision).toBe(envelope + 1);
+    expect(rowOf(id).version).toBe(snapshot.version + 3);
+    await vi.waitFor(() => expect(h.versions.length).toBe(versions + 1));
+    await vi.waitFor(() => expect(announce.recordPageEvent).toHaveBeenCalledTimes(1));
+    expect(announce.recordPageEvent.mock.calls[0][1]).toMatchObject({ actorId: ACTOR, type: "page_updated" });
+  });
+
+  it("attributes each new mention to whoever typed it", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hi ", "b1")]);
+    const first = bodySteps(snapshot.body.doc, (tr) => tr.insert(4, pageBodySchema().text("@ann ")));
+    await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, submission: submission(0, first) });
+    const afterFirst = new Transform(PMNode.fromJSON(pageBodySchema(), snapshot.body.doc))
+      .insert(4, pageBodySchema().text("@ann ")).doc.toJSON();
+    const second = bodySteps(afterFirst, (tr) => tr.insert(9, pageBodySchema().text("@bob")));
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: "user-2",
+      submission: { ...submission(1, second), clientId: "browser-session-2" },
+    });
+    announce.notifyPageMentions.mockClear();
+    await materializePage(getServiceClient(), id);
+    await vi.waitFor(() => expect(announce.notifyPageMentions).toHaveBeenCalledTimes(2));
+    const calls = announce.notifyPageMentions.mock.calls.map(([, params]) => params);
+    expect(calls.map((call) => call.actorId)).toEqual([ACTOR, "user-2"]);
+    expect(JSON.stringify(calls[0].doc)).toContain("@ann");
+    expect(JSON.stringify(calls[0].doc)).not.toContain("@bob");
+    expect(JSON.stringify(calls[1].previousDoc)).not.toContain("@bob");
+    expect(JSON.stringify(calls[1].doc)).toContain("@bob");
+  });
+
+  it("lets a replacement materialize the typing it includes, and the cron catch the rest", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: "user-2",
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!")))),
+    });
+    // A rename of a plaintext page leaves the pending body to the materializer.
+    expect(await updatePage({ pageId: id, actorId: ACTOR, input: { title: "Renamed" } })).toMatchObject({ ok: true });
+    expect(rowOf(id)).toMatchObject({ title: "Renamed", body_revision: 0 });
+    expect(await materializeStalePages({ olderThanMs: 0 })).toMatchObject({ pages: 1, materialized: 1 });
+    expect(JSON.stringify(rowOf(id).content)).toContain("Hello!");
+    // A body replacement includes the pending text and materializes it.
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: "user-2",
+      submission: submission(1, bodySteps(rowOf(id).content, (tr) => tr.insert(7, pageBodySchema().text("?")))),
+    });
+    const replaced = await updatePage({ pageId: id, actorId: ACTOR, kind: "agent",
+      input: { content: { type: "doc", content: [paragraph("Hello!?", "b1"), paragraph("More", "b2")] } } });
+    expect(replaced).toMatchObject({ ok: true });
+    expect(rowOf(id)).toMatchObject({ body_revision: headOf(id, "body").revision });
+    expect(headOf(id, "body").pending_since).toBeNull();
+  });
+});
+
+describe("collaboration tokens (MIN-688)", () => {
+  // A batch schedules its materialization two quiet seconds later; these
+  // tests materialize explicitly and drop those timers.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  });
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  const paragraph = (text: string) => ({ type: "paragraph", attrs: { blockId: "t1" }, content: [{ type: "text", text }] });
+
+  async function session() {
+    const created = await createPage({ projectId: PROJECT, actorId: ACTOR,
+      input: { title: "Token", content: { type: "doc", content: [paragraph("Hello")] } } });
+    if (!created.ok) throw new Error("creation refused");
+    const snapshot = await readPageCollaborationSnapshot(PROJECT, created.page.id, ACTOR);
+    if (!snapshot.ok) throw new Error("snapshot refused");
+    return { id: created.page.id, snapshot: snapshot.snapshot, token: snapshot.token };
+  }
+
+  const typing = (doc: unknown, base: number, text: string, at = 6) => ({
+    field: "body" as const,
+    base,
+    batchId: crypto.randomUUID(),
+    clientId: "browser-session-1",
+    steps: (() => {
+      const tr = new Transform(PMNode.fromJSON(pageBodySchema(), doc));
+      tr.insert(at, pageBodySchema().text(text));
+      return tr.steps.map((step) => step.toJSON());
+    })(),
+  });
+
+  it("accepts batches on a valid token without deciding access again", async () => {
+    const { id, snapshot, token } = await session();
+    const decided = h.grants;
+    const result = await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, token,
+      submission: typing(snapshot.body.doc, 0, "!") });
+    expect(result).toMatchObject({ ok: true, result: { status: "accepted" }, token: null });
+    expect(h.grants).toBe(decided);
+  });
+
+  it("decides again and issues a token when it is missing, expired or for someone else", async () => {
+    const { id, snapshot } = await session();
+    const expired = mintCollaborationToken({ userId: ACTOR, pageId: id, projectId: PROJECT,
+      canWrite: true, generation: 0, expiresAt: Date.now() - 1 });
+    const foreign = mintCollaborationToken({ userId: "user-2", pageId: id, projectId: PROJECT,
+      canWrite: true, generation: 0, expiresAt: Date.now() + 30_000 });
+    let base = 0;
+    for (const token of [null, expired, foreign, "c1.forged.signature"]) {
+      const decided = h.grants;
+      const result = await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, token,
+        submission: typing((await getPage(id, ACTOR) as { page: { content: unknown } }).page.content, base, "!") });
+      expect(result).toMatchObject({ ok: true, result: { status: "accepted" } });
+      expect(result.ok && typeof result.token).toBe("string");
+      expect(h.grants).toBe(decided + 1);
+      base += 1;
+    }
+    void snapshot;
+  });
+
+  it("refuses a revoked member at the next batch, whatever the token says", async () => {
+    const { id, snapshot, token } = await session();
+    // Removing the member rotates the project's membership generation.
+    h.access = new Set();
+    h.generations.set(PROJECT, 1);
+    const result = await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, token,
+      submission: typing(snapshot.body.doc, 0, "!") });
+    expect(result).toMatchObject({ ok: false, status: 404 });
+    expect(h.batches).toHaveLength(0);
+  });
+
+  it("re-decides and goes on when the generation moved for someone else", async () => {
+    const { id, snapshot, token } = await session();
+    h.generations.set(PROJECT, 1);
+    const result = await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, token,
+      submission: typing(snapshot.body.doc, 0, "!") });
+    expect(result).toMatchObject({ ok: true, result: { status: "accepted" } });
+    expect(result.ok && typeof result.token).toBe("string");
+    expect(h.batches).toHaveLength(1);
+  });
+
+  it("refuses a reader's batch from its token alone", async () => {
+    const { id, snapshot } = await session();
+    h.readOnly = new Set([PROJECT]);
+    const reader = await readPageCollaborationSnapshot(PROJECT, id, ACTOR);
+    if (!reader.ok) throw new Error("snapshot refused");
+    const decided = h.grants;
+    const result = await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR,
+      token: reader.token, submission: typing(snapshot.body.doc, 0, "!") });
+    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "readOnlyProject" });
+    expect(h.grants).toBe(decided);
+  });
+
+  it("bounds a token's lifetime", async () => {
+    const { id, snapshot } = await session();
+    const tooLong = mintCollaborationToken({ userId: ACTOR, pageId: id, projectId: PROJECT,
+      canWrite: true, generation: 0, expiresAt: Date.now() + 10 * 60_000 });
+    const decided = h.grants;
+    await submitPageCollaboration({ projectId: PROJECT, pageId: id, actorId: ACTOR, token: tooLong,
+      submission: typing(snapshot.body.doc, 0, "!") });
+    expect(h.grants).toBe(decided + 1);
+  });
+
 });

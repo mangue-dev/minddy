@@ -5,6 +5,8 @@ const JOBS = [
   // worker must tick every minute to honor the at-least-once schedule.
   ["* * * * *", "/api/cron/forge-relay-deliveries"],
   ["35 * * * *", "/api/cron/forge-relay-maintenance"],
+  // Live page typing is journaled first; this writes what no request did.
+  ["* * * * *", "/api/cron/page-materialization"],
   ["*/5 * * * *", "/api/cron/smart-assign"],
   ["25 * * * *", "/api/cron/issue-index"],
   ["*/5 * * * *", "/api/cron/routines"],

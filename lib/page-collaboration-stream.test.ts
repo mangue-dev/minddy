@@ -93,6 +93,45 @@ class Authority {
   }
 }
 
+/**
+ * The authority as deployed: an accepted batch is only journaled, the stored
+ * document lags behind until `materialize()`, and a snapshot is the stored
+ * document plus the pending journal — what `liveFromRow` serves.
+ */
+class JournalAuthority extends Authority {
+  stored: unknown;
+  storedRevision = 0;
+
+  constructor(field: "body" | "title", initial: unknown) {
+    super(field, initial);
+    this.stored = initial;
+  }
+
+  /** The stored document with every pending step applied. */
+  live(): unknown {
+    const steps = this.journal.filter((row) => row.base >= this.storedRevision).flatMap((row) => row.steps);
+    if (steps.length === 0) return this.stored;
+    const applied = applyCollabSteps(this.field, this.stored, steps);
+    if (!applied.ok) throw new Error(`pending steps do not apply: ${applied.reason}`);
+    return this.field === "body" ? applied.doc : applied.text;
+  }
+
+  materialize(): void {
+    this.stored = this.live();
+    this.storedRevision = this.head;
+  }
+
+  override snapshot(): PageCollaborationSnapshot {
+    const accepted = this.doc;
+    this.doc = this.live();
+    try {
+      return super.snapshot();
+    } finally {
+      this.doc = accepted;
+    }
+  }
+}
+
 /** One collaborator: a headless editor state with the collab and history plugins. */
 class Client {
   state: EditorState;
@@ -340,6 +379,53 @@ describe("CollabStream — two collaborators in the same paragraph", () => {
 
     await expect(flushed).resolves.toBe(false);
     expect(alice.stream.hasPending()).toBe(true);
+  });
+});
+
+describe("CollabStream — journal-only commits and materialization", () => {
+  it("starts a joining session at the head while typing is still pending", async () => {
+    const authority = new JournalAuthority("body", paragraph("Draft"));
+    const schema = pageBodySchema();
+    const alice = new Client(authority, schema, "alice-session");
+    alice.edit((tr) => tr.insertText(" one", 6));
+    await settle();
+    expect(authority.head).toBe(1);
+    // Nothing materialized: the stored document still lags.
+    expect(PMNode.fromJSON(schema, authority.stored).textContent).toBe("Draft");
+
+    const bob = new Client(authority, schema, "bob-session");
+    expect(bob.text()).toBe("Draft one");
+    bob.edit((tr) => tr.insertText(" two", 10));
+    await settle();
+    await alice.stream.pull();
+    await settle();
+    expect(alice.text()).toBe("Draft one two");
+    expect(bob.stream.hasPending()).toBe(false);
+  });
+
+  it("keeps sessions converging when the page is materialized between their batches", async () => {
+    const authority = new JournalAuthority("body", paragraph("abc"));
+    const schema = pageBodySchema();
+    const alice = new Client(authority, schema, "alice-session");
+    const bob = new Client(authority, schema, "bob-session");
+
+    alice.edit((tr) => tr.insertText("1", 2));
+    await settle();
+    authority.materialize();
+    bob.edit((tr) => tr.insertText("2", 4));
+    await settle();
+    await bob.stream.pull();
+    await settle();
+    alice.edit((tr) => tr.insertText("3", 1));
+    await settle();
+    await alice.stream.pull();
+    await bob.stream.pull();
+    await settle();
+    authority.materialize();
+
+    expect(alice.text()).toBe(bob.text());
+    expect(PMNode.fromJSON(schema, authority.stored).textContent).toBe(alice.text());
+    expect(authority.storedRevision).toBe(authority.head);
   });
 });
 

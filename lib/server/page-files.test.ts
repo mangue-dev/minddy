@@ -8,6 +8,12 @@ import {
   sweepOrphanPageFiles,
 } from "@/lib/server/page-files";
 
+/** Pending collaboration typing is materialized before the sweep reads bodies (MIN-688). */
+const materialized = vi.hoisted(() => ({
+  pages: vi.fn(async (_service: unknown, _ids: readonly string[]) => 0),
+}));
+vi.mock("@/lib/server/pages", () => ({ materializePendingPages: materialized.pages }));
+
 /**
  * MIN-280 verifies both sides of the page-file lifecycle against an in-memory
  * Supabase double. A failed metadata insert must remove the uploaded object;
@@ -293,6 +299,9 @@ describe("sweepOrphanPageFiles", () => {
       `projects/${PROJECT}/pages/${PAGE}/${ORPHELIN}/f.png`,
     ]);
     expect(service.files.map((f) => f.id)).toEqual([VIVANT, IMBRIQUE]);
+    // Typing still pending in the collaboration journal could cite a file:
+    // the candidate pages are materialized before their bodies are read.
+    expect(materialized.pages).toHaveBeenCalledWith(service.client, [PAGE]);
   });
 
   it("deletes the row before the bytes", async () => {
