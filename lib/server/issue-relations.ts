@@ -104,18 +104,31 @@ function relationEvents(
   ];
 }
 
+/** Rows per page when reading a project's relations: PostgREST caps a
+    response at 1,000 rows, so a larger project must be read in pages. */
+const RELATION_PAGE_SIZE = 1000;
+
 /** All relation rows of a project (raw stored form). Pass an RLS or service
-    client — both are pinned by project_id. */
+    client — both are pinned by project_id. Read in stable pages: a single
+    request would silently stop at the PostgREST row cap, and callers use the
+    list for cycle checks and "already linked" decisions. */
 export async function listIssueRelations(
   db: SupabaseClient,
   projectId: string
 ): Promise<{ relations: IssueRelationRow[] } | { error: string }> {
-  const { data, error } = await db
-    .from("issue_relations")
-    .select(RELATION_COLUMNS)
-    .eq("project_id", projectId);
-  if (error) return { error: error.message };
-  return { relations: (data ?? []) as IssueRelationRow[] };
+  const relations: IssueRelationRow[] = [];
+  for (let offset = 0; ; offset += RELATION_PAGE_SIZE) {
+    const { data, error } = await db
+      .from("issue_relations")
+      .select(RELATION_COLUMNS)
+      .eq("project_id", projectId)
+      .order("id", { ascending: true })
+      .range(offset, offset + RELATION_PAGE_SIZE - 1);
+    if (error) return { error: error.message };
+    relations.push(...((data ?? []) as IssueRelationRow[]));
+    if ((data ?? []).length < RELATION_PAGE_SIZE) break;
+  }
+  return { relations };
 }
 
 /** Find a single stored relation matching a (source, type, target) spec from

@@ -81,3 +81,20 @@ Figure revisions were advanced with their articles without a content change.
 `npm run check:documentation`, `npm run check:knowledge`,
 `npm run check:owned-english` and `git diff --check` were run after the edits;
 results are listed in the pull request.
+
+## Corrections after the code review
+
+A source review of the pull request found three passages that did not match
+the code. All three were corrected in the six locales of `issues` and
+`instance-administration`:
+
+- **Usage history.** A relation decision answered by the decision model is
+  billed as `jev_decision`, which the history shows as **AI decision**. Only
+  the fallback model's decisions appear as **Smart-fill · relations**.
+- **Index issues.** The background job now also honors the issue author's
+  refusal, and a vector of former text is deleted when the content changes.
+  The bullet now says so; the earlier text claimed that vectors stayed until
+  the issue was purged.
+- **Encryption catch-up.** The cron job converts clear vectors once a
+  project encrypts, even while the feature is off. The cron description in
+  `instance-administration` now mentions this.

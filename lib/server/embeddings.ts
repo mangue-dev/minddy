@@ -104,7 +104,7 @@ export async function requestEmbeddings(
     : OPENROUTER_EMBEDDINGS_URL;
   const provider: AgentProviderId = runtime?.provider ?? "openrouter";
   const keyMode = runtime?.mode ?? "platform";
-  const requestedDimensions = opts.dimensions === "any" ? EMBEDDING_DIMENSIONS : opts.dimensions;
+  const requestedDimensions = opts.dimensions === "any" ? null : opts.dimensions;
 
   const input = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
   const attempt = async (model: string): Promise<(number[] | null)[]> => {
@@ -120,7 +120,11 @@ export async function requestEmbeddings(
       body: JSON.stringify({
         model,
         input,
-        dimensions: requestedDimensions,
+        // A fixed size is part of the feedback contract. The issue index
+        // (`"any"`) leaves the model at its native size: some embedding
+        // models refuse the parameter, and the index version records the
+        // returned dimensions anyway.
+        ...(requestedDimensions !== null ? { dimensions: requestedDimensions } : {}),
         ...(provider === "openrouter" ? { usage: { include: true } } : {}),
       }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),

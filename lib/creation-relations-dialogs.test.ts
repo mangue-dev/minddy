@@ -12,7 +12,7 @@ import type { Issue, Objective, PendingRelationInput, Project } from "./types";
 const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
-  mobile: false, smartFill: true, smartFillCreated: true, queryProjects: [] as (string | null)[],
+  mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, queryProjects: [] as (string | null)[],
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
 vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
@@ -58,7 +58,7 @@ vi.mock("@/lib/use-issues-query", () => ({ useIssuesQuery: (project: string | nu
   return { issues: project ? fixture.issues : [], loading: false };
 } }));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: (project: string | null) => ({ objectives: project ? fixture.objectives : [], loading: false }) }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated } } }) }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_relations: fixture.smartFillRelations } } }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => [] }));
@@ -115,7 +115,7 @@ beforeEach(() => {
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;
-  fixture.drafts = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -274,6 +274,15 @@ describe("creation relation controls", () => {
     expect(dialog.create).toHaveBeenCalledWith(expect.objectContaining({ smart_fill: true, relations: [expect.objectContaining({ target_id: objective.id })] }));
     expect(host.querySelector("textarea")?.value).toBe("");
     expect(host.textContent).not.toContain("Target objective");
+  });
+
+  it("keeps the relation picker beside Smart Fill when the account turned relation linking off", async () => {
+    fixture.smartFillRelations = false;
+    await mountDialog("issue");
+    // Smart Fill is on for the issue, but it will not link anything: the field stays manual.
+    expect(host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)).not.toBeNull();
+    await addRelation("related", "objective");
+    expect(host.textContent).toContain("Target objective");
   });
 
   it.each(["issue", "objective"] as const)("saves and restores a %s draft with only relations", async (kind) => {

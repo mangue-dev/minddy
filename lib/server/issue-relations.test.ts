@@ -22,6 +22,7 @@ const service = {
     let operation = "select";
     let values: Row[] = [];
     let columns: string[] | undefined;
+    let window: [number, number] | null = null;
     const project = (rows: Row[]) => {
       const selected = columns;
       return selected
@@ -44,7 +45,8 @@ const service = {
       if (operation === "delete") {
         tables[table] = rows.filter((row) => !matches.includes(row));
       }
-      return { data: project(matches), error: null };
+      const ordered = window ? [...matches].sort((a, b) => String(a.id).localeCompare(String(b.id))) : matches;
+      return { data: project(window ? ordered.slice(window[0], window[1] + 1) : ordered), error: null };
     };
     const query = {
       select: (column?: string) => {
@@ -61,6 +63,11 @@ const service = {
       },
       in: (key: string, values: unknown[]) => {
         filters.push((row) => values.includes(row[key]));
+        return query;
+      },
+      order: () => query,
+      range: (from: number, to: number) => {
+        window = [from, to];
         return query;
       },
       insert: (input: Row | Row[]) => {
@@ -238,6 +245,16 @@ describe("relation access and legacy compatibility", () => {
     tables.issue_relations = [local, { ...local, id: "foreign", project_id: "other-project" }];
     const { project_id: _projectId, ...expected } = local;
     expect(await listIssueRelations(service as never, projectId)).toEqual({ relations: [expected] });
+  });
+
+  it("reads every page past the 1,000-row response cap", async () => {
+    tables.issue_relations = Array.from({ length: 2_345 }, (_, i) => ({
+      id: `r-${String(i).padStart(5, "0")}`, project_id: projectId, source_id: lowId, target_id: highId,
+      source_type: "issue", target_type: "issue", type: "blocks",
+    }));
+    const result = await listIssueRelations(service as never, projectId);
+    expect("relations" in result && result.relations).toHaveLength(2_345);
+    expect("relations" in result && new Set(result.relations.map((r) => r.id)).size).toBe(2_345);
   });
 
   it.each(types)("keeps implicit issue endpoints and legacy rows working for %s", async (type) => {

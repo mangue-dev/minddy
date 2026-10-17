@@ -3265,7 +3265,7 @@
     "file": "lib/server/embeddings.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 225,
+    "line": 229,
     "storage": false
   },
   {
@@ -6723,42 +6723,49 @@
     "file": "lib/server/issue-embedding-store.ts",
     "operation": "from",
     "resource": "issue_encryption_scopes",
-    "line": 45,
+    "line": 53,
     "storage": false
   },
   {
     "file": "lib/server/issue-embedding-store.ts",
     "operation": "from",
     "resource": "issue_embeddings",
-    "line": 118,
+    "line": 133,
     "storage": false
   },
   {
     "file": "lib/server/issue-embedding-store.ts",
     "operation": "from",
     "resource": "issue_embeddings",
-    "line": 140,
+    "line": 139,
     "storage": false
   },
   {
     "file": "lib/server/issue-embedding-store.ts",
     "operation": "from",
     "resource": "issue_embeddings",
-    "line": 145,
+    "line": 155,
     "storage": false
   },
   {
     "file": "lib/server/issue-embedding-store.ts",
     "operation": "from",
     "resource": "issue_embeddings",
-    "line": 163,
+    "line": 174,
     "storage": false
   },
   {
     "file": "lib/server/issue-embedding-store.ts",
     "operation": "from",
     "resource": "issue_embeddings",
-    "line": 194,
+    "line": 204,
+    "storage": false
+  },
+  {
+    "file": "lib/server/issue-embedding-store.ts",
+    "operation": "from",
+    "resource": "issue_embeddings",
+    "line": 235,
     "storage": false
   },
   {
@@ -6919,77 +6926,77 @@
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 397,
+    "line": 437,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 402,
+    "line": 442,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "issue_relation_inferences",
-    "line": 631,
+    "line": 687,
     "storage": false
   },
   {
     "file": "lib/server/issue-relation-inference.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 743,
+    "line": 832,
     "storage": false
   },
   {
     "file": "lib/server/issue-relations.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 113,
+    "line": 121,
     "storage": false
   },
   {
     "file": "lib/server/issue-relations.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 130,
+    "line": 143,
     "storage": false
   },
   {
     "file": "lib/server/issue-relations.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 146,
+    "line": 159,
     "storage": false
   },
   {
     "file": "lib/server/issue-relations.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 238,
+    "line": 251,
     "storage": false
   },
   {
     "file": "lib/server/issue-relations.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 249,
+    "line": 262,
     "storage": false
   },
   {
     "file": "lib/server/issue-relations.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 311,
+    "line": 324,
     "storage": false
   },
   {
     "file": "lib/server/issue-relations.ts",
     "operation": "from",
     "resource": "issue_relations",
-    "line": 322,
+    "line": 335,
     "storage": false
   },
   {

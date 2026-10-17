@@ -73,7 +73,7 @@ import type {
   IssuePriority,
   IssueEffort,
 } from "@/lib/issue-constants";
-import { resolveSmartFill, resolveSmartFillScope } from "@/lib/smart-fill";
+import { resolveSmartFill, resolveSmartFillRelations, resolveSmartFillScope } from "@/lib/smart-fill";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import type {
   Category,
@@ -235,6 +235,9 @@ export function CreateIssueDialog({
    * where something is going to fill it, reads like an oversight.
    */
   const smartFillAvailable = resolveSmartFill(user?.user_metadata);
+  // Smart Fill links relations only when the account lets it (MIN-717):
+  // with "Link related issues" off, relations stay a manual field.
+  const smartFillLinksRelations = resolveSmartFillRelations(user?.user_metadata);
   const smartFillDefault = resolveSmartFillScope(
     user?.user_metadata,
     (initialStatus ?? DEFAULTS.status) === "triage" ? "triage" : "created",
@@ -835,9 +838,10 @@ export function CreateIssueDialog({
                   </CreationProperty>
                 )}
                 {/* Smart Fill also links related issues after the save (MIN-717):
-                    the picker leaves with the other inferred fields. Relations
-                    already chosen stay visible as pills above the title. */}
-                {!smartFill && (
+                    the picker leaves with the other inferred fields, unless the
+                    account turned relation linking off. Relations already
+                    chosen stay visible as pills above the title. */}
+                {!(smartFill && smartFillLinksRelations) && (
                   <CreationProperty mobile={mobile} label={tRelations("relations")}>
                     <CreationRelationsCompact
                       projectId={projectId}

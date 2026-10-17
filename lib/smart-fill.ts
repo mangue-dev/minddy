@@ -59,10 +59,11 @@ export function resolveSmartFillScope(
  * Both are enabled by default, read like the others (only an explicit `false`
  * disables), and belong to the account that pays the pass: the creator for a
  * new issue (Smart Fill provenance), the editor for an edit, the project
- * owner for the background backfill. Work already queued re-reads them
- * before spending, so turning one off cancels what has not run yet. Vectors
- * already stored stay encrypted with the project until the issue's content
- * changes or the issue is purged.
+ * owner for the background backfill — which also honors the issue author's
+ * `issue_indexing` refusal. Work already queued re-reads them before
+ * spending, so turning one off cancels what has not run yet. A vector
+ * already stored stays while the text is unchanged, and is deleted as soon as
+ * the content changes or the issue is purged.
  */
 export const SMART_FILL_RELATIONS_META_KEY = "smart_fill_relations";
 export const ISSUE_INDEXING_META_KEY = "issue_indexing";

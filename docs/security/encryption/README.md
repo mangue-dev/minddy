@@ -2565,8 +2565,14 @@ policy, and the anon and authenticated grants are revoked.
     description are encrypted together under the project content key by
     `lib/server/issue-embedding-store.ts`. That module is the only reader and
     writer the access check allows.
-  - The table follows the issue's own encryption rule: a project whose issues
-    are encrypted gets encrypted vectors.
+  - The table follows the issue's encryption rule: a project with content
+    encryption on, or with an issue encryption scope, gets encrypted vectors.
+    Unlike `encodeIssue`, there is no shortcut when the root key is absent.
+    In that case the write fails and no vector is stored.
+  - Vectors stored in clear before their project started encrypting are
+    re-encoded by the hourly `/api/cron/issue-index` walk, even while the
+    feature is off. The update is a compare-and-swap on the content version
+    and the clear state, so a concurrent rewrite wins. No AI call is made.
   - `content_version` is a random UUID that changes whenever the fingerprint
     changes. It carries no content.
   - Similarity is computed in the server after decryption. Postgres holds no
@@ -2577,10 +2583,15 @@ policy, and the anon and authenticated grants are revoked.
 
 Both tables cascade with the issue and the project. A trashed issue keeps its
 vector, but retrieval only returns issues that are not deleted. A purge
-removes the vector together with the issue.
+removes the vector together with the issue. A vector of former text is deleted
+as soon as the issue's content changes, in every index version, even when no
+new vector can be created.
 
-Migration `20270109200052` is additive and was not applied to a remote database
-by this change.
+Migration `20270109200052` is additive. It was applied to the production
+database on 2026-10-17, after a dry run, and the result was verified there:
+both tables have RLS on, no policies and no anon or authenticated grants, and
+the widened `ai_usage_feature_check` accepts `issue_embedding` and
+`issue_relation`.
 
 ## Numo worker completion authority (2026-10-11)
 

@@ -10,6 +10,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   meta: {} as Record<string, unknown>,
+  metaByUser: {} as Record<string, Record<string, unknown>>,
+  // Subject title seen by list reads (the post-embedding freshness check), when set.
+  raceTitle: null as string | null,
+  projects: [] as Record<string, unknown>[],
+  cursor: null as string | null,
   issues: new Map<string, Record<string, unknown>>(),
   // Content returned by the SECOND subject read (stale check), when set.
   staleTitle: null as string | null,
@@ -26,13 +31,15 @@ const h = vi.hoisted(() => ({
   requestEmbeddings: vi.fn(),
   addIssueRelation: vi.fn(),
   writeIssueEmbedding: vi.fn(),
+  reencodeClearEmbedding: vi.fn(),
+  deleted: [] as string[],
 }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: (fn: () => unknown) => void fn() }));
 vi.mock("@/lib/server/app-config", () => ({
   getAppConfigValues: async () => ({}),
-  setAppConfigValue: async () => {},
+  setAppConfigValue: async (_key: string, value: string) => { h.cursor = value; },
 }));
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => h.budget }));
 vi.mock("@/lib/server/project-access", () => ({
@@ -51,6 +58,11 @@ vi.mock("@/lib/server/embeddings", () => ({
 vi.mock("@/lib/server/issue-embedding-store", () => ({
   listIssueEmbeddings: async (_s: unknown, ids: string[]) =>
     h.embeddings.filter((row) => ids.includes(row.issue_id as string)),
+  deleteIssueEmbeddingVersions: async (_s: unknown, issueId: string, versions: string[]) => {
+    h.deleted.push(...versions.map((version) => `${issueId}@${version}`));
+    h.embeddings = h.embeddings.filter((row) => !(row.issue_id === issueId && versions.includes(row.index_version as string)));
+  },
+  reencodeClearEmbedding: h.reencodeClearEmbedding,
   listProjectEmbeddings: async (_s: unknown, _p: string, version: string) =>
     h.embeddings.filter((row) => row.index_version === version),
   writeIssueEmbedding: h.writeIssueEmbedding,
@@ -62,16 +74,20 @@ vi.mock("@/lib/server/issue-relations", () => ({
 vi.mock("@/lib/server/decisions/runner", () => ({ runDecision: h.runDecision }));
 
 /** A thenable query over a list, enough for the filters this module uses. */
-function query(rows: () => Record<string, unknown>[]) {
+function query(
+  rows: () => Record<string, unknown>[],
+  listRows: (rows: Record<string, unknown>[]) => Record<string, unknown>[] = (r) => r,
+) {
   const filters: Array<(row: Record<string, unknown>) => boolean> = [];
   let max = Infinity;
+  let sortBy: string | null = null;
   const q = {
     select: () => q,
     eq(c: string, v: unknown) { filters.push((r) => r[c] === v); return q; },
     is(c: string, v: unknown) { filters.push((r) => (r[c] ?? null) === v); return q; },
     in(c: string, v: unknown[]) { filters.push((r) => v.includes(r[c])); return q; },
     gt(c: string, v: string) { filters.push((r) => String(r[c]) > v); return q; },
-    order: () => q,
+    order(c: string) { sortBy = c; return q; },
     limit(n: number) { max = n; return q; },
     upsert(values: Record<string, unknown>[]) { h.upserts.push(values); return Promise.resolve({ error: null }); },
     async maybeSingle() {
@@ -79,8 +95,9 @@ function query(rows: () => Record<string, unknown>[]) {
       return { data: found[0] ?? null, error: null };
     },
     then(resolve: (v: unknown) => unknown) {
-      return Promise.resolve({ data: rows().filter((r) => filters.every((f) => f(r))).slice(0, max), error: null })
-        .then(resolve);
+      const found = rows().filter((r) => filters.every((f) => f(r)));
+      if (sortBy) found.sort((a, b) => String(a[sortBy!]).localeCompare(String(b[sortBy!])));
+      return Promise.resolve({ data: listRows(found).slice(0, max), error: null }).then(resolve);
     },
   };
   return q;
@@ -88,7 +105,10 @@ function query(rows: () => Record<string, unknown>[]) {
 
 vi.mock("@/lib/server/issue-store", () => ({
   issueStore: () => {
-    const q = query(() => [...h.issues.values()]);
+    // List reads (not single reads) see the racing edit: that is the
+    // freshness check made after the embedding call.
+    const q = query(() => [...h.issues.values()], (rows) => rows.map((row) =>
+      row.id === "subject" && h.raceTitle ? { ...row, title: h.raceTitle } : row));
     const maybeSingle = q.maybeSingle.bind(q);
     q.maybeSingle = async () => {
       const result = await maybeSingle();
@@ -103,9 +123,12 @@ vi.mock("@/lib/server/issue-store", () => ({
 }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
-    auth: { admin: { getUserById: async () => ({ data: { user: { user_metadata: h.meta } }, error: null }) } },
+    auth: { admin: { getUserById: async (id: string) =>
+      ({ data: { user: { user_metadata: h.metaByUser[id] ?? h.meta } }, error: null }) } },
     from: (table: string) =>
-      query(() => (table === "issue_embeddings" ? h.embeddings : table === "issue_relation_inferences" ? h.inferences : [])),
+      query(() => (table === "issue_embeddings" ? h.embeddings
+        : table === "issue_relation_inferences" ? h.inferences
+          : table === "projects" ? h.projects : [])),
   }),
 }));
 
@@ -118,13 +141,15 @@ import {
   rankVectorNeighbours,
   relationScopeAllows,
   runIssueAiPass,
+  runIssueIndexBackfill,
   wouldCloseBlockingCycle,
 } from "./issue-relation-inference";
 
 const VERSION = "openrouter:openai/text-embedding-3-small:3";
 
-function issue(id: string, title: string, description: string | null = null, status = "todo") {
-  h.issues.set(id, { id, project_id: "p1", number: Number(id.replace(/\D/g, "") || 1), title, description, status, deleted_at: null });
+function issue(id: string, title: string, description: string | null = null, status = "todo", createdBy = "u1") {
+  h.issues.set(id, { id, project_id: "p1", number: Number(id.replace(/\D/g, "") || 1), title, description, status,
+    deleted_at: null, created_by: createdBy });
 }
 
 function indexRow(id: string, embedding: number[], version = VERSION) {
@@ -141,6 +166,10 @@ const pass = () =>
 
 beforeEach(() => {
   h.meta = {};
+  h.metaByUser = {};
+  h.raceTitle = null;
+  h.projects = [{ id: "p1", owner_id: "owner", deleted_at: null }];
+  h.cursor = null;
   h.issues = new Map();
   h.staleTitle = null;
   h.subjectReads = 0;
@@ -160,6 +189,8 @@ beforeEach(() => {
     ok: true, relation: { id: `rel-${input.targetId}`, source_id: input.sourceId, target_id: input.targetId, type: "related" },
   }));
   h.writeIssueEmbedding.mockReset().mockResolvedValue(undefined);
+  h.reencodeClearEmbedding.mockReset().mockResolvedValue(false);
+  h.deleted = [];
   issue("subject", "Add SSO login", "Use the new auth provider for sign-in.");
 });
 
@@ -201,6 +232,15 @@ describe("pure helpers", () => {
     expect([...dismissedCandidates("s", rows)]).toEqual(["x"]);
     expect(cachedVerdict(rows, "s", "1", "y", "3")).toBe("blocked_by");
     expect(cachedVerdict(rows, "s", "changed", "y", "3")).toBeNull();
+  });
+
+  it("never lets a member's explicit choice override the owner's triage refusal", () => {
+    const ownerRefusesTriage = { smart_fill_triage: false };
+    expect(relationScopeAllows("created", "triage", ownerRefusesTriage, true,
+      { ownerBilledTriage: true, actorId: "member", payerId: "owner" })).toBe(false);
+    // The owner promoting feedback themselves may still opt this issue in.
+    expect(relationScopeAllows("created", "triage", ownerRefusesTriage, true,
+      { ownerBilledTriage: true, actorId: "owner", payerId: "owner" })).toBe(true);
   });
 
   it("applies the creation scopes to creations and the relation switch to edits", () => {
@@ -339,5 +379,97 @@ describe("runIssueAiPass", () => {
     const result = await pass();
     expect(result.indexed).toBe(false);
     expect(result.skipped).toBe("no_candidates");
+  });
+
+  it("keeps another embedding space of the same text and drops the ones of former text", async () => {
+    const hash = contentFingerprint("Add SSO login", "Use the new auth provider for sign-in.");
+    h.embeddings.push(
+      { issue_id: "subject", project_id: "p1", index_version: "openai:text-embedding-3-small:3", content_version: "byok",
+        dimensions: 3, embedding: [1, 0, 0], content_hash: hash },
+      { issue_id: "subject", project_id: "p1", index_version: "google:gemini-embedding-001:3", content_version: "old",
+        dimensions: 3, embedding: [0, 1, 0], content_hash: "former-text" },
+    );
+    await pass();
+    expect(h.requestEmbeddings).toHaveBeenCalledTimes(1);
+    const [, , stale] = h.writeIssueEmbedding.mock.calls[0];
+    expect(stale).toEqual(["google:gemini-embedding-001:3"]);
+  });
+
+  it("does not write a vector of text that changed while the embedding call ran", async () => {
+    h.raceTitle = "Edited during the call";
+    await pass();
+    expect(h.requestEmbeddings).toHaveBeenCalledTimes(1);
+    expect(h.writeIssueEmbedding).not.toHaveBeenCalled();
+  });
+
+  it("drops vectors of former text without paying when indexing is off", async () => {
+    h.meta = { issue_indexing: false, smart_fill_relations: false };
+    indexRow("subject", [1, 0, 0]);
+    h.embeddings[0].content_hash = "former-text";
+    const result = await pass();
+    expect(result.skipped).toBe("opted_out");
+    expect(h.deleted).toEqual([`subject@${VERSION}`]);
+    expect(h.requestEmbeddings).not.toHaveBeenCalled();
+  });
+
+  it("respects the author's indexing refusal when someone else edits the issue", async () => {
+    issue("subject", "Add SSO login", "Use the new auth provider for sign-in.", "todo", "author");
+    h.metaByUser.author = { issue_indexing: false };
+    await pass();
+    expect(h.requestEmbeddings).not.toHaveBeenCalled();
+  });
+
+  it("re-decides a candidate whose vector predates its current text", async () => {
+    issue("c2", "Single sign-on for enterprise customers");
+    indexRow("subject", [1, 0, 0]);
+    indexRow("c2", [0.95, 0.05, 0]);
+    // c2 was edited without reindexing: its stored fingerprint is outdated.
+    h.embeddings[1].content_hash = "former-text";
+    h.inferences = [{ issue_id: "subject", candidate_id: "c2", issue_version: "v-subject", candidate_version: "v-c2",
+      verdict: "none", relation_id: null, applied_at: null }];
+    h.decision = { candidate_1: { value: "related", probability: null, confidence: null } };
+    const result = await pass();
+    expect(h.runDecision).toHaveBeenCalledTimes(1);
+    expect(result.applied).toBe(1);
+    expect(h.upserts[0][0].candidate_version).not.toBe("v-c2");
+  });
+
+  it("applies at most three relations in one pass", async () => {
+    const decision: Record<string, { value: string; probability: null; confidence: null }> = {};
+    for (let i = 0; i < 5; i++) {
+      issue(`c${i + 10}`, `SSO variant ${i}`);
+      indexRow(`c${i + 10}`, [1, 0.01 * (i + 1), 0]);
+      decision[`candidate_${i + 1}`] = { value: "related", probability: null, confidence: null };
+    }
+    h.decision = decision;
+    const result = await pass();
+    expect(result).toMatchObject({ candidates: 5, applied: 3 });
+    expect(h.addIssueRelation).toHaveBeenCalledTimes(3);
+    expect(h.upserts[0]).toHaveLength(5);
+  });
+});
+
+describe("runIssueIndexBackfill", () => {
+  it("indexes for the project owner, skips authors who refused, re-encodes clear rows and saves its cursor", async () => {
+    issue("c2", "Second issue", null, "todo", "member");
+    issue("c3", "Third issue", null, "todo", "refuser");
+    h.metaByUser.refuser = { issue_indexing: false };
+    indexRow("c2", [0, 1, 0]);
+    h.embeddings[0].stored_clear = true;
+    h.reencodeClearEmbedding.mockResolvedValue(true);
+
+    const result = await runIssueIndexBackfill(100);
+
+    expect(result).toMatchObject({ scanned: 3, reencoded: 1, wrapped: true });
+    const texts = h.requestEmbeddings.mock.calls.flatMap((call) => call[0] as string[]);
+    expect(texts.some((text) => text.startsWith("Third issue"))).toBe(false);
+    expect(h.requestEmbeddings.mock.calls[0][1]).toMatchObject({ billedUserId: "owner" });
+    expect(h.cursor).toBe("");
+  });
+
+  it("resumes after the last issue of a full page", async () => {
+    issue("c2", "Second issue");
+    await runIssueIndexBackfill(1);
+    expect(h.cursor).toBe("c2");
   });
 });

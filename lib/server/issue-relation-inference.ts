@@ -12,8 +12,10 @@ import { getProjectAccess } from "@/lib/server/project-access";
 import { cosineSimilarity, requestEmbeddings } from "@/lib/server/embeddings";
 import { issueStore } from "@/lib/server/issue-store";
 import {
+  deleteIssueEmbeddingVersions,
   listIssueEmbeddings,
   listProjectEmbeddings,
+  reencodeClearEmbedding,
   writeIssueEmbedding,
   type IssueEmbeddingRow,
 } from "@/lib/server/issue-embedding-store";
@@ -69,6 +71,8 @@ import {
 export const MIN_CANDIDATE_SIMILARITY = 0.35;
 /** Relations a single pass may apply. */
 export const MAX_APPLIED_RELATIONS = 3;
+/** Neighbours considered before dismissed, linked and closed ones are filtered out. */
+const NEIGHBOUR_POOL = 30;
 /** Recent issues the lexical fallback reads, at most. */
 const LEXICAL_POOL = 300;
 /** Below this overlap score, a lexical neighbour is not a candidate. */
@@ -85,6 +89,7 @@ interface IssueContent {
   title: string;
   description: string | null;
   status: string;
+  created_by?: string | null;
 }
 
 /** Fingerprint of the indexed content. Stored encrypted only, never compared in SQL. */
@@ -213,7 +218,7 @@ async function readMeta(userId: string): Promise<Record<string, unknown> | null>
 
 async function readIssue(service: SupabaseClient, issueId: string, projectId: string): Promise<IssueContent | null> {
   const { data, error } = await issueStore(service)
-    .select("id, project_id, number, title, description, status")
+    .select("id, project_id, number, title, description, status, created_by")
     .eq("id", issueId)
     .eq("project_id", projectId)
     .is("deleted_at", null)
@@ -232,22 +237,49 @@ async function embeddingTarget(userId: string): Promise<{ provider: string; mode
   return null;
 }
 
-async function storedForPrefix(
+/**
+ * Remove the issue's vectors that no longer describe its content, in every
+ * index version. Runs whether or not a new vector can be paid for: a stale
+ * vector must not keep answering searches for text the issue no longer has.
+ */
+export async function purgeStaleVectors(
   service: SupabaseClient,
-  issueIds: string[],
-  prefix: string,
-): Promise<Map<string, IssueEmbeddingRow>> {
-  const found = new Map<string, IssueEmbeddingRow>();
-  for (const row of await listIssueEmbeddings(service, issueIds)) {
-    if (row.index_version.startsWith(`${prefix}:`)) found.set(row.issue_id, row);
+  issue: Pick<IssueContent, "id" | "title" | "description">,
+): Promise<void> {
+  const hash = contentFingerprint(issue.title, issue.description);
+  const stale = (await listIssueEmbeddings(service, [issue.id]))
+    .filter((row) => row.content_hash !== hash)
+    .map((row) => row.index_version);
+  await deleteIssueEmbeddingVersions(service, issue.id, stale);
+}
+
+/** Current fingerprints of these issues, to refuse writing a vector of former text. */
+async function currentFingerprints(
+  service: SupabaseClient,
+  projectId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  const { data, error } = await issueStore(service)
+    .select("id, title, description")
+    .eq("project_id", projectId)
+    .is("deleted_at", null)
+    .in("id", ids);
+  const result = new Map<string, string>();
+  if (error) return result;
+  for (const row of (data ?? []) as Pick<IssueContent, "id" | "title" | "description">[]) {
+    result.set(row.id, contentFingerprint(row.title, row.description));
   }
-  return found;
+  return result;
 }
 
 /**
  * Index a batch of issues of ONE project for ONE payer. Unchanged content
  * reuses its row (no call, no charge); the rest goes into a single embeddings
- * request. Returns the current row per issue id, for the caller's retrieval.
+ * request.
+ * Versions computed from former content are removed; versions of the SAME
+ * content in other embedding spaces are kept. A vector whose issue changed
+ * while the call ran is not written — the edit's own pass writes the right
+ * one. Returns the current row per issue id, for the caller's retrieval.
  */
 export async function indexIssues(
   service: SupabaseClient,
@@ -260,19 +292,29 @@ export async function indexIssues(
     console.warn("[issue-index] skipped: no_runtime");
     return new Map();
   }
-  const prefix = `${target.provider}:${target.model}`;
-  const existing = await storedForPrefix(service, issues.map((i) => i.id), prefix);
+  const prefix = `${target.provider}:${target.model}:`;
+  const stored = await listIssueEmbeddings(service, issues.map((i) => i.id));
   const current = new Map<string, IssueEmbeddingRow>();
-  const stale: { issue: IssueContent; hash: string }[] = [];
+  const stale: { issue: IssueContent; hash: string; outdated: string[] }[] = [];
   for (const issue of issues) {
     const hash = contentFingerprint(issue.title, issue.description);
-    const row = existing.get(issue.id);
-    if (row && row.content_hash === hash) current.set(issue.id, row);
-    else stale.push({ issue, hash });
+    const rows = stored.filter((row) => row.issue_id === issue.id);
+    const outdated = rows.filter((row) => row.content_hash !== hash).map((row) => row.index_version);
+    const own = rows.find((row) => row.index_version.startsWith(prefix) && row.content_hash === hash);
+    if (own) {
+      current.set(issue.id, own);
+      await deleteIssueEmbeddingVersions(service, issue.id, outdated);
+    } else {
+      stale.push({ issue, hash, outdated });
+    }
   }
   if (stale.length === 0) return current;
+  // Former-content vectors go now, even if no new one can be paid for below.
+  const dropOutdated = () =>
+    Promise.all(stale.map(({ issue, outdated }) => deleteIssueEmbeddingVersions(service, issue.id, outdated)));
   if (!(await hasUsageBudget(payerId, "automations", "issue_embedding_model"))) {
     console.warn("[issue-index] skipped: budget_exhausted");
+    await dropOutdated();
     return current;
   }
   const batch = await requestEmbeddings(
@@ -289,31 +331,29 @@ export async function indexIssues(
   );
   if (!batch) {
     console.warn("[issue-index] skipped: provider_failed");
+    await dropOutdated();
     return current;
   }
-  for (const [i, { issue, hash }] of stale.entries()) {
+  const fresh = await currentFingerprints(service, projectId, stale.map(({ issue }) => issue.id));
+  for (const [i, { issue, hash, outdated }] of stale.entries()) {
     const vector = batch.vectors[i];
-    if (!vector) continue;
-    const version = indexVersion(batch.provider, batch.model, vector.length);
-    const previous = existing.get(issue.id);
+    if (!vector || fresh.get(issue.id) !== hash) {
+      await deleteIssueEmbeddingVersions(service, issue.id, outdated);
+      continue;
+    }
     const row: IssueEmbeddingRow = {
       issue_id: issue.id,
       project_id: projectId,
-      index_version: version,
-      // A new content gets a new version id, so cached decisions on the old
-      // text can never be reused for the new one.
-      content_version:
-        previous && previous.content_hash === hash && previous.index_version === version
-          ? previous.content_version
-          : randomUUID(),
+      index_version: indexVersion(batch.provider, batch.model, vector.length),
+      // New text in this space gets a new version id, so decisions cached on
+      // the former text can never be reused for it.
+      content_version: randomUUID(),
       dimensions: vector.length,
       embedding: vector,
       content_hash: hash,
     };
     try {
-      // A new vector means this version had none or an outdated one: any
-      // other version of the issue may hold former content, so it goes.
-      await writeIssueEmbedding(service, row, true);
+      await writeIssueEmbedding(service, row, outdated);
       current.set(issue.id, row);
     } catch {
       console.error("[issue-index] write failed");
@@ -470,15 +510,26 @@ export async function runIssueAiPass(input: {
     // switch off cancels whatever has not run yet.
     const meta = await readMeta(input.payerId);
     if (!meta) return { ...result, skipped: "no_account" };
-    const indexing = resolveIssueIndexing(meta);
+    let indexing = resolveIssueIndexing(meta);
     const relations = input.inferRelations && platform.relations && resolveSmartFillRelations(meta);
-    if (!indexing && !relations) return { ...result, skipped: "opted_out" };
 
     const service = getServiceClient();
     const subject = await readIssue(service, input.issueId, input.projectId);
     if (!subject) return { ...result, skipped: "issue_gone" };
     const fingerprint = contentFingerprint(subject.title, subject.description);
+    // The author's refusal of indexing holds even when someone else edits.
+    if (indexing && subject.created_by && subject.created_by !== input.payerId) {
+      const authorMeta = await readMeta(subject.created_by);
+      if (authorMeta && !resolveIssueIndexing(authorMeta)) indexing = false;
+    }
+    if (!indexing && !relations) {
+      await purgeStaleVectors(service, subject);
+      return { ...result, skipped: "opted_out" };
+    }
 
+    // Indexing off still removes vectors of former text: no new vector is
+    // created, but none may keep describing content the issue no longer has.
+    if (!indexing) await purgeStaleVectors(service, subject);
     const indexed = indexing
       ? await indexIssues(service, input.projectId, input.payerId, [subject])
       : new Map<string, IssueEmbeddingRow>();
@@ -499,18 +550,17 @@ export async function runIssueAiPass(input: {
     // Vector neighbours in the SAME index version, then lexical ones for the
     // issues that version has not indexed (or for everything, without a vector).
     const neighbours: Neighbour[] = [];
-    const versions = new Map<string, string>();
-    let indexedIds = new Set<string>();
+    const vectorRows = new Map<string, IssueEmbeddingRow>();
     if (own) {
       const rows = await listProjectEmbeddings(service, input.projectId, own.index_version);
-      indexedIds = new Set(rows.map((r) => r.issue_id));
-      for (const r of rows) versions.set(r.issue_id, r.content_version);
+      for (const row of rows) vectorRows.set(row.issue_id, row);
       for (const n of rankVectorNeighbours(own.embedding, rows, subject.id)) {
-        if (!linked.has(n.id)) neighbours.push({ ...n, version: versions.get(n.id) ?? null });
-        if (neighbours.length >= MAX_RELATION_CANDIDATES * 3) break;
+        if (!linked.has(n.id)) neighbours.push({ ...n, version: vectorRows.get(n.id)?.content_version ?? null });
+        if (neighbours.length >= NEIGHBOUR_POOL) break;
       }
     }
-    if (neighbours.length < MAX_RELATION_CANDIDATES * 3) {
+    const indexedIds = new Set(vectorRows.keys());
+    if (neighbours.length < NEIGHBOUR_POOL) {
       neighbours.push(...await lexicalNeighbours(service, subject, new Set([...linked, ...indexedIds])));
     }
     if (neighbours.length === 0) return { ...result, skipped: "no_candidates" };
@@ -524,7 +574,13 @@ export async function runIssueAiPass(input: {
       const candidate = alive.get(n.id);
       if (!candidate || seen.has(n.id) || dismissed.has(n.id) || linked.has(n.id)) continue;
       seen.add(n.id);
-      chosen.push({ candidate, version: n.version ?? randomUUID(), score: n.score });
+      // A candidate whose vector predates its current text (edited without
+      // reindexing: indexing off, repository sync, budget) gets a throwaway
+      // version: no verdict cached on its former text is reused, and the new
+      // verdict is never filed under the outdated version.
+      const vector = vectorRows.get(n.id);
+      const fresh = vector && vector.content_hash === contentFingerprint(candidate.title, candidate.description);
+      chosen.push({ candidate, version: fresh ? vector.content_version : randomUUID(), score: n.score });
       if (chosen.length >= MAX_RELATION_CANDIDATES) break;
     }
     result.candidates = chosen.length;
@@ -676,26 +732,35 @@ export function scheduleIssueAiPass(input: {
       projectId: input.projectId,
       projectName: input.projectName ?? "this project",
       payerId: account.userId,
-      inferRelations: relationScopeAllows(input.trigger, account.scope, account.meta, input.explicit),
+      inferRelations: relationScopeAllows(input.trigger, account.scope, account.meta, input.explicit, {
+        ownerBilledTriage: input.ownerBilledTriage === true,
+        actorId: input.actorId,
+        payerId: account.userId,
+      }),
     });
   });
 }
 
 /**
  * Whether the relation half may run for this trigger. A creation follows the
- * Smart Fill creation scopes (an explicit per-issue "on" re-enables a disabled
- * scope, an explicit "off" always wins); an edit follows the relation switch
- * alone. Pure.
+ * Smart Fill creation scopes: an explicit per-issue "off" always wins, and an
+ * explicit "on" re-enables a disabled scope only for the payer's own choice —
+ * a member promoting feedback into the owner's triage cannot override the
+ * owner's refusal (the same rule as `resolveSmartFillPayer`). An edit follows
+ * the relation switch alone. Pure.
  */
 export function relationScopeAllows(
   trigger: IssueAiTrigger,
   scope: SmartFillScope,
   meta: Record<string, unknown>,
   explicit: unknown,
+  provenance: { ownerBilledTriage?: boolean; actorId?: string | null; payerId?: string } = {},
 ): boolean {
   if (explicit === false || !resolveSmartFill(meta)) return false;
   if (trigger === "edited") return true;
-  return explicit === true || resolveSmartFillScope(meta, scope);
+  const canOverrideScope =
+    explicit === true && (!provenance.ownerBilledTriage || provenance.actorId === provenance.payerId);
+  return canOverrideScope || resolveSmartFillScope(meta, scope);
 }
 
 // ── Backfill ────────────────────────────────────────────────────────────────
@@ -704,7 +769,8 @@ const BACKFILL_CURSOR_KEY = "issue_index_backfill_cursor";
 
 /**
  * Bounded, resumable indexing of existing issues — imports, issues created
- * before this feature, and issues of an index version an admin just replaced.
+ * before this feature, and issues of an index version an admin just replaced
+ * — and the encryption catch-up of vectors stored in clear.
  * Walks the issues by id from a cursor kept in `app_config`, `limit` per run,
  * grouped per project and billed to the project OWNER (the backfill has no
  * other nameable trigger), under the owner's indexing preference and budget.
@@ -716,15 +782,17 @@ const BACKFILL_CURSOR_KEY = "issue_index_backfill_cursor";
 export async function runIssueIndexBackfill(limit = 100): Promise<{
   scanned: number;
   indexed: number;
+  reencoded: number;
   wrapped: boolean;
 }> {
+  // With the feature turned off, the walk still converts clear vectors to
+  // encrypted ones; it only stops creating new vectors.
   const platform = await platformEnabled();
-  if (!platform.indexing) return { scanned: 0, indexed: 0, wrapped: false };
   const service = getServiceClient();
   const cfg = await getAppConfigValues([BACKFILL_CURSOR_KEY]).catch(() => ({}) as Record<string, string | null>);
   const cursor = cfg[BACKFILL_CURSOR_KEY] ?? "";
   let query = issueStore(service)
-    .select("id, project_id, number, title, description, status")
+    .select("id, project_id, number, title, description, status, created_by")
     .is("deleted_at", null)
     .order("id", { ascending: true })
     .limit(limit);
@@ -734,14 +802,33 @@ export async function runIssueIndexBackfill(limit = 100): Promise<{
   const issues = (data ?? []) as IssueContent[];
   const wrapped = issues.length < limit;
 
+  // Encryption catch-up first: vectors written in clear before their project
+  // started encrypting are re-encoded, in every index version. No AI call, so
+  // neither preferences nor budgets apply.
+  let reencoded = 0;
+  if (issues.length > 0) {
+    for (const row of await listIssueEmbeddings(service, issues.map((issue) => issue.id))) {
+      if (row.stored_clear && (await reencodeClearEmbedding(service, row))) reencoded++;
+    }
+  }
+
   const byProject = new Map<string, IssueContent[]>();
   for (const issue of issues) {
     const list = byProject.get(issue.project_id) ?? [];
     list.push(issue);
     byProject.set(issue.project_id, list);
   }
+  // An author who refused indexing keeps that refusal in the backfill too,
+  // even though the project owner pays for it.
+  const creatorMeta = new Map<string, Record<string, unknown> | null>();
+  const authorAllows = async (issue: IssueContent & { created_by?: string | null }) => {
+    if (!issue.created_by) return true;
+    if (!creatorMeta.has(issue.created_by)) creatorMeta.set(issue.created_by, await readMeta(issue.created_by));
+    const meta = creatorMeta.get(issue.created_by);
+    return !meta || resolveIssueIndexing(meta);
+  };
   let indexed = 0;
-  for (const [projectId, projectIssues] of byProject) {
+  for (const [projectId, projectIssues] of platform.indexing ? byProject : new Map<string, IssueContent[]>()) {
     const { data: project } = await service
       .from("projects")
       .select("owner_id")
@@ -752,12 +839,18 @@ export async function runIssueIndexBackfill(limit = 100): Promise<{
     if (!ownerId) continue;
     const meta = await readMeta(ownerId);
     if (!meta || !resolveIssueIndexing(meta)) continue;
-    const rows = await indexIssues(service, projectId, ownerId, projectIssues);
+    const allowed: IssueContent[] = [];
+    for (const issue of projectIssues) {
+      if (await authorAllows(issue)) allowed.push(issue);
+      else await purgeStaleVectors(service, issue);
+    }
+    if (allowed.length === 0) continue;
+    const rows = await indexIssues(service, projectId, ownerId, allowed);
     indexed += rows.size;
   }
   const next = wrapped ? "" : issues[issues.length - 1]?.id ?? "";
   await setAppConfigValue(BACKFILL_CURSOR_KEY, next).catch(() =>
     console.error("[issue-index] cursor save failed")
   );
-  return { scanned: issues.length, indexed, wrapped };
+  return { scanned: issues.length, indexed, reencoded, wrapped };
 }
