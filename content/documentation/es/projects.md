@@ -182,7 +182,7 @@ Si una invitación no aparece, compara el correo invitado con la cuenta que ha i
 
 ## Transferir la propiedad {#transfer-ownership}
 
-Un proyecto tiene exactamente un propietario. Para cederlo, abre **Configuración del proyecto** → **Miembros** como propietario, elige **Transferir la propiedad** para un miembro existente y confirma. Solo un Miembro puede recibir la propiedad; invita antes a la persona o cambia un lector a Miembro. Después de la transferencia, sigues en el proyecto como Miembro.
+Un proyecto tiene exactamente un propietario. Para cederlo, abre **Configuración del proyecto** → **Miembros** como propietario, elige **Transferir la propiedad del proyecto** para un miembro existente y confirma. Solo un Miembro puede recibir la propiedad; invita antes a la persona o cambia un lector a Miembro. Después de la transferencia, sigues en el proyecto como Miembro.
 
 ### Qué cambia con la propiedad {#transfer-effects}
 

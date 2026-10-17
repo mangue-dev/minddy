@@ -182,7 +182,7 @@ Se um convite não aparecer, compare o e-mail convidado com a conta conectada e 
 
 ## Transferir a propriedade {#transfer-ownership}
 
-Um projeto tem exatamente um proprietário. Para passá-lo adiante, abra **Configurações do projeto** → **Membros** como proprietário, escolha **Transferir propriedade** para um membro existente e confirme. Só um Membro pode receber a propriedade; convide a pessoa ou mude um leitor para Membro antes. Depois da transferência, você continua no projeto como Membro.
+Um projeto tem exatamente um proprietário. Para passá-lo adiante, abra **Configurações do projeto** → **Membros** como proprietário, escolha **Transferir a propriedade do projeto** para um membro existente e confirme. Só um Membro pode receber a propriedade; convide a pessoa ou mude um leitor para Membro antes. Depois da transferência, você continua no projeto como Membro.
 
 ### O que muda com a propriedade {#transfer-effects}
 

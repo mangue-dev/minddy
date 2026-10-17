@@ -182,7 +182,7 @@ Comparez l’adresse invitée avec le compte connecté et vérifiez l’URL de l
 
 ## Transférer la propriété {#transfer-ownership}
 
-Un projet a exactement un propriétaire. Pour le céder, ouvrez **Paramètres du projet** → **Membres** en tant que propriétaire, choisissez **Transférer la propriété** pour un membre existant et confirmez. Seul un Membre peut recevoir la propriété : invitez d’abord la personne ou faites passer un lecteur en Membre. Après le transfert, vous restez dans le projet en tant que Membre.
+Un projet a exactement un propriétaire. Pour le céder, ouvrez **Paramètres du projet** → **Membres** en tant que propriétaire, choisissez **Transférer la propriété du projet** pour un membre existant et confirmez. Seul un Membre peut recevoir la propriété : invitez d’abord la personne ou faites passer un lecteur en Membre. Après le transfert, vous restez dans le projet en tant que Membre.
 
 ### Ce qui change avec la propriété {#transfer-effects}
 

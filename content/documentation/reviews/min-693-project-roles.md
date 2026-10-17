@@ -71,7 +71,7 @@ articles, but their images were not re-inspected against the new UI:
 
 - `project-members` (`projects`, `project-members.png`, all six locales) is
   stale. It shows the invitation form without a role choice and the member
-  list without role controls or **Transfer ownership**. A recapture in all six
+  list without role controls or **Transfer project ownership**. A recapture in all six
   locales remains open.
 - `project-settings-steps` (`project-general.png`) is unaffected by roles but
   still lacks the MIN-692 visibility group noted in that review.

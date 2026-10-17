@@ -182,7 +182,7 @@ If an invitation is absent, compare the invited email with the signed-in account
 
 ## Transfer ownership {#transfer-ownership}
 
-A project has exactly one owner. To hand it over, open **Project settings** → **Members** as owner, choose **Transfer ownership** for an existing member and confirm. Only a Member can receive ownership; invite the person or change a reader to Member first. After the transfer, you stay in the project as a Member.
+A project has exactly one owner. To hand it over, open **Project settings** → **Members** as owner, choose **Transfer project ownership** for an existing member and confirm. Only a Member can receive ownership; invite the person or change a reader to Member first. After the transfer, you stay in the project as a Member.
 
 ### What moves with ownership {#transfer-effects}
 

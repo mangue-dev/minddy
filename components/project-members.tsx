@@ -3,8 +3,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
+  CrownIcon,
   MoreHorizontalIcon,
   UserAdd01Icon,
+  UserRemove01Icon,
 } from "@hugeicons/core-free-icons";
 import { useId, useState } from "react";
 import Link from "@/components/app-link";
@@ -335,14 +337,16 @@ export function ProjectMembers({
                             <DropdownMenuContent align="end">
                               {m.role === "member" && (
                                 <DropdownMenuItem onSelect={() => setTransferTarget(m)}>
+                                  <HugeiconsIcon icon={CrownIcon} />
                                   {t("transferOwnership")}
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem
-                                className="text-destructive"
+                                variant="destructive"
                                 onSelect={() => setRemoveTarget(m)}
                               >
-                                {t("remove")}
+                                <HugeiconsIcon icon={UserRemove01Icon} />
+                                {t("removeFromProject")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

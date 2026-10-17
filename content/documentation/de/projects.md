@@ -182,7 +182,7 @@ Fehlt eine Einladung, vergleiche die eingeladene E-Mail-Adresse mit dem angemeld
 
 ## Eigentum übertragen {#transfer-ownership}
 
-Ein Projekt hat genau einen Eigentümer. Um es abzugeben, öffne als Eigentümer **Projekteinstellungen** → **Mitglieder**, wähle bei einem bestehenden Mitglied **Eigentum übertragen** und bestätige. Nur ein Mitglied kann das Eigentum erhalten; lade die Person zuerst ein oder ändere die Rolle eines Lesers auf Mitglied. Nach der Übertragung bleibst du als Mitglied im Projekt.
+Ein Projekt hat genau einen Eigentümer. Um es abzugeben, öffne als Eigentümer **Projekteinstellungen** → **Mitglieder**, wähle bei einem bestehenden Mitglied **Projekteigentum übertragen** und bestätige. Nur ein Mitglied kann das Eigentum erhalten; lade die Person zuerst ein oder ändere die Rolle eines Lesers auf Mitglied. Nach der Übertragung bleibst du als Mitglied im Projekt.
 
 ### Was mit dem Eigentum übergeht {#transfer-effects}
 
