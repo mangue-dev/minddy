@@ -39,6 +39,11 @@ export async function guardFeedbackComment(
     userId: string;
     /** `delete` opens team moderation; `edit` remains with the author. */
     mode: "edit" | "delete";
+    /** The caller may write project content (owner or member, MIN-693). A
+        public comment is board content: moderating it, or rewriting one's
+        own published reply, needs write access. Commenting readers keep
+        their internal notes. Defaults to the historical member behavior. */
+    canWrite?: boolean;
   }
 ): Promise<FeedbackCommentGuard> {
   const { data } = await commentStore(service, "comments")
@@ -50,6 +55,9 @@ export async function guardFeedbackComment(
     return { ok: false, status: 404 };
   }
 
+  if (data.visibility === "public" && params.canWrite === false) {
+    return { ok: false, status: 403 };
+  }
   if (params.mode === "delete" && data.visibility === "public") return { ok: true };
   // A visitor's words are not rewritten, even by the team.
   if (data.feedback_user_id !== null) return { ok: false, status: 403 };

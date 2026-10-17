@@ -3,8 +3,12 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 const h = vi.hoisted(() => ({ access: vi.fn(), getPage: vi.fn(), rpc: vi.fn(), event: vi.fn(), wake: vi.fn() }));
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: h.access }));
-vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage }));
+vi.mock("@/lib/server/project-access", async importOriginal => ({
+  ...await importOriginal<typeof import("./project-access")>(),
+  getProjectAccess: h.access,
+}));
+// The role-based write refusal (MIN-693) belongs to the pages core; these tests assert dispatch.
+vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage, pageWriteRefusal: async () => null }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({ rpc: h.rpc }) }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: (fn: () => Promise<void>) => fn() }));
 vi.mock("@/lib/server/page-activity", () => ({ recordPageEvent: h.event }));
@@ -49,7 +53,8 @@ async function call(surface: typeof surfaces[number], args: Record<string, unkno
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.access.mockResolvedValue({ project: { id: PROJECT }, isOwner: true });
+  h.access.mockResolvedValue({ project: { id: PROJECT }, isOwner: true, isMember: true,
+    role: "owner", canWrite: true, canComment: true });
   h.getPage.mockImplementation(async (id: string) => ({ ok: true, page: id === DATABASE ? page : {
     id: ENTRY, project_id: PROJECT, parent_id: DATABASE, property_values: {},
   } }));

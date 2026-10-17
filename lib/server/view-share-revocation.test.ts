@@ -10,7 +10,7 @@ const { deleteViewShare } = await import("@/lib/server/view-shares");
 
 beforeEach(() => {
   vi.resetAllMocks();
-  getProjectAccess.mockResolvedValue({ isOwner: true });
+  getProjectAccess.mockResolvedValue({ isOwner: true, canWrite: true, canComment: true });
   const query = {
     select: () => query,
     eq: () => query,

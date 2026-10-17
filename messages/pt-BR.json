@@ -298,7 +298,15 @@
     "pageDatabaseStale": "Esta coluna foi alterada. Confira o valor atual e tente novamente.",
     "pageDatabaseMove": "Esta página não pode ser movida para outro banco de dados com os valores atuais das suas colunas.",
     "pageDatabaseRestoreParent": "Restaure o banco de dados pai antes de restaurar esta entrada.",
-    "projectAutomationsRetired": "As automações do projeto foram substituídas por rotinas."
+    "projectAutomationsRetired": "As automações do projeto foram substituídas por rotinas.",
+    "readOnlyProject": "Você só pode consultar este projeto.",
+    "commentNotAllowed": "Você não pode comentar neste projeto.",
+    "invalidRole": "Esta função não é válida.",
+    "memberNotFound": "Esta pessoa não faz mais parte do projeto.",
+    "cannotChangeOwner": "A função do proprietário só muda com a transferência da propriedade.",
+    "transferTargetNotMember": "A propriedade só pode ser transferida para um membro, não para um leitor.",
+    "transferKeyConflict": "O novo proprietário já tem um projeto com esta chave. Altere a chave primeiro.",
+    "transferStorageQuota": "O armazenamento do novo proprietário não comporta os arquivos deste projeto."
   },
   "RelayClaim": {
     "title": "Conecte GitHub",
@@ -1568,7 +1576,8 @@
     "githubMilestone": "Marco",
     "githubRawMetadata": "Ver todos os metadados GitHub preservados",
     "githubYes": "Sim",
-    "githubNo": "Não"
+    "githubNo": "Não",
+    "descriptionEmptyReadOnly": "Sem descrição."
   },
   "Language": {
     "title": "Idioma",
@@ -1591,7 +1600,30 @@
     "pendingInvitations": "Convites pendentes",
     "pendingInvitationsHint": "Um convite aguarda 30 dias. Se a pessoa ainda não tiver uma conta minddy, ela estará lá quando ela se inscrever com esse endereço.",
     "pending": "Pendente",
-    "cancelInvitationAria": "Cancelar convite"
+    "cancelInvitationAria": "Cancelar convite",
+    "roleMember": "Membro",
+    "roleReader": "Leitor",
+    "roleReaderCanComment": "Leitor · pode comentar",
+    "canComment": "Pode comentar",
+    "canCommentHint": "Comentários em problemas, objetivos, feedbacks e páginas. Todo o resto fica somente leitura.",
+    "rolesHint": "Membros trabalham em tudo; leitores só podem ler.",
+    "inviteRoleAria": "Função concedida pelo convite",
+    "memberRoleAria": "Função de {name}",
+    "invitationRoleAria": "Função para {email}",
+    "manageMemberAria": "Gerenciar {name}",
+    "transferOwnership": "Transferir propriedade",
+    "demoteTitle": "Tornar {name} leitor?",
+    "demoteDescription": "A pessoa mantém o acesso de leitura. Os problemas abertos dela deixam de ser atribuídos e ela deixa de liderar objetivos.",
+    "demoteConfirm": "Tornar leitor",
+    "transferTitle": "Transferir a propriedade para {name}?",
+    "transferDescription": "Somente o novo proprietário poderá devolvê-la a você.",
+    "transferBecomeMember": "Você passa a ser membro deste projeto.",
+    "transferRoutinesPaused": "Suas rotinas neste projeto são pausadas.",
+    "transferPlanFollows": "Os limites do plano e o armazenamento de arquivos seguem o plano do novo proprietário.",
+    "transferPersonalStays": "Sua assinatura, seus métodos de pagamento e suas chaves de API pessoais continuam com você.",
+    "transferConfirm": "Transferir propriedade",
+    "transferDone": "{name} agora é proprietário do projeto.",
+    "transferRoutinesPausedCount": "{count, plural, one {# rotina pausada.} other {# rotinas pausadas.}}"
   },
   "Meta": {
     "description": "Um espaço de trabalho de código aberto para gerenciar projetos e tarefas e trabalhar com o Numo e ferramentas de IA conectadas.",
@@ -6345,5 +6377,9 @@
     "articleLabel": "Artigo",
     "localeLabel": "Idioma",
     "revisionLabel": "Revisão"
+  },
+  "ProjectAccess": {
+    "readOnlyToast": "Você só pode ler este projeto.",
+    "sharedViewReadOnly": "Somente membros podem alterar visualizações compartilhadas. Salve sua própria visualização."
   }
 }

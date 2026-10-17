@@ -29,7 +29,7 @@ export type SetCategoriesResult =
       ok: false;
       status: number;
       /** Key into the ApiErrors i18n namespace (mutually exclusive with rawMessage). */
-      errorKey?: "issueNotFound" | "databaseError";
+      errorKey?: "issueNotFound" | "readOnlyProject" | "databaseError";
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
     };
@@ -73,6 +73,9 @@ export async function setIssueCategories({
   const access = await getProjectAccess(actorId, issue.project_id as string);
   if (!access) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+  if (!access.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
 
   // Keep only categories that actually belong to this issue's project.

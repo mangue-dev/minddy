@@ -1,3 +1,4 @@
+import type { ProjectRole } from "@/lib/project-roles";
 import "server-only";
 
 import type { AssistantPageContext } from "@/lib/assistant-types";
@@ -13,7 +14,8 @@ import { responseLanguageInstruction } from "@/lib/locale-language";
 export interface PromptMember {
   user_id: string;
   name: string;
-  role: "owner" | "member";
+  /** Readers can read and be mentioned but are never assignees (MIN-693). */
+  role: ProjectRole;
 }
 
 export interface PromptObjective {
@@ -395,7 +397,7 @@ export function buildSystemPrompt(
 ): string {
   const memberLines =
     project.members
-      .map((m) => `- ${m.name} (user_id: ${m.user_id}, ${m.role})`)
+      .map((m) => `- ${m.name} (user_id: ${m.user_id}, ${m.role}${m.role === "reader" ? ", read-only, never assign" : ""})`)
       .join("\n") || "None.";
   const objectiveLines =
     project.objectives

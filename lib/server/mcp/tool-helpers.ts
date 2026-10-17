@@ -2,7 +2,13 @@ import "server-only";
 
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getProjectAccess, type ProjectAccess } from "@/lib/server/project-access";
+import {
+  accessAllows,
+  getProjectAccess,
+  type ProjectAccess,
+  type ProjectCapability,
+} from "@/lib/server/project-access";
+import { declaredProjectCapability } from "./tool-capabilities";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
   resolveIssueRef as resolveIssueRefCore,
@@ -70,9 +76,23 @@ export function requireUser(
   return { userId, keyId };
 }
 
+const CAPABILITY_DENIED: Record<Exclude<ProjectCapability, "read">, string> = {
+  comment:
+    "Your role in this project is read-only: you cannot comment. Ask the project owner for comment access.",
+  write:
+    "Your role in this project is read-only (Reader): this tool needs Member access. Ask the project owner to change your role.",
+  admin: "Only the project owner can use this tool.",
+};
+
+/**
+ * Resolves a project and enforces the capability the running tool declared
+ * in `MCP_TOOL_CAPABILITIES` (MIN-693). The access is re-read on every call,
+ * so a role change applies to the next call without revoking tokens.
+ */
 export async function resolveProject(
   userId: string,
-  projectId: unknown
+  projectId: unknown,
+  capability: ProjectCapability = declaredProjectCapability()
 ): Promise<{ access: ProjectAccess } | { error: ToolResult }> {
   if (typeof projectId !== "string" || !projectId) {
     return {
@@ -91,6 +111,14 @@ export async function resolveProject(
       ),
     };
   }
+  if (!accessAllows(access, capability)) {
+    return {
+      error: fail(
+        "forbidden",
+        CAPABILITY_DENIED[capability as Exclude<ProjectCapability, "read">]
+      ),
+    };
+  }
   return { access };
 }
 
@@ -100,14 +128,15 @@ export async function resolveProject(
  would be a tool for which the rate limit would have been forgotten. */
 export async function requireProject(
   extra: ToolExtra,
-  projectId: unknown
+  projectId: unknown,
+  capability: ProjectCapability = declaredProjectCapability()
 ): Promise<
   | { userId: string; keyId: string | null; access: ProjectAccess }
   | { error: ToolResult }
 > {
   const auth = requireUser(extra);
   if ("error" in auth) return auth;
-  const project = await resolveProject(auth.userId, projectId);
+  const project = await resolveProject(auth.userId, projectId, capability);
   if ("error" in project) return project;
   return { userId: auth.userId, keyId: auth.keyId, access: project.access };
 }

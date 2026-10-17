@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,14 +60,17 @@
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-680-file-preview.md",
       "components/file-viewer.tsx",
-      "components/image-viewer.tsx"
+      "components/image-viewer.tsx",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 10,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en changed-text and retained-meaning self-review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "notifications-and-inbox",
@@ -102,7 +105,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -134,7 +137,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +153,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +169,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +185,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -198,7 +201,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -214,7 +217,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -258,7 +261,7 @@ Deletion sends supported page work to trash. Check the selected branch before de
 
 ## Write a page with blocks and mentions {#page-editor}
 
-Open the page and edit its title or body as a project member. Use the slash-command menu and formatting controls to insert headings, paragraphs, lists, task items, code, collapsible sections and callouts. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
+Open the page and edit its title or body as the owner or a Member. Readers can open and read pages, but cannot edit, import, duplicate, favorite or publish them, or restore a version. Use the slash-command menu and formatting controls to insert headings, paragraphs, lists, task items, code, collapsible sections and callouts. A callout can have an emoji icon and palette color; choose them to distinguish useful information rather than as the only way to communicate a warning.
 
 Use mentions to link relevant issues, objectives, people or pages. Backlinks help readers find pages that reference the current one. A link supplies context rather than granting a reader access to another project's private object.
 
@@ -273,7 +276,7 @@ Markdown exports and agent page reads preserve callout icons and colors in their
 
 ## Discuss a page and handle conflicts {#page-comments-and-collaboration}
 
-Open a project page and its comment controls. Select relevant content when creating an anchored comment, explain the question or proposed change, and use mentions to involve a project member. Reply in the thread to keep the decision with the context it concerns. Resolve a thread when its question has actually been addressed.
+Open a project page and its comment controls. Select relevant content when creating an anchored comment, explain the question or proposed change, and use mentions to involve a project member. A reader can comment when the owner turned on **Can comment** for them. Reply in the thread to keep the decision with the context it concerns. Resolve a thread when its question has actually been addressed.
 
 Presence `avatars` identify people viewing the page. They do not prove that another person's unsaved text has reached the server or that simultaneous edits are merged automatically. Read the current save state before navigating away.
 
@@ -326,7 +329,7 @@ Reopen or refresh the page editor after restoration and check its actual body. A
 
 ## Publish a page and revoke its link {#publish-a-page}
 
-Open a project page as a member and use its publication controls. Review the content and attachments first. Choose private, password-protected or public access. Password protection requires at least eight characters and is applied after submitting the password; selecting the mode alone does not create a protected link.
+Open a project page as the owner or a Member and use its publication controls. Review the content and attachments first. Choose private, password-protected or public access. Password protection requires at least eight characters and is applied after submitting the password; selecting the mode alone does not create a protected link.
 
 Copy the generated /p/ link after publication succeeds. If the page has descendants, review the include-children option and count. Including children publishes the selected branch; excluding them keeps their content outside that publication. A database without published children does not expose all its entry bodies automatically.
 

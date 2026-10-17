@@ -12,7 +12,7 @@ type RouteContext = { params: Promise<{ id: string; postId: string }> };
  accept = merge (undoable), reject = remembered forever (anti-relapse). */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "write");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 

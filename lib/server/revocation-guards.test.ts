@@ -174,7 +174,7 @@ describe("DELETE /api/resources/[id]", () => {
   });
 
   it("allows a depositor who is still a member through", async () => {
-    getProjectAccess.mockResolvedValue({ isMember: true, isOwner: false, project: {} });
+    getProjectAccess.mockResolvedValue({ isMember: true, isOwner: false, role: "member", canWrite: true, canComment: true, project: {} });
 
     const response = await deleteResource(req(), {
       params: Promise.resolve({ id: RESOURCE }),

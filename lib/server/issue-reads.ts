@@ -6,6 +6,7 @@ import { decodeGithubIssueMetadata, legacyGithubIssueMetadataSchema } from
 import { decodeGithubCommentUrl, legacyGithubCommentUrlSchema } from
   "@/lib/server/git/comment-sync-url-content";
 import "server-only";
+import { memberRoleFromRow, resolveProjectRole } from "@/lib/project-roles";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -794,13 +795,17 @@ export async function listMembers(
 
   const ids = [ownerId, ...(memberRows ?? []).map((m) => m.user_id as string)];
   const users = await fetchAuthUsersById(ctx.service, ids);
+  // The stored role (MIN-693): readers are listed (they can be mentioned)
+  // but callers choosing an assignee or lead must skip them.
+  const roles = new Map((memberRows ?? []).map((m) =>
+    [m.user_id as string, memberRoleFromRow(m.role)] as const));
 
   const members = ids.map((id) => {
     const named = toNamed(users.get(id));
     return {
       user_id: id,
       name: displayName(named, "User"),
-      role: id === ownerId ? "owner" : "member",
+      role: resolveProjectRole(id, ownerId, roles.get(id)),
     };
   });
 

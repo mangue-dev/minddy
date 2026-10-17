@@ -38,8 +38,16 @@ describe.each(cases)("$table assistant comment authorization", ({ table, column,
     await run(test.input as never);
     expect(test.from.mock.calls.map(([name]) => name)).toEqual([table]);
   });
+  it("does not run Numo for a reader who may not comment (MIN-693)", async () => {
+    state.access.mockResolvedValue({ project: { id: "project", key: "TEST" }, isOwner: false, isMember: true,
+      role: "reader", canWrite: false, canComment: false });
+    const test = fixture();
+    await run(test.input as never);
+    expect(test.from.mock.calls.map(([name]) => name)).toEqual([table]);
+    expect(state.budget).not.toHaveBeenCalled();
+  });
   it("requires the trigger to belong to the authorized parent", async () => {
-    state.access.mockResolvedValue({ project: { id: "project", key: "TEST" } });
+    state.access.mockResolvedValue({ project: { id: "project", key: "TEST" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
     const test = fixture();
     await run(test.input as never);
     expect(test.from.mock.calls.map(([name]) => name)).toEqual([

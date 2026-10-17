@@ -3,7 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeObjective, encodeObjective } from "@/lib/server/objective-store";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { userInProject } from "@/lib/server/tenancy";
+import { userCanBeAssigned } from "@/lib/server/tenancy";
 import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
 import { isValidColor } from "@/lib/category-colors";
@@ -46,6 +46,7 @@ export type ObjectiveResult =
         | "projectNotFound"
         | "objectiveNotFound"
         | "notAProjectMember"
+        | "readOnlyProject"
         | "databaseError";
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
@@ -133,6 +134,9 @@ export async function createObjective({
   if (!access) {
     return { ok: false, status: 404, errorKey: "projectNotFound" };
   }
+  if (!access.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
+  }
 
   const service = getServiceClient();
 
@@ -141,7 +145,7 @@ export async function createObjective({
   // and the lens displays — on the entire project screen — someone's name
   // which is not there.
   if (typeof row.lead_user_id === "string") {
-    const isMember = await userInProject(
+    const isMember = await userCanBeAssigned(
       service,
       row.lead_user_id,
       projectId,
@@ -319,6 +323,9 @@ export async function updateObjective({
   if (!access) {
     return { ok: false, status: 404, errorKey: "objectiveNotFound" };
   }
+  if (!access.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
+  }
   let previousObjective: Record<string, unknown>;
   try {
     previousObjective = await decodeObjective(objective, actorId);
@@ -328,7 +335,7 @@ export async function updateObjective({
 
   // Same guard as at creation (MIN-339).
   if (typeof updates.lead_user_id === "string") {
-    const isMember = await userInProject(
+    const isMember = await userCanBeAssigned(
       service,
       updates.lead_user_id,
       objective.project_id as string,

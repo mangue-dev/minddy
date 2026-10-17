@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,17 @@
       "lib/server/feedback/posts.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-light-review-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "integration-troubleshooting",
@@ -73,7 +76,7 @@
       "src": "/documentation/it/integration-api-and-webhooks-flow.svg",
       "alt": "Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
       "caption": "Segui le fasi in questo ordine. Server conserva chiave integrazione. `POST` ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +108,7 @@
       "src": "/documentation/it/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Sequenze distinte di acquisizione backend e SSO browser con segreti diversi.",
       "caption": "La chiave di acquisizione autentica le chiamate server. Il segreto SSO della bacheca firma un token visitatore breve e monouso.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +153,7 @@ L’API di integrazione riceve ticket e feedback tramite chiavi di progetto; i w
 
 ## Creare ticket o feedback e ricevere webhook firmati {#integration-api-and-webhooks}
 
-Il proprietario crea un’integrazione dalle impostazioni del progetto. Un’integrazione `issues` invia lavoro al triage; un’integrazione `feedback` raccoglie esigenze con voti e stato pubblico. La chiave `mdy_` viene mostrata una sola volta. Conservala solo sul server in `MINDDY_API_KEY` o `MINDDY_FEEDBACK_KEY`, mai nel browser, in Git o nei log. La revoca è permanente; una chiave sconosciuta o revocata restituisce 401 `invalid_api_key`. Ogni chiave appartiene a un progetto e a un tipo: usarla sull’endpoint sbagliato restituisce 403 `wrong_key_kind`.
+Il proprietario crea un’integrazione dalle impostazioni del progetto. Un’integrazione `issues` invia lavoro al triage; un’integrazione `feedback` raccoglie esigenze con voti e stato pubblico. La chiave `mdy_` viene mostrata una sola volta. Conservala solo sul server in `MINDDY_API_KEY` o `MINDDY_FEEDBACK_KEY`, mai nel browser, in Git o nei log. La revoca è permanente; una chiave sconosciuta o revocata restituisce 401 `invalid_api_key`. Ogni chiave appartiene a un progetto e a un tipo: usarla sull’endpoint sbagliato restituisce 403 `wrong_key_kind`. Un’integrazione non è una persona: non ha un ruolo nel progetto e mantiene i permessi fissi del suo tipo quando cambiano i ruoli dei membri. I lettori non vedono le integrazioni.
 
 ![Schema: Server conserva chiave integrazione. POST ticket o feedback con tipo corretto. Proprietario sceglie destinazione webhook. Ricevente verifica HMAC grezzo e UUID.](/documentation/it/integration-api-and-webhooks-flow.svg)
 

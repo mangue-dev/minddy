@@ -9,7 +9,7 @@ import {
   isDatabasePropertyValue,
 } from "@/lib/page-databases";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getPage, type PageResult } from "@/lib/server/pages";
+import { getPage, pageWriteRefusal, type PageResult } from "@/lib/server/pages";
 import { recordPageEvent } from "@/lib/server/page-activity";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -120,6 +120,8 @@ export async function updatePageDatabase(
   if (!loaded.ok) return loaded;
   if (loaded.page.project_id !== projectId)
     return { ok: false, status: 404, errorKey: "pageNotFound" };
+  const refusal = await pageWriteRefusal(actorId, projectId, "pageNotFound");
+  if (refusal) return refusal;
   const invalid = {
     ok: false,
     status: 400,
@@ -241,6 +243,8 @@ export async function convertPageDatabase(
   if (!loaded.ok) return loaded;
   if (loaded.page.project_id !== projectId)
     return { ok: false, status: 404, errorKey: "pageNotFound" };
+  const refusal = await pageWriteRefusal(actorId, projectId, "pageNotFound");
+  if (refusal) return refusal;
   const invalid = { ok: false, status: 400, errorKey: "pageDatabaseInvalid" } as const;
   if (!input || typeof input !== "object" || Array.isArray(input)) return invalid;
   const body = input as Record<string, unknown>;

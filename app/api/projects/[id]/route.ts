@@ -5,6 +5,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { updateProjectSettings } from "@/lib/server/update-project";
 import { softDeleteItem } from "@/lib/server/trash";
 import { decodeProject } from "@/lib/server/project-content";
+import { withViewerRoles } from "@/lib/server/project-access";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,7 +30,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!data) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
-  return NextResponse.json(projectForClient(await decodeProject(data, auth.user.id)));
+  const project = projectForClient(await decodeProject(data, auth.user.id));
+  try {
+    const [withRole] = await withViewerRoles(auth.user.id,
+      [project as unknown as { id: string; owner_id: string }]);
+    return NextResponse.json(withRole);
+  } catch {
+    console.error("[api/projects/:id] role read failed");
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
 }
 
 /** PATCH /api/projects/[id] — owner-only update of name / key / color. */

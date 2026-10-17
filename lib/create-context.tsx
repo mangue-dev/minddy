@@ -19,6 +19,8 @@ import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "mangue-ui";
 import { useProjects } from "@/lib/projects-context";
+import { capabilitiesForProject } from "@/lib/use-project-capabilities";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
@@ -127,14 +129,27 @@ function activeObjectiveIdFromUrl(): string | null {
 export function CreateProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
-  const { projects } = useProjects();
+  const { projects: allProjects } = useProjects();
   const { user } = useAuth();
+  const tAccess = useTranslations("ProjectAccess");
+  // Read through a ref: creation actions must keep a stable identity.
+  const tAccessRef = useRef(tAccess);
+  useLayoutEffect(() => { tAccessRef.current = tAccess; }, [tAccess]);
+  // Creation targets only projects the viewer can write (MIN-693): a reader's
+  // projects never appear in the dialogs' project picker nor as a default.
+  const userId = user?.id ?? null;
+  const projects = useMemo(
+    () => allProjects.filter((p) => capabilitiesForProject(p, userId).canWrite),
+    [allProjects, userId]
+  );
   const targetInputs = useRef({ pathname, projects });
   // Creation actions resolve the committed route when invoked. Publishing a
   // new action on every navigation wakes all closed card pickers, even inside
   // an Activity-hidden board. Layout synchronization avoids abandoned renders
   // changing the target used by an event on the still-visible route.
   useLayoutEffect(() => { targetInputs.current = { pathname, projects }; }, [pathname, projects]);
+  const allProjectsRef = useRef(allProjects);
+  useLayoutEffect(() => { allProjectsRef.current = allProjects; }, [allProjects]);
   // Local undo history (MIN-35): creations from the global dialog record too.
   const { record } = useUndoHistory();
 
@@ -239,11 +254,19 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   );
 
   const resolveTarget = useCallback(
-    (projectId?: string) => {
-      if (projectId) return projectId;
+    (projectId?: string, notify = false) => {
       const { pathname: currentPath, projects: currentProjects } = targetInputs.current;
-      const fromPath = projectIdFromPath(currentPath);
-      if (fromPath) return fromPath;
+      const requested = projectId ?? projectIdFromPath(currentPath);
+      if (requested) {
+        // Only projects the list knows as read-only are refused; an unknown
+        // id (list still loading) keeps the historical behavior.
+        const known = allProjectsRef.current.some((p) => p.id === requested);
+        if (!known || currentProjects.some((p) => p.id === requested)) return requested;
+        if (notify) {
+          toast.info(tAccessRef.current("readOnlyToast"), { id: "read-only-project" });
+        }
+        return null;
+      }
       // Outside a project, prefer the last creation target when it is still
       // accessible, then fall back to the current project's display order.
       return defaultCreateProjectId(currentProjects, lastCreateProjectId());
@@ -268,7 +291,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
 
   const openCreateIssue = useCallback(
     (opts?: OpenIssueOptions) => {
-      const pid = resolveTarget(opts?.projectId);
+      const pid = resolveTarget(opts?.projectId, true);
       if (!pid) return;
       // On an objective-filtered board (/projects/[id]?objective=X), default the
       // new issue into that objective — so `C` and the header "New issue" land it
@@ -296,7 +319,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
 
   const openCreateObjective = useCallback(
     (opts?: OpenObjectiveOptions) => {
-      const pid = resolveTarget(opts?.projectId);
+      const pid = resolveTarget(opts?.projectId, true);
       if (!pid) return;
       setTarget(pid);
       setObjectiveName(opts?.name?.trim() || undefined);

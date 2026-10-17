@@ -17,6 +17,7 @@ import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { normalizeLanguage } from "@/lib/feedback/languages";
 import { randomUUID } from "node:crypto";
 import { decodeProject, encodeProject } from "@/lib/server/project-content";
+import { withViewerRoles } from "@/lib/server/project-access";
 
 // Length bounds (MIN-118) — same caps as updateProjectSettings:
 // beyond that we truncate. Color is a short token, never text.
@@ -42,8 +43,15 @@ export async function GET(request: NextRequest) {
     console.error("[api/projects] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json(await Promise.all((data ?? []).map((row) =>
-    decodeProject(row, auth.user.id).then(projectForClient))));
+  const projects = await Promise.all((data ?? []).map((row) =>
+    decodeProject(row, auth.user.id).then(projectForClient)));
+  try {
+    return NextResponse.json(await withViewerRoles(auth.user.id,
+      projects as unknown as Array<{ id: string; owner_id: string }>));
+  } catch {
+    console.error("[api/projects] role read failed");
+    return NextResponse.json({ error: t("databaseError") }, { status: 500 });
+  }
 }
 
 /** POST /api/projects — create a project owned by the caller. */
@@ -167,5 +175,8 @@ export async function POST(request: NextRequest) {
     ),
   });
 
-  return NextResponse.json(projectForClient(await decodeProject(data, auth.user.id)), { status: 201 });
+  return NextResponse.json({
+    ...projectForClient(await decodeProject(data, auth.user.id)),
+    my_role: "owner", my_can_comment: true,
+  }, { status: 201 });
 }

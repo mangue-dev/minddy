@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 vi.mock("@/lib/server/categories", () => ({ updateCategory: vi.fn() }));
 vi.mock("@/lib/server/project-access", () => ({
-  getProjectAccess: async () => state.allowed ? { role: "member" } : null,
+  getProjectAccess: async () => state.allowed ? { role: "member", canWrite: true, canComment: true } : null,
 }));
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({ ok: true, user: { id: "actor-1" }, supabase: {

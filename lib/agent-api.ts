@@ -220,6 +220,10 @@ export interface PrViewer {
       distinguishes (MIN-146), and on a tab that has remained open since a version
       before this field. */
   numoLogin?: string | null;
+  /** The viewer only reads the linking project (Reader role, MIN-693): every
+      PR action is refused whatever the forge account may do. Absent on older
+      responses. */
+  projectReadOnly?: boolean;
 }
 
 export interface AgentRunPrResponse {

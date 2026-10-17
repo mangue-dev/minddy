@@ -19,6 +19,7 @@ import { sendPushToUser } from "@/lib/server/push/send";
 import { sendInvitationEmail } from "@/lib/server/invitation-email";
 import { capability } from "@/lib/server/capabilities";
 import type { Invitation } from "@/lib/types";
+import { isMemberRole, type MemberRole } from "@/lib/project-roles";
 import { intlLocaleByLocale, type Locale } from "@/i18n/config";
 import { pushMessages, toPushLocale } from "@/lib/server/push/payload";
 import {
@@ -56,6 +57,7 @@ type InviteError =
   | "projectNotFound"
   | "ownerOnlyInvite"
   | "invalidEmail"
+  | "invalidRole"
   | "alreadyOwner"
   | "alreadyMember"
   | "invitationAlreadyPending"
@@ -66,12 +68,18 @@ export async function inviteMember({
   projectId,
   actorId,
   email,
+  role = "member",
+  canComment = false,
   origin,
   locale = "en",
 }: {
   projectId: string;
   actorId: string;
   email: unknown;
+  /** Role granted on acceptance (MIN-693): `member` (default) or `reader`. */
+  role?: unknown;
+  /** Reader-only: allowed to comment once accepted. */
+  canComment?: unknown;
   /** Origin of the deployment, for the email link. Default: the canonical URL. */
   origin?: string;
   /** Email language. We do not know that of the guest — we take that of
@@ -92,6 +100,11 @@ export async function inviteMember({
   if (!access.isOwner) {
     return { ok: false, status: 403, errorKey: "ownerOnlyInvite" };
   }
+
+  if (!isMemberRole(role) || typeof canComment !== "boolean") {
+    return { ok: false, status: 400, errorKey: "invalidRole" };
+  }
+  const invitedCanComment = role === "reader" && canComment;
 
   const normalized =
     typeof email === "string" ? email.trim().toLowerCase() : "";
@@ -145,7 +158,7 @@ export async function inviteMember({
     }
   }
   const { data: invitation, error } = encrypted
-    ? await service.rpc("create_project_invitation_encrypted_guarded", {
+    ? await service.rpc("create_project_invitation_encrypted_role_guarded", {
       p_id: invitationId,
       p_project_id: projectId,
       p_actor_id: actorId,
@@ -156,13 +169,17 @@ export async function inviteMember({
       p_token_digest: invitationToken!.digest,
       p_invited_user_id: memberUser?.id ?? null,
       p_member_limit: memberLimit,
+      p_role: role,
+      p_can_comment: invitedCanComment,
     })
-    : await service.rpc("create_project_invitation_guarded", {
+    : await service.rpc("create_project_invitation_role_guarded", {
       p_project_id: projectId,
       p_actor_id: actorId,
       p_invited_email: normalized,
       p_invited_user_id: memberUser?.id ?? null,
       p_member_limit: memberLimit,
+      p_role: role,
+      p_can_comment: invitedCanComment,
     });
 
   if (error) {
@@ -218,6 +235,8 @@ export async function inviteMember({
     invited_email: normalized,
     status: raw.status,
     created_at: raw.created_at,
+    role,
+    can_comment: invitedCanComment,
   };
   const consoleEmail =
     process.env.EMAIL_PROVIDER?.trim() === "console" &&
@@ -476,6 +495,173 @@ export async function cancelInvitation({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   return { ok: true };
+}
+
+type PermissionChangeError =
+  | "projectNotFound"
+  | "ownerOnly"
+  | "invalidRole"
+  | "memberNotFound"
+  | "cannotChangeOwner"
+  | "invitationNotFound"
+  | "transferTargetNotMember"
+  | "transferKeyConflict"
+  | "transferStorageQuota"
+  | "databaseError";
+
+type PermissionChangeResult<T> =
+  | ({ ok: true } & T)
+  | { ok: false; status: number; errorKey: PermissionChangeError };
+
+/**
+ * Change a member's role or a reader's comment option (owner only, MIN-693).
+ * The RPC locks the project, audits the change and, on demotion to reader,
+ * unassigns the person's open issues and objective leads in the same
+ * transaction. `canComment` omitted keeps the current reader option.
+ */
+export async function updateMemberRole({
+  projectId,
+  actorId,
+  userId,
+  role,
+  canComment,
+}: {
+  projectId: string;
+  actorId: string;
+  userId: string;
+  role: unknown;
+  canComment?: unknown;
+}): Promise<
+  PermissionChangeResult<{ role: MemberRole; canComment: boolean; unassigned: number }>
+> {
+  if (!isMemberRole(role) || (canComment !== undefined && typeof canComment !== "boolean")) {
+    return { ok: false, status: 400, errorKey: "invalidRole" };
+  }
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+  if (userId === access.project.owner_id) {
+    return { ok: false, status: 400, errorKey: "cannotChangeOwner" };
+  }
+
+  const { data, error } = await getServiceClient().rpc(
+    "update_project_member_role_guarded",
+    {
+      p_project_id: projectId,
+      p_actor_id: actorId,
+      p_user_id: userId,
+      p_role: role,
+      p_can_comment: canComment ?? null,
+    }
+  );
+  if (error) return { ok: false, ...permissionRpcError(error) };
+  const result = (data ?? {}) as { role?: unknown; can_comment?: unknown; unassigned?: unknown };
+  return {
+    ok: true,
+    role: isMemberRole(result.role) ? result.role : role,
+    canComment: result.can_comment === true,
+    unassigned: typeof result.unassigned === "number" ? result.unassigned : 0,
+  };
+}
+
+/** Change the role granted by a still-pending invitation (owner only). */
+export async function updateInvitationRole({
+  projectId,
+  actorId,
+  invitationId,
+  role,
+  canComment = false,
+}: {
+  projectId: string;
+  actorId: string;
+  invitationId: string;
+  role: unknown;
+  canComment?: unknown;
+}): Promise<PermissionChangeResult<{ role: MemberRole; canComment: boolean }>> {
+  if (!isMemberRole(role) || typeof canComment !== "boolean") {
+    return { ok: false, status: 400, errorKey: "invalidRole" };
+  }
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+
+  const { data, error } = await getServiceClient().rpc(
+    "update_project_invitation_role_guarded",
+    {
+      p_project_id: projectId,
+      p_actor_id: actorId,
+      p_invitation_id: invitationId,
+      p_role: role,
+      p_can_comment: canComment,
+    }
+  );
+  if (error) return { ok: false, ...permissionRpcError(error) };
+  if (data !== true) return { ok: false, status: 404, errorKey: "invitationNotFound" };
+  return { ok: true, role, canComment: role === "reader" && canComment };
+}
+
+/**
+ * Hand the project to an existing member (owner only). The former owner
+ * becomes a member and their routines in the project are disabled; plan
+ * limits, storage and background AI follow the new owner. Subscriptions,
+ * payment methods and personal credentials never move.
+ */
+export async function transferProjectOwnership({
+  projectId,
+  actorId,
+  newOwnerId,
+}: {
+  projectId: string;
+  actorId: string;
+  newOwnerId: string;
+}): Promise<PermissionChangeResult<{ disabledRoutines: number }>> {
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+  if (newOwnerId === actorId) {
+    return { ok: false, status: 400, errorKey: "cannotChangeOwner" };
+  }
+
+  const { data, error } = await getServiceClient().rpc(
+    "transfer_project_ownership_guarded",
+    {
+      p_project_id: projectId,
+      p_actor_id: actorId,
+      p_new_owner_id: newOwnerId,
+    }
+  );
+  if (error) return { ok: false, ...permissionRpcError(error) };
+  const result = (data ?? {}) as { disabled_routines?: unknown };
+  return {
+    ok: true,
+    disabledRoutines:
+      typeof result.disabled_routines === "number" ? result.disabled_routines : 0,
+  };
+}
+
+function permissionRpcError(error: { message: string; code?: string }): {
+  status: number;
+  errorKey: PermissionChangeError;
+} {
+  const message = error.message;
+  if (message.includes("tenant_guard_forbidden")) return { status: 403, errorKey: "ownerOnly" };
+  if (message.includes("invalid_member_role") || message.includes("invalid_invitation_role")) {
+    return { status: 400, errorKey: "invalidRole" };
+  }
+  if (message.includes("member_not_found")) return { status: 404, errorKey: "memberNotFound" };
+  if (message.includes("member_is_owner") || message.includes("transfer_target_invalid")) {
+    return { status: 400, errorKey: "cannotChangeOwner" };
+  }
+  if (message.includes("transfer_target_not_member")) {
+    return { status: 409, errorKey: "transferTargetNotMember" };
+  }
+  if (message.includes("storage_quota_exceeded")) {
+    return { status: 409, errorKey: "transferStorageQuota" };
+  }
+  // The new owner already owns a live project with the same key.
+  if (error.code === "23505") return { status: 409, errorKey: "transferKeyConflict" };
+  console.error("[members] permission change failed:", message);
+  return { status: 500, errorKey: "databaseError" };
 }
 
 /** Pending invitations of a project (for the assistant's member reads). Expired

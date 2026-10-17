@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { hasProjectAccess } from "@/lib/server/project-access";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { recordAiUsage, newRunId } from "@/lib/server/ai-usage";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
@@ -96,6 +97,12 @@ export async function POST(
     .single();
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+  // A dictated draft only feeds a creation or edit form, which readers cannot
+  // submit: refuse before spending on the model (MIN-693).
+  if (!(await hasProjectAccess(auth.user.id, projectId))?.canWrite) {
+    const errors = await getTranslations("ApiErrors");
+    return NextResponse.json({ error: errors("readOnlyProject") }, { status: 403 });
   }
   project.name = await decodeProjectName(project, auth.user.id);
 

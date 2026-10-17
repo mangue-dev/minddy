@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -66,14 +66,17 @@
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
       "content/documentation/reviews/min-670-feedback-objectives.md",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (es changed-passage parity and localized-label review)",
-    "date": "2026-10-11"
+    "revision": 10,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (es changed-passage parity and localized-label review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "api-and-webhooks"
@@ -99,7 +102,7 @@
       "src": "/documentation/es/publish-a-feedback-board-workflow.png",
       "alt": "Tablero público de feedback activado, con identidad SSO local configurada y URL oculta.",
       "caption": "El propietario activa el tablero y elige cómo se identifican los visitantes. Este ejemplo usa un firmante SSO local; la URL y el secreto de firma están ocultos.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +118,7 @@
       "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
       "alt": "Formulario de una solicitud de feedback con título, descripción y visibilidad pública activada.",
       "caption": "Un visitante identificado envía una solicitud y elige su visibilidad. El ejemplo se envió realmente con la revisión automática desactivada.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +134,7 @@
       "src": "/documentation/es/feedback-objective-selection.png",
       "alt": "Vista previa de los componentes de selección de objetivo para un comentario y una integración, ambos con Docs.",
       "caption": "Selectores de objetivo con datos de demostración. Los nuevos comentarios heredan el ajuste de la integración.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -148,7 +151,7 @@
       "src": "/documentation/es/feedback-pages-and-views-workflow.png",
       "alt": "Guía de feedback publicada y seleccionada en la navegación del tablero, legible sin iniciar sesión.",
       "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva `noindex`.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -206,13 +209,13 @@ Abra Mis sugerencias para encontrar sus solicitudes y votos según lo que permit
 
 Los filtros de la lista combinan estado, objetivo, categorías, autor, origen y estado de revisión; la visibilidad está disponible cuando el tablero público está activado. Varios valores de una propiedad son alternativas; las distintas propiedades se combinan. Restablece los filtros para volver a la lista inicial. La lista muestra hasta 500 solicitudes que coinciden con estos filtros a la vez. Abre el submenú de una propiedad para seleccionar sus valores; el número indica cuántos están seleccionados. En móvil, despliega la sección de la propiedad.
 
-Los miembros abren Feedback en el proyecto y seleccionan una solicitud de la cola de revisión o la lista. Lea el envío original, la elección pública o privada, el estado de revisión y las sugerencias de moderación o duplicados. Puede aclarar el título y el cuerpo canónicos sin perder los textos originales enviados. Asigne categorías y un estado público adecuado; el spam nunca aparece en el tablero público. Una solicitud privada sigue siendo distinta de una solicitud pública que solo está pendiente.
+El propietario del proyecto y los Miembros abren Feedback en el proyecto y seleccionan una solicitud de la cola de revisión o la lista. Los lectores pueden leer las solicitudes, pero no moderarlas. Lea el envío original, la elección pública o privada, el estado de revisión y las sugerencias de moderación o duplicados. Puede aclarar el título y el cuerpo canónicos sin perder los textos originales enviados. Asigne categorías y un estado público adecuado; el spam nunca aparece en el tablero público. Una solicitud privada sigue siendo distinta de una solicitud pública que solo está pendiente.
 
 La traducción opcional aparece junto al texto original para el equipo; el tablero público conserva el feedback tal como se escribió. Compruebe las clasificaciones de IA antes de confiar en ellas. Si una solicitud está vinculada a una incidencia, su estado lo controla esa incidencia y no puede editarse de forma independiente.
 
 ### Notas y respuestas públicas {#responses}
 
-Elija la discusión interna para las notas del equipo. Las respuestas públicas son visibles para los visitantes: compruebe la visibilidad antes de enviar. Las respuestas heredan la visibilidad del hilo; elegir el modo interno en el campo de composición no hace privada una respuesta dentro de un hilo público. Las respuestas públicas de Numo requieren una petición expresa; mencionarlo en un comentario público no provoca una respuesta automática.
+Elija la discusión interna para las notas del equipo. Las respuestas públicas son visibles para los visitantes: compruebe la visibilidad antes de enviar. Un lector con **Puede comentar** puede participar en los hilos de discusión internos, pero no puede responder públicamente en el tablero. Las respuestas heredan la visibilidad del hilo; elegir el modo interno en el campo de composición no hace privada una respuesta dentro de un hilo público. Las respuestas públicas de Numo requieren una petición expresa; mencionarlo en un comentario público no provoca una respuesta automática.
 
 Los miembros pueden eliminar comentarios públicos para moderarlos. Solo el autor puede editarlos, y el equipo nunca reescribe las palabras de los visitantes. Los comentarios internos conservan las reglas que reservan esas acciones al autor. Tras responder públicamente o moderar, compruebe el tablero sin sesión para confirmar la visibilidad prevista.
 

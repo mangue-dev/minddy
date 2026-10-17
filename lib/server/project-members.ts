@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "./auth-users";
 import { fetchAvatarSeeds } from "./avatar-seeds";
 import type { Member } from "@/lib/types";
+import { memberRoleFromRow } from "@/lib/project-roles";
 
 /**
  * Members of every project I can access, bucketed by project id.
@@ -39,6 +40,13 @@ export async function loadMembersByProject(
  * Same as `loadMembersByProject`, for callers that already read the project
  * rows themselves (GET /api/me/board needs `projectIds` for other lookups).
  */
+type MembershipRow = {
+  project_id: string;
+  user_id: string;
+  role: string;
+  can_comment: boolean | null;
+};
+
 export async function buildMembersByProject(
   service: SupabaseClient,
   projectRows: { id: string; owner_id: string }[],
@@ -46,13 +54,13 @@ export async function buildMembersByProject(
 ): Promise<{ members: Record<string, Member[]>; projectIds: string[] }> {
   const projectIds = projectRows.map((p) => p.id);
 
-  const { data: memberRows } = await measureAllStartupPhase<{ data: { project_id: string; user_id: string }[] | null }>(timing, "members_db", () => projectIds.length
+  const { data: memberRows } = await measureAllStartupPhase<{ data: MembershipRow[] | null }>(timing, "members_db", () => projectIds.length
     ? service
         .from("project_members")
-        .select("project_id, user_id, role")
+        .select("project_id, user_id, role, can_comment")
         .in("project_id", projectIds)
         .order("created_at", { ascending: true })
-    : { data: [] as { project_id: string; user_id: string }[] });
+    : { data: [] as MembershipRow[] });
 
   const ids = [
     ...projectRows.map((p) => p.owner_id),
@@ -71,16 +79,19 @@ export async function buildMembersByProject(
         ...toNamed(usersById.get(p.owner_id)),
         avatar_seed: seeds.get(p.owner_id) ?? p.owner_id,
         role: "owner",
+        can_comment: true,
         is_owner: true,
       },
     ];
   }
-  for (const m of (memberRows ?? []) as { project_id: string; user_id: string }[]) {
+  for (const m of memberRows ?? []) {
+    const role = memberRoleFromRow(m.role);
     (members[m.project_id] ??= []).push({
       user_id: m.user_id,
       ...toNamed(usersById.get(m.user_id)),
       avatar_seed: seeds.get(m.user_id) ?? m.user_id,
-      role: "member",
+      role,
+      can_comment: role === "reader" && m.can_comment === true,
       is_owner: false,
     });
   }

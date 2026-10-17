@@ -38,6 +38,7 @@ import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { useIssueMenuActions } from "@/components/use-issue-menu-actions";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssuePullRequestQuery } from "@/lib/use-agent-runs";
@@ -154,6 +155,10 @@ export function IssueSidePanel({
   const tCommon = useTranslations("Common");
   const tPlan = useTranslations("Plan");
   const { openIssue: openGlobalIssue } = useIssuePanelActions();
+  // Project readers (MIN-693) see the ticket without editing controls; the
+  // server rejects their writes regardless.
+  const { canWrite, canComment } = useProjectCapabilities(issue?.project_id ?? null);
+  const readOnly = !canWrite;
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
   useIdleMarkdownEditorPreload();
@@ -484,7 +489,7 @@ export function IssueSidePanel({
   // The “Custom” dialog suspends them: it covers the panel, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } = useIssueFieldShortcuts(
-    open && !customPromptOpen,
+    open && !customPromptOpen && canWrite,
     {
       "shift+p": () => void copyPrompt(),
     }
@@ -728,6 +733,7 @@ export function IssueSidePanel({
     },
     extraActions: buildCycleActions(issue),
     onDelete: () => setConfirmDelete(true),
+    readOnly,
   });
 
   return (
@@ -755,7 +761,7 @@ export function IssueSidePanel({
                 key={issue.id}
                 parentIdentifier={parent ? issueIdentifier(projectKey, parent.number) : null}
                 onOpenParent={() => parent && onOpenIssue(parent.id)}
-                onUnlink={() => patch({ parent_id: null })}
+                onUnlink={readOnly ? undefined : () => patch({ parent_id: null })}
               />
               <SidePanelTitle asChild>
                 <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-lg font-semibold tracking-tight">
@@ -768,7 +774,7 @@ export function IssueSidePanel({
                   the rest is in the “⋯” menu. */}
               <IssuePrChip pr={pullRequest} onOpenPr={openPr} />
               {/* Voice editing — Numo turns dictated commands into field updates */}
-              {numoBusy ? (
+              {readOnly ? null : numoBusy ? (
                 <>
                   <span
                     className="inline-flex size-8 shrink-0 items-center justify-center"
@@ -794,6 +800,7 @@ export function IssueSidePanel({
               )}
             </div>
             <div data-mobile-sheet-header-actions className="-mr-1.5 flex items-center gap-0.5">
+              {menuActions.length > 0 && (
               <IssueActionsMenu
                 key={issue.id}
                 actions={menuActions}
@@ -815,6 +822,7 @@ export function IssueSidePanel({
                   </Button>
                 }
               />
+              )}
               <SidePanelClose asChild>
                 <Button
                   variant="ghost"
@@ -839,6 +847,7 @@ export function IssueSidePanel({
             <AutoTextarea
               ref={arrowTitle.ref}
               value={title}
+              readOnly={readOnly}
               onChange={(e) => {
                 titleEdited.current = true;
                 setTitle(arrowTitle.read(e));
@@ -891,6 +900,7 @@ export function IssueSidePanel({
                 <IssuePlan
                   key={issue.id}
                   plan={issue.plan}
+                  readOnly={readOnly}
                   onCommit={(plan) => void patch({ plan })}
                   // Copyable prompts serve the user's own coding agent.
                   onCopyPrompt={() => void copyPlanPrompt()}
@@ -943,7 +953,10 @@ export function IssueSidePanel({
                     onEdit={() => {
                       descriptionEdited.current = true;
                     }}
-                    placeholder={t("descriptionPlaceholder")}
+                    placeholder={
+                      readOnly ? t("descriptionEmptyReadOnly") : t("descriptionPlaceholder")
+                    }
+                    readOnly={readOnly}
                   />
                 </div>
 
@@ -953,6 +966,9 @@ export function IssueSidePanel({
                     right under the row, so they read as properties of the
                     ticket rather than sections of their own. */}
                 <div className="flex flex-col">
+                  {/* A disabled fieldset disables every value picker at once
+                      for readers, while the rows keep showing their values. */}
+                  <fieldset disabled={readOnly} className="m-0 flex min-w-0 flex-col border-0 p-0">
                   <PropertyRow label={tField("status")}>
                     <StatusValue
                       value={issue.status}
@@ -1006,6 +1022,7 @@ export function IssueSidePanel({
                       onChange={(objective_id) => void patch({ objective_id })}
                     />
                   </PropertyRow>
+                  </fieldset>
 
                   <RelationsSection
                     issue={issue}
@@ -1016,11 +1033,13 @@ export function IssueSidePanel({
                     onOpenIssue={onOpenIssue}
                     onAddRelation={onAddRelation}
                     onRemoveRelation={onRemoveRelation}
+                    readOnly={readOnly}
                   />
 
                   <IssueResourcesSection
                     issueId={issue.id}
                     projectId={issue.project_id}
+                    readOnly={readOnly}
                   />
 
                   {githubMetadata && (
@@ -1078,6 +1097,7 @@ export function IssueSidePanel({
                     projectKey={projectKey}
                     onOpenIssue={onOpenIssue}
                     onCreate={onCreate}
+                    readOnly={readOnly}
                   />
                 )}
 
@@ -1100,6 +1120,8 @@ export function IssueSidePanel({
                   onEditComment={updateComment}
                   onDeleteComment={deleteComment}
                   onDeleteAttachment={deleteAttachment}
+                  canComment={canComment}
+                  canModerate={canWrite}
                 />
               </TabsContent>
             </Tabs>
@@ -1133,15 +1155,17 @@ export function IssueSidePanel({
             }
           />
 
-          <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
-            <CommentComposer
-              members={members}
-              projectId={issue.project_id}
-              onSubmit={(body, mentions, attachments) =>
-                addComment(body, mentions, null, attachments)
-              }
-            />
-          </SidePanelFooter>
+          {canComment && (
+            <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
+              <CommentComposer
+                members={members}
+                projectId={issue.project_id}
+                onSubmit={(body, mentions, attachments) =>
+                  addComment(body, mentions, null, attachments)
+                }
+              />
+            </SidePanelFooter>
+          )}
 
           {/* Numo takes over the dictation: the border highlights the edge of the panel
             while working — same signal as the Numo “thinking” icon

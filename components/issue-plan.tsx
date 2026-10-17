@@ -50,9 +50,12 @@ export function IssuePlan({
   onCopyPrompt,
   onCopyImplementPrompt,
   onCopyVerifyPrompt,
+  readOnly = false,
 }: {
   plan: string | null;
   onCommit: (plan: string | null) => void;
+  /** Project readers: the plan is shown without edit or task controls. */
+  readOnly?: boolean;
   /** Copies the “write/verify plan” prompt to an external agent. */
   onCopyPrompt?: () => void;
   /** Copies the “implement ticket” prompt to an external agent. */
@@ -94,7 +97,7 @@ export function IssuePlan({
     onCommit(setTaskState(plan, task.line, state));
   };
 
-  if (editing) {
+  if (editing && !readOnly) {
     return (
       <div className="flex flex-col gap-2">
         <textarea
@@ -126,6 +129,14 @@ export function IssuePlan({
             {tCommon("save")}
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (!plan && readOnly) {
+    return (
+      <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
+        <p className="text-sm text-muted-foreground">{t("emptyTitle")}</p>
       </div>
     );
   }
@@ -177,21 +188,24 @@ export function IssuePlan({
           </>
         )}
         <span className="flex-1" />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t("editAriaLabel")}
-          className="rounded-full text-muted-foreground hover:text-foreground"
-          onClick={startEditing}
-        >
-          <HugeiconsIcon icon={Edit04Icon} />
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("editAriaLabel")}
+            className="rounded-full text-muted-foreground hover:text-foreground"
+            onClick={startEditing}
+          >
+            <HugeiconsIcon icon={Edit04Icon} />
+          </Button>
+        )}
       </div>
 
       {/* What you do with a written plan: copy a prompt for your own coding
           agent — implement it, check the implementation once a task is
           checked, or resume the plan itself. */}
-      {(onCopyPrompt ||
+      {!readOnly &&
+        (onCopyPrompt ||
         onCopyImplementPrompt ||
         onCopyVerifyPrompt) && (
         <div className="mb-4 flex flex-col gap-2">
@@ -246,6 +260,7 @@ export function IssuePlan({
                   key={`${task.line}-${task.text}`}
                   task={task}
                   onSetState={(state) => commitTaskState(task, state)}
+                  readOnly={readOnly}
                 />
               ))}
             </div>

@@ -183,7 +183,7 @@ export type CategoryResult =
       ok: false;
       status: number;
       /** Key into the ApiErrors i18n namespace (mutually exclusive with rawMessage). */
-      errorKey?: "nameRequired" | "projectNotFound" | "databaseError";
+      errorKey?: "nameRequired" | "projectNotFound" | "readOnlyProject" | "databaseError";
       /** Verbatim DB message already meant for the user. */
       rawMessage?: string;
     };
@@ -206,6 +206,9 @@ export async function createCategory({
   const access = await getProjectAccess(actorId, projectId);
   if (!access) {
     return { ok: false, status: 404, errorKey: "projectNotFound" };
+  }
+  if (!access.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
 
   const service = getServiceClient();
@@ -248,6 +251,7 @@ export type UpdateCategoryResult =
         | "noFieldsToUpdate"
         | "categoryNotFound"
         | "projectNotFound"
+        | "readOnlyProject"
         | "databaseError";
       rawMessage?: string;
     };
@@ -265,6 +269,7 @@ export async function updateCategory({
 }): Promise<UpdateCategoryResult> {
   const access = await getProjectAccess(actorId, projectId);
   if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (!access.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
 
   const updates: Record<string, unknown> = {};
   if (typeof input.name === "string") {

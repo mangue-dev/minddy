@@ -8,6 +8,9 @@ import {
   cancelInvitation,
   inviteMember,
   removeMember,
+  transferProjectOwnership,
+  updateInvitationRole,
+  updateMemberRole,
 } from "@/lib/server/members";
 import type { Locale } from "@/i18n/config";
 
@@ -52,10 +55,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
+  const input = (body ?? {}) as { email?: unknown; role?: unknown; can_comment?: unknown };
   const result = await inviteMember({
     projectId: id,
     actorId: auth.user.id,
-    email: (body as { email?: unknown })?.email,
+    email: input.email,
+    role: input.role ?? "member",
+    canComment: input.can_comment ?? false,
     // The email link must return to THIS deployment (dev, preview, prod) —
     // otherwise a local test sends the guest to production. It is read in
     // the ENVIRONMENT and not in the request (MIN-351): `X-Forwarded-Host` is
@@ -75,6 +81,85 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     );
   }
   return NextResponse.json(result.invitation, { status: 201 });
+}
+
+/**
+ * PATCH /api/projects/[id]/members — owner-only permission changes (MIN-693):
+ *   { userId, role, can_comment? }       change a member's role or reader option
+ *   { invitationId, role, can_comment }  change a pending invitation's role
+ *   { transferTo }                       hand ownership to an existing member
+ */
+export async function PATCH(request: NextRequest, { params }: RouteContext) {
+  const { id } = await params;
+  const auth = await getAuthedUser(request);
+  if (!auth.ok) return auth.response;
+  const rl = checkSessionRateLimit(auth.user.id, "project-members-write", {
+    limit: 20,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", retry_after: rl.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    );
+  }
+  const t = await getTranslations("ApiErrors");
+
+  let body: Record<string, unknown>;
+  try {
+    const parsed: unknown = await request.json();
+    body = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+  }
+
+  if (typeof body.transferTo === "string") {
+    const result = await transferProjectOwnership({
+      projectId: id,
+      actorId: auth.user.id,
+      newOwnerId: body.transferTo,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
+    }
+    return NextResponse.json({ ok: true, disabledRoutines: result.disabledRoutines });
+  }
+
+  if (typeof body.invitationId === "string") {
+    const result = await updateInvitationRole({
+      projectId: id,
+      actorId: auth.user.id,
+      invitationId: body.invitationId,
+      role: body.role,
+      canComment: body.can_comment ?? false,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
+    }
+    return NextResponse.json({ ok: true, role: result.role, can_comment: result.canComment });
+  }
+
+  if (typeof body.userId === "string") {
+    const result = await updateMemberRole({
+      projectId: id,
+      actorId: auth.user.id,
+      userId: body.userId,
+      role: body.role,
+      canComment: body.can_comment,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
+    }
+    return NextResponse.json({
+      ok: true,
+      role: result.role,
+      can_comment: result.canComment,
+      unassigned: result.unassigned,
+    });
+  }
+
+  return NextResponse.json({ error: t("missingParameter") }, { status: 400 });
 }
 
 /** DELETE /api/projects/[id]/members?invitationId=… | ?userId=… */

@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { buildForgeAssigneeIndex } from "@/lib/server/git/forge-members";
+import { hasProjectAccess } from "@/lib/server/project-access";
 import { forgeMentionKeyIndex,
   shouldIndexForgeMentionKey } from "@/lib/server/encryption/forge-mention-key";
 
@@ -23,7 +24,9 @@ import { forgeMentionKeyIndex,
  * linked to a MEMBER of a project which links this repository, by his account of
  * connected forge (`git_user_identities` on the GitHub side, the OAuth connection on the
  side * GitLab) — exactly the bridge that issue sync already uses to
- * assign a ticket, reused here to authorize a spend.
+ * assign a ticket, reused here to authorize a spend. Only the owner and the
+ * `member` role qualify (MIN-693): a reader cannot start owner-billed,
+ * owner-authority work, so a reader's forge login is treated as unknown.
  *
  * **The default on a public repository is refusal**, with no exception in v1: an
  * external contributor who writes `@numo` gets nothing, and the owner
@@ -101,7 +104,10 @@ export async function isForgeAuthorMember(params: {
   return !!await forgeAuthorMemberId(params);
 }
 
-/** Resolve the exact minddy member connected to the forge comment author. */
+/**
+ * Resolve the exact minddy member connected to the forge comment author, among
+ * people who can still write in that project (owner or `member`, live).
+ */
 export async function forgeAuthorMemberId(params: {
   provider: RepoProviderId;
   projectIds: string[];
@@ -115,7 +121,7 @@ export async function forgeAuthorMemberId(params: {
       provider: params.provider,
     });
     const userId = index.get(login);
-    if (userId) return userId;
+    if (userId && (await hasProjectAccess(userId, projectId))?.canWrite) return userId;
   }
   return null;
 }

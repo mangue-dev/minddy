@@ -40,6 +40,7 @@ import {
   CONVERSATION_ASSISTANT_TOOLS,
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
+import { readerToolSet } from "@/lib/server/assistant/tool-capabilities";
 import {
   AmbiguousToolExecutionError,
   NumoCompletionError,
@@ -463,6 +464,9 @@ async function buildExecutionInput(input: {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
   let systemPrompt: string;
+  // Re-read on every execution, so a deferred or retried turn uses the role
+  // the user has NOW (MIN-693).
+  let readerAccess: { canComment: boolean } | null = null;
   if (intent.documentation) {
     systemPrompt = await buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId, intent.documentation.selfHosting);
   } else if (intent.projectId) {
@@ -474,6 +478,11 @@ async function buildExecutionInput(input: {
       project: access.project,
     });
     systemPrompt = buildSystemPrompt(promptProject, intent.locale, intent.numoDefaultStatus);
+    if (access.role === "reader") {
+      readerAccess = { canComment: access.canComment };
+      systemPrompt += `\n## Access
+- The user is a Reader in this project: it is read-only for them${access.canComment ? ", except for comments" : ""}. Do not offer changes to it; tools that would change it are refused.`;
+    }
   } else {
     systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
   }
@@ -580,6 +589,13 @@ async function buildExecutionInput(input: {
   let tools: AssistantToolDef[] = CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
+  // An @Numo mention runs on the shared surface of this one project: a
+  // reader's mention is offered read tools only (plus comments when allowed).
+  // Chat conversations stay cross-project, so there the per-call gate in
+  // executeTool refuses writes in read-only projects.
+  else if (readerAccess && intent.triggerSource === "mention") {
+    tools = readerToolSet(tools, readerAccess.canComment);
+  }
   return { messages, tools };
 }
 

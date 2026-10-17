@@ -79,7 +79,7 @@ const { deletePageShare, getPageShare, upsertPageShare } = await import(
 beforeEach(() => {
   db.page = { id: "page-1", project_id: "proj" };
   db.share = null;
-  access = { isOwner: true };
+  access = { isOwner: true, canWrite: true, canComment: true };
   writes.length = 0;
   encryption.enabled = false;
 });

@@ -83,6 +83,38 @@ export async function userInProject(
 }
 
 /**
+ * May this account be assigned work in the project (owner or member role)?
+ * Readers can read and be mentioned but are never assignees, objective leads
+ * or routine trigger people (MIN-693).
+ */
+export async function userCanBeAssigned(
+  service: SupabaseClient,
+  userId: string,
+  projectId: string,
+  ownerId?: string | null
+): Promise<boolean> {
+  if (ownerId && ownerId === userId) return true;
+  if (ownerId === undefined) {
+    const { data: project } = await service
+      .from("projects")
+      .select("owner_id")
+      .eq("id", projectId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!project) return false;
+    if ((project.owner_id as string) === userId) return true;
+  }
+  const { data } = await service
+    .from("project_members")
+    .select("project_id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .eq("role", "member")
+    .maybeSingle();
+  return !!data;
+}
+
+/**
  * Does this cycle belong to this account? A cycle is PERSONAL — it does not have a
  * project, it has an owner, and storing a ticket there assigns it to this one
  * (MIN-32). It is therefore the only one of the five references whose scope is

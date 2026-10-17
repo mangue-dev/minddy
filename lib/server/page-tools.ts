@@ -80,6 +80,7 @@ export type PageToolCode =
   | "page_too_large"
   | "text_not_found"
   | "text_ambiguous"
+  | "forbidden"
   | "database_error";
 
 export type PageToolResult<T> =
@@ -102,6 +103,7 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   pageDatabaseMove: "invalid_params",
   pageDatabaseRestoreParent: "invalid_params",
   pageDatabaseStale: "page_stale",
+  readOnlyProject: "forbidden",
   databaseError: "database_error",
 };
 
@@ -131,6 +133,7 @@ const MESSAGES: Record<PageErrorKey, string> = {
   pageDatabaseMove: "This page cannot move into another database with its current properties.",
   pageDatabaseRestoreParent: "Restore the parent database before restoring this entry.",
   pageDatabaseStale: "This property changed. Read its current value and retry.",
+  readOnlyProject: "Refused: you can only read this project.",
   databaseError: "Database error.",
 };
 
@@ -373,9 +376,14 @@ async function readThreads(pageId: string, actorId: string): Promise<PageThreadF
 /** Refusals from the comments core, translated into the vocabulary of page tools
  (stable codes, messages in English). */
 const COMMENT_REFUSALS: Record<
-  "commentEmpty" | "pageNotFound" | "commentNotFound" | "databaseError",
+  "commentEmpty" | "pageNotFound" | "commentNotFound" | "commentNotAllowed" | "databaseError",
   { ok: false; code: PageToolCode; message: string }
 > = {
+  commentNotAllowed: {
+    ok: false,
+    code: "forbidden",
+    message: "Refused: you cannot comment in this project.",
+  },
   commentEmpty: {
     ok: false,
     code: "invalid_params",

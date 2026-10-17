@@ -76,7 +76,7 @@ vi.mock("next/og", () => ({
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const PAGE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
-getProjectAccess.mockResolvedValue({ role: "owner", isOwner: true });
+getProjectAccess.mockResolvedValue({ role: "owner", isOwner: true, canWrite: true, canComment: true });
 createPage.mockResolvedValue({ ok: true, page: { id: PAGE } });
 duplicatePage.mockResolvedValue({ ok: true, page: { id: PAGE } });
 createPageFile.mockResolvedValue({

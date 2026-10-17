@@ -52,6 +52,7 @@ import {
   PAGE_ACTIVITY_FRESH_MS,
   pageEventsKey,
 } from "@/lib/page-activity-cache";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
 export function PageActivity({
   projectId,
@@ -67,6 +68,8 @@ export function PageActivity({
 }) {
   const t = useTranslations("Pages");
   const { members } = useMembersQuery(projectId, enabled);
+  // Project roles (MIN-693): readers comment only with their option.
+  const { canWrite, canComment } = useProjectCapabilities(projectId);
 
   const events = useQuery({
     queryKey: pageEventsKey(pageId),
@@ -197,6 +200,8 @@ export function PageActivity({
         // A page thread has no attachment: the hook exists for the
         // shared signature, and is never reachable.
         onDeleteAttachment={async () => {}}
+        canComment={canComment}
+        canModerate={canWrite}
       />
     </div>
   );
@@ -223,6 +228,9 @@ export function PageCommentBar({
   const tTimeline = useTranslations("Timeline");
   const { members } = useMembersQuery(projectId, true);
   const { add } = usePageComments({ projectId, pageId, blockIds: NO_BLOCKS });
+  // Readers without the comment option (MIN-693) get no composer.
+  const { canComment } = useProjectCapabilities(projectId);
+  if (!canComment) return null;
 
   return (
     <CommentComposer

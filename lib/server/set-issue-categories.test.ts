@@ -4,7 +4,7 @@ import { setIssueCategories } from "./set-issue-categories";
 
 const { insertEvents, getProjectAccess } = vi.hoisted(() => ({
   insertEvents: vi.fn(),
-  getProjectAccess: vi.fn(async () => ({ role: "member" })),
+  getProjectAccess: vi.fn(async () => ({ role: "member", canWrite: true, canComment: true })),
 }));
 let service: SupabaseClient;
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));

@@ -46,8 +46,10 @@ export async function POST(
   const { id: projectId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  if (!(await getProjectAccess(auth.user.id, projectId)))
-    return NextResponse.json({ types: null }, { status: 404 });
+  const access = await getProjectAccess(auth.user.id, projectId);
+  if (!access) return NextResponse.json({ types: null }, { status: 404 });
+  // Planning an import only serves an import, which is a write (MIN-693).
+  if (!access.canWrite) return NextResponse.json({ types: null }, { status: 403 });
   const refused = rateLimitRefusal(auth.user.id, "database-import-plan", {
     limit: 10,
   });

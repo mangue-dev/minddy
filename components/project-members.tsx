@@ -1,15 +1,29 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
-import { useState } from "react";
+import {
+  Cancel01Icon,
+  MoreHorizontalIcon,
+  UserAdd01Icon,
+} from "@hugeicons/core-free-icons";
+import { useId, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import {
   Badge,
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Spinner,
+  Switch,
   toast,
 } from "mangue-ui";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,10 +35,80 @@ import {
 } from "@/components/settings/settings-ui";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName as resolveDisplayName } from "@/lib/display-name";
+import { isMemberRole, type MemberRole, type ProjectRole } from "@/lib/project-roles";
 import type { Member } from "@/lib/types";
 
 function displayName(m: Member): string {
   return resolveDisplayName(m);
+}
+
+type MembersT = ReturnType<typeof useTranslations<"Members">>;
+
+function roleLabel(t: MembersT, role: ProjectRole): string {
+  if (role === "owner") return t("owner");
+  return role === "reader" ? t("roleReader") : t("roleMember");
+}
+
+/** Compact Member/Reader picker shared by members, invitations and the invite form. */
+function RoleSelect({
+  value,
+  onChange,
+  disabled,
+  ariaLabel,
+  id,
+}: {
+  value: MemberRole;
+  onChange: (role: MemberRole) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  id?: string;
+}) {
+  const t = useTranslations("Members");
+  return (
+    <Select
+      value={value}
+      onValueChange={(v) => {
+        if (isMemberRole(v)) onChange(v);
+      }}
+      disabled={disabled}
+    >
+      <SelectTrigger id={id} size="sm" className="w-auto min-w-24" aria-label={ariaLabel}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="member">{t("roleMember")}</SelectItem>
+        <SelectItem value="reader">{t("roleReader")}</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** The reader-only "Can comment" option, shown under the row it belongs to. */
+function CanCommentToggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
+  const t = useTranslations("Members");
+  const id = useId();
+  return (
+    <div className="flex items-center justify-between gap-3 pb-3 pl-11">
+      <label htmlFor={id} className="flex min-w-0 flex-col">
+        <span className="text-sm">{t("canComment")}</span>
+        <span className="text-xs text-muted-foreground">{t("canCommentHint")}</span>
+      </label>
+      <Switch
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onChange}
+      />
+    </div>
+  );
 }
 
 export function ProjectMembers({
@@ -37,12 +121,22 @@ export function ProjectMembers({
   const t = useTranslations("Members");
   const tc = useTranslations("Common");
   const tb = useTranslations("Billing");
-  const { members, invitations, isOwner, loading, invite, cancelInvitation, removeMember } =
-    useMembersQuery(projectId, enabled);
+  const {
+    members,
+    invitations,
+    isOwner,
+    loading,
+    invite,
+    cancelInvitation,
+    removeMember,
+    updateMemberRole,
+    updateInvitationRole,
+    transferOwnership,
+  } = useMembersQuery(projectId, enabled);
   // The plan caps project guests rather than collaboration itself (MIN-199),
   // so the form remains visible with a counter and disables only when the last
-  // slot is occupied. This mirrors the server RPC: non-owner members plus live
-  // pending invitations.
+  // slot is occupied. This mirrors the server RPC: non-owner members (readers
+  // included) plus live pending invitations.
   const { maxMembersPerProject } = usePlanGates();
   const guestsUsed =
     members.filter((m) => !m.is_owner).length + invitations.length;
@@ -52,11 +146,16 @@ export function ProjectMembers({
     maxMembersPerProject != null && guestsUsed >= maxMembersPerProject;
 
   const [email, setEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<MemberRole>("member");
+  const [inviteCanComment, setInviteCanComment] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   // Removing a member is irreversible on the server side (the `project_members` line
   // is deleted): we go through an explicit confirmation.
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
+  // Demotion unassigns the person's open issues, so it is confirmed too.
+  const [demoteTarget, setDemoteTarget] = useState<Member | null>(null);
+  const [transferTarget, setTransferTarget] = useState<Member | null>(null);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +163,10 @@ export function ProjectMembers({
     if (!value) return;
     setInviting(true);
     try {
-      await invite(value);
+      await invite(value, {
+        role: inviteRole,
+        can_comment: inviteRole === "reader" && inviteCanComment,
+      });
       toast.success(t("invitationSent", { email: value }));
       setEmail("");
     } catch (err) {
@@ -75,7 +177,7 @@ export function ProjectMembers({
   };
 
   /** Returns `false` if the call failed — the caller then keeps its dialog open. */
-  const withBusy = async (id: string, fn: () => Promise<void>) => {
+  const withBusy = async (id: string, fn: () => Promise<unknown>) => {
     setBusyId(id);
     try {
       await fn();
@@ -88,31 +190,62 @@ export function ProjectMembers({
     }
   };
 
+  const changeRole = (m: Member, role: MemberRole) => {
+    if (role === m.role) return;
+    if (role === "reader") {
+      setDemoteTarget(m);
+      return;
+    }
+    void withBusy(m.user_id, () =>
+      updateMemberRole(m.user_id, { role, can_comment: false })
+    );
+  };
+
+  const isBusy = (id: string | undefined) => id !== undefined && busyId === id;
+
   return (
     <div className="flex flex-col gap-4">
       {isOwner && (
         <>
-          <form onSubmit={handleInvite} className="flex items-end gap-2">
-            <div className="flex flex-1 flex-col gap-1.5">
-              <label htmlFor="invite-email" className="text-sm font-medium">
-                {t("inviteByEmail")}
-              </label>
-              <Input
-                id="invite-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("invitePlaceholder")}
+          <form onSubmit={handleInvite} className="flex flex-col gap-2">
+            <div className="flex items-end gap-2">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <label htmlFor="invite-email" className="text-sm font-medium">
+                  {t("inviteByEmail")}
+                </label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("invitePlaceholder")}
+                  disabled={limitReached}
+                />
+              </div>
+              <RoleSelect
+                value={inviteRole}
+                onChange={(role) => {
+                  setInviteRole(role);
+                  if (role !== "reader") setInviteCanComment(false);
+                }}
+                disabled={limitReached}
+                ariaLabel={t("inviteRoleAria")}
+              />
+              <Button type="submit" disabled={inviting || limitReached}>
+                {inviting ? <Spinner /> : <HugeiconsIcon icon={UserAdd01Icon} />}
+                {t("invite")}
+              </Button>
+            </div>
+            {inviteRole === "reader" && (
+              <CanCommentToggle
+                checked={inviteCanComment}
+                onChange={setInviteCanComment}
                 disabled={limitReached}
               />
-            </div>
-            <Button type="submit" disabled={inviting || limitReached}>
-              {inviting ? <Spinner /> : <HugeiconsIcon icon={UserAdd01Icon} />}
-              {t("invite")}
-            </Button>
+            )}
           </form>
           <p className="-mt-2 text-xs text-muted-foreground">
-            {t("inviteHint")}
+            {t("inviteHint")} {t("rolesHint")}
           </p>
           {/* As long as the list loads, `guestsUsed` is 0 because we haven't received ANYTHING yet — not because the project is empty. Showing the
  counter there would announce "0 guests of 2" to a full project, a half second, each time the tab is opened. */}
@@ -147,31 +280,75 @@ export function ProjectMembers({
           <SettingsEmpty>{tc("loading")}</SettingsEmpty>
         ) : (
           <div className="flex flex-col divide-y divide-border">
-            {members.map((m) => (
-              <SettingsListRow
-                key={m.user_id}
-                avatar={<UserAvatar seed={m.avatar_seed} className="size-8" />}
-                title={displayName(m)}
-                subtitle={m.email && m.full_name ? m.email : undefined}
-                action={
-                  m.is_owner ? (
-                    <Badge variant="secondary">{t("owner")}</Badge>
-                  ) : (
-                    isOwner && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        disabled={busyId === m.user_id}
-                        onClick={() => setRemoveTarget(m)}
-                      >
-                        {t("remove")}
-                      </Button>
-                    )
-                  )
-                }
-              />
-            ))}
+            {members.map((m) => {
+              const manageable = isOwner && !m.is_owner;
+              const busy = isBusy(m.user_id);
+              return (
+                <div key={m.user_id} className="flex flex-col">
+                  <SettingsListRow
+                    avatar={<UserAvatar seed={m.avatar_seed} className="size-8" />}
+                    title={displayName(m)}
+                    subtitle={m.email && m.full_name ? m.email : undefined}
+                    action={
+                      manageable ? (
+                        <>
+                          {busy && <Spinner />}
+                          <RoleSelect
+                            value={m.role === "reader" ? "reader" : "member"}
+                            onChange={(role) => changeRole(m, role)}
+                            disabled={busy}
+                            ariaLabel={t("memberRoleAria", { name: displayName(m) })}
+                          />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={busy}
+                                aria-label={t("manageMemberAria", { name: displayName(m) })}
+                              >
+                                <HugeiconsIcon icon={MoreHorizontalIcon} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {m.role === "member" && (
+                                <DropdownMenuItem onSelect={() => setTransferTarget(m)}>
+                                  {t("transferOwnership")}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onSelect={() => setRemoveTarget(m)}
+                              >
+                                {t("remove")}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </>
+                      ) : (
+                        <Badge variant={m.is_owner ? "secondary" : "outline"}>
+                          {m.role === "reader" && m.can_comment
+                            ? t("roleReaderCanComment")
+                            : roleLabel(t, m.is_owner ? "owner" : m.role)}
+                        </Badge>
+                      )
+                    }
+                  />
+                  {manageable && m.role === "reader" && (
+                    <CanCommentToggle
+                      checked={m.can_comment}
+                      disabled={busy}
+                      onChange={(value) =>
+                        void withBusy(m.user_id, () =>
+                          updateMemberRole(m.user_id, { role: "reader", can_comment: value })
+                        )
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -188,27 +365,53 @@ export function ProjectMembers({
             {t("pendingInvitationsHint")}
           </p>
           <div className="mt-1 flex flex-col divide-y divide-border">
-            {invitations.map((inv) => (
-              <SettingsListRow
-                key={inv.id}
-                title={inv.invited_email}
-                action={
-                  <>
-                    <Badge variant="outline">{t("pending")}</Badge>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t("cancelInvitationAria")}
-                      disabled={busyId === inv.id}
-                      onClick={() => withBusy(inv.id, () => cancelInvitation(inv.id))}
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} />
-                    </Button>
-                  </>
-                }
-              />
-            ))}
+            {invitations.map((inv) => {
+              const busy = isBusy(inv.id);
+              const role: MemberRole = inv.role === "reader" ? "reader" : "member";
+              return (
+                <div key={inv.id} className="flex flex-col">
+                  <SettingsListRow
+                    title={inv.invited_email}
+                    action={
+                      <>
+                        <Badge variant="outline">{t("pending")}</Badge>
+                        <RoleSelect
+                          value={role}
+                          disabled={busy}
+                          ariaLabel={t("invitationRoleAria", { email: inv.invited_email })}
+                          onChange={(next) =>
+                            void withBusy(inv.id, () =>
+                              updateInvitationRole(inv.id, { role: next, can_comment: false })
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("cancelInvitationAria")}
+                          disabled={busy}
+                          onClick={() => withBusy(inv.id, () => cancelInvitation(inv.id))}
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} />
+                        </Button>
+                      </>
+                    }
+                  />
+                  {role === "reader" && (
+                    <CanCommentToggle
+                      checked={inv.can_comment}
+                      disabled={busy}
+                      onChange={(value) =>
+                        void withBusy(inv.id, () =>
+                          updateInvitationRole(inv.id, { role: "reader", can_comment: value })
+                        )
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -234,7 +437,7 @@ export function ProjectMembers({
             </Button>
             <Button
               variant="destructive"
-              disabled={removeTarget !== null && busyId === removeTarget.user_id}
+              disabled={isBusy(removeTarget?.user_id)}
               onClick={async () => {
                 if (!removeTarget) return;
                 const userId = removeTarget.user_id;
@@ -242,10 +445,95 @@ export function ProjectMembers({
                 if (ok) setRemoveTarget(null);
               }}
             >
-              {removeTarget !== null && busyId === removeTarget.user_id ? (
-                <Spinner />
-              ) : null}
+              {isBusy(removeTarget?.user_id) ? <Spinner /> : null}
               {t("remove")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={demoteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDemoteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {t("demoteTitle", {
+                name: demoteTarget ? displayName(demoteTarget) : "",
+              })}
+            </DialogTitle>
+            <DialogDescription>{t("demoteDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDemoteTarget(null)}>
+              {tc("cancel")}
+            </Button>
+            <Button
+              disabled={isBusy(demoteTarget?.user_id)}
+              onClick={async () => {
+                if (!demoteTarget) return;
+                const userId = demoteTarget.user_id;
+                const ok = await withBusy(userId, () =>
+                  updateMemberRole(userId, { role: "reader", can_comment: false })
+                );
+                if (ok) setDemoteTarget(null);
+              }}
+            >
+              {isBusy(demoteTarget?.user_id) ? <Spinner /> : null}
+              {t("demoteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={transferTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setTransferTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {t("transferTitle", {
+                name: transferTarget ? displayName(transferTarget) : "",
+              })}
+            </DialogTitle>
+            <DialogDescription>{t("transferDescription")}</DialogDescription>
+          </DialogHeader>
+          <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm text-muted-foreground">
+            <li>{t("transferBecomeMember")}</li>
+            <li>{t("transferRoutinesPaused")}</li>
+            <li>{t("transferPlanFollows")}</li>
+            <li>{t("transferPersonalStays")}</li>
+          </ul>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferTarget(null)}>
+              {tc("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isBusy(transferTarget?.user_id)}
+              onClick={async () => {
+                if (!transferTarget) return;
+                const target = transferTarget;
+                let paused = 0;
+                const ok = await withBusy(target.user_id, async () => {
+                  paused = (await transferOwnership(target.user_id)).disabledRoutines;
+                });
+                if (!ok) return;
+                setTransferTarget(null);
+                toast.success(t("transferDone", { name: displayName(target) }), {
+                  description:
+                    paused > 0 ? t("transferRoutinesPausedCount", { count: paused }) : undefined,
+                });
+              }}
+            >
+              {isBusy(transferTarget?.user_id) ? <Spinner /> : null}
+              {t("transferConfirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

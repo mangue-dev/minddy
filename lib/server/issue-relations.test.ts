@@ -119,7 +119,7 @@ const events = () => tables.issue_events.map(({ id: _id, ...row }) => row);
 beforeEach(() => {
   vi.clearAllMocks();
   for (const table of ["issues", "objectives", "issue_relations", "issue_events"]) tables[table] = [];
-  getProjectAccess.mockResolvedValue({ role: "owner" });
+  getProjectAccess.mockResolvedValue({ role: "owner", isOwner: true, canWrite: true, canComment: true });
 });
 
 describe.each(pairs)("%s to %s relations", (sourceType, targetType) => {

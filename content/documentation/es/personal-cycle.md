@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,17 @@
       "components/settings/account-cycles-section.tsx",
       "lib/cycle-prefs.ts",
       "lib/server/cycles.ts",
-      "components/cycle/use-cycle-menu-actions.tsx"
+      "components/cycle/use-cycle-menu-actions.tsx",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "views",
@@ -59,7 +62,7 @@
       "src": "/documentation/es/reader-cycle.png",
       "alt": "Incidencia de demostración en el backlog del ciclo personal.",
       "caption": "Al añadirla se asignó al titular del ciclo y se conservó su estado de backlog.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -78,7 +81,7 @@
 
 ## Configurar y llenar tu ciclo {#personal-cycle}
 
-Activa los ciclos en los ajustes de la cuenta → Ciclos y abre Ciclo desde la navegación personal. Pertenece a tu cuenta y puede contener incidencias de varios proyectos a los que tienes acceso. No es un sprint del proyecto ni pertenece a un objetivo del equipo.
+Activa los ciclos en los ajustes de la cuenta → Ciclos y abre Ciclo desde la navegación personal. Pertenece a tu cuenta y puede contener incidencias que tienes asignadas en proyectos donde eres el propietario o un Miembro. A los lectores no se les puede asignar trabajo, así que un proyecto que solo lees no aporta ninguna incidencia. No es un sprint del proyecto ni pertenece a un objetivo del equipo.
 
 Elige una duración de una o dos semanas, el día de inicio, de uno a cuatro ciclos futuros y una intensidad ligera, media o alta. Estas opciones determinan tu periodo y capacidad objetivo. Los controles de captura automática indican si las incidencias asignadas entran en el ciclo actual al iniciarse o completarse.
 

@@ -5,9 +5,11 @@ import { getTranslations } from "next-intl/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import {
+  accessAllows,
   getProjectAccess,
   hasProjectAccess,
   type ProjectAccess,
+  type ProjectCapability,
 } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
@@ -24,9 +26,15 @@ export type TeamGuardResult =
   | { ok: true; userId: string; access: ProjectAccess; supabase: SupabaseClient }
   | { ok: false; response: NextResponse };
 
+/**
+ * `capability` is what the route does (MIN-693): `read` for listings and
+ * reads, `comment` for internal notes, `write` for moderation, promotion,
+ * links and every other change. A reader who lacks it gets a 403.
+ */
 export async function requireProjectMember(
   request: NextRequest,
-  projectId: string
+  projectId: string,
+  capability: Exclude<ProjectCapability, "admin"> = "read"
 ): Promise<TeamGuardResult> {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
@@ -36,6 +44,15 @@ export async function requireProjectMember(
     return {
       ok: false,
       response: NextResponse.json({ error: t("projectNotFound") }, { status: 404 }),
+    };
+  }
+  if (!accessAllows(access, capability)) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: t(capability === "comment" ? "commentNotAllowed" : "readOnlyProject") },
+        { status: 403 }
+      ),
     };
   }
   // supabase = the caller's RLS client (still valid inside after()) — the

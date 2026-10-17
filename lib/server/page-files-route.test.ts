@@ -67,7 +67,7 @@ const params = { params: Promise.resolve({ id: PROJECT, pageId: PAGE }) };
 beforeEach(() => {
   vi.clearAllMocks();
   getAuthedUser.mockResolvedValue({ ok: true, user: { id: "user-1" } });
-  getProjectAccess.mockResolvedValue({ role: "owner" });
+  getProjectAccess.mockResolvedValue({ role: "owner", isOwner: true, canWrite: true, canComment: true });
   maybeSingle.mockResolvedValue({ data: { id: PAGE } });
   createPageFile.mockResolvedValue({
     id: "file-1",

@@ -30,8 +30,10 @@ import { Button, cn } from "mangue-ui";
 import {
   CommentBlock,
   CommentComposer,
+  CommentPermissionsProvider,
   ReplyComposer,
 } from "@/components/issue-timeline";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { posOfBlockId } from "@/components/pages/block-actions";
 import type { MarkdownEditorMentions } from "@/components/markdown-editor";
 import {
@@ -92,6 +94,8 @@ export function PageCommentPopover({
   const panel = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ top: number; left: number } | null>(null);
   const mentions = useDescriptionMentions(projectId, members);
+  // Project roles (MIN-693): readers without the comment option only read.
+  const { canWrite, canComment } = useProjectCapabilities(projectId);
 
   const measure = useCallback(() => {
     if (!editor || editor.isDestroyed) return;
@@ -206,22 +210,25 @@ export function PageCommentPopover({
           </p>
         ) : null}
 
-        {threads.map((thread) => (
-          <ThreadPanel
-            key={thread.root.id}
-            thread={thread}
-            members={members}
-            currentUserId={currentUserId}
-            projectId={projectId}
-            mentions={mentions}
-            onAdd={onAdd}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
+        <CommentPermissionsProvider canComment={canComment} canModerate={canWrite}>
+          {threads.map((thread) => (
+            <ThreadPanel
+              key={thread.root.id}
+              thread={thread}
+              members={members}
+              currentUserId={currentUserId}
+              projectId={projectId}
+              mentions={mentions}
+              canReply={canComment}
+              onAdd={onAdd}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </CommentPermissionsProvider>
       </div>
 
-      {fresh && (
+      {fresh && canComment && (
         <div className="relative shrink-0 p-3">
           <CommentComposer
             members={members}
@@ -256,6 +263,7 @@ function ThreadPanel({
   currentUserId,
   projectId,
   mentions,
+  canReply,
   onAdd,
   onEdit,
   onDelete,
@@ -265,6 +273,7 @@ function ThreadPanel({
   currentUserId: string | null;
   projectId: string;
   mentions: MarkdownEditorMentions;
+  canReply: boolean;
   onAdd: (input: {
     body: string;
     mentionedUserIds: string[];
@@ -314,7 +323,7 @@ function ThreadPanel({
           />
         </div>
       ))}
-      {!root.delivery && <div className="border-t border-border/60">
+      {!root.delivery && canReply && <div className="border-t border-border/60">
         <ReplyComposer
           members={members}
           mentions={mentions}

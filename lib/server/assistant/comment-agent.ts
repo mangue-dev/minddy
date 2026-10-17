@@ -151,6 +151,16 @@ ${transcript || "No earlier messages."}
 Your final answer is projected back into this shared thread. Answer the request directly and include only information intended for every reader of that surface. The canonical conversation, reasoning, tool results, personal connector data, credentials, and other private context are not shared automatically. Do not reveal them merely because they are available in your private working context. If essential input is missing, ask the minimum blocking question with ask_user; a later reply in this thread resumes the same durable work.`;
 }
 
+/**
+ * The Numo reply is written as the commenter's comment (MIN-693), so the
+ * commenter must still be allowed to comment: a member or owner, or a reader
+ * whose owner allowed comments. Checked live, when the mention runs.
+ */
+async function canCommentIn(actorId: string, projectId: string): Promise<boolean> {
+  const access = await getProjectAccess(actorId, projectId);
+  return access?.canComment === true;
+}
+
 async function actorNames(
   service: SupabaseClient,
   actorId: string,
@@ -268,7 +278,7 @@ export async function runCommentMention(input: {
   const access = parent
     ? await getProjectAccess(actorId, parent.project_id as string)
     : null;
-  if (!parent || !access || !await hasUsageBudget(actorId, "assistant", "assistant_model")) return;
+  if (!parent || !access?.canComment || !await hasUsageBudget(actorId, "assistant", "assistant_model")) return;
   const { data: issue } = await issueStore(service, actorId)
     .select("id, project_id, number, title, created_by, assignee_id")
     .eq("id", issueId).eq("project_id", parent.project_id).is("deleted_at", null).maybeSingle();
@@ -372,7 +382,7 @@ export async function runObjectiveCommentMention(input: {
     .is("deleted_at", null).maybeSingle();
   if (
     !target
-    || !await getProjectAccess(actorId, target.project_id as string)
+    || !await canCommentIn(actorId, target.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
   const { data: objective, error: objectiveError } = await objectiveStore(service, actorId)
@@ -468,7 +478,7 @@ export async function runPageCommentMention(input: {
     .is("deleted_at", null).maybeSingle();
   if (
     !page
-    || !await getProjectAccess(actorId, page.project_id as string)
+    || !await canCommentIn(actorId, page.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
   const clearPage = await decodePageProjection(page, actorId);
@@ -563,7 +573,7 @@ export async function runFeedbackCommentMention(input: {
     .is("deleted_at", null).maybeSingle();
   if (
     !postScope
-    || !await getProjectAccess(actorId, postScope.project_id as string)
+    || !await canCommentIn(actorId, postScope.project_id as string)
     || !await hasUsageBudget(actorId, "assistant", "assistant_model")
   ) return;
   const { data: post } = await feedbackPostStore(service, actorId)

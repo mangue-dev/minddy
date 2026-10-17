@@ -12,6 +12,7 @@ import {
   viewConfigOf,
 } from "./view-filter";
 import { useViewsQuery, type ViewScope } from "./use-views-query";
+import { useProjectCapabilities } from "./use-project-capabilities";
 import type { View, ViewConfig } from "./types";
 
 /**
@@ -70,6 +71,14 @@ export function useBoardViews(
   }
 ) {
   const t = useTranslations("Board");
+  // Project readers (MIN-693) keep personal views only: what they create is
+  // theirs, and shared views stay as the team saved them.
+  const { canWrite } = useProjectCapabilities(
+    scope.kind === "project" ? scope.projectId : null
+  );
+  const tAccess = useTranslations("ProjectAccess");
+  const sharedReadOnly = (view: View) =>
+    scope.kind === "project" && !canWrite && view.user_id === null;
   const {
     views,
     loading: viewsLoading,
@@ -132,7 +141,11 @@ export function useBoardViews(
 
   /** Create a view carrying the current working config, and select it. */
   const createViewAndSelect = async (name: string): Promise<View> => {
-    const view = await createView({ name, ...config });
+    const view = await createView({
+      name,
+      ...config,
+      ...(scope.kind === "project" && !canWrite ? { personal: true } : {}),
+    });
     setActiveViewId(view.id);
     writeStoredView(storageKey, view.id);
     return view;
@@ -141,6 +154,10 @@ export function useBoardViews(
   /** Persist the working config into the active view (the Save button). */
   const saveActiveView = async () => {
     if (!activeView) return;
+    if (sharedReadOnly(activeView)) {
+      toast.info(tAccess("sharedViewReadOnly"));
+      return;
+    }
     try {
       await updateView(activeView.id, {
         filters: config.filters,
@@ -159,11 +176,16 @@ export function useBoardViews(
   };
 
   const renameView = async (view: View, name: string) => {
+    if (sharedReadOnly(view)) throw new Error(tAccess("sharedViewReadOnly"));
     await updateView(view.id, { name });
   };
 
   const handleDeleteView = async (view: View) => {
     if (view.kind === "my") return; // the UI never offers it; belt only
+    if (sharedReadOnly(view)) {
+      toast.info(tAccess("sharedViewReadOnly"));
+      return;
+    }
     if (customCount <= 1) {
       toast.error(t("needOneView"));
       return;

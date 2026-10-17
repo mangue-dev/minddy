@@ -60,6 +60,7 @@ type RelationErrorKey =
   | "relationSelf"
   | "issueNotFound"
   | "relationNotFound"
+  | "readOnlyProject"
   | "databaseError";
 
 export type AddRelationResult =
@@ -213,6 +214,7 @@ export async function addIssueRelation({
 
   const access = await getProjectAccess(actorId, projectId);
   if (!access) return { ok: false, status: 404, errorKey: "issueNotFound" };
+  if (!access.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
 
   const service = getServiceClient();
 
@@ -312,6 +314,7 @@ export async function removeIssueRelation({
 
   const access = await getProjectAccess(actorId, row.project_id as string);
   if (!access) return { ok: false, status: 404, errorKey: "relationNotFound" };
+  if (!access.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
 
   const { error } = await service
     .from("issue_relations")

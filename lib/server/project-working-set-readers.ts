@@ -9,6 +9,7 @@ import { CompleteScopedRowsError, readCompleteScopedRows } from "./complete-scop
 import { ISSUE_SELECT } from "./issue-mapper";
 import { issueStore } from "./issue-store";
 import { objectiveStore } from "./objective-store";
+import { memberRoleFromRow, projectCapabilities } from "@/lib/project-roles";
 import { buildProjectIssueResponse } from "./project-issue-response";
 import {
   decryptInvitationEmail, legacyInvitationEmailColumns, missingInvitationEncryptionSchema,
@@ -81,8 +82,8 @@ export async function loadProjectObjectives(auth: ProjectWorkingSetAuth, project
   }
 }
 
-type InvitationRow = InvitationEmailColumns & { id: string; project_id: string; status: string; created_at: string };
-type MembershipRow = { user_id: string; role: string; created_at: string };
+type InvitationRow = InvitationEmailColumns & { id: string; project_id: string; status: string; created_at: string; role?: string | null; can_comment?: boolean | null };
+type MembershipRow = { user_id: string; role: string; can_comment: boolean | null; created_at: string };
 
 /** Service-role member enrichment retains the ordinary living-project ACL. */
 export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId: string): Promise<ProjectWorkingSetReadResult<MembersResponse>> {
@@ -98,16 +99,16 @@ export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId:
     }, (row) => row.id);
     const loadInvitations = async () => {
       try {
-        return await invitations("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, status, created_at");
+        return await invitations("id, project_id, invited_email, invited_email_ciphertext, invited_email_blind_index, encryption_version, status, created_at, role, can_comment");
       } catch (error) {
         if (!(error instanceof CompleteScopedRowsError) || !missingInvitationEncryptionSchema(error.databaseError)) throw error;
-        return (await invitations("id, project_id, invited_email, status, created_at")).map(legacyInvitationEmailColumns);
+        return (await invitations("id, project_id, invited_email, status, created_at, role, can_comment")).map(legacyInvitationEmailColumns);
       }
     };
     const [projectResult, memberRows, inviteRows] = await Promise.all([
       service.from("projects").select("owner_id, deleted_at").eq("id", projectId).maybeSingle(),
       readCompleteScopedRows<MembershipRow>((after) => {
-        let query = service.from("project_members").select("user_id, role, created_at", { count: "exact" })
+        let query = service.from("project_members").select("user_id, role, can_comment, created_at", { count: "exact" })
           .eq("project_id", projectId).order("user_id", { ascending: true }).limit(BATCH_SIZE);
         if (after) query = query.gt("user_id", after);
         return query;
@@ -128,14 +129,22 @@ export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId:
       id: row.id, project_id: row.project_id,
       invited_email: await decryptInvitationEmail(row, { actorId: auth.user.id, reason: "invitation_list" }),
       status: row.status, created_at: row.created_at,
+      role: memberRoleFromRow(row.role), can_comment: row.role === "reader" && row.can_comment === true,
     }))) : [];
     const memberIds = [ownerId, ...memberRows.map((member) => member.user_id)];
     const [users, seeds] = await Promise.all([fetchAuthUsersById(service, memberIds), fetchAvatarSeeds(service, memberIds)]);
     const members: Member[] = [{ user_id: ownerId, ...toNamed(users.get(ownerId)), avatar_seed: seeds.get(ownerId) ?? ownerId,
-      role: "owner", is_owner: true },
-    ...memberRows.map((member) => ({ user_id: member.user_id, ...toNamed(users.get(member.user_id)),
-      avatar_seed: seeds.get(member.user_id) ?? member.user_id, role: "member" as const, is_owner: false }))];
-    return { ok: true, data: { members, invitations: pending, isOwner } };
+      role: "owner", can_comment: true, is_owner: true },
+    ...memberRows.map((member) => {
+      const role = memberRoleFromRow(member.role);
+      return { user_id: member.user_id, ...toNamed(users.get(member.user_id)),
+        avatar_seed: seeds.get(member.user_id) ?? member.user_id, role,
+        can_comment: role === "reader" && member.can_comment === true, is_owner: false };
+    })];
+    const me = members.find((member) => member.user_id === auth.user.id);
+    const myCapabilities = projectCapabilities(me?.role ?? "reader", me?.can_comment === true);
+    return { ok: true, data: { members, invitations: pending, isOwner,
+      myRole: myCapabilities.role, canComment: myCapabilities.canComment } };
   } catch {
     console.error("[api/members] complete list failed");
     return databaseError;

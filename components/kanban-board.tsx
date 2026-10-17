@@ -19,6 +19,8 @@ import {
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
+  type SensorDescriptor,
+  type SensorOptions,
 } from "@dnd-kit/core";
 import { cn, toast } from "mangue-ui";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
@@ -61,6 +63,7 @@ import { KanbanColumn } from "@/components/kanban-column";
 import type { BoardLandingPreview } from "@/components/board-drop-indicator";
 import { IssuePrProvider } from "@/components/issue-pr-context";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import {
   MarqueeOverlay,
@@ -72,6 +75,9 @@ import {
   restoreBoardScroll,
   type BoardScrollPosition,
 } from "@/lib/board-scroll";
+
+/** Readers' boards register no sensor, so no drag can ever start. */
+const NO_SENSORS: SensorDescriptor<SensorOptions>[] = [];
 
 export const KanbanBoard = memo(function KanbanBoard({
   issues,
@@ -143,6 +149,8 @@ export const KanbanBoard = memo(function KanbanBoard({
   /** Shared with the loading shell so replacing it does not reset the board. */
   horizontalScroll?: BoardScrollPosition;
 }) {
+  // Project readers (MIN-693): no drag, no selection actions, no create slot.
+  const { canWrite } = useProjectCapabilities(projectId);
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.user_id, m])),
     [members],
@@ -490,7 +498,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           the button on the selection pill (MIN-105). */}
       <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
         <DndContext
-          sensors={sensors}
+          sensors={canWrite ? sensors : NO_SENSORS}
           collisionDetection={boardCollision}
           onDragStart={handleDragStart}
           // The drop side can change without the target changing, so the marker
@@ -501,7 +509,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           onDragCancel={handleDragCancel}
         >
           <div className="flex h-full flex-col">
-            {selectedIssues.length > 0 && (
+            {canWrite && selectedIssues.length > 0 && (
               <BulkIssueActions
                 count={selectedIssues.length}
                 members={members}
@@ -559,7 +567,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                     onOpenIssue={onOpenIssue}
                     onOpenIssueById={onOpenIssueById}
                     onOpenPlan={onOpenPlan}
-                    onCreateIssue={onCreateIssue}
+                    onCreateIssue={canWrite ? onCreateIssue : undefined}
                     onUpdateIssue={onUpdateIssue}
                     onSetCategories={onSetCategories}
                     onAddRelation={onAddRelation}
@@ -572,7 +580,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                       preview?.status === status.value ? preview : undefined
                     }
                     landingPreview={landingPreview ?? undefined}
-                    onSelect={toggleSelection}
+                    onSelect={canWrite ? toggleSelection : undefined}
                   />
                 ))}
               </div>

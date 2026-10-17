@@ -11,6 +11,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import type { PageSummary } from "@/lib/pages-api";
 import { pageHref, replacePagesHistory } from "@/lib/pages-navigation";
 import { readLastPage } from "@/lib/pages-last-open";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
 export function PagesHome({
   projectId,
@@ -27,6 +28,8 @@ export function PagesHome({
 }) {
   const t = useTranslations("Pages");
   const restored = useRef(false);
+  // Project readers (MIN-693) pick a page; they cannot create one.
+  const { canWrite } = useProjectCapabilities(projectId);
 
   useEffect(() => {
     if (restored.current || loading) return;
@@ -47,10 +50,12 @@ export function PagesHome({
           icon={File02Icon}
           title={pages.length === 0 ? t("emptyTitle") : t("pickTitle")}
         >
-          <PageCreateMenu onCreate={onCreate} trigger={<Button>
-            <HugeiconsIcon icon={Add01Icon} className="size-4" />
-            {t("newPage")}
-          </Button>} />
+          {canWrite && (
+            <PageCreateMenu onCreate={onCreate} trigger={<Button>
+              <HugeiconsIcon icon={Add01Icon} className="size-4" />
+              {t("newPage")}
+            </Button>} />
+          )}
         </EmptyScene>
       </div>
     </div>

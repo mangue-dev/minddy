@@ -46,6 +46,7 @@ export type ViewShareResult =
         | "passwordRequired"
         | "passwordTooShort"
         | "globalViewsNotShareable"
+        | "readOnlyProject"
         | "databaseError";
     };
 
@@ -127,13 +128,18 @@ const SHARE_SELECT =
 
 /** Same access rule as updateView: project access, personal view = owner only.
     Global views (project_id null) are not shareable in v1 — the public share
-    renderer is single-project. */
+    renderer is single-project. Reading, publishing and revoking a link all
+    need write access: readers never see share tokens (MIN-693). */
 async function resolveShareView(
   viewId: string,
   actorId: string
 ): Promise<
   | { ok: true }
-  | { ok: false; status: 400 | 404; errorKey: "viewNotFound" | "globalViewsNotShareable" }
+  | {
+      ok: false;
+      status: 400 | 403 | 404;
+      errorKey: "viewNotFound" | "globalViewsNotShareable" | "readOnlyProject";
+    }
 > {
   const service = getServiceClient();
   const { data: view } = await service
@@ -150,6 +156,7 @@ async function resolveShareView(
   }
   const access = await getProjectAccess(actorId, view.project_id as string);
   if (!access) return { ok: false, status: 404, errorKey: "viewNotFound" };
+  if (!access.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
   return { ok: true };
 }
 
@@ -404,6 +411,7 @@ export type PageShareResult =
         | "pageNotFound"
         | "passwordRequired"
         | "passwordTooShort"
+        | "readOnlyProject"
         | "databaseError";
     };
 
@@ -425,7 +433,10 @@ function toPageShare(row: ShareRow): PageShare {
 async function resolveSharePage(
   pageId: string,
   actorId: string
-): Promise<{ ok: true; projectId: string } | { ok: false; status: 404; errorKey: "pageNotFound" }> {
+): Promise<
+  | { ok: true; projectId: string }
+  | { ok: false; status: 403 | 404; errorKey: "pageNotFound" | "readOnlyProject" }
+> {
   const service = getServiceClient();
   const { data: page } = await service
     .from("pages")
@@ -436,6 +447,8 @@ async function resolveSharePage(
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
   const access = await getProjectAccess(actorId, page.project_id as string);
   if (!access) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  // Readers neither see the share token nor publish or revoke (MIN-693).
+  if (!access.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
   return { ok: true, projectId: page.project_id as string };
 }
 

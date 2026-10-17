@@ -298,7 +298,15 @@
     "pageDatabaseStale": "This column changed since you opened it. Review the latest value and try again.",
     "pageDatabaseMove": "This page cannot move into another database with its current column values.",
     "pageDatabaseRestoreParent": "Restore the parent database before restoring this entry.",
-    "projectAutomationsRetired": "Project automations were replaced by routines."
+    "projectAutomationsRetired": "Project automations were replaced by routines.",
+    "readOnlyProject": "You can only read this project.",
+    "commentNotAllowed": "You can’t comment in this project.",
+    "invalidRole": "This role is not valid.",
+    "memberNotFound": "This person is no longer a member of the project.",
+    "cannotChangeOwner": "The owner’s role changes only by transferring ownership.",
+    "transferTargetNotMember": "Ownership can only go to a member, not a reader.",
+    "transferKeyConflict": "The new owner already has a project with this key. Change the key first.",
+    "transferStorageQuota": "The new owner’s storage can’t hold this project’s files."
   },
   "RelayClaim": {
     "title": "Connect GitHub",
@@ -1568,7 +1576,8 @@
     "githubMilestone": "Milestone",
     "githubRawMetadata": "View all preserved GitHub metadata",
     "githubYes": "Yes",
-    "githubNo": "No"
+    "githubNo": "No",
+    "descriptionEmptyReadOnly": "No description."
   },
   "Language": {
     "title": "Language",
@@ -1591,7 +1600,30 @@
     "pendingInvitations": "Pending invitations",
     "pendingInvitationsHint": "An invitation waits 30 days. If the person has no minddy account yet, it will be there when they sign up with that address.",
     "pending": "Pending",
-    "cancelInvitationAria": "Cancel invitation"
+    "cancelInvitationAria": "Cancel invitation",
+    "roleMember": "Member",
+    "roleReader": "Reader",
+    "roleReaderCanComment": "Reader · can comment",
+    "canComment": "Can comment",
+    "canCommentHint": "Comments on issues, objectives, feedback and pages. Everything else stays read-only.",
+    "rolesHint": "Members work on everything; readers can only read.",
+    "inviteRoleAria": "Role granted by the invitation",
+    "memberRoleAria": "Role of {name}",
+    "invitationRoleAria": "Role for {email}",
+    "manageMemberAria": "Manage {name}",
+    "transferOwnership": "Transfer ownership",
+    "demoteTitle": "Make {name} a reader?",
+    "demoteDescription": "They keep read access. Their open issues are unassigned and they stop leading objectives.",
+    "demoteConfirm": "Make reader",
+    "transferTitle": "Transfer ownership to {name}?",
+    "transferDescription": "Only the new owner can transfer it back.",
+    "transferBecomeMember": "You become a member of this project.",
+    "transferRoutinesPaused": "Your routines in this project are paused.",
+    "transferPlanFollows": "Plan limits and file storage follow the new owner’s plan.",
+    "transferPersonalStays": "Your subscription, payment methods and personal API keys stay with you.",
+    "transferConfirm": "Transfer ownership",
+    "transferDone": "{name} now owns the project.",
+    "transferRoutinesPausedCount": "{count, plural, one {# routine paused.} other {# routines paused.}}"
   },
   "Meta": {
     "description": "An open-source workspace to manage projects, track tasks, and work with Numo and connected AI tools.",
@@ -6345,5 +6377,9 @@
     "articleLabel": "Article",
     "localeLabel": "Language",
     "revisionLabel": "Revision"
+  },
+  "ProjectAccess": {
+    "readOnlyToast": "You can only read this project.",
+    "sharedViewReadOnly": "Only members can change shared views. Save your own view instead."
   }
 }

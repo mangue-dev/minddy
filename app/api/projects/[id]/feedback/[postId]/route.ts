@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "write");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 
@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "write");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 

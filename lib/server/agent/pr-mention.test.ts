@@ -25,6 +25,8 @@ const world = {
   /** forge login → minddy user who connected this account. */
   identities: [] as Array<{ user_id: string; account_login: string; provider: string }>,
   members: [] as string[],
+  /** Members whose project role is `reader` (MIN-693). */
+  readers: new Set<string>(),
   links: [{ provider: "github", repo_full_name: REPO, project_id: PROJECT_ID }],
   /** The persisted counter, as rendered by the SQL function. */
   counters: new Map<string, number>(),
@@ -53,7 +55,14 @@ vi.mock("@/lib/supabase-service", () => {
       }
       if (table === "projects") return [{ owner_id: OWNER_ID }];
       if (table === "project_members") {
-        return world.members.map((user_id) => ({ user_id, project_id: PROJECT_ID }));
+        return world.members
+          .filter((user_id) => !filters.user_id || filters.user_id === user_id)
+          .map((user_id) => ({
+            user_id,
+            project_id: PROJECT_ID,
+            role: world.readers.has(user_id) ? "reader" : "member",
+            can_comment: false,
+          }));
       }
       if (table === "git_user_identities" || table === "git_connections") {
         return world.identities
@@ -70,6 +79,7 @@ vi.mock("@/lib/supabase-service", () => {
         filters[column] = value;
         return builder;
       },
+      is: () => builder,
       in: (_column: string, values: string[]) => {
         inValues = values;
         return builder;
@@ -144,22 +154,23 @@ beforeEach(() => {
     { user_id: MEMBER_ID, account_login: "collegue", provider: "github" },
   ];
   world.members = [MEMBER_ID];
+  world.readers.clear();
   world.counters.clear();
   world.rpcFails = false;
 });
 
-describe("handleForgeNumoMention — qui a le droit", () => {
-  it("ne lance rien pour un auteur qu'aucun membre n'a connecté", async () => {
+describe("handleForgeNumoMention — who may trigger", () => {
+  it("starts nothing for an author no member has connected", async () => {
     await mention("inconnu");
     expect(startNumoPrReview).not.toHaveBeenCalled();
   });
 
-  it("ne lance rien pour un commentaire sans auteur", async () => {
+  it("starts nothing for a comment without an author", async () => {
     await mention(null);
     expect(startNumoPrReview).not.toHaveBeenCalled();
   });
 
-  it("ne lance rien pour un compte de forge connu mais étranger au projet", async () => {
+  it("starts nothing for a known forge account outside the project", async () => {
     world.members = [];
     world.identities.push({
       user_id: "33333333-3333-4333-8333-333333333333",
@@ -170,7 +181,7 @@ describe("handleForgeNumoMention — qui a le droit", () => {
     expect(startNumoPrReview).not.toHaveBeenCalled();
   });
 
-  it("répond UNE fois au non-membre, puis se tait", async () => {
+  it("answers a non-member ONCE, then stays silent", async () => {
     await mention("inconnu");
     expect(createPullRequestComment).toHaveBeenCalledTimes(1);
     const body = createPullRequestComment.mock.calls[0][0].body;
@@ -182,12 +193,21 @@ describe("handleForgeNumoMention — qui a le droit", () => {
     expect(startNumoPrReview).not.toHaveBeenCalled();
   });
 
-  it("laisse passer un membre du projet, et le propriétaire", async () => {
+  it("lets a project member and the owner through", async () => {
     await mention("collegue");
     expect(startNumoPrReview).toHaveBeenCalledTimes(1);
     await mention("Clement");
     expect(startNumoPrReview).toHaveBeenCalledTimes(2);
     expect(createPullRequestComment).not.toHaveBeenCalled();
+  });
+
+  it("does not let a reader's forge login trigger an owner-billed review", async () => {
+    world.readers.add(MEMBER_ID);
+    await mention("collegue");
+    expect(startNumoPrReview).not.toHaveBeenCalled();
+    // Treated like an unknown author: one explanation, then silence.
+    expect(createPullRequestComment).toHaveBeenCalledTimes(1);
+    expect(createPullRequestComment.mock.calls[0][0].body).toContain("Readers excluded");
   });
 
   it("keeps billing with the owner and the private conversation with the commenter", async () => {
@@ -197,8 +217,8 @@ describe("handleForgeNumoMention — qui a le droit", () => {
   });
 });
 
-describe("handleForgeNumoMention — combien de fois", () => {
-  it("refuse le déclenchement au-delà de la limite horaire, et le dit une fois", async () => {
+describe("handleForgeNumoMention — how many times", () => {
+  it("refuses triggers beyond the hourly limit, and says so once", async () => {
     for (let i = 0; i < MENTION_LIMIT_PER_AUTHOR; i++) await mention("collegue");
     expect(startNumoPrReview).toHaveBeenCalledTimes(MENTION_LIMIT_PER_AUTHOR);
     expect(createPullRequestComment).not.toHaveBeenCalled();
@@ -212,13 +232,13 @@ describe("handleForgeNumoMention — combien de fois", () => {
     expect(createPullRequestComment).toHaveBeenCalledTimes(1);
   });
 
-  it("ne laisse pas un inconnu consommer le compteur des membres", async () => {
+  it("does not let a stranger consume the members' counter", async () => {
     for (let i = 0; i < 50; i++) await mention("inconnu");
     await mention("collegue");
     expect(startNumoPrReview).toHaveBeenCalledTimes(1);
   });
 
-  it("refuse quand le compteur persisté est indisponible (fail-closed)", async () => {
+  it("refuses when the persisted counter is unavailable (fail-closed)", async () => {
     world.rpcFails = true;
     await mention("collegue");
     expect(startNumoPrReview).not.toHaveBeenCalled();

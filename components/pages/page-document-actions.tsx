@@ -13,6 +13,7 @@ import { descendantIds } from "@/lib/pages";
 import { buildPageAgentPrompt } from "@/lib/page-agent-prompt";
 import { useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { trackEvent } from "@/lib/analytics";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
 export type PageMenuTarget = {
   id: string;
@@ -65,6 +66,8 @@ export function usePageDocumentMenu({
   // decorative: ⌘L bare is taken by the browser address bar and
   // never reaches the page (see page-view.tsx).
   const modShortcut = useModShiftShortcut("L");
+  // Project readers (MIN-693) keep only reading gestures: copy and export.
+  const { canWrite } = useProjectCapabilities(projectId);
   const [target, setTarget] = useState<{ id: string; title: string } | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   // The page targeted by “Copy for agent”, and where the gesture came from —
@@ -198,6 +201,26 @@ export function usePageDocumentMenu({
         );
       }
 
+      const copyForAgent: ContextMenuAction = {
+        id: "copy-for-agent",
+        label: t("copyForAgent"),
+        // What we type while looking for the entry, and which is not in the
+        // wording: the protocol, the name of the agent we have in mind, or the
+        // word that we use for this on a ticket (“prompt”, “link”).
+        keywords: ["mcp", "agent", "link", "lien", "prompt", "claude", "cursor"],
+        icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+        shortcut: options?.shortcut ? modShortcut : undefined,
+        separatorBefore: canWrite,
+        onSelect: () => openAgentCopy(page, "menu"),
+      };
+      const exportAction: ContextMenuAction = {
+        id: "export",
+        label: t("export"),
+        icon: <HugeiconsIcon icon={Download01Icon} className="size-4" />,
+        children: exportChildren,
+      };
+      if (!canWrite) return [copyForAgent, exportAction];
+
       return [
         {
           id: "new-subpage",
@@ -215,18 +238,7 @@ export function usePageDocumentMenu({
           ),
           onSelect: () => onToggleFavorite(page),
         },
-        {
-          id: "copy-for-agent",
-          label: t("copyForAgent"),
-          // What we type while looking for the entry, and which is not in the
-          // wording: the protocol, the name of the agent we have in mind, or the
-          // word that we use for this on a ticket (“prompt”, “link”).
-          keywords: ["mcp", "agent", "link", "lien", "prompt", "claude", "cursor"],
-          icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
-          shortcut: options?.shortcut ? modShortcut : undefined,
-          separatorBefore: true,
-          onSelect: () => openAgentCopy(page, "menu"),
-        },
+        copyForAgent,
         {
           id: "publish",
           label: t("publish"),
@@ -236,12 +248,7 @@ export function usePageDocumentMenu({
             setPublishOpen(true);
           },
         },
-        {
-          id: "export",
-          label: t("export"),
-          icon: <HugeiconsIcon icon={Download01Icon} className="size-4" />,
-          children: exportChildren,
-        },
+        exportAction,
         {
           id: "trash",
           label: t("deletePage"),
@@ -264,6 +271,7 @@ export function usePageDocumentMenu({
       t,
       tDatabase,
       pages,
+      canWrite,
     ]
   );
 
@@ -303,9 +311,11 @@ export function usePageDocumentMenu({
   );
 
   const openPublish = useCallback((page: { id: string; title: string }) => {
+    // Publishing hands out a link: readers cannot (and do not see share tokens).
+    if (!canWrite) return;
     setTarget(page);
     setPublishOpen(true);
-  }, []);
+  }, [canWrite]);
 
   return { actionsFor, openPublish, openAgentCopy, dialogs };
 }

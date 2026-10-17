@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,14 +40,17 @@
       "content/knowledge/settings-and-data.md",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (collection-caption clarity); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "pages",
@@ -65,7 +68,7 @@
       "src": "/documentation/it/permissions-and-public-links-flow.svg",
       "alt": "Schema: Permessi account e progetto. Oggetto privato o pubblicazione esplicita. Solo insieme pubblicato e file firmati. Revocare link; file scadono successivamente.",
       "caption": "La pubblicazione concede accesso solo al contenuto scelto; la revoca del link non invalida subito gli URL firmati già emessi.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,13 +103,15 @@
 
 ## Comprendere permessi e link pubblici {#permissions-and-public-links}
 
-Il server verifica l’accesso al progetto per ogni operazione. Il proprietario gestisce le impostazioni riservate, i membri e le integrazioni; i membri lavorano su ticket e pagine secondo i permessi applicabili. Nascondere un controllo nell’interfaccia non concede alcuna autorizzazione. Preferenze personali, quaderno e conversazioni private non diventano condivisi quando aggiungi contesto di progetto. MCP opera con l’account che lo ha autorizzato e ricontrolla l’appartenenza al progetto; non attribuisce privilegi di amministratore all’agente.
+Il server verifica l’accesso al progetto e il tuo ruolo nel progetto per ogni operazione. Ogni progetto ha un solo proprietario, che gestisce le impostazioni riservate, i membri, i ruoli e le integrazioni. I membri lavorano sui contenuti del progetto. I lettori possono leggerli e, quando il proprietario attiva **Può commentare** per loro, commentare; non possono modificare i contenuti né pubblicare link, e non vedono le integrazioni né i token di condivisione e della bacheca. La tabella dei [ruoli del progetto](/docs/projects#member-permissions) elenca l’accesso di ciascun ruolo. Nascondere un controllo nell’interfaccia non concede alcuna autorizzazione. Preferenze personali, quaderno e conversazioni private non diventano condivisi quando aggiungi contesto di progetto. MCP opera con l’account che lo ha autorizzato e segue, a ogni chiamata, il ruolo attuale di quell’account in ciascun progetto; non attribuisce privilegi di amministratore all’agente. Le integrazioni di progetto con chiavi `mdy_` non sono persone: mantengono i permessi fissi del loro tipo e non ricevono alcun ruolo.
+
+Un cambio di ruolo o una rimozione si applica alla richiesta successiva. I contenuti già consegnati non vengono ritirati, e un URL firmato già emesso per un file privato resta valido fino alla scadenza, al massimo 10 minuti dopo.
 
 ![Schema: Permessi account e progetto. Oggetto privato o pubblicazione esplicita. Solo insieme pubblicato e file firmati. Revocare link; file scadono successivamente.](/documentation/it/permissions-and-public-links-flow.svg)
 
 ## Comprendere cosa viene pubblicato {#publication}
 
-Una pagina pubblicata o una vista condivisa usa un link opaco, eventualmente protetto da password. Chi possiede il link e, quando richiesta, la password può accedere al contenuto pubblicato. Revoca il link quando non serve più. Le sottopagine vengono risolte solo all’interno dell’insieme pubblicato, senza mostrare i titoli delle pagine escluse. Le URL firmate dei file riguardano solo le pagine incluse; i bucket e le route private rimangono protetti. Le menzioni possono restare testo senza un profilo accessibile. Un database pubblico mostra soltanto le voci del ramo pubblicato.
+Una pagina pubblicata o una vista condivisa usa un link opaco, eventualmente protetto da password. Il proprietario e i membri possono pubblicare e revocare questi link; i lettori no. Chi possiede il link e, quando richiesta, la password può accedere al contenuto pubblicato. Revoca il link quando non serve più. Le sottopagine vengono risolte solo all’interno dell’insieme pubblicato, senza mostrare i titoli delle pagine escluse. Le URL firmate dei file riguardano solo le pagine incluse; i bucket e le route private rimangono protetti. Le menzioni possono restare testo senza un profilo accessibile. Un database pubblico mostra soltanto le voci del ramo pubblicato.
 
 ## Provare pubblicazione e revoca {#revocation}
 

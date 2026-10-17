@@ -25,6 +25,8 @@ export interface IssueMenuOptions {
   onOpenField: (field: ShortcutField) => void;
   extraActions?: ContextMenuAction[];
   onDelete?: () => void;
+  /** Project readers (MIN-693): only navigation survives, never a mutation. */
+  readOnly?: boolean;
 }
 
 /** One action factory for card context menus and sidebar More menus. */
@@ -46,47 +48,49 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
 
   return useCallback(({
     issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation,
-    onOpenField, extraActions = [], onDelete,
+    onOpenField, extraActions = [], onDelete, readOnly = false,
   }: IssueMenuOptions): ContextMenuAction[] => {
     const identifier = issueIdentifier(projectKey, issue.number);
+    const openPr: ContextMenuAction[] = pr
+      ? [
+          {
+            id: "open-pr",
+            label: tAgent("viewPullRequest"),
+            keywords: [
+              "pull request",
+              "pr",
+              "review",
+              "github",
+              "gitlab",
+              "merge",
+            ],
+            icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+            children: [
+              {
+                id: "open-pr-current-tab",
+                label: tAction("openInCurrentTab"),
+                icon: <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />,
+                onSelect: () => navigate(`/pull-requests?pr=${pr.prId}`),
+              },
+              {
+                id: "open-pr-new-tab",
+                label: tAction("openInNewTab"),
+                icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
+                onSelect: () => {
+                  const href = `/pull-requests?pr=${pr.prId}`;
+                  if (appTabs) void appTabs.create(href);
+                  else window.open(href, "_blank", "noopener,noreferrer");
+                },
+              },
+            ],
+          },
+        ]
+      : [];
+    if (readOnly) return openPr;
     return [
       ...agentActions,
       // Open pull request — only offered when a PR exists for the ticket.
-      ...(pr
-        ? [
-            {
-              id: "open-pr",
-              label: tAgent("viewPullRequest"),
-              keywords: [
-                "pull request",
-                "pr",
-                "review",
-                "github",
-                "gitlab",
-                "merge",
-              ],
-              icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
-              children: [
-                {
-                  id: "open-pr-current-tab",
-                  label: tAction("openInCurrentTab"),
-                  icon: <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />,
-                  onSelect: () => navigate(`/pull-requests?pr=${pr.prId}`),
-                },
-                {
-                  id: "open-pr-new-tab",
-                  label: tAction("openInNewTab"),
-                  icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
-                  onSelect: () => {
-                    const href = `/pull-requests?pr=${pr.prId}`;
-                    if (appTabs) void appTabs.create(href);
-                    else window.open(href, "_blank", "noopener,noreferrer");
-                  },
-                },
-              ],
-            },
-          ]
-        : []),
+      ...openPr,
       ...(pr ? [{
         id: "unlink-pr",
         label: tPr("unlinkIssue"),

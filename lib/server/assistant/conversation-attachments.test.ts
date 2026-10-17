@@ -84,7 +84,7 @@ function message(id = MESSAGE, attachments: unknown[] = [file()]): Row {
 beforeEach(() => {
   vi.clearAllMocks();
   databaseError = null; ranges = []; persisted = [];
-  h.access.mockResolvedValue({ project: { id: PROJECT, key: "MIN" } });
+  h.access.mockResolvedValue({ project: { id: PROJECT, key: "MIN" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
   h.download.mockResolvedValue(Buffer.from("hello"));
   h.quota.mockResolvedValue(true);
   h.signed.mockResolvedValue("https://signed.test/image");

@@ -44,7 +44,7 @@ import type { Category, Member, Objective } from "@/lib/types";
 export { Dot } from "@/components/ui/color-dot";
 
 export const TRIGGER =
-  "-mr-1.5 flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
+  "-mr-1.5 flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted disabled:cursor-default disabled:hover:bg-transparent";
 
 export function PropertyRow({
   label,

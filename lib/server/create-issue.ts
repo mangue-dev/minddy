@@ -4,7 +4,6 @@ import { categoryStore } from "@/lib/server/category-store";
 
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getProjectAccess } from "@/lib/server/project-access";
 import { isEffort, isPriority, isStatus, isDateOrNull } from "@/lib/issue-validation";
 import { isRecurrenceCadence, startDueDateISO } from "@/lib/recurrence";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
@@ -35,7 +34,7 @@ import {
 } from "@/lib/server/smart-assign";
 import { ensureIssueLimit } from "@/lib/server/entitlements";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
-import { objectiveInProject } from "@/lib/server/tenancy";
+import { objectiveInProject, userCanBeAssigned } from "@/lib/server/tenancy";
 import { captureServerEvent } from "./posthog";
 
 /**
@@ -262,13 +261,14 @@ export async function createIssueForProject({
 
   const service = getServiceClient();
 
-  // An assignee must belong to the target project. Cross-project creation may
+  // An assignee must be assignable in the target project (owner or member
+  // role; readers are never assignees, MIN-693). Cross-project creation may
   // carry an assignee_id whose user isn't a member here — drop it rather than
   // assign a stranger. (Same-project assignees are picked from the project's
   // own member list, so this is a no-op there.)
   if (typeof row.assignee_id === "string") {
-    const assigneeAccess = await getProjectAccess(row.assignee_id, projectId);
-    if (!assigneeAccess) row.assignee_id = null;
+    const assignable = await userCanBeAssigned(service, row.assignee_id, projectId);
+    if (!assignable) row.assignee_id = null;
   }
 
   // Same requirement for the OBJECTIVE (MIN-339): it must live in this project.

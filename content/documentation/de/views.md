@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,17 @@
       "app/share/[token]/page.tsx",
       "content/knowledge/feedback.md",
       "lib/server/view-shares.ts",
-      "lib/public-board-projection.ts"
+      "lib/public-board-projection.ts",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "navigation",
@@ -68,7 +71,7 @@
       "src": "/documentation/de/work-view-filters.png",
       "alt": "Manuelle Ansichtsfilter und Sortiermenü.",
       "caption": "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +87,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -122,7 +125,7 @@ Eine gespeicherte Ansicht ist keine Kopie ihrer Probleme. Das Löschen der Ansic
 
 ## Eine schreibgeschützte Ansicht teilen und widerrufen {#share-a-view}
 
-Öffne das Ansichtsmenü auf einem geeigneten Projektboard und wähle die Aktion zum Teilen der Ansicht. Du brauchst Projektzugriff; eine persönliche Ansicht innerhalb des Projekts kann nur ihr eigener Benutzer teilen. Globale projektübergreifende Ansichten lassen sich nicht teilen. Prüfe Filter und sichtbare Inhalte vor der Veröffentlichung. Wähle einen öffentlichen geheimen Link oder einen Passwortschutz, sofern angeboten. Passwörter benötigen mindestens acht Zeichen. Kopiere den erzeugten Link erst, wenn die Änderung erfolgreich gespeichert wurde.
+Öffne das Ansichtsmenü auf einem geeigneten Projektboard und wähle die Aktion zum Teilen der Ansicht. Du musst Eigentümer oder Mitglied sein; Leser behalten ihre persönlichen Ansichten, können aber keine Ansichten teilen. Eine persönliche Ansicht innerhalb des Projekts kann nur ihr eigener Benutzer teilen. Globale projektübergreifende Ansichten lassen sich nicht teilen. Prüfe Filter und sichtbare Inhalte vor der Veröffentlichung. Wähle einen öffentlichen geheimen Link oder einen Passwortschutz, sofern angeboten. Passwörter benötigen mindestens acht Zeichen. Kopiere den erzeugten Link erst, wenn die Änderung erfolgreich gespeichert wurde.
 
 Öffne den Link in einer separaten Browsersitzung ohne dein Konto. Prüfe die Problemauswahl, Felder und verknüpften Inhalte, die Besucher sehen können. Der öffentliche Link gewährt schreibgeschützten Zugriff auf die Ansicht, keine Mitgliedschaft oder Bearbeitungsrechte im Projekt.
 

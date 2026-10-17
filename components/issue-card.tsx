@@ -16,6 +16,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { ConfirmDeleteDialog, Spinner, cn, toast } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
 import { useIssueMenuActionsWithNavigation } from "@/components/use-issue-menu-actions";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
 import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
 import {
@@ -960,6 +961,8 @@ const IssueCardContent = memo(function IssueCardContent({
   const t = useTranslations("IssueUI");
   const tAttach = useTranslations("Resources");
   const buildIssueMenuActions = useIssueMenuActionsWithNavigation(onNavigate);
+  // Project readers (MIN-693): the card opens and navigates, nothing mutates.
+  const { canWrite } = useProjectCapabilities(issue.project_id);
   const tPlan = useTranslations("Plan");
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
@@ -1212,7 +1215,7 @@ const IssueCardContent = memo(function IssueCardContent({
   // The “Custom” dialog suspends them: it covers the card, and a key
   // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } =
-    useIssueFieldShortcuts(!dragging && !customPromptOpen, {
+    useIssueFieldShortcuts(!dragging && !customPromptOpen && canWrite, {
       " ": openIssue,
       "shift+p": () => void copyPrompt(),
     });
@@ -1280,8 +1283,9 @@ const IssueCardContent = memo(function IssueCardContent({
       hasObjectives: !!objectiveMap?.size,
       onSelectRelation: onAddRelation ? setRelationType : undefined,
       onOpenField: openFieldAtPointer,
-      extraActions: buildMenuActions?.(issue),
+      extraActions: canWrite ? buildMenuActions?.(issue) : undefined,
       onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
+      readOnly: !canWrite,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1295,6 +1299,7 @@ const IssueCardContent = memo(function IssueCardContent({
     objectiveMap,
     buildMenuActions,
     onDelete,
+    canWrite,
   ]);
   lastMenuActions.current = menuActions;
 
@@ -1317,7 +1322,7 @@ const IssueCardContent = memo(function IssueCardContent({
         pointerRef.current = { x: e.clientX, y: e.clientY };
         setMenuPosition(pointerRef.current);
       }}
-      {...drop.handlers}
+      {...(canWrite ? drop.handlers : {})}
       // No touch-action override: drag-and-drop is mouse-only (MouseSensor), so
       // touch is free to scroll the board/columns natively. The grab cursor is
       // a DRAG signal, not an affordance: the card reads as a normal surface on
@@ -1351,8 +1356,8 @@ const IssueCardContent = memo(function IssueCardContent({
             onOpenPlan={openPlan}
             pr={pr}
             onOpenPr={openPr}
-            onUpdate={updateCard}
-            onSetCategories={setCardCategories}
+            onUpdate={canWrite ? updateCard : undefined}
+            onSetCategories={canWrite ? setCardCategories : undefined}
             inCurrentCycle={inCurrentCycle}
             selected={selected}
           />
@@ -1426,8 +1431,11 @@ type IssueCardProps = ComponentProps<typeof IssueCardContent> & {
  */
 export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
   const { landingOutOfFlow = false, ...contentProps } = props;
+  // Readers cannot move tickets: their cards never start a drag.
+  const { canWrite } = useProjectCapabilities(props.issue.project_id);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: props.issue.id,
+    disabled: !canWrite,
   });
   // The drag sensor activates only after pointer movement crosses its threshold.
 

@@ -144,7 +144,9 @@ export async function runSmartAssign(
       service
         .from("project_members")
         .select("user_id")
-        .eq("project_id", params.projectId),
+        .eq("project_id", params.projectId)
+        // Readers are never assignees (MIN-693).
+        .eq("role", "member"),
     ]);
 
   // Re-check everything at execution time — the world may have moved since
@@ -154,7 +156,7 @@ export async function runSmartAssign(
   if (!issue || issue.assignee_id !== null) return null;
   if (!isSmartAssignEligibleStatus(issue.status)) return null;
 
-  // The team = owner (no project_members row) + members.
+  // The team = owner (no project_members row) + members with the member role.
   const ownerId = project.owner_id as string;
   const memberIds = [
     ownerId,
@@ -460,7 +462,8 @@ export async function sweepUnassignedIssues(
  * warned.
  *
  * The team and the notion of "written rule" read exactly as in
- * runSmartAssign: owner (without project_members line) + members, and a rule
+ * runSmartAssign: owner (without project_members line) + members (member
+ * role only, readers are not candidates), and a rule
  * empty of blanks does not count. A solo project is never reported — it
  * has nothing to adjust, the assignment is deterministic.
  *
@@ -485,7 +488,8 @@ export async function loadSmartAssignConfigWarnings(
     const { data: memberRows } = await service
       .from("project_members")
       .select("project_id, user_id")
-      .in("project_id", projectIds);
+      .in("project_id", projectIds)
+      .eq("role", "member");
 
     const teamByProject = new Map<string, Set<string>>();
     for (const id of projectIds) teamByProject.set(id, new Set([userId]));

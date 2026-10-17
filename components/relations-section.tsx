@@ -57,6 +57,7 @@ export function RelationsSection({
   onOpenIssue,
   onAddRelation,
   onRemoveRelation,
+  readOnly = false,
 }: {
   issue: Issue;
   /** This issue's relations, resolved (with otherNumber) and priority-sorted. */
@@ -76,6 +77,8 @@ export function RelationsSection({
     },
   ) => void;
   onRemoveRelation: (relationId: string) => void;
+  /** Project readers: relations are listed without add or remove controls. */
+  readOnly?: boolean;
 }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
@@ -150,6 +153,7 @@ export function RelationsSection({
 
   return (
     <>
+      {!readOnly && (
       <PropertyRow label={t("relations")}>
         <SearchMenu
           open={open}
@@ -251,6 +255,7 @@ export function RelationsSection({
           )}
         </SearchMenu>
       </PropertyRow>
+      )}
 
       {grouped.length > 0 && (
         <div className="flex flex-col gap-3 pb-2">
@@ -369,7 +374,7 @@ export function RelationsSection({
                             })}
                           </TooltipContent>
                         </Tooltip>
-                      ) : (
+                      ) : readOnly ? null : (
                         <Button
                           variant="ghost"
                           size="icon-sm"

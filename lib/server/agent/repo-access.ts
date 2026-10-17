@@ -205,8 +205,25 @@ export async function resolveRepoCloneTargetForRepo(opts: {
   provider: RepoProvider;
   repoFullName: string;
 }): Promise<RepoCloneTarget | null> {
+  const target = await resolveRepoCloneTargetWithAccess(opts);
+  return target ? target.target : null;
+}
+
+/**
+ * The same choice, plus whether this user may WRITE through it (MIN-693): a
+ * link in a project where they are owner or member is preferred, so a reader
+ * in one project and member in another acts through the second. Read-only
+ * access still resolves (reads stay open), with `canWrite: false`.
+ */
+export async function resolveRepoCloneTargetWithAccess(opts: {
+  userId: string;
+  provider: RepoProvider;
+  repoFullName: string;
+}): Promise<{ target: RepoCloneTarget; canWrite: boolean } | null> {
   const link = await resolveProjectLinkForRepo(opts);
-  return link ? targetFromLink(link.row) : null;
+  if (!link) return null;
+  const target = await targetFromLink(link.row);
+  return target ? { target, canWrite: link.canWrite } : null;
 }
 
 /** Project↔deposit link retained for a user, WITHOUT token mint. */
@@ -220,6 +237,8 @@ export interface ResolvedRepoLink {
   defaultBranch: string;
   /** Raw line, for `targetFromLink` — avoids a second query. */
   row: GitLinkRow;
+  /** The user may write in the link's project (owner or member, MIN-693). */
+  canWrite: boolean;
 }
 
 /**
@@ -248,6 +267,8 @@ export async function resolveProjectLinkForRepo(opts: {
     .eq("repo_full_name", storedName);
 
   const rows = (data ?? []) as GitLinkRow[];
+  // A writable link wins; the first read-only one is the fallback (MIN-693).
+  let readOnly: { row: GitLinkRow; projectId: string } | null = null;
   for (const row of rows) {
     if (!row.project_id || !row.repo_full_name) continue;
     const access = await getProjectAccess(opts.userId, row.project_id);
@@ -255,19 +276,33 @@ export async function resolveProjectLinkForRepo(opts: {
     // An incomplete link must not hide a usable link in another accessible
     // project, or turn every PR read into an unhandled server exception.
     if (row.provider === "github" && githubInstallationId(row) == null) continue;
-    return {
-      linkId: row.id,
-      connectionId: row.connection_id,
-      externalRepoId: row.external_repo_id,
-      projectId: row.project_id,
-      provider: opts.provider,
-      repoFullName: (await decodeRepositoryName(opts.provider,
-        row.repo_full_name,opts.userId))!,
-      defaultBranch: await decodeDefaultBranch(row.project_id!,row.default_branch) ?? "main",
-      row,
-    };
+    if (!access.canWrite) {
+      readOnly ??= { row, projectId: row.project_id };
+      continue;
+    }
+    return resolvedLink(opts, row, row.project_id, true);
   }
-  return null;
+  return readOnly ? resolvedLink(opts, readOnly.row, readOnly.projectId, false) : null;
+}
+
+async function resolvedLink(
+  opts: { userId: string; provider: RepoProvider },
+  row: GitLinkRow,
+  projectId: string,
+  canWrite: boolean,
+): Promise<ResolvedRepoLink> {
+  return {
+    linkId: row.id,
+    connectionId: row.connection_id,
+    externalRepoId: row.external_repo_id,
+    projectId,
+    provider: opts.provider,
+    repoFullName: (await decodeRepositoryName(opts.provider,
+      row.repo_full_name, opts.userId))!,
+    defaultBranch: await decodeDefaultBranch(projectId, row.default_branch) ?? "main",
+    row,
+    canWrite,
+  };
 }
 
 /**

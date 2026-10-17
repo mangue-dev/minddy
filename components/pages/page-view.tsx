@@ -63,6 +63,7 @@ import {
   usePagesQuery,
 } from "@/lib/use-pages-query";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
@@ -309,6 +310,8 @@ function PageSurface({
   } = usePagesQuery(projectId);
   const pagesLoaded = !pagesLoading;
   const { members, loading: membersLoading } = useMembersQuery(projectId, true);
+  // Project readers (MIN-693) read the page: no editing, no document writes.
+  const { canWrite } = useProjectCapabilities(projectId);
   const present = usePresentOn(pageId);
   // The watch heartbeat: while this surface holds the document open, the
   // server knows someone is reading it and stays quiet about agent writes.
@@ -1002,7 +1005,7 @@ function PageSurface({
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
         <div className={cn("relative mx-auto w-full px-6 py-10", panel ? "max-w-3xl app-desktop:px-16" : page.database_schema != null ? "max-w-none app-desktop:pl-24 app-desktop:pr-10" : "max-w-3xl app-desktop:pl-24 app-desktop:pr-10")}>
-          {page.database_schema != null && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
+          {page.database_schema != null && canWrite && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}
             icon={icon}
@@ -1012,7 +1015,8 @@ function PageSurface({
             // of the parent, of the `+` of the sidebar or of the menu of a line of the tree,
             // and that avoids making a “I have just been created” travel through
             // three components and navigation.
-            autoFocus={!title && isEmptyDoc(page.content)}
+            autoFocus={canWrite && !title && isEmptyDoc(page.content)}
+            readOnly={!canWrite}
             onTitleChange={(next) => {
               if (next.trim()) forgetDraftPage(pageId);
               setEdited((current) => ({ ...current, title: next }));
@@ -1044,7 +1048,9 @@ function PageSurface({
             onDismiss={autosave.dismiss}
           />
           {page.parent_id && byId.get(page.parent_id)?.database_schema != null && (
-            <PageDatabaseProperties projectId={projectId} page={summary ?? page} database={byId.get(page.parent_id)!} />
+            <fieldset disabled={!canWrite} className="contents">
+              <PageDatabaseProperties projectId={projectId} page={summary ?? page} database={byId.get(page.parent_id)!} />
+            </fieldset>
           )}
           {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
             {/* What “assign a task” means when it comes off a page
@@ -1057,6 +1063,7 @@ function PageSurface({
               flush={flush}
             >
               <PageEditor
+                editable={canWrite}
                 initialContent={(page.content as JSONContent | null) ?? null}
                 onChange={(content) => {
                   if (!isEmptyDoc(content)) forgetDraftPage(pageId);

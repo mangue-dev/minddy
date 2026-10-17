@@ -273,7 +273,7 @@ describe("Numo tool contracts", () => {
     );
 
     expect(projects).toBeDefined();
-    expect(projects?.function.description).toMatch(/owner or member/i);
+    expect(projects?.function.description).toMatch(/owner, member, or reader/i);
     expect(projects?.function.parameters.properties).not.toHaveProperty(
       "project_id",
     );

@@ -185,6 +185,8 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
       full_name: displayName(named),
       avatar_seed: seeds.get(id) ?? id,
       role: id === project.owner_id ? "owner" : "member",
+      // Public viewers never act, so the comment capability is irrelevant here.
+      can_comment: false,
       is_owner: id === project.owner_id,
     };
   });

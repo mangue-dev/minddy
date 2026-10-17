@@ -1,3 +1,4 @@
+import { memberRoleFromRow } from "@/lib/project-roles";
 import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
@@ -41,7 +42,7 @@ export async function gatherProjectPromptContext({
       .limit(5),
     service
       .from("project_members")
-      .select("user_id")
+      .select("user_id, role")
       .eq("project_id", project.id),
     objectiveStore(supabase)
       .select("id, name, status")
@@ -74,10 +75,12 @@ export async function gatherProjectPromptContext({
     ...(memberRows ?? []).map((m) => m.user_id as string),
   ];
   const users = await fetchAuthUsersById(service, memberIds);
+  const roles = new Map((memberRows ?? []).map((m) =>
+    [m.user_id as string, memberRoleFromRow(m.role)]));
   const members = memberIds.map((id) => ({
     user_id: id,
     name: displayName(toNamed(users.get(id)), "User"),
-    role: (id === project.owner_id ? "owner" : "member") as "owner" | "member",
+    role: id === project.owner_id ? "owner" as const : roles.get(id) ?? "reader",
   }));
 
   return {

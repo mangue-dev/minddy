@@ -42,6 +42,8 @@ export type MarkdownEditorProps = {
   mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;
+  /** Rendered without editing (project readers). */
+  readOnly?: boolean;
 };
 
 function EditorFallback({

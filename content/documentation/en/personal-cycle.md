@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,17 @@
       "components/settings/account-cycles-section.tsx",
       "lib/cycle-prefs.ts",
       "lib/server/cycles.ts",
-      "components/cycle/use-cycle-menu-actions.tsx"
+      "components/cycle/use-cycle-menu-actions.tsx",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "views",
@@ -59,7 +62,7 @@
       "src": "/documentation/en/reader-cycle.png",
       "alt": "A demonstration issue in the personal cycle’s backlog.",
       "caption": "Adding the issue to this cycle assigned its owner while preserving backlog status.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -78,7 +81,7 @@
 
 ## Configure and fill your cycle {#personal-cycle}
 
-Enable cycles in Account settings → Cycles, then open Cycle from personal navigation. It belongs to your account and can contain issues from multiple projects you can access. It is not a project sprint and does not belong to a team objective.
+Enable cycles in Account settings → Cycles, then open Cycle from personal navigation. It belongs to your account and can contain issues assigned to you in projects where you are the owner or a Member. Readers cannot be assigned, so a project you only read contributes no work. It is not a project sprint and does not belong to a team objective.
 
 Choose a duration of one or two weeks, the starting weekday, one to four upcoming cycles and light, medium or heavy intensity. These settings determine your personal period and target capacity. The automatic-capture switches control whether assigned issues enter the current cycle when they start or finish.
 

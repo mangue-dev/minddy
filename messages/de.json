@@ -298,7 +298,15 @@
     "pageDatabaseStale": "Diese Spalte wurde inzwischen geändert. Prüfe den aktuellen Wert und versuche es erneut.",
     "pageDatabaseMove": "Diese Seite kann mit ihren aktuellen Spaltenwerten nicht in eine andere Datenbank verschoben werden.",
     "pageDatabaseRestoreParent": "Stelle zuerst die übergeordnete Datenbank wieder her, bevor du diesen Eintrag wiederherstellst.",
-    "projectAutomationsRetired": "Projektautomatisierungen wurden durch Routinen ersetzt."
+    "projectAutomationsRetired": "Projektautomatisierungen wurden durch Routinen ersetzt.",
+    "readOnlyProject": "Sie können dieses Projekt nur lesen.",
+    "commentNotAllowed": "Sie können in diesem Projekt nicht kommentieren.",
+    "invalidRole": "Diese Rolle ist ungültig.",
+    "memberNotFound": "Diese Person ist nicht mehr Mitglied des Projekts.",
+    "cannotChangeOwner": "Die Rolle des Inhabers ändert sich nur durch eine Eigentumsübertragung.",
+    "transferTargetNotMember": "Das Eigentum kann nur an ein Mitglied übertragen werden, nicht an einen Leser.",
+    "transferKeyConflict": "Der neue Inhaber hat bereits ein Projekt mit diesem Schlüssel. Ändern Sie zuerst den Schlüssel.",
+    "transferStorageQuota": "Der Speicher des neuen Inhabers reicht für die Dateien dieses Projekts nicht aus."
   },
   "RelayClaim": {
     "title": "GitHub verbinden",
@@ -1568,7 +1576,8 @@
     "githubMilestone": "Meilenstein",
     "githubRawMetadata": "Alle erhaltenen GitHub-Metadaten anzeigen",
     "githubYes": "Ja",
-    "githubNo": "Nein"
+    "githubNo": "Nein",
+    "descriptionEmptyReadOnly": "Keine Beschreibung."
   },
   "Language": {
     "title": "Sprache",
@@ -1591,7 +1600,30 @@
     "pendingInvitations": "Ausstehende Einladungen",
     "pendingInvitationsHint": "Eine Einladung wartet 30 Tage. Wenn die Person noch kein minddy-Konto hat, wird es dort sein, wenn sie sich mit dieser Adresse anmeldet.",
     "pending": "Ausstehend",
-    "cancelInvitationAria": "Einladung abbrechen"
+    "cancelInvitationAria": "Einladung abbrechen",
+    "roleMember": "Mitglied",
+    "roleReader": "Leser",
+    "roleReaderCanComment": "Leser · darf kommentieren",
+    "canComment": "Darf kommentieren",
+    "canCommentHint": "Kommentare zu Problemen, Zielen, Feedback und Seiten. Alles andere bleibt schreibgeschützt.",
+    "rolesHint": "Mitglieder arbeiten an allem mit; Leser können nur lesen.",
+    "inviteRoleAria": "Rolle aus der Einladung",
+    "memberRoleAria": "Rolle von {name}",
+    "invitationRoleAria": "Rolle für {email}",
+    "manageMemberAria": "{name} verwalten",
+    "transferOwnership": "Eigentum übertragen",
+    "demoteTitle": "{name} zum Leser machen?",
+    "demoteDescription": "Der Lesezugriff bleibt bestehen. Offene Probleme werden nicht mehr zugewiesen, und Ziele werden nicht mehr geleitet.",
+    "demoteConfirm": "Zum Leser machen",
+    "transferTitle": "Eigentum an {name} übertragen?",
+    "transferDescription": "Nur der neue Eigentümer kann es zurückübertragen.",
+    "transferBecomeMember": "Sie werden Mitglied dieses Projekts.",
+    "transferRoutinesPaused": "Ihre Routinen in diesem Projekt werden pausiert.",
+    "transferPlanFollows": "Planlimits und Dateispeicher richten sich nach dem Plan des neuen Eigentümers.",
+    "transferPersonalStays": "Ihr Abonnement, Ihre Zahlungsmethoden und Ihre persönlichen API-Schlüssel bleiben bei Ihnen.",
+    "transferConfirm": "Eigentum übertragen",
+    "transferDone": "{name} ist jetzt Eigentümer des Projekts.",
+    "transferRoutinesPausedCount": "{count, plural, one {# Routine pausiert.} other {# Routinen pausiert.}}"
   },
   "Meta": {
     "description": "Ein Open-Source-Arbeitsbereich zum Verwalten von Projekten und Aufgaben sowie zur Zusammenarbeit mit Numo und verbundenen KI-Tools.",
@@ -6345,5 +6377,9 @@
     "articleLabel": "Artikel",
     "localeLabel": "Sprache",
     "revisionLabel": "Revision"
+  },
+  "ProjectAccess": {
+    "readOnlyToast": "Sie können dieses Projekt nur lesen.",
+    "sharedViewReadOnly": "Nur Mitglieder können geteilte Ansichten ändern. Speichern Sie stattdessen eine eigene Ansicht."
   }
 }

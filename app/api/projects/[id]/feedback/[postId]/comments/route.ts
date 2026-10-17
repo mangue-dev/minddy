@@ -81,7 +81,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     since MIN-196. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "comment");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 

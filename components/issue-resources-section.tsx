@@ -26,9 +26,12 @@ import { useAuth } from "@/lib/auth-context";
 export function IssueResourcesSection({
   issueId,
   projectId,
+  readOnly = false,
 }: {
   issueId: string;
   projectId: string;
+  /** Project readers: resources are listed, never added or removed. */
+  readOnly?: boolean;
 }) {
   const t = useTranslations("Resources");
   const { user } = useAuth();
@@ -44,6 +47,16 @@ export function IssueResourcesSection({
 
   const drop = useFileDrop(uploads.addFiles);
   const empty = resources.length === 0 && uploads.pending.length === 0;
+
+  if (readOnly) {
+    if (resources.length === 0) return null;
+    return (
+      <div className="rounded-lg">
+        <PropertyRow label={t("sectionTitle")}>{null}</PropertyRow>
+        <ResourcePills resources={resources} className="pb-2" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative rounded-lg" {...drop.handlers}>

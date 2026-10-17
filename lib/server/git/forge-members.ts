@@ -31,13 +31,16 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 /** forge login (lowercase) → `user_id` minddy. */
 export type ForgeAssigneeIndex = Map<string, string>;
 
-/** The members of the project: the owner (who does not have a line
- * `project_members`) and the members, like everywhere else. */
+/** The people who can be assigned in the project: the owner (who does not
+ * have a line `project_members`) and the members with the `member` role.
+ * Readers are never assignees, and they cannot trigger a forge `@numo`
+ * either, which reuses this index (MIN-693). */
 async function loadProjectUserIds(projectId: string): Promise<string[]> {
   const service = getServiceClient();
   const [{ data: project }, { data: members }] = await Promise.all([
     service.from("projects").select("owner_id").eq("id", projectId).maybeSingle(),
-    service.from("project_members").select("user_id").eq("project_id", projectId),
+    service.from("project_members").select("user_id").eq("project_id", projectId)
+      .eq("role", "member"),
   ]);
   return [
     ...new Set([

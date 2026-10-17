@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { updateView } from "@/lib/server/views";
+import { getProjectAccess } from "@/lib/server/project-access";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -42,7 +43,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
   const { data: existing } = await auth.supabase
     .from("views")
-    .select("id, kind")
+    .select("id, kind, project_id, user_id")
     .eq("id", id)
     .maybeSingle();
   if (!existing) {
@@ -50,6 +51,14 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   }
   if (existing.kind === "my") {
     return NextResponse.json({ error: t("systemViewLocked") }, { status: 400 });
+  }
+  // A shared project view needs write access; RLS enforces it too, this
+  // turns a reader's silent no-op into an explicit 403 (MIN-693).
+  if (existing.project_id && !existing.user_id) {
+    const access = await getProjectAccess(auth.user.id, existing.project_id as string);
+    if (access && !access.canWrite) {
+      return NextResponse.json({ error: t("readOnlyProject") }, { status: 403 });
+    }
   }
 
   const { data, error } = await auth.supabase

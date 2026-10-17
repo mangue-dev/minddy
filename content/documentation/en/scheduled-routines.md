@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus; MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,13 +40,16 @@
       "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "components/routines/routines-panel.tsx",
       "components/routines/use-routine-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review: code delegation and code routine templates removed; routine examples are now triage, stale issues and weekly summary; no operational rerun); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review: code delegation and code routine templates removed; routine examples are now triage, stale issues and weekly summary; no operational rerun); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en translation, label and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [],
@@ -61,7 +64,7 @@
       "src": "/documentation/en/scheduled-routines-workflow.png",
       "alt": "Scheduled and event modes, one condition group, app icons and discreet information buttons.",
       "caption": "Local demonstration of the actual trigger editor. No routine was saved or executed.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -86,7 +89,7 @@ Only the project owner can create, edit or enable a routine. Open Routines, choo
 Choose **Scheduled** or **Event**. Database arrivals are an option in the event list.
 
 - **Scheduled:** choose daily, weekly or monthly, the time and your timezone. Check the first-run preview.
-- **Event:** choose issue creation, entry into a target status, assignment, a comment on a followed issue, feedback receipt, or a new database entry. Choose the target status, person or followed issue where requested. A status trigger includes issues created directly in that status. Assignment requires an actual change of assignee.
+- **Event:** choose issue creation, entry into a target status, assignment, a comment on a followed issue, feedback receipt, or a new database entry. Choose the target status, person or followed issue where requested. A status trigger includes issues created directly in that status. Assignment requires an actual change of assignee. A comment written by a reader does not start a comment routine.
 
 For a database arrival, choose **New database entry** in the event list, then a page database in this project. A creation, duplicate, database import or move into that database counts as an arrival. Restoring an entry does not create a new arrival.
 
@@ -110,7 +113,7 @@ Open the routine to inspect waiting conditions, change its instruction or trigge
 
 Right-click a routine in the list to open its latest run without selecting it first; **Open latest run** stays unavailable until the routine has run. The project owner can also choose **Run now**, **Pause** or **Resume**, **Edit** or **Move to trash** from the same menu. **Resume** is unavailable when the instance cannot schedule routines. Other members only see entries that leave the routine unchanged. To create a routine, right-click **Routines** in the sidebar and choose **New routine**.
 
-Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by default, including every Numo call of that occurrence. Open its conversation to inspect the source, outcome and questions. When owner input is required, answer in that same conversation; the remaining occurrence budget is retained. Inspect saved results before adjusting a cap or retrying. After an ownership change, the previous owner's routine cannot start new work; create a routine as the current owner.
+Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by default, including every Numo call of that occurrence. Open its conversation to inspect the source, outcome and questions. When owner input is required, answer in that same conversation; the remaining occurrence budget is retained. Inspect saved results before adjusting a cap or retrying. When ownership is [transferred](/docs/projects#transfer-ownership), the former owner's routines in the project are paused and cannot start new work; the new owner creates the routines that should continue.
 
 The cap applies when an included monthly budget is available; an uncapped personal-key mode does not acquire an artificial monthly allowance.
 

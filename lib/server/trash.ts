@@ -9,7 +9,7 @@ import { decodeObjective } from "@/lib/server/objective-store";
 import { decodePageProjection } from "@/lib/server/page-content";
 import { decodeProjectName } from "@/lib/server/project-content";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { getProjectAccess, writableProjectIds } from "@/lib/server/project-access";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { removeStorageObjects } from "@/lib/server/attachments";
@@ -147,6 +147,7 @@ type TrashErrorKey =
   | "pageDatabaseRestoreParent"
   | "pageStale"
   | "ownerOnly"
+  | "readOnlyProject"
   | "projectKeyAlreadyUsed"
   | "databaseError";
 
@@ -203,6 +204,11 @@ async function authorize(
   if (type === "routine" && !access.isOwner) {
     return { ok: false, status: 403, errorKey: "ownerOnly" };
   }
+  // Trashing, restoring and purging content are writes: a reader sees the
+  // project but cannot change it (MIN-693).
+  if (!access.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
+  }
   return null;
 }
 
@@ -217,7 +223,8 @@ function toTrashResult(result: {
   errorKey: PageErrorKey;
 }): Extract<TrashResult, { ok: false }> {
   const errorKey: TrashErrorKey =
-    result.errorKey === "databaseError" || result.errorKey === "pageDatabaseRestoreParent" || result.errorKey === "pageStale"
+    result.errorKey === "databaseError" || result.errorKey === "pageDatabaseRestoreParent" || result.errorKey === "pageStale" ||
+    result.errorKey === "readOnlyProject"
       ? result.errorKey
       : "pageNotFound";
   return { ok: false, status: result.status, errorKey };
@@ -248,6 +255,10 @@ export async function softDeleteItem(
   // mutation must remain in one database transaction. The RPC locks the
   // project scope and re-checks current membership before soft-deleting.
   if (type === "objective") {
+    // The RPC re-checks write access in its transaction; this check only
+    // turns a reader's refusal into an explicit 403 instead of a 404.
+    const refusal = await authorize(service, type, id, actorId, false);
+    if (refusal) return refusal;
     const { error } = await service.rpc("soft_delete_objective_guarded", {
       p_objective_id: id,
       p_actor_id: actorId,
@@ -332,10 +343,19 @@ export async function listTrash(
     .is("deleted_at", null);
   if (liveProjectsError) throw new Error("Unable to list accessible trash projects");
 
-  const projectIds = (liveProjects ?? []).map((p) => p.id as string);
   const ownedProjectIds = (liveProjects ?? [])
     .filter((p) => p.owner_id === userId)
     .map((p) => p.id as string);
+  // Only projects where the caller can WRITE (MIN-693): a reader would get a
+  // "Restore" button answering 403, and emptying the trash must not try to
+  // purge what they cannot change. Owned projects need no membership read.
+  const sharedProjectIds = (liveProjects ?? [])
+    .filter((p) => p.owner_id !== userId)
+    .map((p) => p.id as string);
+  const writableShared = await writableProjectIds(userId, sharedProjectIds);
+  const projectIds = (liveProjects ?? [])
+    .map((p) => p.id as string)
+    .filter((id) => ownedProjectIds.includes(id) || writableShared.has(id));
   const projectById = new Map(
     await Promise.all((liveProjects ?? []).map(async (p) => [
       p.id as string,

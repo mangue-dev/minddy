@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  createContext,
   useContext,
   useMemo,
   useState,
@@ -21,8 +20,13 @@ import type { ProjectDraft } from "./project-draft";
 import { useTranslations } from "next-intl";
 import { ServerUnavailableState } from "@/components/server-unavailable-state";
 import { isBackendUnavailableError } from "./backend-availability";
+import {
+  ProjectRolesContext,
+  ProjectsContext,
+  type ViewerProjectRole,
+} from "./projects-context-store";
 
-interface ProjectsContextValue extends UseProjectsResult {
+export interface ProjectsContextValue extends UseProjectsResult {
   /** Opens the shared "new project" wizard (mounted once here). */
   openCreateProject: () => void;
   /** My creative drafts, from newest to oldest. They take a
@@ -37,7 +41,6 @@ interface ProjectsContextValue extends UseProjectsResult {
   resumeProjectDraft: (draft: ProjectDraft, connectionId: string | null) => void;
 }
 
-const ProjectsContext = createContext<ProjectsContextValue | null>(null);
 
 export function ProjectsProvider({ children }: { children: ReactNode }) {
   const tUnavailable = useTranslations("ServerUnavailable");
@@ -104,6 +107,22 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     ]
   );
 
+  // Keyed on the roles alone: an unrelated refresh keeps the same map.
+  const rolesKey = projects.projects
+    .map((p) => `${p.id}:${p.my_role ?? ""}:${p.my_can_comment ? 1 : 0}`)
+    .join("|");
+  const roles = useMemo(() => {
+    const map = new Map<string, ViewerProjectRole>();
+    for (const entry of rolesKey ? rolesKey.split("|") : []) {
+      const [id, role, comment] = entry.split(":");
+      map.set(id, {
+        role: role === "owner" || role === "member" || role === "reader" ? role : undefined,
+        canComment: comment === "1",
+      });
+    }
+    return map;
+  }, [rolesKey]);
+
   // The unavailable screen answers ONE question: can this app work at all?
   // It is the INITIAL load that has no list to show. A refetch that fails
   // while the cache holds one — the burst of refetches a merge fires in
@@ -123,12 +142,14 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
 
   return (
     <ProjectsContext.Provider value={value}>
-      {children}
-      <CreateProjectWizard
-        open={createOpen}
-        onOpenChange={handleOpenChange}
-        resume={resume}
-      />
+      <ProjectRolesContext.Provider value={roles}>
+        {children}
+        <CreateProjectWizard
+          open={createOpen}
+          onOpenChange={handleOpenChange}
+          resume={resume}
+        />
+      </ProjectRolesContext.Provider>
     </ProjectsContext.Provider>
   );
 }

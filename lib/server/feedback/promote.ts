@@ -26,7 +26,12 @@ export type PromoteResult =
   | {
       ok: false;
       status: number;
-      errorKey: "issueNotFound" | "databaseError" | "titleRequired" | "objectiveNotFound";
+      errorKey:
+        | "issueNotFound"
+        | "databaseError"
+        | "titleRequired"
+        | "objectiveNotFound"
+        | "readOnlyProject";
     };
 
 export async function promoteFeedbackPost(params: {
@@ -50,8 +55,12 @@ export async function promoteFeedbackPost(params: {
   const service = getServiceClient();
   const { data: scope } = await service.from("feedback_posts")
     .select("project_id").is("deleted_at", null).eq("id", params.postId).maybeSingle();
-  if (!scope || !await getProjectAccess(params.actorId, scope.project_id)) {
+  const access = scope ? await getProjectAccess(params.actorId, scope.project_id) : null;
+  if (!scope || !access) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+  if (!access.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
   const { data: post } = await feedbackPostStore(service, params.actorId)
     .select(

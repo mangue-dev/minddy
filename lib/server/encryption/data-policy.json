@@ -2923,7 +2923,9 @@
         "invited_email_ciphertext"
       ],
       "operational_configuration": [
-        "status"
+        "status",
+        "role",
+        "can_comment"
       ],
       "routing_identity": [
         "id",
@@ -2950,7 +2952,8 @@
     "encrypted": [],
     "clear": {
       "operational_configuration": [
-        "role"
+        "role",
+        "can_comment"
       ],
       "routing_identity": [
         "added_by",
@@ -4013,6 +4016,31 @@
       ],
       "timestamp": [
         "hidden_at"
+      ]
+    }
+  },
+  "project_permission_events": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "project_id",
+        "actor_id",
+        "target_user_id"
+      ],
+      "bounded_metadata": [
+        "kind",
+        "old_role",
+        "new_role",
+        "old_can_comment",
+        "new_can_comment"
+      ],
+      "timestamp": [
+        "created_at"
       ]
     }
   }

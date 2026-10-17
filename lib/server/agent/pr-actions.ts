@@ -22,7 +22,7 @@ import { broadcastPrChanged } from "./pr-live";
 import { recordPrCommentEditQuiet } from "./pr-comment-edits";
 import { syncIssueStatusFromPr } from "@/lib/server/agent/issue-status-sync";
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
-import { resolveRepoCloneTargetForRepo, type RepoCloneTarget } from "./repo-access";
+import { resolveRepoCloneTargetWithAccess, type RepoCloneTarget } from "./repo-access";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { resolveForgeActor, type ForgeActor } from "@/lib/server/git/forge-actor";
 import { isGithubUserAuthConfigured } from "@/lib/server/git/github-user-auth";
@@ -113,6 +113,9 @@ const MAX_PATH_LENGTH = 1024;
 export interface PrScope {
   pr: PullRequestRow;
   target: RepoCloneTarget;
+  /** The user may act on the PR (owner or member of a linking project). A
+      reader reads it but every mutation is refused (MIN-693). */
+  canWrite: boolean;
   forge: Forge;
   /** Shortcut for the three values every forge call requires. */
   call: { token: string; repoFullName: string; number: number };
@@ -140,12 +143,13 @@ export async function resolvePrScope(
   batch?: ReadinessBatchReadControl,
 ): Promise<PrScope | null> {
   const provider = rowProvider(pr);
-  const target = await resolveRepoCloneTargetForRepo({
+  const resolved = await resolveRepoCloneTargetWithAccess({
     userId,
     provider,
     repoFullName: pr.repo_full_name,
   });
-  if (!target) return null;
+  if (!resolved) return null;
+  const { target, canWrite } = resolved;
 
   const forge = forgeFor(target.provider);
   const scopedForge = { ...forge };
@@ -170,6 +174,7 @@ export async function resolvePrScope(
   return {
     pr,
     target,
+    canWrite,
     forge: shareReads ? scopedForge : forge,
     call: { token: target.token, repoFullName: target.repoFullName, number: pr.number },
     // NEVER rejects: a resolution failure is worth “no account” (so
@@ -279,6 +284,18 @@ export async function authorizePrRequest(
 
   const scope = await resolvePrScope(auth.user.id, pr, request.method === "GET", readNotBefore);
   if (!scope) return { ok: false, response: prNotFound() };
+  // Every non-GET PR route is a mutation: actions, comments, review comments,
+  // reactions, attachments, review requests, issue links (MIN-693).
+  if (request.method !== "GET" && !scope.canWrite) {
+    const t = await getTranslations("ApiErrors");
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: t("readOnlyProject"), code: "readOnlyProject" },
+        { status: 403 },
+      ),
+    };
+  }
   // Keep the authenticated client: its RLS is the guard when an action touches a
   // table beyond the PR. Manual ticket linking (MIN-163) rereads the ticket with
   // this client instead of duplicating a project-membership check.
@@ -348,6 +365,8 @@ export interface PrViewer {
    * not invent one; the screen falls back to the current session summary message.
    */
   numoLogin: string | null;
+  /** Reader of every linking project (MIN-693): PR actions are refused. */
+  projectReadOnly: boolean;
 }
 
 async function resolveViewer(scope: PrScope): Promise<PrViewer> {
@@ -379,6 +398,7 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
       avatarUrl: actor.avatarUrl,
       capability: actor.capability,
       numoLogin,
+      projectReadOnly: !scope.canWrite,
     };
   }
   return {
@@ -394,6 +414,7 @@ async function resolveViewer(scope: PrScope): Promise<PrViewer> {
     avatarUrl: null,
     capability: "none",
     numoLogin,
+    projectReadOnly: !scope.canWrite,
   };
 }
 

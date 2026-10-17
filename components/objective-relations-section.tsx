@@ -37,6 +37,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 import { PropertyRow, TRIGGER } from "@/components/issue-property-fields";
 import { SearchMenu } from "@/components/search-menu";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import type { Issue, IssueRelationType, Objective } from "@/lib/types";
 
 export function ObjectiveRelationsSection({
@@ -58,6 +59,8 @@ export function ObjectiveRelationsSection({
   const router = useAppRouter();
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
+  // Project readers (MIN-693): the relations are listed, never changed.
+  const { canWrite } = useProjectCapabilities(projectId);
   const { relations, addRelation, removeRelation } =
     useIssueRelationsQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
@@ -125,6 +128,7 @@ export function ObjectiveRelationsSection({
 
   const content = (
     <>
+      {canWrite && (
       <PropertyRow label={t("relations")}>
         <SearchMenu
           open={open}
@@ -221,6 +225,7 @@ export function ObjectiveRelationsSection({
           )}
         </SearchMenu>
       </PropertyRow>
+      )}
 
       {grouped.length > 0 && (
         <div className="flex flex-col gap-3 pb-2">
@@ -293,6 +298,7 @@ export function ObjectiveRelationsSection({
                           </span>
                         )}
                       </button>
+                      {canWrite && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -306,6 +312,7 @@ export function ObjectiveRelationsSection({
                       >
                         <HugeiconsIcon icon={Cancel01Icon} />
                       </Button>
+                      )}
                     </div>
                   );
                 })}

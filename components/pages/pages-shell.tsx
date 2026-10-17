@@ -41,6 +41,7 @@ import {
 } from "@/lib/pages-navigation";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
 export function PagesShell({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   return <AppTabRouteBoundary><PagesShellInner browse={browse} /></AppTabRouteBoundary>;
@@ -53,6 +54,8 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const tCommon = useTranslations("Common");
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
+  // Project readers (MIN-693) browse pages without creating any.
+  const { canWrite } = useProjectCapabilities(projectId);
   const tDatabase = useTranslations("PageDatabase");
   const previewFlush = useRef<() => Promise<boolean>>(async () => true);
   const registerPreviewFlush = useCallback((flush: () => Promise<boolean>) => { previewFlush.current = flush; }, []);
@@ -220,10 +223,12 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
-          <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
-            <Button variant="ghost" size="icon" className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
-              aria-label={tDatabase("create")}><HugeiconsIcon icon={Add01Icon} className="size-[18px]" /></Button>
-          } />
+          canWrite ? (
+            <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
+              <Button variant="ghost" size="icon" className={cn(SIDEBAR_COMPACT_CONTROL_CLASS, "-mr-2")}
+                aria-label={tDatabase("create")}><HugeiconsIcon icon={Add01Icon} className="size-[18px]" /></Button>
+            } />
+          ) : undefined
         }
       >
         {loading ? (

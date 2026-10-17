@@ -26,6 +26,7 @@ import { useAppRouter } from "@/lib/use-app-router";
 import { useCreatePage } from "@/lib/use-pages-query";
 import { useHiddenProjects } from "@/lib/use-hidden-projects";
 import type { Project } from "@/lib/types";
+import { capabilitiesForProject } from "@/lib/use-project-capabilities";
 
 const icon = (data: Parameters<typeof HugeiconsIcon>[0]["icon"]) => (
   <HugeiconsIcon icon={data} className="size-4" />
@@ -152,13 +153,17 @@ export function useProjectContextActions({
   const projectActions = useCallback(
     (project: Project): ContextMenuAction[] => {
       const create = createActions(project);
+      // Readers (MIN-693) have nothing to create in the project.
+      const writable = capabilitiesForProject(project, user?.id).canWrite;
       const actions: ContextMenuAction[] = [
-        {
-          id: "project-new",
-          label: t("new"),
-          icon: icon(Add01Icon),
-          children: [create.tickets, create.objectives, create.pages],
-        },
+        ...(writable
+          ? [{
+            id: "project-new",
+            label: t("new"),
+            icon: icon(Add01Icon),
+            children: [create.tickets, create.objectives, create.pages],
+          }]
+          : []),
         {
           id: "project-settings",
           label: t("projectSettings"),
@@ -198,8 +203,9 @@ export function useProjectContextActions({
   );
 
   const tabActions = useCallback(
-    (project: Project, tab: ProjectTabKind) => [createActions(project)[tab]],
-    [createActions],
+    (project: Project, tab: ProjectTabKind) =>
+      capabilitiesForProject(project, user?.id).canWrite ? [createActions(project)[tab]] : [],
+    [createActions, user?.id],
   );
 
   const onTrashed = useCallback(

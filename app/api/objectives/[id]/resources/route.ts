@@ -67,6 +67,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!access) {
     return NextResponse.json({ error: t("objectiveNotFound") }, { status: 404 });
   }
+  if (!access.canWrite) {
+    return NextResponse.json({ error: t("readOnlyProject") }, { status: 403 });
+  }
 
   const resources = parseResourcesInput(
     (body as { resources?: unknown })?.resources,

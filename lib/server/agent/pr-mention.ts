@@ -129,8 +129,8 @@ async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
 const DENIAL_BODIES = {
   notMember: (login: string | null) =>
     `${login ? `@${login} — ` : ""}I only take requests from members of the minddy ` +
-    `project this repository is linked to, with their git account connected in ` +
-    `minddy. Nothing was started.\n\n` +
+    `project this repository is linked to (Readers excluded), with their git ` +
+    `account connected in minddy. Nothing was started.\n\n` +
     `If you are on the team, connect your git account in minddy (Settings → ` +
     `Git accounts) and mention me again.`,
   throttled: `That's a lot of \`@numo\` on this repository in the last hour, so I ` +
