@@ -18,6 +18,9 @@ import { describe, expect, it, vi } from "vitest";
  * The second case measures hybrid issue search (MIN-718) against the text-only
  * baseline; MINDDY_SEARCH_EVAL_OUT=<file.json> writes its report.
  *
+ * Stored vectors go through the production int8 format; MINDDY_EVAL_FLOAT=true
+ * keeps them as floats for comparison.
+ *
  * Optional: MINDDY_RELATION_EVAL_OUT=<file.json> writes the full report, and
  * MINDDY_RELATION_EVAL_ENGINE=llm measures the LLM fallback alone.
  * The default suite skips this file; it spends a few cents per run.
@@ -130,7 +133,10 @@ describe.skipIf(!enabled)("Smart Fill relations evaluation (MIN-717)", () => {
     });
     const embedMs = Math.round(performance.now() - started);
     expect(batch).not.toBeNull();
-    const vectors = new Map(all.map((c, i) => [c.id, batch!.vectors[i]!]));
+    // Corpus vectors go through the production storage format (int8), as they would in the index.
+    const { dequantizeVector, quantizeVector } = await import("@/lib/server/issue-vector-format");
+    const stored = (v: number[]) => (process.env.MINDDY_EVAL_FLOAT === "true" ? v : dequantizeVector(quantizeVector(v)));
+    const vectors = new Map(all.map((c, i) => [c.id, stored(batch!.vectors[i]!)]));
     const corpusRows = CORPUS.map((c) => ({ issue_id: c.id, embedding: vectors.get(c.id)! }));
 
     const report: Record<string, unknown>[] = [];
@@ -232,7 +238,9 @@ describe.skipIf(!enabled)("Smart Fill relations evaluation (MIN-717)", () => {
       dimensions: "any", xTitle: "Issue search eval",
     });
     expect(corpusBatch).not.toBeNull();
-    const rows = CORPUS.map((c, i) => ({ issue_id: c.id, project_id: "eval", embedding: corpusBatch!.vectors[i]! }));
+    const { dequantizeVector, quantizeVector } = await import("@/lib/server/issue-vector-format");
+    const stored = (v: number[]) => (process.env.MINDDY_EVAL_FLOAT === "true" ? v : dequantizeVector(quantizeVector(v)));
+    const rows = CORPUS.map((c, i) => ({ issue_id: c.id, project_id: "eval", embedding: stored(corpusBatch!.vectors[i]!) }));
 
     const report: Record<string, unknown>[] = [];
     let lexicalTop1 = 0, hybridTop1 = 0, hybridTop5 = 0, negativeHits = 0, queryMs = 0, embedded = 0;

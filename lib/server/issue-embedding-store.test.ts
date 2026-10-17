@@ -49,7 +49,7 @@ import {
   decodeIssueEmbedding,
   encodeIssueEmbedding,
   projectEncrypts,
-  reencodeClearEmbedding,
+  rewriteStoredEmbedding,
   writeIssueEmbedding,
   type IssueEmbeddingRow,
 } from "./issue-embedding-store";
@@ -82,9 +82,10 @@ describe("issue embedding repository", () => {
     expect(stored.content_hash).toBeNull();
     expect(stored.encrypted_content).not.toBeNull();
     expect(JSON.stringify(stored)).not.toContain("0.2");
-    await expect(decodeIssueEmbedding(stored)).resolves.toMatchObject({
-      embedding: row.embedding, content_hash: row.content_hash,
-    });
+    const decoded = await decodeIssueEmbedding(stored);
+    expect(decoded.content_hash).toBe(row.content_hash);
+    // int8 storage: each coordinate within one quantization step of its value.
+    decoded.embedding.forEach((value, i) => expect(Math.abs(value - row.embedding[i])).toBeLessThan(0.3 / 127));
   });
 
   it("encrypts as soon as the project has an issue encryption scope, root key or not", async () => {
@@ -106,7 +107,8 @@ describe("issue embedding repository", () => {
 
   it("re-encodes a clear row under compare-and-swap once its project encrypts", async () => {
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
-    await expect(reencodeClearEmbedding(client() as never, { ...row, stored_clear: true })).resolves.toBe(true);
+    await expect(rewriteStoredEmbedding(client() as never, { ...row, stored_clear: true, stored_encryption_version: 0 }))
+      .resolves.toBe(true);
     const update = state.calls.find((call) => call.op === "update")!;
     expect(update.payload).toMatchObject({ embedding: null, content_hash: null });
     expect(update.filters).toEqual(expect.arrayContaining([
@@ -114,12 +116,37 @@ describe("issue embedding repository", () => {
     ]));
     // A concurrent rewrite won: nothing matched, nothing is claimed.
     state.updatedRows = [];
-    await expect(reencodeClearEmbedding(client() as never, { ...row, stored_clear: true })).resolves.toBe(false);
+    await expect(rewriteStoredEmbedding(client() as never, { ...row, stored_clear: true, stored_encryption_version: 0 }))
+      .resolves.toBe(false);
   });
 
   it("leaves rows alone while the project stays in clear", async () => {
     vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
-    await expect(reencodeClearEmbedding(client() as never, { ...row, stored_clear: true })).resolves.toBe(false);
+    await expect(rewriteStoredEmbedding(client() as never, { ...row, stored_clear: true, stored_encryption_version: 0 }))
+      .resolves.toBe(false);
     expect(state.calls.some((call) => call.op === "update")).toBe(false);
+  });
+
+  it("stores the vector compactly, about ten times smaller once encrypted", async () => {
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
+    const big = { ...row, dimensions: 1536, embedding: Array.from({ length: 1536 }, (_, i) => Math.sin(i) * 0.03) };
+    const compact = JSON.stringify(await encodeIssueEmbedding(big)).length;
+    const legacyPayload = JSON.stringify(big.embedding).length;
+    expect(compact).toBeLessThan(legacyPayload / 5);
+    const decoded = await decodeIssueEmbedding(await encodeIssueEmbedding(big));
+    expect(decoded.stored_legacy_format).toBeUndefined();
+    const maxError = Math.max(...decoded.embedding.map((v, i) => Math.abs(v - big.embedding[i])));
+    expect(maxError).toBeLessThanOrEqual(0.03 / 254 + 1e-12);
+  });
+
+  it("still reads legacy float arrays, flags them, and rewrites them in place", async () => {
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
+    const legacy = { ...row, embedding: JSON.stringify(row.embedding), encryption_version: 0, encrypted_content: null };
+    const decoded = await decodeIssueEmbedding(legacy);
+    expect(decoded).toMatchObject({ embedding: row.embedding, stored_legacy_format: true, stored_encryption_version: 0 });
+    await expect(rewriteStoredEmbedding(client() as never, decoded)).resolves.toBe(true);
+    const update = state.calls.find((call) => call.op === "update")!;
+    expect(update.payload).toMatchObject({ embedding: { f: "i8" } });
+    expect(update.filters).toContainEqual(["eq", "encryption_version", 0]);
   });
 });

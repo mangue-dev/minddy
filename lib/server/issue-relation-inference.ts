@@ -15,7 +15,7 @@ import {
   deleteIssueEmbeddingVersions,
   listIssueEmbeddings,
   listProjectEmbeddings,
-  reencodeClearEmbedding,
+  rewriteStoredEmbedding,
   writeIssueEmbedding,
   type IssueEmbeddingRow,
 } from "@/lib/server/issue-embedding-store";
@@ -814,13 +814,16 @@ export async function runIssueIndexBackfill(limit = 100): Promise<{
   const issues = (data ?? []) as IssueContent[];
   const wrapped = issues.length < limit;
 
-  // Encryption catch-up first: vectors written in clear before their project
-  // started encrypting are re-encoded, in every index version. No AI call, so
+  // Storage catch-up first, in every index version: vectors still in the
+  // legacy float format are rewritten compactly, and vectors written in clear
+  // before their project started encrypting are encrypted. No AI call, so
   // neither preferences nor budgets apply.
   let reencoded = 0;
   if (issues.length > 0) {
     for (const row of await listIssueEmbeddings(service, issues.map((issue) => issue.id))) {
-      if (row.stored_clear && (await reencodeClearEmbedding(service, row))) reencoded++;
+      if ((row.stored_clear || row.stored_legacy_format) && (await rewriteStoredEmbedding(service, row))) {
+        reencoded++;
+      }
     }
   }
 

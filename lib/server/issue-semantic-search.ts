@@ -9,6 +9,7 @@ import { cosineSimilarity, requestEmbeddings } from "@/lib/server/embeddings";
 import { listProjectEmbeddings } from "@/lib/server/issue-embedding-store";
 import { issueStore } from "@/lib/server/issue-store";
 import { getServiceClient } from "@/lib/supabase-service";
+import { withSupabaseAbortSignal } from "@/lib/server/supabase-fetch";
 import { resolveIssueIndexing } from "@/lib/smart-fill";
 import { isSemanticQuery, normalizeSemanticQuery } from "@/lib/issue-semantic-query";
 
@@ -32,8 +33,9 @@ import { isSemanticQuery, normalizeSemanticQuery } from "@/lib/issue-semantic-qu
  *   user under `issue_search`, after their budget check. The query vector is
  *   cached per user and per embedding target, so a repeated query, the same
  *   query from another picker or a model change never mix up or re-bill.
- * - **Bounds.** At most 25 projects, 3,000 vectors each, a deadline, and a
- *   similarity floor. Any failure answers "unavailable": the picker keeps its
+ * - **Bounds.** At most 25 projects, 3,000 vectors each (stored compactly, about
+ *   2.7 KB encrypted), a deadline that also aborts the reads still in flight,
+ *   and a similarity floor. Any failure answers "unavailable": the picker keeps its
  *   lexical results.
  */
 
@@ -188,12 +190,18 @@ export async function searchIssuesSemantically(input: {
     return { status: "ok", hits: ranked.filter((hit) => alive.has(hit.id)).slice(0, limit) };
   };
 
+  // The deadline answers AND cancels: database reads still in flight are
+  // aborted instead of running on for a result nobody will read.
+  const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<{ status: SemanticSearchStatus; hits: SemanticHit[] }>((resolve) => {
-    timer = setTimeout(() => resolve({ status: "timeout", hits: [] }), input.deadlineMs ?? DEFAULT_DEADLINE_MS);
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve({ status: "timeout", hits: [] });
+    }, input.deadlineMs ?? DEFAULT_DEADLINE_MS);
   });
   try {
-    return await Promise.race([work(), deadline]);
+    return await Promise.race([withSupabaseAbortSignal(controller.signal, work), deadline]);
   } catch {
     return { status: "unavailable", hits: [] };
   } finally {

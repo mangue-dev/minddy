@@ -6,6 +6,7 @@ import { isContentEncryptionEnabled } from "./encryption/content-config";
 import { getEncryptedStore } from "./encryption/registry";
 import { EncryptedRowCodec, type StoredRow } from "./encryption/row-codec";
 import { parseStoredEmbedding } from "./embeddings";
+import { dequantizeVector, isCompactVector, quantizeVector } from "./issue-vector-format";
 
 /**
  * Repository of the issue embedding index (MIN-717).
@@ -22,8 +23,9 @@ import { parseStoredEmbedding } from "./embeddings";
  * The encryption rule follows the issue's: a project with content encryption
  * on, or with an issue encryption scope, gets encrypted vectors. A row written
  * in clear before its project switched is re-encoded by the index backfill
- * (`reencodeClearEmbedding`), which costs no AI call because the vector is
- * already known. If the key cannot be loaded the write fails and no vector is
+ * (`rewriteStoredEmbedding`), which costs no AI call because the vector is
+ * already known. Vectors are stored compactly as int8 (`issue-vector-format.ts`);
+ * the legacy float arrays are still read and rewritten by the same walk. If the key cannot be loaded the write fails and no vector is
  * stored: a missing vector only costs the lexical fallback, while a clear copy
  * of encrypted content would break the data boundary.
  */
@@ -40,6 +42,10 @@ export interface IssueEmbeddingRow {
   content_hash: string;
   /** The stored row was in clear when read (decoding only; never written). */
   stored_clear?: boolean;
+  /** The stored vector was a legacy JSON float array (decoding only). */
+  stored_legacy_format?: boolean;
+  /** The row's `encryption_version` when read, for compare-and-swap rewrites. */
+  stored_encryption_version?: number;
 }
 
 const SELECT_COLUMNS =
@@ -61,8 +67,16 @@ export async function projectEncrypts(projectId: string): Promise<boolean> {
   return !!data;
 }
 
+/** The stored vector, in either format: compact int8 (current) or a legacy float array. */
+function readVector(value: unknown): { vector: number[]; legacy: boolean } | null {
+  if (isCompactVector(value)) return { vector: dequantizeVector(value), legacy: false };
+  const legacy = parseStoredEmbedding(value);
+  return legacy ? { vector: legacy, legacy: true } : null;
+}
+
 function validate(row: Row): IssueEmbeddingRow {
-  const embedding = parseStoredEmbedding(row.embedding);
+  const read = readVector(row.embedding);
+  const embedding = read?.vector;
   if (
     typeof row.issue_id !== "string" ||
     typeof row.project_id !== "string" ||
@@ -83,7 +97,19 @@ function validate(row: Row): IssueEmbeddingRow {
     dimensions: row.dimensions,
     embedding,
     content_hash: row.content_hash,
+    ...(read?.legacy ? { stored_legacy_format: true } : {}),
   };
+}
+
+/** The in-memory row checked before encoding: a float vector of the declared size. */
+function validateForWrite(row: IssueEmbeddingRow): void {
+  if (
+    !Array.isArray(row.embedding) ||
+    row.embedding.length !== row.dimensions ||
+    !row.embedding.every((value) => typeof value === "number" && Number.isFinite(value))
+  ) {
+    throw new Error("Invalid issue embedding");
+  }
 }
 
 /** Decode one stored row. The caller has already scoped the read to a project it serves. */
@@ -91,21 +117,31 @@ export async function decodeIssueEmbedding(row: Row): Promise<IssueEmbeddingRow>
   const { encryption_version, encrypted_content, ...plain } = row;
   if (encryption_version === undefined && encrypted_content === undefined ||
       encryption_version === 0 && encrypted_content === null) {
-    return { ...validate(plain), stored_clear: true };
+    return { ...validate(plain), stored_clear: true, stored_encryption_version: 0 };
   }
   if (typeof row.project_id !== "string") throw new Error("Missing issue embedding project");
   const decoded = await new EncryptedRowCodec(getEncryptedStore()).decode(row as StoredRow,
     { table: "issue_embeddings", scope: { kind: "project", id: row.project_id } },
     { actorId: null, reason: "repository_read" });
-  return validate(decoded);
+  return {
+    ...validate(decoded),
+    stored_encryption_version: typeof encryption_version === "number" ? encryption_version : undefined,
+  };
 }
 
 /** Encode a complete row for insert or upsert. */
 export async function encodeIssueEmbedding(row: IssueEmbeddingRow): Promise<Row> {
-  validate(row as unknown as Row);
-  const { stored_clear: _clear, ...columns } = row;
+  validateForWrite(row);
+  const {
+    stored_clear: _clear,
+    stored_legacy_format: _legacy,
+    stored_encryption_version: _version,
+    ...columns
+  } = row;
   const stored: Row = {
     ...columns,
+    // Always written compactly; the legacy float array is only ever read.
+    embedding: quantizeVector(row.embedding),
     updated_at: new Date().toISOString(),
   };
   if (!(await projectEncrypts(row.project_id))) {
@@ -161,15 +197,26 @@ export async function deleteIssueEmbeddingVersions(
 }
 
 /**
- * Re-encode a row stored in clear once its project encrypts. Compare-and-swap
- * on the content version and the clear state, so a concurrent rewrite always
- * wins. Returns whether the row was converted.
+ * Whether a stored row should be rewritten in place: a legacy float array
+ * (compact format since the follow-up of MIN-718), or a clear row of a
+ * project that now encrypts. Neither needs an AI call.
  */
-export async function reencodeClearEmbedding(
+export async function needsRewrite(row: IssueEmbeddingRow): Promise<boolean> {
+  if (row.stored_legacy_format) return true;
+  return !!row.stored_clear && (await projectEncrypts(row.project_id));
+}
+
+/**
+ * Rewrite a stored row in place — compact format, and encrypted when its
+ * project encrypts — from the vector already decoded. Compare-and-swap on the
+ * content version and the encryption version read, so a concurrent rewrite
+ * always wins. Returns whether the row was rewritten.
+ */
+export async function rewriteStoredEmbedding(
   service: SupabaseClient,
   row: IssueEmbeddingRow,
 ): Promise<boolean> {
-  if (!row.stored_clear || !(await projectEncrypts(row.project_id))) return false;
+  if (row.stored_encryption_version === undefined || !(await needsRewrite(row))) return false;
   const stored = await encodeIssueEmbedding(row);
   const { data, error } = await service
     .from("issue_embeddings")
@@ -183,10 +230,10 @@ export async function reencodeClearEmbedding(
     .eq("issue_id", row.issue_id)
     .eq("index_version", row.index_version)
     .eq("content_version", row.content_version)
-    .eq("encryption_version", 0)
+    .eq("encryption_version", row.stored_encryption_version)
     .select("issue_id");
   if (error) {
-    console.error("[issue-index] re-encode failed");
+    console.error("[issue-index] rewrite failed");
     return false;
   }
   return (data ?? []).length > 0;
