@@ -445,6 +445,9 @@
     "historyFeatureJevDecision": "Decisión de IA",
     "historyFeatureJevShadow": "Verificación de decisiones",
     "historyFeatureSmartTriage": "Triage inteligente",
+    "historyFeatureIssueEmbedding": "Smart-fill · índice de incidencias",
+    "historyFeatureIssueRelation": "Smart-fill · relaciones",
+    "historyFeatureIssueSearch": "Búsqueda de incidencias",
     "agentsGateTitle": "El trabajo con Numo no está disponible",
     "agentsGateDescription": "El trabajo con Numo no está activado en esta cuenta.",
     "agentsGateCta": "Ver los planes",
@@ -1365,7 +1368,7 @@
       "subIssues": "Divide una incidencia en subincidencias sin perder la incidencia principal.",
       "relations": "Vincula incidencias como bloqueadoras, bloqueadas o relacionadas.",
       "plan": "Añade un plan de implementación junto a la descripción de una incidencia.",
-      "smartFill": "El relleno inteligente puede definir la prioridad, el esfuerzo, el objetivo y las categorías de una incidencia.",
+      "smartFill": "El relleno inteligente puede definir la prioridad, el esfuerzo, el objetivo y las categorías de una incidencia, y vincularla con incidencias relacionadas.",
       "smartAssign": "La asignación inteligente usa tus reglas para asignar las incidencias aptas al compañero adecuado.",
       "autoAssignOnStart": "Asígnate automáticamente una incidencia sin asignar cuando la inicies.",
       "drafts": "Cierra una incidencia sin terminar y recupérala después desde tus borradores recientes.",
@@ -1528,8 +1531,8 @@
     "changeObjectiveAria": "Cambiar el objetivo",
     "issueCreatedToast": "Incidencia creada.",
     "smartFillChip": "Rellenado inteligente",
-    "smartFillOffHint": "Desactivado para esta incidencia: tú defines sus propiedades. Vuelve a activarlo para que se encargue el relleno inteligente.",
-    "smartFillOnHint": "Activado: el relleno inteligente lee la incidencia y define su prioridad, esfuerzo, categorías y objetivo. Desactívalo para definirlos tú.",
+    "smartFillOffHint": "Desactivado para esta incidencia: tú defines sus propiedades y relaciones. Vuelve a activarlo para que se encargue el relleno inteligente.",
+    "smartFillOnHint": "Activado: el relleno inteligente lee la incidencia, define su prioridad, esfuerzo, categorías y objetivo, y la vincula con incidencias relacionadas una vez guardada. Desactívalo para hacerlo tú.",
     "smartFillPendingToast": "El relleno inteligente está completando la incidencia; aparecerá dentro de unos segundos.",
     "newIssueTitle": "Nueva incidencia",
     "createDescriptionPlaceholder": "Descripción de la incidencia",
@@ -2254,6 +2257,7 @@
     "exportFailed": "No se pudo exportar esta página."
   },
   "Picker": {
+    "relatedByMeaning": "Relacionadas por el sentido",
     "createNamed": "Crear «{name}»",
     "noResults": "No hay resultados",
     "search": "Buscar…"
@@ -2375,6 +2379,10 @@
     "smartFillCreatedLabel": "Completar incidencias creadas",
     "smartFillTriageDesc": "Completa los valores que falten en incidencias de triaje y comentarios promovidos en proyectos de tu propiedad.",
     "smartFillTriageLabel": "Completar incidencias de triaje",
+    "smartFillRelationsLabel": "Vincular incidencias relacionadas",
+    "smartFillRelationsDesc": "Después de guardar una incidencia, la vincula con las incidencias relacionadas y las dependencias que tiene claramente. Puedes quitar cualquier vínculo; un vínculo quitado no se vuelve a añadir.",
+    "issueIndexingLabel": "Indexar incidencias",
+    "issueIndexingDesc": "Convierte el título y la descripción de tus incidencias en vectores privados para encontrar incidencias relacionadas y buscar incidencias por el sentido. Desactivado, no se crea ningún vector y la búsqueda solo compara palabras.",
     "numoStatusTitle": "Estado de las incidencias que crea Numo",
     "numoStatusDesc": "Triage añade un paso de revisión manual; Backlog y Todo lo saltan.",
     "promptAutoStartDesc": "Sólo se aplica a las incidencias y tareas de cuaderno que aún no han comenzado.",
@@ -4165,6 +4173,18 @@
         "label": "Modelo de llenado inteligente",
         "desc": "Lee el título y la descripción de una incidencia nueva y completa sus campos. Hay alguien esperando el resultado: elige un modelo rápido."
       },
+      "smart_fill_relations_enabled": {
+        "label": "Relaciones de Smart Fill",
+        "desc": "Indexa las incidencias después de guardarlos y deja que Smart Fill vincule incidencias relacionadas y dependencias. Desactivado aquí, la indexación y las relaciones se detienen en todas partes; la creación no se ve afectada."
+      },
+      "issue_embedding_model": {
+        "label": "Embeddings de incidencias",
+        "desc": "Vectoriza el título y la descripción de las incidencias para encontrar relaciones candidatas. Cambiarlo inicia un índice nuevo; los vectores antiguos y nuevos nunca se comparan."
+      },
+      "issue_relation_model": {
+        "label": "Modelo de decisión de relaciones",
+        "desc": "Confirma si un candidato está relacionado, bloquea o está bloqueado por una incidencia cuando el modelo de decisión duda. Nadie espera su respuesta."
+      },
       "conversation_title_model": {
         "label": "Títulos de conversación",
         "desc": "Nombres de una conversación de Numo en unas pocas palabras, desde su primer mensaje. Un pequeño modelo es suficiente."
@@ -4244,7 +4264,8 @@
     "decisionModelErrors": {
       "catalog_unavailable": "El catálogo de modelos de decisión no está disponible. Se mantiene el modelo actual.",
       "not_a_decision_model": "Este modelo no es un modelo de decisión. Se mantiene el modelo actual.",
-      "compatibility_check_failed": "Este modelo falló la decisión de prueba (rechazada, no válida o más lenta de 5 segundos). Se mantiene el modelo actual."
+      "compatibility_check_failed": "Este modelo falló la decisión de prueba (rechazada, no válida o más lenta de 5 segundos). Se mantiene el modelo actual.",
+      "capability_mismatch": "Este modelo no corresponde a este campo (por ejemplo, un modelo de chat en un campo de embeddings). Se mantuvo el modelo actual."
     },
     "finance": {
       "title": "Finanzas",
@@ -4326,7 +4347,10 @@
         "brief_split": "Breve desglose",
         "landing_demo": "Demostración de dictado público",
         "jev_decision": "Decisiones de IA",
-        "jev_shadow": "Verificaciones de decisiones"
+        "jev_shadow": "Verificaciones de decisiones",
+        "issue_embedding": "Embeddings de incidencias",
+        "issue_relation": "Relaciones de Smart-fill",
+        "issue_search": "Búsqueda de incidencias"
       },
       "stripeHidden": "Los ingresos de Stripe están ocultos: la facturación no está conectada en esta instancia."
     },

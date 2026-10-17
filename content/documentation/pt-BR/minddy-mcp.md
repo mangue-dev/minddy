@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-693 project roles",
+    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-693 project roles; MIN-718 hybrid issue search",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,13 +60,15 @@
       "content/documentation/reviews/min-670-feedback-objectives.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "lib/server/issue-reads.ts",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 pt-BR network guidance and terminology review); agent:/root/review_it_pt with agent:/root (pt-BR pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, pt-BR wording and new-control review; existing procedural evidence retained); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -89,7 +91,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
       "alt": "Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.",
       "caption": "Selecione seu cliente para exibir o comando ou a configuração de instalação.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -106,7 +108,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
       "alt": "Diálogo de instalação do Codex mostrando o endpoint minddy Cloud.",
       "caption": "Este exemplo se conecta ao minddy Cloud. Para uma instância autogerenciada, use a origem da sua própria instância; o comando exibido não foi executado para esta captura.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -161,6 +163,8 @@ minddy MCP nas configurações da conta lista acessos externos e controles de re
 `/api/mcp` usa Streamable HTTP, ferramentas sem estado e OAuth 2.1. Conecte sua conta pelo consentimento no navegador; as antigas chaves `mdyk_` não são aceitas. Use `minddy_list_projects` para descobrir UUIDs e leia os esquemas do servidor conectado. `/llms-full.txt` gera os parâmetros exatos a partir dos registros das ferramentas. Não os reconstrua com uma lista antiga. Cada ferramenta de projeto verifica novamente o acesso e retorna códigos de erro estáveis.
 
 ### Ler antes de alterar os planos {#issue-plans}
+
+Para encontrar uma issue, chame `minddy_list_issues` com `query`: a busca considera palavras do título e da descrição, um identificador ou um número. Correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode depois acrescentar issues do mesmo projeto encontradas [pelo sentido](/docs/navigation#search-by-meaning), marcadas com `match: "semantic"`. Leia uma issue assim antes de agir sobre ela. A busca pelo sentido é cobrada da sua conta como **Busca de problemas** e não acontece se você desligou **Indexar tickets**.
 
 `minddy_get_issue` aceita o UUID de uma issue, um identificador de issue como `DEMO-42` ou o número da issue; `project_id` é informado separadamente. `plan_tasks` informa `task_index` a partir de zero. `minddy_update_plan_task` recebe um array `tasks` com os estados `pending`, `in_progress`, `completed` ou `cancelled`; um índice inválido faz o lote inteiro ser rejeitado. `minddy_append_to_plan` acrescenta conteúdo, enquanto `minddy_edit_issue_text` substitui `old_string` por `new_string` em uma correspondência exata e única. Releia um plano que pode ter mudado: substituí-lo por inteiro pode sobrescrever o progresso de outras pessoas. A seção `## Questions` fica fora da contagem de tarefas.
 

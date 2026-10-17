@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,13 +47,20 @@
       "components/pull-requests/pr-context-actions.tsx",
       "content/documentation/reviews/min-685-sidebar-context-actions.md",
       "lib/use-hidden-projects.ts",
-      "content/documentation/reviews/min-692-hidden-projects.md"
+      "content/documentation/reviews/min-692-hidden-projects.md",
+      "lib/issue-semantic-query.ts",
+      "lib/use-semantic-issue-search.ts",
+      "lib/server/issue-semantic-search.ts",
+      "app/api/issues/semantic-search/route.ts",
+      "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR changed-passage parity and label review); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; pt-BR translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR changed-passage parity and label review); agent:/root (pt-BR translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (pt-BR translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -75,7 +82,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +98,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -154,6 +161,25 @@ Pressione Command+K no macOS ou Ctrl+K no Windows/Linux para abrir a paleta de c
 Use a ajuda de atalhos de teclado para consultar os comandos disponíveis na sua plataforma. O minddy distingue atalhos da aplicação, ações de propriedades de problemas e atalhos nativos de abas ou janelas do desktop. Confira onde está o foco antes de usar um comando: digitar em um editor e agir no problema ao redor são contextos diferentes.
 
 ![Resultados de busca do identificador de um ticket de demonstração.](/documentation/pt-BR/work-search.png)
+
+### Ordem dos problemas na busca {#issue-search-order}
+
+Toda busca de problemas lista os problemas na mesma ordem: a paleta, as menções `@`, os seletores de relações, duplicados e pull requests, a janela **Link para um problema existente** dos feedbacks e a busca usada pelo Numo e pelos agentes MCP. Problemas **Em andamento** e **Em revisão** vêm primeiro, depois os de **Backlog** e **A fazer**. Problemas em **Triagem**, **Concluído**, **Cancelada** e **Duplicado** sempre vêm por último e continuam selecionáveis. Dentro de cada grupo, a melhor correspondência de texto vem primeiro. Um identificador digitado por inteiro, como `MIN-42`, coloca esse problema no topo, seja qual for o status.
+
+### Buscar problemas pelo sentido {#search-by-meaning}
+
+Quando uma busca descreve o trabalho em vez de nomeá-lo, a busca de problemas também encontra problemas de sentido próximo, mesmo que usem outras palavras. Por exemplo, “o login falha depois de redefinir a senha” pode encontrar um problema intitulado “Sessão perdida ao trocar a senha”. Isso vale para a paleta de comandos, as menções `@` em descrições, páginas, comentários e no compositor do Numo, os seletores de relação, **Marcar como duplicado…** na triagem, **Vincular um problema** em um pull request, o menu **Adicionar contexto** → **Problema** do Numo e **Link para um problema existente** no feedback.
+
+Correspondências de texto e identificadores exatos sempre vêm primeiro e mantêm a ordem. Pouco depois que você para de digitar, no máximo cinco problemas encontrados pelo sentido são adicionados depois deles, em **Relacionados pelo sentido**. Um problema já listado não se repete, e a linha destacada não se move. Cada seletor mantém as próprias regras, então só aparecem problemas que ele já podia oferecer: um seletor de relação, por exemplo, continua oferecendo apenas problemas do mesmo projeto que ainda não estão vinculados. A paleta de comandos busca nos projetos que você pode ler, até os 25 atualizados mais recentemente; as ações de seleção em massa dela não usam a busca pelo sentido.
+
+A busca pelo sentido tem estes limites:
+
+- A busca precisa de pelo menos duas palavras, ou de uma palavra com pelo menos seis letras. Identificadores como `MIN-42`, `#42` ou `42`, e buscas muito curtas, usam apenas a busca por texto.
+- Ela se apoia no índice que o Preenchimento inteligente monta a partir do título e da descrição dos problemas. Um problema ainda não indexado, ou cujo autor desligou [**Indexar tickets**](/docs/issues#smart-fill-preferences), só é encontrado pelas palavras. Problemas na lixeira nunca aparecem.
+- Se você desligou **Indexar tickets** em **Configurações da conta** → **Preferências**, suas buscas comparam apenas palavras. O mesmo acontece quando a administração da instância desligou **Relações do Smart Fill**, quando seu orçamento de IA acabou ou quando o provedor não responde em poucos segundos. Os resultados de texto permanecem e nenhum erro é exibido.
+- Uma busca `@` cujo texto já corresponde a uma pessoa, um projeto ou uma página não é buscada pelo sentido. Em um projeto com mais de 3.000 problemas indexados, só os 3.000 indexados mais recentemente são comparados; os outros são encontrados pelas palavras.
+
+Cada busca nova usa uma chamada de IA, contada na sua parcela **Automações** e exibida no histórico de uso como **Busca de problemas**. Uma busca repetida em cerca de 15 minutos normalmente não é cobrada de novo.
 
 ### Usar um controle visível equivalente {#shortcut-alternatives}
 

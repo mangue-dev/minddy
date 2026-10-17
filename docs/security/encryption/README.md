@@ -2552,6 +2552,57 @@ transfer does not copy them, because project ids are rebound on import.
 Migration `20270109200050` is additive and was not applied to a remote database
 by this change.
 
+## Issue embedding index and relation decisions (MIN-717)
+
+Smart Fill relations add two service-only tables. Both have RLS enabled with no
+policy, and the anon and authenticated grants are revoked.
+
+- `issue_embeddings` stores one vector per issue and index version. Its
+  primary key is `(issue_id, index_version)`, where the version is
+  `provider:model:dimensions`, so vectors from different embedding spaces are
+  never compared, even when their dimensions are equal.
+  - The vector and the SHA-256 fingerprint of the indexed title and
+    description are encrypted together under the project content key by
+    `lib/server/issue-embedding-store.ts`. That module is the only reader and
+    writer the access check allows.
+  - The table follows the issue's encryption rule: a project with content
+    encryption on, or with an issue encryption scope, gets encrypted vectors.
+    Unlike `encodeIssue`, there is no shortcut when the root key is absent.
+    In that case the write fails and no vector is stored.
+  - Vectors stored in clear before their project started encrypting are
+    re-encoded by the hourly `/api/cron/issue-index` walk, even while the
+    feature is off. The update is a compare-and-swap on the content version
+    and the clear state, so a concurrent rewrite wins. No AI call is made.
+  - `content_version` is a random UUID that changes whenever the fingerprint
+    changes. It carries no content.
+  - Similarity is computed in the server after decryption. Postgres holds no
+    plaintext vector index.
+- `issue_relation_inferences` caches Smart Fill's relation verdicts per issue
+  pair and content-version pair. It holds identifiers, a bounded verdict, the
+  engine and timestamps only, so it has no encryption target.
+
+Both tables cascade with the issue and the project. A trashed issue keeps its
+vector, but retrieval only returns issues that are not deleted. A purge
+removes the vector together with the issue. A vector of former text is deleted
+as soon as the issue's content changes, in every index version, even when no
+new vector can be created.
+
+Search by meaning (MIN-718) reads the same vectors and stores nothing new
+per issue. `lib/server/issue-semantic-search.ts` decrypts the vectors of one
+index version, for projects the searching user can read, and ranks them in
+the server; the route returns issue ids and project ids only, never titles or
+fingerprints. The query vector, derived from the user's own typed text, is
+kept in process memory for 15 minutes, keyed by user and embedding target.
+Decrypted issue vectors are not cached. Migration `20270109200053` only
+widens `ai_usage_feature_check` with `issue_search`; it was applied to the
+production database on 2026-10-17 after a dry run and verified there.
+
+Migration `20270109200052` is additive. It was applied to the production
+database on 2026-10-17, after a dry run, and the result was verified there:
+both tables have RLS on, no policies and no anon or authenticated grants, and
+the widened `ai_usage_feature_check` accepts `issue_embedding` and
+`issue_relation`.
+
 ## Numo worker completion authority (2026-10-11)
 
 Migration `20270109200041` moves the worker-generation check into the service-only

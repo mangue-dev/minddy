@@ -104,18 +104,31 @@ function relationEvents(
   ];
 }
 
+/** Rows per page when reading a project's relations: PostgREST caps a
+    response at 1,000 rows, so a larger project must be read in pages. */
+const RELATION_PAGE_SIZE = 1000;
+
 /** All relation rows of a project (raw stored form). Pass an RLS or service
-    client — both are pinned by project_id. */
+    client — both are pinned by project_id. Read in stable pages: a single
+    request would silently stop at the PostgREST row cap, and callers use the
+    list for cycle checks and "already linked" decisions. */
 export async function listIssueRelations(
   db: SupabaseClient,
   projectId: string
 ): Promise<{ relations: IssueRelationRow[] } | { error: string }> {
-  const { data, error } = await db
-    .from("issue_relations")
-    .select(RELATION_COLUMNS)
-    .eq("project_id", projectId);
-  if (error) return { error: error.message };
-  return { relations: (data ?? []) as IssueRelationRow[] };
+  const relations: IssueRelationRow[] = [];
+  for (let offset = 0; ; offset += RELATION_PAGE_SIZE) {
+    const { data, error } = await db
+      .from("issue_relations")
+      .select(RELATION_COLUMNS)
+      .eq("project_id", projectId)
+      .order("id", { ascending: true })
+      .range(offset, offset + RELATION_PAGE_SIZE - 1);
+    if (error) return { error: error.message };
+    relations.push(...((data ?? []) as IssueRelationRow[]));
+    if ((data ?? []).length < RELATION_PAGE_SIZE) break;
+  }
+  return { relations };
 }
 
 /** Find a single stored relation matching a (source, type, target) spec from
@@ -192,6 +205,7 @@ export async function addIssueRelation({
   targetType = "issue",
   viaAssistant = false,
   mcpKeyId = null,
+  viaSmartFill = false,
 }: {
   projectId: string;
   actorId: string;
@@ -204,6 +218,8 @@ export async function addIssueRelation({
   targetType?: RelationEndpointType;
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
+  /** Smart Fill relations (MIN-717): the timeline names Smart Fill, under the payer's account. */
+  viaSmartFill?: boolean;
 }): Promise<AddRelationResult> {
   if (!isRelationType(type)) {
     return { ok: false, status: 400, errorKey: "invalidRelationType" };
@@ -261,12 +277,12 @@ export async function addIssueRelation({
   }
 
   const row = data as IssueRelationRow;
+  const events = relationEvents("relation_added", row, actorId).map((event) =>
+    viaSmartFill ? { ...event, via_smart_fill: true } : event
+  );
   await insertEvents(
     service,
-    stampMcpKey(
-      stampViaAssistant(relationEvents("relation_added", row, actorId), viaAssistant),
-      mcpKeyId
-    )
+    stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId)
   );
 
   // Cycle coherence (MIN-32): a fresh `blocks` edge whose BLOCKED issue sits in

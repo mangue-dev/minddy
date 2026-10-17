@@ -1,7 +1,11 @@
+import { isExactIssueQuery, orderIssuesForSearch } from "@/lib/issue-search-order";
+
 export interface MentionSearchItem {
   type: string;
   label: string;
   keywords?: readonly string[];
+  /** Issues: their status, which orders them (MIN-726). */
+  status?: string;
 }
 
 export interface ActiveMentionQuery {
@@ -37,9 +41,15 @@ export function findActiveMentionQuery(
   };
 }
 
-/** Stable ordering: put Numo first, preserve source order, and place tickets last. */
+/**
+ * Stable ordering: put Numo first, preserve source order, and place tickets
+ * last. Among tickets, the issue search order applies (MIN-726): work under
+ * way first, closed and triage tickets last, and the ticket whose identifier
+ * is the query before all.
+ */
 export function orderMentionItems<T extends MentionSearchItem>(
   items: readonly T[],
+  query = "",
 ): T[] {
   const numo: T[] = [];
   const other: T[] = [];
@@ -47,7 +57,12 @@ export function orderMentionItems<T extends MentionSearchItem>(
   for (const item of items) {
     (item.type === "numo" ? numo : item.type === "issue" ? issues : other).push(item);
   }
-  return [...numo, ...other, ...issues];
+  const orderedIssues = orderIssuesForSearch(
+    issues,
+    (item) => item.status,
+    (item) => isExactIssueQuery(query, item.label),
+  );
+  return [...numo, ...other, ...orderedIssues];
 }
 
 /** Matches a mention query without imposing an artificial result limit. */
@@ -63,5 +78,5 @@ export function filterMentionItems<T extends MentionSearchItem>(
         ),
       )
     : [...items];
-  return orderMentionItems(matches);
+  return orderMentionItems(matches, query);
 }

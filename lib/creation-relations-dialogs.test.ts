@@ -12,7 +12,7 @@ import type { Issue, Objective, PendingRelationInput, Project } from "./types";
 const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
-  mobile: false, smartFill: true, smartFillCreated: true, queryProjects: [] as (string | null)[],
+  mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, queryProjects: [] as (string | null)[],
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
 vi.mock("next-intl", () => ({ useTranslations: (namespace: keyof typeof en) =>
@@ -58,7 +58,7 @@ vi.mock("@/lib/use-issues-query", () => ({ useIssuesQuery: (project: string | nu
   return { issues: project ? fixture.issues : [], loading: false };
 } }));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: (project: string | null) => ({ objectives: project ? fixture.objectives : [], loading: false }) }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated } } }) }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_relations: fixture.smartFillRelations } } }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => [] }));
@@ -84,6 +84,8 @@ vi.mock("@/components/issue-indicators", () => ({ RelationIcon: () => null, Stat
 vi.mock("@/components/relation-objective-label", () => ({ RelationObjectiveLabel: ({ objective }: { objective: Objective }) => React.createElement("span", null, objective.name) }));
 vi.mock("@/components/date-time-picker", () => ({ DateTimePicker: () => null }));
 vi.mock("@/components/search-select", () => ({ SearchSelect: () => null }));
+// The semantic group needs a real cmdk Command; it has its own test (lib/semantic-issue-group.test.tsx).
+vi.mock("@/components/semantic-issue-group", () => ({ SemanticIssueGroup: () => null }));
 vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => null }));
 vi.mock("@/components/numo-icon", () => ({ NumoIcon: () => null }));
 vi.mock("@/components/agent-beam", () => ({ AgentBeamOverlay: () => null }));
@@ -115,7 +117,7 @@ beforeEach(() => {
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;
-  fixture.drafts = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -190,6 +192,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("portals the modal %s relation menu outside the clipping dialog after reopening", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     for (let opening = 0; opening < 2; opening++) {
       await click(en.Relations.addRelationAria);
@@ -221,6 +225,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("keeps %s selections when creation is rejected", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     dialog.create.mockRejectedValueOnce(new Error("Creation rejected"));
     await addRelation("blocks", "objective");
@@ -231,6 +237,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("submits removable %s pills with the keyboard shortcut and protects cross-project creation", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     await addRelation("blocked_by", "objective");
     const pill = host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)!;
@@ -250,16 +258,18 @@ describe("creation relation controls", () => {
     expect(host.textContent).not.toContain("MIN-12 Target issue");
   });
 
-  it("keeps relations immediately before Smart Fill when enabled or disabled and resets after create more", async () => {
+  it("hides the relation picker while Smart Fill is on, keeps chosen relations, and resets after create more", async () => {
+    fixture.smartFillCreated = false;
     const dialog = await mountDialog("issue");
     const relationButton = host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)!;
     const smartFill = [...host.querySelectorAll("button")].find((button) => button.textContent === "Smart Fill")!;
     expect(relationButton.closest("[data-picker]")!.nextElementSibling).toBe(smartFill);
     await addRelation("related", "objective");
+    // Smart Fill also links related issues after the save (MIN-717): the
+    // picker leaves, the relation already chosen stays as a pill.
     await click("Smart Fill");
-    expect(host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)).not.toBeNull();
+    expect(host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)).toBeNull();
     expect(host.textContent).toContain("Target objective");
-    await click("Smart Fill");
     await click("Create more toggle");
     await typeTitle("Smart Fill issue");
     await act(() => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
@@ -268,7 +278,18 @@ describe("creation relation controls", () => {
     expect(host.textContent).not.toContain("Target objective");
   });
 
+  it("keeps the relation picker beside Smart Fill when the account turned relation linking off", async () => {
+    fixture.smartFillRelations = false;
+    await mountDialog("issue");
+    // Smart Fill is on for the issue, but it will not link anything: the field stays manual.
+    expect(host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)).not.toBeNull();
+    await addRelation("related", "objective");
+    expect(host.textContent).toContain("Target objective");
+  });
+
   it.each(["issue", "objective"] as const)("saves and restores a %s draft with only relations", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     await addRelation("related", "objective");
     await click("Close creation");

@@ -14,7 +14,11 @@ import {
   SMART_FILL_CREATED_META_KEY,
   SMART_FILL_META_KEY,
   SMART_FILL_TRIAGE_META_KEY,
+  SMART_FILL_RELATIONS_META_KEY,
+  ISSUE_INDEXING_META_KEY,
+  resolveIssueIndexing,
   resolveSmartFill,
+  resolveSmartFillRelations,
   resolveSmartFillScope,
 } from "@/lib/smart-fill";
 import {
@@ -80,6 +84,10 @@ export interface AccountSettings {
   smart_fill: boolean;
   smart_fill_created: boolean;
   smart_fill_triage: boolean;
+  /** Smart Fill relations (MIN-717): link related issues and dependencies after save. */
+  smart_fill_relations: boolean;
+  /** Issue indexing (MIN-717): embedding vectors of the account's issues, independent of Smart Fill. */
+  issue_indexing: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
   cycles: CyclePrefs;
   /** Product-analytics consent. `null` = never answered. */
@@ -119,6 +127,8 @@ function toSettings(
     smart_fill: resolveSmartFill(meta),
     smart_fill_created: resolveSmartFillScope(meta, "created"),
     smart_fill_triage: resolveSmartFillScope(meta, "triage"),
+    smart_fill_relations: resolveSmartFillRelations(meta),
+    issue_indexing: resolveIssueIndexing(meta),
     cycles: resolveCyclePrefs(meta),
     analytics_consent: resolveAnalyticsConsent(meta),
     notifications: resolveNotificationPrefs(meta),
@@ -229,7 +239,12 @@ export async function updateAccountSettings({
     }
     next[SMART_FILL_META_KEY] = input[SMART_FILL_META_KEY];
   }
-  for (const key of [SMART_FILL_CREATED_META_KEY, SMART_FILL_TRIAGE_META_KEY]) {
+  for (const key of [
+    SMART_FILL_CREATED_META_KEY,
+    SMART_FILL_TRIAGE_META_KEY,
+    SMART_FILL_RELATIONS_META_KEY,
+    ISSUE_INDEXING_META_KEY,
+  ]) {
     if (key in input) {
       if (typeof input[key] !== "boolean") {
         return { ok: false, error: `${key} must be a boolean.` };
@@ -320,6 +335,8 @@ export async function updateAccountSettings({
     SMART_FILL_META_KEY,
     SMART_FILL_CREATED_META_KEY,
     SMART_FILL_TRIAGE_META_KEY,
+    SMART_FILL_RELATIONS_META_KEY,
+    ISSUE_INDEXING_META_KEY,
     // Without it, a call carrying ONLY the preset came out here as “nothing to
     // change” — even though the block that wrote it had just placed it.
     ANALYTICS_CONSENT_META_KEY,

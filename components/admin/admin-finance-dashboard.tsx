@@ -109,6 +109,12 @@ const FEATURES = [
   // on a ~5% sample after a confident decision-model decision. The line answers "what
   // does measuring the decisions cost, on top of the decisions?"
   "jev_shadow",
+  // Smart Fill relations (MIN-717): issue indexing, and the LLM fallback of
+  // the relation decision. Read apart from Smart Fill's own field pass.
+  "issue_embedding",
+  "issue_relation",
+  // Issue search by meaning (MIN-718): one query embedding per distinct search.
+  "issue_search",
   // Landing Dictation Demo (MIN-150): the ONLY line that no one
   // pays — a visitor without an account, to whom the platform offers passage. A
   // run = a demo played, so “average cost/run” is the price of a run.

@@ -15,6 +15,7 @@ import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useMemo, useState } from "react";
 import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -27,6 +28,7 @@ import {
   toast,
 } from "mangue-ui";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import {
   RELATION_PRIORITY,
   RELATION_TYPES,
@@ -96,7 +98,8 @@ export function ObjectiveRelationsSection({
     [resolved, step],
   );
   const issueCandidates = useMemo(
-    () => issues.filter((i) => !linked.has(i.id) && !isClosedStatus(i.status)),
+    // Work under way first, triage last (MIN-726).
+    () => orderIssuesForSearch(issues.filter((i) => !linked.has(i.id) && !isClosedStatus(i.status)), (i) => i.status),
     [issues, linked],
   );
   const objectiveCandidates = useMemo(
@@ -181,7 +184,7 @@ export function ObjectiveRelationsSection({
                     <CommandItem
                       key={candidate.id}
                       value={candidate.id}
-                      keywords={[id, candidate.title]}
+                      keywords={[id, candidate.title, issueTierKeyword(candidate.status)]}
                       onSelect={() => {
                         void addRelation(objective.id, step, candidate.id, {
                           sourceType: "objective",
@@ -221,6 +224,32 @@ export function ObjectiveRelationsSection({
                   ))}
                 </CommandGroup>
               )}
+              {/* Same eligible issues, found by meaning (MIN-718). */}
+              <SemanticIssueGroup
+                projectId={projectId}
+                candidates={issueCandidates}
+                idOf={(candidate) => candidate.id}
+                statusOf={(candidate) => candidate.status}
+                textOf={(candidate) => ({
+                  value: candidate.id,
+                  keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],
+                })}
+                onSelect={(candidate) => {
+                  void addRelation(objective.id, step, candidate.id, {
+                    sourceType: "objective",
+                  }).catch((err) => toast.error((err as Error).message));
+                  close();
+                }}
+                renderItem={(candidate) => (
+                  <>
+                    <StatusIndicator status={candidate.status} className="size-4" />
+                    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                      {issueIdentifier(projectKey, candidate.number)}
+                    </span>
+                    <span className="truncate">{candidate.title}</span>
+                  </>
+                )}
+              />
             </>
           )}
         </SearchMenu>

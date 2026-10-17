@@ -18,10 +18,14 @@ import type {NumoDefaultStatus} from "@/lib/numo-default-status";
 import {PROMPT_COPY_AUTO_START_META_KEY, resolvePromptCopyAutoStart} from "@/lib/prompt-copy-auto-start";
 import {AUTO_ASSIGN_ON_START_META_KEY, resolveAutoAssignOnStart} from "@/lib/auto-assign-on-start";
 import {
+  ISSUE_INDEXING_META_KEY,
+  resolveIssueIndexing,
   resolveSmartFill,
+  resolveSmartFillRelations,
   resolveSmartFillScope,
   SMART_FILL_CREATED_META_KEY,
   SMART_FILL_META_KEY,
+  SMART_FILL_RELATIONS_META_KEY,
   SMART_FILL_TRIAGE_META_KEY,
 } from "@/lib/smart-fill";
 import {SEND_MODE_META_KEY, resolveSendMode} from "@/lib/keyboard/send-shortcut";
@@ -117,10 +121,18 @@ export function AccountPreferencesSection() {
   const [smartFillTriage, setSmartFillTriage] = useState(
     resolveSmartFillScope(user?.user_metadata, "triage"),
   );
+  // Smart Fill relations and issue indexing (MIN-717): two switches, because
+  // the index will also serve search and refusing vectors must hold on its own.
+  const [smartFillRelations, setSmartFillRelations] = useState(
+    resolveSmartFillRelations(user?.user_metadata),
+  );
+  const [issueIndexing, setIssueIndexing] = useState(resolveIssueIndexing(user?.user_metadata));
   useEffect(() => {
     setSmartFill(resolveSmartFill(user?.user_metadata));
     setSmartFillCreated(resolveSmartFillScope(user?.user_metadata, "created"));
     setSmartFillTriage(resolveSmartFillScope(user?.user_metadata, "triage"));
+    setSmartFillRelations(resolveSmartFillRelations(user?.user_metadata));
+    setIssueIndexing(resolveIssueIndexing(user?.user_metadata));
   }, [user]);
 
   const toggleSmartFill = async (next: boolean) => {
@@ -135,11 +147,20 @@ export function AccountPreferencesSection() {
   };
 
   const toggleSmartFillScope = async (
-    key: typeof SMART_FILL_CREATED_META_KEY | typeof SMART_FILL_TRIAGE_META_KEY,
+    key:
+      | typeof SMART_FILL_CREATED_META_KEY
+      | typeof SMART_FILL_TRIAGE_META_KEY
+      | typeof SMART_FILL_RELATIONS_META_KEY
+      | typeof ISSUE_INDEXING_META_KEY,
     next: boolean,
   ) => {
     if (!user) return;
-    const setter = key === SMART_FILL_CREATED_META_KEY ? setSmartFillCreated : setSmartFillTriage;
+    const setter = {
+      [SMART_FILL_CREATED_META_KEY]: setSmartFillCreated,
+      [SMART_FILL_TRIAGE_META_KEY]: setSmartFillTriage,
+      [SMART_FILL_RELATIONS_META_KEY]: setSmartFillRelations,
+      [ISSUE_INDEXING_META_KEY]: setIssueIndexing,
+    }[key];
     setter(next);
     try {
       await updateUserMetadata({ [key]: next });
@@ -376,6 +397,38 @@ export function AccountPreferencesSection() {
                 void toggleSmartFillScope(SMART_FILL_TRIAGE_META_KEY, v)
               }
               disabled={!user || !smartFill}
+            />
+          }
+        />
+
+        <SettingsRow
+          htmlFor="account-smart-fill-relations"
+          label={ta("smartFillRelationsLabel")}
+          hint={ta("smartFillRelationsDesc")}
+          control={
+            <Switch
+              id="account-smart-fill-relations"
+              checked={smartFillRelations}
+              onCheckedChange={(v) =>
+                void toggleSmartFillScope(SMART_FILL_RELATIONS_META_KEY, v)
+              }
+              disabled={!user || !smartFill}
+            />
+          }
+        />
+
+        <SettingsRow
+          htmlFor="account-issue-indexing"
+          label={ta("issueIndexingLabel")}
+          hint={ta("issueIndexingDesc")}
+          control={
+            <Switch
+              id="account-issue-indexing"
+              checked={issueIndexing}
+              onCheckedChange={(v) =>
+                void toggleSmartFillScope(ISSUE_INDEXING_META_KEY, v)
+              }
+              disabled={!user}
             />
           }
         />

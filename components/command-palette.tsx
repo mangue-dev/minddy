@@ -50,7 +50,14 @@ import {
   type FormSelectOption,
   type PaletteItem as CpPaletteItem,
   type PaletteItem,
+  usePaletteStore,
 } from "@/lib/command-palette";
+import { semanticExtras } from "@/lib/issue-semantic-query";
+import { issueSearchTier } from "@/lib/issue-search-order";
+import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
+
+/** Palette category of the issues found by meaning (MIN-718), always last. */
+const SEMANTIC_CATEGORY = "semantic-issues";
 import { NumoIcon } from "@/components/numo-icon";
 import { AppIcon } from "@/components/icon";
 import { projectOrbIcon } from "@/components/project-orb";
@@ -372,6 +379,16 @@ export function CommandPalette({
           return ProjectIcon ? <AppIcon icon={ProjectIcon} className="size-3.5" /> : undefined;
         })(),
         filterCategory: cat,
+        // Issue search order (MIN-726): work under way first, closed and
+        // triage issues last, the typed identifier before all.
+        ...(issue
+          ? {
+              searchTier: issueSearchTier(issue.status),
+              exactKeywords: [it.metaText, String((issue as { number?: number }).number ?? "")].filter(
+                (keyword): keyword is string => Boolean(keyword),
+              ),
+            }
+          : {}),
         entityType: it.entityType ?? (it.href ? "navigation" : undefined),
         // Line project: the motor boosts those of the current project
         // (SearchContext.currentContextId), without excluding others.
@@ -1316,14 +1333,52 @@ export function CommandPalette({
     [issueProvider, entityProvider, themeProvider, savedViewProvider, bulkFieldProvider]
   );
 
+  // Issues found by meaning (MIN-718): the palette's own issue rows, looked up
+  // by id, appended after the scored results under their own heading. Only
+  // rows the palette already holds can appear, so nothing outside the
+  // search index (and its access rules) does. Not in bulk mode, nor in the
+  // new-tab destination launcher.
+  const tPicker = useTranslations("Picker");
+  const semanticEnabled = open && !showBulk && !destinationOnly;
+  // Subscribed only while it can be used; the categories and supplemental
+  // results below are memoized, so a keystroke re-renders this host without
+  // handing the palette new props (which would rescore every item).
+  const paletteQuery = usePaletteStore((state) => (semanticEnabled ? state.query : ""));
+  const { ids: semanticIds } = useSemanticIssueSearch(paletteQuery, { projectId: null, enabled: semanticEnabled });
+  const semanticItems = useMemo(() => {
+    if (!semanticEnabled || semanticIds.length === 0) return [];
+    const issueRows = new Map(
+      searchItems.filter((item) => item.entityType === "issue").map((item) => [item.id, item])
+    );
+    return semanticExtras(
+      semanticIds.map((id) => `issue-${id}`),
+      issueRows,
+      new Set<string>(),
+    ).map((item) => ({ ...item, filterCategory: SEMANTIC_CATEGORY }))
+      // Same order as the text rows, by similarity within a tier (MIN-726).
+      .sort((a, b) => (a.searchTier ?? 1) - (b.searchTier ?? 1));
+  }, [semanticEnabled, semanticIds, searchItems]);
+
   // In bulk mode, the palette displays the selection options instead of the
   // normal content (navigation, creation, etc.).
   const paletteItems = showBulk ? bulkItems : searchItems;
-  const paletteCategories = showBulk
-    ? bulkCategories
-    : navigationSearch
-      ? categories.filter((category) => searchItems.some((item) => item.filterCategory === category.id))
-      : categories;
+  const semanticLabel = tPicker("relatedByMeaning");
+  const hasSemanticItems = semanticItems.length > 0;
+  const paletteCategories = useMemo(() => {
+    const semanticCategory = { id: SEMANTIC_CATEGORY, label: semanticLabel };
+    if (showBulk) return bulkCategories;
+    if (navigationSearch) {
+      return [
+        ...categories.filter((category) => searchItems.some((item) => item.filterCategory === category.id)),
+        ...(hasSemanticItems ? [semanticCategory] : []),
+      ];
+    }
+    return [...categories, semanticCategory];
+  }, [showBulk, bulkCategories, navigationSearch, categories, searchItems, hasSemanticItems, semanticLabel]);
+  const supplemental = useMemo(
+    () => (showBulk ? undefined : { items: semanticItems, categories: ["issues"] }),
+    [showBulk, semanticItems],
+  );
 
   // The placeholder follows the mode: the new-tab launcher asks for a
   // destination, bulk mode names the selection it acts on, and the usual
@@ -1348,6 +1403,7 @@ export function CommandPalette({
       isOpen={open}
       onClose={() => onOpenChange(false)}
       items={paletteItems}
+      supplemental={supplemental}
       categories={paletteCategories}
       providers={navigationSearch && !showBulk ? [] : providers}
       locale={locale}

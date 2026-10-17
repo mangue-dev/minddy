@@ -124,7 +124,13 @@ const rules = [
   {
     access: /\.\s*(?:from\s*\(\s*["'`]issue_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_issue_ciphertext["'`])/,
     allowed: new Set(["lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts",
-      "captures/world/seed/_issues.mjs"]),
+      "lib/server/issue-embedding-store.ts", "captures/world/seed/_issues.mjs"]),
+  },
+  {
+    // Issue vectors and their content fingerprints (MIN-717) are encrypted
+    // derived content: only their repository reads or writes the table.
+    access: /\.\s*from\s*\(\s*["'`]issue_embeddings["'`]\s*\)/,
+    allowed: new Set(["lib/server/issue-embedding-store.ts"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]feedback_posts["'`]\s*\)/,

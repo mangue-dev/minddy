@@ -70,6 +70,23 @@ describe("AI settings registry and i18n catalogs", () => {
     );
   });
 
+  it("gives the issue index its own embedding field, separate from feedback", () => {
+    const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
+    expect(byKey.get("issue_embedding_model")).toMatchObject({
+      catalogCapability: "embedding",
+      group: "automations",
+    });
+    // The relation decision's LLM fallback is a text model.
+    expect(byKey.get("issue_relation_model")?.catalogCapability).toBeUndefined();
+    expect(byKey.get("byok_default_openai_issue_embedding_model")?.fallback).toBe(
+      "text-embedding-3-small",
+    );
+    expect(byKey.get("byok_default_google_issue_embedding_model")?.fallback).toBe(
+      "gemini-embedding-001",
+    );
+    expect(byKey.has("byok_default_anthropic_issue_embedding_model")).toBe(false);
+  });
+
   it("omits provider-specific fields for unsupported model families", () => {
     const keys = new Set(AI_MODEL_CONFIG_FIELDS.map((field) => field.key));
     expect(keys.has("byok_default_anthropic_assistant_model")).toBe(true);

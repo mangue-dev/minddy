@@ -445,6 +445,9 @@
     "historyFeatureJevDecision": "AI decision",
     "historyFeatureJevShadow": "Decision check",
     "historyFeatureSmartTriage": "Smart Triage",
+    "historyFeatureIssueEmbedding": "Smart-fill · issue index",
+    "historyFeatureIssueRelation": "Smart-fill · relations",
+    "historyFeatureIssueSearch": "Issue search",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
     "agentsGateCta": "View plans",
@@ -1365,7 +1368,7 @@
       "subIssues": "Break an issue into sub-issues without losing the parent issue.",
       "relations": "Link issues as blocking, blocked by, or related.",
       "plan": "Add an implementation plan alongside an issue's description.",
-      "smartFill": "Smart-fill can set an issue's priority, effort, objective, and categories.",
+      "smartFill": "Smart-fill can set an issue's priority, effort, objective, and categories, and link it to related issues.",
       "smartAssign": "Smart Assign uses your rules to assign eligible issues to the right teammate.",
       "autoAssignOnStart": "Automatically assign an unassigned issue to yourself when you start it.",
       "drafts": "Close an unfinished issue and find it later in your recent drafts.",
@@ -1528,8 +1531,8 @@
     "changeObjectiveAria": "Change objective",
     "issueCreatedToast": "Issue created.",
     "smartFillChip": "Smart-fill",
-    "smartFillOffHint": "Off for this issue: you set its properties yourself. Turn back on to let Smart-fill do it.",
-    "smartFillOnHint": "On: Smart-fill reads the issue and sets its priority, effort, categories and objective for you. Turn off to set them yourself.",
+    "smartFillOffHint": "Off for this issue: you set its properties and relations yourself. Turn back on to let Smart-fill do it.",
+    "smartFillOnHint": "On: Smart-fill reads the issue, sets its priority, effort, categories and objective, then links it to related issues once it is saved. Turn off to set them yourself.",
     "smartFillPendingToast": "Smart-fill is filling the issue in, it will show up in a few seconds.",
     "newIssueTitle": "New issue",
     "createDescriptionPlaceholder": "Issue description",
@@ -2254,6 +2257,7 @@
     "exportFailed": "Could not export this page."
   },
   "Picker": {
+    "relatedByMeaning": "Related by meaning",
     "createNamed": "Create “{name}”",
     "noResults": "No results",
     "search": "Search…"
@@ -2375,6 +2379,10 @@
     "smartFillCreatedLabel": "Fill created issues",
     "smartFillTriageDesc": "Fills missing values on triage issues you own.",
     "smartFillTriageLabel": "Fill triage issues",
+    "smartFillRelationsLabel": "Link related issues",
+    "smartFillRelationsDesc": "After you save an issue, links it to related issues and dependencies it plainly has. You can remove any link; a removed link is not added again.",
+    "issueIndexingLabel": "Index issues",
+    "issueIndexingDesc": "Turns your issues' titles and descriptions into private vectors, used to find related issues and to search issues by meaning. Off, no vector is created and search compares words only.",
     "numoStatusTitle": "Status for issues Numo creates",
     "numoStatusDesc": "Triage adds a manual review step; Backlog and Todo skip it.",
     "promptAutoStartDesc": "Only applies to issues and notebook tasks that haven't started yet.",
@@ -4165,6 +4173,18 @@
         "label": "Smart-fill model",
         "desc": "Reads a new issue's title and description and fills its fields. Someone is waiting on it: pick a fast model."
       },
+      "smart_fill_relations_enabled": {
+        "label": "Smart Fill relations",
+        "desc": "Indexes issues after they are saved and lets Smart Fill link related issues and dependencies. Off here, indexing and relation suggestions stop everywhere; issue creation is unaffected."
+      },
+      "issue_embedding_model": {
+        "label": "Issue embeddings",
+        "desc": "Vectorizes issue titles and descriptions to find candidate relations. Changing it starts a new index; old and new vectors are never compared."
+      },
+      "issue_relation_model": {
+        "label": "Relation decision model",
+        "desc": "Confirms whether a candidate is related, blocks or is blocked by an issue when the decision model is unsure. It never runs while anyone waits."
+      },
       "conversation_title_model": {
         "label": "Conversation titles",
         "desc": "Names a Numo conversation in a few words, from its first message. A small model is enough."
@@ -4244,7 +4264,8 @@
     "decisionModelErrors": {
       "catalog_unavailable": "The decision model catalog is unavailable. The current model was kept.",
       "not_a_decision_model": "This model is not a decision model. The current model was kept.",
-      "compatibility_check_failed": "This model failed the test decision (refused, invalid or slower than 5 seconds). The current model was kept."
+      "compatibility_check_failed": "This model failed the test decision (refused, invalid or slower than 5 seconds). The current model was kept.",
+      "capability_mismatch": "This model does not fit this field (for example a chat model in an embeddings field). The current model was kept."
     },
     "finance": {
       "title": "Finances",
@@ -4326,7 +4347,10 @@
         "brief_split": "Brief breakdown",
         "landing_demo": "Public dictation demo",
         "jev_decision": "AI decisions",
-        "jev_shadow": "Decision checks"
+        "jev_shadow": "Decision checks",
+        "issue_embedding": "Issue embeddings",
+        "issue_relation": "Smart-fill relations",
+        "issue_search": "Issue search"
       },
       "stripeHidden": "Stripe revenue is hidden: billing is not connected on this instance."
     },

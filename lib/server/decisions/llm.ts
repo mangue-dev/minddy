@@ -64,6 +64,18 @@ const LLM_PASSES: Record<DecisionSpec["useCase"], LlmPassProfile> = {
     xTitle: "Feedback Review (minddy)",
     logPrefix: "[feedback-review]",
   },
+  // Smart Fill relations (MIN-717): runs after the save, nobody waits on it.
+  // One enum per candidate (at most five), so the output stays small.
+  issue_relations: {
+    modelKey: "issue_relation_model",
+    feature: "issue_relation",
+    xTitle: "minddy Smart-fill relations",
+    logPrefix: "[issue-relations]",
+    maxTokens: 1_024,
+    reasoning: "low",
+    preferNonReasoning: true,
+    timeoutMs: 30_000,
+  },
 };
 
 /** One allowed-value check for a choice answer. */
@@ -92,6 +104,14 @@ export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>):
   const answers: DecisionAnswers = {};
 
   switch (spec.useCase) {
+    case "issue_relations": {
+      // One verdict enum per candidate question; anything else is silence.
+      for (const q of spec.questions) {
+        const verdict = choiceAnswer(raw[q.key], options(q.key));
+        if (verdict) answers[q.key] = verdict;
+      }
+      break;
+    }
     case "smart_fill": {
       const priority = choiceAnswer(raw.priority, options("priority"));
       if (priority) answers.priority = priority;

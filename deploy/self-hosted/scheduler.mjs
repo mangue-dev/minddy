@@ -6,6 +6,7 @@ const JOBS = [
   ["* * * * *", "/api/cron/forge-relay-deliveries"],
   ["35 * * * *", "/api/cron/forge-relay-maintenance"],
   ["*/5 * * * *", "/api/cron/smart-assign"],
+  ["25 * * * *", "/api/cron/issue-index"],
   ["*/5 * * * *", "/api/cron/routines"],
   ["15 * * * *", "/api/cron/billing-sync"],
   ["15 * * * *", "/api/cron/encryption-maintenance"],

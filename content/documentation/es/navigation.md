@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,13 +47,20 @@
       "components/pull-requests/pr-context-actions.tsx",
       "content/documentation/reviews/min-685-sidebar-context-actions.md",
       "lib/use-hidden-projects.ts",
-      "content/documentation/reviews/min-692-hidden-projects.md"
+      "content/documentation/reviews/min-692-hidden-projects.md",
+      "lib/issue-semantic-query.ts",
+      "lib/use-semantic-issue-search.ts",
+      "lib/server/issue-semantic-search.ts",
+      "app/api/issues/semantic-search/route.ts",
+      "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (es changed-passage parity and label review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (es changed-passage parity and label review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -75,7 +82,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +98,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -154,6 +161,25 @@ Pulsa Command+K en macOS o Ctrl+K en Windows/Linux para abrir la paleta de coman
 Utiliza la ayuda de atajos para consultar los comandos disponibles en tu plataforma. minddy distingue los atajos de la aplicación, las acciones de propiedades de incidencias y los atajos nativos de pestañas o ventanas de escritorio. Comprueba dónde está el foco antes de usar un comando: escribir en un editor y actuar sobre la incidencia que lo rodea son contextos diferentes.
 
 ![Resultados de búsqueda del identificador de una incidencia de demostración.](/documentation/es/work-search.png)
+
+### Orden de las incidencias en la búsqueda {#issue-search-order}
+
+Todas las búsquedas de incidencias muestran las incidencias en el mismo orden: la paleta, las menciones `@`, los selectores de relaciones, duplicados y pull requests, el diálogo **Vincular a una incidencia existente** de los comentarios y la búsqueda que usan Numo y los agentes MCP. Las incidencias **En curso** y **En examen** van primero, luego las de **Registro** y **Pendiente**. Las incidencias en **Clasificación**, **Hecho**, **Cancelado** y **Duplicado** siempre van al final y siguen siendo seleccionables. Dentro de cada grupo, la mejor coincidencia de texto va primero. Un identificador escrito completo, como `MIN-42`, pone esa incidencia primero, sea cual sea su estado.
+
+### Buscar incidencias por el sentido {#search-by-meaning}
+
+Cuando una búsqueda describe el trabajo en lugar de nombrarlo, la búsqueda de incidencias también encuentra incidencias de sentido parecido, aunque usen otras palabras. Por ejemplo, «el inicio de sesión falla tras restablecer la contraseña» puede encontrar una incidencia titulada «Sesión perdida al cambiar la contraseña». Esto se aplica a la paleta de comandos, las menciones `@` en descripciones, páginas, comentarios y el compositor de Numo, los selectores de relaciones, **Marcar como duplicado...** en el triaje, **Vincular una incidencia** en una pull request, el menú **Añadir contexto** → **Incidencia** de Numo y **Vincular a una incidencia existente** en el feedback.
+
+Las coincidencias de texto y los identificadores exactos aparecen siempre primero y conservan su orden. Poco después de que dejes de escribir, se añaden detrás, bajo **Relacionadas por el sentido**, como máximo cinco incidencias encontradas por el sentido. Una incidencia ya mostrada no se repite y la fila resaltada no se mueve. Cada selector conserva sus propias reglas, así que solo aparecen incidencias que ya podía ofrecer: un selector de relaciones, por ejemplo, sigue ofreciendo solo incidencias del mismo proyecto que aún no están vinculadas. La paleta de comandos busca en los proyectos que puedes leer, hasta los 25 actualizados más recientemente; sus acciones de selección múltiple no usan la búsqueda por el sentido.
+
+La búsqueda por el sentido tiene estos límites:
+
+- La búsqueda necesita al menos dos palabras, o una palabra de al menos seis letras. Los identificadores como `MIN-42`, `#42` o `42`, y las búsquedas muy cortas, solo usan la búsqueda de texto.
+- Se basa en el índice que Rellenado inteligente construye con el título y la descripción de las incidencias. Una incidencia aún no indexada, o cuyo autor desactivó [**Indexar incidencias**](/docs/issues#smart-fill-preferences), solo se encuentra por sus palabras. Las incidencias de la papelera nunca aparecen.
+- Si desactivaste **Indexar incidencias** en **Configuración de la cuenta** → **Preferencias**, tus búsquedas solo comparan palabras. Lo mismo ocurre cuando la administración de la instancia desactivó **Relaciones de Smart Fill**, cuando tu presupuesto de IA está agotado o cuando el proveedor no responde en pocos segundos. Los resultados de texto se mantienen y no se muestra ningún error.
+- Una consulta `@` cuyo texto ya coincide con una persona, un proyecto o una página no se busca por el sentido. En un proyecto con más de 3000 incidencias indexadas, solo se comparan las 3000 indexadas más recientemente; las demás se encuentran por sus palabras.
+
+Cada búsqueda nueva usa una llamada de IA, que cuenta en tu parte **Automatizaciones** y aparece en el historial de uso como **Búsqueda de incidencias**. Una búsqueda repetida en unos 15 minutos normalmente no se cobra de nuevo.
 
 ### Usar un control visible equivalente {#shortcut-alternatives}
 

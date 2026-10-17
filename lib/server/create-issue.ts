@@ -23,6 +23,7 @@ import {
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { decodeIssue, encodeIssue } from "@/lib/server/issue-store";
 import { resolveSmartFillPayer, runSmartFill } from "@/lib/server/smart-fill";
+import { scheduleIssueAiPass } from "@/lib/server/issue-relation-inference";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notificationActorSource } from "@/lib/notification-actor";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
@@ -673,6 +674,25 @@ export async function createIssueForProject({
       projectId,
       triggerActorId: actorId,
       trigger: "create",
+    });
+  }
+
+  // Smart Fill relations (MIN-717): index the new issue and link it to the
+  // issues it plainly relates to — AFTER the response, never on its path.
+  // Forge imports and recurrence copies are not new writing: the hourly
+  // backfill indexes them, and nothing links them automatically.
+  if (remote === null && recurrenceSeriesId === null) {
+    scheduleIssueAiPass({
+      issueId: data.id as string,
+      projectId,
+      projectName,
+      trigger: "created",
+      actorId,
+      integrationId,
+      mcpKeyId,
+      status: data.status,
+      ownerBilledTriage: smartFillOwnerTriage,
+      explicit: input.smart_fill,
     });
   }
 

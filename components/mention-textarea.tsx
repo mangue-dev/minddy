@@ -58,6 +58,8 @@ import {
 } from "@/lib/mention-scan";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { filterMentionItems, findActiveMentionQuery } from "@/lib/mention-menu";
+import { useSemanticMentions } from "@/lib/use-semantic-mentions";
+import { MentionRowWithDivider } from "@/components/mention-suggest";
 import {
   MAX_SELECTED_SKILLS,
   type RepositorySkill,
@@ -523,10 +525,13 @@ export function MentionTextarea({
     item.type === "issue" && item.status ? [[item.id, item.status] as const] : [],
   )), [mentionables]);
 
-  const suggestions = useMemo(
+  const textSuggestions = useMemo(
     () => (query === null ? [] : filterMentionItems(mentionables, query)),
     [query, mentionables],
   );
+  // Issues found by meaning (MIN-718), appended after the text matches; the
+  // selection resets on the query only, so a late answer never moves it.
+  const suggestions = useSemanticMentions(textSuggestions, mentionables, query ?? "", query !== null);
   const open = suggestions.length > 0;
   // Typing narrows the list under the cursor, so keep the highlight in range.
   const active = Math.min(selected, Math.max(0, suggestions.length - 1));
@@ -951,8 +956,8 @@ export function MentionTextarea({
         )}
       >
         {suggestions.map((option, index) => (
+          <MentionRowWithDivider key={`${option.type}:${option.id}`} options={suggestions} index={index}>
           <button
-            key={`${option.type}:${option.id}`}
             type="button"
             role="option"
             aria-selected={index === active}
@@ -988,6 +993,7 @@ export function MentionTextarea({
               ) : null}
             </span>
           </button>
+          </MentionRowWithDivider>
         ))}
       </div>
     ) : null;

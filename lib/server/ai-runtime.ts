@@ -74,7 +74,7 @@ async function providerDefaultModel(
   const registryFallback = aiModelFallback(featureKey).trim();
   if (registryFallback) return registryFallback;
   if (provider === "generic") return null;
-  if (modelKey === "feedback_embedding_model" && provider === "google") {
+  if (modelCatalogCapabilityForKey(modelKey) === "embedding" && provider === "google") {
     return "gemini-embedding-001";
   }
   return getAgentProvider(provider)?.defaultModel?.trim() || null;

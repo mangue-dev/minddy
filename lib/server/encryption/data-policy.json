@@ -4043,5 +4043,64 @@
         "created_at"
       ]
     }
+  },
+  "issue_embeddings": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "content_hash",
+      "embedding"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "content_version",
+        "dimensions"
+      ],
+      "operational_configuration": [
+        "index_version"
+      ],
+      "routing_identity": [
+        "issue_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
+  },
+  "issue_relation_inferences": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "candidate_version",
+        "issue_version",
+        "verdict"
+      ],
+      "operational_configuration": [
+        "engine"
+      ],
+      "routing_identity": [
+        "candidate_id",
+        "id",
+        "issue_id",
+        "project_id",
+        "relation_id"
+      ],
+      "timestamp": [
+        "applied_at",
+        "created_at"
+      ]
+    }
   }
 }

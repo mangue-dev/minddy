@@ -5,7 +5,7 @@ summary: Work with Numo in minddy and connect external agents or personal MCP to
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-10-16
+lastReviewed: 2026-10-17
 ---
 
 Numo is minddy's built-in conversation for understanding and acting on project work. The floating Numo button is the one place conversations live: it opens the Numo panel, adds the current page as context, and keeps every conversation reachable from its conversation list. Contextual actions such as **Ask Numo** enter this same conversation instead of opening a separate agent destination, and links to the retired dedicated Numo page open the panel too.
@@ -16,7 +16,7 @@ Stopping Numo stops its turn. An external action already sent may still complete
 
 Routines are scheduled Numo requests. Each occurrence starts a new Numo conversation with the saved instruction and project context. Numo uses Minddy tools and the owner's MCP connections; routines do not change repository code. The conversation records the result and any request for user input.
 
-minddy also exposes an OAuth-based MCP server for external tools. This is how coding agents such as Claude Code, Codex or Cursor work with minddy: they can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages, feedback posts, cycles, routines, and the task notebook. The MCP setup page provides the endpoint and setup instructions for supported clients. The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
+minddy also exposes an OAuth-based MCP server for external tools. This is how coding agents such as Claude Code, Codex or Cursor work with minddy: they can read issues and their context, update status and properties, write plans and comments, create linked issues and objectives, and work with project pages, feedback posts, cycles, routines, and the task notebook. The MCP setup page provides the endpoint and setup instructions for supported clients. When an MCP client or Numo searches a project's issues (`minddy_list_issues` with `query`, or Numo's issue search), text matches and exact identifiers come first; a descriptive query can then add issues of the same project found by meaning, marked `match: "semantic"`, which should be read before being relied on. That search by meaning is billed to the connected account as "Issue search" and is skipped when the account turned off "Index issues". The MCP server and Numo are available on every plan; available AI usage and model choices depend on the account plan or an optional personal API key.
 
 ## Connect Numo to an MCP server
 

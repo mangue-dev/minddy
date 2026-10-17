@@ -1,5 +1,7 @@
 "use client";
 
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
@@ -19,7 +21,7 @@ import { SearchMenu } from "@/components/search-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { globalBoardQueryFn } from "@/lib/global-board-api";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
-import { issueIdentifier, isClosedStatus } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
 import { issueStatusForPrState } from "@/lib/pr-issue-status";
 import { linkPullRequestIssueApi } from "@/lib/agent-api";
 import type { PullRequestListItem } from "@/lib/agent-api";
@@ -73,17 +75,18 @@ export function PrLinkIssue({
 
   const issues = (data?.issues ?? []) as GlobalBoardResponse["issues"];
   const options = useMemo<PickerOption[]>(() => {
-    return issues
-      .filter((i) => i.project_id === projectId && !linkedIssueIds.includes(i.id))
-      // Open first: a PR that is attached afterwards almost aims
-      // still a ticket still alive. The closes remain achievable.
-      .sort((a, b) => (isClosedStatus(a.status) ? 1 : 0) - (isClosedStatus(b.status) ? 1 : 0))
+    // Work under way first — a PR almost always targets a live issue — then
+    // open issues; triage and closed ones last, still selectable (MIN-726).
+    return orderIssuesForSearch(
+      issues.filter((i) => i.project_id === projectId && !linkedIssueIds.includes(i.id)),
+      (i) => i.status,
+    )
       .map((i) => {
         const identifier = issueIdentifier(projectKey, i.number);
         return {
           value: i.id,
           label: `${identifier}  ${i.title}`,
-          keywords: [identifier, i.title],
+          keywords: [identifier, i.title, issueTierKeyword(i.status)],
           icon: <StatusIndicator status={i.status} className="size-4" />,
         };
       });
@@ -146,6 +149,26 @@ export function PrLinkIssue({
             </CommandItem>
           ))}
         </CommandGroup>
+        {/* Same eligible issues, found by meaning (MIN-718). */}
+        <SemanticIssueGroup
+          projectId={projectId}
+          candidates={options}
+          idOf={(option) => option.value}
+          statusOf={(option) => issues.find((candidate) => candidate.id === option.value)?.status}
+          textOf={(option) => ({ value: option.value, keywords: [option.label, ...(option.keywords ?? [])] })}
+          onSelect={(option) => {
+            const issue = issues.find((candidate) => candidate.id === option.value);
+            if (!issue) return;
+            setPending({ id: issue.id, identifier: issueIdentifier(projectKey, issue.number) });
+            setOpen(false);
+          }}
+          renderItem={(option) => (
+            <>
+              {option.icon}
+              <span className="truncate">{option.label}</span>
+            </>
+          )}
+        />
       </SearchMenu>
 
       {/* Confirm the status change before linking. */}

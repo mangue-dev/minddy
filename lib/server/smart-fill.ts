@@ -109,7 +109,26 @@ async function resolveSmartFillPayerUnsafe(
   input: SmartFillPayerInput,
 ): Promise<{ userId: string; scope: SmartFillScope } | null> {
   if (input.explicit === false || input.excluded) return null;
+  const resolved = await resolveCreationAccount(input);
+  if (!resolved) return null;
+  const { userId, scope, meta } = resolved;
+  if (!resolveSmartFill(meta)) return null;
+  const canOverrideScope =
+    input.explicit === true &&
+    (!input.ownerBilledTriage || input.actorId === userId);
+  if (!canOverrideScope && !resolveSmartFillScope(meta, scope)) return null;
+  return { userId, scope };
+}
 
+/**
+ * The account a creation belongs to, from its provenance, with that account's
+ * metadata — and no preference applied. Smart Fill's field pass and its
+ * relation pass (MIN-717) read different preferences of the SAME account, so
+ * the provenance rule lives once, here.
+ */
+export async function resolveCreationAccount(
+  input: Pick<SmartFillPayerInput, "projectId" | "actorId" | "integrationId" | "mcpKeyId" | "status" | "ownerBilledTriage">,
+): Promise<{ userId: string; scope: SmartFillScope; meta: Record<string, unknown> } | null> {
   const service = getServiceClient();
   const scope: SmartFillScope =
     input.ownerBilledTriage || input.status === "triage" ? "triage" : "created";
@@ -151,13 +170,7 @@ async function resolveSmartFillPayerUnsafe(
   if (!userId) return null;
   const { data, error } = await service.auth.admin.getUserById(userId);
   if (error || !data.user) return null;
-  const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
-  if (!resolveSmartFill(meta)) return null;
-  const canOverrideScope =
-    input.explicit === true &&
-    (!input.ownerBilledTriage || input.actorId === userId);
-  if (!canOverrideScope && !resolveSmartFillScope(meta, scope)) return null;
-  return { userId, scope };
+  return { userId, scope, meta: (data.user.user_metadata ?? {}) as Record<string, unknown> };
 }
 
 /** Title/description truncated before prompt: a ticket pasted from a document

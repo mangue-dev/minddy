@@ -63,6 +63,8 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 export interface SearchViewProps {
   /** All available items (unfiltered). */
   items: PaletteItem[];
+  /** Extra results appended after the scored ones (see CommandPaletteProps). */
+  supplemental?: { items: PaletteItem[]; categories?: string[] };
   /** Context for action execution. */
   actionContext: ActionExecutionContext;
   /** Callback when the palette should close. */
@@ -98,8 +100,26 @@ export interface SearchViewProps {
 // COMPONENT
 // =============================================================================
 
+/**
+ * Stable reorder by `searchTier` (lowest first), with an item whose
+ * `exactKeywords` contains the query ahead of every tier. Items without a
+ * tier keep the relevance order the caller gave them. Categories are grouped
+ * afterwards, so only the order inside a category is affected.
+ */
+function orderByTier(items: PaletteItem[], query: string): PaletteItem[] {
+  if (!items.some((item) => item.searchTier !== undefined || item.exactKeywords)) return items;
+  const q = query.trim().toLocaleLowerCase().replace(/^#/, "");
+  const rank = (item: PaletteItem) =>
+    q && item.exactKeywords?.some((keyword) => keyword.toLocaleLowerCase() === q) ? -1 : item.searchTier ?? 0;
+  return items
+    .map((item, index) => ({ item, index, rank: rank(item) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ item }) => item);
+}
+
 export function SearchView({
   items,
+  supplemental,
   actionContext,
   onClose,
   onSelectItem,
@@ -205,7 +225,7 @@ export function SearchView({
 
     // No query: return as-is (no scoring needed)
     if (!debouncedQuery.trim()) {
-      return result;
+      return orderByTier(result, "");
     }
 
     const matchingCategories = findMatchingCategories(debouncedQuery);
@@ -247,7 +267,7 @@ export function SearchView({
 
     scoredItems.sort((a, b) => b.score - a.score);
 
-    return scoredItems.map((s) => s.item);
+    return orderByTier(scoredItems.map((s) => s.item), debouncedQuery);
   }, [items, debouncedQuery, categoryFilter, searchContext, usageStats, categories, findMatchingCategories]);
 
   // Sort by category so activeIndex matches the visual position.
@@ -255,8 +275,15 @@ export function SearchView({
     // Group by category order so visual order matches array order (critical for
     // keyboard navigation: activeIndex === globalIndex). This stays linear for
     // the thousands of issue rows shown by an empty-query palette.
-    return orderByCategoryRank(filteredItems, categoryOrder);
-  }, [filteredItems, categoryOrder]);
+    const ordered = orderByCategoryRank(filteredItems, categoryOrder);
+    // Supplemental results go LAST, never between scored rows: when they
+    // arrive, every row already shown keeps its index.
+    const extra = supplemental?.items ?? [];
+    if (!debouncedQuery.trim() || extra.length === 0) return ordered;
+    if (categoryFilter !== "all" && !(supplemental?.categories ?? []).includes(categoryFilter)) return ordered;
+    const shown = new Set(ordered.map((item) => item.id));
+    return [...ordered, ...extra.filter((item) => !shown.has(item.id))];
+  }, [filteredItems, categoryOrder, supplemental, debouncedQuery, categoryFilter]);
 
   // Group items for the virtualized list
   const groups = useMemo<ItemGroup[]>(() => {

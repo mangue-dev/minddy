@@ -318,7 +318,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "search_issues",
       description:
-        "Search the project's issues by text (matches title/description, and exact identifiers like 'MIND-42' or bare numbers).",
+        "Search the project's issues by text (matches title/description, and exact identifiers like 'MIND-42' or bare numbers). Text matches come first; a descriptive query may add issues found by meaning, marked match: \"semantic\" — check them before relying on them.",
       parameters: {
         type: "object",
         properties: {
@@ -1604,6 +1604,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "Automatically run Smart Fill on eligible triage issues and promoted feedback.",
+          },
+          smart_fill_relations: {
+            type: "boolean",
+            description:
+              "Let Smart Fill link a saved issue to related issues and dependencies (related, blocks, blocked by). Requires smart_fill.",
+          },
+          issue_indexing: {
+            type: "boolean",
+            description:
+              "Allow embedding vectors of the user's issues (used to find related issues and to search issues by meaning). Independent of smart_fill; off means no vectors are generated and search uses words only.",
           },
           cycles_enabled: {
             type: "boolean",

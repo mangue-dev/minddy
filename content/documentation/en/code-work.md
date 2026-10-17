@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained); MIN-685 sidebar context menus; MIN-693 project roles",
+    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained); MIN-685 sidebar context menus; MIN-693 project roles; MIN-718 hybrid issue search",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -43,13 +43,15 @@
       "content/documentation/reviews/min-685-sidebar-context-actions.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/pull-requests/pr-link-issue.tsx",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 12,
+    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-718 added passages with catalog UI labels; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -73,7 +75,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -105,7 +107,7 @@ The prompt contents, branch suggestion and language rules are described in [Copy
 
 ### Keep the work linked to the issue {#link-work}
 
-When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. Minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch.
+When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. Minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch. To attach an issue by hand, use **Link an issue** on the pull request. Its search accepts an identifier or title words, and a description also lists issues of the project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
 
 In **Account settings → Preferences**, **Start the issue or task when I copy its prompt** moves an issue or notebook task that has not started yet into progress when you copy its prompt. Leave it off if you copy prompts only to read them.
 

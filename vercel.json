@@ -13,6 +13,7 @@
     { "path": "/api/cron/forge-relay-deliveries", "schedule": "* * * * *" },
     { "path": "/api/cron/forge-relay-maintenance", "schedule": "35 * * * *" },
     { "path": "/api/cron/smart-assign", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/issue-index", "schedule": "25 * * * *" },
     { "path": "/api/cron/routines", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/billing-sync", "schedule": "15 * * * *" },
     { "path": "/api/cron/fx-rate", "schedule": "30 15 * * *" },

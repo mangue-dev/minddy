@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -97,13 +97,22 @@
       "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "lib/server/issue-relation-inference.ts",
+      "lib/server/issue-relation-decision.ts",
+      "lib/server/issue-embedding-store.ts",
+      "components/settings/account-preferences-section.tsx",
+      "content/documentation/reviews/min-717-smart-fill-relations.md",
+      "lib/issue-semantic-query.ts",
+      "lib/server/issue-semantic-search.ts",
+      "components/relation-target-picker.tsx",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; de translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "revision": 15,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; de translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; de translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -149,7 +158,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf mit Titel, Beschreibung und manuell wählbaren Eigenschaften.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -165,7 +174,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,7 +190,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -197,7 +206,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +222,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +238,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -245,7 +254,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -261,7 +270,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -277,7 +286,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -294,7 +303,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Entfernen.",
-      "revision": 13,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -329,7 +338,7 @@ Das Löschen eines gespeicherten Entwurfs erfordert eine Bestätigung. Abbrechen
 
 Du musst Eigentümer oder Mitglied des Zielprojekts sein; Leser können Probleme öffnen, aber weder erstellen noch bearbeiten. Öffne das Projekt und seine Funktion zum Erstellen eines Problems. Gib einen Titel ein, der die Arbeit benennt, und ergänze Kontext, erwartetes Ergebnis und Einschränkungen in der Beschreibung. Wähle das Projekt bewusst, wenn du aus einer persönlichen oder projektübergreifenden Ansicht erstellst.
 
-Schalte für eine manuelle Erstellung Smart-Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien und Ziel selbst festlegen. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig.
+Schalte für eine manuelle Erstellung Smart-Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien, Ziel und Beziehungen selbst festlegen. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig. Solange Smart-Fill eingeschaltet ist, [verknüpft es das Problem nach dem Speichern auch mit verwandten Problemen](#smart-fill-relations), deshalb ist die Beziehungsauswahl ausgeblendet. Bereits gewählte Beziehungen bleiben über dem Titel sichtbar und werden mit dem Problem angelegt.
 
 Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Aufwand, zuständige Person, Ziel, Kategorien, Fälligkeitsdatum und Wiederholung. Zuständig ist der Projekteigentümer oder ein Mitglied, nie ein Leser; ein Ziel bündelt Probleme zu einem Projektergebnis. Optionale Eigenschaften kannst du offenlassen, statt Werte zu erraten. Die Priorität reicht von keiner über niedrig, mittel und hoch bis dringend; der Aufwand verwendet XS, S, M, L und XL.
 
@@ -344,13 +353,24 @@ Prüfe nach einer Eigenschaftsänderung den angezeigten Wert. Filter können ein
 
 Schlägt Erstellen oder Speichern fehl, bewahre deinen Text auf, lies den Fehler und prüfe, ob Mitgliedschaft und Ziel noch bestehen. Kontrolliere nach einem Netzwerkfehler zuerst, ob das Problem bereits erstellt wurde, bevor du erneut versuchst. Verknüpfe Projektseiten als aktuelle Ressourcen, wenn du deren jetzigen Inhalt brauchst, und verwende Kommentare für die Diskussion der Aufgabe.
 
+### Festlegen, was Smart-Fill tut {#smart-fill-preferences}
+
+Die Smart-Fill-Einstellungen gehören zu deinem Konto. Öffne **Kontoeinstellungen** → **Einstellungen** und verwende die Schalter der Gruppe **Probleme**:
+
+- **Smart Fill aktivieren** schaltet Smart-Fill für dein Konto ein oder aus. Es ergänzt fehlende Priorität, fehlenden Aufwand, fehlende Kategorien und ein fehlendes Ziel; Status, zuständige Person und Fälligkeitsdatum bleiben deine Sache. Die drei folgenden Schalter hängen davon ab.
+- **Erstellte Vorgänge ausfüllen** und **Triage-Vorgänge ausfüllen** legen fest, welche neuen Probleme es ergänzt: die Probleme, die du erstellst, und die Triage-Probleme, für die du zuständig bist.
+- **Verwandte Vorgänge verknüpfen** ist standardmäßig eingeschaltet und erlaubt Smart-Fill, nach dem Speichern eines Problems [Beziehungen hinzuzufügen](#smart-fill-relations).
+- **Vorgänge indexieren** ist standardmäßig eingeschaltet und von Smart-Fill unabhängig. Es wandelt Titel und Beschreibung der Probleme, die du erstellst oder bearbeitest, in private Vektoren um, mit denen verwandte Probleme gefunden und Probleme [inhaltlich gesucht](/docs/navigation#search-by-meaning) werden. Die Indexierung der bestehenden Probleme eines Projekts im Hintergrund folgt sowohl dem Schalter des Projekteigentümers als auch dem des Autors: Ein Problem, dessen Autor ihn ausgeschaltet hat, wird nie indexiert. Die Vektoren werden wie das Problem mit dem Projekt verschlüsselt; Vektoren, die gespeichert wurden, bevor das Projekt verschlüsselt wurde, wandelt der Hintergrundjob um. Ist der Schalter aus, entsteht für deine Probleme kein Vektor, auch wenn jemand anderes sie bearbeitet, und die Suche nach verwandten Problemen vergleicht nur Wörter. Deine eigenen Suchen nutzen dann nur den Text, ohne inhaltliche Suche. Bereits erstellte Vektoren bleiben, solange sich der Text nicht ändert; sie werden gelöscht, sobald sich der Text ändert, oder mit dem Problem.
+
+Das Ausschalten eines Schalters bricht auch Durchläufe ab, die noch nicht ausgeführt wurden. Numo kann diese Einstellungen auf deine Bitte hin ändern.
+
 ## Eingehende Arbeit in der Triage prüfen {#triage-incoming-work}
 
 Die Listenfilter grenzen eingehende Tickets nach Priorität, Aufwand, zugewiesener Person, Ziel, Kategorien oder Integration ein. Werte derselben Eigenschaft sind Alternativen, verschiedene Eigenschaften gelten gemeinsam. Setzen Sie die Filter zurück, um alle eingehenden Tickets wieder anzuzeigen.
 
 Öffne den Triage-Bereich des Projekts. Lies das eingegangene Problem und seinen Ursprungskontext, bevor du es in die geplante Arbeit aufnimmst. Prüfe, ob ein bestehendes Problem die Anfrage bereits abbildet. Kläre bei Bedarf erwartetes Ergebnis, Projekt, zuständige Person, Priorität und Aufwand.
 
-Wähle Akzeptieren und bestätige, um ein beibehaltenes Problem in den Rückstand zu verschieben. Wähle Ablehnen und bestätige, um es auf Abgebrochen zu setzen. Bei einem Duplikat wählst du mit der Duplikatauswahl das Problem aus, das beibehalten werden soll. Das eingegangene Problem erhält den Status Duplikat und verweist auf dieses Problem. Sobald ein Eintrag die Triage verlässt, wird der nächste ausgewählt. Prüfe den entstandenen Status oder den Duplikatlink direkt im Problem. Der Wechsel zwischen Karten ohne eine dieser Aktionen schließt kein Problem ab.
+Wähle Akzeptieren und bestätige, um ein beibehaltenes Problem in den Rückstand zu verschieben. Wähle Ablehnen und bestätige, um es auf Abgebrochen zu setzen. Bei einem Duplikat wählst du mit der Duplikatauswahl das Problem aus, das beibehalten werden soll. Das eingegangene Problem erhält den Status Duplikat und verweist auf dieses Problem. Beschreibst du die Anfrage im Suchfeld der Auswahl, listet sie nach den Textübereinstimmungen auch ähnliche Probleme unter **Inhaltlich verwandt** auf; siehe [Probleme inhaltlich suchen](/docs/navigation#search-by-meaning). Sobald ein Eintrag die Triage verlässt, wird der nächste ausgewählt. Prüfe den entstandenen Status oder den Duplikatlink direkt im Problem. Der Wechsel zwischen Karten ohne eine dieser Aktionen schließt kein Problem ab.
 
 ### Sortierung und Grenzen {#triage-order}
 
@@ -409,7 +429,7 @@ Prüfe nach dem Hochladen, ob die Ressource erscheint und sich öffnen lässt. S
 
 ## Abhängigkeiten und verwandte Probleme verknüpfen {#issue-dependencies}
 
-Öffne die Beziehungsfunktionen eines Problems und suche das andere anhand von Titel oder Kennung. Wähle eine blockierende Beziehung, wenn eine Aufgabe abgeschlossen sein muss, bevor eine andere weitergehen kann. Blockiert A das Problem B, ist A die Voraussetzung und B wird von A blockiert. Eine verwandte Beziehung ergänzt Kontext ohne diese Reihenfolge vorzugeben.
+Öffne die Beziehungsfunktionen eines Problems und suche das andere anhand von Titel oder Kennung. Eine beschreibende Suchanfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Probleme desselben Projekts unter **Inhaltlich verwandt** auf. Wähle eine blockierende Beziehung, wenn eine Aufgabe abgeschlossen sein muss, bevor eine andere weitergehen kann. Blockiert A das Problem B, ist A die Voraussetzung und B wird von A blockiert. Eine verwandte Beziehung ergänzt Kontext ohne diese Reihenfolge vorzugeben.
 
 Lies beide Kennungen und die angezeigte Richtung vor der Bestätigung. Beispielsweise blockiert „Endpunkt vorbereiten“ die Aufgabe „Client verbinden“, nicht umgekehrt. Eine Abhängigkeit macht keines der Probleme zu einem Unterproblem. Eine Eltern-Kind-Beziehung ersetzt keine blockierende Beziehung.
 
@@ -424,6 +444,16 @@ Ein offenes Problem kann über sein offenes Ziel eine Blockade erben. Wenn A das
 Entferne eine Beziehung über ihre Steuerelemente, wenn sie nicht mehr zutrifft, und prüfe anschließend sowohl die Beschriftung als auch die Blockadeanzeige. Das Markieren eines Duplikats beeinflusst den Lebenszyklus und verweist auf die beibehaltene Arbeit. Verwende es für doppelte Aufgaben, statt eine normale verwandte Beziehung anzulegen und anzunehmen, diese würde das Duplikat schließen.
 
 Findet die Beziehungsauswahl ein Problem nicht, prüfe Projektzugriff und Kennung. Lege keine Inhalte eines anderen Projekts offen, indem du eine private Problem-URL in eine öffentliche Feedback-Antwort kopierst.
+
+### Von Smart-Fill hinzugefügte Verknüpfungen {#smart-fill-relations}
+
+Ist **Verwandte Vorgänge verknüpfen** eingeschaltet, sucht Smart-Fill nach verwandten Problemen, sobald ein Problem erstellt oder sein Titel oder seine Beschreibung geändert wurde. Das geschieht im Hintergrund nach dem Speichern: Erstellen und Bearbeiten warten nie darauf, und Verknüpfungen können einige Sekunden später erscheinen. Bei einem neuen Problem folgt es denselben Einstellungen wie die übrigen Felder; es läuft also nicht, wenn du Smart-Fill für dieses Problem ausgeschaltet hast. Es läuft nicht für Probleme, die aus einem verknüpften Repository importiert wurden, nicht für wiederkehrende Kopien und nicht für Änderungen, die aus dem Repository synchronisiert werden.
+
+Smart-Fill vergleicht das Problem mit höchstens fünf Kandidaten aus demselben Projekt; abgebrochene, doppelte und gelöschte Probleme bleiben außen vor. Eine Entscheidung ordnet dann jeden Kandidaten ein: verwandt, blockierend, blockiert durch oder ohne Beziehung. Ähnlichkeit allein erzeugt nie eine Verknüpfung, eine Abhängigkeit braucht stärkere Anhaltspunkte als eine verwandte Beziehung, und im Zweifel fügt Smart-Fill nichts hinzu. Ein einzelner Durchlauf fügt höchstens drei Beziehungen hinzu. Er rührt kein Paar an, das bereits eine Beziehung hat, fügt nie eine Blockade hinzu, die einen Zyklus schließen würde, und verwirft sein Ergebnis, wenn sich der Text des Problems während der Entscheidung geändert hat. Er markiert nie ein Duplikat und ändert nie einen Status.
+
+So hinzugefügte Verknüpfungen erscheinen wie alle anderen in den Beziehungen des Problems, und der Verlauf nennt Smart-Fill als Urheber. Prüfe die Richtung einer Abhängigkeit wie bei deinen eigenen. Entferne eine Verknüpfung über die Beziehungssteuerelemente: Smart-Fill fügt eine entfernte Verknüpfung für dieses Paar nicht erneut hinzu. Um keine neuen Verknüpfungen mehr zu erhalten, schalte **Verwandte Vorgänge verknüpfen** in [deinen Einstellungen](#smart-fill-preferences) aus. Probleme, die vor dieser Funktion erstellt, importiert oder aus einem Repository synchronisiert wurden, werden nach und nach im Hintergrund indexiert, erhalten aber nie automatisch Verknüpfungen.
+
+Indexierung und Beziehungsentscheidungen nutzen KI. Sie zählen zum Anteil **Automatisierungen** des Kontos, dem der Durchlauf zugerechnet wird: dem Konto, das für das Smart-Fill des neuen Problems belastet wird, meist seinem Ersteller; der bearbeitenden Person bei einer Bearbeitung; dem Projekteigentümer bei der Indexierung im Hintergrund. Der Nutzungsverlauf führt die Indexierung als **Smart-fill · Problemindex**. Eine Beziehungsentscheidung erscheint als **KI-Entscheidung**, wenn das Entscheidungsmodell sie trifft, und als **Smart-fill · Beziehungen**, wenn das Ersatzmodell sie trifft. Ist dieses Budget erschöpft oder schlägt der Anbieter fehl, wird der Durchlauf übersprungen und das Problem bleibt unverändert. Die Administration der Instanz kann die Funktion auch für alle ausschalten. Die [inhaltliche Problemsuche](/docs/navigation#search-by-meaning) nutzt denselben Index: Jede neue Suchanfrage zählt zum Anteil **Automatisierungen** des suchenden Kontos und erscheint als **Problemsuche**.
 
 ## Ein Problem in Unterprobleme aufteilen {#sub-issues}
 

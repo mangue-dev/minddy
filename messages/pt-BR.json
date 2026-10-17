@@ -445,6 +445,9 @@
     "historyFeatureJevDecision": "Decisão de IA",
     "historyFeatureJevShadow": "Verificação de decisões",
     "historyFeatureSmartTriage": "Triagem inteligente",
+    "historyFeatureIssueEmbedding": "Smart-fill · índice de problemas",
+    "historyFeatureIssueRelation": "Smart-fill · relações",
+    "historyFeatureIssueSearch": "Busca de problemas",
     "agentsGateTitle": "O trabalho com o Numo não está disponível",
     "agentsGateDescription": "O trabalho com o Numo não está ativado nesta conta.",
     "agentsGateCta": "Ver planos",
@@ -1365,7 +1368,7 @@
       "subIssues": "Divida um problema em subproblemas sem perder o problema pai.",
       "relations": "Vincule problemas como bloqueadores, bloqueados por ou relacionados.",
       "plan": "Adicione um plano de implementação junto com a descrição de um problema.",
-      "smartFill": "O preenchimento inteligente pode definir a prioridade, o esforço, o objetivo e as categorias de um problema.",
+      "smartFill": "O preenchimento inteligente pode definir a prioridade, o esforço, o objetivo e as categorias de um problema, e vinculá-lo a problemas relacionados.",
       "smartAssign": "O Smart Assign usa suas regras para atribuir problemas elegíveis ao colega de equipe certo.",
       "autoAssignOnStart": "Atribuir automaticamente um problema não atribuído a si mesmo ao iniciá-lo.",
       "drafts": "Feche um problema inacabado e encontre-o mais tarde em seus rascunhos recentes.",
@@ -1528,8 +1531,8 @@
     "changeObjectiveAria": "Alterar objetivo",
     "issueCreatedToast": "Problema criado.",
     "smartFillChip": "Preenchimento inteligente",
-    "smartFillOffHint": "Desativado para este problema: você mesmo define suas propriedades. Ative novamente para deixar o preenchimento inteligente fazer isso.",
-    "smartFillOnHint": "Ativado: o preenchimento inteligente lê o problema e define sua prioridade, esforço, categorias e objetivo para você. Desligue para defini-los você mesmo.",
+    "smartFillOffHint": "Desativado para este problema: você mesmo define suas propriedades e relações. Ative novamente para deixar o preenchimento inteligente fazer isso.",
+    "smartFillOnHint": "Ativado: o preenchimento inteligente lê o problema, define prioridade, esforço, categorias e objetivo, e depois o vincula a problemas relacionados quando ele é salvo. Desligue para definir você mesmo.",
     "smartFillPendingToast": "O Smart-fill está preenchendo o problema, ele aparecerá em alguns segundos.",
     "newIssueTitle": "Novo problema",
     "createDescriptionPlaceholder": "Descrição do problema",
@@ -2254,6 +2257,7 @@
     "exportFailed": "Não foi possível exportar esta página."
   },
   "Picker": {
+    "relatedByMeaning": "Relacionados pelo sentido",
     "createNamed": "Criar “{name}”",
     "noResults": "Nenhum resultado",
     "search": "Pesquisar…"
@@ -2375,6 +2379,10 @@
     "smartFillCreatedLabel": "Preencher tickets criados",
     "smartFillTriageDesc": "Preenche valores ausentes em tickets na triagem e feedbacks promovidos nos projetos que você possui.",
     "smartFillTriageLabel": "Preencher tickets na triagem",
+    "smartFillRelationsLabel": "Vincular tickets relacionados",
+    "smartFillRelationsDesc": "Depois que você salva um ticket, vincula-o aos tickets relacionados e às dependências evidentes. Você pode remover qualquer vínculo; um vínculo removido não é adicionado de novo.",
+    "issueIndexingLabel": "Indexar tickets",
+    "issueIndexingDesc": "Transforma o título e a descrição dos seus tickets em vetores privados, usados para encontrar tickets relacionados e buscar tickets pelo sentido. Desligado, nenhum vetor é criado e a busca compara só palavras.",
     "numoStatusTitle": "O status dos problemas criados por Numo",
     "numoStatusDesc": "A triagem adiciona uma etapa de revisão manual; Backlog e Todo ignoram essa etapa.",
     "promptAutoStartDesc": "Aplica-se apenas a problemas e tarefas de notebook que ainda não foram iniciadas.",
@@ -4165,6 +4173,18 @@
         "label": "Modelo de preenchimento inteligente",
         "desc": "Lê o título e a descrição de um novo problema e preenche seus campos. Alguém está esperando pelo resultado: escolha um modelo rápido."
       },
+      "smart_fill_relations_enabled": {
+        "label": "Relações do Smart Fill",
+        "desc": "Indexa os problemas depois de salvos e deixa o Smart Fill vincular problemas relacionados e dependências. Desligado aqui, a indexação e as relações param em todo lugar; a criação não é afetada."
+      },
+      "issue_embedding_model": {
+        "label": "Embeddings de problemas",
+        "desc": "Vetoriza título e descrição dos problemas para encontrar relações candidatas. Trocá-lo inicia um novo índice; vetores antigos e novos nunca são comparados."
+      },
+      "issue_relation_model": {
+        "label": "Modelo de decisão de relações",
+        "desc": "Confirma se um candidato está relacionado, bloqueia ou é bloqueado por um problema quando o modelo de decisão hesita. Ninguém espera pela resposta."
+      },
       "conversation_title_model": {
         "label": "Títulos de conversas",
         "desc": "Nomeia uma conversa Numo em poucas palavras, desde sua primeira mensagem. Um modelo pequeno é suficiente."
@@ -4244,7 +4264,8 @@
     "decisionModelErrors": {
       "catalog_unavailable": "O catálogo de modelos de decisão está indisponível. O modelo atual foi mantido.",
       "not_a_decision_model": "Este modelo não é um modelo de decisão. O modelo atual foi mantido.",
-      "compatibility_check_failed": "Este modelo falhou na decisão de teste (recusada, inválida ou mais lenta que 5 segundos). O modelo atual foi mantido."
+      "compatibility_check_failed": "Este modelo falhou na decisão de teste (recusada, inválida ou mais lenta que 5 segundos). O modelo atual foi mantido.",
+      "capability_mismatch": "Este modelo não corresponde a este campo (por exemplo, um modelo de chat em um campo de embeddings). O modelo atual foi mantido."
     },
     "finance": {
       "title": "Finanças",
@@ -4326,7 +4347,10 @@
         "brief_split": "Breve detalhamento",
         "landing_demo": "Demonstração de ditado público",
         "jev_decision": "Decisões de IA",
-        "jev_shadow": "Verificações de decisões"
+        "jev_shadow": "Verificações de decisões",
+        "issue_embedding": "Embeddings de problemas",
+        "issue_relation": "Relações do Smart-fill",
+        "issue_search": "Busca de problemas"
       },
       "stripeHidden": "A receita da Stripe está oculta: o faturamento não está conectado a esta instância."
     },

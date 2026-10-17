@@ -66,12 +66,13 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function render() {
+async function render(supplemental?: { items: PaletteItem[]; categories?: string[] }) {
   const registry = createActionRegistry();
   registry.register(ItemActionsProvider);
+  const allCategories = [...categories, { id: "semantic-issues", label: "Related by meaning" }];
   await act(() => root.render(
-    <PaletteConfigProvider value={{ t: translate, locale: "en", categories, categoryOrder: buildCategoryOrder(categories), registry, shortcuts: { actionsKey: ";" } }}>
-      <SearchView items={items} actionContext={context} onClose={vi.fn()} />
+    <PaletteConfigProvider value={{ t: translate, locale: "en", categories: allCategories, categoryOrder: buildCategoryOrder(allCategories), registry, shortcuts: { actionsKey: ";" } }}>
+      <SearchView items={items} supplemental={supplemental} actionContext={context} onClose={vi.fn()} />
     </PaletteConfigProvider>
   ));
 }
@@ -109,5 +110,62 @@ describe("command palette without favorites", () => {
     expect(await actions[0].execute!(item, legacyContext)).toEqual({ success: true, closeMenu: false });
     expect(item.execute).toHaveBeenCalledOnce();
     expect(toggleFavorite).not.toHaveBeenCalled();
+  });
+});
+
+describe("command palette supplemental results (MIN-718)", () => {
+  const meaning: PaletteItem[] = [
+    { id: "issue-9", title: "Enterprise identity federation", filterCategory: "semantic-issues" },
+    // Already a text result: never shown twice.
+    { id: "issue-2", title: "Create issue", filterCategory: "semantic-issues" },
+  ];
+
+  it("appends them after every scored result, under their own heading, and keeps the active row", async () => {
+    await render({ items: [], categories: ["issues"] });
+    await act(() => usePaletteStore.getState().setQuery("Create issue"));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)); });
+    const before = usePaletteStore.getState().activeIndex;
+    await render({ items: meaning, categories: ["issues"] });
+    expect(resultIds()).toEqual(["command-1", "issue-2", "issue-1", "issue-9"]);
+    expect([...container.querySelectorAll("section")].map((group) => group.getAttribute("aria-label")))
+      .toEqual(["Commands", "Issues", "Related by meaning"]);
+    expect(usePaletteStore.getState().activeIndex).toBe(before);
+  });
+
+  it("shows nothing extra without a query, or under a tab it was not offered for", async () => {
+    await render({ items: meaning, categories: ["issues"] });
+    expect(resultIds()).not.toContain("issue-9");
+    await act(() => usePaletteStore.getState().setQuery("Create issue"));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)); });
+    await act(() => usePaletteStore.getState().setCategoryFilter("commands"));
+    expect(resultIds()).not.toContain("issue-9");
+    await act(() => usePaletteStore.getState().setCategoryFilter("issues"));
+    expect(resultIds()).toContain("issue-9");
+  });
+});
+
+describe("issue order in the palette (MIN-726)", () => {
+  it("orders issues by tier inside their group, the exact identifier first", async () => {
+    const registry = createActionRegistry();
+    registry.register(ItemActionsProvider);
+    const tiered: PaletteItem[] = [
+      { id: "i-done", title: "Login fails", filterCategory: "issues", searchTier: 2, keywords: ["MIN-1"], exactKeywords: ["MIN-1"] },
+      { id: "i-todo", title: "Login copy", filterCategory: "issues", searchTier: 1, keywords: ["MIN-3"], exactKeywords: ["MIN-3"] },
+      { id: "i-review", title: "Login redirect", filterCategory: "issues", searchTier: 0, keywords: ["MIN-4"], exactKeywords: ["MIN-4"] },
+      { id: "cmd", title: "Login settings", filterCategory: "commands" },
+    ];
+    await act(() => root.render(
+      <PaletteConfigProvider value={{ t: translate, locale: "en", categories, categoryOrder: buildCategoryOrder(categories), registry, shortcuts: { actionsKey: ";" } }}>
+        <SearchView items={tiered} actionContext={context} onClose={vi.fn()} />
+      </PaletteConfigProvider>
+    ));
+    // No query: the tier order applies too.
+    expect(resultIds()).toEqual(["cmd", "i-review", "i-todo", "i-done"]);
+    await act(() => usePaletteStore.getState().setQuery("login"));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)); });
+    expect(resultIds()).toEqual(["cmd", "i-review", "i-todo", "i-done"]);
+    await act(() => usePaletteStore.getState().setQuery("min-1"));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 80)); });
+    expect(resultIds()[0]).toBe("i-done");
   });
 });

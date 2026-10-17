@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-718 hybrid issue search",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -69,13 +69,14 @@
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (es changed-passage parity and localized-label review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (es changed-passage parity and localized-label review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -102,7 +103,7 @@
       "src": "/documentation/es/publish-a-feedback-board-workflow.png",
       "alt": "Tablero público de feedback activado, con identidad SSO local configurada y URL oculta.",
       "caption": "El propietario activa el tablero y elige cómo se identifican los visitantes. Este ejemplo usa un firmante SSO local; la URL y el secreto de firma están ocultos.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,7 +119,7 @@
       "src": "/documentation/es/submit-and-follow-feedback-workflow.png",
       "alt": "Formulario de una solicitud de feedback con título, descripción y visibilidad pública activada.",
       "caption": "Un visitante identificado envía una solicitud y elige su visibilidad. El ejemplo se envió realmente con la revisión automática desactivada.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -134,7 +135,7 @@
       "src": "/documentation/es/feedback-objective-selection.png",
       "alt": "Vista previa de los componentes de selección de objetivo para un comentario y una integración, ambos con Docs.",
       "caption": "Selectores de objetivo con datos de demostración. Los nuevos comentarios heredan el ajuste de la integración.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -151,7 +152,7 @@
       "src": "/documentation/es/feedback-pages-and-views-workflow.png",
       "alt": "Guía de feedback publicada y seleccionada en la navegación del tablero, legible sin iniciar sesión.",
       "caption": "Publique una página, active las pestañas de páginas y selecciónela para el tablero. Esta página de demostración se abrió de forma anónima; su URL opaca conserva `noindex`.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -239,7 +240,7 @@ Como miembro del proyecto, abra la solicitud y elija unirla a una solicitud can�
 
 ### Crear o vincular trabajo {#work}
 
-Convierta la solicitud en una nueva incidencia si el trabajo aún no está registrado. Revise los campos de creación antes de confirmar; sin campos proporcionados, la promoción crea por defecto trabajo en el `backlog`. Si ya existe una incidencia, use la acción de vincular. Una solicitud ya vinculada no puede volver a convertirse. Desvincular conserva el último estado público y detiene la relación con la incidencia.
+Convierta la solicitud en una nueva incidencia si el trabajo aún no está registrado. Revise los campos de creación antes de confirmar; sin campos proporcionados, la promoción crea por defecto trabajo en el `backlog`. Si ya existe una incidencia, use la acción de vincular. **Vincular a una incidencia existente** busca entre las incidencias del proyecto, salvo las canceladas y duplicadas. Si describe la necesidad, también aparecen incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por el sentido**, después de las coincidencias de texto, lo que ayuda cuando la solicitud no usa las palabras de la incidencia. Una solicitud ya vinculada no puede volver a convertirse. Desvincular conserva el último estado público y detiene la relación con la incidencia.
 
 El estado vinculado sigue a la incidencia: `triage`/`backlog`/`duplicate` → `open`; `todo` → `planned`; `in_progress`/`in_review` → `in_progress`; `done` → `shipped`; `canceled` → `declined`. Devolver el trabajo al `backlog` también reabre el estado de feedback. Tras cambiar un estado, compruebe la incidencia vinculada y la solicitud sin sesión.
 

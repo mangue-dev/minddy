@@ -2,6 +2,9 @@
 
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+import { semanticExtras } from "@/lib/issue-semantic-query";
+import { isExactIssueQuery, orderIssuesForSearch } from "@/lib/issue-search-order";
+import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
@@ -2151,15 +2154,31 @@ function LinkIssueDialog({
   const [search, setSearch] = useState("");
 
   const needle = search.trim().toLowerCase();
-  const candidates = issues
-    .filter((issue) => issue.status !== "canceled" && issue.status !== "duplicate")
-    .filter(
+  const eligible = issues.filter((issue) => issue.status !== "canceled" && issue.status !== "duplicate");
+  // Work under way first, done and triage last; an exact identifier before
+  // all (MIN-726).
+  const candidates = orderIssuesForSearch(
+    eligible.filter(
       (issue) =>
         !needle ||
         issue.title.toLowerCase().includes(needle) ||
         issueIdentifier(projectKey, issue.number).toLowerCase().includes(needle)
-    )
-    .slice(0, 30);
+    ),
+    (issue) => issue.status,
+    (issue) => isExactIssueQuery(search, issueIdentifier(projectKey, issue.number), issue.number),
+  ).slice(0, 30);
+  // Issues found by meaning (MIN-718), after the text matches and among the
+  // same eligible issues: a feedback post rarely reuses the issue's words.
+  const { ids: semanticIds } = useSemanticIssueSearch(search, { projectId, enabled: open });
+  const semantic = orderIssuesForSearch(
+    semanticExtras(
+      semanticIds,
+      new Map(eligible.map((issue) => [issue.id, issue])),
+      new Set(candidates.map((issue) => issue.id)),
+    ),
+    (issue) => issue.status,
+  );
+  const tPicker = useTranslations("Picker");
 
   return (
     <Dialog
@@ -2198,6 +2217,25 @@ function LinkIssueDialog({
               <span className="min-w-0 truncate">{issue.title}</span>
             </button>
           ))}
+          {semantic.length > 0 && (
+            <>
+              <p className="px-2 pt-2 text-xs font-medium text-muted-foreground">{tPicker("relatedByMeaning")}</p>
+              {semantic.map((issue) => (
+                <button
+                  key={issue.id}
+                  type="button"
+                  onClick={() => onLink(issue.id)}
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                >
+                  <StatusIndicator status={issue.status} className="size-4 shrink-0" />
+                  <code className="shrink-0 font-mono text-xs text-muted-foreground">
+                    {issueIdentifier(projectKey, issue.number)}
+                  </code>
+                  <span className="min-w-0 truncate">{issue.title}</span>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

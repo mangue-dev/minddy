@@ -7,6 +7,7 @@
 // by a +X trigger whose popover shows the complete message context.
 
 import { HugeiconsIcon } from "@hugeicons/react";
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { AtIcon, Book02Icon, FileAttachmentIcon, Folder01Icon, Target01Icon, UserIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -24,7 +25,8 @@ import {
 } from "@/components/assistant/adaptive-context-row";
 import { ResourcePills, type ResourceLike } from "@/components/resources";
 import { displayName } from "@/lib/display-name";
-import { issueIdentifier, isClosedStatus } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useMentionSources } from "@/lib/use-mention-sources";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { flattenPageTree } from "@/lib/pages";
@@ -100,10 +102,9 @@ function AddContextButton({
 
   const issues = useMemo(() => {
     const list = board.data?.issues ?? [];
-    // Open first — closed ones remain selectable.
-    return [...list].sort(
-      (a, b) => (isClosedStatus(a.status) ? 1 : 0) - (isClosedStatus(b.status) ? 1 : 0),
-    );
+    // Work under way first, then open issues, triage and closed ones last
+    // — all remain selectable (MIN-726).
+    return orderIssuesForSearch(list, (issue) => issue.status);
   }, [board.data]);
 
   const close = () => {
@@ -301,6 +302,7 @@ function AddContextButton({
                   <CommandItem
                     key={issue.id}
                     value={`${identifier} ${issue.title} ${project?.name ?? ""}`}
+                    keywords={[identifier, issueTierKeyword(issue.status)]}
                     onSelect={() =>
                       pick({
                         kind: "issue",
@@ -320,6 +322,42 @@ function AddContextButton({
                 );
               })}
           </CommandGroup>
+        )}
+        {/* Issues of every readable project, found by meaning (MIN-718). */}
+        {kind === "issue" && (
+          <SemanticIssueGroup
+            projectId={null}
+            candidates={issues}
+            idOf={(issue) => issue.id}
+            statusOf={(issue) => issue.status}
+            textOf={(issue) => {
+              const project = projectById.get(issue.project_id);
+              return { value: `${issueIdentifier(project?.key ?? "", issue.number)} ${issue.title} ${project?.name ?? ""}` };
+            }}
+            onSelect={(issue) => {
+              const project = projectById.get(issue.project_id);
+              pick({
+                kind: "issue",
+                id: issue.id,
+                label: issueIdentifier(project?.key ?? "", issue.number),
+                detail: issue.title,
+              });
+            }}
+            renderItem={(issue) => {
+              const project = projectById.get(issue.project_id);
+              return (
+                <>
+                  <StatusIndicator status={issue.status} className="size-4" />
+                  <span className="truncate">
+                    <span className="text-muted-foreground">
+                      {issueIdentifier(project?.key ?? "", issue.number)}
+                    </span>{" "}
+                    {issue.title}
+                  </span>
+                </>
+              );
+            }}
+          />
         )}
       </SearchMenu>
     </div>

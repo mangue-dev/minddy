@@ -79,3 +79,23 @@ describe("mention menu results", () => {
     expect(filterMentionItems(many, "")).toHaveLength(18);
   });
 });
+
+describe("issue order in mention menus (MIN-726)", () => {
+  const items = [
+    { type: "issue", label: "MIN-1", keywords: ["Login fails"], status: "done" },
+    { type: "member", label: "Login Bot" },
+    { type: "issue", label: "MIN-2", keywords: ["Login page"], status: "triage" },
+    { type: "issue", label: "MIN-3", keywords: ["Login copy"], status: "todo" },
+    { type: "issue", label: "MIN-4", keywords: ["Login redirect"], status: "in_review" },
+  ];
+
+  it("lists issues under way first and closed or triage issues last, after the other options", () => {
+    expect(filterMentionItems(items, "login").map((item) => item.label)).toEqual([
+      "Login Bot", "MIN-4", "MIN-3", "MIN-1", "MIN-2",
+    ]);
+  });
+
+  it("puts the issue whose identifier is typed before every tier", () => {
+    expect(filterMentionItems(items, "min-1").map((item) => item.label)[0]).toBe("MIN-1");
+  });
+});

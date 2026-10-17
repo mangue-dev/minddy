@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,13 +47,20 @@
       "components/pull-requests/pr-context-actions.tsx",
       "content/documentation/reviews/min-685-sidebar-context-actions.md",
       "lib/use-hidden-projects.ts",
-      "content/documentation/reviews/min-692-hidden-projects.md"
+      "content/documentation/reviews/min-692-hidden-projects.md",
+      "lib/issue-semantic-query.ts",
+      "lib/use-semantic-issue-search.ts",
+      "lib/server/issue-semantic-search.ts",
+      "app/api/issues/semantic-search/route.ts",
+      "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
+      "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (Documentation command and mobile transition source review; unchanged evidence retained); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; de translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (de changed-passage parity and label review); agent:/root (de translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (de MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (de translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -75,7 +82,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -91,7 +98,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -154,6 +161,25 @@ Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspal
 Lies in der Tastenkürzelhilfe die Befehle für deine Plattform. minddy unterscheidet Anwendungskürzel, Aktionen für Problemeigenschaften und native Desktop-Kürzel für Tabs oder Fenster. Prüfe vor einem Befehl den Fokus: Schreiben im Editor und Handeln am umgebenden Problem sind verschiedene Kontexte.
 
 ![Suchergebnisse für die Kennung eines Demo-Tickets.](/documentation/de/work-search.png)
+
+### Reihenfolge der Probleme in der Suche {#issue-search-order}
+
+Jede Problemsuche listet Probleme in derselben Reihenfolge: die Befehlspalette, `@`-Erwähnungen, die Auswahl für Beziehungen, Duplikate und Pull Requests, der Feedback-Dialog **Link zu einem bestehenden Problem** und die Suche, die Numo und MCP-Agenten nutzen. Probleme **In Bearbeitung** und **In Überprüfung** kommen zuerst, dann Probleme im **Rückstand** und **Todo**. Probleme in **Triage**, **Fertig**, **Abgebrochen** und **Duplikat** stehen immer am Ende und bleiben auswählbar. Innerhalb jeder Gruppe kommt der beste Texttreffer zuerst. Eine vollständig eingegebene Kennung wie `MIN-42` stellt dieses Problem an den Anfang, unabhängig von seinem Status.
+
+### Probleme inhaltlich suchen {#search-by-meaning}
+
+Beschreibt eine Suchanfrage die Arbeit, statt sie zu benennen, findet die Problemsuche auch inhaltlich ähnliche Probleme, selbst wenn sie andere Wörter verwenden. So kann „Anmeldung scheitert nach dem Zurücksetzen des Passworts“ ein Problem mit dem Titel „Sitzung geht bei Passwortänderung verloren“ finden. Das gilt für die Befehlspalette, `@`-Erwähnungen in Beschreibungen, Seiten, Kommentaren und im Eingabefeld von Numo, die Beziehungsauswahl, **Als Duplikat markieren…** in der Triage, **Ein Problem verknüpfen** an einer Pull-Anfrage, das Menü **Kontext hinzufügen** → **Problem** von Numo und **Link zu einem bestehenden Problem** bei Feedback.
+
+Textübereinstimmungen und exakte Kennungen stehen immer zuerst und behalten ihre Reihenfolge. Kurz nachdem du aufgehört hast zu tippen, werden höchstens fünf inhaltlich gefundene Probleme unter **Inhaltlich verwandt** dahinter angefügt. Ein bereits angezeigtes Problem wird nicht wiederholt, und die hervorgehobene Zeile verschiebt sich nicht. Jede Auswahl behält ihre eigenen Regeln, daher erscheinen nur Probleme, die sie ohnehin anbieten konnte: Die Beziehungsauswahl bietet zum Beispiel weiterhin nur noch nicht verknüpfte Probleme desselben Projekts an. Die Befehlspalette durchsucht die Projekte, die du lesen kannst, bis zu den 25 zuletzt aktualisierten; ihre Aktionen für Mehrfachauswahl nutzen die inhaltliche Suche nicht.
+
+Für die inhaltliche Suche gelten diese Grenzen:
+
+- Die Suchanfrage braucht mindestens zwei Wörter oder ein Wort mit mindestens sechs Buchstaben. Kennungen wie `MIN-42`, `#42` oder `42` sowie sehr kurze Anfragen nutzen nur die Textsuche.
+- Sie stützt sich auf den Index, den Smart-Fill aus Titel und Beschreibung der Probleme aufbaut. Ein noch nicht indexiertes Problem oder eines, dessen Autor [**Vorgänge indexieren**](/docs/issues#smart-fill-preferences) ausgeschaltet hat, wird nur über seine Wörter gefunden. Probleme im Papierkorb erscheinen nie.
+- Hast du **Vorgänge indexieren** unter **Kontoeinstellungen** → **Einstellungen** ausgeschaltet, vergleichen deine Suchen nur Wörter. Dasselbe gilt, wenn die Administration der Instanz **Smart-Fill-Beziehungen** ausgeschaltet hat, wenn dein KI-Budget erschöpft ist oder wenn der Anbieter nicht innerhalb weniger Sekunden antwortet. Die Textergebnisse bleiben, und es wird kein Fehler angezeigt.
+- Eine `@`-Suche, deren Text bereits zu einer Person, einem Projekt oder einer Seite passt, wird nicht inhaltlich gesucht. In einem Projekt mit mehr als 3.000 indexierten Problemen werden nur die 3.000 zuletzt indexierten verglichen; die übrigen werden über ihre Wörter gefunden.
+
+Jede neue Suchanfrage nutzt einen KI-Aufruf, der zu deinem Anteil **Automatisierungen** zählt und im Nutzungsverlauf als **Problemsuche** erscheint. Eine innerhalb von etwa 15 Minuten wiederholte Anfrage wird normalerweise nicht erneut berechnet.
 
 ### Ein entsprechendes sichtbares Steuerelement verwenden {#shortcut-alternatives}
 

@@ -6,6 +6,7 @@
 // integrated search input that filters the options, Linear-style). Single- and
 // multi-select variants both render it in trigger-anchored mode.
 
+import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
@@ -187,6 +188,7 @@ export function SearchSelect({
   options,
   noneOption,
   menuActions,
+  semanticIssues,
   createOption,
   open: controlledOpen,
   onOpenChange,
@@ -198,6 +200,12 @@ export function SearchSelect({
   noneOption?: { label: string; icon?: React.ReactNode };
   /** Always-visible actions, distinct from query-based entity creation. */
   menuActions?: { id: string; label: string; icon?: React.ReactNode; onSelect: () => void }[];
+  /**
+   * Issue pickers only (MIN-718): option values are issue ids, and options
+   * found by meaning in this scope are appended after the text matches.
+   * `projectId: null` searches every readable project.
+   */
+  semanticIssues?: { projectId: string | null; statusOf?: (value: string) => string | null | undefined };
   /** Last line “Add…” (see {@link PickerCreateOption}). */
   createOption?: PickerCreateOption;
   /** Controlled open state (e.g. driven by a keyboard shortcut). */
@@ -240,6 +248,22 @@ export function SearchSelect({
           </CommandItem>
         ))}
       </CommandGroup>
+      {semanticIssues && (
+        <SemanticIssueGroup
+          projectId={semanticIssues.projectId}
+          candidates={options}
+          idOf={(opt) => opt.value}
+          statusOf={semanticIssues.statusOf ? (opt) => semanticIssues.statusOf?.(opt.value) : undefined}
+          textOf={(opt) => ({ value: opt.value, keywords: [opt.label, ...(opt.keywords ?? [])] })}
+          onSelect={(opt) => select(opt.value)}
+          renderItem={(opt) => (
+            <>
+              {opt.icon}
+              <span className="truncate">{opt.label}</span>
+            </>
+          )}
+        />
+      )}
       {menuActions?.length ? <>
         <CommandSeparator alwaysRender className="my-1" />
         <CommandGroup forceMount>
