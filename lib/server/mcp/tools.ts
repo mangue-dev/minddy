@@ -144,6 +144,11 @@ import {
   type IssueStatus,
 } from "@/lib/issue-constants";
 import type { ProjectAccess } from "@/lib/server/project-access";
+import { resolveProjectRole } from "@/lib/project-roles";
+import {
+  mcpToolCapability,
+  runWithToolCapability,
+} from "./tool-capabilities";
 import {
   ok,
   fail,
@@ -821,6 +826,42 @@ function withToolAnalytics(server: McpServer): McpServer {
   }) as McpServer;
 }
 
+/**
+ * `registerTool` wrapper that binds each tool to its declared project
+ * capability (MIN-693). Registering a tool missing from
+ * `MCP_TOOL_CAPABILITIES` throws, so a new tool cannot ship without a
+ * classification; the handler then runs inside that capability, which
+ * `requireProject`/`resolveProject` enforce against the caller's live role.
+ */
+function withToolCapabilities(server: McpServer): McpServer {
+  const original = server.registerTool.bind(server) as (
+    ...args: unknown[]
+  ) => unknown;
+
+  const wrapped = (name: string, config: unknown, handler: unknown) => {
+    const capability = mcpToolCapability(name);
+    if (!capability) {
+      throw new Error(
+        `MCP tool ${name} has no capability in MCP_TOOL_CAPABILITIES.`,
+      );
+    }
+    const scoped = (...args: unknown[]) =>
+      runWithToolCapability(capability, () =>
+        (handler as (...a: unknown[]) => unknown)(...args),
+      );
+    return original(name, config, scoped);
+  };
+
+  return new Proxy(server, {
+    get(target, prop, receiver) {
+      if (prop === "registerTool") return wrapped;
+      // oxlint-disable-next-line anti-slop/no-reflect-get
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as McpServer;
+}
+
 interface DiscoveryToolConfig {
   description?: string;
   annotations?: DiscoveryAnnotations;
@@ -870,7 +911,7 @@ export function registerMinddyTools(
     options.descriptions === "full"
       ? rawServer
       : withCompactDiscoveryMetadata(rawServer);
-  const server = withToolAnalytics(discoveryServer);
+  const server = withToolCapabilities(withToolAnalytics(discoveryServer));
 
   // PAGES (MIN-273) live in their own module, but register here:
   // it is this call which gives them the analytics of the tools and their place in the
@@ -886,7 +927,8 @@ export function registerMinddyTools(
       description:
         "List every minddy project the API key's owner can access (owned or member). " +
         "Returns each project's id (UUID to pass as project_id elsewhere), name, key " +
-        "(the issue-identifier prefix, e.g. 'MIND' in 'MIND-42') and your role.",
+        "(the issue-identifier prefix, e.g. 'MIND' in 'MIND-42') and your role " +
+        "('owner', 'member', or 'reader', which is read-only).",
       inputSchema: z.object({}),
       annotations: READ_ONLY,
     },
@@ -897,11 +939,14 @@ export function registerMinddyTools(
       const service = getServiceClient();
       const { data: memberships, error: memberError } = await service
         .from("project_members")
-        .select("project_id")
+        .select("project_id, role")
         .eq("user_id", auth.userId);
       if (memberError) return fail("database_error", memberError.message);
 
       const memberIds = (memberships ?? []).map((m) => m.project_id as string);
+      const memberRoles = new Map(
+        (memberships ?? []).map((m) => [m.project_id as string, m.role]),
+      );
       let query = service
         .from("projects")
         .select("id, name, key, owner_id, encrypted_content, encryption_version")
@@ -919,7 +964,7 @@ export function registerMinddyTools(
           id: p.id,
           name: await decodeProjectName(p, auth.userId),
           key: p.key,
-          role: p.owner_id === auth.userId ? "owner" : "member",
+          role: resolveProjectRole(auth.userId, p.owner_id, memberRoles.get(p.id)),
         }))),
       });
     },
@@ -983,7 +1028,7 @@ export function registerMinddyTools(
           id: project.id,
           name: project.name,
           key: project.key,
-          role: scope.access.isOwner ? "owner" : "member",
+          role: scope.access.role,
           open_issues: count ?? 0,
           created_at: project.created_at,
         },
@@ -3613,7 +3658,8 @@ export function registerMinddyTools(
         "respected). Points are an internal capacity unit: talk to humans in " +
         "effort sizes or percentages, never raw points. The timezone resolves " +
         "cycle boundaries in the owner's local calendar. Reading also reconciles " +
-        "the timeline (cycle creation, rollover, one-shot auto-fill).",
+        "the timeline (cycle creation, rollover, one-shot auto-fill), only in " +
+        "projects where the owner can still edit issues.",
       inputSchema: z.object({
         which: z
           .enum(["current", "next", "previous"])
@@ -4473,15 +4519,20 @@ export function registerMinddyTools(
         "any link, button or redirect that sends users to the board. Returns whether " +
         "the board exists and is enabled, its public_url, whether SSO pre-identification is configured, and the display " +
         "options. public_url is the /f/<token> URL on the application origin: use it VERBATIM — a board is reached by " +
-        "an opaque token and its URL cannot be derived from the project.",
+        "an opaque token and its URL cannot be derived from the project. A Reader " +
+        "receives the setup with public_url and token set to null.",
       inputSchema: z.object({ project_id: PROJECT_ID }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
+      const board = await getFeedbackBoardConfig(scope.access.project.id);
+      // The board token is a capability link readers do not receive (MIN-693).
       return ok({
-        board: await getFeedbackBoardConfig(scope.access.project.id),
+        board: scope.access.canWrite
+          ? board
+          : { ...board, token: null, public_url: null },
       });
     },
   );

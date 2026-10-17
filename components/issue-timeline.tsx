@@ -5,7 +5,7 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { OneLine } from "@/components/one-line";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Button,
@@ -61,6 +61,33 @@ import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useCommentLive } from "@/lib/use-comment-live";
 import type { CommentLiveTable } from "@/lib/comment-live-topic";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+
+/**
+ * What the viewer may do in a thread (MIN-693). `canComment` covers writing,
+ * replying, and editing or deleting one's own comments; `canModerate` (project
+ * write access) covers public team replies and removing other people's public
+ * comments. Both default to true so surfaces without roles keep their behavior.
+ */
+interface CommentPermissions {
+  canComment: boolean;
+  canModerate: boolean;
+}
+const CommentPermissionsContext = createContext<CommentPermissions>({
+  canComment: true,
+  canModerate: true,
+});
+
+/** Scopes the comment permissions for threads rendered outside `IssueActivity`. */
+export function CommentPermissionsProvider({
+  canComment,
+  canModerate,
+  children,
+}: CommentPermissions & { children: React.ReactNode }) {
+  const value = useMemo(() => ({ canComment, canModerate }), [canComment, canModerate]);
+  return (
+    <CommentPermissionsContext.Provider value={value}>{children}</CommentPermissionsContext.Provider>
+  );
+}
 import type { Attachment, Comment, Member, ResourceInput } from "@/lib/types";
 import type { CommentVisibility } from "@/lib/feedback/types";
 import {
@@ -486,8 +513,11 @@ export function CommentBlock({
    * moderation; and those of a VISITOR are never rewritten. To correct
    * a typo in one's own published response, however, remains permitted.
    */
-  const canDelete = isPublic || (mine && !viaNumo && !github);
-  const canEdit = mine && !viaNumo && !visitor && !github;
+  const permissions = useContext(CommentPermissionsContext);
+  const canDelete =
+    (isPublic && permissions.canModerate) ||
+    (mine && !viaNumo && !github && permissions.canComment);
+  const canEdit = mine && !viaNumo && !visitor && !github && permissions.canComment;
 
   const saveEdit = async () => {
     const body = draft.trim();
@@ -920,6 +950,9 @@ function CommentCard({
 }) {
   // Visibility is read on the ROOT: it is this from which any response inherits.
   const threadIsPublic = item.comment.visibility === "public";
+  const permissions = useContext(CommentPermissionsContext);
+  // A reply in a public thread is a team reply on the public board.
+  const canReply = threadIsPublic ? permissions.canModerate : permissions.canComment;
   return (
     <li
       className={cn(
@@ -962,7 +995,7 @@ function CommentCard({
           />
         </div>
       ))}
-      {!item.comment.delivery && <div className="border-t border-border/60">
+      {!item.comment.delivery && canReply && <div className="border-t border-border/60">
         <ReplyComposer
           members={ctx.members}
           mentions={mentions}
@@ -1057,6 +1090,8 @@ export function IssueActivity({
   onEditComment,
   onDeleteComment,
   onDeleteAttachment,
+  canComment = true,
+  canModerate = true,
 }: {
   items: ActivityItem[];
   readState?: import("@/lib/timeline-read-state").TimelineReadState;
@@ -1085,9 +1120,17 @@ export function IssueActivity({
   onEditComment: (commentId: string, body: string) => Promise<void>;
   onDeleteComment: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  /** The viewer may comment here (project role, MIN-693). */
+  canComment?: boolean;
+  /** The viewer has project write access: public replies and moderation. */
+  canModerate?: boolean;
 }) {
   const t = useTranslations("Timeline");
   const mentions = useDescriptionMentions(projectId, ctx.members);
+  const permissions = useMemo(
+    () => ({ canComment, canModerate }),
+    [canComment, canModerate]
+  );
   // Memoized: grouping walks the whole feed on every render, and an issue
   // with hundreds of comments re-renders on each timeline patch or poll.
   // A long feed used to regroup per render; the array identity only changes
@@ -1095,6 +1138,7 @@ export function IssueActivity({
   const rows = useMemo(() => groupRows(items), [items]);
 
   return (
+    <CommentPermissionsContext.Provider value={permissions}>
     <div className="flex flex-col">
       <span className="py-1 text-sm font-medium">{t("activity")}</span>
 
@@ -1148,6 +1192,7 @@ export function IssueActivity({
       )}
       </QueryReadBoundary>
     </div>
+    </CommentPermissionsContext.Provider>
   );
 }
 

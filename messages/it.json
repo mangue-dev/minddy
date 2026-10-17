@@ -298,7 +298,15 @@
     "pageDatabaseStale": "Questa colonna è stata modificata. Controlla il valore attuale e riprova.",
     "pageDatabaseMove": "Questa pagina non può essere spostata in un altro database con i valori attuali delle sue colonne.",
     "pageDatabaseRestoreParent": "Ripristina il database padre prima di ripristinare questa voce.",
-    "projectAutomationsRetired": "Le automazioni del progetto sono state sostituite dalle routine."
+    "projectAutomationsRetired": "Le automazioni del progetto sono state sostituite dalle routine.",
+    "readOnlyProject": "Puoi solo consultare questo progetto.",
+    "commentNotAllowed": "Non puoi commentare in questo progetto.",
+    "invalidRole": "Questo ruolo non è valido.",
+    "memberNotFound": "Questa persona non fa più parte del progetto.",
+    "cannotChangeOwner": "Il ruolo del proprietario cambia solo trasferendo la proprietà.",
+    "transferTargetNotMember": "La proprietà può passare solo a un membro, non a un lettore.",
+    "transferKeyConflict": "Il nuovo proprietario ha già un progetto con questa chiave. Cambia prima la chiave.",
+    "transferStorageQuota": "Lo spazio del nuovo proprietario non basta per i file di questo progetto."
   },
   "RelayClaim": {
     "title": "Connetti GitHub",
@@ -1568,7 +1576,8 @@
     "githubMilestone": "Il punto chiave",
     "githubRawMetadata": "Visualizza tutti i metadati GitHub conservati",
     "githubYes": "Già",
-    "githubNo": "No"
+    "githubNo": "No",
+    "descriptionEmptyReadOnly": "Nessuna descrizione."
   },
   "Language": {
     "title": "Lingua",
@@ -1585,13 +1594,37 @@
     "membersLabel": "Membri",
     "owner": "Proprietario",
     "remove": "Rimuovi",
+    "removeFromProject": "Rimuovi dal progetto",
     "removeMemberTitle": "Rimuovi {name} - Dal progetto?",
     "removeMemberDescription": "Perderà l'accesso al progetto e ai relativi ticket. Potrai invitarla di nuovo in seguito.",
     "invitationSent": "Invito inviato al {email}.",
     "pendingInvitations": "In attesa di inviti",
     "pendingInvitationsHint": "Un invito attende 30 giorni. Se la persona non ha ancora un account minddy, sarà lì quando si iscriveranno con quell'indirizzo.",
     "pending": "In attesa",
-    "cancelInvitationAria": "Annulla invito"
+    "cancelInvitationAria": "Annulla invito",
+    "roleMember": "Membro",
+    "roleReader": "Lettore",
+    "roleReaderCanComment": "Lettore · può commentare",
+    "canComment": "Può commentare",
+    "canCommentHint": "Commenti su ticket, obiettivi, feedback e pagine. Tutto il resto resta in sola lettura.",
+    "rolesHint": "I membri lavorano su tutto; i lettori possono solo leggere.",
+    "inviteRoleAria": "Ruolo assegnato dall'invito",
+    "memberRoleAria": "Ruolo di {name}",
+    "invitationRoleAria": "Ruolo per {email}",
+    "manageMemberAria": "Gestisci {name}",
+    "transferOwnership": "Trasferisci la proprietà del progetto",
+    "demoteTitle": "Rendere {name} lettore?",
+    "demoteDescription": "Mantiene l'accesso in lettura. I suoi ticket aperti non sono più assegnati e non guida più obiettivi.",
+    "demoteConfirm": "Rendi lettore",
+    "transferTitle": "Trasferire la proprietà a {name}?",
+    "transferDescription": "Solo il nuovo proprietario potrà restituirtela.",
+    "transferBecomeMember": "Diventi membro di questo progetto.",
+    "transferRoutinesPaused": "Le tue routine in questo progetto vengono sospese.",
+    "transferPlanFollows": "I limiti del piano e lo spazio per i file seguono il piano del nuovo proprietario.",
+    "transferPersonalStays": "Il tuo abbonamento, i metodi di pagamento e le chiavi API personali restano tuoi.",
+    "transferConfirm": "Trasferisci la proprietà",
+    "transferDone": "{name} è ora proprietario del progetto.",
+    "transferRoutinesPausedCount": "{count, plural, one {# routine sospesa.} other {# routine sospese.}}"
   },
   "Meta": {
     "description": "Uno spazio di lavoro open source per gestire progetti e attività e lavorare con Numo e strumenti IA collegati.",
@@ -6345,5 +6378,9 @@
     "articleLabel": "Articolo",
     "localeLabel": "Lingua",
     "revisionLabel": "Revisione"
+  },
+  "ProjectAccess": {
+    "readOnlyToast": "Puoi solo leggere questo progetto.",
+    "sharedViewReadOnly": "Solo i membri possono modificare le viste condivise. Salva invece una tua vista."
   }
 }

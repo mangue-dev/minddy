@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,17 @@
       "content/knowledge/feedback.md",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/editorial_de_es (collection-caption clarity); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "permissions-and-public-links",
@@ -63,7 +66,7 @@
       "src": "/documentation/es/glossary-and-data-model-flow.svg",
       "alt": "Diagrama: Proyecto: trabajo y conocimiento compartidos. Incidencia: trabajo; objetivo: resultado. Ciclo personal: trabajo entre proyectos. Página: contexto; feedback: necesidad.",
       "caption": "Los objetos relacionan tareas, resultados y contexto duradero, mientras el ciclo personal organiza el trabajo propio entre proyectos.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -100,7 +103,7 @@
 
 | Concepto | Significado |
 | --- | --- |
-| Proyecto | Espacio de trabajo compartido con miembros, incidencias, categorías, vistas, páginas, integraciones y tablero de sugerencias. |
+| Proyecto | Espacio de trabajo compartido con miembros, incidencias, categorías, vistas, páginas, integraciones y tablero de sugerencias. Cada persona tiene un rol: un único propietario, miembros que trabajan en el contenido y lectores que lo siguen. |
 | Incidencia | Tarea concreta con estado y responsable. Puede incluir un plan, fecha límite, objetivo, categorías, relaciones, comentarios y recursos. |
 | Objetivo | Agrupa incidencias del proyecto para seguir un resultado y su progreso. |
 | Ciclo personal | Selecciona el trabajo de una persona durante una o dos semanas, incluso de distintos proyectos. No es un sprint compartido ni un objetivo del proyecto. |

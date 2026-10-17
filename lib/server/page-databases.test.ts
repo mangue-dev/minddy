@@ -8,8 +8,9 @@ const h = vi.hoisted(() => ({
     order: vi.fn().mockReturnThis(), range: vi.fn(),
   },
   commitBatch: vi.fn(),
+  writeRefusal: vi.fn(),
 }));
-vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage }));
+vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage, pageWriteRefusal: h.writeRefusal }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ rpc: h.rpc, from: () => h.query }),
 }));
@@ -35,6 +36,7 @@ const entry = {
 };
 beforeEach(() => {
   vi.clearAllMocks();
+  h.writeRefusal.mockResolvedValue(null);
   h.getPage.mockImplementation(async (id: string) => ({
     ok: true,
     page: id === "db" ? database : entry,
@@ -309,5 +311,17 @@ describe("column conversion boundary", () => {
       .toMatchObject({ ok: false, status: 409 });
     expect(await convertPageDatabase("project", "db", "actor", apply))
       .toEqual({ ok: true, page: database });
+  });
+});
+
+describe("project roles (MIN-693)", () => {
+  it("refuses a reader before any database write", async () => {
+    h.writeRefusal.mockResolvedValue({ ok: false, status: 403, errorKey: "readOnlyProject" });
+    const result = await updatePageDatabase("project", "db", "reader", {
+      kind: "schema", revision: 1, schema: { properties: [] },
+    });
+    expect(result).toEqual({ ok: false, status: 403, errorKey: "readOnlyProject" });
+    expect(h.rpc).not.toHaveBeenCalled();
+    expect(h.commitBatch).not.toHaveBeenCalled();
   });
 });

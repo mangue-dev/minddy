@@ -31,7 +31,11 @@ export async function POST(request: NextRequest) {
   }
   const service = getServiceClient();
   if (segments[0] === "projects") {
-    if (!(await getProjectAccess(auth.user.id, segments[1])) ||
+    // Comment capability, not write: a reader allowed to comment attaches
+    // files to their own comment. Standalone resources are refused to them
+    // when the resource itself is written (MIN-693).
+    const access = await getProjectAccess(auth.user.id, segments[1]);
+    if (!access?.canComment ||
         !(await projectStorageAllowed(service, segments[1],
           Math.ceil(file.size * 1.4) + 4096))) {
       return NextResponse.json({ error: "Attachment storage unavailable" }, { status: 403 });

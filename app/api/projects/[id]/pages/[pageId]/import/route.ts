@@ -41,8 +41,13 @@ export async function POST(
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("PageDatabase");
-  if (!(await getProjectAccess(auth.user.id, projectId)))
+  const access = await getProjectAccess(auth.user.id, projectId);
+  if (!access)
     return NextResponse.json({ error: t("importFailed") }, { status: 404 });
+  if (!access.canWrite) {
+    const errors = await getTranslations("ApiErrors");
+    return NextResponse.json({ error: errors("readOnlyProject") }, { status: 403 });
+  }
   const refused = rateLimitRefusal(auth.user.id, "page-database-import", {
     limit: 5,
   });

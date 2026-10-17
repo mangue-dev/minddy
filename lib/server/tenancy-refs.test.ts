@@ -200,9 +200,9 @@ beforeEach(() => {
       { id: THEIRS, name: "Le leur", owner_id: STRANGER, deleted_at: null },
     ],
     project_members: [
-      { project_id: MINE, user_id: ME },
-      { project_id: MINE, user_id: MEMBER },
-      { project_id: THEIRS, user_id: STRANGER },
+      { project_id: MINE, user_id: ME, role: "member" },
+      { project_id: MINE, user_id: MEMBER, role: "member" },
+      { project_id: THEIRS, user_id: STRANGER, role: "member" },
     ],
     issues: [
       {
@@ -414,6 +414,56 @@ describe("objectives — le responsable est membre du projet", () => {
       status: 400,
       errorKey: "notAProjectMember",
     });
+    expect(updateLog).toEqual([]);
+  });
+});
+
+describe("project roles (MIN-693)", () => {
+  const READER = "user-reader";
+  beforeEach(() => {
+    db.project_members.push({ project_id: MINE, user_id: READER, role: "reader", can_comment: true });
+  });
+
+  it("refuses an issue edit from a reader with a 403, writing nothing", async () => {
+    const result = await patch({ title: "Renamed" }, READER);
+
+    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "readOnlyProject" });
+    expect(updateLog).toEqual([]);
+  });
+
+  it("keeps the member edit path unchanged", async () => {
+    const result = await patch({ title: "Renamed" }, MEMBER);
+
+    expect(result.ok).toBe(true);
+    expect(updateLog[0].values).toMatchObject({ title: "Renamed" });
+  });
+
+  it("does not assign an issue to a reader", async () => {
+    const result = await patch({ assignee_id: READER });
+
+    expect(result).toMatchObject({ ok: false, status: 400, errorKey: "notAProjectMember" });
+    expect(updateLog).toEqual([]);
+  });
+
+  it("refuses a reader as objective lead", async () => {
+    const result = await updateObjective({
+      objectiveId: "objective-mine",
+      actorId: ME,
+      input: { lead_user_id: READER },
+    });
+
+    expect(result).toMatchObject({ ok: false, status: 400, errorKey: "notAProjectMember" });
+    expect(updateLog).toEqual([]);
+  });
+
+  it("refuses an objective edit from a reader", async () => {
+    const result = await updateObjective({
+      objectiveId: "objective-mine",
+      actorId: READER,
+      input: { name: "Renamed" },
+    });
+
+    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "readOnlyProject" });
     expect(updateLog).toEqual([]);
   });
 });

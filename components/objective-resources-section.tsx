@@ -12,6 +12,7 @@ import { PropertyRow } from "@/components/issue-property-fields";
 import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useObjectiveResources } from "@/lib/use-objective-resources";
 import { useAuth } from "@/lib/auth-context";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
 /**
  * Attachments of an OBJECTIVE — twin of IssueResourcesSection. A coin
@@ -44,6 +45,18 @@ export function ObjectiveResourcesSection({
 
   const drop = useFileDrop(uploads.addFiles);
   const empty = resources.length === 0 && uploads.pending.length === 0;
+  // Project readers (MIN-693) see the resources without adding or removing.
+  const { canWrite } = useProjectCapabilities(projectId);
+
+  if (!canWrite) {
+    if (resources.length === 0) return null;
+    return (
+      <div className="flex flex-col rounded-lg">
+        <PropertyRow label={t("sectionTitle")}>{null}</PropertyRow>
+        <ResourcePills className="pb-2" resources={resources} />
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex flex-col rounded-lg" {...drop.handlers}>

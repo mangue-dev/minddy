@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,14 +60,17 @@
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-680-file-preview.md",
       "components/file-viewer.tsx",
-      "components/image-viewer.tsx"
+      "components/image-viewer.tsx",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
-    "language": "agent:/root (es changed-text and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 10,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (es changed-text and retained-meaning self-review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "notifications-and-inbox",
@@ -102,7 +105,7 @@
       "src": "/documentation/es/page-create-menu.png",
       "alt": "Menú de creación con Nueva página y Nueva base de datos.",
       "caption": "Utiliza los controles de páginas del proyecto para elegir un documento o una base de datos.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/es/page-editor.png",
       "alt": "Página de demostración con títulos, párrafos, casillas de tareas y una mención a un ticket.",
       "caption": "Los títulos, las tareas y la mención AUR-2 estructuran la página. El contenido es un ejemplo de demostración.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -134,7 +137,7 @@
       "src": "/documentation/es/page-comments.png",
       "alt": "Actividad de la página con una edición de demostración y el campo de comentario vacío.",
       "caption": "Consulta la actividad y escribe un comentario en el campo. En este ejemplo no se ha enviado ninguno.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +153,7 @@
       "src": "/documentation/es/page-file-states.png",
       "alt": "Página de demostración con una carga incompleta y un archivo guardado de 67 bytes que ofrece Descargar.",
       "caption": "Comprueba el estado real del archivo: el segundo adjunto está disponible y la primera carga incompleta no.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +169,7 @@
       "src": "/documentation/es/page-history-preview.png",
       "alt": "Pestaña Versiones con un estado anterior desplegado, su autor, Restaurar y el aviso de conservación durante 30 días.",
       "caption": "Previsualiza un estado guardado y compáralo con la página actual antes de restaurarlo.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +185,7 @@
       "src": "/documentation/es/page-publish.png",
       "alt": "Diálogo de publicación con Privado seleccionado y opciones de contraseña o enlace.",
       "caption": "Privado mantiene la página dentro del proyecto. Revisa quién debe verla antes de cambiar la publicación.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -198,7 +201,7 @@
       "src": "/documentation/es/page-export.png",
       "alt": "Menú de exportación del documento con Markdown (.md) e Imprimir / PDF.",
       "caption": "Elige Markdown para descargar el documento o Imprimir / PDF para abrir la vista de impresión.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -214,7 +217,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Eliminar.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -258,7 +261,7 @@ La eliminación envía a la papelera las páginas para las que se admite la recu
 
 ## Escribir una página con bloques y menciones {#page-editor}
 
-Abre la página y edita su título o cuerpo como miembro del proyecto. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, párrafos, listas, tareas, código, secciones plegables y avisos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
+Abre la página y edita su título o cuerpo como propietario o como Miembro. Los lectores pueden abrir y leer las páginas, pero no pueden editarlas, importarlas, duplicarlas, añadirlas a favoritos ni publicarlas, ni restaurar una versión. Usa el menú de comandos de barra y los controles de formato para insertar encabezados, párrafos, listas, tareas, código, secciones plegables y avisos. Un aviso puede tener un icono emoji y un color de la paleta; elígelos para distinguir información útil, no como única forma de comunicar una advertencia.
 
 Utiliza menciones para enlazar incidencias, objetivos, personas o páginas relevantes. Los enlaces inversos ayudan a encontrar páginas que hacen referencia a la actual. Un enlace aporta contexto, no acceso a un objeto privado de otro proyecto.
 
@@ -273,7 +276,7 @@ Las exportaciones Markdown y las lecturas de páginas por agentes conservan icon
 
 ## Discutir una página y resolver conflictos {#page-comments-and-collaboration}
 
-Abre una página del proyecto y sus controles de comentarios. Selecciona el contenido relevante al crear un comentario anclado, explica la pregunta o cambio propuesto y utiliza menciones para involucrar a un miembro. Responde en el hilo para mantener la decisión junto a su contexto. Resuélvelo cuando su pregunta se haya atendido realmente.
+Abre una página del proyecto y sus controles de comentarios. Selecciona el contenido relevante al crear un comentario anclado, explica la pregunta o cambio propuesto y utiliza menciones para involucrar a un miembro. Un lector puede comentar si el propietario le ha activado **Puede comentar**. Responde en el hilo para mantener la decisión junto a su contexto. Resuélvelo cuando su pregunta se haya atendido realmente.
 
 Los avatares de presencia identifican a las personas que ven la página. No demuestran que el texto sin guardar de otra persona haya llegado al servidor ni que las ediciones simultáneas se fusionen automáticamente. Lee el estado de guardado actual antes de salir.
 
@@ -326,7 +329,7 @@ Vuelve a abrir o actualiza el editor después de restaurar y comprueba el cuerpo
 
 ## Publicar una página y revocar su enlace {#publish-a-page}
 
-Abre una página del proyecto como miembro y usa sus controles de publicación. Revisa primero contenido y adjuntos. Elige acceso privado, protegido por contraseña o público. La contraseña requiere al menos ocho caracteres y se aplica después de enviarla; seleccionar el modo no crea por sí solo un enlace protegido.
+Abre una página del proyecto como propietario o como Miembro y usa sus controles de publicación. Revisa primero contenido y adjuntos. Elige acceso privado, protegido por contraseña o público. La contraseña requiere al menos ocho caracteres y se aplica después de enviarla; seleccionar el modo no crea por sí solo un enlace protegido.
 
 Copia el enlace /p/ generado cuando la publicación tenga éxito. Si la página tiene descendientes, revisa la opción de incluirlos y su número. Incluirlos publica la rama seleccionada; excluirlos deja su contenido fuera de esa publicación. Una base de datos sin descendientes publicados no expone automáticamente todos los cuerpos de sus entradas.
 

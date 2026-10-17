@@ -48,6 +48,7 @@ import {
   type PageMenuTarget,
 } from "@/components/pages/page-document-actions";
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
@@ -102,6 +103,8 @@ export function PageTree({
 }: PageTreeProps) {
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
+  // Project readers (MIN-693) browse the tree: no reorder, no new subpage.
+  const { canWrite } = useProjectCapabilities(projectId);
 
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   // Read after editing: `localStorage` does not exist in server rendering, and
@@ -235,7 +238,7 @@ export function PageTree({
             untitled={t("untitled")}
             actions={actionsFor(page)}
             onToggle={() => {}}
-            onCreateChild={createChild}
+            onCreateChild={canWrite ? createChild : undefined}
             onOpen={onOpen}
             onPrefetch={onPrefetch}
           />
@@ -267,19 +270,19 @@ export function PageTree({
             actions={actionsFor(node)}
             pinned={favoriteSection && node.favorite}
             onToggle={() => toggle(node.id)}
-            onCreateChild={createChild}
+            onCreateChild={canWrite ? createChild : undefined}
             onOpen={onOpen}
             onPrefetch={onPrefetch}
-            onDragStart={() => setDragId(node.id)}
-            onDragOverRow={(mode) => {
+            onDragStart={canWrite ? () => setDragId(node.id) : undefined}
+            onDragOverRow={canWrite ? (mode) => {
               if (!dragId || dragId === node.id) return;
               setDrop({ id: node.id, mode });
-            }}
-            onDropRow={(mode) => {
+            } : undefined}
+            onDropRow={canWrite ? (mode) => {
               if (dragId && dragId !== node.id) onMove(dragId, node.id, mode);
               endDrag();
-            }}
-            onDragEnd={endDrag}
+            } : undefined}
+            onDragEnd={canWrite ? endDrag : undefined}
           />
         );
         if (open) walk(node.children);
@@ -341,7 +344,8 @@ function PageRow({
   /** Whether this row itself is a favorite in the upper tree. */
   pinned?: boolean;
   onToggle: () => void;
-  onCreateChild: (parentId: string) => void;
+  /** Absent for project readers: the row has no "+" subpage button. */
+  onCreateChild?: (parentId: string) => void;
   onOpen: (pageId: string) => void;
   onPrefetch: (pageId: string) => void;
   onDragStart?: () => void;
@@ -508,15 +512,17 @@ function PageRow({
             </Button>
           }
         />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6"
-          aria-label={t("newSubpage")}
-          onClick={() => onCreateChild(page.id)}
-        >
-          <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
-        </Button>
+        {onCreateChild && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6"
+            aria-label={t("newSubpage")}
+            onClick={() => onCreateChild(page.id)}
+          >
+            <HugeiconsIcon icon={Add01Icon} className="size-3.5" />
+          </Button>
+        )}
       </div>
 
       {/* The star CLOSES the line, after the ⋯ and the + — it is the right edge of

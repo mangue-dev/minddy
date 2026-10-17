@@ -2,8 +2,11 @@ import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoutineEventRow } from "./routine-event-processing";
 
-const h = vi.hoisted(() => ({ tables: {} as Record<string, Record<string, unknown>[]>, owner: true, start: vi.fn(), execute: vi.fn(), claims: [] as string[] }));
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: async () => h.owner ? { isOwner: true } : null }));
+const h = vi.hoisted(() => ({ tables: {} as Record<string, Record<string, unknown>[]>, owner: true, roles: {} as Record<string, string>, start: vi.fn(), execute: vi.fn(), claims: [] as string[] }));
+vi.mock("@/lib/server/project-access", () => ({
+  getProjectAccess: async () => h.owner ? { isOwner: true } : null,
+  hasProjectAccess: async (userId: string) => h.roles[userId] ? { role: h.roles[userId] } : null,
+}));
 vi.mock("@/lib/server/routine-content", () => ({ decodeRoutine: async (row: unknown) => row }));
 vi.mock("@/lib/server/issue-store", () => ({ decodeIssue: async (row: unknown) => row }));
 vi.mock("@/lib/server/page-content", () => ({ decodePage: async (row: unknown) => row }));
@@ -52,7 +55,7 @@ function emit(id: number, event = "issue.status_changed", after: Record<string, 
 }
 beforeEach(() => {
   h.tables = { agent_routines: [{ id: routine,project_id:project,owner_id:"owner",enabled:true,deleted_at:null,trigger_revision:1,trigger_type:"event",trigger:{type:"event",event:"issue.status_changed",status:"triage",conditions:{field:"assignee",operator:"present"}} }],routine_events:[],routine_armings:[],issues:[{id:subject,project_id:project,status:"triage",assignee_id:null,deleted_at:null}],issue_categories:[],pages:[] };
-  h.owner=true; h.claims=[]; h.start.mockReset().mockResolvedValue({turn:{id:"turn"}}); h.execute.mockReset().mockResolvedValue({});
+  h.owner=true; h.roles={}; h.claims=[]; h.start.mockReset().mockResolvedValue({turn:{id:"turn"}}); h.execute.mockReset().mockResolvedValue({});
 });
 describe("durable routine orchestration", () => {
   it("bounds fan-out admissions, finishes the event and lets the Numo drain execute queued turns", async () => {
@@ -153,6 +156,46 @@ describe("durable routine orchestration", () => {
     h.tables.pages[1].database_schema=[];h.tables.routine_armings[0].retry_at=new Date(0).toISOString();await processRoutineEvents();
     expect(h.tables.routine_armings[0].error_code).toBe("invalidConditionReference");expect(h.start).not.toHaveBeenCalled();
   });
+  describe("comment triggers and reader authors (MIN-693)", () => {
+    const comment = randomUUID();
+    function commentEvent(id: number, authorId: string) {
+      Object.assign(h.tables.agent_routines[0], { trigger: { type: "event", event: "issue.comment_added", issueId: subject } });
+      h.tables.comments = [{ id: comment, author_id: authorId }];
+      emit(id, "issue.comment_added", {});
+      h.tables.routine_events.at(-1)!.source_id = comment;
+    }
+
+    it("does not arm a routine from a reader's comment", async () => {
+      h.roles = { reader: "reader" };
+      commentEvent(1, "reader");
+      await processRoutineEvents();
+      expect(h.tables.routine_armings).toHaveLength(0);
+      expect(h.start).not.toHaveBeenCalled();
+      expect(h.tables.routine_events[0].processed_at).toBeTruthy();
+    });
+
+    it("still arms and admits a member's comment", async () => {
+      h.roles = { member: "member" };
+      commentEvent(1, "member");
+      await processRoutineEvents();
+      expect(h.start).toHaveBeenCalledTimes(1);
+      expect(h.tables.routine_armings[0].state).toBe("consumed");
+    });
+
+    it("cancels a delayed arming once its author has become a reader", async () => {
+      h.roles = { member: "member" };
+      commentEvent(1, "member");
+      (h.tables.agent_routines[0].trigger as Record<string, unknown>).delayMinutes = 30;
+      await processRoutineEvents();
+      expect(h.tables.routine_armings[0].state).toBe("armed");
+      h.roles = { member: "reader" };
+      h.tables.routine_armings[0].retry_at = new Date(0).toISOString();
+      await processRoutineEvents();
+      expect(h.tables.routine_armings[0].state).toBe("cancelled");
+      expect(h.start).not.toHaveBeenCalled();
+    });
+  });
+
   it("only follows the configured issue for comment triggers", () => {
     const e={event:"issue.comment_added",subject_id:subject} as RoutineEventRow;
     expect(eventMatchesTrigger({type:"event",event:"issue.comment_added",issueId:subject},e)).toBe(true);

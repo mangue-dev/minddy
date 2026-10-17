@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,17 @@
       "app/share/[token]/page.tsx",
       "content/knowledge/feedback.md",
       "lib/server/view-shares.ts",
-      "lib/public-board-projection.ts"
+      "lib/public-board-projection.ts",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "navigation",
@@ -68,7 +71,7 @@
       "src": "/documentation/es/work-view-filters.png",
       "alt": "Filtros manuales de una vista y menú de ordenación.",
       "caption": "Filtra por propiedades de las incidencias o elige un orden. El campo de IA es opcional para estos controles manuales.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -84,7 +87,7 @@
       "src": "/documentation/es/work-share-view.png",
       "alt": "Diálogo para compartir una vista con acceso privado seleccionado.",
       "caption": "El acceso privado, protegido por contraseña y público son opciones distintas. La vista permanece privada en esta captura.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -122,7 +125,7 @@ Una vista guardada no es una copia de sus incidencias. Eliminarla retira su conf
 
 ## Compartir y revocar una vista de solo lectura {#share-a-view}
 
-Abre el menú de una vista compatible en un tablero del proyecto y elige la acción para compartirla. Necesitas acceso al proyecto; una vista personal dentro del proyecto solo puede compartirla su propio usuario. Las vistas globales entre proyectos no se pueden compartir. Revisa los filtros y el contenido visible antes de publicar. Elige un enlace público secreto o protección por contraseña cuando se ofrezcan; la contraseña debe tener al menos ocho caracteres. Copia el enlace generado solo después de que el cambio se guarde correctamente.
+Abre el menú de una vista compatible en un tablero del proyecto y elige la acción para compartirla. Debes ser el propietario o un Miembro; los lectores conservan sus vistas personales, pero no pueden compartir vistas. Una vista personal dentro del proyecto solo puede compartirla su propio usuario. Las vistas globales entre proyectos no se pueden compartir. Revisa los filtros y el contenido visible antes de publicar. Elige un enlace público secreto o protección por contraseña cuando se ofrezcan; la contraseña debe tener al menos ocho caracteres. Copia el enlace generado solo después de que el cambio se guarde correctamente.
 
 Abre el enlace en una sesión de navegador aparte sin tu cuenta. Comprueba el subconjunto de incidencias, los campos y el contenido enlazado que puede ver un visitante. El enlace público concede acceso de solo lectura a la vista, no pertenencia ni permisos de edición en el proyecto.
 

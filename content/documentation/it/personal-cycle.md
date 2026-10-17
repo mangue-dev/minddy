@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -35,14 +35,17 @@
       "components/settings/account-cycles-section.tsx",
       "lib/cycle-prefs.ts",
       "lib/server/cycles.ts",
-      "components/cycle/use-cycle-menu-actions.tsx"
+      "components/cycle/use-cycle-menu-actions.tsx",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "views",
@@ -59,7 +62,7 @@
       "src": "/documentation/it/reader-cycle.png",
       "alt": "Ticket dimostrativo nel backlog del ciclo personale.",
       "caption": "L’aggiunta ha assegnato il ticket al titolare del ciclo e mantenuto lo stato backlog.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -78,7 +81,7 @@
 
 ## Configurare e riempire il ciclo {#personal-cycle}
 
-Attiva i cicli in Impostazioni dell’account → Cicli, poi apri Ciclo dalla navigazione personale. Appartiene al tuo account e può contenere ticket di più progetti a cui hai accesso. Non è uno sprint del progetto e non appartiene a un obiettivo del team.
+Attiva i cicli in Impostazioni dell’account → Cicli, poi apri Ciclo dalla navigazione personale. Appartiene al tuo account e può contenere i ticket assegnati a te nei progetti in cui sei il proprietario o un Membro. I lettori non possono ricevere assegnazioni, quindi un progetto che ti limiti a leggere non contribuisce con alcun lavoro. Non è uno sprint del progetto e non appartiene a un obiettivo del team.
 
 Scegli una durata di una o due settimane, il giorno d’inizio, da uno a quattro cicli futuri e un’intensità leggera, media o elevata. Queste impostazioni definiscono il tuo periodo e la capacità prevista. I controlli di acquisizione automatica stabiliscono se i ticket assegnati entrano nel ciclo attuale quando vengono avviati o completati.
 

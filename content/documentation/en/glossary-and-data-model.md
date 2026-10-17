@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 3,
-  "sourceRevision": 3,
+  "revision": 4,
+  "sourceRevision": 4,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,17 @@
       "content/knowledge/feedback.md",
       "content/documentation/reviews/editorial-clarity-en-fr-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
-      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md"
+      "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 3,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity)",
-    "date": "2026-10-09"
+    "revision": 4,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (collection-caption clarity); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "permissions-and-public-links",
@@ -63,7 +66,7 @@
       "src": "/documentation/en/glossary-and-data-model-flow.svg",
       "alt": "Diagram: Project: shared work and knowledge. Issue: work; objective: intended result. Personal cycle: one user's cross-project work. Page: durable context; feedback: user need.",
       "caption": "Shared project work and personal planning use different objects with their own access boundaries.",
-      "revision": 3,
+      "revision": 4,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -98,7 +101,7 @@
 
 ## Choose the right object {#glossary-and-data-model}
 
-A project is the shared workspace for members, issues, categories, saved views, pages, integrations and its feedback board. An issue is a discrete unit of work with status, assignee and optional plan, due date, objective, categories, relations, comments and resources. An objective groups project issues around a result and tracks progress. A personal cycle selects one user’s weekly or fortnightly work across projects; it is not a shared sprint or project objective.
+A project is the shared workspace for members, issues, categories, saved views, pages, integrations and its feedback board. Each person in it has a role: one owner, members who work on the content, and readers who follow it. An issue is a discrete unit of work with status, assignee and optional plan, due date, objective, categories, relations, comments and resources. An objective groups project issues around a result and tracks progress. A personal cycle selects one user’s weekly or fortnightly work across projects; it is not a shared sprint or project objective.
 
 
 ![Diagram: Project: shared work and knowledge. Issue: work; objective: intended result. Personal cycle: one user's cross-project work. Page: durable context; feedback: user need.](/documentation/en/glossary-and-data-model-flow.svg)

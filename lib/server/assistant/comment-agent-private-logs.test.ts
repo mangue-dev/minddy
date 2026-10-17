@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 
 const sentinel = "MIN591_PRIVATE_COMMENT_SENTINEL";
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: async () => ({ project: { id: "project", key: "MIN" } }) }));
+vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: async () => ({ project: { id: "project", key: "MIN" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true }) }));
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => true }));
 vi.mock("@/lib/server/issue-store", () => ({ issueStore: (service: { from: (table: string) => unknown }) => service.from("issues") }));
 vi.mock("@/lib/server/comment-store", () => ({ commentStore: (service: { from: (table: string) => unknown }) => service.from("comments") }));

@@ -31,7 +31,9 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 function boardPayload(
   board: Awaited<ReturnType<typeof getBoardForProject>>,
-  isOwner: boolean
+  isOwner: boolean,
+  /** Readers never receive the board token (MIN-693). */
+  canWrite: boolean
 ) {
   if (!board) return null;
   return {
@@ -44,7 +46,7 @@ function boardPayload(
     allow_comments: board.allow_comments,
     accent_light: board.accent_light,
     accent_dark: board.accent_dark,
-    token: board.token,
+    token: canWrite ? board.token : null,
     sso_secret: isOwner ? board.sso_secret : null,
     sso_configured: board.sso_secret !== null,
   };
@@ -98,7 +100,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     listPublishedPages(id),
   ]);
   return NextResponse.json({
-    board: boardPayload(board, guard.access.isOwner),
+    board: boardPayload(board, guard.access.isOwner, guard.access.canWrite),
     shared_views: sharedViews,
     published_pages: publishedPages,
   });
@@ -225,7 +227,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 
   const board = await getBoardForProject(id);
   return NextResponse.json({
-    board: boardPayload(board, true),
+    board: boardPayload(board, true, true),
     shared_views: await listSharedViews(id),
     published_pages: await listPublishedPages(id),
   });
@@ -262,7 +264,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       if (!rotated) {
         return NextResponse.json({ error: t("databaseError") }, { status: 500 });
       }
-      return NextResponse.json({ board: boardPayload(rotated, true) });
+      return NextResponse.json({ board: boardPayload(rotated, true, true) });
     }
     case "rotate_sso": {
       const secret = await rotateSsoSecret(id);
@@ -270,7 +272,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ error: t("databaseError") }, { status: 500 });
       }
       const fresh = await getBoardForProject(id);
-      return NextResponse.json({ board: boardPayload(fresh, true) });
+      return NextResponse.json({ board: boardPayload(fresh, true, true) });
     }
     case "clear_sso": {
       const ok = await clearSsoSecret(id);
@@ -278,7 +280,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ error: t("databaseError") }, { status: 500 });
       }
       const fresh = await getBoardForProject(id);
-      return NextResponse.json({ board: boardPayload(fresh, true) });
+      return NextResponse.json({ board: boardPayload(fresh, true, true) });
     }
     default:
       return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });

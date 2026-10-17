@@ -20,7 +20,7 @@ const H = vi.hoisted(() => ({
   insertNotifications: vi.fn<
     (service: unknown, rows: Array<Record<string, unknown>>) => Promise<void>
   >(async () => {}),
-  access: vi.fn(async () => ({ role: "member" }) as unknown),
+  access: vi.fn(async () => ({ role: "member", canWrite: true, canComment: true }) as unknown),
   page: { project_id: "p1", created_by: "u-author" } as Record<
     string,
     unknown

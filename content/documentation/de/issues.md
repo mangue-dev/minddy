@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -94,14 +94,17 @@
       "components/image-viewer.tsx",
       "lib/issue-prompt.ts",
       "lib/server/issue-prompt-context.ts",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; de translation of removal edits; no operational rerun)",
-    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 13,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; de translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (de new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_de (de translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "feedback",
@@ -146,7 +149,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf mit Titel, Beschreibung und manuell wählbaren Eigenschaften.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -162,7 +165,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoproblem DOC-11 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +181,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +197,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -210,7 +213,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Suche nach einem blockierenden Ticket anhand seiner Kennung.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -226,7 +229,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -242,7 +245,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -258,7 +261,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -274,7 +277,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -291,7 +294,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Entfernen.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -324,11 +327,11 @@ Ein Problem erfasst eine Arbeitseinheit im Projekt, von der ersten Anfrage bis z
 
 Das Löschen eines gespeicherten Entwurfs erfordert eine Bestätigung. Abbrechen behält den Entwurf; Bestätigen entfernt diesen gespeicherten Entwurf. Dieselbe Bestätigung gibt es beim Erstellen eines Ziels.
 
-Du musst Mitglied des Zielprojekts sein. Öffne das Projekt und seine Funktion zum Erstellen eines Problems. Gib einen Titel ein, der die Arbeit benennt, und ergänze Kontext, erwartetes Ergebnis und Einschränkungen in der Beschreibung. Wähle das Projekt bewusst, wenn du aus einer persönlichen oder projektübergreifenden Ansicht erstellst.
+Du musst Eigentümer oder Mitglied des Zielprojekts sein; Leser können Probleme öffnen, aber weder erstellen noch bearbeiten. Öffne das Projekt und seine Funktion zum Erstellen eines Problems. Gib einen Titel ein, der die Arbeit benennt, und ergänze Kontext, erwartetes Ergebnis und Einschränkungen in der Beschreibung. Wähle das Projekt bewusst, wenn du aus einer persönlichen oder projektübergreifenden Ansicht erstellst.
 
 Schalte für eine manuelle Erstellung Smart-Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien und Ziel selbst festlegen. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig.
 
-Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Aufwand, zuständige Person, Ziel, Kategorien, Fälligkeitsdatum und Wiederholung. Zuständige Personen sind Projektmitglieder; ein Ziel bündelt Probleme zu einem Projektergebnis. Optionale Eigenschaften kannst du offenlassen, statt Werte zu erraten. Die Priorität reicht von keiner über niedrig, mittel und hoch bis dringend; der Aufwand verwendet XS, S, M, L und XL.
+Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Aufwand, zuständige Person, Ziel, Kategorien, Fälligkeitsdatum und Wiederholung. Zuständig ist der Projekteigentümer oder ein Mitglied, nie ein Leser; ein Ziel bündelt Probleme zu einem Projektergebnis. Optionale Eigenschaften kannst du offenlassen, statt Werte zu erraten. Die Priorität reicht von keiner über niedrig, mittel und hoch bis dringend; der Aufwand verwendet XS, S, M, L und XL.
 
 Bestätige die Erstellung und öffne das neue Problem. Prüfe Kennung und Projekt. Öffne die Eigenschaftsauswahl erneut, um Werte zu ändern, sobald die Aufgabe klarer wird. Die Beschreibung erklärt die Arbeit; ein Umsetzungsplan wird gesondert im Plan-Tab gepflegt.
 
@@ -388,7 +391,7 @@ Prüfe Filter, wenn ein Problem nach dem Schließen verschwindet. Öffne es übe
 
 ## Arbeit besprechen und Kontext hinzufügen {#issue-discussion-and-resources}
 
-Öffne den Diskussionsverlauf des Problems, um einen Kommentar hinzuzufügen. Erkläre eine Entscheidung, Frage oder ein Prüfergebnis, damit ein anderes Mitglied die Änderung verstehen kann. Verwende Erwähnungen, wenn du eine Person oder ein verknüpftes Objekt im Kontext brauchst; Benachrichtigungen hängen weiterhin von den Einstellungen der empfangenden Person und der Zustellung auf ihrem Gerät ab.
+Öffne den Diskussionsverlauf des Problems, um einen Kommentar hinzuzufügen. Erkläre eine Entscheidung, Frage oder ein Prüfergebnis, damit ein anderes Mitglied die Änderung verstehen kann. Verwende Erwähnungen, wenn du eine Person oder ein verknüpftes Objekt im Kontext brauchst; Benachrichtigungen hängen weiterhin von den Einstellungen der empfangenden Person und der Zustellung auf ihrem Gerät ab. Ein Leser kann nur kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Dann kann er antworten, Personen erwähnen, Dateien an seine eigenen Kommentare anhängen und seine eigenen Kommentare bearbeiten oder löschen.
 
 Füge eine passende Projektseite, Datei oder einen Link über die Ressourcenfunktionen hinzu. Eine verknüpfte Seite ist eine aktuelle Ressource: Ihr Titel folgt einer Umbenennung und ihr Inhalt kann sich ändern. Eine Datei ist ein gespeicherter Anhang, keine Garantie für die Erreichbarkeit einer externen URL.
 

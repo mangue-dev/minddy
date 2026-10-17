@@ -159,6 +159,7 @@ export function MarkdownEditor({
   mentions,
   placeholder = "Ajoute une description…",
   className,
+  readOnly = false,
 }: {
   value: string;
   onCommit: (markdown: string) => void;
@@ -186,6 +187,8 @@ export function MarkdownEditor({
   mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;
+  /** Rendered without editing (project readers): no caret, no commit. */
+  readOnly?: boolean;
 }) {
   const tCommon = useTranslations("Common");
   const [, setEmpty] = useState(value.trim() === "");
@@ -283,6 +286,7 @@ export function MarkdownEditor({
   // frozen: nothing moves from one rendering to another.
   const editor = useEditor({
     immediatelyRender: false,
+    editable: !readOnly,
     extensions,
     content: initialContentRef.current,
     editorProps,
@@ -301,8 +305,17 @@ export function MarkdownEditor({
       onEdit?.();
     },
     // tiptap-markdown adds `markdown` storage but doesn't augment TipTap's type.
-    onBlur: ({ editor }) => onCommit(markdownOf(editor)),
+    onBlur: ({ editor }) => {
+      if (editor.isEditable) onCommit(markdownOf(editor));
+    },
   });
+
+  // A role change while the surface is open flips it in place.
+  useEffect(() => {
+    if (editor && !editor.isDestroyed && editor.isEditable === readOnly) {
+      editor.setEditable(!readOnly);
+    }
+  }, [editor, readOnly]);
 
   // ── The composer surface ────────────────────────────────────────────────
   // The markdown of an editor, read the same way on every road.

@@ -21,14 +21,19 @@ import type { ImportContext } from "@/lib/import/types";
  */
 export async function loadImportContext(
   projectId: string,
-  actorId: string
+  actorId: string,
+  /** Issue imports map people to ASSIGNEES, so readers are left out
+      (MIN-693). A database import maps person cells, which may name anyone
+      who can read the project. */
+  { assignableOnly = true }: { assignableOnly?: boolean } = {}
 ): Promise<ImportContext> {
   const service = getServiceClient();
+  const members = service.from("project_members").select("user_id").eq("project_id", projectId);
 
   const [{ data: project }, { data: memberRows }, { data: categoryRows, error: categoryError }] =
     await Promise.all([
       service.from("projects").select("owner_id").eq("id", projectId).maybeSingle(),
-      service.from("project_members").select("user_id").eq("project_id", projectId),
+      assignableOnly ? members.eq("role", "member") : members,
       categoryStore(service).select("name").eq("project_id", projectId),
     ]);
   if (categoryError) throw new Error("Unable to read import categories");

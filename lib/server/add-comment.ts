@@ -41,6 +41,8 @@ export type AddCommentResult =
         | "objectiveNotFound"
         | "feedbackNotFound"
         | "commentNotFound"
+        | "commentNotAllowed"
+        | "readOnlyProject"
         | "databaseError"
         | "attachmentInvalid";
       /** Verbatim DB message already meant for the user. */
@@ -97,6 +99,9 @@ export async function addCommentToIssue({
   const access = await getProjectAccess(actorId, issue.project_id as string);
   if (!access) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+  if (!access.canComment) {
+    return { ok: false, status: 403, errorKey: "commentNotAllowed" };
   }
 
   // Validate the attachment descriptors before creating anything: the paths
@@ -310,6 +315,9 @@ export async function addCommentToObjective({
   if (!access) {
     return { ok: false, status: 404, errorKey: "objectiveNotFound" };
   }
+  if (!access.canComment) {
+    return { ok: false, status: 403, errorKey: "commentNotAllowed" };
+  }
 
   const parsedAttachments = parseResourcesInput(
     attachments,
@@ -486,6 +494,9 @@ export async function addCommentToFeedbackPost({
   if (!access) {
     return { ok: false, status: 404, errorKey: "feedbackNotFound" };
   }
+  if (!access.canComment) {
+    return { ok: false, status: 403, errorKey: "commentNotAllowed" };
+  }
 
   const parsedAttachments = parseResourcesInput(
     attachments,
@@ -529,6 +540,14 @@ export async function addCommentToFeedbackPost({
         .maybeSingle();
       threadAuthorIds.push((root?.author_id as string | null) ?? null);
     }
+  }
+
+  // A public comment is the team answering ON the board: that is a write,
+  // not an internal note, so a commenting reader cannot post one (MIN-693).
+  // Checked on the effective visibility, so a reply in a public thread counts.
+  if (effectiveVisibility === "public" && !access.canWrite) {
+    await removeUnretainedResources(service, parsedAttachments);
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
 
   const { data, error } = await commentStore(service, "comments", actorId)

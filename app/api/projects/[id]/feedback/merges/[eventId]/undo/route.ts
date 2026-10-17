@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ id: string; eventId: string }> };
  is memorized: the AI ​​will never propose it again. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, eventId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "write");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 

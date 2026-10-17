@@ -78,7 +78,8 @@ export const KanbanColumn = memo(function KanbanColumn({
   onOpenIssue: (issue: Issue) => void;
   onOpenIssueById: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
-  onCreateIssue: (status: IssueStatus) => void;
+  /** Absent for project readers: the column has no "new issue" slot. */
+  onCreateIssue?: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
   onAddRelation: (
@@ -101,7 +102,8 @@ export const KanbanColumn = memo(function KanbanColumn({
   dropPreview?: DropPreview;
   /** The reserved destination slot while the overlay is landing. */
   landingPreview?: BoardLandingPreview;
-  onSelect: (issueId: string) => void;
+  /** Absent for project readers: shift-click selects nothing. */
+  onSelect?: (issueId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
   const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>();
@@ -203,6 +205,7 @@ export const KanbanColumn = memo(function KanbanColumn({
             }}
           />
 
+          {onCreateIssue && (
           <button
             type="button"
             onClick={() => onCreateIssue(status.value)}
@@ -211,6 +214,7 @@ export const KanbanColumn = memo(function KanbanColumn({
             <HugeiconsIcon icon={Add01Icon} className="size-4" />
             {t("newIssue")}
           </button>
+          )}
         </div>
         <ScrollFadeEdges edges={edges} className="z-30" />
       </div>

@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -41,14 +41,17 @@
       "lib/objective-momentum.ts",
       "content/documentation/reviews/min-671-objective-momentum-2026-10-10.md",
       "content/documentation/reviews/min-670-feedback-objectives.md",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
-    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review)",
-    "date": "2026-10-11"
+    "revision": 10,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "issues",
@@ -69,7 +72,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog with a demonstration result name.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,7 +93,7 @@ An objective groups a project’s issues around an outcome. Create it and attach
 
 ## Track an outcome with an objective {#objectives}
 
-Open the project's Objectives destination and create an objective. Name the result you want, add useful context, and set its available lead, target date, color and status fields. The lead is the person responsible for the outcome; choosing a lead does not transfer project ownership. An objective belongs to a project; it is distinct from a personal cycle spanning several projects.
+Open the project's Objectives destination and create an objective. Name the result you want, add useful context, and set its available lead, target date, color and status fields. The lead is the person responsible for the outcome; choosing a lead does not transfer project ownership. Only the owner or a Member can lead an objective, and a lead whose role changes to Reader is removed from it. An objective belongs to a project; it is distinct from a personal cycle spanning several projects.
 
 Open each relevant issue and choose the objective in its properties, or use the objective's issue controls. Check that the intended work appears under the objective. Use its discussion and resources for decisions and reference pages that apply to the whole outcome.
 

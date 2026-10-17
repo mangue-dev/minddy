@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -66,14 +66,17 @@
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
       "content/documentation/reviews/min-670-feedback-objectives.md",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review)",
-    "date": "2026-10-11"
+    "revision": 10,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_en_fr (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_en_fr with agent:/root (en pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, en wording and new-control review; existing procedural evidence retained); agent:/root (en changed-passage parity and localized-label review); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "api-and-webhooks"
@@ -99,7 +102,7 @@
       "src": "/documentation/en/publish-a-feedback-board-workflow.png",
       "alt": "Enabled public feedback board with local SSO identity configured and its URL concealed.",
       "caption": "The owner enables the board and chooses visitor identity. This demo uses a local SSO signer; the URL and signing secret are concealed.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +118,7 @@
       "src": "/documentation/en/submit-and-follow-feedback-workflow.png",
       "alt": "Visitor feedback form with a title, description and public visibility enabled.",
       "caption": "A signed-in visitor submits a need and chooses whether it appears publicly. The example was actually submitted with automatic review disabled.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +134,7 @@
       "src": "/documentation/en/feedback-objective-selection.png",
       "alt": "Component preview of the feedback objective selector and a feedback integration default, both set to Docs.",
       "caption": "Objective selectors with demonstration data. New feedback inherits the integration default.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -148,7 +151,7 @@
       "src": "/documentation/en/feedback-pages-and-views-workflow.png",
       "alt": "Published feedback guide selected in the board navigation and readable without sign-in.",
       "caption": "Publish a page, enable page tabs and select it for the board. This demonstration page was opened anonymously; the opaque URL keeps `noindex`.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -206,13 +209,13 @@ Open My feedback to find your submitted requests and votes, including what your 
 
 Use the list filters to combine status, objective, categories, author, source and review state; visibility is available when the public board is enabled. Several choices within one property are alternatives, while different properties are combined. Clear the filters to return to the initial list. The list displays up to 500 requests matching these filters at a time. Open a property submenu to select its values; its count shows how many are selected. On mobile, expand the property section.
 
-Project members open the project's Feedback surface and select a request from the review queue or list. Read the original submission, public/private choice, review state and any moderation or duplicate suggestion. Canonical title and body can be clarified while submitted originals remain preserved. Assign categories and a suitable public status; spam never appears on the public board. A private request remains separate from a merely pending public one.
+The project owner and Members open the project's Feedback surface and select a request from the review queue or list. Readers can read requests but not moderate them. Read the original submission, public/private choice, review state and any moderation or duplicate suggestion. Canonical title and body can be clarified while submitted originals remain preserved. Assign categories and a suitable public status; spam never appears on the public board. A private request remains separate from a merely pending public one.
 
 Optional translation is shown beside the source for the team; the public board keeps the written feedback. Check any AI classification before relying on it. If a post is linked to an issue, its status is controlled by that issue and cannot be edited independently.
 
 ### Notes and public responses {#responses}
 
-Choose internal discussion for team notes. Public replies are visible to visitors; check visibility before sending. Replies inherit their thread's visibility, so an internal composer choice cannot make a reply inside a public thread private. Numo public answers need an explicit request; mentioning Numo in a public comment does not trigger an automatic reply.
+Choose internal discussion for team notes. Public replies are visible to visitors; check visibility before sending. A reader with **Can comment** can take part in internal discussion threads but cannot reply publicly on the board. Replies inherit their thread's visibility, so an internal composer choice cannot make a reply inside a public thread private. Numo public answers need an explicit request; mentioning Numo in a public comment does not trigger an automatic reply.
 
 Team members can delete public comments for moderation. Editing stays with the author, and visitor words are never rewritten by the team. Internal comments retain author-only rules. After a public reply or moderation action, inspect the signed-out board to confirm the intended visibility.
 

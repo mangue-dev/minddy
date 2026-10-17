@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { hasProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeProjectName } from "@/lib/server/project-content";
 import {
@@ -352,6 +353,12 @@ export async function POST(
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
+  // A dictated draft only feeds a creation or edit form, which readers cannot
+  // submit: refuse before spending on the model (MIN-693).
+  if (!(await hasProjectAccess(auth.user.id, projectId))?.canWrite) {
+    const errors = await getTranslations("ApiErrors");
+    return NextResponse.json({ error: errors("readOnlyProject") }, { status: 403 });
+  }
   project.name = await decodeProjectName(project, auth.user.id);
 
   const service = getServiceClient();
@@ -365,9 +372,10 @@ export async function POST(
     resolveAiRuntime({ userId: auth.user.id, modelKey: "dictate_model", surface: "voice" }),
     getLocale(),
   ]);
+  // Readers can never lead an objective (MIN-693): they are not offered.
   const members: PromptMember[] =
     "members" in membersResult
-      ? membersResult.members.map((m) => ({
+      ? membersResult.members.filter((m) => m.role !== "reader").map((m) => ({
           user_id: m.user_id as string,
           name: m.name as string,
         }))

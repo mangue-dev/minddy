@@ -20,6 +20,7 @@ import {
 } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
 import { useProjects } from "@/lib/projects-context";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import {
   useAssistantContext,
   useAssistantPanelActions,
@@ -281,6 +282,8 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
+  // Project readers (MIN-693) browse objectives without creating any.
+  const { canWrite } = useProjectCapabilities(projectId);
 
   const { objectives, loading, createObjective, updateObjective, deleteObjective } =
     useObjectivesQuery(projectId);
@@ -507,6 +510,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
  list, not 8 px below. */
           <>
             <ObjectiveFilterMenu state={state} onStateChange={setState} />
+            {canWrite && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -524,6 +528,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
                 <Kbd size="sm">O</Kbd>
               </TooltipContent>
             </Tooltip>
+            )}
           </>
         }
       >
@@ -591,6 +596,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
  tab icon, placed on the ground — the page can be recognized by what names it
  in the sidebar. No import here: an objective cannot be exported from any tool. */}
               <EmptyScene icon={Target01Icon} title={t("emptyTitle")}>
+                {canWrite && (
                 <Button onClick={() => setDialogOpen(true)}>
                   <HugeiconsIcon icon={Add01Icon} />
                   {t("newObjective")}
@@ -601,6 +607,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
                     O
                   </Kbd>
                 </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"

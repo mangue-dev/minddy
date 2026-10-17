@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (cd1843e12); 0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -57,14 +57,17 @@
       "lib/server/page-databases.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 it network guidance and terminology review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 8,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 it network guidance and terminology review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "numo",
@@ -87,7 +90,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -104,7 +107,7 @@
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
       "alt": "Finestra di installazione di Codex con l’endpoint minddy Cloud.",
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -147,7 +150,7 @@ La disponibilità del servizio non ne garantisce la raggiungibilità in rete. Si
 
 ### Ambito e revoca {#access}
 
-I client esterni usano gli strumenti disponibili per ticket, piani, commenti, pagine, feedback, cicli, routine e taccuino entro i permessi autorizzati. MCP è disponibile in tutti i piani Cloud; l’IA del client dipende comunque da configurazione e costi propri.
+I client esterni usano gli strumenti disponibili per ticket, piani, commenti, pagine, feedback, cicli, routine e taccuino entro i permessi autorizzati. Gli strumenti seguono, a ogni chiamata, il tuo ruolo attuale in ciascun progetto, quindi un cambio di ruolo si applica senza riconnettersi. Come lettore ottieni gli strumenti di lettura, più quelli dei commenti quando il proprietario ha attivato **Può commentare** per te. MCP è disponibile in tutti i piani Cloud; l’IA del client dipende comunque da configurazione e costi propri.
 
 minddy MCP nelle impostazioni dell’account elenca accessi esterni e controlli di revoca. Revoca client inutilizzati o non più affidabili. MCP per Numo è distinto: collega Numo ad altri servizi. Non incollare token in ticket, feedback pubblici o screenshot.
 

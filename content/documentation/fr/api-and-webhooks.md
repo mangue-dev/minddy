@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,17 @@
       "lib/server/feedback/posts.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-light-review-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 7,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root/editorial_en_fr (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, fr wording and new-control review; existing procedural evidence retained); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "integration-troubleshooting",
@@ -72,7 +75,7 @@
       "src": "/documentation/fr/integration-api-and-webhooks-flow.svg",
       "alt": "Schéma: Le serveur garde la clé d’intégration projet. POST tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
       "caption": "Lisez les étapes dans cet ordre. Le serveur garde la clé d’intégration projet. `POST` tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +107,7 @@
       "src": "/documentation/fr/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.",
       "caption": "La clé d’ingestion authentifie les appels serveur. Le secret SSO du tableau signe un jeton visiteur court, à usage unique.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +152,7 @@ L’API d’intégration reçoit des tickets ou des retours depuis un serveur, a
 
 ## Créer tickets ou feedback et recevoir des webhooks signés {#integration-api-and-webhooks}
 
-Le propriétaire crée une intégration dans les paramètres du projet. Choisissez `issues` pour les tâches internes en triage, `feedback` pour les besoins utilisateur avec votes/statut public. La clé `mdy_` en clair apparaît une fois. Gardez-la uniquement côté serveur, dans `MINDDY_API_KEY` ou `MINDDY_FEEDBACK_KEY`, jamais navigateur, dépôt ou journaux partagés. La révocation est définitive ; clés inconnues/révoquées retournent 401 `invalid_api_key`. La clé appartient à un projet et ne peut appeler l’autre famille d’endpoints (403 `wrong_key_kind`).
+Le propriétaire crée une intégration dans les paramètres du projet. Choisissez `issues` pour les tâches internes en triage, `feedback` pour les besoins utilisateur avec votes/statut public. La clé `mdy_` en clair apparaît une fois. Gardez-la uniquement côté serveur, dans `MINDDY_API_KEY` ou `MINDDY_FEEDBACK_KEY`, jamais navigateur, dépôt ou journaux partagés. La révocation est définitive ; clés inconnues/révoquées retournent 401 `invalid_api_key`. La clé appartient à un projet et ne peut appeler l’autre famille d’endpoints (403 `wrong_key_kind`). Une intégration n’est pas une personne : elle n’a aucun rôle dans le projet et garde les permissions fixes de son type lorsque les rôles des membres changent. Les lecteurs ne voient pas les intégrations.
 
 
 ![Schéma: Le serveur garde la clé d’intégration projet. POST tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.](/documentation/fr/integration-api-and-webhooks-flow.svg)

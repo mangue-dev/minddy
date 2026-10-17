@@ -4,6 +4,7 @@ const h = vi.hoisted(() => ({
   row: null as Record<string, unknown> | null,
   rows: [] as Record<string, unknown>[],
   accessibleProjects: new Set<string>(),
+  readOnlyProjects: new Set<string>(),
   selectedColumns: [] as string[],
   providerSources: [] as (string | null)[],
   installationCalls: [] as unknown[],
@@ -31,7 +32,9 @@ vi.mock("@/lib/supabase-service", () => ({
 }));
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: vi.fn(async (_userId: string, projectId: string) =>
-    h.accessibleProjects.has(projectId) ? { role: "member" } : null),
+    !h.accessibleProjects.has(projectId) ? null
+      : h.readOnlyProjects.has(projectId) ? { role: "reader", canWrite: false, canComment: false }
+        : { role: "member", canWrite: true, canComment: true }),
 }));
 vi.mock("@/lib/server/git/repository-name-content", () => ({
   shouldProtectRepositoryNames: async () => false,
@@ -58,13 +61,18 @@ vi.mock("@/lib/server/git/gitlab-rest", () => ({
   gitlabHeaders: (token: string) => ({ Authorization: `Bearer ${token}` }),
 }));
 
-import { resolveRepoCloneTarget, resolveRepoCloneTargetForRepo } from "./repo-access";
+import {
+  resolveRepoCloneTarget,
+  resolveRepoCloneTargetForRepo,
+  resolveRepoCloneTargetWithAccess,
+} from "./repo-access";
 
 beforeEach(() => {
   h.installationCalls.length = 0;
   h.row = null;
   h.rows = [];
   h.accessibleProjects.clear();
+  h.readOnlyProjects.clear();
   h.selectedColumns.length = 0;
   h.providerSources.length = 0;
   h.gitlabCalls.length = 0;
@@ -293,5 +301,33 @@ describe("sandbox repository credentials", () => {
     await expect(resolveRepoCloneTarget("project-1", "repo-read")).rejects.toThrow(
       "GitLab project token mint failed (403)",
     );
+  });
+});
+
+describe("project roles (MIN-693)", () => {
+  const twoLinks = () => [
+    githubLink({ installation_id: 4141 }),
+    githubLink({ id: "link-2", project_id: "project-2", connection_id: "connection-2", installation_id: 4343 }),
+  ];
+
+  it("acts through a project where the user can write before a read-only one", async () => {
+    h.rows = twoLinks();
+    h.accessibleProjects.add("project-1");
+    h.accessibleProjects.add("project-2");
+    h.readOnlyProjects.add("project-1");
+    const resolved = await resolveRepoCloneTargetWithAccess({
+      userId: "user", provider: "github", repoFullName: "acme/private-app",
+    });
+    expect(resolved).toMatchObject({ canWrite: true, target: { linkId: "link-2" } });
+  });
+
+  it("still resolves reads for a reader, flagged as read-only", async () => {
+    h.rows = twoLinks();
+    h.accessibleProjects.add("project-1");
+    h.readOnlyProjects.add("project-1");
+    const resolved = await resolveRepoCloneTargetWithAccess({
+      userId: "user", provider: "github", repoFullName: "acme/private-app",
+    });
+    expect(resolved).toMatchObject({ canWrite: false, target: { linkId: "link-1" } });
   });
 });

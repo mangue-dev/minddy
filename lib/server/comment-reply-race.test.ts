@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
   getServiceClient: vi.fn(),
-  getProjectAccess: vi.fn(async () => ({ role: "member" })),
+  getProjectAccess: vi.fn(async () => ({ role: "member", canWrite: true, canComment: true })),
   insertAttachments: vi.fn(),
   parseResourcesInput: vi.fn(),
   removeUnretainedResources: vi.fn(async () => {}),

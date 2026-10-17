@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained); MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate; MIN-721 removal of Numo code work (copied prompts and MCP for external agents, pull request review and merge retained); MIN-685 sidebar context menus; MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,13 +40,16 @@
       "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "components/pull-requests/pr-context-actions.tsx",
       "lib/pr-context-menu.ts",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min721_docs (MIN-721 source review: Numo code work, sandboxes, native code agents and AI pull request review removed; copied prompts, MCP, pull request review, Merge with Numo and read-only @numo mention verified in source; no operational rerun, no new capture); agent:/root (MIN-685 sidebar context menu source and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/min721_docs (en rewrite and retained-meaning review; agent review, not human acceptance); agent:/root (en MIN-685 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -70,7 +73,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -112,7 +115,7 @@ Open the pull request linked to an issue, or find it in the pull request list. R
 
 Read the description and activity, then inspect changed files and diff hunks. Open unresolved conversations and respond in the relevant thread rather than creating an unrelated comment. To hand the remaining feedback back to your agent, open **View conversations**, then **Fix all** and **Copy prompt**. File review marks help track your reading; they are not a provider approval. Check commits, CI results and linked issues to confirm the proposed change covers the requested work.
 
-Mention `@numo` in a pull request comment to ask Numo for a read-only review in a conversation. It reads the pull request and answers; it does not push commits. A mention written on the forge counts only when its author is linked to a member of a project that links the repository, and its usage is charged to that project's owner.
+Mention `@numo` in a pull request comment to ask Numo for a read-only review in a conversation. It reads the pull request and answers; it does not push commits. A mention written on the forge counts only when its author is linked to the owner or a Member (not a reader) of a project that links the repository, and its usage is charged to that project's owner.
 
 ![Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.](/documentation/en/review-pull-requests-workflow.png)
 

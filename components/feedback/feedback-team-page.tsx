@@ -102,6 +102,7 @@ import {
   FeedbackStatusBadge,
 } from "@/app/f/[token]/feedback-bits";
 import { useProjects } from "@/lib/projects-context";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { defaultLocale } from "@/i18n/config";
 import {
@@ -621,6 +622,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // The wizard provisions and creates secrets: it is only offered to the owner.
   const { user } = useAuth();
   const isOwner = !!project && project.owner_id === user?.id;
+  // Project readers (MIN-693) read feedback without filing any.
+  const { canWrite } = useProjectCapabilities(projectId);
   const [setupOpen, setSetupOpen] = useState(false);
 
   const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
@@ -652,11 +655,11 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const newParam = browse ? null : searchParams.get("new");
   useEffect(() => {
     if (!active || newParam !== "1") return;
-    setCreateOpen(true);
+    if (canWrite) setCreateOpen(true);
     const remaining = new URLSearchParams(searchParams);
     remaining.delete("new");
     router.replace(pathname + (remaining.size ? `?${remaining}` : ""));
-  }, [active, newParam, pathname, router, searchParams]);
+  }, [active, newParam, pathname, router, searchParams, canWrite]);
 
   // We arrive on this page to decide what is not decided: the
   // column therefore opens on the open returns, and not on the hundreds
@@ -905,6 +908,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             {/* Icon alone: ​​the complete wording took up half of the line.
                 Ce qu'il disait revient au survol — un vrai tooltip, celui de
                 the app, not the browser tooltip. */}
+            {canWrite && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -919,6 +923,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
               </TooltipTrigger>
               <TooltipContent>{t("newFeedback")}</TooltipContent>
             </Tooltip>
+            )}
           </>
         }
       >
@@ -1051,10 +1056,12 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
               <div className="mx-auto max-w-5xl">
                 <EmptyScene icon={MessageMultiple01Icon} title={t("emptyTitle")}>
+                  {canWrite && (
                   <Button onClick={() => setCreateOpen(true)}>
                     <HugeiconsIcon icon={Add01Icon} />
                     {t("newFeedback")}
                   </Button>
+                  )}
                   {/* Pay for the collection is done HERE, not at the end of a link:
                       this is the gesture that the scene proposes, and send it into a
                       settings tab would make him leave the page he came from
@@ -1173,6 +1180,10 @@ function FeedbackDetail({
   const locale = useLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  // Project readers (MIN-693): the feedback reads, internal comments follow
+  // their option, and public team replies need write access.
+  const { canWrite, canComment } = useProjectCapabilities(projectId);
+  const readOnly = !canWrite;
   const memberSeeds = useMemberSeeds(members);
   // The language the journal translates into. NULL in base = never entered
   // (project before the migration): same fallback as on the server side, so that the
@@ -1389,6 +1400,7 @@ function FeedbackDetail({
             reviewFailed={reviewGaveUp(post)}
           />
         </span>
+        {!readOnly && (
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {/* The linked ticket is no longer ANNOUNCED here: it has its row in the
               file, with its status, title and detachment. Only remains
@@ -1464,6 +1476,7 @@ function FeedbackDetail({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        )}
       </AppContentHeader>
 
       {/* Scrolling body, centered like the yard. */}
@@ -1482,6 +1495,7 @@ function FeedbackDetail({
                 confidence: Math.round((post.suggested_confidence ?? 0) * 100),
               })}
             </p>
+            {!readOnly && (
             <div className="flex gap-1.5">
               <Button
                 size="sm"
@@ -1504,6 +1518,7 @@ function FeedbackDetail({
                 {t("rejectSuggestion")}
               </Button>
             </div>
+            )}
           </div>
         )}
 
@@ -1560,6 +1575,7 @@ function FeedbackDetail({
         <div className="flex flex-col gap-2">
           <AutoTextarea
             value={title}
+            readOnly={readOnly}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => {
               const trimmed = title.trim();
@@ -1582,6 +1598,7 @@ function FeedbackDetail({
             }}
             placeholder={t("postBodyPlaceholder")}
             className="min-h-16"
+            readOnly={readOnly}
           />
         </div>
         )}
@@ -1633,6 +1650,7 @@ function FeedbackDetail({
             </PropertyRow>
           ) : null}
 
+          <fieldset disabled={readOnly} className="contents">
           <PropertyRow label={tField("status")}>
             {statusLocked ? (
               <Tooltip>
@@ -1689,8 +1707,9 @@ function FeedbackDetail({
               opens search; garnished, the ticket reads below, full
               width, because a title does not fit in the right half
               of a key/value row. */}
+          </fieldset>
           <PropertyRow label={t("linkedIssue")}>
-            {post.issue ? null : (
+            {post.issue || readOnly ? null : (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -1725,6 +1744,7 @@ function FeedbackDetail({
                     issueIdentifier(projectKey, post.issue.number)}
                 </span>
               </button>
+              {!readOnly && (
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -1740,6 +1760,7 @@ function FeedbackDetail({
               >
                 <HugeiconsIcon icon={Cancel01Icon} />
               </Button>
+              )}
             </div>
           ) : null}
 
@@ -1761,6 +1782,7 @@ function FeedbackDetail({
 
           {/* Public or private — the question only arises if there is a board
               where to publish. */}
+          <fieldset disabled={readOnly} className="contents">
           {boardEnabled ? (
             <PropertyRow label={t("visibility")}>
               <SearchSelect
@@ -1816,6 +1838,7 @@ function FeedbackDetail({
               onChange={handleCategoriesChange}
             />
           </PropertyRow>
+          </fieldset>
 
           <PropertyRow label={t("createdAt")}>
             <span className="text-sm">
@@ -1845,7 +1868,7 @@ function FeedbackDetail({
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={action.isPending}
+                  disabled={action.isPending || readOnly}
                   onClick={() => action.mutate({ path: `merges/${event.id}/undo` })}
                 >
                   <HugeiconsIcon icon={Undo02Icon} className="size-3.5" />
@@ -1873,11 +1896,14 @@ function FeedbackDetail({
             onEditComment={updateComment}
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
+            canComment={canComment}
+            canModerate={canWrite}
           />
         </div>
         </div>
       </div>
 
+      {canComment && (
       <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
         <div className="mx-auto max-w-3xl">
           <CommentComposer
@@ -1886,12 +1912,16 @@ function FeedbackDetail({
             onSubmit={handleComment}
             // Without a published board, a public comment has nowhere to appear.
             // Keep the toggle visible but disabled so the missing setting is explicit.
-            publicOption={{
-              disabledReason: boardEnabled ? undefined : t("publicNeedsBoard"),
-            }}
+            // A public reply speaks for the team: readers only comment internally.
+            publicOption={
+              canWrite
+                ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
+                : undefined
+            }
           />
         </div>
       </div>
+      )}
 
       <MergeDialog
         open={mergeOpen}

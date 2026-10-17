@@ -28,15 +28,21 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const service = getServiceClient();
   const { data: row } = await service
     .from("attachments")
-    .select("project_id")
+    .select("project_id, comment_id")
     .eq("id", id)
     .eq("created_by", auth.user.id)
     .maybeSingle();
 
   // Same 404 for “does not exist”, “filed by another” and “no longer a member”:
   // none of these three answers need be distinguishable from the other two.
-  if (!row || !(await getProjectAccess(auth.user.id, row.project_id as string))) {
+  const access = row ? await getProjectAccess(auth.user.id, row.project_id as string) : null;
+  if (!row || !access) {
     return NextResponse.json({ error: t("resourceNotFound") }, { status: 404 });
+  }
+  // A file inside one's own comment follows the comment capability; a
+  // standalone resource is project content and needs write access (MIN-693).
+  if (!(row.comment_id ? access.canComment : access.canWrite)) {
+    return NextResponse.json({ error: t("readOnlyProject") }, { status: 403 });
   }
 
   const { data, error } = await service

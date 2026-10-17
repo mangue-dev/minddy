@@ -11,6 +11,7 @@ import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
 import type { SmartTriageMode } from "./smart-triage";
 import type { CommentVisibility } from "./feedback/types";
+import type { MemberRole, ProjectRole } from "./project-roles";
 
 export interface Objective {
   id: string;
@@ -555,6 +556,11 @@ export interface Project {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  /** The viewer's role in this project (MIN-693), set by project list and
+      bootstrap reads. Absent on rows that did not come from such a read. */
+  my_role?: ProjectRole;
+  /** The viewer may comment (always true for owner and members). */
+  my_can_comment?: boolean;
 }
 
 export interface CreateProjectInput {
@@ -596,7 +602,9 @@ export interface Member {
   full_name: string | null;
   /** Seed of the generated avatar (public.user_avatars), never an image URL. */
   avatar_seed: string;
-  role: "owner" | "member";
+  role: ProjectRole;
+  /** Reader-only: allowed to comment (always false for owner and members). */
+  can_comment: boolean;
   is_owner: boolean;
 }
 
@@ -870,12 +878,19 @@ export interface Invitation {
   invited_email: string;
   status: string;
   created_at: string;
+  /** Role granted on acceptance (MIN-693). */
+  role: MemberRole;
+  /** Reader-only comment option granted on acceptance. */
+  can_comment: boolean;
 }
 
 export interface MembersResponse {
   members: Member[];
   invitations: Invitation[];
   isOwner: boolean;
+  /** The viewer's own role and comment capability in this project. */
+  myRole: ProjectRole;
+  canComment: boolean;
 }
 
 /**

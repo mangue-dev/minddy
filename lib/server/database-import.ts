@@ -70,7 +70,7 @@ export async function importDatabase(args: {
   const prepared = readDatabaseArchive(args.bytes, args.filename);
   const source = prepared.sources.find((source) => source.id === args.sourceId);
   if (!source) throw new Error("importNoDatabase");
-  const context = await loadImportContext(projectId, actorId);
+  const context = await loadImportContext(projectId, actorId, { assignableOnly: false });
   const memberIds = new Set(context.members.map((member) => member.userId));
   const aliases = new Map<string, string>();
   const ambiguous = new Set<string>();

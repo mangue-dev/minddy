@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus",
+    "version": "0.11.1 candidate (MIN-677); MIN-721 removal of code delegation in routines; MIN-685 sidebar context menus; MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,13 +40,16 @@
       "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "components/routines/routines-panel.tsx",
       "components/routines/use-routine-actions.tsx",
-      "content/documentation/reviews/min-685-sidebar-context-actions.md"
+      "content/documentation/reviews/min-685-sidebar-context-actions.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; fr translation of removal edits; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 8; fr translation of added passages; no operational rerun)",
-    "language": "agent:/root (fr translation, label and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "revision": 9,
+    "fact": "agent:/root (MIN-677 source review and single-group editor keyboard/mobile follow-up; unchanged procedures retain prior evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 7; fr translation of removal edits; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 8; fr translation of added passages; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (fr translation, label and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root (fr translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [],
@@ -61,7 +64,7 @@
       "src": "/documentation/fr/scheduled-routines-workflow.png",
       "alt": "Modes « Programmé » et « Événement », un seul groupe de conditions, icônes de l’application et boutons d’information discrets.",
       "caption": "Démonstration locale du véritable éditeur de déclencheurs. Aucune routine n’a été enregistrée ou exécutée.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -86,7 +89,7 @@ Seul le propriétaire du projet peut créer, modifier ou activer une routine. Ou
 Choisissez **Programmé** ou **Événement**. L’arrivée dans une base est un choix de la liste des événements.
 
 - **Programmé :** choisissez une fréquence quotidienne, hebdomadaire ou mensuelle, une heure et votre fuseau. Vérifiez l’aperçu de la première exécution.
-- **Événement :** choisissez la création d’un ticket, son entrée dans un statut cible, une affectation, un commentaire sur un ticket suivi, la réception d’un retour ou une nouvelle entrée dans une base. Sélectionnez le statut, la personne ou le ticket demandé. Le déclencheur de statut inclut les tickets créés directement dans ce statut. Une affectation exige un changement réel de personne assignée.
+- **Événement :** choisissez la création d’un ticket, son entrée dans un statut cible, une affectation, un commentaire sur un ticket suivi, la réception d’un retour ou une nouvelle entrée dans une base. Sélectionnez le statut, la personne ou le ticket demandé. Le déclencheur de statut inclut les tickets créés directement dans ce statut. Une affectation exige un changement réel de personne assignée. Un commentaire écrit par un lecteur ne déclenche pas de routine de commentaire.
 
 Pour une arrivée dans une base, choisissez **Nouvelle entrée de base de données** dans la liste des événements, puis une base de pages de ce projet. Une création, duplication, import de base ou déplacement vers cette base compte comme une arrivée. Restaurer une entrée ne crée pas une nouvelle arrivée.
 
@@ -110,7 +113,7 @@ Ouvrez la routine pour consulter ses attentes, modifier ses instructions ou son 
 
 Faites un clic droit sur une routine de la liste pour ouvrir sa dernière exécution sans la sélectionner d’abord ; **Ouvrir la dernière exécution** reste indisponible si la routine n’a jamais été exécutée. Le propriétaire du projet peut aussi choisir **Lancer maintenant**, **Mettre en pause** ou **Réactiver**, **Modifier** ou **Déplacer vers la corbeille** depuis le même menu. **Réactiver** est indisponible lorsque l’instance ne peut pas planifier de routines. Les autres membres ne voient que les entrées qui ne modifient pas la routine. Pour créer une routine, faites un clic droit sur **Routines** dans la barre latérale et choisissez **Nouvelle routine**.
 
-Chaque occurrence utilise le budget IA du propriétaire, avec un plafond par défaut de 15 % du budget mensuel, qui inclut chaque appel à Numo de cette occurrence. Ouvrez sa conversation pour lire la source, le résultat et les questions. Si Numo demande votre avis, répondez dans cette conversation ; le budget restant de l’occurrence est conservé. Consultez les résultats enregistrés avant de modifier un plafond ou de réessayer. Après un changement de propriétaire, la routine de l’ancien propriétaire ne peut plus démarrer de travail ; créez-en une avec le compte du propriétaire actuel.
+Chaque occurrence utilise le budget IA du propriétaire, avec un plafond par défaut de 15 % du budget mensuel, qui inclut chaque appel à Numo de cette occurrence. Ouvrez sa conversation pour lire la source, le résultat et les questions. Si Numo demande votre avis, répondez dans cette conversation ; le budget restant de l’occurrence est conservé. Consultez les résultats enregistrés avant de modifier un plafond ou de réessayer. Lorsque la propriété est [transférée](/docs/projects#transfer-ownership), les routines de l’ancien propriétaire dans le projet sont mises en pause et ne peuvent plus démarrer de travail ; le nouveau propriétaire crée les routines qui doivent continuer.
 
 Les anciennes automatisations du projet apparaissent comme propositions en pause lorsque leur propriétaire ouvre Routines. Lisez le [guide de transition](/docs/automation-settings) avant de les activer.
 

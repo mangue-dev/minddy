@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { hasProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeProjectName } from "@/lib/server/project-content";
 import {
@@ -434,14 +435,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
+  // A dictated draft only feeds a creation or edit form, which readers cannot
+  // submit: refuse before spending on the model (MIN-693).
+  if (!(await hasProjectAccess(auth.user.id, projectId))?.canWrite) {
+    const errors = await getTranslations("ApiErrors");
+    return NextResponse.json({ error: errors("readOnlyProject") }, { status: 403 });
+  }
   project.name = await decodeProjectName(project, auth.user.id);
 
   const service = getServiceClient();
-  const [ctx, aiRuntime, locale] = await Promise.all([
+  const [promptContext, aiRuntime, locale, { data: readerRows }] = await Promise.all([
     gatherProjectPromptContext({ supabase: auth.supabase, service, project }),
     resolveAiRuntime({ userId: auth.user.id, modelKey: "dictate_model", surface: "voice" }),
     getLocale(),
+    service.from("project_members").select("user_id")
+      .eq("project_id", projectId).eq("role", "reader"),
   ]);
+  // Members here are assignee candidates only: readers are never assignable
+  // (MIN-693), so neither the prompt nor the whitelist offers them.
+  const readerIds = new Set((readerRows ?? []).map((row) => row.user_id as string));
+  const ctx = {
+    ...promptContext,
+    members: promptContext.members.filter((m) => !readerIds.has(m.user_id)),
+  };
   // `let`: The routing shortcut fallback (MIN-263) sticks to the template that has
   // market, so as not to re-attempt the suffix each round.
   let model = aiRuntime.model;

@@ -29,6 +29,7 @@ interface TriageIssueRow extends TriageIssue {
 
 export type SmartTriageResult =
   | { ok: false; status: 404; errorKey: "projectNotFound" }
+  | { ok: false; status: 403; errorKey: "readOnlyProject" }
   | {
       ok: true;
       mode: SmartTriageMode;
@@ -57,6 +58,10 @@ export async function runSmartTriage({
   const service = getServiceClient();
   const access = await getProjectAccess(actorId, projectId);
   if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  // Computing an order is a read; writing it into the positions is a write.
+  if (persist && !access.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
+  }
 
   const { data: project } = await service
     .from("projects")

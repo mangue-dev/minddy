@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -94,14 +94,17 @@
       "components/image-viewer.tsx",
       "lib/issue-prompt.ts",
       "lib/server/issue-prompt-context.ts",
-      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md"
+      "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review: Numo implementation and verification actions removed; copy-prompt submenu and auto-start preference verified; bulk-actions screenshot removed because it showed the retired Implement with Numo action; no operational rerun)",
-    "language": "agent:/root (en new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 13,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review: Numo implementation and verification actions removed; copy-prompt submenu and auto-start preference verified; bulk-actions screenshot removed because it showed the retired Implement with Numo action; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (en new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_docs (en removal edits; agent review, not human acceptance); agent:/root (en MIN-693 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "feedback",
@@ -146,7 +149,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft with a localized title and description and manually available properties.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -162,7 +165,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue DOC-11 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -178,7 +181,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -194,7 +197,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -210,7 +213,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "Search for a blocker by issue identifier.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -226,7 +229,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -242,7 +245,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -258,7 +261,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -274,7 +277,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -291,7 +294,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Remove.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -324,11 +327,11 @@ An issue tracks a piece of work within a project, from its initial report to com
 
 The saved-draft delete control opens a confirmation. Cancel keeps the draft; confirming removes that saved draft. The same confirmation is available when creating an objective.
 
-You need membership in the destination project. Open the project and its new-issue control. Enter a title that names the work, then add the context, expected result and constraints in the description. Choose the project deliberately when creating from a personal or cross-project view.
+You need to be the owner or a Member of the destination project; readers can open issues but not create or edit them. Open the project and its new-issue control. Enter a title that names the work, then add the context, expected result and constraints in the description. Choose the project deliberately when creating from a personal or cross-project view.
 
 For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category and objective controls for you to set. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines.
 
-Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is a project member; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority ranges from none through low, medium and high to urgent; effort uses XS, S, M, L and XL.
+Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is the project owner or a Member, never a reader; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority ranges from none through low, medium and high to urgent; effort uses XS, S, M, L and XL.
 
 Confirm creation and open the new issue. Check its identifier and project. Reopen its property pickers to change values as the task becomes clearer. The description explains the work; an implementation plan is maintained separately in the Plan tab.
 
@@ -395,7 +398,7 @@ Check filters if an issue disappears after closing it. Reopen the issue by ident
 
 ## Discuss work and attach its context {#issue-discussion-and-resources}
 
-Open the issue's discussion timeline to add a comment. Explain a decision, question or verification result so another member can understand what changed. Use mentions when you need a person or linked object in context; notifications still depend on the recipient's preferences and device delivery.
+Open the issue's discussion timeline to add a comment. Explain a decision, question or verification result so another member can understand what changed. Use mentions when you need a person or linked object in context; notifications still depend on the recipient's preferences and device delivery. A reader can comment only when the owner turned on **Can comment** for them. They can then reply, mention people, attach files to their own comments, and edit or delete their own comments.
 
 Attach a relevant project page, file or link through the resources controls. A linked page is a live resource: its title follows page renaming and its content can evolve. A file is a stored attachment rather than a guarantee that an external URL remains available.
 

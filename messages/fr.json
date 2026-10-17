@@ -298,7 +298,15 @@
     "pageDatabaseStale": "Cette colonne a changé depuis son ouverture. Vérifiez sa valeur actuelle et réessayez.",
     "pageDatabaseMove": "Cette page ne peut pas être déplacée dans une autre base avec les valeurs actuelles de ses colonnes.",
     "pageDatabaseRestoreParent": "Restaurez la base parente avant de restaurer cette entrée.",
-    "projectAutomationsRetired": "Les automatisations de projet ont été remplacées par les routines."
+    "projectAutomationsRetired": "Les automatisations de projet ont été remplacées par les routines.",
+    "readOnlyProject": "Vous pouvez seulement consulter ce projet.",
+    "commentNotAllowed": "Vous ne pouvez pas commenter dans ce projet.",
+    "invalidRole": "Ce rôle n’est pas valide.",
+    "memberNotFound": "Cette personne ne fait plus partie du projet.",
+    "cannotChangeOwner": "Le rôle du propriétaire ne change que par un transfert de propriété.",
+    "transferTargetNotMember": "La propriété ne peut être transférée qu’à un membre, pas à un lecteur.",
+    "transferKeyConflict": "Le nouveau propriétaire a déjà un projet avec cette clé. Changez d’abord la clé.",
+    "transferStorageQuota": "Le stockage du nouveau propriétaire ne peut pas contenir les fichiers de ce projet."
   },
   "RelayClaim": {
     "title": "Connecter GitHub",
@@ -1568,7 +1576,8 @@
     "githubMilestone": "Jalon",
     "githubRawMetadata": "Afficher toutes les métadonnées GitHub conservées",
     "githubYes": "Oui",
-    "githubNo": "Non"
+    "githubNo": "Non",
+    "descriptionEmptyReadOnly": "Aucune description."
   },
   "Language": {
     "title": "Langue",
@@ -1585,13 +1594,37 @@
     "membersLabel": "Membres",
     "owner": "Propriétaire",
     "remove": "Retirer",
+    "removeFromProject": "Retirer du projet",
     "removeMemberTitle": "Retirer {name} du projet ?",
     "removeMemberDescription": "Cette personne perdra l'accès au projet et à ses tickets. Vous pourrez l'inviter à nouveau plus tard.",
     "invitationSent": "Invitation envoyée à {email}.",
     "pendingInvitations": "Invitations en attente",
     "pendingInvitationsHint": "Une invitation attend 30 jours. Si la personne n'a pas encore de compte minddy, elle la retrouvera en s'inscrivant avec cette adresse.",
     "pending": "En attente",
-    "cancelInvitationAria": "Annuler l'invitation"
+    "cancelInvitationAria": "Annuler l'invitation",
+    "roleMember": "Membre",
+    "roleReader": "Lecteur",
+    "roleReaderCanComment": "Lecteur · peut commenter",
+    "canComment": "Peut commenter",
+    "canCommentHint": "Commentaires sur les tickets, objectifs, retours et pages. Tout le reste reste en lecture seule.",
+    "rolesHint": "Les membres travaillent sur tout ; les lecteurs peuvent seulement lire.",
+    "inviteRoleAria": "Rôle donné par l'invitation",
+    "memberRoleAria": "Rôle de {name}",
+    "invitationRoleAria": "Rôle pour {email}",
+    "manageMemberAria": "Gérer {name}",
+    "transferOwnership": "Transférer la propriété du projet",
+    "demoteTitle": "Passer {name} en lecteur ?",
+    "demoteDescription": "Cette personne garde l'accès en lecture. Ses tickets ouverts sont désassignés et elle ne pilote plus d'objectif.",
+    "demoteConfirm": "Passer en lecteur",
+    "transferTitle": "Transférer la propriété à {name} ?",
+    "transferDescription": "Seul le nouveau propriétaire pourra vous la rendre.",
+    "transferBecomeMember": "Vous devenez membre de ce projet.",
+    "transferRoutinesPaused": "Vos routines dans ce projet sont mises en pause.",
+    "transferPlanFollows": "Les limites du plan et le stockage des fichiers suivent le plan du nouveau propriétaire.",
+    "transferPersonalStays": "Votre abonnement, vos moyens de paiement et vos clés API personnelles restent les vôtres.",
+    "transferConfirm": "Transférer la propriété",
+    "transferDone": "{name} est désormais propriétaire du projet.",
+    "transferRoutinesPausedCount": "{count, plural, one {# routine mise en pause.} other {# routines mises en pause.}}"
   },
   "Meta": {
     "description": "Un espace open source pour gérer vos projets, suivre vos tâches et travailler avec Numo et vos outils IA connectés.",
@@ -6345,5 +6378,9 @@
     "articleLabel": "Article",
     "localeLabel": "Langue",
     "revisionLabel": "Révision"
+  },
+  "ProjectAccess": {
+    "readOnlyToast": "Vous pouvez seulement lire ce projet.",
+    "sharedViewReadOnly": "Seuls les membres peuvent modifier les vues partagées. Enregistrez plutôt votre propre vue."
   }
 }

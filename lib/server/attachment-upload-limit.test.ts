@@ -35,7 +35,7 @@ function request(size: number) {
 beforeEach(() => {
   vi.clearAllMocks();
   getAuthedUser.mockResolvedValue({ ok: true, user: { id: project } });
-  getProjectAccess.mockResolvedValue({ role: "member" });
+  getProjectAccess.mockResolvedValue({ role: "member", canWrite: true, canComment: true });
   projectStorageAllowed.mockResolvedValue(true);
   uploadPrivateAttachmentObject.mockResolvedValue(undefined);
 });

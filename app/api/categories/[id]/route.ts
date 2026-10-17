@@ -40,8 +40,12 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { data: category, error: lookupError } = await auth.supabase.from("categories")
     .select("id, project_id").eq("id", id).maybeSingle();
   if (lookupError) return NextResponse.json({ error: t("databaseError") }, { status: 500 });
-  if (!category || !await getProjectAccess(auth.user.id, category.project_id)) {
+  const access = category ? await getProjectAccess(auth.user.id, category.project_id) : null;
+  if (!category || !access) {
     return NextResponse.json({ error: t("categoryNotFound") }, { status: 404 });
+  }
+  if (!access.canWrite) {
+    return NextResponse.json({ error: t("readOnlyProject") }, { status: 403 });
   }
   const { data, error } = await getServiceClient().rpc("delete_category_guarded", {
     p_id: id, p_project_id: category.project_id, p_actor_id: auth.user.id,

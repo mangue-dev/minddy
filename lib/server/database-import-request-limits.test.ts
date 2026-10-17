@@ -78,7 +78,7 @@ function streamRequest(
 beforeEach(() => {
   vi.clearAllMocks();
   H.getAuthedUser.mockResolvedValue({ ok: true, user: { id: "user-1" } });
-  H.getProjectAccess.mockResolvedValue({ role: "owner" });
+  H.getProjectAccess.mockResolvedValue({ role: "owner", isOwner: true, canWrite: true, canComment: true });
   H.rateLimitRefusal.mockReturnValue(null);
   H.importDatabase.mockResolvedValue({ imported: 1 });
   H.hasUsageBudget.mockResolvedValue(true);

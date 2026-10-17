@@ -1,9 +1,10 @@
 import "server-only";
+import { commentStore } from "@/lib/server/comment-store";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRoutine } from "@/lib/server/routine-content";
 import { decodeIssue } from "@/lib/server/issue-store";
 import { decodePage } from "@/lib/server/page-content";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { getProjectAccess, hasProjectAccess } from "@/lib/server/project-access";
 import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
 import { assertPropertyConditions, evaluateRoutineConditions, parseRoutineTrigger, RoutineTriggerError, type ConditionContext, type RoutineTrigger } from "@/lib/routine-triggers";
 import type { Routine } from "@/lib/server/routines";
@@ -36,6 +37,22 @@ export function eventCancelsArming(trigger: RoutineTrigger, event: RoutineEventR
   if (trigger.type === "event" && trigger.event === "issue.status_changed") return event.event === "issue.status_changed" && event.after_state.status !== trigger.status;
   if (trigger.type === "event" && trigger.event === "issue.assigned") return ["issue.updated", "issue.status_changed", "issue.assigned"].includes(event.event) && Object.hasOwn(event.before_state, "assignee") && event.before_state.assignee !== event.after_state.assignee;
   return false;
+}
+
+/**
+ * A comment whose author is CURRENTLY a reader of the project does not arm
+ * comment-triggered routines (MIN-693): a reader must not start owner-billed,
+ * owner-authority work. Numo's reply to a reader's mention is written as the
+ * reader's comment, so it is covered the same way. Members' and owners'
+ * comments behave as before; a removed author is not a reader.
+ */
+async function commentByReader(projectId: string, event: Pick<RoutineEventRow, "event" | "source_id">): Promise<boolean> {
+  if (event.event !== "issue.comment_added" || !event.source_id) return false;
+  const result = await commentStore(getServiceClient()).select("author_id").eq("id", event.source_id).maybeSingle();
+  check(result.error);
+  const authorId = result.data?.author_id;
+  if (typeof authorId !== "string") return false;
+  return (await hasProjectAccess(authorId, projectId))?.role === "reader";
 }
 
 async function subjectContext(routine: Routine, arming: Arming, trigger: RoutineTrigger): Promise<ConditionContext | null> {
@@ -77,6 +94,12 @@ async function evaluateArming(arming: Arming, routine: Routine, budget: Admissio
   const access = await getProjectAccess(routine.owner_id, routine.project_id);
   if (!access?.isOwner || !routine.enabled || arming.revision !== routine.trigger_revision) { await update({ state: "cancelled" }); return; }
   const trigger = parseRoutineTrigger(routine.trigger);
+  // Re-checked at evaluation, so a delayed arming follows the author's role now.
+  if (trigger.type === "event" && trigger.event === "issue.comment_added") {
+    const sourceResult = event?.id === arming.event_id ? { data: event, error: null } : await service.from("routine_events").select("event, source_id").eq("id", arming.event_id).maybeSingle();
+    check(sourceResult.error);
+    if (sourceResult.data && await commentByReader(routine.project_id, sourceResult.data)) { await update({ state: "cancelled" }); return; }
+  }
   if (event?.cause_routine_id === routine.id || event?.cause_routine_ids?.includes(routine.id)) return;
   if (event && event.id !== arming.event_id && eventCancelsArming(trigger, event)) { await update({ state: "cancelled" }); return; }
   // Continue processing cancellation events after the admission allowance is
@@ -132,10 +155,11 @@ async function processEvent(event: RoutineEventRow, budget: AdmissionBudget) {
   const service = getServiceClient();
   const result = await service.from("agent_routines").select("*").eq("project_id", event.project_id).eq("enabled", true).is("deleted_at", null).neq("trigger_type", "schedule");
   check(result.error);
+  const readerComment = (result.data?.length ?? 0) > 0 && await commentByReader(event.project_id, event);
   for (const row of result.data ?? []) {
     const routine = await decodeRoutine(row, row.owner_id) as unknown as Routine;
     const trigger = parseRoutineTrigger(routine.trigger);
-    if (eventMatchesTrigger(trigger, event) && event.cause_routine_id !== routine.id && !event.cause_routine_ids?.includes(routine.id) && (event.cause_routine_ids?.length ?? 0) < 8) {
+    if (!readerComment && eventMatchesTrigger(trigger, event) && event.cause_routine_id !== routine.id && !event.cause_routine_ids?.includes(routine.id) && (event.cause_routine_ids?.length ?? 0) < 8) {
       const armed = await service.rpc("arm_routine_event", { p_routine_id: routine.id, p_revision: routine.trigger_revision, p_event_id: event.id, p_delay_minutes: trigger.type === "schedule" ? 0 : trigger.delayMinutes ?? 0 });
       check(armed.error);
     }

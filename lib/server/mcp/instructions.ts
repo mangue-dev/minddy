@@ -26,6 +26,9 @@ export const MCP_FULL_USAGE_GUIDE =
       "minddy_create_objective / minddy_update_objective write it, and " +
       "minddy_add_objective_comment posts on the goal itself (a note about one " +
       "ticket goes on that ticket, with minddy_add_comment). " +
+      "Your ROLE differs per project (minddy_list_projects returns it): an owner " +
+      "or member uses every tool; a reader is read-only, may comment only when the " +
+      "owner allowed it, and receives 'forbidden' from any other write. " +
       "Issue identifiers read '<PROJECT KEY>-<number>' (e.g. MIND-42): " +
       "tools accept them wherever an 'issue' parameter appears. Statuses: triage, " +
       "backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities: " +

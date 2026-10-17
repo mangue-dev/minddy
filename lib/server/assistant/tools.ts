@@ -2472,7 +2472,7 @@ const LIST_PROJECTS_TOOL: AssistantToolDef = {
   function: {
     name: "list_projects",
     description:
-      "List all projects the user has access to, with their id, name, key, and role (owner or member). Use this to resolve a project named by the user when its ID is not already attached to the message.",
+      "List all projects the user has access to, with their id, name, key, and role (owner, member, or reader; a reader's project is read-only for them). Use this to resolve a project named by the user when its ID is not already attached to the message.",
     parameters: { type: "object", properties: {} },
   },
 };

@@ -6,7 +6,9 @@ const { getProjectAccess, createIssueForProject } = vi.hoisted(() => ({
   getProjectAccess: vi.fn(),
   createIssueForProject: vi.fn(),
 }));
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess }));
+vi.mock("@/lib/server/project-access", async (original) => ({
+  ...await original<typeof import("@/lib/server/project-access")>(), getProjectAccess,
+}));
 vi.mock("@/lib/server/create-issue", () => ({ createIssueForProject }));
 
 const USER_ID = "51600000-0000-4000-8000-000000000001";
@@ -50,7 +52,7 @@ function context(client: SupabaseClient = service()): ToolContext {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getProjectAccess.mockResolvedValue({ project: PROJECT_ROW });
+  getProjectAccess.mockResolvedValue({ project: PROJECT_ROW, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
   createIssueForProject.mockResolvedValue({
     ok: true,
     issue: { id: PROJECT_ID, number: 1 },

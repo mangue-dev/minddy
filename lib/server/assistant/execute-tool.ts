@@ -21,9 +21,17 @@ import { resolveApplicationLocale } from "@/lib/locale-language";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  accessAllows,
   getProjectAccess,
+  writableProjectIds,
   type ProjectAccess,
 } from "@/lib/server/project-access";
+import { resolveProjectRole } from "@/lib/project-roles";
+import {
+  COMMENT_NOT_ALLOWED_MESSAGE,
+  READ_ONLY_PROJECT_MESSAGE,
+  numoToolCapability,
+} from "./tool-capabilities";
 import { createIssueForProject } from "@/lib/server/create-issue";
 import {
   MAX_DESCRIPTION_LENGTH,
@@ -307,11 +315,35 @@ function toolError(message: string): ToolExecution {
 }
 
 /** Map a lib/server/* failure into a readable tool error. */
+/** Role refusals from the shared cores (MIN-693), in words Numo can relay. */
+const ROLE_ERROR_MESSAGES: Record<string, string> = {
+  readOnlyProject: READ_ONLY_PROJECT_MESSAGE,
+  commentNotAllowed: COMMENT_NOT_ALLOWED_MESSAGE,
+};
+
 function libError(r: {
   errorKey?: string;
   rawMessage?: string;
 }): ToolExecution {
-  return toolError(r.rawMessage ?? r.errorKey ?? "Request failed");
+  return toolError(
+    r.rawMessage ??
+      (r.errorKey ? ROLE_ERROR_MESSAGES[r.errorKey] ?? r.errorKey : undefined) ??
+      "Request failed",
+  );
+}
+
+/** The refusal for a tool whose capability the user lacks in the project. */
+function capabilityDenied(toolName: string, capability: string): ToolExecution {
+  if (capability === "comment") return toolError(COMMENT_NOT_ALLOWED_MESSAGE);
+  if (capability === "write") return toolError(READ_ONLY_PROJECT_MESSAGE);
+  if (toolName === "create_routine" || toolName === "update_routine") {
+    return toolError(routineErrorMessage({ errorKey: "ownerOnly" }));
+  }
+  if (toolName === "invite_member") return settingsError("ownerOnlyInvite");
+  if (toolName === "propose_backlog") {
+    return toolError("Only the project owner can seed the backlog of this project.");
+  }
+  return settingsError("ownerOnly");
 }
 
 /** Refusal to attach a PR, told to Numo so that he relays them as they are
@@ -578,7 +610,13 @@ async function listViews(
 
 /** Service-safe projection of projects the current actor can still access. */
 async function accessibleProjects(ctx: ToolContext): Promise<{
-  projects: Array<{ id: string; name: string; key: string; owner_id: string }>;
+  projects: Array<{
+    id: string;
+    name: string;
+    key: string;
+    owner_id: string;
+    role: ReturnType<typeof resolveProjectRole>;
+  }>;
   error: string | null;
 }> {
   const [{ data: owned, error: ownedError }, { data: memberships, error: membershipError }] =
@@ -590,7 +628,7 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
         .is("deleted_at", null),
       ctx.service
         .from("project_members")
-        .select("project_id")
+        .select("project_id, role")
         .eq("user_id", ctx.userId),
     ]);
   if (ownedError || membershipError) {
@@ -601,6 +639,10 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
     ...((memberships ?? []) as Array<{ project_id: string }>).map((membership) => membership.project_id),
   ]);
   if (ids.size === 0) return { projects: [], error: null };
+  const memberRoles = new Map(
+    ((memberships ?? []) as Array<{ project_id: string; role: unknown }>)
+      .map((membership) => [membership.project_id, membership.role]),
+  );
   const { data: projects, error } = await ctx.service
     .from("projects")
     .select("id, name, key, owner_id, encrypted_content, encryption_version")
@@ -611,6 +653,7 @@ async function accessibleProjects(ctx: ToolContext): Promise<{
     projects: await Promise.all((projects ?? []).map(async (project) => ({
       id: project.id, name: await decodeProjectName(project, ctx.userId),
       key: project.key, owner_id: project.owner_id,
+      role: resolveProjectRole(ctx.userId, project.owner_id, memberRoles.get(project.id)),
     }))),
     error: error?.message ?? null,
   };
@@ -751,7 +794,7 @@ export async function executeTool(
             id: project.id,
             name: project.name,
             key: project.key,
-            role: project.owner_id === ctx.userId ? "owner" : "member",
+            role: project.role,
           })),
         },
         success: true,
@@ -791,8 +834,21 @@ export async function executeTool(
       const projectId = resolveAssistantProjectId(
         ctx.requireExplicitProjectTarget ? null : ctx.projectId, args.project_id,
       );
-      if (projectId && !(await getProjectAccess(ctx.userId, projectId))) {
+      const viewAccess = projectId
+        ? await getProjectAccess(ctx.userId, projectId)
+        : null;
+      if (projectId && !viewAccess) {
         return toolError("Project not found or not accessible.");
+      }
+      // A personal view is the user's own bookkeeping; a shared view changes
+      // the project (MIN-693). The view core enforces the same rule on update.
+      if (
+        toolName === "create_view" &&
+        viewAccess &&
+        !viewAccess.canWrite &&
+        args.personal !== true
+      ) {
+        return toolError(READ_ONLY_PROJECT_MESSAGE);
       }
       return executeViewTool(toolName, args, ctx, projectId);
     }
@@ -917,6 +973,16 @@ export async function executeTool(
       return toolError(
         "Project not found or not accessible. Pass the project's id (resolve it with list_projects) or its exact key or name.",
       );
+    }
+    // One capability gate for every project tool (MIN-693): the live role
+    // decides, so a role change applies to the next tool call.
+    const capability = numoToolCapability(toolName);
+    const required =
+      capability === "personal" || capability === "personal_write"
+        ? "admin"
+        : capability;
+    if (!accessAllows(access, required)) {
+      return capabilityDenied(toolName, required);
     }
 
     switch (toolName) {
@@ -2188,8 +2254,14 @@ export async function executeTool(
       // posts on it — what Numo needs to hand the user a working "Feedback"
       // button for their own app. Absolute URLs: the code goes elsewhere.
       case "get_feedback_board": {
+        const board = await getFeedbackBoardConfig(projectId, SITE_URL);
+        // The board token is a capability link readers do not receive.
         return {
-          result: { board: await getFeedbackBoardConfig(projectId, SITE_URL) },
+          result: {
+            board: access.canWrite
+              ? board
+              : { ...board, token: null, public_url: null },
+          },
           success: true,
         };
       }
@@ -2737,6 +2809,7 @@ const TRASH_ERROR_MESSAGES: Record<string, string> = {
   projectNotFound: "Project not found, or not accessible.",
   ownerOnly:
     "Only the project's owner can trash or restore a project or a routine.",
+  readOnlyProject: READ_ONLY_PROJECT_MESSAGE,
   projectKeyAlreadyUsed:
     "Its key is now used by another project — restoring it would collide. Rename that other project's key first.",
   databaseError: "A database error occurred.",
@@ -2804,6 +2877,35 @@ async function executeTrashTool(
   };
 }
 
+/**
+ * Splits cycle-move targets by whether the user may still write in each
+ * issue's project (MIN-693): planning a cycle edits the issue, which a reader
+ * cannot do. Unknown ids stay in `allowed`, so the core reports them as before.
+ */
+async function splitWritableIssues(
+  ctx: ToolContext,
+  issueIds: string[],
+): Promise<{ allowed: string[]; denied: string[] }> {
+  const { data } = await issueStore(ctx.service).select("id, project_id")
+    .in("id", issueIds);
+  const projectByIssue = new Map(
+    ((data ?? []) as Array<{ id: string; project_id: string }>)
+      .map((row) => [row.id, row.project_id]),
+  );
+  const writable = await writableProjectIds(
+    ctx.userId,
+    [...new Set(projectByIssue.values())],
+  );
+  const allowed: string[] = [];
+  const denied: string[] = [];
+  for (const id of issueIds) {
+    const projectId = projectByIssue.get(id);
+    if (projectId && !writable.has(projectId)) denied.push(id);
+    else allowed.push(id);
+  }
+  return { allowed, denied };
+}
+
 async function executeCycleTool(
   toolName: string,
   args: Record<string, unknown>,
@@ -2869,8 +2971,10 @@ async function executeCycleTool(
   }
 
   if (toolName === "move_issues") {
-    const ids = parseIssueIds(args);
-    if (!ids) return toolError("issue_ids must be 1–50 issue ids.");
+    const requested = parseIssueIds(args);
+    if (!requested) return toolError("issue_ids must be 1–50 issue ids.");
+    const { allowed: ids, denied } = await splitWritableIssues(ctx, requested);
+    if (ids.length === 0) return toolError(READ_ONLY_PROJECT_MESSAGE);
     const targetCycle =
       args.target_cycle === "current" || args.target_cycle === "next"
         ? args.target_cycle
@@ -2895,7 +2999,14 @@ async function executeCycleTool(
         moved: result.moved_ids.length,
         moved_ids: result.moved_ids,
         unchanged_ids: result.unchanged_ids,
-        failed: result.failed,
+        failed: [
+          ...result.failed,
+          ...denied.map((issue_id) => ({
+            issue_id,
+            code: "readOnlyProject",
+            error: READ_ONLY_PROJECT_MESSAGE,
+          })),
+        ],
         source_cycle: toCycleInfo(result.source),
         target_cycle: toCycleInfo(result.target),
         status_changed: false,
@@ -2915,8 +3026,12 @@ async function executeCycleTool(
     if (!ids) return toolError("issue_ids must be 1–50 issue ids.");
     const removing = toolName === "remove_issues_from_cycle";
     const done: string[] = [];
-    const failed: { id: string; error: string }[] = [];
-    for (const issueId of ids) {
+    const { allowed, denied } = await splitWritableIssues(ctx, ids);
+    const failed: { id: string; error: string }[] = denied.map((id) => ({
+      id,
+      error: READ_ONLY_PROJECT_MESSAGE,
+    }));
+    for (const issueId of allowed) {
       if (removing) {
         // Only pull issues out of the user's OWN current cycle — never someone
         // else's (project access alone would otherwise allow it).

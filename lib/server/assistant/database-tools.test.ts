@@ -16,7 +16,9 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
 vi.mock("@/lib/server/agent/repo-access", () => ({
   resolveRepoCloneTarget: h.resolveRepo,
 }));
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: h.access }));
+vi.mock("@/lib/server/project-access", async (original) => ({
+  ...await original<typeof import("@/lib/server/project-access")>(), getProjectAccess: h.access,
+}));
 vi.mock("@/lib/server/page-tools", () => ({
   readPageForAgent: h.read,
   updateDatabaseForAgent: h.update,
@@ -31,7 +33,7 @@ const ctx = {
 } as ToolContext;
 beforeEach(() => {
   vi.clearAllMocks();
-  h.access.mockResolvedValue({ project: { id: "project" } });
+  h.access.mockResolvedValue({ project: { id: "project" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
   h.update.mockResolvedValue({
     ok: true,
     data: { page_id: "entry", property_values: { amount: -12.5 } },
@@ -180,7 +182,7 @@ describe("conversation action targets", () => {
     expect(h.update).toHaveBeenCalledTimes(1);
   });
   it("keeps owner-only operations gated for an explicitly targeted member project", async () => {
-    h.access.mockResolvedValue({ project: { id: "a" }, isOwner: false });
+    h.access.mockResolvedValue({ project: { id: "a" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
     expect(await executeTool("propose_backlog", { project_id: "a" }, conversation))
       .toMatchObject({ success: false, result: { error: "Only the project owner can seed the backlog of this project." } });
   });

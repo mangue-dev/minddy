@@ -2,7 +2,7 @@ import { categoryStore } from "@/lib/server/category-store";
 import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodePage } from "@/lib/server/page-content";
-import { issueInProject, userInProject } from "@/lib/server/tenancy";
+import { issueInProject, userCanBeAssigned } from "@/lib/server/tenancy";
 import { assertPropertyConditions, conditionLeaves, parseRoutineTrigger, RoutineTriggerError, type RoutineTrigger } from "@/lib/routine-triggers";
 
 /** Every creation door and schema reevaluation uses the same scoped references. */
@@ -29,7 +29,7 @@ export async function validateRoutineTrigger(value: unknown, projectId: string, 
     const target = leaf.field === "assignee" ? people : leaf.field === "category" ? categories : null;
     if (target) for (const id of Array.isArray(leaf.value) ? leaf.value : typeof leaf.value === "string" ? [leaf.value] : []) target.add(id);
   }
-  for (const id of people) if (!await userInProject(service, id, projectId)) invalid();
+  for (const id of people) if (!await userCanBeAssigned(service, id, projectId)) invalid();
   for (const id of categories) {
     const { data } = await categoryStore(service, actorId).select("id").eq("id", id).eq("project_id", projectId);
     if (!data?.length) invalid();

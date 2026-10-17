@@ -3,7 +3,7 @@
   "id": "projects",
   "locale": "es",
   "title": "Proyectos y miembros",
-  "summary": "Configura un proyecto, invita a colaboradores y gestiona los miembros con los permisos necesarios.",
+  "summary": "Configura un proyecto, invita a colaboradores, elige sus roles y transfiere la propiedad.",
   "topic": "Primeros pasos",
   "type": "guide",
   "audiences": [
@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 8,
+  "revision": 10,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -48,13 +48,16 @@
       "components/settings/account-hidden-projects-section.tsx",
       "lib/use-hidden-projects.ts",
       "lib/server/hidden-projects.ts",
-      "content/documentation/reviews/min-692-hidden-projects.md"
+      "content/documentation/reviews/min-692-hidden-projects.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance)",
+    "revision": 10,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-685 sidebar context menu source review inherited from en revision 7; es translation of added passages; no operational rerun); agent:/root (MIN-692 hidden-project source, route and unit-test review; no browser walkthrough; unchanged evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (es translation of MIN-685 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-692 added passages, label and retained-meaning self-review; agent review, not human acceptance); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -79,7 +82,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Configuración general del proyecto con nombre, clave, icono y una acción separada para la papelera.",
       "caption": "Comprueba el nombre y la clave antes de guardar. Mover el proyecto a la papelera es una acción separada.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -95,7 +98,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Invitación por correo y tres miembros de demostración, con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -113,11 +116,11 @@
 }
 ---
 
-Un proyecto reúne incidencias, objetivos, páginas y miembros. Su propietario gestiona los ajustes administrativos y las invitaciones. Los miembros trabajan con el contenido y pueden abandonar el proyecto. Consulta el apartado correspondiente para configurar el proyecto o resolver un problema de invitación.
+Un proyecto reúne incidencias, objetivos, páginas y las personas que trabajan en ellos. Su único propietario gestiona los ajustes administrativos, las invitaciones y los roles. Los miembros trabajan con el contenido y los lectores lo siguen; unos y otros pueden abandonar el proyecto. Consulta el apartado correspondiente para configurar el proyecto, decidir quién puede hacer qué, transferir la propiedad o resolver un problema de invitación.
 
 ## Configurar un proyecto {#project-settings}
 
-Abre el proyecto y después sus ajustes. La propiedad del proyecto determina el acceso a los ajustes administrativos. Los miembros pueden consultar la sección general, ocultar el proyecto para sí mismos y abandonarlo, pero no obtienen los controles de edición del propietario.
+Abre el proyecto y después sus ajustes. La propiedad del proyecto determina el acceso a los ajustes administrativos. Los miembros y los lectores pueden consultar la sección general, ocultar el proyecto para sí mismos y abandonarlo, pero no obtienen los controles de edición del propietario.
 
 Como propietario, introduce un nombre que no esté vacío y una clave de proyecto válida, y guarda. La clave se normaliza a mayúsculas y utiliza de 2 a 5 letras ASCII. Revisa los identificadores resultantes después de cambiarla. Usa los controles de icono y apariencia para distinguir el proyecto en la navegación; estas elecciones visuales no modifican la pertenencia al proyecto.
 
@@ -128,7 +131,7 @@ Otras secciones gestionan colaboradores, incidencias recurrentes, Git, importaci
 
 ### Ocultar un proyecto para ti {#hide-project}
 
-Oculta un proyecto que ya no sigues a diario para quitarlo de tu barra lateral y de tu inicio sin abandonarlo. En la configuración general del proyecto, elige **Ocultar** en **Visibilidad para ti**, o haz clic derecho en el proyecto en la barra lateral y elige **Ocultar proyecto**. Cualquier miembro puede ocultar un proyecto, incluido el propietario.
+Oculta un proyecto que ya no sigues a diario para quitarlo de tu barra lateral y de tu inicio sin abandonarlo. En la configuración general del proyecto, elige **Ocultar** en **Visibilidad para ti**, o haz clic derecho en el proyecto en la barra lateral y elige **Ocultar proyecto**. Cualquier persona del proyecto puede ocultarlo, incluidos el propietario y los lectores.
 
 Ocultarlo solo cambia tu propia navegación. La preferencia se guarda en tu cuenta, así que se mantiene al volver a iniciar sesión y en tus otros dispositivos. Conservas tu acceso y puedes seguir abriendo y editando el proyecto desde un enlace directo o desde **Configuración de la cuenta** → **Preferencias** → **Proyectos ocultos**. Los demás miembros siguen viendo el proyecto, y sus rutinas, integraciones y notificaciones siguen funcionando. Abrir un proyecto oculto no lo devuelve a tu barra lateral.
 
@@ -136,7 +139,7 @@ Para recuperarlo, elige **Mostrar** en **Proyectos ocultos** o en la configuraci
 
 ### Abandonar y eliminar {#project-removal}
 
-Un miembro puede abandonar el proyecto para retirar su propio acceso. Pide al propietario que vuelva a invitarte si lo necesitas más adelante. Abandonarlo no elimina el proyecto para todos.
+Un miembro o un lector puede abandonar el proyecto para retirar su propio acceso. Pide al propietario que vuelva a invitarte si lo necesitas más adelante. Abandonarlo no elimina el proyecto para todos. El propietario no puede abandonarlo: antes debe [transferir la propiedad](#transfer-ownership) a un miembro.
 
 Eliminar el proyecto es una acción del propietario en la zona de peligro. Lee las consecuencias y la confirmación antes de hacerlo, sobre todo si contiene incidencias, páginas, archivos o integraciones. Si falla un guardado normal, conserva los valores que querías introducir, lee el error y actualiza el proyecto antes de intentarlo de nuevo. Evita repetir una acción destructiva cuando no sepas cuál fue su primer resultado.
 
@@ -144,23 +147,48 @@ El propietario también puede hacer clic derecho en el proyecto en la barra late
 
 ## Invitar personas a un proyecto {#project-members}
 
-El propietario del proyecto gestiona la pertenencia en los ajustes de miembros. Pide a la persona colaboradora el correo que utiliza en esta instancia, envía la invitación y comprueba que figure como pendiente. Ese mismo correo en otra instancia no concede acceso aquí.
+El propietario del proyecto gestiona la pertenencia en **Configuración del proyecto** → **Miembros**. Pide a la persona colaboradora el correo que utiliza en esta instancia, elige su rol, envía la invitación y comprueba que figure como pendiente. Elige **Miembro** para alguien que trabaja en el proyecto, o **Lector** para alguien que solo lo sigue. Para un lector, activa **Puede comentar** si debe participar en las conversaciones. Mientras la invitación esté pendiente, el propietario puede cambiar su rol y la opción de comentar. Ese mismo correo en otra instancia no concede acceso aquí.
 
-La persona invitada inicia sesión con esa cuenta y abre la bandeja de entrada. Acepta la invitación pendiente para unirte o recházala si no esperabas ese proyecto. El diálogo de incorporación inicial ayuda a compartir tu correo con el propietario; no permite unirse a proyectos sin invitación.
+La persona invitada inicia sesión con esa cuenta y abre la bandeja de entrada. Acepta la invitación pendiente para unirte con el rol que indica, o recházala si no esperabas ese proyecto. El diálogo de incorporación inicial ayuda a compartir tu correo con el propietario; no permite unirse a proyectos sin invitación.
 
 
 ![Invitación por correo y tres miembros de demostración, con la persona propietaria identificada.](/documentation/es/project-members.png)
 
-### Responsabilidades del propietario y los miembros {#member-permissions}
+### Roles de propietario, miembro y lector {#member-permissions}
 
-| Persona | Acceso habitual al proyecto |
+| Rol | Acceso al proyecto |
 | --- | --- |
-| Miembro | Trabajar con incidencias, páginas y espacios de colaboración del proyecto; gestionar sus propias preferencias de cuenta. |
-| Propietario | Los recorridos de miembro más ajustes del proyecto, invitaciones y configuración de integraciones o automatización reservada al propietario. |
+| Propietario | Uno por proyecto. Todo lo que puede hacer un miembro, más los ajustes del proyecto, las invitaciones y los roles, las integraciones, el vínculo con Git, las rutinas, la transferencia de la propiedad y la eliminación del proyecto. |
+| Miembro | Todo el trabajo sobre el contenido: incidencias, planes, objetivos, sugerencias, páginas y bases de datos, comentarios, archivos, vistas compartidas y enlaces de publicación, acciones de Git y de pull requests, Numo y MCP. Puede abandonar el proyecto. |
+| Lector | Lee el contenido, los miembros y las rutinas del proyecto. Puede ocultar el proyecto, aparecer en los avatares de presencia de una página, usar vistas personales y notificaciones, y abandonar el proyecto. No puede editar contenido, recibir asignaciones, liderar un objetivo ni publicar enlaces, y no ve las integraciones ni los tokens de compartición y de tablero. |
+| Lector con **Puede comentar** | El acceso de lector más los comentarios en incidencias, objetivos, hilos internos de sugerencias y páginas: respuestas, menciones, archivos adjuntos a sus propios comentarios, y edición o eliminación de sus propios comentarios. Las respuestas públicas en el tablero de feedback y los comentarios o reacciones en pull requests siguen sin estar disponibles. |
 | Visitante de un enlace público | Solo el contenido publicado expresamente mediante ese enlace; sin pertenencia al proyecto. |
 
-Revisa la lista de miembros antes de retirar a alguien. La fila del propietario no ofrece una acción de retirada, y estos controles no transfieren la propiedad del proyecto. El propietario puede cancelar una invitación pendiente antes de que se acepte; ese estado no revela si la dirección ya tiene una cuenta. La retirada termina el acceso como miembro; no recupera exportaciones, capturas o copias ya recibidas. Las credenciales personales de Git, IA y MCP siguen perteneciendo a la cuenta y no se transfieren por cambiar la propiedad del proyecto.
+Los lectores cuentan para el límite de invitados por proyecto del plan igual que los miembros, y también las invitaciones pendientes. No hay facturación por puesto.
+
+Revisa la lista de miembros antes de retirar a alguien. La fila del propietario no ofrece una acción de retirada; solo una [transferencia](#transfer-ownership) cambia el propietario. El propietario puede cancelar una invitación pendiente antes de que se acepte; ese estado no revela si la dirección ya tiene una cuenta. La retirada termina el acceso como miembro; no recupera exportaciones, capturas o copias ya recibidas. Las credenciales personales de Git, IA y MCP siguen perteneciendo a la cuenta y no se transfieren por cambiar la propiedad del proyecto.
+
+### Cambiar el rol de un miembro {#change-role}
+
+Como propietario, abre **Configuración del proyecto** → **Miembros** y elige el nuevo rol de la persona: **Miembro** o **Lector**. Para un lector, elige si **Puede comentar** está activado. Esta opción está desactivada de forma predeterminada y se desactiva cada vez que alguien pasa a ser lector, así que revísala después de cambiar un miembro a Lector. Tu propio rol de propietario solo cambia mediante una transferencia.
+
+Cambiar un miembro a Lector también le retira la asignación de sus incidencias abiertas y lo quita como responsable de sus objetivos, lo que saca esas incidencias de su ciclo personal. Reasigna ese trabajo si debe continuar.
+
+Un cambio de rol se aplica a la siguiente solicitud de la persona, en la aplicación, en Numo y a través de MCP. El contenido que ya cargó o descargó no se recupera, y un enlace firmado a un archivo que ya abrió puede seguir siendo válido unos minutos.
 
 ### Resolver la falta de acceso {#invitation-recovery}
 
-Si una invitación no aparece, compara el correo invitado con la cuenta que ha iniciado sesión y verifica la URL de la instancia. Pide al propietario que compruebe las invitaciones pendientes en lugar de crear cuentas repetidamente. Si cambian los permisos durante una sesión abierta, recarga el destino y comprueba la pertenencia antes de volver a intentar una escritura. No compartas la sesión de otra persona para eludir un error de acceso.
+Si una invitación no aparece, compara el correo invitado con la cuenta que ha iniciado sesión y verifica la URL de la instancia. Pide al propietario que compruebe las invitaciones pendientes en lugar de crear cuentas repetidamente. Si tu rol cambia durante una sesión abierta, recarga el destino y comprueba tu rol antes de volver a intentar una escritura. Un lector que necesita editar pide al propietario que cambie su rol a Miembro. No compartas la sesión de otra persona para eludir un error de acceso.
+
+## Transferir la propiedad {#transfer-ownership}
+
+Un proyecto tiene exactamente un propietario. Para cederlo, abre **Configuración del proyecto** → **Miembros** como propietario, elige **Transferir la propiedad del proyecto** para un miembro existente y confirma. Solo un Miembro puede recibir la propiedad; invita antes a la persona o cambia un lector a Miembro. Después de la transferencia, sigues en el proyecto como Miembro.
+
+### Qué cambia con la propiedad {#transfer-effects}
+
+- Tus rutinas en este proyecto se pausan y no pueden iniciar trabajo nuevo. El nuevo propietario crea las rutinas que deban continuar con su propio presupuesto.
+- Los límites del plan para incidencias e invitados por proyecto, el almacenamiento y la IA en segundo plano, como Smart Assign y la revisión de sugerencias, pasan a usar el plan y el presupuesto del nuevo propietario. Las incidencias y los miembros existentes se conservan.
+- Las suscripciones, los métodos de pago y las claves y conexiones personales se quedan en cada cuenta.
+- Las invitaciones pendientes siguen siendo válidas.
+
+La transferencia falla sin cambiar nada si el almacenamiento del nuevo propietario no puede albergar los archivos del proyecto, o si ya es propietario de un proyecto con la misma clave. Libera almacenamiento o cambia la clave del proyecto e inténtalo de nuevo.

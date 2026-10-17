@@ -55,6 +55,7 @@ import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { addCommentApi } from "@/lib/comments-api";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
@@ -97,6 +98,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
+  // Project readers (MIN-693) read the triage queue without deciding on it.
+  const { canWrite, canComment } = useProjectCapabilities(projectId);
+  const readOnly = !canWrite;
 
   const { issues, loading, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
@@ -502,6 +506,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
               {/* Same order as the actions of a pull request (pr-detail):
  the neutral action, then the refusal, then the acceptance last
  — the gesture that advances the ticket is always on the right. */}
+              {!readOnly && (
               <div className="ml-auto flex shrink-0 items-center gap-1.5">
                 <SearchSelect
                   value={null}
@@ -530,6 +535,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                   {t("accept")}
                 </Button>
               </div>
+              )}
             </AppContentHeader>
 
             <div
@@ -542,6 +548,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                 <div className="flex flex-col gap-2">
                   <AutoTextarea
                     value={title}
+                    readOnly={readOnly}
                     onChange={(e) => setTitle(e.target.value)}
                     onBlur={commitTitle}
                     onKeyDown={(e) => {
@@ -564,11 +571,12 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                       }
                     }}
                     placeholder={tIssueUI("descriptionPlaceholder")}
+                    readOnly={readOnly}
                   />
                 </div>
 
                 {/* Key/value properties — same borderless rows as the side panel */}
-                <div className="flex flex-col">
+                <fieldset disabled={readOnly} className="m-0 flex min-w-0 flex-col border-0 p-0">
                   <PropertyRow label={tField("status")}>
                     <StatusValue
                       value={selected.status}
@@ -620,7 +628,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                       onChange={(objective_id) => void patch(selected, { objective_id })}
                     />
                   </PropertyRow>
-                </div>
+                </fieldset>
 
                 <IssueActivity
                   items={timelineItems}
@@ -639,10 +647,13 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                   onEditComment={updateComment}
                   onDeleteComment={deleteComment}
                   onDeleteAttachment={deleteAttachment}
+                  canComment={canComment}
+                  canModerate={canWrite}
                 />
               </div>
             </div>
 
+            {canComment && (
             <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
               <div className="mx-auto max-w-3xl">
                 <CommentComposer
@@ -654,6 +665,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                 />
               </div>
             </div>
+            )}
           </>
         ) : triageIssues.length === 0 ? (
           /* Nothing in the yard: the same scene the whole page used to show,
@@ -731,7 +743,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         </DialogContent>
       </Dialog>
 
-      {bulkIssues.length > 0 && (
+      {canWrite && bulkIssues.length > 0 && (
         <BulkIssueActions
           surface="triage"
           count={bulkIssues.length}

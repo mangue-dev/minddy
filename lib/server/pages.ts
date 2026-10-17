@@ -41,10 +41,10 @@ import { decodePage, decodePageProjection, encodePage, pageContentValues } from 
  * (`app/api/projects/[id]/pages/**`) and, later, by the MCP.
  *
  * EVERYTHING goes through the client service, RLS bypassed: access control lives
- * so here in `access()`, and it is the same for all six gestures — read,
- * create, modify, move, trash, restore. Project member = all
- * rights, as for goals: a team wiki that would require one
- * permission per page is no longer a team wiki.
+ * so here in `access()` (read) and `pageWriteRefusal()` (create, modify,
+ * move, trash, restore). Owner or member = all rights, as for goals: a team
+ * wiki that would require one permission per page is no longer a team wiki.
+ * A reader reads every page and writes none (MIN-693).
  *
  * Two reasons NOT to write to the session client, while the policy
  * `pages_update` would allow it:
@@ -118,7 +118,8 @@ export type PageErrorKey =
   | "pageDatabaseInvalid"
   | "pageDatabaseStale"
   | "pageDatabaseRestoreParent"
-  | "pageDatabaseMove";
+  | "pageDatabaseMove"
+  | "readOnlyProject";
 
 /** The title of a page: same ceiling as a ticket title (MIN-118). */
 const MAX_TITLE_LENGTH = 500;
@@ -152,6 +153,25 @@ type Service = ReturnType<typeof getServiceClient>;
 /** The project must be accessible to the actor, otherwise it does not exist for him. */
 async function access(actorId: string, projectId: string): Promise<boolean> {
   return (await getProjectAccess(actorId, projectId)) !== null;
+}
+
+/**
+ * Writing gestures (create, edit including favorite, move, trash, discard,
+ * restore, duplicate) also need write access (MIN-693): a reader sees the
+ * page, so the refusal is an explicit 403 rather than a 404. Presence pings
+ * stay allowed to readers through `access()`.
+ */
+export async function pageWriteRefusal(
+  actorId: string,
+  projectId: string,
+  notFound: "projectNotFound" | "pageNotFound"
+): Promise<{ ok: false; status: number; errorKey: PageErrorKey } | null> {
+  const projectAccess = await getProjectAccess(actorId, projectId);
+  if (!projectAccess) return { ok: false, status: 404, errorKey: notFound };
+  if (!projectAccess.canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
+  }
+  return null;
 }
 
 /* ─── Watching (MIN-278 follow-up) ─────────────────────────────────────────── */
@@ -573,9 +593,8 @@ export async function createPage({
   mcpKeyId?: string | null;
   input: Record<string, unknown>;
 }): Promise<PageResult<Page>> {
-  if (!(await access(actorId, projectId))) {
-    return { ok: false, status: 404, errorKey: "projectNotFound" };
-  }
+  const refusal = await pageWriteRefusal(actorId, projectId, "projectNotFound");
+  if (refusal) return refusal;
 
   const service = getServiceClient();
   const parentId = typeof input.parent_id === "string" ? input.parent_id : null;
@@ -705,9 +724,8 @@ export async function duplicatePage(
   const service = getServiceClient();
   const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
-  if (!(await access(actorId, page.project_id))) {
-    return { ok: false, status: 404, errorKey: "pageNotFound" };
-  }
+  const refusal = await pageWriteRefusal(actorId, page.project_id, "pageNotFound");
+  if (refusal) return refusal;
 
   const all = await loadProjectPages(service, page.project_id);
   const live = all.filter((p) => !p.deleted_at);
@@ -850,9 +868,8 @@ export async function updatePage({
   const service = getServiceClient();
   const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
-  if (!(await access(actorId, page.project_id))) {
-    return { ok: false, status: 404, errorKey: "pageNotFound" };
-  }
+  const refusal = await pageWriteRefusal(actorId, page.project_id, "pageNotFound");
+  if (refusal) return refusal;
 
   const patch: Record<string, unknown> = {};
 
@@ -1131,9 +1148,8 @@ export async function trashPage(
   const service = getServiceClient();
   const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
-  if (!(await access(actorId, page.project_id))) {
-    return { ok: false, status: 404, errorKey: "pageNotFound" };
-  }
+  const refusal = await pageWriteRefusal(actorId, page.project_id, "pageNotFound");
+  if (refusal) return refusal;
 
   const all = await loadProjectPages(service, page.project_id);
   const descendants = descendantIds(
@@ -1229,9 +1245,8 @@ export async function discardPage(
   const service = getServiceClient();
   const page = await loadPage(service, pageId, actorId);
   if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
-  if (!(await access(actorId, page.project_id))) {
-    return { ok: false, status: 404, errorKey: "pageNotFound" };
-  }
+  const refusal = await pageWriteRefusal(actorId, page.project_id, "pageNotFound");
+  if (refusal) return refusal;
 
   const { data, error } = await service.rpc("discard_blank_page_guarded", {
     p_page_id: pageId,
@@ -1286,9 +1301,8 @@ export async function restorePage(
   if (!page || !page.deleted_at) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
   }
-  if (!(await access(actorId, page.project_id))) {
-    return { ok: false, status: 404, errorKey: "pageNotFound" };
-  }
+  const refusal = await pageWriteRefusal(actorId, page.project_id, "pageNotFound");
+  if (refusal) return refusal;
 
   const all = await loadProjectPages(service, page.project_id);
   const { data, error } = await service.rpc("restore_page_guarded", {

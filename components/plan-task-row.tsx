@@ -27,9 +27,12 @@ import type { PlanTask, PlanTaskState } from "@/lib/plan";
 export function TaskRow({
   task,
   onSetState,
+  readOnly = false,
 }: {
   task: PlanTask;
   onSetState: (state: PlanTaskState) => void;
+  /** Read-only viewers (project readers) see the state without changing it. */
+  readOnly?: boolean;
 }) {
   const t = useTranslations("Plan");
   const struck = task.state === "completed" || task.state === "cancelled";
@@ -46,11 +49,12 @@ export function TaskRow({
       <button
         type="button"
         aria-label={t("taskCheckboxAria", { text: task.text })}
+        disabled={readOnly}
         onClick={() => onSetState(toggled)}
         className={cn(
           "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors",
           task.state === "pending" &&
-            "border-input hover:border-muted-foreground/60",
+            "border-input enabled:hover:border-muted-foreground/60",
           task.state === "in_progress" && "border-primary",
           task.state === "completed" &&
             "border-primary bg-primary text-primary-foreground",
@@ -74,6 +78,7 @@ export function TaskRow({
         <Markdown className="[&_p]:my-0">{task.text}</Markdown>
       </div>
 
+      {!readOnly && (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -112,6 +117,7 @@ export function TaskRow({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -153,6 +154,8 @@ function ProjectBoard() {
   // Import and priming by Numo are reserved for the owner (the API
   // reserve): the empty board only shows what is actually within range.
   const isOwner = !!project && project.owner_id === myUserId;
+  // Project readers (MIN-693) browse the board without creating anything.
+  const { canWrite } = useProjectCapabilities(projectId);
   // Smart triage mode (MIN-566) — read once so the toolbar prop narrows off
   // cleanly (`off` renders no button at all).
   const { open: openAssistant, openIntent } = useAssistantPanelActions();
@@ -718,12 +721,12 @@ function ProjectBoard() {
                     C
                   </Kbd>
                 </SplitButton>
-              ) : (
+              ) : canWrite ? (
                 <Button type="button" onClick={() => openCreate()}>
                   <HugeiconsIcon icon={Add01Icon} />
                   {t("newIssue")}
                 </Button>
-              )}
+              ) : null}
               {isOwner && (
                 <Button
                   type="button"
@@ -803,6 +806,8 @@ function ProjectBoard() {
               onRenameView={renameView}
               onDeleteView={deleteView}
               onAskAI={handleAskAI}
+              // Readers (MIN-693) cannot publish or revoke view links.
+              withShare={canWrite}
               // The cycle is personal & cross-project: the tab exists on every
               // board but is canonical on /all only — here it just links out
               // (↗), it never scopes the cycle to this project (MIN-32).

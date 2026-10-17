@@ -21,7 +21,8 @@ vi.mock("next/dynamic", () => ({ default: () => {
   const issue = state.dynamicCount++ === 0;
   return (props: Record<string, unknown>) => { if (issue) state.issue = props; else state.objective = props; return null; };
 } }));
-vi.mock("mangue-ui", () => ({ toast: { error: vi.fn() } }));
+vi.mock("mangue-ui", () => ({ toast: { error: vi.fn(), info: vi.fn() } }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => state.client }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({ projects: state.projects }) }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: null }) }));

@@ -123,7 +123,7 @@ beforeEach(() => {
     if (rpcResult.error) return rpcResult;
     return { data: writtenMoves.length, error: null };
   });
-  getProjectAccessMock.mockResolvedValue({ isOwner: true });
+  getProjectAccessMock.mockResolvedValue({ isOwner: true, canWrite: true, canComment: true });
   ensureUsageBudgetMock.mockResolvedValue({});
   runDecisionMock.mockResolvedValue(null);
 });

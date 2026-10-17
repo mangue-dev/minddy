@@ -234,13 +234,17 @@ vi.mock("@/lib/server/notifications", () => ({
   projectMemberIds: async () => new Set(["user-1"]),
 }));
 
-vi.mock("@/lib/server/project-access", () => ({
+vi.mock("@/lib/server/project-access", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/server/project-access")>()),
   getProjectAccess: async (_userId: string, projectId: string) =>
     h.access.has(projectId)
       ? {
           project: { id: projectId, key: "MIN", name: "minddy", owner_id: "user-1" },
           isOwner: true,
           isMember: true,
+          role: "owner",
+          canWrite: true,
+          canComment: true,
         }
       : null,
 }));

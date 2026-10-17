@@ -29,6 +29,10 @@ let projectRows: Row[] = [];
 let memberRows: Row[] = [];
 let invitationRows: Row[] = [];
 let memberLimit: number | null = null;
+/** RPC calls the cores made, for the permission transitions (MIN-693). */
+let rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+/** Canned results of the permission RPCs, whose logic lives in SQL. */
+let permissionRpcResults: Record<string, { data: unknown; error: unknown }> = {};
 /** Comptes minddy existants, par email — ce que `findAuthUserByEmail` voit. */
 let accounts = new Map<string, { id: string }>();
 /** Scheduled background jobs to wait for explicitly. */
@@ -170,7 +174,9 @@ vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
     from: (name: string) => table(name, TABLES[name] ?? (() => [])),
     rpc: async (name: string, args: Record<string, unknown>) => {
-      if (name !== "create_project_invitation_guarded") {
+      rpcCalls.push({ name, args });
+      if (name in permissionRpcResults) return permissionRpcResults[name]!;
+      if (name !== "create_project_invitation_role_guarded") {
         return { data: null, error: { message: "unknown RPC" } };
       }
       const project = projectRows.find(
@@ -211,6 +217,8 @@ vi.mock("@/lib/supabase-service", () => ({
         invited_user_id: args.p_invited_user_id,
         invited_by: args.p_actor_id,
         status: "pending",
+        role: args.p_role,
+        can_comment: args.p_can_comment,
       });
     },
   }),
@@ -267,6 +275,10 @@ import {
   attachPendingInvitations,
   claimPendingInvitationsLate,
   inviteMember,
+  removeMember,
+  transferProjectOwnership,
+  updateInvitationRole,
+  updateMemberRole,
 } from "./members";
 
 const OWNER = "11111111-1111-4111-8111-111111111111";
@@ -287,6 +299,8 @@ beforeEach(() => {
   memberRows = [];
   invitationRows = [];
   memberLimit = null;
+  rpcCalls = [];
+  permissionRpcResults = {};
   accounts = new Map();
   adminAccounts = new Map();
   adminLookups = 0;
@@ -602,5 +616,167 @@ describe("claimPendingInvitationsLate", () => {
     seed();
     await expect(claimPendingInvitationsLate({ id: LATE })).resolves.toBe(false);
     expect(invitationRows[0].invited_user_id).toBeNull();
+  });
+});
+
+describe("project roles (MIN-693)", () => {
+  const READER = "44444444-4444-4444-8444-444444444444";
+
+  beforeEach(() => {
+    memberRows = [
+      { id: "m1", project_id: PROJECT, user_id: MEMBER, role: "member", can_comment: false },
+      { id: "m2", project_id: PROJECT, user_id: READER, role: "reader", can_comment: false },
+    ];
+  });
+
+  it("stores the invited role and the reader comment option", async () => {
+    const result = await inviteMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      email: "lecteur@example.test",
+      role: "reader",
+      canComment: true,
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      invitation: { role: "reader", can_comment: true },
+    });
+    expect(invitationRows[0]).toMatchObject({ role: "reader", can_comment: true });
+  });
+
+  it("never grants the comment option to an invited member", async () => {
+    const result = await inviteMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      email: "membre@example.test",
+      role: "member",
+      canComment: true,
+    });
+    expect(result).toMatchObject({ ok: true, invitation: { role: "member", can_comment: false } });
+  });
+
+  it("rejects an unknown invitation role before any write", async () => {
+    const result = await inviteMember({
+      projectId: PROJECT,
+      actorId: OWNER,
+      email: "x@example.test",
+      role: "owner",
+    });
+    expect(result).toMatchObject({ ok: false, status: 400, errorKey: "invalidRole" });
+    expect(invitationRows).toHaveLength(0);
+  });
+
+  it("lets only the owner change a role", async () => {
+    for (const actorId of [MEMBER, READER]) {
+      await expect(
+        updateMemberRole({ projectId: PROJECT, actorId, userId: MEMBER, role: "reader" })
+      ).resolves.toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+    }
+    // A reader cannot promote themselves either.
+    await expect(
+      updateMemberRole({ projectId: PROJECT, actorId: READER, userId: READER, role: "member" })
+    ).resolves.toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+    expect(rpcCalls).toHaveLength(0);
+  });
+
+  it("refuses to change the owner's role outside a transfer", async () => {
+    await expect(
+      updateMemberRole({ projectId: PROJECT, actorId: OWNER, userId: OWNER, role: "reader" })
+    ).resolves.toMatchObject({ ok: false, status: 400, errorKey: "cannotChangeOwner" });
+  });
+
+  it("passes the change to the guarded RPC and reports unassigned issues", async () => {
+    permissionRpcResults.update_project_member_role_guarded = {
+      data: { role: "reader", can_comment: false, unassigned: 3 },
+      error: null,
+    };
+    const result = await updateMemberRole({
+      projectId: PROJECT,
+      actorId: OWNER,
+      userId: MEMBER,
+      role: "reader",
+    });
+    expect(result).toEqual({ ok: true, role: "reader", canComment: false, unassigned: 3 });
+    expect(rpcCalls).toEqual([{
+      name: "update_project_member_role_guarded",
+      args: {
+        p_project_id: PROJECT,
+        p_actor_id: OWNER,
+        p_user_id: MEMBER,
+        p_role: "reader",
+        // Omitted means "keep the current reader option", decided in SQL.
+        p_can_comment: null,
+      },
+    }]);
+  });
+
+  it("maps a lost race on the target to memberNotFound", async () => {
+    permissionRpcResults.update_project_member_role_guarded = {
+      data: null,
+      error: { code: "P0002", message: "member_not_found" },
+    };
+    await expect(
+      updateMemberRole({ projectId: PROJECT, actorId: OWNER, userId: MEMBER, role: "reader" })
+    ).resolves.toMatchObject({ ok: false, status: 404, errorKey: "memberNotFound" });
+  });
+
+  it("changes a pending invitation's role only while it is pending", async () => {
+    permissionRpcResults.update_project_invitation_role_guarded = { data: false, error: null };
+    await expect(
+      updateInvitationRole({
+        projectId: PROJECT,
+        actorId: OWNER,
+        invitationId: "inv-1",
+        role: "reader",
+        canComment: true,
+      })
+    ).resolves.toMatchObject({ ok: false, status: 404, errorKey: "invitationNotFound" });
+    await expect(
+      updateInvitationRole({
+        projectId: PROJECT,
+        actorId: MEMBER,
+        invitationId: "inv-1",
+        role: "member",
+      })
+    ).resolves.toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+  });
+
+  it("transfers ownership through the guarded RPC, owner only", async () => {
+    await expect(
+      transferProjectOwnership({ projectId: PROJECT, actorId: MEMBER, newOwnerId: MEMBER })
+    ).resolves.toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+
+    permissionRpcResults.transfer_project_ownership_guarded = {
+      data: { owner_id: MEMBER, disabled_routines: 2 },
+      error: null,
+    };
+    await expect(
+      transferProjectOwnership({ projectId: PROJECT, actorId: OWNER, newOwnerId: MEMBER })
+    ).resolves.toEqual({ ok: true, disabledRoutines: 2 });
+  });
+
+  it("explains why a transfer was refused", async () => {
+    permissionRpcResults.transfer_project_ownership_guarded = {
+      data: null,
+      error: { code: "42501", message: "transfer_target_not_member" },
+    };
+    await expect(
+      transferProjectOwnership({ projectId: PROJECT, actorId: OWNER, newOwnerId: READER })
+    ).resolves.toMatchObject({ ok: false, status: 409, errorKey: "transferTargetNotMember" });
+
+    permissionRpcResults.transfer_project_ownership_guarded = {
+      data: null,
+      error: { code: "P0001", message: "storage_quota_exceeded" },
+    };
+    await expect(
+      transferProjectOwnership({ projectId: PROJECT, actorId: OWNER, newOwnerId: MEMBER })
+    ).resolves.toMatchObject({ ok: false, status: 409, errorKey: "transferStorageQuota" });
+  });
+
+  it("still lets a reader leave the project", async () => {
+    await expect(
+      removeMember({ projectId: PROJECT, actorId: READER, userId: READER })
+    ).resolves.toEqual({ ok: true });
+    expect(memberRows.map((row) => row.user_id)).toEqual([MEMBER]);
   });
 });

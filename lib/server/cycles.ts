@@ -5,6 +5,7 @@ import "server-only";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
+import { writableProjectIds } from "@/lib/server/project-access";
 import { insertEvents, type EventRow } from "@/lib/server/issue-events";
 import { resolveCyclePrefs, type CyclePrefs } from "@/lib/cycle-prefs";
 import {
@@ -110,6 +111,20 @@ export interface EnsuredCycles {
   current: CycleRow | null;
   upcoming: CycleRow[];
   past: CycleRow[];
+}
+
+/** The ids, among these issues, whose project the user can write in. */
+async function writableIssueIds(
+  userId: string,
+  issues: readonly { id: unknown; project_id: unknown }[]
+): Promise<string[]> {
+  if (issues.length === 0) return [];
+  const writable = await writableProjectIds(userId, [
+    ...new Set(issues.map((issue) => issue.project_id as string)),
+  ]);
+  return issues
+    .filter((issue) => writable.has(issue.project_id as string))
+    .map((issue) => issue.id as string);
 }
 
 /**
@@ -231,14 +246,26 @@ async function reconcileCycles({
   if (current) {
     // 3. Auto-rollover: unfinished issues of past cycles slide into the
     //    current one (assignment unchanged — the SQL trigger keeps them valid).
+    //    Only in projects where the user can still write (MIN-693): a
+    //    reader's leftover past assignments stay where they are.
     const pastIds = past.map((r) => r.id);
     if (pastIds.length > 0) {
-      await service
+      const { data: leftovers } = await service
         .from("issues")
-        .update({ cycle_id: current.id })
+        .select("id, project_id")
         .in("cycle_id", pastIds)
         .in("status", CYCLE_OPEN_STATUSES as string[])
         .is("deleted_at", null);
+      const movable = await writableIssueIds(userId, leftovers ?? []);
+      if (movable.length > 0) {
+        await service
+          .from("issues")
+          .update({ cycle_id: current.id })
+          .in("id", movable)
+          .in("cycle_id", pastIds)
+          .in("status", CYCLE_OPEN_STATUSES as string[])
+          .is("deleted_at", null);
+      }
     }
 
     // 4. Re-align current + future snapshots whenever the freshly computed
@@ -316,7 +343,14 @@ export async function fillCycleForUser({
       .is("deleted_at", null),
   ]);
 
-  const candidates: RecoIssue[] = (candidateRows ?? []).map((row) => ({
+  // A fill writes each picked issue: never in a project where the user can
+  // no longer write (MIN-693).
+  const writableCandidates = new Set(
+    await writableIssueIds(userId, candidateRows ?? [])
+  );
+  const candidates: RecoIssue[] = (candidateRows ?? [])
+    .filter((row) => writableCandidates.has(row.id as string))
+    .map((row) => ({
     id: row.id as string,
     project_id: row.project_id as string,
     title: (row.title as string) ?? "",
@@ -701,12 +735,13 @@ export async function runCycleCapture(params: CycleCaptureParams): Promise<void>
       : prefs.autoCaptureCompleted;
   if (!prefs.enabled || !wanted) return;
 
-  const { data: issue } = await issueStore(service).select("id, assignee_id, cycle_id, status")
+  const { data: issue } = await issueStore(service).select("id, project_id, assignee_id, cycle_id, status")
     .eq("id", params.issueId)
     .is("deleted_at", null)
     .maybeSingle();
   if (!issue || issue.cycle_id !== null) return;
   if (issue.assignee_id !== params.userId) return;
+  if ((await writableIssueIds(params.userId, [issue])).length === 0) return;
   const expected = params.transition === "started" ? "in_progress" : "done";
   if (issue.status !== expected) return;
 
@@ -808,6 +843,9 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
   if (!blocker || blocker.cycle_id !== null) return;
   if (!CYCLE_OPEN_STATUSES.includes(blocker.status as IssueStatus)) return;
   if (blocker.assignee_id && blocker.assignee_id !== cycle.user_id) return;
+  // The pull assigns the blocker to the cycle owner: they must be able to
+  // write (and so be assigned) in its project (MIN-693).
+  if ((await writableIssueIds(cycle.user_id, [blocker])).length === 0) return;
 
   // Pull it in (CAS on "still uncycled"), assigning to the owner — the same
   // side-effect as every add-to-cycle path; the SQL trigger keeps it honest.

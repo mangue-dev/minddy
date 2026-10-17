@@ -52,9 +52,10 @@ import {
   cycleBelongsToUser,
   issueInProject,
   objectiveInProject,
-  userInProject,
+  userCanBeAssigned,
 } from "@/lib/server/tenancy";
 import { captureServerEvent } from "./posthog";
+import { memberRoleFromRow } from "@/lib/project-roles";
 import { resolveIssueSource } from "./create-issue";
 import type { RepoProviderId } from "@/lib/repo-providers";
 
@@ -97,6 +98,7 @@ export type UpdateIssueResult =
         | "planTooLong"
         | "noFieldsToUpdate"
         | "issueNotFound"
+        | "readOnlyProject"
         | "objectiveNotFound"
         | "duplicateIssueNotFound"
         | "notAProjectMember"
@@ -293,18 +295,25 @@ export async function updateIssueFields({
   } | null;
   // Access = living project AND (owner OR member). Same rule as
   // getProjectAccess/can_access_project; RLS invisibility becomes a 404.
+  // Writing additionally needs the member role: a reader sees the issue but
+  // gets a 403 (MIN-693, can_write_project).
   let hasAccess = !!beforeProject && !beforeProject.deleted_at;
+  let canWrite = hasAccess;
   if (hasAccess && beforeProject!.owner_id !== actorId) {
     const { data: membership } = await service
       .from("project_members")
-      .select("project_id")
+      .select("role")
       .eq("project_id", before.project_id as string)
       .eq("user_id", actorId)
       .maybeSingle();
     hasAccess = !!membership;
+    canWrite = !!membership && memberRoleFromRow(membership.role) === "member";
   }
   if (!hasAccess) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
+  }
+  if (!canWrite) {
+    return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
   const projectName = beforeProject
     ? await decodeProjectName(beforeProject, actorId) : null;
@@ -345,7 +354,7 @@ export async function updateIssueFields({
     // silence: at creation the assignee can come from another project (copy
     // inter-projects), on an edition it is a gesture, and a gesture without effect
     // is told incorrectly in the UI as well as in the timeline.
-    const isMember = await userInProject(
+    const isMember = await userCanBeAssigned(
       service,
       updates.assignee_id as string,
       projectId,

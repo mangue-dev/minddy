@@ -42,7 +42,7 @@ function serviceFor(entity: "page" | "issue", existingAuthor: string = "u1", exi
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.access.mockResolvedValue({ role: "member" });
+  mocks.access.mockResolvedValue({ role: "member", canWrite: true, canComment: true });
   mocks.parseResourcesInput.mockReturnValue([attachment]);
   mocks.insertAttachments.mockResolvedValue([]);
   mocks.members.mockResolvedValue(new Set());

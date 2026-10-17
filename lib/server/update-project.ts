@@ -135,12 +135,14 @@ export async function updateProjectSettings({
     input.smart_assign_rules !== null &&
     !Array.isArray(input.smart_assign_rules)
   ) {
-    // Whitelist keys to the current team (owner + members) and keep only
+    // Whitelist keys to the current assignable team (owner + members with
+    // the member role; readers are not candidates, MIN-693) and keep only
     // non-empty texts — stale entries for removed members drop on save.
     const { data: memberRows } = await service
       .from("project_members")
       .select("user_id")
-      .eq("project_id", projectId);
+      .eq("project_id", projectId)
+      .eq("role", "member");
     const teamIds = new Set([
       access.project.owner_id as string,
       ...(memberRows ?? []).map((m) => m.user_id as string),
@@ -187,7 +189,9 @@ export async function updateProjectSettings({
         return { ok: false, status: 500, errorKey: "databaseError" };
       }
       if (write.data) {
-        return { ok: true, project: projectForClient(await decodeProject(write.data, actorId)) as unknown as Project };
+        return { ok: true, project: { ...projectForClient(await decodeProject(write.data, actorId)),
+          // Settings are owner-only, so the writer is the owner (MIN-693).
+          my_role: "owner", my_can_comment: true } as unknown as Project };
       }
     }
     return { ok: false, status: 409, errorKey: "databaseError" };
@@ -208,5 +212,7 @@ export async function updateProjectSettings({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   if (!data) return { ok: false, status: 404, errorKey: "projectNotFound" };
-  return { ok: true, project: projectForClient(await decodeProject(data, actorId)) as unknown as Project };
+  return { ok: true, project: { ...projectForClient(await decodeProject(data, actorId)),
+          // Settings are owner-only, so the writer is the owner (MIN-693).
+          my_role: "owner", my_can_comment: true } as unknown as Project };
 }

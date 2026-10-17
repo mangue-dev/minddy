@@ -46,6 +46,8 @@ const h = vi.hoisted(() => ({
   versions: [] as Record<string, unknown>[],
   /** Projects to which the actor has access. Empty = everything is “not found”. */
   access: new Set<string>(),
+  /** Projects among `access` where the actor is only a reader (MIN-693). */
+  readOnly: new Set<string>(),
   /** Optional edit injected between discardPage's initial read and its RPC. */
   beforeDiscard: null as (() => void) | null,
   beforeRestore: null as (() => void) | null,
@@ -356,7 +358,10 @@ vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async (_userId: string, projectId: string) => {
     h.trace.push(`access:${projectId}`);
     if (h.accessHold) await h.accessHold;
-    return h.access.has(projectId) ? { project: { id: projectId }, isOwner: true, isMember: true } : null;
+    if (!h.access.has(projectId)) return null;
+    const reader = h.readOnly.has(projectId);
+    return { project: { id: projectId }, isOwner: !reader, isMember: true,
+      role: reader ? "reader" : "owner", canWrite: !reader, canComment: !reader };
   },
 }));
 
@@ -421,6 +426,7 @@ beforeEach(() => {
   h.accessHold = null;
   h.pageReadHold = null;
   h.access = new Set([PROJECT]);
+  h.readOnly = new Set();
   announce.recordPageEvent.mockClear();
   announce.notifyAgentPageWrite.mockClear();
   announce.notifyPageMentions.mockClear();
@@ -1910,5 +1916,27 @@ describe("database page lifecycle", () => {
     expect(await restorePage(entryId, ACTOR)).toEqual({ ok: false, status: 409, errorKey: "pageDatabaseRestoreParent" });
     expect(rowOf(entryId)).toMatchObject({ parent_id: source.id });
     expect(rowOf(entryId).deleted_at).not.toBeNull();
+  });
+});
+
+describe("project roles (MIN-693)", () => {
+  it("lets a reader read a page but refuses every write with a 403", async () => {
+    const id = await create("Guide");
+    h.readOnly = new Set([PROJECT]);
+
+    expect(await getPage(id, ACTOR)).toMatchObject({ ok: true });
+    const refused = { ok: false, status: 403, errorKey: "readOnlyProject" };
+    expect(await updatePage({ pageId: id, actorId: ACTOR, input: { title: "Renamed" } }))
+      .toEqual(refused);
+    expect(await updatePage({ pageId: id, actorId: ACTOR, input: { favorite: true } }))
+      .toEqual(refused);
+    expect(await createPage({ projectId: PROJECT, actorId: ACTOR, input: { title: "New" } }))
+      .toEqual(refused);
+    expect(await duplicatePage(id, ACTOR)).toEqual(refused);
+    expect(await trashPage(id, ACTOR)).toEqual(refused);
+
+    h.readOnly = new Set();
+    const page = await getPage(id, ACTOR);
+    expect(page).toMatchObject({ ok: true, page: { title: "Guide" } });
   });
 });

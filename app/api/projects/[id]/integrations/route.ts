@@ -17,6 +17,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!access) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
+  // Readers never see integrations: their summaries carry webhook URLs and
+  // key prefixes (MIN-693). An empty list keeps their screens quiet.
+  if (!access.canWrite) {
+    return NextResponse.json({ integrations: [], isOwner: false });
+  }
 
   const integrations = await listIntegrations(id);
   if (!integrations) {

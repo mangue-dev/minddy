@@ -24,7 +24,8 @@ export function IssueParentMenu({
 }: {
   parentIdentifier: string | null;
   onOpenParent: () => void;
-  onUnlink: () => Promise<boolean>;
+  /** Absent for project readers: the parent opens but never unlinks. */
+  onUnlink?: () => Promise<boolean>;
 }) {
   const t = useTranslations("IssueUI");
   const tCommon = useTranslations("Common");
@@ -39,7 +40,7 @@ export function IssueParentMenu({
   const handleUnlink = async () => {
     setUnlinking(true);
     try {
-      if (await onUnlink()) {
+      if (onUnlink && (await onUnlink())) {
         setConfirmParent(null);
         toast.success(t("parentUnlinkedToast"));
       }
@@ -67,11 +68,15 @@ export function IssueParentMenu({
                 <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden />
                 {t("openParent")}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmParent(parentIdentifier)}>
-                <HugeiconsIcon icon={Unlink01Icon} aria-hidden />
-                {t("unlinkFromParent", { id: parentIdentifier })}
-              </DropdownMenuItem>
+              {onUnlink && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setConfirmParent(parentIdentifier)}>
+                    <HugeiconsIcon icon={Unlink01Icon} aria-hidden />
+                    {t("unlinkFromParent", { id: parentIdentifier })}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />

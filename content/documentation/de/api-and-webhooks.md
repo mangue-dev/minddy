@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-10",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12)",
+    "version": "0.11.1 candidate (89ebb59a5); 0.11.1 candidate (cd1843e12); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,17 @@
       "lib/server/feedback/posts.ts",
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-light-review-2026-10-10.md",
-      "content/documentation/reviews/min-670-feedback-objectives.md"
+      "content/documentation/reviews/min-670-feedback-objectives.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained)",
-    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained)",
-    "date": "2026-10-10"
+    "revision": 7,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (de title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "integration-troubleshooting",
@@ -72,7 +75,7 @@
       "src": "/documentation/de/integration-api-and-webhooks-flow.svg",
       "alt": "Diagramm: Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
       "caption": "Lesen Sie die Schritte in dieser Reihenfolge. Server hält Projektintegrationsschlüssel. `POST` Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +107,7 @@
       "src": "/documentation/de/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Getrennte Abläufe für Backend-Erfassung und Browser-SSO mit unterschiedlichen Geheimnissen.",
       "caption": "Der Erfassungsschlüssel authentifiziert Serveraufrufe. Das Board-SSO-Geheimnis signiert ein kurzlebiges, einmaliges Besuchertoken.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -149,7 +152,7 @@ Die Integrations-API nimmt Tickets oder Feedback über projektgebundene Schlüss
 
 ## Tickets oder Feedback erstellen und signierte Webhooks empfangen {#integration-api-and-webhooks}
 
-Eigentümer erstellen Integrationen in Projekteinstellungen. `issues` erzeugt interne Arbeit in Triage, `feedback` Nutzerbedarfe mit Stimmen/öffentlichem Status. Der Klartextschlüssel `mdy_` erscheint einmal. Speichern Sie ihn nur serverseitig als `MINDDY_API_KEY` beziehungsweise `MINDDY_FEEDBACK_KEY`, nie im Browser, Git oder geteilten Logs. Widerruf ist endgültig; unbekannte und widerrufene Schlüssel ergeben 401 `invalid_api_key`. Schlüssel gehören zum Projekt und können die andere Endpunktfamilie nicht aufrufen (403 `wrong_key_kind`).
+Eigentümer erstellen Integrationen in Projekteinstellungen. `issues` erzeugt interne Arbeit in Triage, `feedback` Nutzerbedarfe mit Stimmen/öffentlichem Status. Der Klartextschlüssel `mdy_` erscheint einmal. Speichern Sie ihn nur serverseitig als `MINDDY_API_KEY` beziehungsweise `MINDDY_FEEDBACK_KEY`, nie im Browser, Git oder geteilten Logs. Widerruf ist endgültig; unbekannte und widerrufene Schlüssel ergeben 401 `invalid_api_key`. Schlüssel gehören zum Projekt und können die andere Endpunktfamilie nicht aufrufen (403 `wrong_key_kind`). Eine Integration ist keine Person: Sie hat keine Projektrolle und behält die festen Berechtigungen ihrer Art, wenn sich die Rollen der Mitglieder ändern. Leser sehen keine Integrationen.
 
 
 ![Diagramm: Server hält Projektintegrationsschlüssel. POST Tickets oder Feedback mit passender Art. Eigentümer wählt Webhookziel für Tickets. Empfänger prüft Rohkörper-HMAC und Zustell-UUID.](/documentation/de/integration-api-and-webhooks-flow.svg)

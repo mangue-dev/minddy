@@ -6,7 +6,12 @@ const h = vi.hoisted(() => ({ find: vi.fn(), target: vi.fn(), getPr: vi.fn(),
 vi.mock("./pull-requests", async (original) => ({ ...await original<typeof import("./pull-requests")>(),
   findPullRequest: h.find }));
 vi.mock("./repo-access", async (original) => ({ ...await original<typeof import("./repo-access")>(),
-  resolveRepoCloneTargetForRepo: h.target }));
+  resolveRepoCloneTargetForRepo: h.target,
+  // PR scopes resolve the target with the caller's write capability (MIN-693).
+  resolveRepoCloneTargetWithAccess: async (...args: unknown[]) => {
+    const target = await h.target(...args);
+    return target ? { target, canWrite: true } : null;
+  } }));
 vi.mock("./forge", async (original) => ({ ...await original<typeof import("./forge")>(),
   forgeFor: () => ({ getPullRequest: h.getPr, getRepositoryMergePolicy: h.policy,
     listChecks: h.checks, listReviews: h.reviews, listReviewThreads: h.threads }) }));

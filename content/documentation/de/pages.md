@@ -21,12 +21,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680)",
+    "version": "0.11.1 candidate (MIN-680); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,14 +60,17 @@
       "content/documentation/reviews/min-677-routines.md",
       "content/documentation/reviews/min-680-file-preview.md",
       "components/file-viewer.tsx",
-      "components/image-viewer.tsx"
+      "components/image-viewer.tsx",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence)",
-    "language": "agent:/root (de changed-text and retained-meaning self-review)",
-    "date": "2026-10-12"
+    "revision": 10,
+    "fact": "agent:/root (MIN-680 source, focused route/UI tests and isolated browser review; prior controls retain existing evidence); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (de changed-text and retained-meaning self-review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "notifications-and-inbox",
@@ -102,7 +105,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -134,7 +137,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität mit einer Demoänderung und einem leeren Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -150,7 +153,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -166,7 +169,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +185,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -198,7 +201,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -214,7 +217,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Entfernen.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -258,7 +261,7 @@ Das Löschen verschiebt Seiten, für die eine Wiederherstellung vorgesehen ist, 
 
 ## Eine Seite mit Blöcken und Erwähnungen schreiben {#page-editor}
 
-Öffne die Seite und bearbeite als Projektmitglied Titel oder Inhalt. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Absätze, Listen, Aufgaben, Code, aufklappbare Abschnitte und Hinweisblöcke. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
+Öffne die Seite und bearbeite als Eigentümer oder Mitglied Titel oder Inhalt. Leser können Seiten öffnen und lesen, sie aber weder bearbeiten, importieren, duplizieren, zu Favoriten hinzufügen oder veröffentlichen noch eine Version wiederherstellen. Verwende das Slash-Befehlsmenü und die Formatierungsfunktionen für Überschriften, Absätze, Listen, Aufgaben, Code, aufklappbare Abschnitte und Hinweisblöcke. Ein Hinweisblock kann ein Emoji-Symbol und eine Palettenfarbe haben. Unterscheide damit hilfreiche Informationen, ohne eine Warnung allein durch Symbol oder Farbe auszudrücken.
 
 Verwende Erwähnungen, um passende Probleme, Ziele, Personen oder Seiten zu verknüpfen. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts.
 
@@ -273,7 +276,7 @@ Markdown-Exporte und Seitenzugriffe durch Agenten erhalten Symbole und Farben vo
 
 ## Eine Seite besprechen und Konflikte lösen {#page-comments-and-collaboration}
 
-Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Markiere den Verlauf erst als erledigt, wenn seine Frage tatsächlich beantwortet wurde.
+Öffne eine Projektseite und ihre Kommentarfunktionen. Wähle passende Inhalte aus, wenn du einen verankerten Kommentar erstellst, erkläre die Frage oder Änderung und erwähne bei Bedarf ein Projektmitglied. Ein Leser kann kommentieren, wenn der Eigentümer **Darf kommentieren** für ihn aktiviert hat. Antworte im Verlauf, damit die Entscheidung bei ihrem Kontext bleibt. Markiere den Verlauf erst als erledigt, wenn seine Frage tatsächlich beantwortet wurde.
 
 Anwesenheitsavatare zeigen Personen, die die Seite ansehen. Sie beweisen nicht, dass der ungespeicherte Text einer anderen Person den Server erreicht hat oder gleichzeitige Bearbeitungen automatisch zusammengeführt werden. Prüfe den aktuellen Speicherzustand vor dem Wegnavigieren.
 
@@ -326,7 +329,7 @@ Stelle als berechtigtes Projektmitglied die gewählte Version erst wieder her, n
 
 ## Eine Seite veröffentlichen und ihren Link widerrufen {#publish-a-page}
 
-Öffne als Mitglied eine Projektseite und verwende ihre Veröffentlichungsfunktionen. Prüfe zuerst Inhalte und Anhänge. Wähle privaten, passwortgeschützten oder öffentlichen Zugriff. Der Passwortschutz benötigt mindestens acht Zeichen und wird erst nach Absenden des Passworts angewendet; die Modusauswahl allein erzeugt keinen geschützten Link.
+Öffne als Eigentümer oder Mitglied eine Projektseite und verwende ihre Veröffentlichungsfunktionen. Prüfe zuerst Inhalte und Anhänge. Wähle privaten, passwortgeschützten oder öffentlichen Zugriff. Der Passwortschutz benötigt mindestens acht Zeichen und wird erst nach Absenden des Passworts angewendet; die Modusauswahl allein erzeugt keinen geschützten Link.
 
 Kopiere den erzeugten /p/-Link nach erfolgreicher Veröffentlichung. Hat die Seite Unterseiten, prüfe die Option zum Einschließen und deren Anzahl. Das Einschließen veröffentlicht den gewählten Zweig; ohne Einschließen bleiben die Inhalte außerhalb dieser Veröffentlichung. Eine Datenbank ohne veröffentlichte Unterseiten legt nicht automatisch alle Eintragsinhalte offen.
 

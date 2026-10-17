@@ -10,6 +10,10 @@ vi.mock("@/lib/server/issue-events", () => ({ insertEvents: vi.fn() }));
 type Row = Record<string, unknown>;
 
 function database(tables: Record<string, Row[]>) {
+  // The user owns the default project, so cycle writes there are allowed
+  // (MIN-693 filters them by write access).
+  tables.projects ??= [{ id: "project", owner_id: "user" }];
+  tables.project_members ??= [];
   const writes: Array<{ table: string; ids: unknown[]; values: Row }> = [];
   const service = {
     from(table: string) {
@@ -159,4 +163,42 @@ it("does not pull an objective passed as the blocker", async () => {
   });
   await runCycleBlockerPull({ blockerId: "goal", blockedId: "blocked", actorId: "user" });
   expect(writes).toEqual([]);
+});
+
+describe("project roles (MIN-693)", () => {
+  const roleTables = () => ({
+    cycles: [cycle()],
+    projects: [
+      { id: "project", owner_id: "owner" },
+      { id: "read-only", owner_id: "owner" },
+    ],
+    project_members: [
+      { project_id: "project", user_id: "user", role: "member" },
+      { project_id: "read-only", user_id: "user", role: "reader" },
+    ],
+    issues: [
+      issue("member-work"),
+      issue("reader-leftover", { project_id: "read-only" }),
+    ],
+  });
+
+  it("fills a member's work but skips projects where the user only reads", async () => {
+    const { service, writes } = database(roleTables());
+    const fill = await fillCycleForUser({ service, userId: "user", actorId: null, cycle: cycle() });
+    expect(fill.pickedIds).toEqual(["member-work"]);
+    expect(writes.filter((write) => write.table === "issues")).toEqual([
+      { table: "issues", ids: ["member-work"], values: { cycle_id: "cycle" } },
+    ]);
+  });
+
+  it("does not pull a blocker into the cycle of a reader of its project", async () => {
+    const tables = roleTables();
+    tables.issues = [
+      issue("blocked", { cycle_id: "cycle" }),
+      issue("pull", { project_id: "read-only", assignee_id: null }),
+    ];
+    const { writes } = database(tables);
+    await runCycleBlockerPull({ blockerId: "pull", blockedId: "blocked", actorId: "user" });
+    expect(writes).toEqual([]);
+  });
 });

@@ -20,12 +20,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-11",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements)",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -66,14 +66,17 @@
       "content/documentation/reviews/premerge-de-es-2026-10-10.md",
       "content/documentation/reviews/premerge-it-pt-BR-2026-10-10.md",
       "content/documentation/reviews/min-670-feedback-objectives.md",
-      "content/documentation/reviews/ui-refinements-2026-10-11.md"
+      "content/documentation/reviews/ui-refinements-2026-10-11.md",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (it changed-passage parity and localized-label review)",
-    "date": "2026-10-11"
+    "revision": 10,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root with agent:/root/review_it_pt (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/review_it_pt with agent:/root (it pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, it wording and new-control review; existing procedural evidence retained); agent:/root (it changed-passage parity and localized-label review); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "api-and-webhooks"
@@ -99,7 +102,7 @@
       "src": "/documentation/it/publish-a-feedback-board-workflow.png",
       "alt": "Bacheca pubblica dei feedback attiva, con identità SSO locale configurata e URL nascosto.",
       "caption": "Il proprietario attiva la bacheca e sceglie l’identità dei visitatori. Questo esempio usa un firmatario SSO locale; l’URL e il segreto di firma sono nascosti.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -115,7 +118,7 @@
       "src": "/documentation/it/submit-and-follow-feedback-workflow.png",
       "alt": "Modulo di feedback del visitatore con titolo, descrizione e visibilità pubblica attivata.",
       "caption": "Un visitatore identificato invia un’esigenza e ne sceglie la visibilità. L’esempio è stato realmente inviato con la revisione automatica disattivata.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +134,7 @@
       "src": "/documentation/it/feedback-objective-selection.png",
       "alt": "Anteprima dei componenti di selezione dell’obiettivo per un feedback e un’integrazione, entrambi impostati su Docs.",
       "caption": "Selettori dell’obiettivo con dati dimostrativi. I nuovi feedback ereditano l’impostazione dell’integrazione.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -148,7 +151,7 @@
       "src": "/documentation/it/feedback-pages-and-views-workflow.png",
       "alt": "Guida ai feedback pubblicata e selezionata nella navigazione della bacheca, leggibile senza accesso.",
       "caption": "Pubblica una pagina, attiva le schede delle pagine e selezionala per la bacheca. Questa pagina dimostrativa è stata aperta anonimamente; il suo URL opaco mantiene `noindex`.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -206,13 +209,13 @@ Apri Il mio feedback per ritrovare richieste e voti secondo ciò che può vedere
 
 I filtri dell’elenco combinano stato, obiettivo, categorie, autore, origine e stato di revisione; la visibilità è disponibile quando la bacheca pubblica è attiva. Più valori della stessa proprietà sono alternative; proprietà diverse si combinano. Reimposta i filtri per tornare all’elenco iniziale. L’elenco mostra fino a 500 richieste corrispondenti a questi filtri alla volta. Apri il sottomenu di una proprietà per selezionarne i valori; il numero indica quanti sono selezionati. Su mobile, espandi la sezione della proprietà.
 
-I membri aprono Feedback nel progetto e scelgono una richiesta dalla coda di revisione o dall’elenco. Leggi l’invio originale, la scelta pubblica o privata, lo stato di revisione e gli eventuali suggerimenti di moderazione o duplicati. Puoi chiarire titolo e corpo canonici conservando i testi originali inviati. Assegna categorie e uno stato pubblico adatto; lo spam non appare mai sulla bacheca pubblica. Una richiesta privata resta distinta da una richiesta pubblica soltanto in attesa.
+Il proprietario del progetto e i Membri aprono Feedback nel progetto e scelgono una richiesta dalla coda di revisione o dall’elenco. I lettori possono leggere le richieste ma non moderarle. Leggi l’invio originale, la scelta pubblica o privata, lo stato di revisione e gli eventuali suggerimenti di moderazione o duplicati. Puoi chiarire titolo e corpo canonici conservando i testi originali inviati. Assegna categorie e uno stato pubblico adatto; lo spam non appare mai sulla bacheca pubblica. Una richiesta privata resta distinta da una richiesta pubblica soltanto in attesa.
 
 La traduzione facoltativa compare accanto al testo originale per il team; la bacheca pubblica conserva il feedback così com’è stato scritto. Verifica le classificazioni IA prima di farvi affidamento. Se un feedback è collegato a una issue, il suo stato dipende da quella issue e non può essere modificato autonomamente.
 
 ### Note e risposte pubbliche {#responses}
 
-Scegli la discussione interna per le note del team. Le risposte pubbliche sono visibili ai visitatori: controlla la visibilità prima di inviare. Le risposte ereditano la visibilità del thread; selezionare la modalità interna nel composer non rende privata una risposta in un thread pubblico. Le risposte pubbliche di Numo richiedono una richiesta esplicita; menzionarlo in un commento pubblico non attiva una risposta automatica.
+Scegli la discussione interna per le note del team. Le risposte pubbliche sono visibili ai visitatori: controlla la visibilità prima di inviare. Un lettore con **Può commentare** può partecipare alle discussioni interne, ma non può rispondere pubblicamente sulla bacheca. Le risposte ereditano la visibilità del thread; selezionare la modalità interna nel composer non rende privata una risposta in un thread pubblico. Le risposte pubbliche di Numo richiedono una richiesta esplicita; menzionarlo in un commento pubblico non attiva una risposta automatica.
 
 I membri possono eliminare commenti pubblici per moderarli. Solo l’autore può modificarli e il team non riscrive mai le parole dei visitatori. I commenti interni mantengono le regole che riservano queste azioni all’autore. Dopo una risposta pubblica o un intervento di moderazione, verifica la bacheca senza sessione per confermare la visibilità prevista.
 

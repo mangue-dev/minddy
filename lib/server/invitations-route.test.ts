@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 const getAuthedUser = vi.fn();
-const upsertMember = vi.fn();
+const acceptMember = vi.fn();
 const updateInvitation = vi.fn();
 
 let invitation: Record<string, unknown> | null = null;
@@ -63,15 +63,14 @@ vi.mock("@/lib/supabase-service", () => ({
           }),
         };
       }
-      if (table === "project_members") {
-        return {
-          upsert: async (payload: unknown) => {
-            upsertMember(payload);
-            return { error: null };
-          },
-        };
-      }
       throw new Error(`Unexpected table: ${table}`);
+    },
+    // The membership insert is the guarded acceptance RPC (MIN-693): it
+    // applies the invitation's stored role and never overwrites a membership.
+    rpc: async (name: string, args: unknown) => {
+      if (name !== "accept_project_invitation_guarded") throw new Error(`Unexpected RPC: ${name}`);
+      acceptMember(args);
+      return { data: PROJECT, error: null };
     },
   }),
 }));
@@ -130,9 +129,12 @@ describe("PATCH /api/projects/invitations", () => {
       ok: true,
       acceptedProjectId: PROJECT,
     });
-    expect(upsertMember).toHaveBeenCalledWith(
-      expect.objectContaining({ project_id: PROJECT, user_id: USER })
-    );
+    // Only the invitation and the caller are passed: the client never
+    // chooses the role it joins with.
+    expect(acceptMember).toHaveBeenCalledWith({
+      p_invitation_id: INVITATION,
+      p_user_id: USER,
+    });
     expect(updateInvitation).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "accepted",
@@ -155,7 +157,7 @@ describe("PATCH /api/projects/invitations", () => {
     invitation!.invited_email = "quelquun.dautre@minddy.app";
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(403);
-    expect(upsertMember).not.toHaveBeenCalled();
+    expect(acceptMember).not.toHaveBeenCalled();
     expect(updateInvitation).not.toHaveBeenCalled();
   });
 
@@ -166,7 +168,7 @@ describe("PATCH /api/projects/invitations", () => {
     project = { owner_id: "22222222-2222-4222-8222-222222222222" };
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(403);
-    expect(upsertMember).not.toHaveBeenCalled();
+    expect(acceptMember).not.toHaveBeenCalled();
     expect(updateInvitation).not.toHaveBeenCalled();
   });
 
@@ -174,7 +176,7 @@ describe("PATCH /api/projects/invitations", () => {
     const response = await PATCH(request("reject"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, acceptedProjectId: null });
-    expect(upsertMember).not.toHaveBeenCalled();
+    expect(acceptMember).not.toHaveBeenCalled();
     expect(updateInvitation).toHaveBeenCalledWith(
       expect.objectContaining({ status: "rejected" }),
       INVITATION
@@ -185,6 +187,6 @@ describe("PATCH /api/projects/invitations", () => {
     invitation!.expires_at = new Date(Date.now() - 1000).toISOString();
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(404);
-    expect(upsertMember).not.toHaveBeenCalled();
+    expect(acceptMember).not.toHaveBeenCalled();
   });
 });

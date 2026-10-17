@@ -43,6 +43,7 @@ export type ViewResult =
         | "invalidSort"
         | "noFieldsToUpdate"
         | "projectNotFound"
+        | "readOnlyProject"
         | "viewNotFound"
         | "systemViewLocked"
         | "databaseError";
@@ -270,17 +271,23 @@ export async function createView({
     display: input.display,
   });
 
+  const personal = projectId === null || input.personal === true;
   if (projectId !== null) {
     const access = await getProjectAccess(actorId, projectId);
     if (!access) {
       return { ok: false, status: 404, errorKey: "projectNotFound" };
+    }
+    // A personal view is the reader's own bookkeeping; a shared view changes
+    // what the whole team sees and needs write access (MIN-693).
+    if (!personal && !access.canWrite) {
+      return { ok: false, status: 403, errorKey: "readOnlyProject" };
     }
   }
 
   const service = getServiceClient();
   const row = await encodeView({
     id: randomUUID(), project_id: projectId,
-    user_id: projectId === null || input.personal === true ? actorId : null,
+    user_id: personal ? actorId : null,
     kind: "custom", name, filters, sort, display,
   }, { service });
   const { data, error } = await service
@@ -341,9 +348,12 @@ export async function updateView({
     if (!view || view.user_id && view.user_id !== actorId) {
       return { ok: false, status: 404, errorKey: "viewNotFound" };
     }
-    if (view.project_id !== null &&
-        !await getProjectAccess(actorId, view.project_id as string)) {
-      return { ok: false, status: 404, errorKey: "viewNotFound" };
+    if (view.project_id !== null) {
+      const access = await getProjectAccess(actorId, view.project_id as string);
+      if (!access) return { ok: false, status: 404, errorKey: "viewNotFound" };
+      if (!view.user_id && !access.canWrite) {
+        return { ok: false, status: 403, errorKey: "readOnlyProject" };
+      }
     }
     if (view.kind === "my") {
       if ("name" in updates) {

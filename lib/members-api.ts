@@ -4,6 +4,7 @@ import { fetchClientRead } from "./client-read";
 import { apiErrorCode, HttpResponseError } from "./backend-availability";
 
 import type { MembersResponse } from "./types";
+import type { MemberRole } from "./project-roles";
 import { trackEvent } from "./analytics";
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -26,16 +27,77 @@ export async function fetchMembersApi(projectId: string, signal?: AbortSignal): 
   return parseJson<MembersResponse>(await fetchClientRead(`/api/projects/${projectId}/members`, { signal }));
 }
 
-export async function inviteMemberApi(projectId: string, email: string): Promise<void> {
+export interface MemberAccessInput {
+  role: MemberRole;
+  /** Reader-only comment option; ignored by the server for members. */
+  can_comment: boolean;
+}
+
+export async function inviteMemberApi(
+  projectId: string,
+  email: string,
+  access: MemberAccessInput = { role: "member", can_comment: false }
+): Promise<void> {
   // The email is NEVER sent — only that an invitation goes out.
   trackEvent("project_member_invited", {});
   await parseJson(
     await fetch(`/api/projects/${projectId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({
+        email,
+        role: access.role,
+        can_comment: access.role === "reader" && access.can_comment,
+      }),
     })
   );
+}
+
+async function patchMembers<T>(projectId: string, body: Record<string, unknown>): Promise<T> {
+  return parseJson<T>(
+    await fetch(`/api/projects/${projectId}/members`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  );
+}
+
+/** Owner-only: change a member's role, or a reader's comment option. */
+export async function updateMemberRoleApi(
+  projectId: string,
+  userId: string,
+  access: MemberAccessInput
+): Promise<{ unassigned?: number }> {
+  return patchMembers(projectId, {
+    userId,
+    role: access.role,
+    can_comment: access.role === "reader" && access.can_comment,
+  });
+}
+
+/** Owner-only: change the role a pending invitation grants on acceptance. */
+export async function updateInvitationRoleApi(
+  projectId: string,
+  invitationId: string,
+  access: MemberAccessInput
+): Promise<void> {
+  await patchMembers(projectId, {
+    invitationId,
+    role: access.role,
+    can_comment: access.role === "reader" && access.can_comment,
+  });
+}
+
+/** Owner-only: hand ownership to an existing member. */
+export async function transferOwnershipApi(
+  projectId: string,
+  userId: string
+): Promise<{ disabledRoutines: number }> {
+  const result = await patchMembers<{ disabledRoutines?: number }>(projectId, {
+    transferTo: userId,
+  });
+  return { disabledRoutines: result?.disabledRoutines ?? 0 };
 }
 
 export async function cancelInvitationApi(

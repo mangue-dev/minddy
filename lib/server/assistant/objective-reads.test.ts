@@ -5,7 +5,9 @@ import { resolveObjectiveRef } from "@/lib/server/issue-reads";
 import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 
 const { getProjectAccess } = vi.hoisted(() => ({ getProjectAccess: vi.fn() }));
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess }));
+vi.mock("@/lib/server/project-access", async (original) => ({
+  ...await original<typeof import("@/lib/server/project-access")>(), getProjectAccess,
+}));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => database() }));
 
 const objectiveId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -73,7 +75,7 @@ function context(): ToolContext {
 beforeEach(() => {
   vi.clearAllMocks();
   databaseError = null;
-  getProjectAccess.mockResolvedValue({ project: { id: "project-1", key: "MIN" } });
+  getProjectAccess.mockResolvedValue({ project: { id: "project-1", key: "MIN" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
   tables = {
     objectives: [
       { id: objectiveId, project_id: "project-1", name: "Release", description: "Ship it", status: "planned", lead_user_id: "user-1", target_date: null },

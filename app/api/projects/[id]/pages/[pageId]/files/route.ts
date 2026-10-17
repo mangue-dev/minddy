@@ -32,8 +32,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  if (!(await getProjectAccess(auth.user.id, projectId))) {
+  const access = await getProjectAccess(auth.user.id, projectId);
+  if (!access) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
+  }
+  // A file placed in a page body is a page edit (MIN-693).
+  if (!access.canWrite) {
+    return NextResponse.json({ error: t("readOnlyProject") }, { status: 403 });
   }
 
   // Ten megabytes per call, stored in MEMORY during the request: without

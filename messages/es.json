@@ -298,7 +298,15 @@
     "pageDatabaseStale": "Esta columna ha cambiado. Revisa el valor actual e inténtalo de nuevo.",
     "pageDatabaseMove": "Esta página no puede moverse a otra base de datos con los valores actuales de sus columnas.",
     "pageDatabaseRestoreParent": "Restaura la base de datos principal antes de restaurar esta entrada.",
-    "projectAutomationsRetired": "Las automatizaciones del proyecto se han sustituido por rutinas."
+    "projectAutomationsRetired": "Las automatizaciones del proyecto se han sustituido por rutinas.",
+    "readOnlyProject": "Solo puedes consultar este proyecto.",
+    "commentNotAllowed": "No puedes comentar en este proyecto.",
+    "invalidRole": "Este rol no es válido.",
+    "memberNotFound": "Esta persona ya no es miembro del proyecto.",
+    "cannotChangeOwner": "El rol de la persona propietaria solo cambia al transferir la propiedad.",
+    "transferTargetNotMember": "La propiedad solo puede transferirse a un miembro, no a un lector.",
+    "transferKeyConflict": "La nueva persona propietaria ya tiene un proyecto con esta clave. Cambia primero la clave.",
+    "transferStorageQuota": "El almacenamiento de la nueva persona propietaria no tiene espacio para los archivos de este proyecto."
   },
   "RelayClaim": {
     "title": "Conectar GitHub",
@@ -1568,7 +1576,8 @@
     "githubMilestone": "Hito",
     "githubRawMetadata": "Ver todos los metadatos GitHub preservados",
     "githubYes": "Sí",
-    "githubNo": "No"
+    "githubNo": "No",
+    "descriptionEmptyReadOnly": "Sin descripción."
   },
   "Language": {
     "title": "Idioma",
@@ -1585,13 +1594,37 @@
     "membersLabel": "Miembros",
     "owner": "Persona propietaria",
     "remove": "Eliminar",
+    "removeFromProject": "Quitar del proyecto",
     "removeMemberTitle": "¿Eliminar a {name} del proyecto?",
     "removeMemberDescription": "Perderá el acceso al proyecto y sus incidencias. Podrás volver a invitar a esta persona más adelante.",
     "invitationSent": "Invitación enviada a {email}.",
     "pendingInvitations": "Invitaciones pendientes",
     "pendingInvitationsHint": "Las invitaciones duran 30 días. Si la persona todavía no tiene una cuenta de minddy, la encontrará cuando se registre con esa dirección.",
     "pending": "Pendiente",
-    "cancelInvitationAria": "Cancelar la invitación"
+    "cancelInvitationAria": "Cancelar la invitación",
+    "roleMember": "Miembro",
+    "roleReader": "Lector",
+    "roleReaderCanComment": "Lector · puede comentar",
+    "canComment": "Puede comentar",
+    "canCommentHint": "Comentarios en incidencias, objetivos, comentarios recibidos y páginas. Todo lo demás queda en solo lectura.",
+    "rolesHint": "Los miembros trabajan en todo; los lectores solo pueden leer.",
+    "inviteRoleAria": "Rol que otorga la invitación",
+    "memberRoleAria": "Rol de {name}",
+    "invitationRoleAria": "Rol para {email}",
+    "manageMemberAria": "Gestionar a {name}",
+    "transferOwnership": "Transferir la propiedad del proyecto",
+    "demoteTitle": "¿Convertir a {name} en lector?",
+    "demoteDescription": "Conserva el acceso de lectura. Sus incidencias abiertas quedan sin asignar y deja de liderar objetivos.",
+    "demoteConfirm": "Convertir en lector",
+    "transferTitle": "¿Transferir la propiedad a {name}?",
+    "transferDescription": "Solo la nueva persona propietaria podrá devolvértela.",
+    "transferBecomeMember": "Pasas a ser miembro de este proyecto.",
+    "transferRoutinesPaused": "Tus rutinas en este proyecto quedan en pausa.",
+    "transferPlanFollows": "Los límites del plan y el almacenamiento de archivos siguen el plan de la nueva persona propietaria.",
+    "transferPersonalStays": "Tu suscripción, tus métodos de pago y tus claves de API personales siguen siendo tuyos.",
+    "transferConfirm": "Transferir la propiedad",
+    "transferDone": "{name} es ahora quien tiene la propiedad del proyecto.",
+    "transferRoutinesPausedCount": "{count, plural, one {# rutina en pausa.} other {# rutinas en pausa.}}"
   },
   "Meta": {
     "description": "Un espacio de trabajo de código abierto para gestionar proyectos y tareas, y trabajar con Numo y herramientas de IA conectadas.",
@@ -6345,5 +6378,9 @@
     "articleLabel": "Artículo",
     "localeLabel": "Idioma",
     "revisionLabel": "Revisión"
+  },
+  "ProjectAccess": {
+    "readOnlyToast": "Solo puedes leer este proyecto.",
+    "sharedViewReadOnly": "Solo los miembros pueden cambiar las vistas compartidas. Guarda tu propia vista."
   }
 }

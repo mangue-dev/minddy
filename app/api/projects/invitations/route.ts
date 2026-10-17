@@ -200,19 +200,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { error: memberError } = await service
-      .from("project_members")
-      .upsert(
-        {
-          project_id: invitation.project_id,
-          user_id: auth.user.id,
-          role: "member",
-          added_by: invitation.invited_by,
-        },
-        { onConflict: "project_id,user_id" }
-      );
-    if (memberError) {
-      console.error("[api/invitations] add member failed:", memberError.message);
+    // Locked re-check and insert with the invitation's stored role (MIN-693):
+    // a client never chooses its role, and an existing membership is never
+    // overwritten. The project's current owner must still be the inviter.
+    const { error: acceptError } = await service.rpc(
+      "accept_project_invitation_guarded",
+      { p_invitation_id: invitation.id, p_user_id: auth.user.id }
+    );
+    if (acceptError) {
+      if (acceptError.message.includes("invitation_not_found")) {
+        return NextResponse.json({ error: t("invitationNotFound") }, { status: 404 });
+      }
+      if (acceptError.message.includes("invitation_not_for_you")) {
+        return NextResponse.json({ error: t("invitationNotForYou") }, { status: 403 });
+      }
+      console.error("[api/invitations] add member failed:", acceptError.message);
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }

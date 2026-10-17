@@ -42,6 +42,7 @@ import { ObjectiveMomentum } from "@/components/objective-momentum";
 import { ObjectiveFeedbackSection } from "@/components/objective-feedback-section";
 import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
 import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
+import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import {
   DictateButton,
@@ -223,6 +224,9 @@ export function ObjectiveDetail({
   const { track } = useAnalytics();
   // Mounts with the objectives page: warm the editor chunk once painted.
   useIdleMarkdownEditorPreload();
+  // Project readers (MIN-693) read the objective; comments follow their option.
+  const { canWrite, canComment } = useProjectCapabilities(projectId);
+  const readOnly = !canWrite;
   const [name, setName] = useState(objective.name);
   const nameEdited = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -440,6 +444,7 @@ export function ObjectiveDetail({
           {/* Permanently mounted, invisible when at rest: it is he who holds the
  tape recorder and the anchor of the wave. The menu entry below does
  only triggers it, and it then reappears as a stop button. */}
+          {!readOnly && (<>
           <DictateButton
             ref={dictateRef}
             context="objective_form"
@@ -480,6 +485,7 @@ export function ObjectiveDetail({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </>)}
         </div>
       </AppContentHeader>
 
@@ -491,6 +497,7 @@ export function ObjectiveDetail({
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           <AutoTextarea
             value={name}
+            readOnly={readOnly}
             onChange={(e) => { nameEdited.current = true; setName(e.target.value); }}
             onBlur={commitName}
             onKeyDown={(e) => {
@@ -529,6 +536,7 @@ export function ObjectiveDetail({
                 descriptionEdited.current = true;
               }}
               placeholder={t("descriptionPlaceholder")}
+              readOnly={readOnly}
             />
           </div>
 
@@ -536,6 +544,7 @@ export function ObjectiveDetail({
  are a row of this table, the last: they are what
  that the objective TRANSPORTS, after what it is. */}
           <div className="flex flex-col">
+            <fieldset disabled={readOnly} className="m-0 flex min-w-0 flex-col border-0 p-0">
             <PropertyRow label={t("statusFieldLabel")}>
               <ObjectiveStatusValue
                 value={objective.status}
@@ -561,6 +570,7 @@ export function ObjectiveDetail({
                 onChange={(color) => void patch({ color })}
               />
             </PropertyRow>
+            </fieldset>
             <ObjectiveRelationsSection
               objective={objective}
               projectId={projectId}
@@ -588,10 +598,13 @@ export function ObjectiveDetail({
             onEditComment={updateComment}
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
+            canComment={canComment}
+            canModerate={canWrite}
           />
         </div>
       </div>
 
+      {canComment && (
       <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
         <div className="mx-auto max-w-3xl">
           <CommentComposer
@@ -603,6 +616,7 @@ export function ObjectiveDetail({
           />
         </div>
       </div>
+      )}
 
       <ConfirmDeleteDialog
         open={confirmDelete}

@@ -16,7 +16,7 @@ const MAX_CATEGORY_IDS = 100;
  — replaces the post's category set (MIN-52). Project member required. */
 export async function PUT(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "write");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 

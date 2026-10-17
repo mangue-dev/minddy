@@ -16,12 +16,15 @@ export function SubIssuesSection({
   projectKey,
   onOpenIssue,
   onCreate,
+  readOnly = false,
 }: {
   issue: Issue;
   allIssues: Issue[];
   projectKey: string;
   onOpenIssue: (id: string) => void;
   onCreate: (input: CreateIssueInput) => Promise<unknown>;
+  /** Project readers: sub-issues are listed without the add form. */
+  readOnly?: boolean;
 }) {
   const t = useTranslations("IssueUI");
   const tIssue = useTranslations("Issue");
@@ -102,6 +105,7 @@ export function SubIssuesSection({
         </div>
       )}
 
+      {!readOnly && (
       <form onSubmit={handleAdd} className="flex items-center gap-2">
         <Input
           value={title}
@@ -113,6 +117,7 @@ export function SubIssuesSection({
           {adding ? <Spinner /> : <HugeiconsIcon icon={Add01Icon} />}
         </Button>
       </form>
+      )}
     </div>
   );
 }

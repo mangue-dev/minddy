@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "write");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 

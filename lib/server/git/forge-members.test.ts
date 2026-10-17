@@ -98,7 +98,7 @@ beforeEach(() => {
 
 describe("buildForgeAssigneeIndex", () => {
   it("indexe le owner et les membres — le owner n'a pas de ligne project_members", async () => {
-    memberRows.push({ project_id: PROJECT, user_id: "user-dev" });
+    memberRows.push({ project_id: PROJECT, user_id: "user-dev", role: "member" });
     identityRows.push(
       { provider: "github", user_id: OWNER, account_login: "octocat" },
       { provider: "github", user_id: "user-dev", account_login: "Hubot" },
@@ -109,6 +109,19 @@ describe("buildForgeAssigneeIndex", () => {
     expect(index.get("octocat")).toBe(OWNER);
     // Indexed in lowercase: the forge does not have the same case from one endpoint to another.
     expect(index.get("hubot")).toBe("user-dev");
+  });
+
+  it("leaves out a reader: readers are never assignees nor forge @numo triggers (MIN-693)", async () => {
+    memberRows.push({ project_id: PROJECT, user_id: "user-reader", role: "reader" });
+    identityRows.push(
+      { provider: "github", user_id: OWNER, account_login: "octocat" },
+      { provider: "github", user_id: "user-reader", account_login: "reader" },
+    );
+
+    const index = await buildForgeAssigneeIndex({ projectId: PROJECT, provider: "github" });
+
+    expect(index.has("octocat")).toBe(true);
+    expect(index.has("reader")).toBe(false);
   });
 
   it("LAISSE DEHORS un login connu de minddy mais étranger au projet", async () => {

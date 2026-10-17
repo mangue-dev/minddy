@@ -48,6 +48,7 @@ export type PageCommentResult =
         | "commentEmpty"
         | "pageNotFound"
         | "commentNotFound"
+        | "commentNotAllowed"
         | "databaseError";
     };
 
@@ -103,6 +104,7 @@ export async function addPageComment({
   const projectId = page.project_id as string;
   const access = await getProjectAccess(actorId, projectId);
   if (!access) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  if (!access.canComment) return { ok: false, status: 403, errorKey: "commentNotAllowed" };
 
   // Answers: the stored `parent_id` is ALWAYS the root of the thread, and this
   // root must belong to this page.

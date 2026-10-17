@@ -18,7 +18,7 @@ vi.mock("@/lib/server/feedback-post-store", () => ({
   encodeFeedbackPost: async (row: unknown) => row, decodeFeedbackPost: async (row: unknown) => row,
 }));
 vi.mock("@/lib/server/objective-store", () => ({ objectiveStore: (client: { from: (name: string) => unknown }) => client.from("objectives") }));
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: async () => ({ isOwner: true }) }));
+vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: async () => ({ isOwner: true, canWrite: true, canComment: true }) }));
 vi.mock("@/lib/server/create-issue", () => ({ createIssueForProject: state.createIssue }));
 vi.mock("@/lib/server/integration-content", () => ({
   shouldProtectIntegrations: async () => false, decodeIntegration: async (row: unknown) => row,

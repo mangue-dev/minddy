@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 6,
-  "sourceRevision": 6,
+  "revision": 7,
+  "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-693 project roles",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -39,14 +39,17 @@
       "app/share/[token]/page.tsx",
       "content/knowledge/feedback.md",
       "lib/server/view-shares.ts",
-      "lib/public-board-projection.ts"
+      "lib/public-board-projection.ts",
+      "docs/security/project-roles.md",
+      "lib/project-roles.ts",
+      "content/documentation/reviews/min-693-project-roles.md"
     ]
   },
   "review": {
-    "revision": 6,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review)",
-    "date": "2026-10-09"
+    "revision": 7,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root/min693_pt-BR with agent:/root (pt-BR MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "navigation",
@@ -69,7 +72,7 @@
       "src": "/documentation/pt-BR/work-view-filters.png",
       "alt": "Filtros manuais de uma visualização e menu de ordenação.",
       "caption": "Filtre pelas propriedades dos tickets ou escolha uma ordem. O campo de IA é opcional para esses controles manuais.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -85,7 +88,7 @@
       "src": "/documentation/pt-BR/work-share-view.png",
       "alt": "Janela de compartilhamento de visualização com acesso privado selecionado.",
       "caption": "Acesso privado, protegido por senha e público são escolhas distintas. A visualização continua privada nesta captura.",
-      "revision": 6,
+      "revision": 7,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -123,7 +126,7 @@ Uma visualização salva não é uma cópia de seus problemas. Excluir a visuali
 
 ## Compartilhar e revogar uma visualização em modo somente leitura {#share-a-view}
 
-Abra o menu de uma visualização elegível em um quadro do projeto e escolha a ação de compartilhamento. Você precisa ter acesso ao projeto; uma visualização pessoal dentro dele só pode ser compartilhada pelo próprio usuário. Visualizações globais entre projetos não podem ser compartilhadas. Confira filtros e conteúdo visível antes de publicar. Escolha um link público secreto ou proteção por senha, quando disponíveis; a senha exige pelo menos oito caracteres. Copie o link gerado somente depois que a alteração for salva com sucesso.
+Abra o menu de uma visualização elegível em um quadro do projeto e escolha a ação de compartilhamento. Você precisa ser o proprietário ou um Membro; os leitores mantêm suas visualizações pessoais, mas não podem compartilhar visualizações. Uma visualização pessoal dentro do projeto só pode ser compartilhada pelo próprio usuário. Visualizações globais entre projetos não podem ser compartilhadas. Confira filtros e conteúdo visível antes de publicar. Escolha um link público secreto ou proteção por senha, quando disponíveis; a senha exige pelo menos oito caracteres. Copie o link gerado somente depois que a alteração for salva com sucesso.
 
 Abra o link em outra sessão do navegador, sem sua conta. Confira o subconjunto de problemas, os campos e os conteúdos vinculados que um visitante pode ver. O link público concede acesso somente leitura à visualização, não participação nem permissão de edição no projeto.
 

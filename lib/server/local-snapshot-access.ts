@@ -5,7 +5,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 
 type Project = { id: string; owner_id: string; deleted_at: string | null };
 type Membership = { project_id: string; user_id: string; role: string;
-  project: Project | Project[] | null };
+  can_comment?: boolean | null; project: Project | Project[] | null };
 type AccessRecord = [string, string, string];
 const PAGE_SIZE = 300;
 const MAX_ACCESS_ROWS = 10_000;
@@ -47,7 +47,7 @@ export async function localSnapshotProjectAccess(owner: string) {
     let after: string | null = null;
     while (!stopped) {
       let query = service.from("project_members")
-        .select("project_id,user_id,role,project:projects!inner(id,owner_id,deleted_at)")
+        .select("project_id,user_id,role,can_comment,project:projects!inner(id,owner_id,deleted_at)")
         .eq("user_id", owner).is("project.deleted_at", null);
       if (after !== null) query = query.gt("project_id", after);
       const page = await query.order("project_id").limit(PAGE_SIZE);
@@ -59,7 +59,11 @@ export async function localSnapshotProjectAccess(owner: string) {
             project.id !== member.project_id || typeof member.role !== "string") {
           throw new Error("Invalid local snapshot membership");
         }
-        if (project.owner_id !== owner) shared.push([project.id, project.owner_id, member.role]);
+        // The comment option only exists for readers (MIN-693); encoding it
+        // there keeps every existing owner and member fingerprint unchanged.
+        const access = member.role === "reader" && member.can_comment === true
+          ? "reader:comment" : member.role;
+        if (project.owner_id !== owner) shared.push([project.id, project.owner_id, access]);
       }
       if (page.data.length < PAGE_SIZE) break;
       const last = page.data.at(-1)!.project_id;

@@ -31,7 +31,7 @@ const COMMENT_BODY_MAX = 10_000;
 /** PATCH — edit the comment body (author-only, own non-Numo comment). */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id, postId, commentId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "comment");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 
@@ -56,6 +56,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     commentId,
     userId: guard.userId,
     mode: "edit",
+    canWrite: guard.access.canWrite,
   });
   if (!own.ok) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
@@ -81,7 +82,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     (parent_id FK), whose attachment objects are cleaned up here. */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id, postId, commentId } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireProjectMember(request, id, "comment");
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 
@@ -94,6 +95,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     commentId,
     userId: guard.userId,
     mode: "delete",
+    canWrite: guard.access.canWrite,
   });
   if (!own.ok) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
