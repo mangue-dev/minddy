@@ -29,6 +29,7 @@ import {
   titleDocFromText,
 } from "./page-collaboration-document";
 import {
+  COLLAB_BEACON_MAX_BYTES,
   CollabFatalError,
   CollabStream,
   collabPlugin,
@@ -340,19 +341,21 @@ export function usePageCollaboration({
         isPresentation: (origin) => origin.getMeta(MENTION_HYDRATION_META) === true,
         canSend: () => canWriteRef.current,
         onStatus: reportStatus("body"),
-        onRefused: (reason) => {
+        onRefused: (reason, dropped) => {
           console.warn("[page-collaboration] body batch refused:", reason);
-          // A pill rebuild nobody asked for is not the user's change to undo.
+          // A pill rebuild nobody asked for is not the user's change to undo,
+          // but typing lost with it is: say so once, even though the refusal
+          // itself is silent.
           if (reason === "presentation-changed") {
             if (sessionRef.current?.key === key) sessionRef.current.hydrationRefused = true;
+            if (dropped > 0) onRefusedRef.current("step-failed");
             return;
           }
           onRefusedRef.current(reason);
         },
         onConflicts: (found) => setConflicts((current) => [...current, ...(found as PageBlockConflict[])]),
         onFatal: (error) => onFatalRef.current(error),
-        // Typing lost with a refused pill rebuild, or by a demoted writer, is
-        // the user's change: say so even when the refusal itself is silent.
+        // Pending work of a writer demoted to reader is the user's change too.
         onDiscarded: () => onRefusedRef.current("step-failed"),
         onAttached: (attached) => {
           for (const listener of attachedListeners) listener(attached);
@@ -566,11 +569,16 @@ export function usePageCollaboration({
   }, [key]);
 
   const beacon = useCallback(() => {
-    for (const stream of retiredPending()) stream.beacon();
+    // Every keepalive request in flight shares one browser budget: split it
+    // between the streams that have something to send.
     const current = sessionRef.current;
-    if (!current || current.key !== key) return;
-    current.body.beacon();
-    current.title.stream.beacon();
+    const live = current && current.key === key
+      ? [current.body, current.title.stream].filter((stream) => stream.hasPending())
+      : [];
+    const streams = [...live, ...retiredPending()];
+    if (streams.length === 0) return;
+    const share = Math.floor(COLLAB_BEACON_MAX_BYTES / streams.length);
+    for (const stream of streams) stream.beacon(share);
   }, [key]);
 
   /**

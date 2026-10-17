@@ -35,7 +35,7 @@
 
 import type { Node as PMNode, Schema } from "@tiptap/pm/model";
 import { EditorState, type Transaction } from "@tiptap/pm/state";
-import { Step, Transform, type StepMap } from "@tiptap/pm/transform";
+import { Step, type StepMap } from "@tiptap/pm/transform";
 import { collab, getVersion, receiveTransaction, sendableSteps } from "prosemirror-collab";
 
 import {
@@ -114,10 +114,18 @@ export interface CollabTransport {
 export class CollabFatalError extends Error {}
 
 /**
- * The largest batch `beacon()` sends, in serialized characters: browsers
- * refuse a `keepalive` request body above 64 KB, and the refusal is silent.
+ * The UTF-8 bytes all `beacon()` calls of one page may send together: browsers
+ * refuse `keepalive` bodies once the requests in flight exceed 64 KiB, and the
+ * refusal is silent. The streams beaconing at unload share this budget.
  */
-export const COLLAB_BEACON_MAX_CHARS = 60_000;
+export const COLLAB_BEACON_MAX_BYTES = 60_000;
+
+const utf8 = new TextEncoder();
+
+/** Serialized UTF-8 size of a batch's steps, as the route measures it. */
+function jsonBytes(json: unknown): number {
+  return utf8.encode(JSON.stringify(json)).length;
+}
 
 export type CollabStreamStatus = "saved" | "saving" | "error";
 
@@ -149,12 +157,13 @@ export interface CollabStreamOptions {
   /** May this session send? A reader's session only receives. */
   canSend?: () => boolean;
   onStatus?: (status: CollabStreamStatus) => void;
-  onRefused?: (reason: CollabRefusal) => void;
+  /** A batch was refused and reverted; `dropped` later steps could not be
+   *  rebased over its removal and were lost with it. */
+  onRefused?: (reason: CollabRefusal, dropped: number) => void;
   onConflicts?: (conflicts: unknown[]) => void;
   onFatal?: (error: unknown) => void;
-  /** Local work was dropped without a refusal of its own: steps that could
-   *  not be rebased over a refused batch, or pending work of a session that
-   *  can no longer send. */
+  /** Local work was dropped without a refusal: the pending work of a session
+   *  that can no longer send. */
   onDiscarded?: () => void;
   /** After any change of the confirmed revision or the local document. */
   onChange?: () => void;
@@ -330,6 +339,13 @@ export class CollabStream {
 
   /** A local transaction changed the document. */
   noteLocalChange(): void {
+    // A stopped session never saves again: what is typed now stays on screen
+    // only, and the status says so instead of spinning.
+    if (this.stopped) {
+      this.setStatus("error");
+      this.options.onChange?.();
+      return;
+    }
     this.setStatus("saving");
     this.scheduleSend(this.options.sendDelayMs ?? COLLAB_SEND_DELAY_MS);
     this.options.onChange?.();
@@ -477,6 +493,7 @@ export class CollabStream {
     this.setStatus("saving");
     let result: CollabSubmitResult | null = null;
     let failure: unknown = null;
+    let stalled = false;
     try {
       result = await this.options.transport.submit(submission);
     } catch (error) {
@@ -519,17 +536,26 @@ export class CollabStream {
       }
     } else if (result?.status === "behind") {
       await this.pull();
+      // A server that keeps answering "behind" without the catch-up moving
+      // (a backlog it cannot write yet) is retried with backoff, not at once.
+      const now = this.host?.getState();
+      if (now && getVersion(now) === submission.base) {
+        this.failures += 1;
+        stalled = true;
+      }
     } else if (result?.status === "refused") {
       const dropped = this.revertRefused(steps.length);
-      this.options.onRefused?.(result.reason);
-      if (dropped > 0) this.options.onDiscarded?.();
+      this.options.onRefused?.(result.reason, dropped);
     }
     if (arriving && this.pendingAttach === arriving) this.completeAttach(arriving);
     this.options.onChange?.();
     // A catch-up above may have stopped the session for good.
     if (this.stopped) return;
-    if (this.host && hasUnconfirmed(this.host.getState())) this.scheduleSend(0);
-    else this.idle();
+    if (this.host && hasUnconfirmed(this.host.getState())) {
+      this.scheduleSend(stalled ? Math.min(30_000, 500 * 2 ** Math.min(this.failures, 6)) : 0);
+    } else {
+      this.idle();
+    }
   }
 
   /**
@@ -537,10 +563,18 @@ export class CollabStream {
    * and size, and of one kind only — a presentation batch must hold
    * presentation steps alone, or the authority could not verify it.
    */
+  /**
+   * The next batch to send, split by UTF-8 bytes so it fits the route's byte
+   * limit. A single step larger than the limit is still sent on the normal
+   * path, so the server refuses it as `too-large` and it is reverted with a
+   * message; a beacon (`maxBytes` given) sends nothing rather than a body the
+   * browser would drop.
+   */
   private nextBatch(
     state: EditorState,
-    maxChars = MAX_COLLAB_BATCH_CHARS
+    maxBytes?: number
   ): { steps: Step[]; submission: CollabSubmission } | null {
+    const limit = maxBytes ?? MAX_COLLAB_BATCH_CHARS;
     const sendable = sendableSteps(state);
     if (!sendable) return null;
     const origins = sendable.origins as Transaction[];
@@ -550,12 +584,12 @@ export class CollabStream {
       !!this.options.isPresentation?.(origins[count]) === presentation) count += 1;
     let steps = sendable.steps.slice(0, count);
     let json = steps.map((step) => step.toJSON());
-    while (steps.length > 1 && (JSON.stringify(json).length > maxChars ||
+    while (steps.length > 1 && (jsonBytes(json) > limit ||
         collabInsertedChars(json) > MAX_COLLAB_BATCH_INSERTED_CHARS)) {
       steps = steps.slice(0, Math.ceil(steps.length / 2));
       json = json.slice(0, steps.length);
     }
-    if (JSON.stringify(json).length > maxChars) return null;
+    if (maxBytes !== undefined && jsonBytes(json) > maxBytes) return null;
     return {
       steps,
       submission: {
@@ -575,12 +609,13 @@ export class CollabStream {
    * applies — and a batch already in flight is left alone, since a second one
    * at the same base could only be refused.
    */
-  beacon(): void {
+  beacon(maxBytes = COLLAB_BEACON_MAX_BYTES): void {
     if (this.closed || this.stopped || this.inFlight || !this.host) return;
     if (this.options.canSend && !this.options.canSend()) return;
-    // A keepalive body above 64 KB is refused by the browser: send a prefix
-    // that fits, or nothing (the unsaved-work guard has already warned).
-    const batch = this.nextBatch(this.host.getState(), COLLAB_BEACON_MAX_CHARS);
+    // A keepalive body above the shared 64 KiB budget is refused by the
+    // browser: send a prefix that fits, or nothing (the unsaved-work guard has
+    // already warned).
+    const batch = this.nextBatch(this.host.getState(), maxBytes);
     if (batch) this.options.transport.beacon?.(batch.submission);
   }
 
@@ -596,7 +631,11 @@ export class CollabStream {
     const state = host.getState();
     const { unconfirmed, version } = collabInternals(state);
     if (unconfirmed.length === 0) return 0;
-    const transform = new Transform(state.doc);
+    // The rebase runs on the dispatched transaction itself, flagged `rebased`
+    // like prosemirror-collab's own: the history plugin then follows the
+    // mirrored steps, so undo still reaches the typing that was kept and
+    // forgets the refused batch.
+    const transform = state.tr;
     for (let i = unconfirmed.length - 1; i >= 0; i -= 1) transform.step(unconfirmed[i].inverted);
     const kept: Rebaseable[] = [];
     let dropped = 0;
@@ -619,10 +658,9 @@ export class CollabStream {
         dropped += 1;
       }
     }
-    const tr = state.tr;
-    for (const step of transform.steps) tr.step(step);
-    tr.setMeta(COLLAB_META, { version, unconfirmed: kept }).setMeta("addToHistory", false);
-    host.dispatch(tr);
+    transform.setMeta(COLLAB_META, { version, unconfirmed: kept })
+      .setMeta("rebased", unconfirmed.length).setMeta("addToHistory", false);
+    host.dispatch(transform);
     return dropped;
   }
 

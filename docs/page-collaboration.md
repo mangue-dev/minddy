@@ -548,8 +548,9 @@ simply makes the server decide access on its batch. The protocol version
   (envelope CAS, revision bounds, write, `unchanged`), commit, guard gap,
   immutable revisions, reset, discard refused while pending, cascade,
   retention, privileges, and the grant for owner, member, reader, stranger and
-  a rotated generation. Migrations `20270109200059` (marker deadlock) and
-  `20270109200060` (review fixes) were probed the same way; see the
+  a rotated generation. Migrations `20270109200059` (marker deadlock),
+  `20270109200060` (review fixes) and `20270109200061` (marker fence scope)
+  were probed the same way; see the
   [encryption inventory](security/encryption/README.md#shared-writer-fences-min-688).
 
 ## Performance

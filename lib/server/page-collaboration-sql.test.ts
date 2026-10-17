@@ -41,6 +41,16 @@ describe("page collaboration SQL review fixes (MIN-688)", () => {
     expect(fence).not.toContain("'page_content_encryption_scope'");
   });
 
+  it("makes a per-project marker fence exclusive only for its own encrypted first insert", () => {
+    const fence = latest(/CREATE (OR REPLACE )?FUNCTION public\.guard_encryption_snapshot_write\(\)/);
+    // Each per-project marker is tied to the one table whose guard inserts it.
+    expect(fence).toContain("lock_name='issue_encryption_scopes' AND TG_TABLE_NAME='issues'");
+    expect(fence).toContain("TG_TABLE_NAME='github_issue_sync_metadata'");
+    expect(fence).toContain("TG_TABLE_NAME='github_issue_comment_syncs'");
+    // A plaintext write, or a row of another table, never asks for it.
+    expect(fence).toContain("IF sealed AND marker_project IS NOT NULL THEN");
+  });
+
   it("keeps pending plaintext steps when a page is sealed", () => {
     const guard = latest(/CREATE (OR REPLACE )?FUNCTION public\.guard_page_collaboration\(\)/);
     expect(guard).toContain("page_collaboration_plaintext_pending");

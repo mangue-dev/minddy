@@ -2235,9 +2235,12 @@ export async function editPageBodyLive<R>({
           dropped += steps.length - rebased.length;
           steps = rebased;
         } else {
+          // Re-derived from the current text: what was dropped before is
+          // planned again or already there, so only this derivation counts.
           planned = await stepsFrom(current.page.content as JSONContent | null);
           if ("refusal" in planned) return { ok: false, refusal: planned.refusal };
           steps = planned.steps;
+          dropped = 0;
         }
         basis = current.page.content as JSONContent | null;
         revision = current.page.body_revision;

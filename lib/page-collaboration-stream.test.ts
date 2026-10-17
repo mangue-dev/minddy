@@ -10,13 +10,14 @@ import {
   CollabFatalError,
   CollabStream,
   collabPlugin,
-  COLLAB_BEACON_MAX_CHARS,
+  COLLAB_BEACON_MAX_BYTES,
   type CollabHost,
   type CollabStreamOptions,
   type CollabTransport,
 } from "./page-collaboration-stream";
 import {
   assembleCollabSteps,
+  MAX_COLLAB_BATCH_CHARS,
   type CollabCatchUp,
   type CollabSubmission,
   type CollabSubmitResult,
@@ -139,6 +140,8 @@ class Client {
   state: EditorState;
   stream: CollabStream;
   refused: string[] = [];
+  /** Later steps lost with each refusal, in order. */
+  dropped: number[] = [];
 
   fatal: unknown[] = [];
   discarded = 0;
@@ -167,7 +170,10 @@ class Client {
       fromJSON: (s, json) => PMNode.fromJSON(s, json),
       // Theirs wins in this fixture; the real body merge is lib/pages-merge.ts.
       merge: (_base, mine) => ({ doc: mine }),
-      onRefused: (reason) => this.refused.push(reason),
+      onRefused: (reason, dropped) => {
+        this.refused.push(reason);
+        this.dropped.push(dropped);
+      },
       onFatal: (error) => this.fatal.push(error),
       onDiscarded: () => { this.discarded += 1; },
       sendDelayMs: 0,
@@ -392,10 +398,11 @@ describe("CollabStream — two collaborators in the same paragraph", () => {
     expect(alice.text()).toBe("Plan");
     expect(alice.fatal).toHaveLength(1);
     expect(alice.stream.getStatus()).toBe("error");
-    // Stopped for good: no retry loop.
+    // Stopped for good: no retry loop, and new typing says it is not saved.
     alice.edit((tr) => tr.insertText("?", 4));
     await vi.advanceTimersByTimeAsync(60_000);
     expect(submits).toBe(1);
+    expect(alice.stream.getStatus()).toBe("error");
   });
 
   it("reverts only the refused batch and keeps what was typed while it was in flight", async () => {
@@ -429,6 +436,105 @@ describe("CollabStream — two collaborators in the same paragraph", () => {
     expect(alice.discarded).toBe(0);
   });
 
+  it("keeps undo working for the typing kept after a refusal", async () => {
+    const authority = new Authority("body", paragraph("Hello"));
+    const schema = pageBodySchema();
+    let release: (() => void) | null = null;
+    const gated: CollabTransport = {
+      steps: authority.transport().steps,
+      submit: async (submission) => {
+        if (authority.submits === 0) {
+          authority.submits += 1;
+          await new Promise<void>((resolve) => { release = resolve; });
+          return { status: "refused", reason: "content-refused" };
+        }
+        return authority.transport().submit(submission);
+      },
+    };
+    const alice = new Client(authority, schema, "alice-session", gated);
+    alice.edit((tr) => tr.insertText("X", 1));
+    await settle();
+    alice.edit((tr) => tr.insertText(" world", 7));
+    release!();
+    await settle();
+    expect(alice.text()).toBe("Hello world");
+
+    // Undo removes the kept typing and never brings the refused text back.
+    const host = alice.host();
+    undo(alice.state, host.dispatch);
+    expect(alice.text()).toBe("Hello");
+    undo(alice.state, host.dispatch);
+    expect(alice.text()).toBe("Hello");
+  });
+
+  it("sends a paste larger than a batch so the server refuses it, instead of stalling", async () => {
+    const authority = new Authority("body", paragraph("Hello"));
+    const schema = pageBodySchema();
+    const sizes: number[] = [];
+    const transport: CollabTransport = {
+      steps: authority.transport().steps,
+      submit: async (submission) => {
+        sizes.push(new TextEncoder().encode(JSON.stringify(submission.steps)).length);
+        return { status: "refused", reason: "too-large" };
+      },
+    };
+    const alice = new Client(authority, schema, "alice-session", transport);
+    // One step of about 420 KB once encoded: over the batch limit on its own.
+    alice.edit((tr) => tr.insertText("\u00e9".repeat(210_000), 1));
+    const flushed = alice.stream.flush();
+    await settle();
+
+    expect(sizes).toHaveLength(1);
+    expect(sizes[0]).toBeGreaterThan(MAX_COLLAB_BATCH_CHARS);
+    expect(alice.refused).toEqual(["too-large"]);
+    expect(alice.text()).toBe("Hello");
+    await expect(flushed).resolves.toBe(true);
+  });
+
+  it("splits batches by encoded bytes, so multibyte text fits the route limit", async () => {
+    const authority = new Authority("body", paragraph("Hello"));
+    const schema = pageBodySchema();
+    const sizes: number[] = [];
+    const base = authority.transport();
+    const transport: CollabTransport = {
+      steps: base.steps,
+      submit: (submission) => {
+        sizes.push(new TextEncoder().encode(JSON.stringify(submission.steps)).length);
+        return base.submit(submission);
+      },
+    };
+    const alice = new Client(authority, schema, "alice-session", transport, { sendDelayMs: 60_000 });
+    // Three pastes of 60,000 three-byte characters: 540 KB in all.
+    for (let i = 0; i < 3; i += 1) alice.edit((tr) => tr.insertText("\u6f22".repeat(60_000), 1));
+    const flushed = alice.stream.flush();
+    await settle();
+    await expect(flushed).resolves.toBe(true);
+
+    expect(sizes.length).toBeGreaterThan(1);
+    for (const size of sizes) expect(size).toBeLessThanOrEqual(MAX_COLLAB_BATCH_CHARS);
+    expect(PMNode.fromJSON(schema, authority.doc).textContent).toHaveLength(5 + 180_000);
+  });
+
+  it("backs off when the server keeps answering behind without progress", async () => {
+    const authority = new Authority("body", paragraph("Hello"));
+    const schema = pageBodySchema();
+    let submits = 0;
+    const stuck: CollabTransport = {
+      steps: authority.transport().steps,
+      submit: async (submission) => {
+        submits += 1;
+        return { status: "behind", head: submission.base };
+      },
+    };
+    const alice = new Client(authority, schema, "alice-session", stuck);
+    alice.edit((tr) => tr.insertText("!", 6));
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    // Exponential backoff from 1 s: a handful of attempts, not one per tick.
+    expect(submits).toBeGreaterThan(1);
+    expect(submits).toBeLessThan(8);
+  });
+
   it("reports later typing that cannot be rebased over a refused batch", async () => {
     const authority = new Authority("body", paragraph("Hello"));
     const schema = pageBodySchema();
@@ -453,7 +559,10 @@ describe("CollabStream — two collaborators in the same paragraph", () => {
     await settle();
 
     expect(alice.text()).toBe("Hello");
-    expect(alice.discarded).toBe(1);
+    // One report for the refusal and the typing lost with it.
+    expect(alice.refused).toEqual(["content-refused"]);
+    expect(alice.dropped).toEqual([1]);
+    expect(alice.discarded).toBe(0);
     expect(alice.stream.hasPending()).toBe(false);
   });
 
@@ -513,7 +622,7 @@ describe("CollabStream — two collaborators in the same paragraph", () => {
     alice.stream.beacon();
 
     expect(beacons).toHaveLength(1);
-    expect(beacons[0].length).toBeLessThan(COLLAB_BEACON_MAX_CHARS + 1_000);
+    expect(beacons[0].length).toBeLessThan(COLLAB_BEACON_MAX_BYTES + 1_000);
   });
 });
 

@@ -2757,3 +2757,18 @@ holding `ExclusiveLock` and `ShareLock` on the same marker key before the fix,
 and `ShareLock` only after it; a first write in a new project took the
 exclusive fence and created its marker. True concurrency was not reproduced:
 the probe channel has one session.
+
+Correction (migration `20270109200061`, applied): `20270109200059` applied
+the exclusive-until-marker rule to every fence on the three per-project
+markers, but only one table's guard inserts each of them (`issues` →
+`issue_encryption_scopes`, `github_issue_sync_metadata` →
+`github_issue_metadata_encryption_scopes`, `github_issue_comment_syncs` →
+`github_issue_comment_url_encryption_scopes`). `issues` also carries fences on
+the two GitHub markers, which its parent-scope guards only read, so in a
+project that never synced encrypted GitHub data every issue write took both
+global keys EXCLUSIVE for good, and a multi-project issue update could hold a
+key shared for one row and ask for it exclusive for the next. The fence is now
+EXCLUSIVE only for an encrypted write of the inserting table whose project has
+no marker yet, and SHARED otherwise. A rollback-only probe on production
+showed an existing sealed issue write holding both GitHub marker keys as
+`ExclusiveLock` before the fix and all three marker keys as `ShareLock` after.
