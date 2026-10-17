@@ -10,7 +10,9 @@ import {
   CollabFatalError,
   CollabStream,
   collabPlugin,
+  COLLAB_BEACON_MAX_CHARS,
   type CollabHost,
+  type CollabStreamOptions,
   type CollabTransport,
 } from "./page-collaboration-stream";
 import {
@@ -138,7 +140,11 @@ class Client {
   stream: CollabStream;
   refused: string[] = [];
 
-  constructor(authority: Authority, readonly schema: Schema, id: string, transport?: CollabTransport) {
+  fatal: unknown[] = [];
+  discarded = 0;
+
+  constructor(authority: Authority, readonly schema: Schema, id: string, transport?: CollabTransport,
+    extra: Partial<CollabStreamOptions> = {}) {
     const snapshot = authority.snapshot();
     const field = authority.field;
     // Like Tiptap, each body editor builds ITS OWN schema instance; the stream
@@ -162,8 +168,11 @@ class Client {
       // Theirs wins in this fixture; the real body merge is lib/pages-merge.ts.
       merge: (_base, mine) => ({ doc: mine }),
       onRefused: (reason) => this.refused.push(reason),
+      onFatal: (error) => this.fatal.push(error),
+      onDiscarded: () => { this.discarded += 1; },
       sendDelayMs: 0,
       minSendIntervalMs: 0,
+      ...extra,
     });
     this.state = EditorState.create({
       doc,
@@ -366,19 +375,145 @@ describe("CollabStream — two collaborators in the same paragraph", () => {
     expect(alice.stream.hasPending()).toBe(false);
   });
 
-  it("stops on a fatal transport error and reports unsaved work", async () => {
+  it("stops on a fatal transport error, reverts what can never be saved and lets the page go", async () => {
     const authority = new Authority("title", "Plan");
+    let submits = 0;
     const fatal: CollabTransport = {
       steps: authority.transport().steps,
-      submit: async () => { throw new CollabFatalError("forbidden"); },
+      submit: async () => { submits += 1; throw new CollabFatalError("forbidden"); },
     };
     const alice = new Client(authority, pageTitleSchema, "alice-session", fatal);
     alice.edit((tr) => tr.insertText("!", 4));
     const flushed = alice.stream.flush();
     await settle();
 
-    await expect(flushed).resolves.toBe(false);
-    expect(alice.stream.hasPending()).toBe(true);
+    await expect(flushed).resolves.toBe(true);
+    expect(alice.stream.hasPending()).toBe(false);
+    expect(alice.text()).toBe("Plan");
+    expect(alice.fatal).toHaveLength(1);
+    expect(alice.stream.getStatus()).toBe("error");
+    // Stopped for good: no retry loop.
+    alice.edit((tr) => tr.insertText("?", 4));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(submits).toBe(1);
+  });
+
+  it("reverts only the refused batch and keeps what was typed while it was in flight", async () => {
+    const authority = new Authority("body", paragraph("Hello"));
+    const schema = pageBodySchema();
+    let release: (() => void) | null = null;
+    const gated: CollabTransport = {
+      steps: authority.transport().steps,
+      submit: async (submission) => {
+        if (authority.submits === 0) {
+          authority.submits += 1;
+          await new Promise<void>((resolve) => { release = resolve; });
+          return { status: "refused", reason: "presentation-changed" };
+        }
+        return authority.transport().submit(submission);
+      },
+    };
+    const alice = new Client(authority, schema, "alice-session", gated);
+    alice.edit((tr) => tr.insertText("X", 1)); // the batch that will be refused
+    await settle();
+    expect(release).not.toBeNull();
+    alice.edit((tr) => tr.insertText(" world", 7)); // typed while it is in flight
+    release!();
+    await settle();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await settle();
+
+    expect(alice.refused).toEqual(["presentation-changed"]);
+    expect(alice.text()).toBe("Hello world");
+    expect(PMNode.fromJSON(schema, authority.doc).textContent).toBe("Hello world");
+    expect(alice.discarded).toBe(0);
+  });
+
+  it("reports later typing that cannot be rebased over a refused batch", async () => {
+    const authority = new Authority("body", paragraph("Hello"));
+    const schema = pageBodySchema();
+    let release: (() => void) | null = null;
+    const gated: CollabTransport = {
+      steps: authority.transport().steps,
+      submit: async (submission) => {
+        if (authority.submits === 0) {
+          authority.submits += 1;
+          await new Promise<void>((resolve) => { release = resolve; });
+          return { status: "refused", reason: "content-refused" };
+        }
+        return authority.transport().submit(submission);
+      },
+    };
+    const alice = new Client(authority, schema, "alice-session", gated);
+    alice.edit((tr) => tr.insertText("abc", 6));
+    await settle();
+    // Typed INSIDE the refused text: it has nowhere to go once it is removed.
+    alice.edit((tr) => tr.insertText("Z", 8));
+    release!();
+    await settle();
+
+    expect(alice.text()).toBe("Hello");
+    expect(alice.discarded).toBe(1);
+    expect(alice.stream.hasPending()).toBe(false);
+  });
+
+  it("stops instead of looping when a catch-up holds steps it cannot read", async () => {
+    const authority = new Authority("body", paragraph("Hello"));
+    const schema = pageBodySchema();
+    let reads = 0;
+    let submits = 0;
+    const skewed: CollabTransport = {
+      steps: async (field, since) => {
+        reads += 1;
+        return { kind: "steps", field, from: since, to: since + 1, head: since + 1,
+          clientIds: ["newer-client"],
+          steps: [{ stepType: "replace", from: 1, to: 1,
+            slice: { content: [{ type: "nodeFromTheFuture" }] } }] };
+      },
+      submit: async () => { submits += 1; return { status: "behind", head: 1 }; },
+    };
+    const alice = new Client(authority, schema, "alice-session", skewed);
+    alice.edit((tr) => tr.insertText("!", 6));
+    const flushed = alice.stream.flush();
+    await settle();
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await expect(flushed).resolves.toBe(true);
+    expect(alice.fatal).toHaveLength(1);
+    expect(alice.stream.getStatus()).toBe("error");
+    expect(submits + reads).toBeLessThan(6);
+  });
+
+  it("settles the pending work of a writer who lost write access", async () => {
+    const authority = new Authority("title", "Plan");
+    let writable = true;
+    const alice = new Client(authority, pageTitleSchema, "alice-session", undefined,
+      { canSend: () => writable, sendDelayMs: 1_000 });
+    alice.edit((tr) => tr.insertText("!", 4));
+    writable = false;
+    const flushed = alice.stream.flush();
+    await settle();
+
+    await expect(flushed).resolves.toBe(true);
+    expect(alice.text()).toBe("Plan");
+    expect(alice.discarded).toBe(1);
+  });
+
+  it("keeps a keepalive beacon under the browser's 64 KB limit", async () => {
+    const authority = new Authority("body", paragraph(""));
+    const schema = pageBodySchema();
+    const beacons: string[] = [];
+    const transport: CollabTransport = {
+      ...authority.transport(),
+      submit: () => new Promise(() => {}),
+      beacon: (submission) => beacons.push(JSON.stringify(submission)),
+    };
+    const alice = new Client(authority, schema, "alice-session", transport, { sendDelayMs: 60_000 });
+    for (let i = 0; i < 40; i += 1) alice.edit((tr) => tr.insertText("y".repeat(3_000), 1));
+    alice.stream.beacon();
+
+    expect(beacons).toHaveLength(1);
+    expect(beacons[0].length).toBeLessThan(COLLAB_BEACON_MAX_CHARS + 1_000);
   });
 });
 

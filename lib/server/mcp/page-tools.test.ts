@@ -175,6 +175,9 @@ vi.mock("@/lib/supabase-service", async () => {
       return fake.fakeCommitPageCollaboration(h, args);
     }
     if (name === "materialize_page_collaboration") return fake.fakeMaterializePageCollaboration(h, args);
+    if (name === "read_page_collaboration_journal") {
+      return fake.fakeReadPageCollaborationJournal(h, args);
+    }
     if (name !== "search_pages") throw new Error(`rpc inconnu : ${name}`);
     const tokens = String(args.p_query ?? "")
       .toLowerCase()
@@ -538,21 +541,21 @@ describe("minddy_edit_page_text", () => {
   });
 
   it("keeps every untouched block as it was, IDs and rich attributes included (MIN-688)", async () => {
-    const page = await createPage("Atelier", "Premier paragraphe.\n\nDeuxième paragraphe.\n\nTroisième.");
+    const page = await createPage("Workshop", "First paragraph.\n\nSecond paragraph.\n\nThird.");
     const row = h.rows.find((candidate) => candidate.id === page)!;
     const blocks = (row.content as { content: Record<string, unknown>[] }).content;
     // A presentation detail Markdown cannot carry, on a block the edit leaves alone.
     blocks[2] = {
       ...blocks[2],
-      content: [{ type: "text", text: "Troisième.", marks: [{ type: "pageTextColor", attrs: { color: "red" } }] }],
+      content: [{ type: "text", text: "Third.", marks: [{ type: "pageTextColor", attrs: { color: "red" } }] }],
     };
     const ids = blocks.map((block) => (block.attrs as { blockId: string }).blockId);
 
     const { ok, payload } = await call("minddy_edit_page_text", {
       project_id: PROJECT,
       page_id: page,
-      old_string: "Deuxième paragraphe.",
-      new_string: "Deuxième paragraphe, revu.",
+      old_string: "Second paragraph.",
+      new_string: "Second paragraph, revised.",
     });
     expect(ok, JSON.stringify(payload)).toBe(true);
 
@@ -561,7 +564,7 @@ describe("minddy_edit_page_text", () => {
     }).content;
     expect(after.map((block) => (block.attrs as { blockId: string }).blockId)[0]).toBe(ids[0]);
     expect(after[2]).toEqual(blocks[2]);
-    expect(JSON.stringify(after[1])).toContain("revu");
+    expect(JSON.stringify(after[1])).toContain("revised");
     // One live replacement, inside the edited paragraph only.
     expect(h.batches).toHaveLength(1);
   });

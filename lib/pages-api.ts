@@ -644,8 +644,10 @@ export async function submitPageCollaborationApi(
     keepalive,
   });
   keepCollaborationToken(pageId, response);
-  if (response.ok || response.status === 409 || response.status === 422 ||
-      response.status === 413) {
+  // 400 and 413 carry a definitive refusal (an invalid or oversized batch):
+  // reading them as failures would retry the same steps forever.
+  if (response.ok || response.status === 400 || response.status === 409 ||
+      response.status === 413 || response.status === 422) {
     const data = (await response.json().catch(() => null)) as CollabSubmitResult | null;
     if (data && (data.status === "accepted" || data.status === "behind" || data.status === "refused")) {
       return data;

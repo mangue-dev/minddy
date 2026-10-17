@@ -2697,9 +2697,17 @@ re-sealed once per burst by a materialization. Encryption consequences:
   materialize and reset RPCs, with the journal, to
   `lib/server/page-collaboration.ts`.
 
-Verification: rollback-only probes of both migrations on the production schema
+Migration `20270109200060` (applied) adds `size_bytes` (bounded metadata) to
+the journal, 8 MB and 16 MB byte budgets, a byte-bounded catch-up read
+(`read_page_collaboration_journal`, service role only, restricted to
+`lib/server/page-collaboration.ts` with the other journal RPCs), and refuses
+to seal a page while plaintext steps are pending, so sealing never deletes
+acknowledged typing.
+
+Verification: rollback-only probes of the migrations on the production schema
 before they were applied (heads backfill, append, materialize, commit, gap,
-reset, discard, cascade, retention, privileges, grant decisions). The
+reset, discard, cascade, retention, privileges, grant decisions, byte bounds,
+backlog, sealing with pending plaintext steps). The
 inventory records of the changed and new functions and triggers were
 refreshed from the live definitions with `scripts/encryption-schema-audit.sql`;
 other records were left as they were.
@@ -2730,3 +2738,22 @@ are unchanged. The two-session fence test
 (`scripts/encryption-snapshot-write-fences.integration.test.mjs`) checks
 writer versus activation in both directions, which shared writer locks
 preserve; it was not run, because it needs an isolated database.
+
+Correction (migration `20270109200059`, applied): the claim above that writers
+never wait for one another was wrong for 24 marker families. Their content
+guards re-assert the family's marker on every protected write
+(`INSERT INTO <scope> … ON CONFLICT DO NOTHING`, for example
+`guard_issue_encryption`), and the marker table's trigger
+`guard_encryption_marker_change` then took `encryption-marker:<scope>`
+EXCLUSIVE while the row's fence held it SHARED: two concurrent writers
+deadlocked (40P01, observed once in production). The trigger now skips a
+marker that already exists, at trigger depth above one, without locking; the
+fence of those 24 families is EXCLUSIVE only while the row's marker does not
+exist yet (the first protected write of a family, or of a project for the
+three per-project markers), and SHARED afterwards. Activation, depth-one
+marker writes and the key registry keep their exclusive locks. A rollback-only
+probe on production showed a sealed issue write and a push subscription write
+holding `ExclusiveLock` and `ShareLock` on the same marker key before the fix,
+and `ShareLock` only after it; a first write in a new project took the
+exclusive fence and created its marker. True concurrency was not reproduced:
+the probe channel has one session.

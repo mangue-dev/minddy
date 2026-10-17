@@ -3209,42 +3209,42 @@
     "file": "lib/server/database-import.ts",
     "operation": "from",
     "resource": "page_database_imports",
-    "line": 60,
+    "line": 59,
     "storage": false
   },
   {
     "file": "lib/server/database-import.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 316,
+    "line": 315,
     "storage": true
   },
   {
     "file": "lib/server/database-import.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 325,
+    "line": 324,
     "storage": false
   },
   {
     "file": "lib/server/database-import.ts",
     "operation": "rpc",
     "resource": null,
-    "line": 366,
+    "line": 365,
     "storage": false
   },
   {
     "file": "lib/server/database-import.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 380,
+    "line": 379,
     "storage": true
   },
   {
     "file": "lib/server/database-import.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 386,
+    "line": 388,
     "storage": true
   },
   {
@@ -4539,14 +4539,14 @@
     "file": "lib/server/encryption/page-content-backfill.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 23,
+    "line": 24,
     "storage": false
   },
   {
     "file": "lib/server/encryption/page-content-backfill.ts",
     "operation": "rpc",
     "resource": "migrate_verified_content_backfill",
-    "line": 64,
+    "line": 75,
     "storage": false
   },
   {
@@ -8186,56 +8186,56 @@
     "file": "lib/server/page-collaboration.ts",
     "operation": "rpc",
     "resource": "commit_page_collaboration",
-    "line": 236,
+    "line": 248,
     "storage": false
   },
   {
     "file": "lib/server/page-collaboration.ts",
     "operation": "rpc",
     "resource": "append_page_collaboration",
-    "line": 279,
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/page-collaboration.ts",
     "operation": "rpc",
     "resource": "materialize_page_collaboration",
-    "line": 318,
+    "line": 336,
     "storage": false
   },
   {
     "file": "lib/server/page-collaboration.ts",
     "operation": "rpc",
     "resource": "pending_page_collaborations",
-    "line": 345,
+    "line": 364,
     "storage": false
   },
   {
     "file": "lib/server/page-collaboration.ts",
     "operation": "from",
     "resource": "page_collaboration_batches",
-    "line": 368,
-    "storage": false
-  },
-  {
-    "file": "lib/server/page-collaboration.ts",
-    "operation": "rpc",
-    "resource": "reset_page_collaboration",
     "line": 387,
     "storage": false
   },
   {
     "file": "lib/server/page-collaboration.ts",
     "operation": "rpc",
-    "resource": "prune_page_collaboration_batches",
-    "line": 393,
+    "resource": "reset_page_collaboration",
+    "line": 406,
     "storage": false
   },
   {
     "file": "lib/server/page-collaboration.ts",
-    "operation": "from",
-    "resource": "page_collaboration_batches",
-    "line": 419,
+    "operation": "rpc",
+    "resource": "prune_page_collaboration_batches",
+    "line": 412,
+    "storage": false
+  },
+  {
+    "file": "lib/server/page-collaboration.ts",
+    "operation": "rpc",
+    "resource": "read_page_collaboration_journal",
+    "line": 441,
     "storage": false
   },
   {
@@ -8508,140 +8508,140 @@
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 241,
+    "line": 242,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_viewers",
-    "line": 250,
+    "line": 251,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_viewers",
-    "line": 269,
+    "line": 270,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 322,
+    "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 378,
+    "line": 379,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 600,
+    "line": 601,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 793,
+    "line": 794,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 868,
+    "line": 869,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 925,
+    "line": 926,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 1029,
+    "line": 1035,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1688,
+    "line": 1719,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1708,
+    "line": 1741,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 1852,
+    "line": 1894,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "page_collaboration_heads",
-    "line": 2074,
+    "line": 2132,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2481,
+    "line": 2552,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2665,
+    "line": 2736,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2676,
+    "line": 2747,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2710,
+    "line": 2781,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "rpc",
     "resource": "discard_blank_page_guarded",
-    "line": 2755,
+    "line": 2826,
     "storage": false
   },
   {
     "file": "lib/server/pages.ts",
     "operation": "rpc",
     "resource": "restore_page_guarded",
-    "line": 2812,
+    "line": 2883,
     "storage": false
   },
   {

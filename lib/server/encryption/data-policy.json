@@ -2597,7 +2597,8 @@
       "bounded_metadata": [
         "authored",
         "base_revision",
-        "step_count"
+        "step_count",
+        "size_bytes"
       ],
       "operational_configuration": [
         "author_kind",

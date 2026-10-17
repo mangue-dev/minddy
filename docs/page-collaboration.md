@@ -58,14 +58,20 @@ order with the client ID of each, and rebase what is still unconfirmed.
 
 `GET …/collaboration` returns a snapshot of both streams at their heads.
 `GET …/collaboration?field=body&since=N` returns the accepted steps after `N`
-(at most 2,000 per answer; `to < head` means read again), or
-`{ kind: "reset", reason, snapshot }` when the journal cannot bridge `N`.
+(at most 2,000 steps and about 4 MB of stored journal per answer; `to < head`
+means read again), or `{ kind: "reset", reason, snapshot }` when the journal
+cannot bridge `N`. The head and the journal are read side by side; when the
+rows miss a batch the head already counts, the journal is read again before a
+reset is answered.
 
 `POST …/collaboration` sends one batch:
-`{ field, base, batchId, clientId, steps, presentation? }`, at most 400 steps
-and 400,000 serialized characters, validated before any step is parsed.
+`{ field, base, batchId, clientId, steps, presentation? }`, at most 400 steps,
+400,000 serialized characters and 200,000 inserted text characters, validated
+before any step is parsed. The route reads at most 450,000 bytes of body, and
+limits each account to 600 batches and 1,800 reads a minute (429 beyond).
 Answers: `accepted` (200), `behind` with the head (409: catch up, rebase, send
-a new batch), `refused` with a reason (422: definitive for those steps).
+a new batch), `refused` with a reason (400 for an invalid batch, 413 for an
+oversized one, 422 for a refused result: definitive for those steps).
 
 The client keeps one batch in flight. It sends 50 ms after a keystroke, and
 never two batches less than 250 ms apart, which bounds a fast typist at four
@@ -158,7 +164,9 @@ second person typing (`editPageBodyLive`):
 
 Only when the journal cannot bridge the gap is the edit derived again from the
 current text, where it fails when `old_string` no longer matches or matches
-ambiguously. A whole-body `update_page` remains an explicit replacement guarded
+ambiguously. A rebase can drop steps whose text a collaborator deleted
+meanwhile: the tool then answers `partial: true` with a note when part of the
+edit was applied, and `page_stale` when none of it was. A whole-body `update_page` remains an explicit replacement guarded
 by the version it read. A changed block's new text has the losses listed in
 `lib/pages-markdown.ts`.
 
@@ -246,10 +254,17 @@ envelope CAS and the loser finds nothing left. Continuous typing therefore
 rewrites the row at most every ten seconds, and the cron bounds the lag at
 about 75 s when the accepting instance dies before its timer.
 
-If the journal cannot bridge the materialized revision and the head (it
-should never happen: pending rows are never pruned), the materializer opens a
-gap (`reset_page_collaboration`) and connected editors reset to the stored
-page.
+A journal that does not bridge the materialized revision and the head is read
+again: a concurrent materialization may just have pruned rows below its own,
+newer revision. Only the same gap read twice on an unchanged row is treated as
+proven: the materializer then opens a gap (`reset_page_collaboration`) and
+connected editors reset to the stored page. Pending steps that do not apply
+(a newer deployment's node type) are left pending for a deployment that can
+apply them; they are never discarded.
+
+The pending journal is bounded too: past 16 MB of steps awaiting
+materialization, `append_page_collaboration` answers `backlog`, and the
+server materializes the page before appending the batch.
 
 ## Readers
 
@@ -325,9 +340,10 @@ body (it raises `version`, or rewrites a plaintext body) or a plaintext title
 opens a gap instead (`open_page_collaboration_gap`): the head advances one
 past every accepted step without a journal row, and the row is declared to
 reflect it. Steps still pending are discarded, because that writer started
-from the stored projection. Database imports into an existing root call
-`reset_page_collaboration` for the same reason, since their sealed root write
-changes no counter. Writers inventoried for MIN-688:
+from the stored projection. Encrypted database imports into an existing root
+call `reset_page_collaboration` inside `import_encrypted_page_database` for the
+same reason, since their sealed root write changes no counter; the plaintext
+import opens its gap through the guard. Writers inventoried for MIN-688:
 
 | Writer | Path |
 | --- | --- |
@@ -337,7 +353,7 @@ changes no counter. Writers inventoried for MIN-688:
 | Canonical initialization | Steps committed, unsigned |
 | `createPage`, `duplicatePage` | New rows at revision 0, canonical, with head rows (`pages_initialize_collaboration_heads`) |
 | `commit_page_content_batch`, database schema, cells and conversions | Content-preserving for body and title, from the stored page |
-| Database import into an existing root | Gap (`reset_page_collaboration`) |
+| Database import into an existing root | Gap, in the import's transaction |
 | Account import upsert, encryption backfill | Gap through the guard, or content-preserving |
 
 A client whose revision is not covered (compacted journal, gap, a revision
@@ -351,15 +367,23 @@ When Activity hides a page or Tiptap recreates its editor, the stream moves
 onto its own headless state, the confirmed document plus the same pending
 steps, and keeps sending them. The next editor is rebased onto that state,
 read-only while a batch from its predecessor is still in flight. Pending
-steps therefore survive hiding, eviction from the retained documents and
-navigation for as long as the app stays open. They do not survive a reload or
-closing the app: `pagehide` sends the next batch with `keepalive`, which is
-not an acknowledgement, and `beforeunload` warns while work is pending. Undo
-history does not survive an editor recreation.
+steps therefore survive hiding and eviction from the retained documents. In-app
+navigation away from a page waits for `flush()` and is refused while it
+resolves `false` (pending work that cannot be sent yet), with a save error.
+Pending steps do not survive a reload or closing the tab: `pagehide` sends the
+next batch with `keepalive` (at most 60,000 characters, under the browser's
+64 KB keepalive limit), which is not an acknowledgement, and `beforeunload`
+warns while work is pending, including the still-sending streams of a page
+the tab left. Quitting the desktop app does not run `beforeunload`, so it
+neither warns nor waits. Undo history does not survive an editor recreation.
 
 A refused batch is reverted on the screen and reported (`liveEditRefused`).
-A fatal answer (401, 403, 404, for example a revoked member) stops sending and
-leaves the work pending and visible as a save error.
+Only that batch is reverted: steps typed while it was in flight are rebased
+over its removal, and reported too when they cannot be. A fatal answer (401,
+403, 404, for example a revoked member), catch-up steps this client cannot
+read (a newer deployment's node type), or a writer demoted to reader while
+work is pending stop the stream: the pending work is reverted and reported,
+and `flush()` resolves so the page can be left.
 
 ## Wake-ups and carets
 
@@ -405,10 +429,12 @@ adds it back:
 channel handles (a remount, React's double effects in development).
 
 Trust: as with `page-presence`, the user ID in a caret is the publisher's
-claim. Only members of the page's project can publish or receive. Names and
-colors are resolved from the member list, never from the payload. A member
-could draw a caret under another member's name; carets are advisory and
-carry no content.
+claim. Only writers of the page's project can publish (migration
+`20270109200060`); every member can receive. A caret whose user ID is not a
+member of the project is dropped, and a channel tracks at most 32 peer
+sessions. Names and colors are resolved from the member list, never from the
+payload. A writer could draw a caret under another member's name; carets are
+advisory and carry no content.
 
 The title draws peers' carets as an overlay measured in a mirror element.
 Selections are drawn in the body only.
@@ -427,9 +453,12 @@ content key through `EncryptedRowCodec` (`steps` is classified as encrypted in
   be sealed underneath it;
 - `guard_page_collaboration_batch` refuses plaintext once page protection is
   active or the page is sealed, and shares the page content marker fence;
-- the page guard deletes a page's plaintext rows when the page becomes sealed;
+- the page guard deletes a page's plaintext rows when the page becomes sealed,
+  and refuses to seal it (40001, `page_collaboration_plaintext_pending`) while
+  plaintext steps are still pending: the sealing writer materializes first
+  (the encryption backfill does so before each scan);
 - `scripts/check-encrypted-column-access.mjs` restricts journal access, and the
-  append, commit, materialize and reset RPCs, to
+  append, commit, materialize, reset and journal read RPCs, to
   `lib/server/page-collaboration.ts`.
 
 Pending steps change nothing to that: they stay sealed in the journal until a
@@ -445,8 +474,9 @@ content. Rows are created with each page (`pages_initialize_collaboration_heads`
 and backfilled by the migration) and cascade with it.
 
 Retention: a materialization or a commit prunes its page's journal to the last
-2,000 revisions of each stream, for at most seven days, and never below the
-materialized revision, so pending steps are never lost to retention. The
+2,000 revisions and the newest 8 MB of each stream, for at most seven days,
+and never below the materialized revision, so pending steps are never lost to
+retention. Each row records its stored size (`size_bytes`). The
 nightly retention sweep (`prune_page_collaboration_batches`) removes expired,
 materialized rows of idle pages. A receipt lives as long as its row. Rows
 cascade with page and project deletion. Key rotation adds key versions without
@@ -496,6 +526,17 @@ simply makes the server decide access on its batch. The protocol version
 - `lib/server/pages.test.ts` (live agent edit): a person's batch appended while
   the agent derives its edit is kept, and the agent's batch is rebased after it.
 - `lib/realtime-keys.test.ts`: invalidation fan-out and head-event routing.
+- Review fixes: `lib/page-collaboration-stream.test.ts` (only the refused
+  batch reverted, unrebasable typing reported, fatal and unreadable catch-ups
+  stop and settle, a demoted writer settles, the beacon stays under 64 KB),
+  `lib/pages-api.test.ts` (400 refusals read as answers, token header),
+  `lib/server/page-collaboration-route.test.ts` (bounded body, inserted-text
+  cap, rate limits), `lib/server/pages.test.ts` (catch-up re-read, transient
+  versus proven gap, unreadable pending steps kept, backlog, protection
+  activated mid-session, partial and dropped agent edits, project pagination),
+  `lib/page-collaboration-presence.test.ts` (non-member carets, peer cap),
+  `lib/server/encryption/page-content-backfill.test.ts` and
+  `lib/server/page-collaboration-sql.test.ts` (the latest SQL definitions).
 - `lib/server/pages-export.test.ts`, `lib/server/page-files.test.ts`: readers
   that need the row materialize pending typing first.
 - `lib/server/page-materialization-cron.test.ts`: the safety net requires the
@@ -507,7 +548,9 @@ simply makes the server decide access on its batch. The protocol version
   (envelope CAS, revision bounds, write, `unchanged`), commit, guard gap,
   immutable revisions, reset, discard refused while pending, cascade,
   retention, privileges, and the grant for owner, member, reader, stranger and
-  a rotated generation.
+  a rotated generation. Migrations `20270109200059` (marker deadlock) and
+  `20270109200060` (review fixes) were probed the same way; see the
+  [encryption inventory](security/encryption/README.md#shared-writer-fences-min-688).
 
 ## Performance
 

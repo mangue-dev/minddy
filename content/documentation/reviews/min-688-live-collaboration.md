@@ -93,3 +93,17 @@ history still records versions at the same five-minute granularity per
 author. No figure changes. Checks: `npm run check:documentation`,
 `npm run check:knowledge`, `npm run check:owned-english` and
 `git diff --check`.
+
+## Follow-up: review fixes (same day)
+
+`pages`, section `editor-save`, in `en`, `fr`, `de`, `es`, `it` and `pt-BR`:
+the claim that opening another page keeps sending unsaved changes overstated
+navigation. In-app navigation waits until changes are saved and keeps the
+reader on the page, with a save error, while they cannot be sent
+(`app-tabs-session.ts` departure guards and `flush()`); closing a browser tab
+warns first, quitting the desktop app does not; losing access or edit rights
+with unsaved changes undoes them with a message (`CollabStream.stop` and
+`discardPending`). Checked against the source on this branch; no browser
+walkthrough of these cases, no figure change. Checks:
+`npm run check:documentation`, `npm run check:knowledge`,
+`npm run check:owned-english` and `git diff --check`.

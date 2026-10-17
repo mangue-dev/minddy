@@ -81,6 +81,13 @@ export function hasPendingSteps(revisions: StreamRevisions): boolean {
 /** Journal rows read per catch-up query: 2,000 steps fit in far fewer. */
 const JOURNAL_ROWS_PER_READ = 200;
 
+/**
+ * Stored bytes per catch-up query: a batch can hold up to 400 KB, and 200 of
+ * them would be 80 MB to fetch and decrypt in one request. A read returns at
+ * least one row, and the client asks again from where it stopped.
+ */
+const JOURNAL_BYTES_PER_READ = 4 * 1024 * 1024;
+
 /** A client ID for a server-side writer: never equal to a browser session's. */
 export function serverCollabClientId(): string {
   return `srv-${crypto.randomUUID().replace(/-/g, "")}`;
@@ -170,6 +177,11 @@ export function sealCollabBatches(
   return Promise.all(batches.map((batch) => sealBatch(pageId, projectId, batch, protect)));
 }
 
+/** A sealing write met plaintext steps not materialized yet (migration 60). */
+function isPlaintextPending(error: { code?: string; message?: string }): boolean {
+  return error.code === "40001" && error.message === "page_collaboration_plaintext_pending";
+}
+
 export type CommitOutcome =
   | { status: "accepted"; bodyRevision: number; titleRevision: number }
   | { status: "duplicate"; bodyRevision: number; titleRevision: number }
@@ -240,6 +252,9 @@ export async function commitCollaboration(service: Service, {
     p_batches: sealed,
     p_materialized: materialized,
   });
+  // Plaintext typing appended since the read, on a page this write seals:
+  // read again, and the next projection includes it.
+  if (error && isPlaintextPending(error)) return { status: "retry" };
   if (error) throw new CollabCommitError(error.code, error.message);
   const outcome = readCommitOutcome(data, "commit_page_collaboration");
   if (outcome.status === "revoked") throw new Error("commit_page_collaboration returned revoked");
@@ -257,7 +272,9 @@ export type AppendOutcome =
       pendingMs: number;
     }
   | Exclude<CommitOutcome, { status: "accepted" }>
-  | { status: "revoked" };
+  | { status: "revoked" }
+  /** More than 16 MB of steps await materialization: materialize, then append. */
+  | { status: "backlog" };
 
 /**
  * Journals already sealed batches and advances their heads
@@ -283,6 +300,7 @@ export async function appendCollaboration(service: Service, {
     p_batches: sealed,
   });
   if (error) throw new CollabCommitError(error.code, error.message);
+  if ((data as { status?: unknown } | null)?.status === "backlog") return { status: "backlog" };
   const outcome = readCommitOutcome(data, "append_page_collaboration");
   if (outcome.status !== "accepted") return outcome;
   const result = data as Record<string, unknown>;
@@ -322,6 +340,7 @@ export async function materializeCollaboration(service: Service, {
     p_body_revision: revisions.body,
     p_title_revision: revisions.title,
   });
+  if (error && isPlaintextPending(error)) return { status: "retry" };
   if (error) throw new CollabCommitError(error.code, error.message);
   const result = (data ?? {}) as Record<string, unknown>;
   switch (result.status) {
@@ -404,7 +423,10 @@ export interface JournalBatch extends CollabJournalBatch {
   createdAt: string;
 }
 
-/** Journal rows from `since`, still sealed. Nothing is decrypted here. */
+/**
+ * Journal rows from `since`, still sealed, bounded by rows and by stored bytes
+ * (`read_page_collaboration_journal`). Nothing is decrypted here.
+ */
 export async function fetchCollaborationJournal(service: Service, {
   pageId,
   projectId,
@@ -416,17 +438,16 @@ export async function fetchCollaborationJournal(service: Service, {
   field: CollabField;
   since: number;
 }): Promise<Record<string, unknown>[]> {
-  const { data, error } = await service
-    .from("page_collaboration_batches")
-    .select("page_id, project_id, field, base_revision, step_count, client_id, author_id, author_kind, author_api_key_id, authored, created_at, steps, encrypted_content, encryption_version")
-    .eq("page_id", pageId)
-    .eq("project_id", projectId)
-    .eq("field", field)
-    .gte("base_revision", since)
-    .order("base_revision", { ascending: true })
-    .limit(JOURNAL_ROWS_PER_READ);
+  const { data, error } = await service.rpc("read_page_collaboration_journal", {
+    p_page_id: pageId,
+    p_project_id: projectId,
+    p_field: field,
+    p_since: since,
+    p_max_rows: JOURNAL_ROWS_PER_READ,
+    p_max_bytes: JOURNAL_BYTES_PER_READ,
+  });
   if (error) throw new Error(`page collaboration journal read failed: ${error.message}`);
-  return data ?? [];
+  return Array.isArray(data) ? data as Record<string, unknown>[] : [];
 }
 
 /**

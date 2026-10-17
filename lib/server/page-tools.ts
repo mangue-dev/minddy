@@ -230,6 +230,9 @@ export interface PageWritten extends PageTreeEntry {
   version: number;
   /** Body length in markdown, after writing. */
   markdown_length: number;
+  /** Part of a targeted edit was dropped over a collaborator's change (MIN-688). */
+  partial?: true;
+  note?: string;
 }
 
 function entry(page: {
@@ -915,13 +918,28 @@ async function writeDerivedBody({
     },
   });
   if ("refusal" in result) return result.refusal;
-  if (!result.ok) return refuse(result.errorKey);
+  if (!result.ok) {
+    if (result.errorKey === "pageStale") {
+      return {
+        ok: false,
+        code: "page_stale",
+        message: "Collaborators changed this passage while the edit was applied, so none of " +
+          "it could be kept. Read the page again before editing it.",
+      };
+    }
+    return refuse(result.errorKey);
+  }
   return {
     ok: true,
     data: {
       ...entry(result.page),
       version: result.page.version,
       markdown_length: markdownLength,
+      ...(result.partial ? {
+        partial: true,
+        note: "Collaborators changed part of this passage meanwhile: only part of the edit " +
+          "was applied. Read the page again to check the result.",
+      } : {}),
     },
   };
 }

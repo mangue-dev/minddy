@@ -102,6 +102,19 @@ interface Member {
   email?: string | null;
 }
 
+/**
+ * Streams of pages this tab left while they still had unsaved work. Detached,
+ * they keep sending on their own; the unload guards of the current page cover
+ * them too, so leaving the app right after switching pages still warns and
+ * still beacons. A stream leaves the set once nothing is pending.
+ */
+const retiredStreams = new Set<CollabStream>();
+
+function retiredPending(): CollabStream[] {
+  for (const stream of retiredStreams) if (!stream.hasPending()) retiredStreams.delete(stream);
+  return [...retiredStreams];
+}
+
 function sessionId(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
@@ -282,6 +295,12 @@ export function usePageCollaboration({
     }
     // The previous page's streams are not closed: detached, they keep sending
     // whatever was still unsaved, then hold no timer and can be collected.
+    const previous = sessionRef.current;
+    if (previous) {
+      for (const stream of [previous.body, previous.title.stream]) {
+        if (stream.hasPending()) retiredStreams.add(stream);
+      }
+    }
     sessionRef.current = null;
     setStatus("loading");
     const controller = new AbortController();
@@ -332,6 +351,9 @@ export function usePageCollaboration({
         },
         onConflicts: (found) => setConflicts((current) => [...current, ...(found as PageBlockConflict[])]),
         onFatal: (error) => onFatalRef.current(error),
+        // Typing lost with a refused pill rebuild, or by a demoted writer, is
+        // the user's change: say so even when the refusal itself is silent.
+        onDiscarded: () => onRefusedRef.current("step-failed"),
         onAttached: (attached) => {
           for (const listener of attachedListeners) listener(attached);
         },
@@ -357,6 +379,7 @@ export function usePageCollaboration({
           onRefusedRef.current(reason);
         },
         onFatal: (error) => onFatalRef.current(error),
+        onDiscarded: () => onRefusedRef.current("step-failed"),
       });
       const title = new TitleSession(titleStream, snapshot.title.text, titleClientId);
       sessionRef.current = {
@@ -425,6 +448,7 @@ export function usePageCollaboration({
       pageId,
       userId,
       sessionId: session.bodyClientId,
+      isMember: (id) => membersRef.current.some((member) => member.user_id === id),
       onPeers: (peers) => {
         session.peers = peers;
         for (const listener of session.caretListeners) listener();
@@ -536,11 +560,13 @@ export function usePageCollaboration({
 
   const hasUnsavedChanges = useCallback(() => {
     const current = sessionRef.current;
+    if (retiredPending().length > 0) return true;
     return !!current && current.key === key &&
       (current.body.hasPending() || current.title.stream.hasPending());
   }, [key]);
 
   const beacon = useCallback(() => {
+    for (const stream of retiredPending()) stream.beacon();
     const current = sessionRef.current;
     if (!current || current.key !== key) return;
     current.body.beacon();

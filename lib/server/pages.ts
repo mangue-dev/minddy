@@ -79,6 +79,8 @@ import {
 import type { PageDocJSON } from "@/lib/pages-merge";
 import type { JSONContent } from "@tiptap/core";
 import { decodePage, decodePageProjection, encodePage, pageContentValues } from "./page-content";
+import { isContentEncryptionEnabled } from "./encryption/content-config";
+import { hasDataRootKey } from "./encryption/local-key-wrapper";
 
 /**
  * PAGES of a project (MIN-266) — the server core, shared by routes
@@ -1008,9 +1010,14 @@ interface LivePage {
   protect: boolean;
 }
 
-/** The journal does not bridge the materialized revision and the head. */
+/**
+ * The pending steps cannot be read back: `gap` when journal rows between the
+ * materialized revision and the head are missing (a concurrent
+ * materialization may just have pruned them), `unreadable` when they do not
+ * apply (steps from a newer deployment, for example).
+ */
 class PendingJournalError extends Error {
-  constructor() {
+  constructor(readonly kind: "gap" | "unreadable") {
     super("Pending page collaboration steps are not readable");
     this.name = "PendingJournalError";
   }
@@ -1052,13 +1059,13 @@ async function pendingBatches(
     for (const row of rows) {
       if (at >= to) break;
       if (row.base < at) continue;
-      if (row.base !== at || row.steps.length !== row.stepCount) throw new PendingJournalError();
+      if (row.base !== at || row.steps.length !== row.stepCount) throw new PendingJournalError("gap");
       batches.push(row);
       at += row.stepCount;
     }
-    if (at === before) throw new PendingJournalError();
+    if (at === before) throw new PendingJournalError("gap");
   }
-  if (at !== to) throw new PendingJournalError();
+  if (at !== to) throw new PendingJournalError("gap");
   return batches;
 }
 
@@ -1098,7 +1105,7 @@ function applyPending(
     if (pending[field].length === 0) continue;
     const applied = ops.applyCollabSteps(field, field === "body" ? stored.content : stored.title,
       pending[field].flatMap((batch) => batch.steps));
-    if (!applied.ok) throw new PendingJournalError();
+    if (!applied.ok) throw new PendingJournalError("unreadable");
     if (field === "body") page.content = applied.doc;
     else page.title = applied.text;
   }
@@ -1198,6 +1205,16 @@ type StreamCommit =
   | { status: "refused"; reason: CollabRefusal }
   | { status: "retry" }
   | { status: "missing" };
+
+/**
+ * Whether appended steps must be sealed even on a plaintext page: whenever
+ * this deployment can seal (content encryption on, or a data root key), so
+ * that page protection activating, which refuses plaintext journal rows, never
+ * meets a batch it would refuse.
+ */
+function journalMustBeSealed(): boolean {
+  return isContentEncryptionEnabled() || hasDataRootKey();
+}
 
 /** The columns a move, a pin or an icon change carry with a stream commit. */
 const STREAM_METADATA = ["icon", "favorite", "parent_id", "position"] as const;
@@ -1510,15 +1527,30 @@ export async function materializePage(
   service: Service,
   pageId: string
 ): Promise<"materialized" | "unchanged" | "missing" | "reset" | "stale"> {
+  // A gap seen at the same materialized revisions on two consecutive reads.
+  let gapAt: string | null = null;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const row = await fetchCollabRow(service, pageId, null, { includeTrashed: true });
     if (!row) return "missing";
+    const at = `${row.body_revision}:${row.title_revision}:${row.content_revision}`;
     let live: LivePage;
     try {
       live = await liveFromRow(service, row, null);
     } catch (error) {
       if (!(error instanceof PendingJournalError)) throw error;
-      console.error("[pages] pending journal unreadable; opening a gap");
+      // Steps this code cannot apply: a newer deployment will. Never discard
+      // acknowledged typing for it.
+      if (error.kind === "unreadable") {
+        console.error("[pages] pending steps unreadable by this deployment");
+        return "stale";
+      }
+      // A racing materialization prunes rows below ITS revision after this
+      // read: read again. Only the same gap on an unchanged row is proven.
+      if (gapAt !== at) {
+        gapAt = at;
+        continue;
+      }
+      console.error("[pages] pending journal gap confirmed; opening a gap");
       await resetCollaboration(service, pageId);
       return "reset";
     }
@@ -1704,16 +1736,25 @@ export async function materializePendingProjectPages(
 ): Promise<number> {
   const ids = [...new Set(projectIds)];
   if (ids.length === 0) return 0;
-  const { data, error } = await service
-    .from("page_collaboration_heads")
-    .select("page_id")
-    .in("project_id", ids)
-    .not("pending_since", "is", null)
-    .limit(1_000);
-  if (error) throw new Error(`pending collaboration read failed: ${error.message}`);
-  const pending = [...new Set((data ?? []).map((row) => row.page_id as string))];
-  await Promise.all(pending.map((pageId) => runMaterialization(service, pageId)));
-  return pending.length;
+  const pending = new Set<string>();
+  for (let offset = 0; ; offset += 1_000) {
+    const { data, error } = await service
+      .from("page_collaboration_heads")
+      .select("page_id")
+      .in("project_id", ids)
+      .not("pending_since", "is", null)
+      .order("page_id")
+      .order("field")
+      .range(offset, offset + 999);
+    if (error) throw new Error(`pending collaboration read failed: ${error.message}`);
+    for (const row of data ?? []) pending.add(row.page_id as string);
+    if (!data || data.length < 1_000) break;
+  }
+  for (let offset = 0; offset < pending.size; offset += 10) {
+    await Promise.all([...pending].slice(offset, offset + 10)
+      .map((pageId) => runMaterialization(service, pageId)));
+  }
+  return pending.size;
 }
 
 /**
@@ -1847,6 +1888,8 @@ export async function readPageCollaborationSteps({
   const service = getServiceClient();
   // The head and the journal are fetched while access is decided, sealed;
   // nothing is decrypted before access is confirmed, and a denial aborts both.
+  // Fetched side by side, a journal read can miss a batch the head already
+  // counts; that case is read again below rather than reset.
   const abort = new AbortController();
   const headRead = withSupabaseAbortSignal(abort.signal, () => Promise.resolve(service
     .from("page_collaboration_heads")
@@ -1894,8 +1937,15 @@ export async function readPageCollaborationSteps({
       token: decision.token,
     };
   }
-  const rows = await decodeCollaborationJournal(await journalRead, projectId, actorId);
-  const assembled = assembleCollabSteps(field, since, head, rows);
+  // The journal was read alongside the head: a batch accepted between the two
+  // reads shows in the head but not in the rows. Read the journal again,
+  // after the head, before calling it a gap.
+  let rows = await decodeCollaborationJournal(await journalRead, projectId, actorId);
+  let assembled = assembleCollabSteps(field, since, head, rows);
+  if ("gap" in assembled) {
+    rows = await readCollaborationJournal(service, { pageId, projectId, field, since, actorId });
+    assembled = assembleCollabSteps(field, since, head, rows);
+  }
   if ("gap" in assembled) return reset("gap");
   return { ok: true, catchUp: { kind: "steps", ...assembled }, token: decision.token };
 }
@@ -1951,6 +2001,7 @@ export async function submitPageCollaboration({
     }
     if (!grant!.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
 
+    let sealAnyway = false;
     for (let attempt = 0; attempt < 4; attempt += 1) {
       let current = cachedStreamValue(pageId, projectId, field, submission.base);
       if (!current) {
@@ -1960,7 +2011,8 @@ export async function submitPageCollaboration({
         // acknowledged again — before comparing revisions, which have moved since.
         const head = field === "body" ? live.page.body_revision : live.page.title_revision;
         const value = field === "body" ? live.page.content : live.page.title;
-        rememberStreamValue(pageId, projectId, field, head, value, live.protect);
+        const protect = live.protect || journalMustBeSealed();
+        rememberStreamValue(pageId, projectId, field, head, value, protect);
         if (submission.base !== head) {
           const receipt = await findCollaborationReceipt(service, {
             pageId, projectId, batchId: submission.batchId,
@@ -1978,7 +2030,7 @@ export async function submitPageCollaboration({
           }
           return { ok: true, token: issued, result: { status: "behind", head } };
         }
-        current = { value, protect: live.protect };
+        current = { value, protect };
       }
 
       if (submission.presentation) {
@@ -2013,7 +2065,7 @@ export async function submitPageCollaboration({
         authorKind: "human",
         authorApiKeyId: null,
         authored: !submission.presentation,
-      }], current.protect);
+      }], current.protect || sealAnyway);
       // A renewal decided alongside must agree before anything is written.
       const refusal = await settle();
       if (refusal) return refusal;
@@ -2024,10 +2076,13 @@ export async function submitPageCollaboration({
           pageId, projectId, generation: grant!.generation, sealed,
         });
       } catch (error) {
-        // A page sealed since this instance cached it: read it again.
+        // A page sealed since this instance cached it, or page protection
+        // activated meanwhile: read it again and seal.
         if (error instanceof CollabCommitError && error.code === "23514" &&
-            error.message === "page_collaboration_plaintext_refused") {
+            (error.message === "page_collaboration_plaintext_refused" ||
+              error.message === "page_collaboration_requires_encryption")) {
           forgetStreamValues(pageId);
+          sealAnyway = true;
           continue;
         }
         throw error;
@@ -2063,6 +2118,10 @@ export async function submitPageCollaboration({
           continue;
         }
         case "retry":
+          continue;
+        case "backlog":
+          // Too much typing awaits materialization: write it, then append.
+          await runMaterialization(service, pageId);
           continue;
       }
     }
@@ -2118,6 +2177,11 @@ async function bodyStepsBetween(
  * text, even inside the passage, is kept like a parallel edit's. Only when
  * the journal cannot bridge the gap is the edit derived again from the
  * current text, where it may then be refused (its passage is gone).
+ *
+ * A rebase can drop steps whose text a collaborator deleted meanwhile. The
+ * result says so: `partial` when some of the edit was applied, and
+ * `pageStale` when none of it was, so the agent re-reads instead of
+ * reporting an edit that did not happen.
  */
 export async function editPageBodyLive<R>({
   pageId,
@@ -2134,7 +2198,7 @@ export async function editPageBodyLive<R>({
   kind?: PageWriteKind;
   mcpKeyId?: string | null;
   derive: (current: JSONContent | null) => Promise<{ doc: JSONContent } | { refusal: R }>;
-}): Promise<PageResult<Page> | { ok: false; refusal: R }> {
+}): Promise<(PageResult<Page> & { partial?: boolean }) | { ok: false; refusal: R }> {
   const service = getServiceClient();
   const located = await loadPage(service, pageId, actorId);
   if (!located || (projectId && located.project_id !== projectId)) {
@@ -2156,6 +2220,7 @@ export async function editPageBodyLive<R>({
   let planned = await stepsFrom(basis);
   if ("refusal" in planned) return { ok: false, refusal: planned.refusal };
   let steps = planned.steps;
+  let dropped = 0;
 
   for (let attempt = 0; attempt < 12; attempt += 1) {
     if (steps.length === 0) return { ok: true, page: located };
@@ -2166,7 +2231,9 @@ export async function editPageBodyLive<R>({
         const over = await bodyStepsBetween(service, current.page, revision,
           current.page.body_revision, actorId);
         if (over) {
-          steps = ops.rebaseCollabSteps("body", basis, steps, over);
+          const rebased = ops.rebaseCollabSteps("body", basis, steps, over);
+          dropped += steps.length - rebased.length;
+          steps = rebased;
         } else {
           planned = await stepsFrom(current.page.content as JSONContent | null);
           if ("refusal" in planned) return { ok: false, refusal: planned.refusal };
@@ -2176,7 +2243,12 @@ export async function editPageBodyLive<R>({
         revision = current.page.body_revision;
       }
       live = current;
-      if (steps.length === 0) return { ok: true, page: located };
+      if (steps.length === 0) {
+        // Everything the agent meant to change was changed by someone else.
+        return dropped > 0
+          ? { ok: false, status: 409, errorKey: "pageStale" }
+          : { ok: true, page: located };
+      }
     }
     let commit: StreamCommit;
     try {
@@ -2203,7 +2275,7 @@ export async function editPageBodyLive<R>({
         afterStreamCommit({ service, commit, actorId, kind, mcpKeyId });
         scheduleRoutineEvents();
         const fresh = await loadPage(service, pageId, actorId);
-        return { ok: true, page: fresh ?? commit.page };
+        return { ok: true, page: fresh ?? commit.page, ...(dropped > 0 ? { partial: true } : {}) };
       }
       case "refused":
         return commit.reason === "too-large"

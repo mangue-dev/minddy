@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CARET_EXPIRY_MS,
+  MAX_CARET_PEERS,
   nextCaretSeq,
   openPageCollaborationPresence,
   pageCollaborationTopic,
@@ -118,6 +119,39 @@ describe("page collaboration carets (MIN-688)", () => {
     expect(seen.at(-1)).toEqual([]);
     alice.close();
     bob.close();
+  });
+
+  it("draws no caret claiming an account outside the project", async () => {
+    const realtime = sharedBroadcast();
+    const seen: PeerCaret[][] = [];
+    const alice = openPageCollaborationPresence({
+      pageId: "page-1", userId: "alice", sessionId: "alice-session", client: realtime.client,
+      isMember: (id) => id === "alice" || id === "bob", onPeers: (peers) => seen.push(peers),
+    });
+    const bob = open(realtime.client, "bob", "bob-session");
+    const mallory = open(realtime.client, "mallory", "mallory-session");
+    await vi.advanceTimersByTimeAsync(10);
+    bob.publish(caret);
+    mallory.publish(caret);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(seen.at(-1)?.map((peer) => peer.userId)).toEqual(["bob"]);
+    alice.close();
+    bob.close();
+    mallory.close();
+  });
+
+  it("tracks a bounded number of peer sessions per channel", async () => {
+    const realtime = sharedBroadcast();
+    const seen: PeerCaret[][] = [];
+    const alice = open(realtime.client, "alice", "alice-session", seen);
+    await vi.advanceTimersByTimeAsync(10);
+    const others = Array.from({ length: MAX_CARET_PEERS + 8 }, (_, i) => open(realtime.client, "bob", `bob-${i}`));
+    await vi.advanceTimersByTimeAsync(10);
+    for (const other of others) other.publish(caret);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(seen.at(-1)).toHaveLength(MAX_CARET_PEERS);
+    alice.close();
+    for (const other of others) other.close();
   });
 
   it("keeps a still caret alive with heartbeats and expires a silent one", async () => {

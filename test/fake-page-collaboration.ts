@@ -215,3 +215,20 @@ export function fakePendingPageCollaborations(state: FakeCollabState) {
   const ids = [...new Set(state.heads.filter((head) => head.pending_since).map((head) => head.page_id))];
   return { data: ids, error: null };
 }
+
+/** `read_page_collaboration_journal`: rows from `since`, bounded by rows and bytes. */
+export function fakeReadPageCollaborationJournal(state: FakeCollabState, args: Row) {
+  const rows = state.batches
+    .filter((row) => row.page_id === args.p_page_id && row.project_id === args.p_project_id &&
+      row.field === args.p_field && Number(row.base_revision) >= Number(args.p_since))
+    .sort((a, b) => Number(a.base_revision) - Number(b.base_revision))
+    .slice(0, Number(args.p_max_rows));
+  const bounded: Row[] = [];
+  let bytes = 0;
+  for (const row of rows) {
+    if (bytes >= Number(args.p_max_bytes)) break;
+    bounded.push({ ...row });
+    bytes += JSON.stringify(row.encrypted_content ?? row.steps ?? null).length;
+  }
+  return { data: bounded, error: null };
+}

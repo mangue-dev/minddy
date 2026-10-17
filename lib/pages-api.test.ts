@@ -11,6 +11,7 @@ import {
   fetchPagesApi,
   isPageCycleError,
   prepareInitialBriefApi,
+  submitPageCollaborationApi,
   updatePageApi,
 } from "./pages-api";
 
@@ -134,5 +135,45 @@ describe("pages-api", () => {
     );
     expect(err).not.toBeInstanceOf(PageConflictError);
     expect(isPageCycleError(err)).toBe(true);
+  });
+});
+
+describe("live collaboration batches (MIN-688)", () => {
+  const submission = {
+    field: "body" as const, base: 0, batchId: "11111111-1111-4111-8111-111111111111",
+    clientId: "browser-session-1", steps: [{ stepType: "replace" }],
+  };
+
+  it("reads every definitive answer as an answer, 400 included", async () => {
+    for (const [status, body] of [
+      [200, { status: "accepted", revision: 1 }],
+      [409, { status: "behind", head: 3 }],
+      [400, { status: "refused", reason: "invalid-step" }],
+      [413, { status: "refused", reason: "too-large" }],
+      [422, { status: "refused", reason: "content-refused" }],
+    ] as const) {
+      mockFetch({ ok: status === 200, status, body });
+      await expect(submitPageCollaborationApi("p", "page", submission)).resolves.toEqual(body);
+    }
+  });
+
+  it("still throws on a failure without a refusal, which the stream retries or stops on", async () => {
+    mockFetch({ ok: false, status: 500, body: { error: "boom" } });
+    await expect(submitPageCollaborationApi("p", "page", submission)).rejects.toBeInstanceOf(PageApiError);
+    mockFetch({ ok: false, status: 400, body: { error: "Invalid JSON" } });
+    await expect(submitPageCollaborationApi("p", "page", submission)).rejects.toBeInstanceOf(PageApiError);
+  });
+
+  it("sends the latest collaboration token the server issued for the page", async () => {
+    const calls: Headers[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      calls.push(new Headers(init?.headers));
+      return Response.json({ status: "accepted", revision: 1 },
+        { status: 200, headers: { "x-minddy-collab-token": `token-${calls.length}` } });
+    }));
+    await submitPageCollaborationApi("p", "token-page", submission);
+    await submitPageCollaborationApi("p", "token-page", submission);
+    expect(calls[0].get("x-minddy-collab-token")).toBeNull();
+    expect(calls[1].get("x-minddy-collab-token")).toBe("token-1");
   });
 });

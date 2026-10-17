@@ -49,6 +49,33 @@ export const MAX_COLLAB_BATCH_STEPS = 400;
 /** Serialized characters per submitted batch, checked before parsing steps. */
 export const MAX_COLLAB_BATCH_CHARS = 400_000;
 
+/**
+ * Text characters one batch may insert. Bounds how fast one writer can grow
+ * the journal (with the per-stream byte budgets of the database) while still
+ * accepting any realistic paste.
+ */
+export const MAX_COLLAB_BATCH_INSERTED_CHARS = 200_000;
+
+/** Bytes of a request body the batch route reads before giving up. */
+export const MAX_COLLAB_REQUEST_BYTES = MAX_COLLAB_BATCH_CHARS + 50_000;
+
+/** Characters of text a batch's steps carry (`text` of inserted nodes). */
+export function collabInsertedChars(steps: readonly unknown[]): number {
+  let total = 0;
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+    } else if (value && typeof value === "object") {
+      for (const [key, item] of Object.entries(value)) {
+        if (key === "text" && typeof item === "string") total += item.length;
+        else visit(item);
+      }
+    }
+  };
+  visit(steps);
+  return total;
+}
+
 /** Steps returned by one catch-up read; the client asks again from there. */
 export const MAX_COLLAB_CATCH_UP_STEPS = 2_000;
 
@@ -185,6 +212,7 @@ export function readCollabSubmission(
     return "invalid";
   }
   if (JSON.stringify(input.steps).length > MAX_COLLAB_BATCH_CHARS) return "too-large";
+  if (collabInsertedChars(input.steps) > MAX_COLLAB_BATCH_INSERTED_CHARS) return "too-large";
   if (input.presentation !== undefined && typeof input.presentation !== "boolean") {
     return "invalid";
   }

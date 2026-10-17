@@ -2506,7 +2506,7 @@
       "functionReferences": []
     },
     "guard_encryption_marker_change()": {
-      "sha256": "c86939773668bcb055be09f824928a3e5026da8e2345e9cec3f5bdd89bf2caab",
+      "sha256": "6463d8210aa0f7f3373027a0e066ac33776f31317549f33787354d7375a7d5e3",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2792,7 +2792,7 @@
       "functionReferences": []
     },
     "guard_encryption_snapshot_write()": {
-      "sha256": "e893c6a946ede8a987cc8c4301bd76fa0b9eb317409353188c36cb88550e366f",
+      "sha256": "d7b3e913dd9669158057d122fbd5aade563f9df47da88a47ec528e2ee9869e2d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2803,7 +2803,31 @@
         "comments",
         "objectives",
         "issue_events",
-        "feedback_posts"
+        "feedback_posts",
+        "invitation_email_scope",
+        "numo_turn_intent_scope",
+        "issue_encryption_scopes",
+        "numo_tool_content_scope",
+        "numo_user_message_scope",
+        "numo_event_content_scope",
+        "numo_final_content_scope",
+        "push_content_write_scope",
+        "app_config_encryption_scope",
+        "numo_error_encryption_scope",
+        "feedback_sso_encryption_scope",
+        "numo_conversation_title_scope",
+        "pr_comment_edit_encryption_scope",
+        "pull_request_url_encryption_scope",
+        "view_share_token_encryption_scope",
+        "feedback_identity_encryption_scope",
+        "forge_mention_key_encryption_scope",
+        "attachment_metadata_encryption_scope",
+        "forge_relay_delivery_encryption_scope",
+        "pull_request_content_encryption_scope",
+        "github_issue_metadata_encryption_scopes",
+        "numo_surface_destination_encryption_scope",
+        "github_issue_comment_url_encryption_scopes",
+        "provider_operation_resource_encryption_scope"
       ],
       "protectedRelations": [
         "issues",
@@ -6277,7 +6301,7 @@
       "functionReferences": []
     },
     "import_encrypted_page_database(uuid,uuid,uuid,uuid,integer,bigint,jsonb,jsonb)": {
-      "sha256": "7632dc2abb65919f12366f891a05d31a3c5cf358fab44f32a58ea000f534c9c3",
+      "sha256": "810b222b0a0504a4a53e2f1c3b4e5c780ebf1c213767d15eb619297e25d399fc",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6293,6 +6317,7 @@
         "page_files"
       ],
       "functionReferences": [
+        "reset_page_collaboration",
         "lock_live_project_actor_access"
       ]
     },
@@ -6766,7 +6791,7 @@
       "functionReferences": []
     },
     "guard_page_collaboration()": {
-      "sha256": "2c00483e9167cc4f55551b266484ab38bb3baaba2d45e391c1185504ae4bcd96",
+      "sha256": "f1108c4a436fdf4d95bc8f8f330e8ecaccdbe84240ed9393185d0e98d6cb8e27",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6900,7 +6925,7 @@
       "functionReferences": []
     },
     "append_page_collaboration(uuid,uuid,bigint,jsonb)": {
-      "sha256": "7fa102f29c72ada24f3fad96a4716078de26bc87340cde8618fc2cbab17da601",
+      "sha256": "eb2ee14f2f294808127b2e1d5968399c258cd66ffa3a4be4fb179a62ff3d1bf8",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6908,18 +6933,20 @@
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages",
+        "projects",
         "page_collaboration_heads",
         "page_collaboration_batches",
         "project_realtime_generations"
       ],
       "protectedRelations": [
         "pages",
+        "projects",
         "page_collaboration_batches"
       ],
       "functionReferences": []
     },
     "commit_page_collaboration(uuid,bigint,jsonb,jsonb,jsonb)": {
-      "sha256": "deefe770ee6284d454f9fc40d2bfeb67940dd98e068817ece9e99d7b539a10d5",
+      "sha256": "7b7db22859da25d38d21f3260bee1f6f268a2cc5f687bc285bbf29a808bf3f1b",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6939,7 +6966,7 @@
       ]
     },
     "write_page_collaboration_projection(uuid,jsonb,bigint,bigint)": {
-      "sha256": "e56c6e8f5a190e5d83515f7fc86d363d0abcf749940b8fe629b820cdd464278e",
+      "sha256": "06ec8d40a75b3a059802fbe422afd6a2f03b98c4673be418d29d30b681d23ccd",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -6947,11 +6974,13 @@
       "acl": "{postgres=X/postgres,service_role=X/postgres}",
       "relations": [
         "pages",
+        "api_keys",
         "page_collaboration_heads",
         "page_collaboration_batches"
       ],
       "protectedRelations": [
         "pages",
+        "api_keys",
         "page_collaboration_batches"
       ],
       "functionReferences": []
@@ -6973,6 +7002,21 @@
       "functionReferences": [
         "write_page_collaboration_projection"
       ]
+    },
+    "read_page_collaboration_journal(uuid,uuid,text,bigint,integer,bigint)": {
+      "sha256": "619ae6c9c239009d3103f4f4d09b22fdbcbfa8c1dc145852b04e9e83d10fff5f",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "page_collaboration_batches"
+      ],
+      "protectedRelations": [
+        "page_collaboration_batches"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {

@@ -22,7 +22,12 @@
  *   because the journal carries our client ID. Only then is anything resent,
  *   with a new batch ID, from the rebased steps.
  * - **A refusal is definitive** for those steps: they are reverted locally and
- *   reported, so the editor never keeps text the server will not store.
+ *   reported, so the editor never keeps text the server will not store. Only
+ *   the refused batch is reverted; what was typed while it was in flight is
+ *   rebased over its removal, and reported too when it cannot be.
+ * - **Work that can never be confirmed is settled, not kept spinning.** A
+ *   fatal answer, steps this client cannot read, or a session that lost write
+ *   access reverts its pending work and says so, so `flush()` resolves.
  * - **A gap resets, it does not guess.** When the journal cannot bridge the
  *   client's revision, the client restarts from the snapshot and re-expresses
  *   its own unconfirmed work on top of it (see `rebuild`).
@@ -30,7 +35,7 @@
 
 import type { Node as PMNode, Schema } from "@tiptap/pm/model";
 import { EditorState, type Transaction } from "@tiptap/pm/state";
-import { Step, type StepMap } from "@tiptap/pm/transform";
+import { Step, Transform, type StepMap } from "@tiptap/pm/transform";
 import { collab, getVersion, receiveTransaction, sendableSteps } from "prosemirror-collab";
 
 import {
@@ -38,7 +43,9 @@ import {
   COLLAB_RECONCILE_MS,
   COLLAB_SEND_DELAY_MS,
   MAX_COLLAB_BATCH_CHARS,
+  MAX_COLLAB_BATCH_INSERTED_CHARS,
   MAX_COLLAB_BATCH_STEPS,
+  collabInsertedChars,
   type CollabCatchUp,
   type CollabField,
   type CollabRefusal,
@@ -106,6 +113,12 @@ export interface CollabTransport {
 /** A transport failure that no retry will fix (authorization, missing page). */
 export class CollabFatalError extends Error {}
 
+/**
+ * The largest batch `beacon()` sends, in serialized characters: browsers
+ * refuse a `keepalive` request body above 64 KB, and the refusal is silent.
+ */
+export const COLLAB_BEACON_MAX_CHARS = 60_000;
+
 export type CollabStreamStatus = "saved" | "saving" | "error";
 
 export interface CollabStreamOptions {
@@ -139,6 +152,10 @@ export interface CollabStreamOptions {
   onRefused?: (reason: CollabRefusal) => void;
   onConflicts?: (conflicts: unknown[]) => void;
   onFatal?: (error: unknown) => void;
+  /** Local work was dropped without a refusal of its own: steps that could
+   *  not be rebased over a refused batch, or pending work of a session that
+   *  can no longer send. */
+  onDiscarded?: () => void;
   /** After any change of the confirmed revision or the local document. */
   onChange?: () => void;
   /** A host was attached (true) or the stream fell back to its own state (false). */
@@ -163,6 +180,8 @@ export class CollabStream {
   private closed = false;
 
   private inFlight = false;
+  /** Set by a fatal condition: nothing is sent or read any more. */
+  private stopped = false;
   private lastSentAt = -Infinity;
   private sendTimer: ReturnType<typeof setTimeout> | null = null;
   private failures = 0;
@@ -345,7 +364,7 @@ export class CollabStream {
    */
   async flush(): Promise<boolean> {
     if (!this.hasPending()) return true;
-    if (!this.host || this.closed) return false;
+    if (!this.host || this.closed || this.stopped) return false;
     this.clearSendTimer();
     const settled = new Promise<boolean>((resolve) => this.idleWaiters.push(resolve));
     void this.send();
@@ -407,7 +426,7 @@ export class CollabStream {
   }
 
   private scheduleSend(delay: number): void {
-    if (this.closed || this.inFlight) return;
+    if (this.closed || this.inFlight || this.stopped) return;
     this.clearSendTimer();
     const interval = this.options.minSendIntervalMs ?? COLLAB_MIN_SEND_INTERVAL_MS;
     const wait = Math.max(delay, interval - (Date.now() - this.lastSentAt));
@@ -440,9 +459,11 @@ export class CollabStream {
 
   private async send(): Promise<void> {
     const host = this.host;
-    if (this.closed || this.inFlight || !host) return;
+    if (this.closed || this.inFlight || !host || this.stopped) return;
     if (this.options.canSend && !this.options.canSend()) {
-      this.settleWaiters(false);
+      // A writer demoted to reader: this work can never be confirmed.
+      if (this.discardPending()) this.options.onDiscarded?.();
+      this.idle();
       return;
     }
     const batch = this.nextBatch(host.getState());
@@ -470,9 +491,7 @@ export class CollabStream {
     if (failure) {
       if (arriving) this.completeAttach(arriving);
       if (failure instanceof CollabFatalError) {
-        this.setStatus("error");
-        this.settleWaiters(false);
-        this.options.onFatal?.(failure);
+        this.stop(failure);
         return;
       }
       // The batch may or may not have been accepted. The catch-up decides:
@@ -501,11 +520,14 @@ export class CollabStream {
     } else if (result?.status === "behind") {
       await this.pull();
     } else if (result?.status === "refused") {
-      this.revertUnconfirmed();
+      const dropped = this.revertRefused(steps.length);
       this.options.onRefused?.(result.reason);
+      if (dropped > 0) this.options.onDiscarded?.();
     }
     if (arriving && this.pendingAttach === arriving) this.completeAttach(arriving);
     this.options.onChange?.();
+    // A catch-up above may have stopped the session for good.
+    if (this.stopped) return;
     if (this.host && hasUnconfirmed(this.host.getState())) this.scheduleSend(0);
     else this.idle();
   }
@@ -515,7 +537,10 @@ export class CollabStream {
    * and size, and of one kind only — a presentation batch must hold
    * presentation steps alone, or the authority could not verify it.
    */
-  private nextBatch(state: EditorState): { steps: Step[]; submission: CollabSubmission } | null {
+  private nextBatch(
+    state: EditorState,
+    maxChars = MAX_COLLAB_BATCH_CHARS
+  ): { steps: Step[]; submission: CollabSubmission } | null {
     const sendable = sendableSteps(state);
     if (!sendable) return null;
     const origins = sendable.origins as Transaction[];
@@ -525,10 +550,12 @@ export class CollabStream {
       !!this.options.isPresentation?.(origins[count]) === presentation) count += 1;
     let steps = sendable.steps.slice(0, count);
     let json = steps.map((step) => step.toJSON());
-    while (steps.length > 1 && JSON.stringify(json).length > MAX_COLLAB_BATCH_CHARS) {
+    while (steps.length > 1 && (JSON.stringify(json).length > maxChars ||
+        collabInsertedChars(json) > MAX_COLLAB_BATCH_INSERTED_CHARS)) {
       steps = steps.slice(0, Math.ceil(steps.length / 2));
       json = json.slice(0, steps.length);
     }
+    if (JSON.stringify(json).length > maxChars) return null;
     return {
       steps,
       submission: {
@@ -549,30 +576,92 @@ export class CollabStream {
    * at the same base could only be refused.
    */
   beacon(): void {
-    if (this.closed || this.inFlight || !this.host) return;
+    if (this.closed || this.stopped || this.inFlight || !this.host) return;
     if (this.options.canSend && !this.options.canSend()) return;
-    const batch = this.nextBatch(this.host.getState());
+    // A keepalive body above 64 KB is refused by the browser: send a prefix
+    // that fits, or nothing (the unsaved-work guard has already warned).
+    const batch = this.nextBatch(this.host.getState(), COLLAB_BEACON_MAX_CHARS);
     if (batch) this.options.transport.beacon?.(batch.submission);
   }
 
-  /** Drops every pending local step from the screen (after a refusal). */
-  private revertUnconfirmed(): void {
+  /**
+   * Reverts the refused batch — the first `count` unconfirmed steps — and
+   * rebases what was typed after it over its removal, the way
+   * `prosemirror-collab` rebases over remote steps. Returns how many later
+   * steps could not be rebased and were dropped.
+   */
+  private revertRefused(count: number): number {
     const host = this.host;
-    if (!host) return;
+    if (!host) return 0;
     const state = host.getState();
     const { unconfirmed, version } = collabInternals(state);
-    if (unconfirmed.length === 0) return;
+    if (unconfirmed.length === 0) return 0;
+    const transform = new Transform(state.doc);
+    for (let i = unconfirmed.length - 1; i >= 0; i -= 1) transform.step(unconfirmed[i].inverted);
+    const kept: Rebaseable[] = [];
+    let dropped = 0;
+    let mapFrom = unconfirmed.length;
+    for (let i = 0; i < unconfirmed.length; i += 1) {
+      const mapped = i < count ? null : unconfirmed[i].step.map(transform.mapping.slice(mapFrom));
+      mapFrom -= 1;
+      if (i < count) continue;
+      if (mapped && !transform.maybeStep(mapped).failed) {
+        // `setMirror` is public at runtime but missing from the type
+        // declarations; prosemirror-collab's own rebase relies on it.
+        (transform.mapping as unknown as { setMirror(n: number, m: number): void })
+          .setMirror(mapFrom, transform.steps.length - 1);
+        kept.push({
+          step: mapped,
+          inverted: mapped.invert(transform.docs[transform.docs.length - 1]),
+          origin: unconfirmed[i].origin,
+        });
+      } else {
+        dropped += 1;
+      }
+    }
+    const tr = state.tr;
+    for (const step of transform.steps) tr.step(step);
+    tr.setMeta(COLLAB_META, { version, unconfirmed: kept }).setMeta("addToHistory", false);
+    host.dispatch(tr);
+    return dropped;
+  }
+
+  /** Drops every pending local step from the screen; true when there was some. */
+  private discardPending(): boolean {
+    const host = this.host;
+    if (!host) return false;
+    const state = host.getState();
+    const { unconfirmed, version } = collabInternals(state);
+    if (unconfirmed.length === 0) return false;
     const tr = state.tr;
     for (let i = unconfirmed.length - 1; i >= 0; i -= 1) tr.step(unconfirmed[i].inverted);
     tr.setMeta(COLLAB_META, { version, unconfirmed: [] }).setMeta("addToHistory", false);
     host.dispatch(tr);
+    return true;
+  }
+
+  /**
+   * A condition no retry fixes (401, 403, 404, steps this client cannot
+   * read): stop sending and reading, revert the work that can never be
+   * confirmed, and let `flush()` resolve so the page can be left.
+   */
+  private stop(error: unknown): void {
+    if (this.stopped) return;
+    this.stopped = true;
+    this.clearSendTimer();
+    if (this.reconcileTimer) clearInterval(this.reconcileTimer);
+    this.reconcileTimer = null;
+    this.discardPending();
+    this.setStatus("error");
+    this.settleWaiters(true);
+    this.options.onFatal?.(error);
   }
 
   /* ── Receiving ──────────────────────────────────────────────────────────── */
 
   /** Reads accepted steps until caught up. Single-flight; repeats if asked again. */
   pull(): Promise<void> {
-    if (this.closed || !this.host) return Promise.resolve();
+    if (this.closed || this.stopped || !this.host) return Promise.resolve();
     if (this.pulling) {
       this.pullAgain = true;
       return this.pulling;
@@ -598,10 +687,7 @@ export class CollabStream {
       try {
         answer = await this.options.transport.steps(this.field, since);
       } catch (error) {
-        if (error instanceof CollabFatalError) {
-          this.setStatus("error");
-          this.options.onFatal?.(error);
-        }
+        if (error instanceof CollabFatalError) this.stop(error);
         return;
       }
       const now = this.host;
@@ -611,24 +697,31 @@ export class CollabStream {
         this.pullAgain = true;
         continue;
       }
-      if (answer.kind === "reset") {
-        this.applyReset(answer.snapshot);
-        continue;
-      }
-      if (answer.steps.length > 0) {
-        // The attached editor's own schema instance, never a shared one.
-        const schema = now.getState().schema;
-        let steps: Step[];
-        try {
-          steps = answer.steps.map((json) => Step.fromJSON(schema, json as Parameters<typeof Step.fromJSON>[1]));
-        } catch {
-          return;
+      // Steps or a snapshot this client cannot read (a node type added by a
+      // newer deployment) would otherwise loop forever between `behind` and
+      // an empty catch-up: this session stops, and a reload brings the code
+      // that can read them.
+      try {
+        if (answer.kind === "reset") {
+          this.applyReset(answer.snapshot);
+          continue;
         }
-        this.recordConfirmed(steps);
-        now.dispatch(receiveTransaction(now.getState(), steps, answer.clientIds, {
-          mapSelectionBackward: true,
-        }));
-        this.options.onChange?.();
+        if (answer.steps.length > 0) {
+          // The attached editor's own schema instance, never a shared one.
+          const schema = now.getState().schema;
+          const steps = answer.steps.map((json) =>
+            Step.fromJSON(schema, json as Parameters<typeof Step.fromJSON>[1]));
+          const received = receiveTransaction(now.getState(), steps, answer.clientIds, {
+            mapSelectionBackward: true,
+          });
+          this.recordConfirmed(steps);
+          now.dispatch(received);
+          this.options.onChange?.();
+        }
+      } catch (error) {
+        console.error("[page-collaboration] unreadable catch-up", error);
+        this.stop(new CollabFatalError("The page holds content this version cannot read"));
+        return;
       }
       if (answer.to < answer.head) this.pullAgain = true;
     } while (this.pullAgain && !this.closed);

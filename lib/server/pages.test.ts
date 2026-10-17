@@ -52,6 +52,13 @@ const h = vi.hoisted(() => ({
   generations: new Map<string, number>(),
   /** Collaboration access decisions made, in order. */
   grants: 0,
+  /** Journal reads, and an optional override of the next ones (races). */
+  journalReads: 0,
+  journalHook: null as null | ((read: number) => { data: Record<string, unknown>[]; error: null } | null),
+  /** Answer `backlog` to the next append. */
+  backlogOnce: false,
+  /** Refuse plaintext appends as an active page protection scope would. */
+  pageScopeActive: false,
   /** Projects to which the actor has access. Empty = everything is “not found”. */
   access: new Set<string>(),
   /** Projects among `access` where the actor is only a reader (MIN-693). */
@@ -95,6 +102,7 @@ vi.mock("@/lib/supabase-service", async () => {
     let ascending = true;
     let counted = false;
     let requestedLimit = 1000;
+    let range: [number, number] | null = null;
     let afterId: string | null = null;
 
     const all = () => (pages ? h.rows : journal ? h.batches : headsTable ? h.heads : h.versions);
@@ -185,7 +193,7 @@ vi.mock("@/lib/supabase-service", async () => {
         return { data: rows.slice(0, Math.min(requestedLimit, h.pageListCap)).map(copy), error: null,
           ...(counted ? { count: rows.length } : {}) };
       }
-      return { data: rows.map(copy), error: null };
+      return { data: (range ? rows.slice(range[0], range[1] + 1) : rows).map(copy), error: null };
     };
 
     const query: Record<string, unknown> = {};
@@ -245,6 +253,7 @@ vi.mock("@/lib/supabase-service", async () => {
       return query;
     };
     query.limit = (limit: number) => { requestedLimit = limit; return query; };
+    query.range = (from: number, to: number) => { range = [from, to]; return query; };
     query.single = async () => {
       const { data } = run();
       return { data: data?.[0] ?? null, error: data?.length ? null : new Error("no row") };
@@ -270,8 +279,21 @@ vi.mock("@/lib/supabase-service", async () => {
       }
       return fake.fakeCommitPageCollaboration(h, args);
     }
-    if (name === "append_page_collaboration") return fake.fakeAppendPageCollaboration(h, args);
+    if (name === "append_page_collaboration") {
+      if (h.backlogOnce) {
+        h.backlogOnce = false;
+        return { data: { status: "backlog" }, error: null };
+      }
+      if (h.pageScopeActive && (args.p_batches as Record<string, unknown>[]).some((batch) => !batch.encryption_version)) {
+        return { data: null, error: { code: "23514", message: "page_collaboration_requires_encryption" } };
+      }
+      return fake.fakeAppendPageCollaboration(h, args);
+    }
     if (name === "materialize_page_collaboration") return fake.fakeMaterializePageCollaboration(h, args);
+    if (name === "read_page_collaboration_journal") {
+      h.journalReads += 1;
+      return h.journalHook?.(h.journalReads) ?? fake.fakeReadPageCollaborationJournal(h, args);
+    }
     if (name === "reset_page_collaboration") return fake.fakeResetPageCollaboration(h, args);
     if (name === "pending_page_collaborations") return fake.fakePendingPageCollaborations(h);
     if (name === "restore_page_guarded") {
@@ -391,6 +413,17 @@ vi.mock("@/lib/server/page-mentions", () => ({
   notifyPageMentions: announce.notifyPageMentions,
 }));
 
+/**
+ * Journal sealing (MIN-688): real by default; a test can stand in sealed rows
+ * where the real codec would need a key registry this fake does not have.
+ */
+const sealing = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/page-collaboration", async (importActual) => {
+  const actual = await importActual<typeof import("./page-collaboration")>();
+  sealing.mockImplementation(actual.sealCollabBatches);
+  return { ...actual, sealCollabBatches: sealing };
+});
+
 /** Collaboration access decisions, from the same access table. */
 vi.mock("@/lib/server/page-collaboration-token", async (importActual) => ({
   ...(await importActual<typeof import("./page-collaboration-token")>()),
@@ -439,6 +472,7 @@ import {
   discardPage,
   editPageBodyLive,
   materializePage,
+  materializePendingProjectPages,
   materializeStalePages,
   readPageCollaborationSnapshot,
   readPageCollaborationSteps,
@@ -485,6 +519,11 @@ beforeEach(() => {
   h.heads = [];
   h.generations = new Map();
   h.grants = 0;
+  h.journalReads = 0;
+  h.journalHook = null;
+  h.backlogOnce = false;
+  h.pageScopeActive = false;
+  sealing.mockClear();
   // Collaboration tokens are signed with a key derived from a server secret.
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
   // Page ids repeat from one test to the next: no stream value may survive.
@@ -2343,6 +2382,143 @@ describe("live collaboration authority (MIN-688)", () => {
     expect(JSON.stringify(calls[0].doc)).not.toContain("@bob");
     expect(JSON.stringify(calls[1].previousDoc)).not.toContain("@bob");
     expect(JSON.stringify(calls[1].doc)).toContain("@bob");
+  });
+
+  it("reads the journal again rather than resetting when a batch lands between its two reads", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!")))),
+    });
+    // The first journal read ran before the batch the head already counts.
+    h.journalHook = (read) => read === 1 ? { data: [], error: null } : null;
+    const caught = await readPageCollaborationSteps({ projectId: PROJECT, pageId: id, actorId: ACTOR, field: "body", since: 0 });
+    expect(caught).toMatchObject({ ok: true, catchUp: { kind: "steps", from: 0, to: 1 } });
+    expect(h.journalReads).toBe(2);
+  });
+
+  it("retries a materialization that meets a transient gap instead of discarding typing", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text(" kept")))),
+    });
+    // A racing materializer pruned what this one had just counted on, once.
+    h.journalHook = (read) => read === 1 ? { data: [], error: null } : null;
+    expect(await materializePage(getServiceClient(), id)).toBe("materialized");
+    expect(JSON.stringify(rowOf(id).content)).toContain("Hello kept");
+    expect(headOf(id, "body").revision).toBe(1);
+  });
+
+  it("opens a gap only when the same journal gap is read twice", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!")))),
+    });
+    h.batches = [];
+    expect(await materializePage(getServiceClient(), id)).toBe("reset");
+    expect(headOf(id, "body").revision).toBe(2);
+    expect(h.journalReads).toBe(2);
+  });
+
+  it("leaves pending steps this deployment cannot apply to a newer one", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!")))),
+    });
+    h.batches[0].steps = [{ stepType: "replace", from: 1, to: 1, slice: { content: [{ type: "nodeFromTheFuture" }] } }];
+    expect(await materializePage(getServiceClient(), id)).toBe("stale");
+    expect(headOf(id, "body").revision).toBe(1);
+    expect(h.batches).toHaveLength(1);
+  });
+
+  it("materializes a backlog of pending typing before appending more", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text(" one")))),
+    });
+    const afterOne = new Transform(PMNode.fromJSON(pageBodySchema(), snapshot.body.doc))
+      .insert(6, pageBodySchema().text(" one")).doc.toJSON();
+    h.backlogOnce = true;
+    const result = await submitPageCollaboration({
+      projectId: PROJECT, pageId: id, actorId: ACTOR,
+      submission: submission(1, bodySteps(afterOne, (tr) => tr.insert(10, pageBodySchema().text(" two")))),
+    });
+    expect(result).toMatchObject({ ok: true, result: { status: "accepted", revision: 2 } });
+    // The first batch reached the row before the second was accepted.
+    expect(JSON.stringify(rowOf(id).content)).toContain("Hello one");
+    expect(headOf(id, "body").revision).toBe(2);
+  });
+
+  it("seals the journal and goes on when page protection refuses plaintext steps", async () => {
+    const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
+    const real = sealing.getMockImplementation()!;
+    sealing.mockImplementation(async (pageId: string, projectId: string,
+      batches: Array<Record<string, unknown> & { steps: unknown[] }>, protect: boolean) => protect
+      ? batches.map((batch) => ({ field: batch.field, base_revision: batch.base, step_count: batch.steps.length,
+        batch_id: batch.batchId, client_id: batch.clientId, author_id: batch.authorId ?? "",
+        author_kind: batch.authorKind, author_api_key_id: "", authored: batch.authored, steps: null,
+        encrypted_content: "sealed-in-test", encryption_version: 1 }))
+      : real(pageId, projectId, batches as never, protect));
+    h.pageScopeActive = true;
+    try {
+      const result = await submitPageCollaboration({
+        projectId: PROJECT, pageId: id, actorId: ACTOR,
+        submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(6, pageBodySchema().text("!")))),
+      });
+      expect(result).toMatchObject({ ok: true, result: { status: "accepted", revision: 1 } });
+      expect(sealing.mock.calls.map((call) => call[3])).toEqual([false, true]);
+      expect(h.batches[0]).toMatchObject({ encryption_version: 1 });
+    } finally {
+      sealing.mockImplementation(real);
+    }
+  });
+
+  it("tells the agent when a collaborator's change dropped part or all of its edit", async () => {
+    const twoBlocks = [paragraph("Alpha one.", "b1"), paragraph("Beta two.", "b2")];
+    const deleteFirstBlock = async (id: string, doc: unknown, base: number) => {
+      const steps = bodySteps(doc, (tr) => tr.delete(0, 12));
+      await submitPageCollaboration({
+        projectId: PROJECT, pageId: id, actorId: "user-2",
+        submission: { ...submission(base, steps), clientId: "browser-session-2" },
+      });
+    };
+
+    const partial = await livePage(twoBlocks);
+    const both = await editPageBodyLive({
+      pageId: partial.id, projectId: PROJECT, actorId: ACTOR,
+      derive: async () => {
+        if (h.batches.length === 0) await deleteFirstBlock(partial.id, partial.snapshot.body.doc, partial.snapshot.body.revision);
+        return { doc: { type: "doc", content: [paragraph("Alpha ONE.", "b1"), paragraph("Beta TWO.", "b2")] } };
+      },
+    });
+    expect(both).toMatchObject({ ok: true, partial: true });
+
+    h.batches = [];
+    const dropped = await livePage(twoBlocks);
+    const only = await editPageBodyLive({
+      pageId: dropped.id, projectId: PROJECT, actorId: ACTOR,
+      derive: async () => {
+        if (!h.batches.some((batch) => batch.page_id === dropped.id)) {
+          await deleteFirstBlock(dropped.id, dropped.snapshot.body.doc, dropped.snapshot.body.revision);
+        }
+        return { doc: { type: "doc", content: [paragraph("Alpha ONE.", "b1"), paragraph("Beta two.", "b2")] } };
+      },
+    });
+    expect(only).toMatchObject({ ok: false, status: 409, errorKey: "pageStale" });
+  });
+
+  it("materializes every pending page of a project, past the first thousand", async () => {
+    for (let i = 0; i < 1_100; i += 1) {
+      h.heads.push({ page_id: `gone-${String(i).padStart(5, "0")}`, field: "body", project_id: PROJECT,
+        revision: 1, pending_since: "2026-10-17T00:00:00Z" });
+    }
+    h.trace = [];
+    expect(await materializePendingProjectPages(getServiceClient(), [PROJECT])).toBe(1_100);
+    expect(h.trace.filter((entry) => entry === "pages:read")).toHaveLength(1_100);
   });
 
   it("lets a replacement materialize the typing it includes, and the cron catch the rest", async () => {

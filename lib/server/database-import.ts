@@ -36,7 +36,6 @@ import { resolveUploadedMimeType } from "@/lib/inline-safe";
 import { projectStorageAllowed } from "./storage-quota";
 import { queuePageBodyLinks } from "./page-links";
 import { queueSearchText } from "./pages-search";
-import { resetCollaboration } from "./page-collaboration";
 import { opaqueAttachmentPath, uploadPrivateAttachmentObject } from "./attachments";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "./attachment-content";
@@ -382,20 +381,13 @@ export async function importDatabase(args: {
         .remove(files.map((file) => file.storage_path));
     throw new Error(error.code === "40001" ? "importConflict" : "importFailed");
   }
+  // The root's body was replaced without steps; both import functions open
+  // its collaboration gap in their own transaction (MIN-688): the plaintext
+  // one through the page guard, the encrypted one explicitly.
   if (data?.replayed) {
     await service.storage
       .from("attachments")
       .remove(files.map((file) => file.storage_path));
-  } else {
-    // The root's body (and an empty title) were replaced without steps: open
-    // a gap so an editor that has the root open live reloads it instead of
-    // rebasing onto a document it never received (MIN-688). The imported
-    // entries are new pages and start their own streams.
-    try {
-      await resetCollaboration(service, pageId);
-    } catch {
-      console.error("[database-import] collaboration reset failed");
-    }
   }
   queueSearchText(
     service,

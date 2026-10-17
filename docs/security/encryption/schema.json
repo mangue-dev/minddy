@@ -3211,6 +3211,11 @@
         "type": "timestamp with time zone",
         "nullable": false,
         "generated": false
+      },
+      "size_bytes": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [

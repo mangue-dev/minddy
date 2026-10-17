@@ -108,16 +108,28 @@ function readMessage(value: unknown): CaretMessage | null {
   return message as unknown as CaretMessage;
 }
 
+/**
+ * Peer sessions one channel tracks. A member could otherwise fill this tab's
+ * memory with invented session IDs; real pages have a handful of editors.
+ */
+export const MAX_CARET_PEERS = 32;
+
 export function openPageCollaborationPresence({
   pageId,
   userId,
   sessionId,
   onPeers,
+  isMember,
   client,
 }: {
   pageId: string;
   userId: string;
   sessionId: string;
+  /**
+   * Whether an account belongs to the page's project. A caret's user ID is the
+   * publisher's claim; one naming no member is dropped instead of drawn.
+   */
+  isMember?: (userId: string) => boolean;
   /** Every other session's latest caret (other tabs of this account included). */
   onPeers: (peers: PeerCaret[]) => void;
   client?: CaretClient;
@@ -141,6 +153,8 @@ export function openPageCollaborationPresence({
   const receive = (value: unknown) => {
     const message = readMessage(value);
     if (!message || message.sessionId === sessionId) return;
+    if (isMember && !isMember(message.userId)) return;
+    if (message.caret && !peers.has(message.sessionId) && peers.size >= MAX_CARET_PEERS) return;
     // A delayed, older publication never replaces a newer one.
     if (message.seq < (lastSeq.get(message.sessionId) ?? -1)) return;
     lastSeq.set(message.sessionId, message.seq);
