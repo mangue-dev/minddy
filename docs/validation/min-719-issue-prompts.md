@@ -16,8 +16,17 @@ gains a short work-guidance sentence and an honest MCP fallback.
 Forge context comes from `GET /api/issues/prompt-context`
 (`lib/server/issue-prompt-context.ts`): every pull request linked to the issue
 with its state, URL and branches, and the project's repository and default
-branch. The client read is bounded to 2.5 seconds; any failure renders
-`<pull_requests status="unavailable" />` rather than "no pull request".
+branch. Any failure renders `<pull_requests status="unavailable" />` rather
+than "no pull request".
+
+MIN-723 took the read off the copy's critical path, which had waited up to
+2.5 seconds on every copy. `lib/issue-prompt-context.ts` keeps each issue's
+context for 30 seconds and warms it on intent: hovering, focusing or
+right-clicking a card, opening the side panel, or changing a multi-selection
+(one request per 150 ms window). A copy serves the cached entry at once and
+waits at most 300 ms for a missing one; past that it copies with the context
+marked unavailable while the read finishes for the next copy. The command
+palette relies on that bounded wait alone.
 
 ## Instruction length
 
