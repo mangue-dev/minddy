@@ -2170,6 +2170,7 @@
     "noEmoji": "Kein passendes Emoji",
     "saving": "Wird gespeichert…",
     "saveFailed": "Die Seite konnte nicht gespeichert werden.",
+    "liveEditRefused": "Eine Änderung konnte nicht gespeichert werden und wurde rückgängig gemacht.",
     "createFailed": "Die Seite konnte nicht erstellt werden.",
     "deleteFailed": "Die Seite konnte nicht gelöscht werden.",
     "loadFailed": "Die Seite konnte nicht geladen werden.",

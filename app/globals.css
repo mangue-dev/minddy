@@ -3376,3 +3376,54 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 @media (prefers-reduced-motion: reduce) {
   .app-tab-skeleton { animation: none; }
 }
+
+/* ─── Collaborators' carets and selections (MIN-688) ──────────────────────────────
+   Drawn by components/pages/page-collaboration.ts (body decorations) and
+   components/pages/page-title-carets.tsx (title overlay). `--collab-color` is the
+   collaborator's stable hue; the label keeps white text on it, which the palette
+   in page-collaboration.ts is chosen to keep legible in both themes. The caret
+   takes no width in the line, so a remote caret never reflows the text. */
+.page-collab-caret {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 1.2em;
+  margin: 0 -1px;
+  vertical-align: text-bottom;
+  border-left: 2px solid var(--collab-color);
+  pointer-events: none;
+  user-select: none;
+}
+.page-collab-caret.absolute {
+  position: absolute;
+  margin: 0;
+}
+.page-collab-caret-label {
+  position: absolute;
+  bottom: 100%;
+  left: -2px;
+  z-index: 10;
+  padding: 1px 5px;
+  border-radius: 4px 4px 4px 0;
+  background: var(--collab-color);
+  color: #fff;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: normal;
+  line-height: 1.4;
+  white-space: nowrap;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page-collab-caret-label:empty {
+  display: none;
+}
+.page-collab-selection {
+  background-color: color-mix(in oklab, var(--collab-color) 22%, transparent);
+}
+.dark .page-collab-selection {
+  background-color: color-mix(in oklab, var(--collab-color) 35%, transparent);
+}

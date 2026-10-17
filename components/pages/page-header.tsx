@@ -14,12 +14,14 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SmileIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 import { useArrowField } from "@/lib/use-arrow-field";
+import type { LiveTitle } from "@/lib/use-page-collaboration";
+import { PageTitleCarets } from "@/components/pages/page-title-carets";
 
 /**
  * Is the cursor on the LAST visible line of the field?
@@ -49,6 +51,7 @@ export function PageHeader({
   fieldRef,
   autoFocus,
   readOnly,
+  live,
   className,
 }: {
   title: string;
@@ -76,6 +79,12 @@ export function PageHeader({
  */
   autoFocus?: boolean;
   readOnly?: boolean;
+  /**
+   * The live title stream (MIN-688). The field then shows the stream's value,
+   * every input becomes title steps, collaborators' typing lands without moving
+   * this caret, and their carets are drawn over the field.
+   */
+  live?: LiveTitle | null;
   /* WHO WROTE LAST is NO LONGER HERE (MIN-282): the line merged with
  the save state, at the top right of the surface — both
  answered the same question, "where is this document?" ”, from two
@@ -99,7 +108,20 @@ export function PageHeader({
 
   // The arrow substitution (“->” → “→”, like in the body) and the ref
   // plumbing live in the shared hook; `fieldRef` is what focus returns to.
-  const arrow = useArrowField(fieldRef);
+  // A live title stream (MIN-688) binds the same element.
+  const liveFieldRef = live?.fieldRef;
+  const bindField = useCallback((field: HTMLTextAreaElement | null) => {
+    if (fieldRef) (fieldRef as { current: HTMLTextAreaElement | null }).current = field;
+    liveFieldRef?.(field);
+  }, [fieldRef, liveFieldRef]);
+  const arrow = useArrowField(live ? bindField : fieldRef);
+  const measuredRef = useRef<HTMLTextAreaElement | null>(null);
+  const arrowRef = arrow.ref;
+  const textareaRef = useCallback((field: HTMLTextAreaElement | null) => {
+    measuredRef.current = field;
+    arrowRef(field);
+  }, [arrowRef]);
+  const value = live ? live.value : draft;
 
   return (
     // `group/header`: the “add an icon” button only exists when hovering over the
@@ -138,20 +160,30 @@ export function PageHeader({
           </EmojiPicker>
         </div>
       )}
+      <div className="relative">
       <AutoTextarea
-        value={draft}
-        ref={arrow.ref}
+        value={value}
+        ref={textareaRef}
         autoFocus={autoFocus}
         readOnly={readOnly}
+        maxLength={live?.maxLength}
         placeholder={t("titlePlaceholder")}
         aria-label={t("titleLabel")}
         spellCheck={false}
         onChange={(event) => {
-          const value = arrow.read(event);
-          typed.current = value;
-          setDraft(value);
-          onTitleChange(value);
+          const next = arrow.read(event);
+          if (live) {
+            live.input(next);
+            live.publishCaret(event.currentTarget);
+          } else {
+            typed.current = next;
+            setDraft(next);
+          }
+          onTitleChange(next);
         }}
+        onSelect={live ? (event) => live.publishCaret(event.currentTarget) : undefined}
+        onFocus={live ? (event) => live.publishCaret(event.currentTarget) : undefined}
+        onBlur={live ? () => live.publishCaret(null) : undefined}
         onKeyDown={(event) => {
           // A title has no line break: Enter OPENS the next line,
           // which is the first of the body — the field behaves like the line
@@ -168,6 +200,10 @@ export function PageHeader({
         }}
         className="w-full border-0 bg-transparent p-0 font-display text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
       />
+      {live && live.carets.length > 0 && (
+        <PageTitleCarets fieldRef={measuredRef} carets={live.carets} value={value} />
+      )}
+      </div>
     </div>
   );
 }

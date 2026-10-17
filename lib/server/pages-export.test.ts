@@ -34,6 +34,16 @@ let access: unknown = { isOwner: true };
 const projections: unknown[] = [];
 const reads = { selects: [] as string[], bodyIds: [] as string[][] };
 
+/** Pending collaboration typing is materialized before reading (MIN-688). */
+const materialized = vi.hoisted(() => ({
+  pages: vi.fn(async (_service: unknown, _ids: readonly string[]) => 0),
+  projects: vi.fn(async (_service: unknown, _ids: readonly string[]) => 0),
+}));
+vi.mock("@/lib/server/pages", () => ({
+  materializePendingPages: materialized.pages,
+  materializePendingProjectPages: materialized.projects,
+}));
+
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async () => access,
 }));
@@ -119,6 +129,17 @@ describe("exportPage", () => {
     expect(result.fileName).toBe("Guide.md");
     expect(result.contentType).toContain("text/markdown");
     expect(strFromU8(result.body)).toContain("# Guide");
+  });
+
+  it("writes pending collaboration typing into the rows before exporting them (MIN-688)", async () => {
+    access = { isOwner: true };
+    materialized.pages.mockClear();
+    materialized.projects.mockClear();
+    await exportPage({ pageId: "root", actorId: "u", branch: false });
+    expect(materialized.pages).toHaveBeenCalledWith(expect.anything(), ["root"]);
+    rows.list = branchRows();
+    await exportPage({ pageId: "root", actorId: "u", branch: true });
+    expect(materialized.projects).toHaveBeenCalledTimes(1);
   });
 
   it("rend une archive relisible, bornée à la branche", async () => {

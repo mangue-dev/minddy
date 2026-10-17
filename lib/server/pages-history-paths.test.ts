@@ -157,13 +157,22 @@ function scan() {
       }
     }
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-      if (node.expression.text === "writtenBy") signed.add(enclosingFunction(node));
-      if (node.expression.text === "stampPageWrite") {
-        archived.add(enclosingFunction(node));
+      const callee = node.expression.text;
+      const fn = enclosingFunction(node);
+      // The operation authority (MIN-688): `commitPageStreams` writes the body
+      // and signs it itself; `afterStreamCommit` archives and announces. A
+      // materialization writes appended typing, signed with its authors, and
+      // `materializationEffects` archives and announces it.
+      if (callee === "commitPageStreams") {
+        writes.add(fn);
+        signed.add(fn);
       }
-      if (node.expression.text === "announcePageWrite") {
-        announced.add(enclosingFunction(node));
-      }
+      if (callee === "materializeCollaboration") writes.add(fn);
+      if (callee === "writtenBy") signed.add(fn);
+      if (callee === "stampPageWrite" || callee === "afterStreamCommit" ||
+          callee === "materializationEffects") archived.add(fn);
+      if (callee === "announcePageWrite" || callee === "afterStreamCommit" ||
+          callee === "materializationEffects") announced.add(fn);
     }
     ts.forEachChild(node, visit);
   };
@@ -171,6 +180,25 @@ function scan() {
 
   return { writes, signed, archived, announced };
 }
+
+/** Calls made directly inside one named function of lib/server/pages.ts. */
+function callsIn(name: string): Set<string> {
+  const calls = new Set<string>();
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        enclosingFunction(node) === name) calls.add(node.expression.text);
+    ts.forEachChild(node, visit);
+  };
+  visit(parsePages());
+  return calls;
+}
+
+/**
+ * The canonical INITIALIZATION of a live page (MIN-688): it gives an empty
+ * body its block and IDs, covers nothing a reader could want back and is
+ * nobody's gesture — it neither signs the page nor archives or announces.
+ */
+const INITIALIZATION = "readPageCollaborationSnapshot";
 
 describe("les chemins d'écriture du corps d'une page", () => {
   it("portent tous leur auteur", () => {
@@ -193,7 +221,7 @@ describe("les chemins d'écriture du corps d'une page", () => {
   it("archivent tous l'état qu'ils recouvrent", () => {
     const { writes, archived } = scan();
 
-    const missing = [...writes].filter((fn) => !archived.has(fn));
+    const missing = [...writes].filter((fn) => fn !== INITIALIZATION && !archived.has(fn));
     expect(
       missing,
       `Ces fonctions de lib/server/pages.ts recouvrent le corps d'une page sans ` +
@@ -216,7 +244,7 @@ describe("les chemins d'écriture du corps d'une page", () => {
     const { writes, announced } = scan();
 
     const missing = [...writes].filter(
-      (fn) => fn !== MIRROR && !announced.has(fn)
+      (fn) => fn !== MIRROR && fn !== INITIALIZATION && !announced.has(fn)
     );
     expect(
       missing,
@@ -226,11 +254,22 @@ describe("les chemins d'écriture du corps d'une page", () => {
     ).toEqual([]);
   });
 
+  it("keep the four rules on the operation authority's path (MIN-688)", () => {
+    expect(callsIn("commitPageStreams").has("writtenBy")).toBe(true);
+    const after = callsIn("afterStreamCommit");
+    const materialized = callsIn("materializationEffects");
+    for (const rule of ["stampPageWrite", "announcePageWrite"]) {
+      expect(after.has(rule), `afterStreamCommit no longer calls ${rule}`).toBe(true);
+      expect(materialized.has(rule), `materializationEffects no longer calls ${rule}`).toBe(true);
+    }
+  });
+
   it("couvrent les quatre gestes connus", () => {
     const { writes } = scan();
     // A guardrail of the guardrail: if one of these names disappears, it is because the
     // module has moved, and the rule above should be reread rather than believed.
-    for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody"]) {
+    for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody",
+      "updatePageThroughStreams", "materializePage"]) {
       expect(writes.has(fn), `${fn} n'est plus vu comme un chemin d'écriture`).toBe(
         true
       );

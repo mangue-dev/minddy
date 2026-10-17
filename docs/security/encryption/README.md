@@ -2649,3 +2649,126 @@ updated in the retained inventory; the application consumer inventory removes
 parent-wide worker writes. No columns, encryption targets, views, triggers or
 public grants change. Apply the migration before the updated application;
 no remote migration or production activation was performed.
+
+## Live page collaboration journal (MIN-688)
+
+`page_collaboration_batches` journals the ProseMirror steps accepted for a
+page's body and title streams (migration `20270109200054`, applied). Steps can
+carry text, deleted text included, so `steps` is an encryption target sealed
+with the page's project content key through `EncryptedRowCodec`; only a legacy
+plaintext page journals plaintext steps. The commit RPC refuses a plaintext
+batch for a sealed page, `guard_page_collaboration_batch` refuses plaintext
+once page protection is active or the page is sealed, the page guard deletes a
+page's plaintext rows when it becomes sealed, and the table shares the page
+content marker fence. Journal access is restricted to
+`lib/server/page-collaboration.ts` by `scripts/check-encrypted-column-access.mjs`.
+Rows are pruned to 2,000 revisions per stream and seven days, by each commit
+or materialization and by the nightly retention sweep, never below the
+revision the page row reflects, and cascade with the page and project.
+Design and limits: [docs/page-collaboration.md](../../page-collaboration.md).
+
+### Journal-only commits and stream heads (MIN-688 follow-up)
+
+Migrations `20270109200057` and `20270109200058` (applied) let a typing batch
+journal its sealed steps without rewriting the page row; the envelope is
+re-sealed once per burst by a materialization. Encryption consequences:
+
+- Pending steps stay sealed in `page_collaboration_batches` until a
+  materialization re-seals the page envelope from the stored page plus those
+  steps. No plaintext copy of pending text is written anywhere; the batch
+  guard, the plaintext refusal and the sealed-page purge are unchanged, and a
+  plaintext append now holds a share lock on the page row so that the page
+  cannot be sealed underneath it.
+- The new `authored` column is bounded metadata (whether a batch signs the
+  page). `page_collaboration_heads` (`page_id`, `field`, `project_id`,
+  `revision`, `pending_since`) carries no content: routing identity, bounded
+  metadata and a timestamp. RLS without policies; the service role may only
+  read it, and every write goes through `SECURITY DEFINER` functions with an
+  empty search path and service-only `EXECUTE`.
+- Writers that re-seal an envelope outside the collaboration functions
+  (database cells, schema and conversions, metadata-only page updates) start
+  from the stored page, never the live view, and keep the envelope CAS.
+- Decrypted stream values may stay in the memory of the instance that
+  validated a batch (`lib/server/page-collaboration-cache.ts`, at most 128
+  streams, one minute idle), never in a log, a client store or a token.
+  Collaboration tokens carry identifiers, a write decision, a membership
+  generation and an expiry, signed with a key derived from the server secret.
+- `scripts/check-encrypted-column-access.mjs` restricts the append, commit,
+  materialize and reset RPCs, with the journal, to
+  `lib/server/page-collaboration.ts`.
+
+Migration `20270109200060` (applied) adds `size_bytes` (bounded metadata) to
+the journal, 8 MB and 16 MB byte budgets, a byte-bounded catch-up read
+(`read_page_collaboration_journal`, service role only, restricted to
+`lib/server/page-collaboration.ts` with the other journal RPCs), and refuses
+to seal a page while plaintext steps are pending, so sealing never deletes
+acknowledged typing.
+
+Verification: rollback-only probes of the migrations on the production schema
+before they were applied (heads backfill, append, materialize, commit, gap,
+reset, discard, cascade, retention, privileges, grant decisions, byte bounds,
+backlog, sealing with pending plaintext steps). The
+inventory records of the changed and new functions and triggers were
+refreshed from the live definitions with `scripts/encryption-schema-audit.sql`;
+other records were left as they were.
+
+## Shared writer fences (MIN-688)
+
+Migration `20270109200055` (applied) changes the writer side of the
+encryption fences from exclusive to shared advisory locks: the 27 content
+guards that take their family's activation lock (`guard_page_content`,
+`guard_project_content`, `guard_view_content`…), the three locks of
+`guard_encryption_snapshot_write`, and the object branch of
+`guard_attachment_object_snapshot_write`. The activation side keeps exclusive
+locks: every `activate_*` function, `guard_encryption_marker_change`,
+`guard_envelope_key_activation`, the key registry functions and the marker
+branch of the attachment guard. A writer therefore still waits for an
+activation and is still waited for by it; writers no longer wait for one
+another, which serialized every page write of the application (about 35 to
+185 commits per second in total, measured on production). Unchanged on
+purpose: the Numo content guards, whose activation locks have no
+activation-side function in this schema, and every per-entity lock.
+
+Verification: a rollback-only replay on the production schema confirmed the
+29 rewritten functions, unchanged activation, marker and Numo locks, and that
+a page write plus a collaboration commit hold only shared advisory locks apart
+from the per-page routine event lock. The 29 function records and the
+migration hash were refreshed from the live definitions; relations and grants
+are unchanged. The two-session fence test
+(`scripts/encryption-snapshot-write-fences.integration.test.mjs`) checks
+writer versus activation in both directions, which shared writer locks
+preserve; it was not run, because it needs an isolated database.
+
+Correction (migration `20270109200059`, applied): the claim above that writers
+never wait for one another was wrong for 24 marker families. Their content
+guards re-assert the family's marker on every protected write
+(`INSERT INTO <scope> … ON CONFLICT DO NOTHING`, for example
+`guard_issue_encryption`), and the marker table's trigger
+`guard_encryption_marker_change` then took `encryption-marker:<scope>`
+EXCLUSIVE while the row's fence held it SHARED: two concurrent writers
+deadlocked (40P01, observed once in production). The trigger now skips a
+marker that already exists, at trigger depth above one, without locking; the
+fence of those 24 families is EXCLUSIVE only while the row's marker does not
+exist yet (the first protected write of a family, or of a project for the
+three per-project markers), and SHARED afterwards. Activation, depth-one
+marker writes and the key registry keep their exclusive locks. A rollback-only
+probe on production showed a sealed issue write and a push subscription write
+holding `ExclusiveLock` and `ShareLock` on the same marker key before the fix,
+and `ShareLock` only after it; a first write in a new project took the
+exclusive fence and created its marker. True concurrency was not reproduced:
+the probe channel has one session.
+
+Correction (migration `20270109200061`, applied): `20270109200059` applied
+the exclusive-until-marker rule to every fence on the three per-project
+markers, but only one table's guard inserts each of them (`issues` →
+`issue_encryption_scopes`, `github_issue_sync_metadata` →
+`github_issue_metadata_encryption_scopes`, `github_issue_comment_syncs` →
+`github_issue_comment_url_encryption_scopes`). `issues` also carries fences on
+the two GitHub markers, which its parent-scope guards only read, so in a
+project that never synced encrypted GitHub data every issue write took both
+global keys EXCLUSIVE for good, and a multi-project issue update could hold a
+key shared for one row and ask for it exclusive for the next. The fence is now
+EXCLUSIVE only for an encrypted write of the inserting table whose project has
+no marker yet, and SHARED otherwise. A rollback-only probe on production
+showed an existing sealed issue write holding both GitHub marker keys as
+`ExclusiveLock` before the fix and all three marker keys as `ShareLock` after.

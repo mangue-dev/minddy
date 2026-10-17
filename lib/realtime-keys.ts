@@ -3,6 +3,7 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { GLOBAL_BOARD_KEY, issueWrites, objectiveWrites } from "./optimistic/issue-writes";
 import { isAcceptedPageEcho } from "./optimistic-page-writes";
 import { isOwnRelationEcho } from "./optimistic/relation-writes";
+import { hasLivePageSession } from "./page-collaboration-signals";
 
 /**
  * WHAT A BROADCAST EVENT REFRESHES — the realtime
@@ -364,7 +365,29 @@ export function keysForProjectEvent(
     case "pages":
       {
         const pageId = (change.record ?? change.old_record)?.id;
-        const openPage = typeof pageId === "string" ? [active(["page", pageId])] : [];
+        // A page open in a live session (MIN-688) receives its body and title
+        // as steps; refetching the whole document on every typing batch would
+        // only download what the session already has. Trash and restore still
+        // refetch it: the surface must learn the page left.
+        const liveSession = typeof pageId === "string" && hasLivePageSession(pageId) &&
+          change.operation === "UPDATE" &&
+          (change.record?.deleted_at ?? null) === (change.old_record?.deleted_at ?? null);
+        const openPage = typeof pageId === "string" && !liveSession ? [active(["page", pageId])] : [];
+        // A write that only advanced the materialized BODY revision (a
+        // materialization of typing, an agent's body edit) changes nothing the
+        // list shows — title, icon, tree position, pin and trash state are
+        // other fields. Without this, every member with the project open would
+        // reload the whole page list each time someone's typing is written.
+        const record = change.record;
+        const old = change.old_record;
+        const bodyOnly = change.operation === "UPDATE" && !!record && !!old &&
+          typeof record.body_revision === "number" &&
+          record.body_revision !== old.body_revision &&
+          record.title_revision === old.title_revision &&
+          ["parent_id", "position", "favorite", "deleted_at", "deleted_root_id",
+            "parent_block_removed", "database_revision", "page_is_database"]
+            .every((field) => (record[field] ?? null) === (old[field] ?? null));
+        if (bodyOnly) return openPage;
       return [
         active(["pages", projectId]),
         active(["app-tab-metadata"]),
@@ -380,6 +403,22 @@ export function keysForProjectEvent(
         active(["me", "trash"]),
       ];
       }
+    // A stream head moved (MIN-688): typing that is journaled, not yet in the
+    // page row. A live session reads the steps itself; an open page without
+    // one refetches. A title also changes what the list, the tabs and the
+    // palette show; the list reads pending title steps.
+    case "page_collaboration_heads": {
+      const pageId = change.record?.page_id;
+      if (typeof pageId !== "string") return [];
+      const openPage = hasLivePageSession(pageId) ? [] : [active(["page", pageId])];
+      if (change.record?.field !== "title") return openPage;
+      return [
+        active(["pages", projectId]),
+        active(["app-tab-metadata"]),
+        ...openPage,
+        { key: SEARCH_INDEX_KEY, refetch: "none" },
+      ];
+    }
     case "categories": // renames/deletes also affect chips on cached issues
       return [
         active(["categories", projectId]),

@@ -22,9 +22,15 @@ const h = vi.hoisted(() => ({
   comments: [] as Record<string, unknown>[],
   access: new Set<string>(),
   seq: 0,
+  /** The live collaboration journal and stream heads (MIN-688). */
+  batches: [] as Record<string, unknown>[],
+  heads: [] as Record<string, unknown>[],
+  /** A concurrent write injected once, just before the next stream commit. */
+  beforeCommit: null as (() => void) | null,
 }));
 
-vi.mock("@/lib/supabase-service", () => {
+vi.mock("@/lib/supabase-service", async () => {
+  const fake = await import("@/test/fake-page-collaboration");
   type Filter = (row: Record<string, unknown>) => boolean;
 
   const from = (table = "pages") => {
@@ -33,7 +39,10 @@ vi.mock("@/lib/supabase-service", () => {
     let payload: Record<string, unknown> | Record<string, unknown>[] = {};
     let orderColumn: string | null = null;
     const comments = table === "page_comments";
-    const store = () => (comments ? h.comments : h.rows);
+    const journal = table === "page_collaboration_batches";
+    const headsTable = table === "page_collaboration_heads";
+    const pages = !comments && !journal && !headsTable;
+    const store = () => (comments ? h.comments : journal ? h.batches : headsTable ? h.heads : h.rows);
 
     const matching = () => store().filter((row) => filters.every((f) => f(row)));
 
@@ -72,6 +81,7 @@ vi.mock("@/lib/supabase-service", () => {
               ...values,
             };
             h.rows.push(row);
+            fake.fakeInsertPageHeads(h, row);
             return row;
           }
         );
@@ -90,11 +100,16 @@ vi.mock("@/lib/supabase-service", () => {
           String(a[orderColumn!]) < String(b[orderColumn!]) ? -1 : 1
         );
       }
-      return { data: rows, error: null };
+      // Page reads carry their stream heads (`COLLAB_COLUMNS`).
+      return { data: pages && mode === "select" ? rows.map((row) => fake.withEmbeddedHeads(h, row)) : rows, error: null };
     };
 
     const query: Record<string, unknown> = {};
     query.select = () => query;
+    query.not = (column: string, _operator: string, value: unknown) => {
+      filters.push((row) => (row[column] ?? null) !== value);
+      return query;
+    };
     query.insert = (row: Record<string, unknown> | Record<string, unknown>[]) => {
       mode = "insert";
       payload = row;
@@ -153,6 +168,16 @@ vi.mock("@/lib/supabase-service", () => {
  * against a real database, not against a table.
  */
   const rpc = async (name: string, args: Record<string, unknown>) => {
+    if (name === "commit_page_collaboration") {
+      const race = h.beforeCommit;
+      h.beforeCommit = null;
+      race?.();
+      return fake.fakeCommitPageCollaboration(h, args);
+    }
+    if (name === "materialize_page_collaboration") return fake.fakeMaterializePageCollaboration(h, args);
+    if (name === "read_page_collaboration_journal") {
+      return fake.fakeReadPageCollaborationJournal(h, args);
+    }
     if (name !== "search_pages") throw new Error(`rpc inconnu : ${name}`);
     const tokens = String(args.p_query ?? "")
       .toLowerCase()
@@ -316,6 +341,9 @@ async function waitForIndex() {
 
 beforeEach(() => {
   h.rows = [];
+  h.batches = [];
+  h.heads = [];
+  h.beforeCommit = null;
   h.comments = [];
   h.seq = 0;
   h.access = new Set([PROJECT]);
@@ -510,6 +538,55 @@ describe("minddy_edit_page_text", () => {
     expect(read.payload.markdown).toBe(
       body.replace("On garde tiptap.", "On garde tiptap, et Plate reste hors de portée.")
     );
+  });
+
+  it("keeps every untouched block as it was, IDs and rich attributes included (MIN-688)", async () => {
+    const page = await createPage("Workshop", "First paragraph.\n\nSecond paragraph.\n\nThird.");
+    const row = h.rows.find((candidate) => candidate.id === page)!;
+    const blocks = (row.content as { content: Record<string, unknown>[] }).content;
+    // A presentation detail Markdown cannot carry, on a block the edit leaves alone.
+    blocks[2] = {
+      ...blocks[2],
+      content: [{ type: "text", text: "Third.", marks: [{ type: "pageTextColor", attrs: { color: "red" } }] }],
+    };
+    const ids = blocks.map((block) => (block.attrs as { blockId: string }).blockId);
+
+    const { ok, payload } = await call("minddy_edit_page_text", {
+      project_id: PROJECT,
+      page_id: page,
+      old_string: "Second paragraph.",
+      new_string: "Second paragraph, revised.",
+    });
+    expect(ok, JSON.stringify(payload)).toBe(true);
+
+    const after = (h.rows.find((candidate) => candidate.id === page)!.content as {
+      content: Record<string, unknown>[];
+    }).content;
+    expect(after.map((block) => (block.attrs as { blockId: string }).blockId)[0]).toBe(ids[0]);
+    expect(after[2]).toEqual(blocks[2]);
+    expect(JSON.stringify(after[1])).toContain("revised");
+    // One live replacement, inside the edited paragraph only.
+    expect(h.batches).toHaveLength(1);
+  });
+
+  it("re-applies the edit on the current text when the page moved meanwhile (MIN-688)", async () => {
+    const page = await createPage("Notes", "Alpha.\n\nBeta.");
+    // A collaborator's batch lands between the agent's read and its write:
+    // the page's body version and envelope token move once.
+    h.beforeCommit = () => {
+      const row = h.rows.find((candidate) => candidate.id === page)!;
+      row.version = Number(row.version) + 1;
+      row.content_revision = Number(row.content_revision ?? 0) + 1;
+    };
+    const { ok, payload } = await call("minddy_edit_page_text", {
+      project_id: PROJECT,
+      page_id: page,
+      old_string: "Beta.",
+      new_string: "Beta, edited.",
+    });
+    expect(ok, JSON.stringify(payload)).toBe(true);
+    const read = await call("minddy_get_page", { project_id: PROJECT, page_id: page });
+    expect(read.payload.markdown).toBe("Alpha.\n\nBeta, edited.");
   });
 
   it("échoue proprement quand old_string apparaît deux fois", async () => {

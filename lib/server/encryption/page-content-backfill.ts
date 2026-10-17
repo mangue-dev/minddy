@@ -7,6 +7,7 @@ import { decodePage, encodePage, pageContentValues } from
   "@/lib/server/page-content";
 import { getContentKeys, getEncryptedStore } from "./registry";
 import { isContentEncryptionEnabled } from "./content-config";
+import { materializePendingPages } from "@/lib/server/pages";
 
 /** Convert complete page rows under a bounded revision-guarded scan. */
 export async function backfillPageContentBatch(limit = 30,
@@ -20,11 +21,21 @@ export async function backfillPageContentBatch(limit = 30,
   const service = getServiceClient();
   const result = { scanned: 0, migrated: 0, unchanged: 0, conflicted: 0,
     failed: 0, interrupted: false };
-  const { data, error } = await service.from("pages").select("*")
+  const scan = () => service.from("pages").select("*")
     .order("encryption_attempted_at", { ascending: true, nullsFirst: true })
     .order("page_is_database", { ascending: true })
     .order("id", { ascending: true }).limit(limit);
+  let { data, error } = await scan();
   if (error) throw new Error("Unable to scan page content");
+  // Live collaboration (MIN-688): typing still pending in the journal is
+  // written into a plaintext row before that row is sealed, since sealing
+  // drops the page's plaintext journal (and refuses while some is pending).
+  const plaintext = (data ?? []).filter((row) => Number(row.encryption_version ?? 0) === 0)
+    .map((row) => row.id as string);
+  if (plaintext.length > 0 && await materializePendingPages(service, plaintext) > 0) {
+    ({ data, error } = await scan());
+    if (error) throw new Error("Unable to scan page content");
+  }
   for (const row of data ?? []) {
     if (signal?.aborted) { result.interrupted = true; break; }
     result.scanned++;

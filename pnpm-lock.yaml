@@ -210,6 +210,9 @@ importers:
       posthog-node:
         specifier: ^5.55.3
         version: 5.56.1
+      prosemirror-collab:
+        specifier: 1.3.1
+        version: 1.3.1
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -3917,6 +3920,9 @@ packages:
 
   prosemirror-changeset@2.4.2:
     resolution: {integrity: sha512-ViYrjMSg3YFiXwIhKaluu+/mi3Yrxt6AR8ri14ulTaGcZtXO1CThl7A2gv79qx5fQnOw8woKwyBU2u+9PVCm3w==}
+
+  prosemirror-collab@1.3.1:
+    resolution: {integrity: sha512-4SnynYR9TTYaQVXd/ieUvsVV4PDMBzrq2xPUWutHivDuOshZXqQ5rGbZM84HEaXKbLdItse7weMGOUdDVcLKEQ==}
 
   prosemirror-commands@1.7.2:
     resolution: {integrity: sha512-q6Q6szxqdu9Xd6EcdKsqXghu5nQdZTpB4Q9yd04WRc7/jt763e/rT60Owh0L1GYY+T46o5rD+9lEN36dZS43tw==}
@@ -8210,6 +8216,10 @@ snapshots:
   prosemirror-changeset@2.4.2:
     dependencies:
       prosemirror-transform: 1.12.1
+
+  prosemirror-collab@1.3.1:
+    dependencies:
+      prosemirror-state: 1.4.4
 
   prosemirror-commands@1.7.2:
     dependencies:

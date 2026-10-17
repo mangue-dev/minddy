@@ -5,6 +5,13 @@ import { fetchClientRead } from "./client-read";
 import type { Page, PageVersion } from "./pages";
 import type { IssueEvent, PageBacklink, PageShare } from "./types";
 import type { PageComment } from "./page-comments";
+import type {
+  CollabCatchUp,
+  CollabField,
+  CollabSubmission,
+  CollabSubmitResult,
+  PageCollaborationSnapshot,
+} from "./page-collaboration";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 
@@ -570,4 +577,82 @@ export async function downloadPageExportApi(
   anchor.remove();
   // Revoked on next tick: Safari reads the URL AFTER the click.
   setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/* ── Live collaboration (MIN-688) ─────────────────────────────────────────── */
+
+const collaborationUrl = (projectId: string, pageId: string) =>
+  `/api/projects/${projectId}/pages/${pageId}/collaboration`;
+
+/**
+ * The latest collaboration token per page: every collaboration answer may
+ * renew it, and a batch sends it so the server can skip its access queries.
+ * It expires within a minute; a stale one only costs the server a check.
+ */
+const COLLAB_TOKEN_HEADER = "x-minddy-collab-token";
+const collaborationTokens = new Map<string, string>();
+
+function keepCollaborationToken(pageId: string, response: Response): void {
+  const token = response.headers.get(COLLAB_TOKEN_HEADER);
+  if (token) collaborationTokens.set(pageId, token);
+}
+
+/** The session snapshot: both streams of the page, from one server read. */
+export async function fetchPageCollaborationApi(
+  projectId: string,
+  pageId: string,
+  signal?: AbortSignal
+): Promise<PageCollaborationSnapshot> {
+  const response = await fetchClientRead(collaborationUrl(projectId, pageId), { signal });
+  keepCollaborationToken(pageId, response);
+  return json(response, "Request failed");
+}
+
+/** Accepted steps of a stream after `since`, or a reset with a fresh snapshot. */
+export async function fetchPageCollaborationStepsApi(
+  projectId: string,
+  pageId: string,
+  field: CollabField,
+  since: number,
+  signal?: AbortSignal
+): Promise<CollabCatchUp> {
+  const query = new URLSearchParams({ field, since: String(since) });
+  const response = await fetchClientRead(`${collaborationUrl(projectId, pageId)}?${query}`, { signal });
+  keepCollaborationToken(pageId, response);
+  return json(response, "Request failed");
+}
+
+/**
+ * Sends one batch. `behind` and `refused` are answers, not failures; anything
+ * else (network, authorization, server error) throws, and the session decides
+ * whether the batch may have been accepted before it retries.
+ */
+export async function submitPageCollaborationApi(
+  projectId: string,
+  pageId: string,
+  submission: CollabSubmission,
+  { keepalive = false }: { keepalive?: boolean } = {}
+): Promise<CollabSubmitResult> {
+  const token = collaborationTokens.get(pageId);
+  const response = await fetch(collaborationUrl(projectId, pageId), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { [COLLAB_TOKEN_HEADER]: token } : {}),
+    },
+    body: JSON.stringify(submission),
+    keepalive,
+  });
+  keepCollaborationToken(pageId, response);
+  // 400 and 413 carry a definitive refusal (an invalid or oversized batch):
+  // reading them as failures would retry the same steps forever.
+  if (response.ok || response.status === 400 || response.status === 409 ||
+      response.status === 413 || response.status === 422) {
+    const data = (await response.json().catch(() => null)) as CollabSubmitResult | null;
+    if (data && (data.status === "accepted" || data.status === "behind" || data.status === "refused")) {
+      return data;
+    }
+  }
+  await ok(response, "Update failed");
+  throw new PageApiError("Update failed", response.status);
 }

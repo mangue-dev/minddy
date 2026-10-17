@@ -381,10 +381,14 @@ export async function importDatabase(args: {
         .remove(files.map((file) => file.storage_path));
     throw new Error(error.code === "40001" ? "importConflict" : "importFailed");
   }
-  if (data?.replayed)
+  // The root's body was replaced without steps; both import functions open
+  // its collaboration gap in their own transaction (MIN-688): the plaintext
+  // one through the page guard, the encrypted one explicitly.
+  if (data?.replayed) {
     await service.storage
       .from("attachments")
       .remove(files.map((file) => file.storage_path));
+  }
   queueSearchText(
     service,
     pages.map((page) => page.id!),

@@ -2585,6 +2585,64 @@
       ]
     }
   },
+  "page_collaboration_batches": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "steps"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "authored",
+        "base_revision",
+        "step_count",
+        "size_bytes"
+      ],
+      "operational_configuration": [
+        "author_kind",
+        "field"
+      ],
+      "routing_identity": [
+        "author_api_key_id",
+        "author_id",
+        "batch_id",
+        "client_id",
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
+  },
+  "page_collaboration_heads": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "bounded_metadata": [
+        "revision"
+      ],
+      "operational_configuration": [
+        "field"
+      ],
+      "routing_identity": [
+        "page_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "pending_since"
+      ]
+    }
+  },
   "page_versions": {
     "scope": {
       "kind": "project",
@@ -2652,6 +2710,7 @@
     ],
     "clear": {
       "bounded_metadata": [
+        "body_revision",
         "content_revision",
         "database_revision",
         "favorite",
@@ -2659,7 +2718,8 @@
         "page_is_blank",
         "page_is_database",
         "parent_block_removed",
-        "version"
+        "version",
+        "title_revision"
       ],
       "operational_configuration": [
         "position",

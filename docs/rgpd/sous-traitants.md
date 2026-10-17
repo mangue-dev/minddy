@@ -28,7 +28,7 @@ and at least once a year.
 | Subcontractor | Role | Data processed | Accommodation | Outside the EU | Transfer base | DPA |
 | --- | --- | --- | --- | --- | --- | --- |
 | **Supabase** | Database, authentication, file storage | All application data | EU — Ireland (`eu-west-1`) | No | — | [DPA](https://supabase.com/legal/dpa) — to be confirmed |
-| **Vercel** | Application hosting, function execution, agent sandboxes | Data in transit; query logs | United States, with global points of presence | Yes | CCT + DPF | [DPA](https://vercel.com/legal/dpa) — to be confirmed |
+| **Vercel** | Application hosting, function execution, agent sandboxes | Data in transit; query logs | EU — Ireland (`dub1` functions); agent sandboxes in the United States (`iad1`); global points of presence | Yes | CCT + DPF | [DPA](https://vercel.com/legal/dpa) — to be confirmed |
 | **Stripe** | Payment and subscriptions | Email, customer and subscription IDs, payment data (at Stripe only) | Ireland (EU entity) + United States | Yes | Intra-group CCT | [DPA](https://stripe.com/legal/dpa) — to be confirmed |
 | **OpenRouter** | Routing calls to language models | Content transmitted to the models (tickets, code, messages, **feedback posted on a public board and audio of their dictation**) | United States | Yes | CCT | [Policy](https://openrouter.ai/privacy) — TBC |
 | **PostHog** | Audience measurement | Usage events, measurement identifier | EU — Germany (`eu.posthog.com`) | No | — | [DPA](https://posthog.com/dpa) — to be confirmed |
@@ -74,10 +74,10 @@ response, duration, IP address) are kept there according to the retention of the
   ~5 min of inactivity, but its **filesystem is kept in snapshot for
   7 days** (`SANDBOX_SNAPSHOT_EXPIRATION_MS`), for a conversation to resume
   hot. After this period, the snapshot is deleted and the repository re-cloned if necessary.
-- **To watch**: the execution region. Functions can be set to
-  a European region (`fra1`, `cdg1`); sandboxes, **no** — Vercel
-  Sandbox only exists in `iad1` (United States). The point is open for
-  functions, closed for sandboxes as long as the offer does not change.
+- **Execution region**: functions run in `dub1` (Dublin), set by `regions`
+  in `vercel.json`, next to the Supabase database (`eu-west-1`). Sandboxes
+  cannot follow: Vercel Sandbox only exists in `iad1` (United States), which
+  stays a transfer as long as the offer does not change.
 
 ### Stripe
 

@@ -769,7 +769,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "append_to_page",
       description:
-        "Add a DISTINCT new block at the END of a page WITHOUT touching what is already there, and without re-sending the document — a new section, a decision that just landed, a note. Prefer it to update_page, which rewrites the whole body. Do not use it to fill an existing outline or placeholder: replace that exact passage with edit_page_text, using finished reader-ready prose rather than a 'to add' list. Send ONLY what is new. Refused if someone wrote the page between your read and this call, so nothing of theirs is lost.",
+        "Add a DISTINCT new block at the END of a page WITHOUT touching what is already there, and without re-sending the document — a new section, a decision that just landed, a note. Prefer it to update_page, which rewrites the whole body. Do not use it to fill an existing outline or placeholder: replace that exact passage with edit_page_text, using finished reader-ready prose rather than a 'to add' list. Send ONLY what is new. It lands at the end of the page as it is when you write, live for anyone who has it open: text typed meanwhile is kept.",
       parameters: {
         type: "object",
         properties: {
@@ -789,7 +789,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "edit_page_text",
       description:
-        "Rewrite ONE passage of a page IN PLACE, the way a code editor patches a file: old_string → new_string, copied VERBATIM from get_page, unique match (add the surrounding lines, or set replace_all). Every other byte is left alone. This is how a sentence gets corrected without re-emitting the page — and it is the safe way round: a full rewrite silently overwrites someone else's edit, a stale old_string fails loudly. To ADD text, append_to_page.",
+        "Rewrite ONE passage of a page IN PLACE, the way a code editor patches a file: old_string → new_string, copied VERBATIM from get_page, unique match (add the surrounding lines, or set replace_all). Every other byte is left alone. This is how a sentence gets corrected without re-emitting the page — and it is the safe way round: a full rewrite silently overwrites someone else's edit, a stale old_string fails loudly. Only the words you change are written, merged with what people type meanwhile like a second person editing in parallel; untouched blocks keep their formatting and anchors. To ADD text, append_to_page.",
       parameters: {
         type: "object",
         properties: {

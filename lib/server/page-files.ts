@@ -1,5 +1,6 @@
 import "server-only";
 
+import { materializePendingPages } from "@/lib/server/pages";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -220,6 +221,9 @@ export async function sweepOrphanPageFiles(
     byPage.set(row.page_id, list);
   }
 
+  // A file cited only by typing still pending in the collaboration journal
+  // is not an orphan: those steps are written into the rows first (MIN-688).
+  await materializePendingPages(service, [...byPage.keys()]);
   const { data: pages, error: pagesError } = await service
     .from("pages")
     .select("id, project_id, content, encrypted_content, encryption_version")

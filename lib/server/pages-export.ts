@@ -14,6 +14,7 @@ import { zipSync, strToU8 } from "fflate";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { decodePageProjection } from "@/lib/server/page-content";
+import { materializePendingPages, materializePendingProjectPages } from "@/lib/server/pages";
 import { pageToMarkdownServer } from "@/lib/server/pages-projection";
 import { descendantIds } from "@/lib/pages";
 import {
@@ -74,7 +75,7 @@ export async function exportPage({
   branch: boolean;
 }): Promise<PageExportResult> {
   const service = getServiceClient();
-  const { data: root } = await service
+  const readRoot = () => service
     .from("pages")
     .select(
       "id, project_id, parent_id, title, icon, content, position, database_schema, database_title_name, property_values, created_at, encrypted_content, encryption_version",
@@ -82,9 +83,20 @@ export async function exportPage({
     .eq("id", pageId)
     .is("deleted_at", null)
     .maybeSingle();
+  let { data: root } = await readRoot();
   if (!root) return { ok: false, status: 404, errorKey: "pageNotFound" };
   if (!(await getProjectAccess(actorId, root.project_id as string))) {
     return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
+  // The export reads rows: typing still pending in the collaboration journal
+  // is written into them first (MIN-688) — the page, or the whole project
+  // whose titles a branch outline shows.
+  const materialized = branch
+    ? await materializePendingProjectPages(service, [root.project_id as string])
+    : await materializePendingPages(service, [pageId]);
+  if (materialized > 0) {
+    ({ data: root } = await readRoot());
+    if (!root) return { ok: false, status: 404, errorKey: "pageNotFound" };
   }
 
   const rootRow = await decodePageProjection(root, actorId) as PageRow;

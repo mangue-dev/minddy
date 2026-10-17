@@ -23,6 +23,11 @@
  * | The WIDTH of an image | `![…](…)` has no attribute. The width is a display setting - how many columns the image occupies -, never the content (see blocks/image.ts) | The image, at its default width |
  * | The WEIGHT and type of a file | A markdown link only carries its text and address. These are two comfort indications, rereadable from `page_files`: the name and the file itself are there | `[nom](url)`, so the file |
  *
+ * These losses apply to a WHOLE replacement. A targeted agent edit (append,
+ * passage rewrite) keeps every block whose Markdown it did not change exactly as
+ * stored, colors, widths, pills and IDs included (`reconcileBodyBlocks`, MIN-688):
+ * only the blocks it actually rewrote go through the table above.
+ *
  * The LEGEND of an image does NOT fall, and it is a choice: it is the
  * alternative text (`![caption](…)`), a single field for both. A good
  * caption is a good alt text — keeping two in the node would have liked
@@ -50,6 +55,18 @@ import {
   BLOCK_ID_TYPES,
 } from "@/components/pages/blocks";
 import { normalizeNotionCalloutPaste } from "@/components/pages/blocks/callout";
+
+// The live collaboration operations travel in this same bundle (MIN-688): the
+// server applies steps with the schema this module already builds, without a
+// second ProseMirror copy and outside the Next server build.
+export {
+  applyCollabSteps,
+  canonicalBodyJSON,
+  diffCollabSteps,
+  isCanonicalBodyJSON,
+  rebaseCollabSteps,
+  sameCollabValue,
+} from "@/lib/page-collaboration-document";
 
 /** A page as the projection sees it: its header, and its body. */
 export interface PageProjection {
@@ -105,6 +122,100 @@ export function bodyToMarkdown(content: JSONContent | null | undefined): string 
   const editor = pageEditor(content);
   try {
     return markdownOf(editor).trim();
+  } finally {
+    editor.destroy();
+  }
+}
+
+/* ── Keeping what an agent did not touch (MIN-688) ───────────────────────── */
+
+/**
+ * The new body an agent produced from Markdown, with every top-level block
+ * whose Markdown did NOT change taken back from the previous body.
+ *
+ * Reparsing Markdown regenerates block IDs and drops what Markdown cannot say
+ * (a color, an image width, a mention pill, a folded state — the losses table
+ * above). Applied as a whole, a one-word edit by Numo would therefore rewrite
+ * every block: comments and links anchored on block IDs would lose their
+ * target, and a collaborator typing anywhere in the page would see their
+ * pending text rebased across a full replacement. Aligning the two block
+ * sequences by their Markdown (a longest common subsequence) keeps the
+ * untouched blocks exactly as they were, so the live replacement covers only
+ * the blocks the agent actually changed. A changed block is the reparsed one,
+ * with the losses of a whole replacement.
+ */
+export function reconcileBodyBlocks(
+  previous: JSONContent | null | undefined,
+  next: JSONContent
+): JSONContent {
+  const before = previous?.content ?? [];
+  const after = next.content ?? [];
+  if (before.length === 0 || after.length === 0) return next;
+  const editor = pageEditor(previous ?? { type: "doc", content: [] });
+  try {
+    const { schema } = editor;
+    // `null` when a block cannot be serialized: it then matches nothing.
+    const serialize = (block: JSONContent): string | null => {
+      try {
+        const doc = schema.topNodeType.create(null, [schema.nodeFromJSON(block)]);
+        return (editor.storage as unknown as {
+          markdown: { serializer: { serialize(node: unknown): string } };
+        }).markdown.serializer.serialize(doc).trim();
+      } catch {
+        return null;
+      }
+    };
+    const same = (x: string | null, y: string | null) => x !== null && x === y;
+    const a = before.map(serialize);
+    const b = after.map(serialize);
+    // Longest common subsequence of the two Markdown block lists.
+    const table: number[][] = Array.from({ length: a.length + 1 }, () =>
+      new Array<number>(b.length + 1).fill(0));
+    for (let i = a.length - 1; i >= 0; i -= 1) {
+      for (let j = b.length - 1; j >= 0; j -= 1) {
+        table[i][j] = same(a[i], b[j]) ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1]);
+      }
+    }
+    const content: JSONContent[] = [];
+    // A rewritten block keeps its identity: within each run of changed blocks,
+    // the n-th new block of a type takes the ID of the n-th old block of the
+    // same type. Comments and links anchored on it survive, and the live diff
+    // edits it in place instead of replacing it.
+    let removed: JSONContent[] = [];
+    let added: JSONContent[] = [];
+    const flush = () => {
+      const pool = new Map<string, JSONContent[]>();
+      for (const block of removed) {
+        const list = pool.get(block.type ?? "") ?? [];
+        list.push(block);
+        pool.set(block.type ?? "", list);
+      }
+      for (const block of added) {
+        const match = pool.get(block.type ?? "")?.shift();
+        const id = match?.attrs?.[BLOCK_ID_ATTRIBUTE];
+        content.push(id ? { ...block, attrs: { ...block.attrs, [BLOCK_ID_ATTRIBUTE]: id } } : block);
+      }
+      removed = [];
+      added = [];
+    };
+    let i = 0;
+    let j = 0;
+    while (j < b.length || i < a.length) {
+      if (i < a.length && j < b.length && same(a[i], b[j])) {
+        flush();
+        content.push(before[i]);
+        i += 1;
+        j += 1;
+      } else if (i < a.length && (j >= b.length || table[i + 1][j] >= table[i][j + 1])) {
+        removed.push(before[i]);
+        i += 1;
+      } else {
+        added.push(after[j]);
+        j += 1;
+      }
+    }
+    flush();
+    return { ...next, content };
   } finally {
     editor.destroy();
   }

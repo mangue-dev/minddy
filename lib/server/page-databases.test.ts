@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   commitBatch: vi.fn(),
   writeRefusal: vi.fn(),
 }));
-vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage, pageWriteRefusal: h.writeRefusal }));
+vi.mock("@/lib/server/pages", () => ({ getPage: h.getPage, getStoredPage: h.getPage, pageWriteRefusal: h.writeRefusal }));
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ rpc: h.rpc, from: () => h.query }),
 }));

@@ -21,7 +21,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule",
+    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule; MIN-688 page-materialization schedule",
     "editions": [
       "self-hosted"
     ],
@@ -199,6 +199,7 @@ O agendador publicado em v0.11.0 não inclui `numo-turns`. O candidato foi corri
 | `/api/cron/numo-turns` | `* * * * *` |
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |
+| `/api/cron/page-materialization` | `* * * * *` |
 | `/api/cron/smart-assign` | `*/5 * * * *` |
 | `/api/cron/issue-index` | `25 * * * *` |
 | `/api/cron/routines` | `*/5 * * * *` |

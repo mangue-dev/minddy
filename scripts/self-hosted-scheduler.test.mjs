@@ -37,6 +37,8 @@ test("the minute tick drains persisted Numo turns with the configured authentica
     },
   });
   assert.ok(requests.some(request => request.url === "http://instance.test:3000/api/cron/numo-turns"));
-  assert.equal(requests.length, 2);
+  // Every minute: Numo turns, forge-relay deliveries and page materialization.
+  assert.ok(requests.some(request => request.url === "http://instance.test:3000/api/cron/page-materialization"));
+  assert.equal(requests.length, 3);
   assert.ok(requests.every(request => request.authorization === `Bearer ${secret}`));
 });

@@ -192,3 +192,26 @@ export async function bodyFromMarkdownServer(
 ): Promise<JSONContent> {
   return (await projection()).bodyFromMarkdown(markdown);
 }
+
+/** `reconcileBodyBlocks`: the agent's new body, untouched blocks kept as they were. */
+export async function reconcileBodyBlocksServer(
+  previous: JSONContent | null,
+  next: JSONContent
+): Promise<JSONContent> {
+  return (await projection()).reconcileBodyBlocks(previous, next);
+}
+
+/* ── Live collaboration (MIN-688) ──────────────────────────────────────── */
+
+/**
+ * The collaboration operations of the same bundle. Building the schema and
+ * applying steps read no DOM, so they skip the jsdom installation that the
+ * Markdown directions need: a page creation or a typing batch must not pay
+ * for a window it never uses. A missing bundle fails with the same explicit
+ * message as every other projection call.
+ */
+export function pageCollaborationServer(): Pick<PagesMarkdown,
+  "applyCollabSteps" | "canonicalBodyJSON" | "diffCollabSteps" |
+  "isCanonicalBodyJSON" | "rebaseCollabSteps" | "sameCollabValue"> {
+  return pagesMarkdown();
+}

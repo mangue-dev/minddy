@@ -27,14 +27,60 @@ import {
 import { notifyPageMentions } from "@/lib/server/page-mentions";
 import { queuePageBodyLinks } from "@/lib/server/page-links";
 import { appendSubpage, remapSubpages, removeSubpages } from "@/lib/pages-subpage";
-import { bodyFromMarkdownServer } from "@/lib/server/pages-projection";
+import { bodyFromMarkdownServer, pageBodyToMarkdownServer, pageCollaborationServer } from "@/lib/server/pages-projection";
 import {
   queueSearchText,
   runPageSearch,
   type PageSearchHit,
 } from "@/lib/server/pages-search";
+import {
+  COLLAB_COLUMNS,
+  CollabCommitError,
+  appendCollaboration,
+  commitCollaboration,
+  decodeCollaborationJournal,
+  fetchCollaborationJournal,
+  findCollaborationReceipt,
+  hasPendingSteps,
+  listPendingCollaborations,
+  materializeCollaboration,
+  readCollaborationJournal,
+  resetCollaboration,
+  sealCollabBatches,
+  serverCollabClientId,
+  takeStreamRevisions,
+  type CollabBatchInput,
+  type JournalBatch,
+  type StreamRevisions,
+} from "@/lib/server/page-collaboration";
+import {
+  decideCollaborationGrant,
+  grantNeedsRenewal,
+  mintCollaborationToken,
+  verifyCollaborationToken,
+  type CollabGrant,
+} from "@/lib/server/page-collaboration-token";
+import {
+  cachedStreamValue,
+  forgetStreamValues,
+  rememberStreamValue,
+} from "@/lib/server/page-collaboration-cache";
+import {
+  COLLAB_FIELDS,
+  PAGE_COLLABORATION_PROTOCOL,
+  assembleCollabSteps,
+  type CollabCatchUp,
+  type CollabField,
+  type CollabRefusal,
+  type CollabSubmission,
+  type CollabSubmitResult,
+  type PageCollaborationSnapshot,
+} from "@/lib/page-collaboration";
 import type { PageDocJSON } from "@/lib/pages-merge";
+import type { JSONContent } from "@tiptap/core";
 import { decodePage, decodePageProjection, encodePage, pageContentValues } from "./page-content";
+import { isContentEncryptionEnabled } from "./encryption/content-config";
+import { hasDataRootKey } from "./encryption/local-key-wrapper";
 
 /**
  * PAGES of a project (MIN-266) — the server core, shared by routes
@@ -231,6 +277,12 @@ export async function clearPageWatcher(
 /**
  * A page and its project, or null. `includeTrashed` is only true for
  * gestures which refer to a trashed page (restore).
+ *
+ * This is the LIVE page (MIN-688): the stored projection plus the steps
+ * accepted since it was materialized, so every reader sees the latest text.
+ * A writer that re-seals the row's envelope must start from `loadStoredPage`
+ * instead: writing the live text under the stored revision would replay
+ * pending steps twice at the next materialization.
  */
 async function loadPage(
   service: Service,
@@ -242,15 +294,75 @@ async function loadPage(
     projectAccess?: { projectId: string; allowed: Promise<boolean> };
   } = {}
 ): Promise<Page | null> {
-  const query = service.from("pages").select(FULL_COLUMNS).eq("id", pageId);
+  const row = await readAccessiblePageRow(service, pageId, actorId, { includeTrashed, projectAccess });
+  if (!row) return null;
+  return livePageView(service, row, actorId);
+}
+
+/** The page as STORED: the materialized projection, for envelope writers. */
+async function loadStoredPage(
+  service: Service,
+  pageId: string,
+  actorId: string
+): Promise<Page | null> {
+  const row = await readAccessiblePageRow(service, pageId, actorId, {});
+  if (!row) return null;
+  takeStreamRevisions(row);
+  return decodePage(row, actorId);
+}
+
+async function readAccessiblePageRow(
+  service: Service,
+  pageId: string,
+  actorId: string,
+  { includeTrashed = false, projectAccess }: {
+    includeTrashed?: boolean;
+    projectAccess?: { projectId: string; allowed: Promise<boolean> };
+  }
+): Promise<Record<string, unknown> | null> {
+  const query = service.from("pages").select(`${FULL_COLUMNS}, ${COLLAB_COLUMNS}`).eq("id", pageId);
   if (!includeTrashed) query.is("deleted_at", null);
   const { data } = await query.maybeSingle();
   if (!data?.project_id) return null;
   // The early check stands only for that project; any other page checks its own.
   const allowed = projectAccess && data.project_id === projectAccess.projectId
-    ? await projectAccess.allowed : await access(actorId, data.project_id);
-  if (!allowed) return null;
-  return decodePage(data, actorId);
+    ? await projectAccess.allowed : await access(actorId, data.project_id as string);
+  return allowed ? data as Record<string, unknown> : null;
+}
+
+/**
+ * The live view of a fetched row, without its revision columns. A pending
+ * journal that cannot be read back (it should never happen) falls back to
+ * the stored projection and asks for a materialization, which repairs it.
+ */
+async function livePageView(
+  service: Service,
+  row: Record<string, unknown>,
+  actorId: string
+): Promise<Page> {
+  let page: Page;
+  try {
+    page = (await liveFromRow(service, row, actorId)).page;
+  } catch (error) {
+    if (!(error instanceof PendingJournalError)) throw error;
+    console.error("[pages] pending journal unreadable; serving the stored page");
+    scheduleMaterialization(service, row.id as string, { urgent: true });
+    page = await decodePage(row, actorId);
+  }
+  const view = page as Page & { body_revision?: number; title_revision?: number };
+  delete view.body_revision;
+  delete view.title_revision;
+  return view;
+}
+
+/** The stored page for a writer that re-seals its envelope (database cells). */
+export async function getStoredPage(
+  pageId: string,
+  actorId: string
+): Promise<PageResult<Page>> {
+  const page = await loadStoredPage(getServiceClient(), pageId, actorId);
+  if (!page) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  return { ok: true, page };
 }
 
 /**
@@ -413,6 +525,7 @@ function announcePageWrite({
   mcpKeyId,
   event,
   scanMentions = true,
+  activity = true,
 }: {
   service: Service;
   /** The page as it was just written. */
@@ -429,15 +542,21 @@ function announcePageWrite({
   /** DUPLICATION cuts it: recopying a text is not quoting someone, and
  copying a page would recopy all the names it bears. */
   scanMentions?: boolean;
+  /** False for a live typing batch that continues the same author's write
+   (MIN-688): its activity line and agent notice already exist, but a name
+   typed in this batch must still be announced, so mentions stay on. */
+  activity?: boolean;
 }): void {
   afterOrNow(async () => {
-    await recordPageEvent(service, {
-      pageId: page.id,
-      actorId,
-      kind,
-      type: event,
-      mcpKeyId,
-    });
+    if (activity) {
+      await recordPageEvent(service, {
+        pageId: page.id,
+        actorId,
+        kind,
+        type: event,
+        mcpKeyId,
+      });
+    }
 
     // Mentions can only be read on a BODY. A rename does not quote
     // no one, and even less a trash can.
@@ -459,7 +578,7 @@ function announcePageWrite({
     // “only when the actor is the agent”: it’s the SURFACE that knows this
     // (the six tools in lib/server/page-tools.ts sign `kind: "agent"`), and
     // `actorId` is the account that enabled it — therefore the launcher of the run.
-    if (kind === "agent") {
+    if (activity && kind === "agent") {
       await notifyAgentPageWrite(service, {
         projectId: page.project_id,
         pageId: page.id,
@@ -479,7 +598,7 @@ export async function listPages(
   { ok: true; pages: PageSummary[] } | { ok: false; status: number; errorKey: PageErrorKey }
 > {
   const readBatch = (after: string | null) => {
-    let query = getServiceClient().from("pages").select(LIST_COLUMNS, { count: "exact" })
+    let query = getServiceClient().from("pages").select(`${LIST_COLUMNS}, ${COLLAB_COLUMNS}`, { count: "exact" })
       .eq("project_id", projectId).is("deleted_at", null).order("id").limit(1000);
     if (after) query = query.gt("id", after);
     return query;
@@ -505,8 +624,16 @@ export async function listPages(
   try {
     const rows = await readCompleteScopedRows<Record<string, unknown>>(
       (after) => after === null ? firstBatch : readBatch(after), (row) => row.id);
+    const service = getServiceClient();
     const pages = await Promise.all(rows.map(async (row) => {
-      const { content: _body, ...summary } = await decodePageProjection(row, actorId);
+      const revisions = takeStreamRevisions(row);
+      const { content: _body, body_revision: _b, title_revision: _t, ...summary } =
+        await decodePageProjection(row, actorId);
+      // A title being typed shows its pending steps too (MIN-688); the body
+      // is not part of the list.
+      if (revisions.head.title > revisions.materialized.title) {
+        summary.title = await liveTitle(service, summary as unknown as Page, revisions, actorId);
+      }
       return summary as unknown as PageSummary;
     }));
     return { ok: true, pages: pages.sort(byPosition) };
@@ -652,7 +779,10 @@ export async function createPage({
     database_title_name: null,
     property_values: {},
     icon: readIcon(input.icon),
-    content: content ?? { type: "doc", content: [] },
+    // Born canonical (MIN-688): one schema-valid block with its ID, so every
+    // collaborator opening the new page starts from the same document instead
+    // of each editor filling the empty body with its own random block.
+    content: pageCollaborationServer().canonicalBodyJSON(content ?? { type: "doc", content: [] }),
     position: isPosition(input.position) ? input.position : positionAtEnd(
       all.filter((p) => !p.deleted_at && (p.parent_id ?? null) === parentId)
     ),
@@ -732,6 +862,9 @@ export async function duplicatePage(
   // `descendantIds` renders the descendants in width, therefore the parents before
   // their children: the insertion order satisfies the foreign key of itself.
   const family = [pageId, ...descendantIds(live, pageId)];
+  // The copy starts from the latest text (MIN-688): typing still pending in
+  // the journal is materialized first.
+  await materializePendingPages(service, family);
 
   const { data: sources, error: readError } = await service
     .from("pages")
@@ -831,7 +964,1420 @@ export async function duplicatePage(
   return { ok: true, page: copy };
 }
 
+/* ─── Live collaboration: the operation authority (MIN-688) ───────────────── */
+
+/**
+ * Every body or title write goes through the authority, whoever makes it: a
+ * browser session sending ProseMirror steps, or a writer that only knows
+ * whole documents (the PATCH of an older tab, Numo and the MCP, a restored
+ * version, the subpage mirror). A whole document is first expressed as the
+ * smallest replacement steps against the current one (`diffCollabSteps`), so
+ * a collaborator typing elsewhere keeps their pending text and their caret,
+ * and every connected editor receives the change live, in order.
+ *
+ * A session's typing batch is APPENDED (`submitPageCollaboration`): its steps
+ * are journaled and its stream head advances, and the page row is left alone.
+ * The row is rewritten once per burst of typing by a MATERIALIZATION
+ * (`materializePage`): after two quiet seconds, sooner when many steps or old
+ * ones are pending, and from a cron safety net. Whole-document writers and
+ * agents COMMIT (`commitPageStreams`): steps and the projection at the new
+ * heads in one transaction. Readers see the stored projection plus the
+ * pending steps (`liveFromRow`).
+ *
+ * The four write rules of this module still hold on these paths — search text
+ * and links follow the body, the history archives what a write covers, and
+ * the write announces itself: `afterStreamCommit` for commits,
+ * `materializationEffects` for appended typing.
+ */
+
+type CollabPage = Page & {
+  /** Stream HEADS: the revisions of the live document. */
+  body_revision: number;
+  title_revision: number;
+  content_revision: number;
+};
+
+/** A page as the authority sees it. */
+interface LivePage {
+  /** The live document: the stored projection plus the pending steps. */
+  page: CollabPage;
+  /** The decoded row, whose revisions are the materialized ones. */
+  stored: CollabPage;
+  revisions: StreamRevisions;
+  /** Journal batches accepted after the materialized revision, in order. */
+  pending: Record<CollabField, JournalBatch[]>;
+  /** Whether the row is sealed (its journal batches must be too). */
+  protect: boolean;
+}
+
+/**
+ * The pending steps cannot be read back: `gap` when journal rows between the
+ * materialized revision and the head are missing (a concurrent
+ * materialization may just have pruned them), `unreadable` when they do not
+ * apply (steps from a newer deployment, for example).
+ */
+class PendingJournalError extends Error {
+  constructor(readonly kind: "gap" | "unreadable") {
+    super("Pending page collaboration steps are not readable");
+    this.name = "PendingJournalError";
+  }
+}
+
+const COLLAB_PAGE_COLUMNS = `${FULL_COLUMNS}, ${COLLAB_COLUMNS}`;
+
+/** The stored row of a page with its stream revisions, still sealed. Access is the caller's. */
+async function fetchCollabRow(
+  service: Service,
+  pageId: string,
+  projectId: string | null,
+  { includeTrashed = false }: { includeTrashed?: boolean } = {}
+): Promise<Record<string, unknown> | null> {
+  let query = service.from("pages").select(COLLAB_PAGE_COLUMNS).eq("id", pageId);
+  if (projectId !== null) query = query.eq("project_id", projectId);
+  if (!includeTrashed) query = query.is("deleted_at", null);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw new Error(`page read failed: ${error.message}`);
+  return (data as Record<string, unknown> | null) ?? null;
+}
+
+/** The journal batches from `from` to `to` of one stream, decrypted. */
+async function pendingBatches(
+  service: Service,
+  page: { id: string; project_id: string },
+  field: CollabField,
+  from: number,
+  to: number,
+  actorId: string | null
+): Promise<JournalBatch[]> {
+  const batches: JournalBatch[] = [];
+  let at = from;
+  while (at < to) {
+    const rows = await readCollaborationJournal(service, {
+      pageId: page.id, projectId: page.project_id, field, since: at, actorId,
+    });
+    const before = at;
+    for (const row of rows) {
+      if (at >= to) break;
+      if (row.base < at) continue;
+      if (row.base !== at || row.steps.length !== row.stepCount) throw new PendingJournalError("gap");
+      batches.push(row);
+      at += row.stepCount;
+    }
+    if (at === before) throw new PendingJournalError("gap");
+  }
+  if (at !== to) throw new PendingJournalError("gap");
+  return batches;
+}
+
+/** Authored batches in acceptance order, both streams. */
+function byAcceptance(pending: Record<CollabField, JournalBatch[]>) {
+  return [
+    ...pending.body.map((batch) => ({ field: "body" as const, batch })),
+    ...pending.title.map((batch) => ({ field: "title" as const, batch })),
+  ].sort((a, b) => a.batch.createdAt.localeCompare(b.batch.createdAt) ||
+    (a.field === b.field ? a.batch.base - b.batch.base : a.field === "body" ? -1 : 1));
+}
+
+/** The author of the last authored batch among `fields`, if any. */
+function lastAuthor(pending: Record<CollabField, JournalBatch[]>, fields: readonly CollabField[]) {
+  const authored = byAcceptance(pending)
+    .filter(({ field, batch }) => fields.includes(field) && batch.authored && batch.authorId);
+  return authored.at(-1)?.batch ?? null;
+}
+
+/**
+ * The live document: `stored` with the pending steps of `fields` applied.
+ * `version` counts every authored pending body batch, as each counted one
+ * when it rewrote the row; the author is that of the last authored batch.
+ */
+function applyPending(
+  stored: CollabPage,
+  pending: Record<CollabField, JournalBatch[]>,
+  revisions: StreamRevisions
+): CollabPage {
+  const ops = pageCollaborationServer();
+  const page: CollabPage = {
+    ...stored,
+    body_revision: revisions.head.body,
+    title_revision: revisions.head.title,
+  };
+  for (const field of COLLAB_FIELDS) {
+    if (pending[field].length === 0) continue;
+    const applied = ops.applyCollabSteps(field, field === "body" ? stored.content : stored.title,
+      pending[field].flatMap((batch) => batch.steps));
+    if (!applied.ok) throw new PendingJournalError("unreadable");
+    if (field === "body") page.content = applied.doc;
+    else page.title = applied.text;
+  }
+  page.version = stored.version + pending.body.filter((batch) => batch.authored).length;
+  const author = lastAuthor(pending, COLLAB_FIELDS);
+  if (author?.authorId) {
+    Object.assign(page, writtenBy(author.authorId, author.authorKind, author.authorApiKeyId));
+    page.updated_at = author.createdAt;
+  }
+  return page;
+}
+
+/** Decodes a fetched row and applies its pending steps. Only once access is established. */
+async function liveFromRow(
+  service: Service,
+  row: Record<string, unknown>,
+  actorId: string | null
+): Promise<LivePage> {
+  const revisions = takeStreamRevisions(row);
+  const stored = await decodePage(row, actorId) as CollabPage;
+  stored.body_revision = revisions.materialized.body;
+  stored.title_revision = revisions.materialized.title;
+  stored.content_revision = Number(row.content_revision ?? 0);
+  const pending: Record<CollabField, JournalBatch[]> = { body: [], title: [] };
+  await Promise.all(COLLAB_FIELDS.map(async (field) => {
+    if (revisions.head[field] > revisions.materialized[field]) {
+      pending[field] = await pendingBatches(service, stored, field,
+        revisions.materialized[field], revisions.head[field], actorId);
+    }
+  }));
+  return {
+    page: applyPending(stored, pending, revisions),
+    stored,
+    revisions,
+    pending,
+    protect: Number(row.encryption_version ?? 0) > 0,
+  };
+}
+
+/** A list row's title with its pending steps. */
+async function liveTitle(
+  service: Service,
+  page: Page,
+  revisions: StreamRevisions,
+  actorId: string
+): Promise<string> {
+  try {
+    const batches = await pendingBatches(service, page, "title",
+      revisions.materialized.title, revisions.head.title, actorId);
+    const applied = pageCollaborationServer().applyCollabSteps("title", page.title,
+      batches.flatMap((batch) => batch.steps));
+    if (applied.ok) return applied.text;
+  } catch (error) {
+    if (!(error instanceof PendingJournalError)) throw error;
+  }
+  scheduleMaterialization(getServiceClient(), page.id, { urgent: true });
+  return page.title;
+}
+
+/** A live page of a project at its heads, or null. Access is the caller's. */
+async function loadCollabPage(
+  service: Service,
+  pageId: string,
+  projectId: string,
+  actorId: string
+): Promise<LivePage | null> {
+  const row = await fetchCollabRow(service, pageId, projectId);
+  return row ? liveFromRow(service, row, actorId) : null;
+}
+
+/** One stream change: steps from a session, or a whole replacement value. */
+type StreamEdit =
+  | {
+      field: CollabField;
+      steps: unknown[];
+      base: number;
+      batchId: string;
+      clientId: string;
+    }
+  | {
+      field: CollabField;
+      /** The body JSON, or the title string. */
+      replace: unknown;
+    };
+
+type StreamCommit =
+  | {
+      status: "accepted";
+      page: CollabPage;
+      previous: CollabPage;
+      changed: { body: boolean; title: boolean };
+      writesDocument: boolean;
+    }
+  | { status: "duplicate" }
+  | { status: "unchanged" }
+  | { status: "behind"; field: CollabField; head: number }
+  | { status: "refused"; reason: CollabRefusal }
+  | { status: "retry" }
+  | { status: "missing" };
+
+/**
+ * Whether appended steps must be sealed even on a plaintext page: whenever
+ * this deployment can seal (content encryption on, or a data root key), so
+ * that page protection activating, which refuses plaintext journal rows, never
+ * meets a batch it would refuse.
+ */
+function journalMustBeSealed(): boolean {
+  return isContentEncryptionEnabled() || hasDataRootKey();
+}
+
+/** The columns a move, a pin or an icon change carry with a stream commit. */
+const STREAM_METADATA = ["icon", "favorite", "parent_id", "position"] as const;
+
+/**
+ * Applies steps to a stream's value and checks the result the way every
+ * write is checked. The body must already BE what the input gate lets
+ * through: replaying the journal has to reproduce the stored page exactly, so
+ * a normalization cannot happen silently here.
+ */
+function validateStreamEdit(
+  field: CollabField,
+  current: unknown,
+  steps: readonly unknown[]
+): { ok: true; value: unknown } | { ok: false; reason: CollabRefusal } {
+  const ops = pageCollaborationServer();
+  const applied = ops.applyCollabSteps(field, current, steps);
+  if (!applied.ok) return { ok: false, reason: applied.reason };
+  if (field === "title") return { ok: true, value: applied.text };
+  const checked = readPageContent(applied.doc);
+  if (checked === "too-large" || checked === "too-deep") return { ok: false, reason: "too-large" };
+  if (checked === "refused" || !checked || !ops.sameCollabValue("body", checked, applied.doc)) {
+    return { ok: false, reason: "content-refused" };
+  }
+  return { ok: true, value: applied.doc };
+}
+
+/**
+ * Commits stream edits (and accompanying metadata) against `live`, the state
+ * just read, and writes the projection at the new heads. One attempt: `retry`
+ * means only the shared envelope moved, and the caller re-reads and calls
+ * again; `behind` means a stream moved.
+ *
+ * Pending steps the written projection includes are materialized by this
+ * commit; their own effects run as a materialization's would.
+ *
+ * `attribution: "none"` commits without signing the page or counting a body
+ * write — the canonical initialization of an empty page. Everything else is
+ * an authored write.
+ */
+async function commitPageStreams({
+  service,
+  live,
+  actorId,
+  kind,
+  mcpKeyId = null,
+  edits,
+  metadata = {},
+  attribution = "author",
+}: {
+  service: Service;
+  live: LivePage;
+  actorId: string;
+  kind: PageWriteKind;
+  mcpKeyId?: string | null;
+  edits: StreamEdit[];
+  metadata?: Record<string, unknown>;
+  attribution?: "author" | "none";
+}): Promise<StreamCommit> {
+  const ops = pageCollaborationServer();
+  const { page, stored } = live;
+  const next: Record<string, unknown> = { ...page, ...metadata };
+  delete next.body_revision;
+  delete next.title_revision;
+  const batches: CollabBatchInput[] = [];
+  const changed = { body: false, title: false };
+  const authored = attribution === "author";
+
+  for (const edit of edits) {
+    const head = edit.field === "body" ? page.body_revision : page.title_revision;
+    const current = edit.field === "body" ? page.content : page.title;
+    let steps: unknown[];
+    let batchId: string;
+    let clientId: string;
+    if ("steps" in edit) {
+      if (edit.base !== head) return { status: "behind", field: edit.field, head };
+      ({ steps, batchId, clientId } = edit);
+    } else {
+      steps = ops.diffCollabSteps(edit.field, current, edit.replace);
+      if (steps.length === 0) continue;
+      batchId = crypto.randomUUID();
+      clientId = serverCollabClientId();
+    }
+    const applied = validateStreamEdit(edit.field, current, steps);
+    if (!applied.ok) return { status: "refused", reason: applied.reason };
+    if (edit.field === "body") next.content = applied.value;
+    else next.title = applied.value;
+    changed[edit.field] = true;
+    batches.push({
+      field: edit.field,
+      base: head,
+      batchId,
+      clientId,
+      steps,
+      authorId: actorId,
+      authorKind: kind,
+      authorApiKeyId: kind === "agent" ? mcpKeyId : null,
+      authored,
+    });
+  }
+  if (batches.length === 0) return { status: "unchanged" };
+
+  // A sealed page stays sealed: its journal batches can be sealed while the
+  // envelope is, the two key reads running side by side instead of in turn.
+  const sealedAhead = live.protect ? sealCollabBatches(page.id, page.project_id, batches, true) : null;
+  void sealedAhead?.catch(() => {});
+  const writesDocument = authored && (changed.body || changed.title || "icon" in metadata);
+  // Encoded from the live document: on a sealed page the envelope carries
+  // both streams, so it also materializes their pending steps.
+  const encoded = await encodePage(next, { service });
+  const protect = Number(encoded.encryption_version ?? 0) > 0;
+  const absorbed = {
+    body: changed.body || (protect && live.pending.body.length > 0),
+    title: changed.title || (protect && live.pending.title.length > 0),
+  };
+  const values: Record<string, unknown> = protect ? pageContentValues(encoded) : {};
+  if (!protect) {
+    if (changed.body) values.content = next.content;
+    if (changed.title) values.title = next.title;
+    if ("icon" in metadata) values.icon = next.icon;
+  }
+  for (const key of STREAM_METADATA) {
+    if (key !== "icon" && key in metadata) values[key] = metadata[key];
+  }
+  // The body version counts this write and the authored pending body batches
+  // the projection now includes; the stored page counted neither.
+  const version = stored.version +
+    (absorbed.body ? live.pending.body.filter((batch) => batch.authored).length : 0) +
+    (authored && changed.body ? 1 : 0);
+  if (version !== stored.version) values.version = version;
+  next.version = version;
+  const absorbedAuthor = lastAuthor(live.pending,
+    COLLAB_FIELDS.filter((field) => absorbed[field]));
+  if (writesDocument) {
+    Object.assign(values, writtenBy(actorId, kind, mcpKeyId));
+    Object.assign(next, writtenBy(actorId, kind, mcpKeyId));
+  } else if (absorbedAuthor?.authorId) {
+    Object.assign(values, writtenBy(absorbedAuthor.authorId, absorbedAuthor.authorKind,
+      absorbedAuthor.authorApiKeyId));
+  }
+  const sealed = sealedAhead && protect ? await sealedAhead : undefined;
+
+  const outcome = await commitCollaboration(service, {
+    pageId: page.id,
+    projectId: page.project_id,
+    contentRevision: stored.content_revision,
+    values,
+    batches,
+    // A stream without a batch here: the projection reflects its head when
+    // it absorbed that stream's pending steps, its stored revision otherwise.
+    materialized: {
+      body: absorbed.body ? live.revisions.head.body : live.revisions.materialized.body,
+      title: absorbed.title ? live.revisions.head.title : live.revisions.materialized.title,
+    },
+    protect,
+    sealed,
+  });
+  switch (outcome.status) {
+    case "accepted": {
+      for (const field of COLLAB_FIELDS) {
+        if (!changed[field]) continue;
+        rememberStreamValue(page.id, page.project_id, field,
+          field === "body" ? outcome.bodyRevision : outcome.titleRevision,
+          field === "body" ? next.content : next.title, protect);
+      }
+      materializationEffects(service, live, COLLAB_FIELDS.filter((field) =>
+        absorbed[field] && live.pending[field].length > 0));
+      return {
+        status: "accepted",
+        page: {
+          ...(next as unknown as CollabPage),
+          body_revision: outcome.bodyRevision,
+          title_revision: outcome.titleRevision,
+          content_revision: stored.content_revision + 1,
+          updated_at: new Date().toISOString(),
+        },
+        previous: page,
+        changed,
+        writesDocument,
+      };
+    }
+    case "duplicate":
+      return { status: "duplicate" };
+    case "behind":
+      return { status: "behind", field: outcome.field, head: outcome.head };
+    case "batch_reused":
+      return { status: "refused", reason: "batch-reused" };
+    case "retry":
+      return { status: "retry" };
+    case "missing":
+      return { status: "missing" };
+  }
+}
+
+/**
+ * Within this window, a batch from the author of the previous write CONTINUES
+ * that write: its history snapshot and its activity line already exist.
+ */
+const TYPING_CONTINUATION_MS = 60_000;
+
+/**
+ * The side effects of an accepted commit — the rules of this module's header,
+ * on the authority path. A change of author, an agent write or a replacement
+ * is never coalesced away.
+ */
+function afterStreamCommit({
+  service,
+  commit,
+  actorId,
+  kind,
+  mcpKeyId,
+  alwaysArchive = false,
+  announce = true,
+}: {
+  service: Service;
+  commit: Extract<StreamCommit, { status: "accepted" }>;
+  actorId: string;
+  kind: PageWriteKind;
+  mcpKeyId?: string | null;
+  alwaysArchive?: boolean;
+  announce?: boolean;
+}): void {
+  const { page, previous, changed, writesDocument } = commit;
+  if (changed.body) {
+    queueSearchText(service, [page.id]);
+    queuePageBodyLinks(service, [page.id]);
+    if (writesDocument) {
+      stampPageWrite({ service, previous, actorId, kind, always: alwaysArchive });
+    }
+  }
+  if (writesDocument && announce) {
+    announcePageWrite({
+      service,
+      page,
+      previous,
+      actorId,
+      kind,
+      mcpKeyId,
+      event: "page_updated",
+      scanMentions: changed.body,
+    });
+  }
+}
+
+/* ─── Materialization ─────────────────────────────────────────────────────── */
+
+/** How long a page must stay quiet before its appended typing is materialized. */
+const MATERIALIZE_QUIET_MS = 2_000;
+
+/** Pending steps (both streams) that materialize at once, without waiting for quiet. */
+const MATERIALIZE_MAX_PENDING_STEPS = 400;
+
+/** A pending step this old materializes at once: continuous typing never goes quiet. */
+const MATERIALIZE_MAX_PENDING_MS = 10_000;
+
+/** The cron safety net takes pages whose oldest pending step is this old. */
+export const MATERIALIZE_STALE_MS = 15_000;
+
+/** Author alternations whose mentions are attributed exactly in one materialization. */
+const MATERIALIZE_MAX_MENTION_RUNS = 64;
+
+const materializeGenerations = new Map<string, number>();
+const materializing = new Map<string, Promise<void>>();
+
+/**
+ * Asks for a materialization of `pageId` after the quiet period, only the
+ * newest request of this instance running; `urgent` also runs one at once
+ * unless one is already running here. Instances do not coordinate: two
+ * materializations of one page race on the envelope CAS, and the loser finds
+ * nothing left to do.
+ */
+function scheduleMaterialization(
+  service: Service,
+  pageId: string,
+  { urgent = false }: { urgent?: boolean } = {}
+): void {
+  const generation = (materializeGenerations.get(pageId) ?? 0) + 1;
+  materializeGenerations.set(pageId, generation);
+  afterOrNow(async () => {
+    if (urgent && !materializing.has(pageId)) await runMaterialization(service, pageId);
+    await new Promise((resolve) => setTimeout(resolve, MATERIALIZE_QUIET_MS));
+    if (materializeGenerations.get(pageId) !== generation) return;
+    materializeGenerations.delete(pageId);
+    await runMaterialization(service, pageId);
+  });
+}
+
+/** One materialization of a page at a time on this instance; waits for a running one first. */
+async function runMaterialization(service: Service, pageId: string): Promise<void> {
+  const running = materializing.get(pageId);
+  if (running) await running;
+  const task = materializePage(service, pageId).then(() => {}, (error: unknown) => {
+    console.error("[pages] materialization failed:", (error as Error).message);
+  }).finally(() => {
+    if (materializing.get(pageId) === task) materializing.delete(pageId);
+  });
+  materializing.set(pageId, task);
+  await task;
+}
+
+/**
+ * Writes the projection of a page's pending steps into its row: the stored
+ * page plus the journal, re-sealed once, under the envelope CAS. A concurrent
+ * envelope writer (a database cell, another materialization) makes it read
+ * again. A journal that cannot bridge the materialized revision and the head
+ * — it should never happen — is repaired by a gap: connected editors reset to
+ * the stored page.
+ */
+export async function materializePage(
+  service: Service,
+  pageId: string
+): Promise<"materialized" | "unchanged" | "missing" | "reset" | "stale"> {
+  // A gap seen at the same materialized revisions on two consecutive reads.
+  let gapAt: string | null = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const row = await fetchCollabRow(service, pageId, null, { includeTrashed: true });
+    if (!row) return "missing";
+    const at = `${row.body_revision}:${row.title_revision}:${row.content_revision}`;
+    let live: LivePage;
+    try {
+      live = await liveFromRow(service, row, null);
+    } catch (error) {
+      if (!(error instanceof PendingJournalError)) throw error;
+      // Steps this code cannot apply: a newer deployment will. Never discard
+      // acknowledged typing for it.
+      if (error.kind === "unreadable") {
+        console.error("[pages] pending steps unreadable by this deployment");
+        return "stale";
+      }
+      // A racing materialization prunes rows below ITS revision after this
+      // read: read again. Only the same gap on an unchanged row is proven.
+      if (gapAt !== at) {
+        gapAt = at;
+        continue;
+      }
+      console.error("[pages] pending journal gap confirmed; opening a gap");
+      await resetCollaboration(service, pageId);
+      return "reset";
+    }
+    if (!hasPendingSteps(live.revisions)) return "unchanged";
+
+    const next: Record<string, unknown> = { ...live.page };
+    delete next.body_revision;
+    delete next.title_revision;
+    const encoded = await encodePage(next, { service });
+    const protect = Number(encoded.encryption_version ?? 0) > 0;
+    const values: Record<string, unknown> = protect ? pageContentValues(encoded) : {};
+    if (!protect) {
+      if (live.pending.body.length > 0) values.content = next.content;
+      if (live.pending.title.length > 0) values.title = next.title;
+    }
+    if (live.page.version !== live.stored.version) values.version = live.page.version;
+    const author = lastAuthor(live.pending, COLLAB_FIELDS);
+    if (author?.authorId) {
+      Object.assign(values, writtenBy(author.authorId, author.authorKind, author.authorApiKeyId));
+    }
+
+    const outcome = await materializeCollaboration(service, {
+      pageId,
+      contentRevision: live.stored.content_revision,
+      values,
+      revisions: live.revisions.head,
+    });
+    switch (outcome.status) {
+      case "materialized":
+        materializationEffects(service, live, COLLAB_FIELDS.filter((field) =>
+          live.pending[field].length > 0));
+        scheduleRoutineEvents();
+        return "materialized";
+      case "unchanged":
+        return "unchanged";
+      case "missing":
+        return "missing";
+      case "retry":
+        continue;
+    }
+  }
+  return "stale";
+}
+
+/**
+ * The effects of appended typing, once it is in the row: what each batch used
+ * to do when it rewrote the page, at the granularity of a materialization.
+ *
+ * - Search text and links are reprojected once.
+ * - The stored state is archived as covered by the first author, with the
+ *   usual coalescing (`stampPageWrite`): one author typing continuously keeps
+ *   one history line per five minutes, and a different author always gets
+ *   one. Intermediate states inside one materialization (a few seconds) are
+ *   not archived separately.
+ * - Each author's activity line is recorded once, unless they continue the
+ *   stored write (same author, less than a minute ago).
+ * - New mentions are announced per run of one author's batches, so each is
+ *   attributed to whoever typed it. Beyond `MATERIALIZE_MAX_MENTION_RUNS`
+ *   alternations, later runs are not scanned (logged).
+ */
+function materializationEffects(
+  service: Service,
+  live: LivePage,
+  fields: readonly CollabField[]
+): void {
+  if (fields.length === 0) return;
+  const { stored, page } = live;
+  const pending = {
+    body: fields.includes("body") ? live.pending.body : [],
+    title: fields.includes("title") ? live.pending.title : [],
+  };
+  if (pending.body.length > 0) {
+    queueSearchText(service, [page.id]);
+    queuePageBodyLinks(service, [page.id]);
+  }
+  const ordered = byAcceptance(pending);
+  const authored = ordered.filter(({ batch }) => batch.authored && batch.authorId);
+  if (authored.length === 0) return;
+
+  const first = authored[0].batch;
+  if (pending.body.some((batch) => batch.authored)) {
+    stampPageWrite({ service, previous: stored, actorId: first.authorId!, kind: first.authorKind });
+  }
+
+  // Runs of consecutive batches by one author. An unattributed batch
+  // (a presentation rebuild) closes the run and belongs to none.
+  const ops = pageCollaborationServer();
+  const scanMentions = pending.body.length > 0 &&
+    JSON.stringify(page.content ?? null).includes("@");
+  type Run = { batch: JournalBatch; before: unknown; after: unknown; body: boolean };
+  const runs: Run[] = [];
+  let doc: unknown = stored.content;
+  let buffer: unknown[] = [];
+  let run: Run | null = null;
+  let truncated = false;
+  const flush = () => {
+    if (buffer.length > 0 && scanMentions && !truncated) {
+      const applied = ops.applyCollabSteps("body", doc, buffer);
+      if (applied.ok) doc = applied.doc;
+      else truncated = true;
+    }
+    buffer = [];
+    if (run) run.after = doc;
+  };
+  for (const { field, batch } of ordered) {
+    const key = batch.authored && batch.authorId
+      ? `${batch.authorId}:${batch.authorKind}:${batch.authorApiKeyId ?? ""}` : null;
+    const runKey = run ? `${run.batch.authorId}:${run.batch.authorKind}:${run.batch.authorApiKeyId ?? ""}` : null;
+    if (key !== runKey) {
+      flush();
+      run = null;
+      if (key) {
+        if (runs.length >= MATERIALIZE_MAX_MENTION_RUNS) truncated = true;
+        run = { batch, before: doc, after: doc, body: false };
+        runs.push(run);
+      }
+    }
+    if (field === "body") {
+      buffer.push(...batch.steps);
+      if (run) run.body = true;
+    }
+  }
+  flush();
+  if (truncated && scanMentions) {
+    console.warn("[pages] materialization mention scan truncated");
+  }
+
+  const announced = new Set<string>();
+  for (const [index, current] of runs.entries()) {
+    const { authorId, authorKind, authorApiKeyId } = current.batch;
+    if (!authorId) continue;
+    const continuing = authorKind === "human" && stored.updated_by === authorId &&
+      stored.updated_kind === authorKind &&
+      Date.now() - Date.parse(stored.updated_at) < TYPING_CONTINUATION_MS;
+    const activity = !continuing && !announced.has(authorId);
+    announced.add(authorId);
+    const scanned = scanMentions && current.body &&
+      !(truncated && index >= MATERIALIZE_MAX_MENTION_RUNS);
+    if (!activity && !scanned) continue;
+    announcePageWrite({
+      service,
+      page: { ...page, content: scanned ? current.after as JSONContent : page.content },
+      previous: { ...stored, content: scanned ? current.before as JSONContent : stored.content },
+      actorId: authorId,
+      kind: authorKind,
+      mcpKeyId: authorApiKeyId,
+      event: "page_updated",
+      scanMentions: scanned,
+      activity,
+    });
+  }
+}
+
+/**
+ * Materializes the pages among `pageIds` that have pending steps, for a
+ * reader that needs the latest text in the row itself (exports, publication,
+ * duplication, the file sweep). One indexed read when nothing is pending.
+ */
+export async function materializePendingPages(
+  service: Service,
+  pageIds: readonly string[]
+): Promise<number> {
+  const ids = [...new Set(pageIds)];
+  let count = 0;
+  for (let offset = 0; offset < ids.length; offset += 200) {
+    const { data, error } = await service
+      .from("page_collaboration_heads")
+      .select("page_id")
+      .in("page_id", ids.slice(offset, offset + 200))
+      .not("pending_since", "is", null);
+    if (error) throw new Error(`pending collaboration read failed: ${error.message}`);
+    const pending = [...new Set((data ?? []).map((row) => row.page_id as string))];
+    await Promise.all(pending.map((pageId) => runMaterialization(service, pageId)));
+    count += pending.length;
+  }
+  return count;
+}
+
+/** `materializePendingPages` for every page of these projects. */
+export async function materializePendingProjectPages(
+  service: Service,
+  projectIds: readonly string[]
+): Promise<number> {
+  const ids = [...new Set(projectIds)];
+  if (ids.length === 0) return 0;
+  const pending = new Set<string>();
+  for (let offset = 0; ; offset += 1_000) {
+    const { data, error } = await service
+      .from("page_collaboration_heads")
+      .select("page_id")
+      .in("project_id", ids)
+      .not("pending_since", "is", null)
+      .order("page_id")
+      .order("field")
+      .range(offset, offset + 999);
+    if (error) throw new Error(`pending collaboration read failed: ${error.message}`);
+    for (const row of data ?? []) pending.add(row.page_id as string);
+    if (!data || data.length < 1_000) break;
+  }
+  for (let offset = 0; offset < pending.size; offset += 10) {
+    await Promise.all([...pending].slice(offset, offset + 10)
+      .map((pageId) => runMaterialization(service, pageId)));
+  }
+  return pending.size;
+}
+
+/**
+ * The cron safety net: materializes pages whose pending steps are older than
+ * `MATERIALIZE_STALE_MS`, for instance when the instance that accepted them
+ * stopped before its scheduled materialization ran.
+ */
+export async function materializeStalePages({
+  limit = 50,
+  olderThanMs = MATERIALIZE_STALE_MS,
+}: { limit?: number; olderThanMs?: number } = {}): Promise<{
+  pages: number;
+  materialized: number;
+  failed: number;
+}> {
+  const service = getServiceClient();
+  const pageIds = await listPendingCollaborations(service, olderThanMs, limit);
+  let materialized = 0;
+  let failed = 0;
+  for (let offset = 0; offset < pageIds.length; offset += 5) {
+    await Promise.all(pageIds.slice(offset, offset + 5).map(async (pageId) => {
+      try {
+        if (await materializePage(service, pageId) === "materialized") materialized += 1;
+      } catch (error) {
+        failed += 1;
+        console.error("[pages] stale materialization failed:", (error as Error).message);
+      }
+    }));
+  }
+  return { pages: pageIds.length, materialized, failed };
+}
+
+/* ─── Sessions ────────────────────────────────────────────────────────────── */
+
+/** A snapshot of both streams at their heads, from one row read. */
+function collaborationSnapshot(page: CollabPage): PageCollaborationSnapshot {
+  return {
+    protocol: PAGE_COLLABORATION_PROTOCOL,
+    pageId: page.id,
+    projectId: page.project_id,
+    body: { revision: page.body_revision, doc: page.content as JSONContent },
+    title: { revision: page.title_revision, text: page.title },
+    version: page.version,
+    updatedAt: page.updated_at,
+  };
+}
+
+type CollabFailure = { ok: false; status: number; errorKey: PageErrorKey };
+
+/**
+ * A fresh access decision for a collaboration request and the token that
+ * stands for it (see lib/server/page-collaboration-token.ts).
+ */
+async function decideCollaboration(
+  service: Service,
+  ids: { userId: string; pageId: string; projectId: string }
+): Promise<{ grant: CollabGrant; token: string } | null> {
+  const grant = await decideCollaborationGrant(service, ids);
+  return grant ? { grant, token: mintCollaborationToken(grant) } : null;
+}
+
+/**
+ * The document a collaboration session starts from, and its first token.
+ *
+ * Any member who can read the page can open it. If the stored body is not yet
+ * canonical — an empty page from `createPage`, blocks without IDs, content the
+ * input gate would normalize — the canonical form is committed FIRST, once,
+ * under the authority's CAS, so every client receives the same revision-zero
+ * document. That initialization is not an authored write: it neither signs the
+ * page nor counts as a body version, which is also why a reader may trigger it.
+ */
+export async function readPageCollaborationSnapshot(
+  projectId: string,
+  pageId: string,
+  actorId: string
+): Promise<{ ok: true; snapshot: PageCollaborationSnapshot; token: string } | CollabFailure> {
+  const service = getServiceClient();
+  const decision = await decideCollaboration(service, { userId: actorId, pageId, projectId });
+  if (!decision) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  const ops = pageCollaborationServer();
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const live = await loadCollabPage(service, pageId, projectId, actorId);
+    if (!live) return { ok: false, status: 404, errorKey: "pageNotFound" };
+    const { page } = live;
+    const ready = { ok: true as const, snapshot: collaborationSnapshot(page), token: decision.token };
+    const checked = readPageContent(page.content);
+    const basis = checked && typeof checked === "object" ? checked : page.content;
+    const canonical = ops.canonicalBodyJSON(basis);
+    if (ops.sameCollabValue("body", canonical, page.content)) return ready;
+    let commit: StreamCommit;
+    try {
+      commit = await commitPageStreams({
+        service,
+        live,
+        actorId,
+        kind: "human",
+        edits: [{ field: "body", replace: canonical }],
+        attribution: "none",
+      });
+    } catch (error) {
+      console.error("[pages] collaboration initialization failed:", (error as Error).message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    // A stored body the gate refuses cannot be initialized; serve it as it is.
+    if (commit.status === "refused") return ready;
+    if (commit.status === "missing") return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
+  return { ok: false, status: 409, errorKey: "pageStale" };
+}
+
+/**
+ * Accepted steps of one stream after `since`, or a reset when the journal
+ * cannot bridge the gap (compacted, or a writer replaced the page without
+ * steps). The head is read first: steps committed after it are left for the
+ * next read rather than mixed with an older head. Every catch-up decides
+ * access afresh and renews the session's token.
+ */
+export async function readPageCollaborationSteps({
+  projectId,
+  pageId,
+  actorId,
+  field,
+  since,
+}: {
+  projectId: string;
+  pageId: string;
+  actorId: string;
+  field: CollabField;
+  since: number;
+}): Promise<{ ok: true; catchUp: CollabCatchUp; token: string } | CollabFailure> {
+  const service = getServiceClient();
+  // The head and the journal are fetched while access is decided, sealed;
+  // nothing is decrypted before access is confirmed, and a denial aborts both.
+  // Fetched side by side, a journal read can miss a batch the head already
+  // counts; that case is read again below rather than reset.
+  const abort = new AbortController();
+  const headRead = withSupabaseAbortSignal(abort.signal, () => Promise.resolve(service
+    .from("page_collaboration_heads")
+    .select("revision, pages!inner(deleted_at)")
+    .eq("page_id", pageId)
+    .eq("project_id", projectId)
+    .eq("field", field)
+    .is("pages.deleted_at", null)
+    .maybeSingle()
+    .then((result) => result)));
+  const journalRead = withSupabaseAbortSignal(abort.signal,
+    () => fetchCollaborationJournal(service, { pageId, projectId, field, since }));
+  void headRead.catch(() => {});
+  void journalRead.catch(() => {});
+  let decision: Awaited<ReturnType<typeof decideCollaboration>>;
+  try {
+    decision = await decideCollaboration(service, { userId: actorId, pageId, projectId });
+  } catch (error) {
+    abort.abort();
+    throw error;
+  }
+  if (!decision) {
+    abort.abort();
+    return { ok: false, status: 404, errorKey: "projectNotFound" };
+  }
+  const { data, error } = await headRead;
+  if (error) return { ok: false, status: 500, errorKey: "databaseError" };
+  if (!data) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  const head = Number((data as Record<string, unknown>).revision ?? 0);
+
+  const reset = async (reason: "gap" | "ahead") => {
+    const fresh = await readPageCollaborationSnapshot(projectId, pageId, actorId);
+    if (!fresh.ok) return fresh;
+    return {
+      ok: true as const,
+      catchUp: { kind: "reset" as const, reason, snapshot: fresh.snapshot },
+      token: fresh.token,
+    };
+  };
+  if (since > head) return reset("ahead");
+  if (since === head) {
+    return {
+      ok: true,
+      catchUp: { kind: "steps", field, from: since, to: head, head, steps: [], clientIds: [] },
+      token: decision.token,
+    };
+  }
+  // The journal was read alongside the head: a batch accepted between the two
+  // reads shows in the head but not in the rows. Read the journal again,
+  // after the head, before calling it a gap.
+  let rows = await decodeCollaborationJournal(await journalRead, projectId, actorId);
+  let assembled = assembleCollabSteps(field, since, head, rows);
+  if ("gap" in assembled) {
+    rows = await readCollaborationJournal(service, { pageId, projectId, field, since, actorId });
+    assembled = assembleCollabSteps(field, since, head, rows);
+  }
+  if ("gap" in assembled) return reset("gap");
+  return { ok: true, catchUp: { kind: "steps", ...assembled }, token: decision.token };
+}
+
+/**
+ * A session's batch of steps, APPENDED: journaled and acknowledged without
+ * rewriting the page row, which a later materialization does.
+ *
+ * Access comes from the session's collaboration token when it is valid, so a
+ * batch makes no access query; the commit compares the membership generation
+ * the token was issued at, so a membership change is refused at once and
+ * decided afresh. A missing, expired or ageing token is replaced by a fresh
+ * decision, returned as `token`. The account itself is authenticated live by
+ * the route on every request.
+ *
+ * The document the steps apply to comes from this instance's cache when it
+ * holds the base revision (the typist's previous batch usually landed here),
+ * and from the row and its pending steps otherwise.
+ */
+export async function submitPageCollaboration({
+  projectId,
+  pageId,
+  actorId,
+  submission,
+  token = null,
+}: {
+  projectId: string;
+  pageId: string;
+  actorId: string;
+  submission: CollabSubmission;
+  token?: string | null;
+}): Promise<{ ok: true; result: CollabSubmitResult; token: string | null } | CollabFailure> {
+  const service = getServiceClient();
+  const ids = { userId: actorId, pageId, projectId };
+  const { field } = submission;
+  let grant = verifyCollaborationToken(token, ids);
+  let issued: string | null = null;
+  let deciding = !grant || grantNeedsRenewal(grant) ? decideCollaboration(service, ids) : null;
+  void deciding?.catch(() => {});
+  const settle = async (): Promise<CollabFailure | null> => {
+    if (!deciding) return null;
+    const decision = await deciding;
+    deciding = null;
+    if (!decision) return { ok: false, status: 404, errorKey: "projectNotFound" };
+    grant = decision.grant;
+    issued = decision.token;
+    return decision.grant.canWrite ? null : { ok: false, status: 403, errorKey: "readOnlyProject" };
+  };
+  try {
+    if (!grant) {
+      const refusal = await settle();
+      if (refusal) return refusal;
+    }
+    if (!grant!.canWrite) return { ok: false, status: 403, errorKey: "readOnlyProject" };
+
+    let sealAnyway = false;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      let current = cachedStreamValue(pageId, projectId, field, submission.base);
+      if (!current) {
+        const live = await loadCollabPage(service, pageId, projectId, actorId);
+        if (!live) return { ok: false, status: 404, errorKey: "pageNotFound" };
+        // A retry of a batch that was accepted (its response was lost) is
+        // acknowledged again — before comparing revisions, which have moved since.
+        const head = field === "body" ? live.page.body_revision : live.page.title_revision;
+        const value = field === "body" ? live.page.content : live.page.title;
+        const protect = live.protect || journalMustBeSealed();
+        rememberStreamValue(pageId, projectId, field, head, value, protect);
+        if (submission.base !== head) {
+          const receipt = await findCollaborationReceipt(service, {
+            pageId, projectId, batchId: submission.batchId,
+          });
+          if (receipt) {
+            const same = receipt.field === field && receipt.base === submission.base &&
+              receipt.stepCount === submission.steps.length;
+            return {
+              ok: true,
+              token: issued,
+              result: same
+                ? { status: "accepted", revision: submission.base + submission.steps.length }
+                : { status: "refused", reason: "batch-reused" },
+            };
+          }
+          return { ok: true, token: issued, result: { status: "behind", head } };
+        }
+        current = { value, protect };
+      }
+
+      if (submission.presentation) {
+        const applied = pageCollaborationServer().applyCollabSteps("body", current.value, submission.steps);
+        if (applied.ok) {
+          // Rebuilding mention pills changes nodes, never what the page SAYS.
+          const [before, after] = await Promise.all([
+            pageBodyToMarkdownServer(current.value as JSONContent | null),
+            pageBodyToMarkdownServer(applied.doc),
+          ]);
+          if (before !== after) {
+            console.warn("[pages] collaboration batch refused: presentation-changed");
+            return { ok: true, token: issued, result: { status: "refused", reason: "presentation-changed" } };
+          }
+        }
+      }
+
+      const validated = validateStreamEdit(field, current.value, submission.steps);
+      if (!validated.ok) {
+        // Content-free: why a session's steps were refused, never the steps.
+        console.warn("[pages] collaboration batch refused:", validated.reason, field,
+          submission.presentation ? "presentation" : "edit");
+        return { ok: true, token: issued, result: { status: "refused", reason: validated.reason } };
+      }
+      const sealed = await sealCollabBatches(pageId, projectId, [{
+        field,
+        base: submission.base,
+        batchId: submission.batchId,
+        clientId: submission.clientId,
+        steps: submission.steps,
+        authorId: actorId,
+        authorKind: "human",
+        authorApiKeyId: null,
+        authored: !submission.presentation,
+      }], current.protect || sealAnyway);
+      // A renewal decided alongside must agree before anything is written.
+      const refusal = await settle();
+      if (refusal) return refusal;
+
+      let outcome: Awaited<ReturnType<typeof appendCollaboration>>;
+      try {
+        outcome = await appendCollaboration(service, {
+          pageId, projectId, generation: grant!.generation, sealed,
+        });
+      } catch (error) {
+        // A page sealed since this instance cached it, or page protection
+        // activated meanwhile: read it again and seal.
+        if (error instanceof CollabCommitError && error.code === "23514" &&
+            (error.message === "page_collaboration_plaintext_refused" ||
+              error.message === "page_collaboration_requires_encryption")) {
+          forgetStreamValues(pageId);
+          sealAnyway = true;
+          continue;
+        }
+        throw error;
+      }
+      switch (outcome.status) {
+        case "accepted": {
+          const revision = field === "body" ? outcome.bodyRevision : outcome.titleRevision;
+          rememberStreamValue(pageId, projectId, field, revision, validated.value, current.protect);
+          scheduleMaterialization(service, pageId, {
+            urgent: outcome.pending >= MATERIALIZE_MAX_PENDING_STEPS ||
+              outcome.pendingMs >= MATERIALIZE_MAX_PENDING_MS,
+          });
+          return { ok: true, token: issued, result: { status: "accepted", revision } };
+        }
+        case "duplicate":
+          return {
+            ok: true,
+            token: issued,
+            result: { status: "accepted", revision: submission.base + submission.steps.length },
+          };
+        case "behind":
+          return { ok: true, token: issued, result: { status: "behind", head: outcome.head } };
+        case "batch_reused":
+          return { ok: true, token: issued, result: { status: "refused", reason: "batch-reused" } };
+        case "missing":
+          return { ok: false, status: 404, errorKey: "pageNotFound" };
+        case "revoked": {
+          // Membership changed since the token (anyone's, not necessarily
+          // this account's): decide again, then send again.
+          deciding = decideCollaboration(service, ids);
+          const again = await settle();
+          if (again) return again;
+          continue;
+        }
+        case "retry":
+          continue;
+        case "backlog":
+          // Too much typing awaits materialization: write it, then append.
+          await runMaterialization(service, pageId);
+          continue;
+      }
+    }
+  } catch (error) {
+    console.error("[pages] collaboration commit failed:", (error as Error).message);
+    return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  const head = await service.from("page_collaboration_heads").select("revision")
+    .eq("page_id", pageId).eq("project_id", projectId).eq("field", field).maybeSingle();
+  if (!head.data) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  return {
+    ok: true,
+    token: issued,
+    result: { status: "behind", head: Number(head.data.revision) },
+  };
+}
+
+/**
+ * The steps accepted on the body between two revisions, or `null` when the
+ * journal no longer bridges them (compacted, or a writer that recorded none).
+ */
+async function bodyStepsBetween(
+  service: Service,
+  page: CollabPage,
+  from: number,
+  to: number,
+  actorId: string
+): Promise<unknown[] | null> {
+  const steps: unknown[] = [];
+  let at = from;
+  while (at < to) {
+    const rows = await readCollaborationJournal(service, {
+      pageId: page.id, projectId: page.project_id, field: "body", since: at, actorId,
+    });
+    const chunk = assembleCollabSteps("body", at, to, rows);
+    if ("gap" in chunk || chunk.to <= at) return null;
+    steps.push(...chunk.steps);
+    at = chunk.to;
+  }
+  return steps;
+}
+
+/**
+ * A targeted body edit by Numo or an MCP agent, made the way a second person
+ * typing would make it (MIN-688).
+ *
+ * `derive` turns the body as read into the body the agent wants. The
+ * difference becomes a few small steps (`diffCollabSteps`: only the words and
+ * blocks that changed), computed against the revision that was read. When
+ * people keep typing meanwhile, those steps are REBASED onto the steps
+ * accepted since — exactly what a browser does with a late batch — instead
+ * of failing on a version check or overwriting anything. A collaborator's
+ * text, even inside the passage, is kept like a parallel edit's. Only when
+ * the journal cannot bridge the gap is the edit derived again from the
+ * current text, where it may then be refused (its passage is gone).
+ *
+ * A rebase can drop steps whose text a collaborator deleted meanwhile. The
+ * result says so: `partial` when some of the edit was applied, and
+ * `pageStale` when none of it was, so the agent re-reads instead of
+ * reporting an edit that did not happen.
+ */
+export async function editPageBodyLive<R>({
+  pageId,
+  projectId,
+  actorId,
+  kind = "agent",
+  mcpKeyId = null,
+  derive,
+}: {
+  pageId: string;
+  /** The expected project: a page of another project answers 404. */
+  projectId?: string;
+  actorId: string;
+  kind?: PageWriteKind;
+  mcpKeyId?: string | null;
+  derive: (current: JSONContent | null) => Promise<{ doc: JSONContent } | { refusal: R }>;
+}): Promise<(PageResult<Page> & { partial?: boolean }) | { ok: false; refusal: R }> {
+  const service = getServiceClient();
+  const located = await loadPage(service, pageId, actorId);
+  if (!located || (projectId && located.project_id !== projectId)) {
+    return { ok: false, status: 404, errorKey: "pageNotFound" };
+  }
+  const refusal = await pageWriteRefusal(actorId, located.project_id, "pageNotFound");
+  if (refusal) return refusal;
+  const ops = pageCollaborationServer();
+
+  let live = await loadCollabPage(service, pageId, located.project_id, actorId);
+  if (!live) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  let basis = live.page.content as JSONContent | null;
+  let revision = live.page.body_revision;
+  const stepsFrom = async (current: JSONContent | null) => {
+    const derived = await derive(current);
+    if ("refusal" in derived) return derived;
+    return { steps: ops.diffCollabSteps("body", current, ops.canonicalBodyJSON(derived.doc)) };
+  };
+  let planned = await stepsFrom(basis);
+  if ("refusal" in planned) return { ok: false, refusal: planned.refusal };
+  let steps = planned.steps;
+  let dropped = 0;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    if (steps.length === 0) return { ok: true, page: located };
+    if (attempt > 0) {
+      const current = await loadCollabPage(service, pageId, located.project_id, actorId);
+      if (!current) return { ok: false, status: 404, errorKey: "pageNotFound" };
+      if (current.page.body_revision !== revision) {
+        const over = await bodyStepsBetween(service, current.page, revision,
+          current.page.body_revision, actorId);
+        if (over) {
+          const rebased = ops.rebaseCollabSteps("body", basis, steps, over);
+          dropped += steps.length - rebased.length;
+          steps = rebased;
+        } else {
+          // Re-derived from the current text: what was dropped before is
+          // planned again or already there, so only this derivation counts.
+          planned = await stepsFrom(current.page.content as JSONContent | null);
+          if ("refusal" in planned) return { ok: false, refusal: planned.refusal };
+          steps = planned.steps;
+          dropped = 0;
+        }
+        basis = current.page.content as JSONContent | null;
+        revision = current.page.body_revision;
+      }
+      live = current;
+      if (steps.length === 0) {
+        // Everything the agent meant to change was changed by someone else.
+        return dropped > 0
+          ? { ok: false, status: 409, errorKey: "pageStale" }
+          : { ok: true, page: located };
+      }
+    }
+    let commit: StreamCommit;
+    try {
+      commit = await commitPageStreams({
+        service,
+        live,
+        actorId,
+        kind,
+        mcpKeyId,
+        edits: [{
+          field: "body",
+          steps,
+          base: revision,
+          batchId: crypto.randomUUID(),
+          clientId: serverCollabClientId(),
+        }],
+      });
+    } catch (error) {
+      console.error("[pages] live agent edit failed:", (error as Error).message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    switch (commit.status) {
+      case "accepted": {
+        afterStreamCommit({ service, commit, actorId, kind, mcpKeyId });
+        scheduleRoutineEvents();
+        const fresh = await loadPage(service, pageId, actorId);
+        return { ok: true, page: fresh ?? commit.page, ...(dropped > 0 ? { partial: true } : {}) };
+      }
+      case "refused":
+        return commit.reason === "too-large"
+          ? { ok: false, status: 413, errorKey: "pageTooLarge" }
+          : { ok: false, status: 400, errorKey: "pageContentRefused" };
+      case "missing":
+        return { ok: false, status: 404, errorKey: "pageNotFound" };
+      default:
+        // `behind` or `retry`: catch up and rebase on the next attempt.
+        continue;
+    }
+  }
+  return { ok: false, status: 409, errorKey: "pageStale" };
+}
+
 /* ─── Modification ─────────────────────────────────────────────────────────── */
+
+/**
+ * The stream half of `updatePage`: the body and/or the title of `patch` as
+ * replacements, plus the metadata of the same request, committed together.
+ * A version-guarded write (an older tab's PATCH) still fails when the body
+ * moved since its base; an unguarded one (Numo, the MCP, a restore) is
+ * recomputed against the current page on each attempt, which is exactly an
+ * explicit replacement.
+ */
+async function updatePageThroughStreams({
+  service,
+  page: first,
+  actorId,
+  kind,
+  mcpKeyId,
+  alwaysArchive,
+  expected,
+  patch,
+}: {
+  service: Service;
+  page: Page;
+  actorId: string;
+  kind: PageWriteKind;
+  mcpKeyId?: string | null;
+  alwaysArchive: boolean;
+  expected: number | null;
+  patch: Record<string, unknown>;
+}): Promise<PageResult<Page> | "unchanged"> {
+  const ops = pageCollaborationServer();
+  const metadata = Object.fromEntries(
+    STREAM_METADATA.filter((key) => key in patch).map((key) => [key, patch[key]]));
+  const edits: StreamEdit[] = [];
+  if (patch.content !== undefined) {
+    edits.push({ field: "body", replace: ops.canonicalBodyJSON(patch.content) });
+  }
+  if (patch.title !== undefined) edits.push({ field: "title", replace: patch.title });
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const live = await loadCollabPage(service, first.id, first.project_id, actorId);
+    if (!live) return { ok: false, status: 404, errorKey: "pageNotFound" };
+    const { page } = live;
+    if (expected !== null && expected !== page.version) {
+      return { ok: false, status: 409, errorKey: "pageStale", conflict: page };
+    }
+    let commit: StreamCommit;
+    try {
+      commit = await commitPageStreams({ service, live, actorId, kind, mcpKeyId, edits, metadata });
+    } catch (error) {
+      // The same refusal the plain update reports, raised by the database
+      // guard on a move inside the commit.
+      if (error instanceof CollabCommitError && error.code === "23514" &&
+          error.message === "Database entries with values cannot change parent") {
+        return { ok: false, status: 409, errorKey: "pageDatabaseMove" };
+      }
+      console.error("[pages] stream commit failed:", (error as Error).message);
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+    switch (commit.status) {
+      case "accepted": {
+        afterStreamCommit({ service, commit, actorId, kind, mcpKeyId, alwaysArchive });
+        scheduleRoutineEvents();
+        const fresh = await loadPage(service, page.id, actorId);
+        return { ok: true, page: fresh ?? commit.page };
+      }
+      case "unchanged":
+        return "unchanged";
+      case "refused":
+        return commit.reason === "too-large"
+          ? { ok: false, status: 413, errorKey: "pageTooLarge" }
+          : { ok: false, status: 400, errorKey: "pageContentRefused" };
+      case "missing":
+        return { ok: false, status: 404, errorKey: "pageNotFound" };
+      case "duplicate":
+      case "behind":
+      case "retry":
+        continue;
+    }
+  }
+  const fresh = await loadPage(service, first.id, actorId);
+  return fresh
+    ? { ok: false, status: 409, errorKey: "pageStale", conflict: fresh }
+    : { ok: false, status: 404, errorKey: "pageNotFound" };
+}
 
 /**
  * Edits a page. Absent fields do not move.
@@ -853,6 +2399,7 @@ export async function updatePage({
   mcpKeyId,
   alwaysArchive = false,
   input,
+  attempt = 0,
 }: {
   pageId: string;
   actorId: string;
@@ -864,6 +2411,8 @@ export async function updatePage({
  (see `restorePageVersion`), the only action that requires it. */
   alwaysArchive?: boolean;
   input: Record<string, unknown>;
+  /** Internal: retries of a metadata write whose shared envelope moved. */
+  attempt?: number;
 }): Promise<PageResult<Page>> {
   const service = getServiceClient();
   const page = await loadPage(service, pageId, actorId);
@@ -895,7 +2444,7 @@ export async function updatePage({
 
   // The VERSION on which the writing is based (MIN-271). It doesn't make sense
   // only with a body: renaming a page is not an argument with anyone.
-  const expected =
+  let expected =
     content !== undefined && typeof input.version === "number"
       ? input.version
       : null;
@@ -957,6 +2506,23 @@ export async function updatePage({
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
+  // The body and the title are live streams (MIN-688): they change through the
+  // operation authority, which expresses this whole value as the smallest
+  // replacement and broadcasts it to every open editor. A request whose body
+  // and title turn out identical keeps only its other fields for the plain
+  // write below.
+  if (patch.content !== undefined || patch.title !== undefined) {
+    const streamed = await updatePageThroughStreams({
+      service, page, actorId, kind, mcpKeyId, alwaysArchive, expected, patch,
+    });
+    if (streamed !== "unchanged") return streamed;
+    delete patch.content;
+    delete patch.title;
+    delete patch.version;
+    expected = null;
+    if (Object.keys(patch).length === 0) return { ok: true, page };
+  }
+
   // The author is focused on what concerns the DOCUMENT - body, title, icon:
   // renaming a page means modifying it, and the header says "modified by",
   // not “body written by”.
@@ -973,7 +2539,11 @@ export async function updatePage({
     patch.content !== undefined || patch.title !== undefined || "icon" in patch;
   if (writesDocument) Object.assign(patch, writtenBy(actorId, kind, mcpKeyId));
 
-  const encoded = await encodePage({ ...page, ...patch }, { service });
+  // The envelope is re-sealed from the STORED page, never the live one: the
+  // row's revisions say which steps its projection reflects (MIN-688).
+  const stored = await loadStoredPage(service, pageId, actorId);
+  if (!stored) return { ok: false, status: 404, errorKey: "pageNotFound" };
+  const encoded = await encodePage({ ...stored, ...patch }, { service });
   const protectedWrite = Number(encoded.encryption_version ?? 0) > 0;
   if (protectedWrite) Object.assign(patch, pageContentValues(encoded));
 
@@ -985,7 +2555,7 @@ export async function updatePage({
   const write = service.from("pages").update(patch).eq("id", pageId);
   if (expected !== null) write.eq("version", expected);
   if (protectedWrite) write.eq("content_revision",
-    (page as Page & { content_revision: number }).content_revision);
+    (stored as Page & { content_revision: number }).content_revision);
 
   const { data, error } = await write
     .is("deleted_at", null)
@@ -1000,6 +2570,12 @@ export async function updatePage({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   if (!data) {
+    // A metadata write (icon, pin, move) on a protected page re-seals the
+    // whole envelope, so live typing in the body moves its CAS token without
+    // any conflict of substance: read again and retry a few times.
+    if (protectedWrite && expected === null && attempt < 3) {
+      return updatePage({ pageId, actorId, kind, mcpKeyId, alwaysArchive, input, attempt: attempt + 1 });
+    }
     // No line: either the page has just gone to the trash, or the
     // version moved between reading and writing. We reread to decide —
     // the two answers do not match in the same way.
@@ -1039,7 +2615,8 @@ export async function updatePage({
     });
   }
   scheduleRoutineEvents();
-  return { ok: true, page: await decodePage(data, actorId) };
+  // The answer is the live page: typing pending in the journal included.
+  return { ok: true, page: await loadPage(service, pageId, actorId) ?? await decodePage(data, actorId) };
 }
 
 /* ─── The mirror: the subpage block in the body of the parent ────────────────── */
@@ -1077,47 +2654,48 @@ async function syncParentBody(
   }
   if (!parent) return;
 
-  const { doc, changed } = edit((parent.content as PageDocJSON | null) ?? null);
-  if (!changed) return;
-
-  // `version` is incremented as for any body entry:
-  // it is this counter which triggers the merge for those who edit at the same time.
-  // The condition on the read version does the rest — if someone wrote between
-  // reading and here, we don't overwrite it; his own recording next
-  // will go through the merge again, and the orphan block will surrender in the meantime.
-  const encryptedParent = await encodePage({ ...parent, content: doc,
-    version: parent.version + 1 }, { service });
-  const protectedParent = Number(encryptedParent.encryption_version ?? 0) > 0;
-  const { error } = await service
-    .from("pages")
-    .update({
-      ...(protectedParent ? pageContentValues(encryptedParent) : { content: doc }),
-      version: parent.version + 1,
-      // The author of the mirror is that of the GESTE (basket, restoration), and the
-      // gesture is human: the agent has no path to the trash.
-      ...writtenBy(actorId, "human"),
-    })
-    .eq("id", parentId)
-    .eq("version", parent.version)
-    .eq("content_revision", (parent as Page & { content_revision: number }).content_revision ?? 0)
-    .is("deleted_at", null);
-  if (error) console.error("[pages] subpage sync failed:", error.message);
-  // The body of the PARENT has just changed (one subpage block less or less
-  // more): it is a writing of `content` like any other, and its text
-  // indexed must follow — even when no one has the parent open.
-  else {
-    queueSearchText(service, [parentId]);
-    queuePageBodyLinks(service, [parentId]);
-    // And its previous state is archived like any other: the body of
-    // parent loses a block without anyone having opened it, this is precisely a
-    // writing that we may want to reassemble.
-    stampPageWrite({ service, previous: parent, actorId, kind: "human" });
-    // No ANNOUNCEMENT here (MIN-278), and this is deliberate: this mirror is never
-    // a gesture in itself — it always accompanies a basket or a
-    // restoration, which has already laid its line. Putting down a second would read
-    // “X modified Folder” for each deleted subpage. And he can't
-    // make a mention appear: it only adds or removes a block
-    // sous-page.
+  // Through the operation authority (MIN-688), like every body write: the
+  // block disappears (or comes back) LIVE in an editor that has the parent
+  // open, and a collaborator's pending typing is rebased around it instead of
+  // conflicting. The edit is recomputed on the fresh body at each attempt, so
+  // a concurrent write is never overwritten.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    let current: Awaited<ReturnType<typeof loadCollabPage>>;
+    try {
+      current = await loadCollabPage(service, parentId, parent.project_id, actorId);
+    } catch {
+      return;
+    }
+    if (!current) return;
+    const { doc, changed } = edit((current.page.content as PageDocJSON | null) ?? null);
+    if (!changed) return;
+    let commit: StreamCommit;
+    try {
+      commit = await commitPageStreams({
+        service,
+        live: current,
+        // The author of the mirror is that of the GESTURE (trash, restoration),
+        // and the gesture is human: the agent has no path to the trash.
+        actorId,
+        kind: "human",
+        edits: [{ field: "body", replace: pageCollaborationServer().canonicalBodyJSON(doc) }],
+      });
+    } catch (error) {
+      console.error("[pages] subpage sync failed:", (error as Error).message);
+      return;
+    }
+    if (commit.status === "accepted") {
+      // The body of the PARENT has just changed (one subpage block less or
+      // more): its indexed text and links follow, and its previous state is
+      // archived like any other — even when no one has the parent open.
+      // No ANNOUNCEMENT, and this is deliberate (MIN-278): this mirror is never
+      // a gesture in itself — it always accompanies a trash or a restoration,
+      // which has already recorded its line. A second one would read
+      // “X modified Folder” for each deleted subpage.
+      afterStreamCommit({ service, commit, actorId, kind: "human", announce: false });
+      return;
+    }
+    if (commit.status !== "retry" && commit.status !== "behind" && commit.status !== "duplicate") return;
   }
 }
 

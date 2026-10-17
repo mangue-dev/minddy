@@ -9,7 +9,7 @@ import {
   isDatabasePropertyValue,
 } from "@/lib/page-databases";
 import { getServiceClient } from "@/lib/supabase-service";
-import { getPage, pageWriteRefusal, type PageResult } from "@/lib/server/pages";
+import { getPage, getStoredPage, pageWriteRefusal, type PageResult } from "@/lib/server/pages";
 import { recordPageEvent } from "@/lib/server/page-activity";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { insertNotifications } from "@/lib/server/notifications";
@@ -116,7 +116,9 @@ export async function updatePageDatabase(
   kind: "human" | "agent" = "human",
   mcpKeyId: string | null = null,
 ): Promise<PageResult<Page>> {
-  const loaded = await getPage(pageId, actorId);
+  // Stored, not live: this page's envelope is re-sealed below, and the row's
+  // revisions say which collaboration steps it reflects (MIN-688).
+  const loaded = await getStoredPage(pageId, actorId);
   if (!loaded.ok) return loaded;
   if (loaded.page.project_id !== projectId)
     return { ok: false, status: 404, errorKey: "pageNotFound" };
@@ -239,7 +241,9 @@ export async function convertPageDatabase(
   kind: "human" | "agent" = "human",
   mcpKeyId: string | null = null,
 ): Promise<PageResult<Page | DatabaseConversionPreview>> {
-  const loaded = await getPage(pageId, actorId);
+  // Stored, not live: this page's envelope is re-sealed below, and the row's
+  // revisions say which collaboration steps it reflects (MIN-688).
+  const loaded = await getStoredPage(pageId, actorId);
   if (!loaded.ok) return loaded;
   if (loaded.page.project_id !== projectId)
     return { ok: false, status: 404, errorKey: "pageNotFound" };

@@ -121,7 +121,20 @@ export const MENTION_HYDRATION_META = "mentionHydration";
  * `addToHistory: false`: hydration is not a modification of
  * the user, a ⌘Z should not undo it.
  */
-export function hydrateMentions(editor: Editor, scan: MentionScan): void {
+export function hydrateMentions(
+  editor: Editor,
+  scan: MentionScan,
+  { exact = false }: {
+    /**
+     * Only rebuild pills whose label reads exactly like the text they replace.
+     * A live page (MIN-688) sends this rebuild to every collaborator as a
+     * presentation-only change, which the server accepts only when the page's
+     * Markdown is unchanged: "@numo" becoming a pill labeled "Numo" would
+     * change what the page says, so it stays text.
+     */
+    exact?: boolean;
+  } = {}
+): void {
   const { state } = editor;
   const mentionType = state.schema.nodes.mention;
   if (!mentionType) return;
@@ -135,11 +148,14 @@ export function hydrateMentions(editor: Editor, scan: MentionScan): void {
         offset += segment.text.length;
         continue;
       }
-      found.push({
-        from: pos + offset,
-        to: pos + offset + segment.raw.length,
-        attrs: mentionAttrsFromScanned(segment.mention),
-      });
+      const attrs = mentionAttrsFromScanned(segment.mention);
+      if (!exact || `@${attrs.mentionLabel}` === segment.raw) {
+        found.push({
+          from: pos + offset,
+          to: pos + offset + segment.raw.length,
+          attrs,
+        });
+      }
       offset += segment.raw.length;
     }
   });
