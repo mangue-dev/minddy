@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -97,13 +97,18 @@
       "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "lib/server/issue-relation-inference.ts",
+      "lib/server/issue-relation-decision.ts",
+      "lib/server/issue-embedding-store.ts",
+      "components/settings/account-preferences-section.tsx",
+      "content/documentation/reviews/min-717-smart-fill-relations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; fr translation of added passages; no browser walkthrough)",
+    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -149,7 +154,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé avec titre, description et propriétés manuelles.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -165,7 +170,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,7 +186,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -197,7 +202,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +218,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +234,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -245,7 +250,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -261,7 +266,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -277,7 +282,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -294,7 +299,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Retirer.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -329,7 +334,7 @@ Le bouton de suppression d’un brouillon enregistré ouvre une confirmation. An
 
 Vous devez être propriétaire ou Membre du projet destinataire ; les lecteurs peuvent ouvrir les tickets, mais ni les créer ni les modifier. Ouvrez le projet et sa commande de création de ticket. Saisissez un titre qui nomme le travail, puis décrivez contexte, résultat attendu et contraintes. Depuis une vue personnelle ou transversale, choisissez explicitement le projet.
 
-Pour une création manuelle, désactivez Smart-fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories et d’objectif deviennent alors disponibles. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant de Smart Assign et des routines.
+Pour une création manuelle, désactivez Smart-fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories, d’objectif et de relations deviennent alors disponibles. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant de Smart Assign et des routines. Tant que Smart-fill est activé, il [relie aussi le ticket aux tickets liés](#smart-fill-relations) une fois celui-ci enregistré : le sélecteur de relations est donc masqué. Les relations déjà choisies restent visibles au-dessus du titre et sont créées avec le ticket.
 
 Définissez les propriétés utiles avant de confirmer : état, priorité, effort, responsable, objectif, catégories, échéance et récurrence. Le responsable est le propriétaire du projet ou un Membre, jamais un lecteur ; l’objectif regroupe des tickets autour d’un résultat du projet. Laissez une propriété optionnelle vide plutôt que de la deviner. La priorité va d’aucune à urgente, avec basse, moyenne et haute ; l’effort utilise XS, S, M, L et XL.
 
@@ -343,6 +348,17 @@ Confirmez la création et ouvrez le ticket. Vérifiez son identifiant et son pro
 Après une modification, vérifiez la valeur affichée. Un changement de responsable, d’état ou de catégorie peut retirer immédiatement le ticket de la vue filtrée. Recherchez son identifiant ou ouvrez le projet sans ces filtres avant de créer un remplacement.
 
 Si la création ou la sauvegarde échoue, conservez votre texte, lisez l’erreur et vérifiez l’adhésion et la destination. Après un échec réseau, vérifiez d’abord si le ticket existe déjà. Liez une page comme ressource vivante lorsque son contenu actuel est nécessaire, et utilisez les commentaires pour la discussion de la tâche.
+
+### Choisir ce que fait Smart-fill {#smart-fill-preferences}
+
+Les préférences de Smart-fill appartiennent à votre compte. Ouvrez **Paramètres du compte** → **Préférences** et utilisez les interrupteurs du groupe **Tickets** :
+
+- **Activer Smart Fill** active ou désactive Smart-fill pour votre compte. Il complète la priorité, l’effort, les catégories et l’objectif manquants ; l’état, le responsable et l’échéance restent les vôtres. Les trois interrupteurs suivants en dépendent.
+- **Remplir les tickets créés** et **Remplir les tickets en triage** choisissent les nouveaux tickets qu’il complète : ceux que vous créez, et les tickets en triage dont vous êtes responsable.
+- **Relier les tickets liés**, activé par défaut, permet à Smart-fill d’[ajouter des relations](#smart-fill-relations) après l’enregistrement d’un ticket.
+- **Indexer les tickets**, activé par défaut et indépendant de Smart-fill, transforme le titre et la description des tickets que vous créez ou modifiez en vecteurs privés qui servent à trouver les tickets liés. Si vous êtes propriétaire d’un projet, il couvre aussi l’indexation en arrière-plan des tickets existants de ce projet. Les vecteurs sont chiffrés avec le projet, comme le ticket. Interrupteur désactivé, aucun vecteur n’est créé et la recherche de tickets liés ne compare que les mots. Les vecteurs déjà créés ne sont pas effacés : ils restent chiffrés et sont supprimés avec le ticket.
+
+Désactiver un interrupteur annule aussi les passes qui n’ont pas encore eu lieu. Numo peut modifier ces préférences à votre demande.
 
 ## Examiner le travail entrant dans le triage {#triage-incoming-work}
 
@@ -431,6 +447,16 @@ Un ticket ouvert peut hériter d’un blocage par son objectif ouvert. Si A bloq
 Retirez une relation devenue inexacte depuis ses commandes, puis vérifiez son libellé et l’indicateur de blocage. Marquer un doublon modifie son cycle de vie et désigne le travail conservé ; une simple relation associée ne clôture pas le doublon.
 
 Si le sélecteur ne trouve pas un ticket, vérifiez son identifiant et l’accès au projet. Ne révélez pas un autre projet en copiant son lien privé dans une réponse publique à un retour.
+
+### Liens ajoutés par Smart-fill {#smart-fill-relations}
+
+Lorsque **Relier les tickets liés** est activé, Smart-fill cherche les tickets liés après la création d’un ticket ou la modification de son titre ou de sa description. Ce travail se fait en arrière-plan après l’enregistrement : la création et la modification ne l’attendent jamais, et les liens peuvent apparaître quelques secondes plus tard. Pour un nouveau ticket, il suit les mêmes choix que les autres champs : il ne s’exécute donc pas si vous avez désactivé Smart-fill pour ce ticket. Il ne s’exécute pas pour les tickets importés d’un dépôt lié, pour les copies récurrentes ni pour les modifications synchronisées depuis le dépôt.
+
+Smart-fill compare le ticket à cinq candidats au plus du même projet, en écartant les tickets annulés, en doublon ou supprimés. Une décision classe ensuite chaque candidat : lié, bloque, bloqué par ou aucune relation. La similarité seule ne crée jamais de lien, une dépendance exige des indices plus forts qu’un simple lien, et Smart-fill n’ajoute rien en cas de doute. Une même passe ajoute au plus trois relations. Elle ne touche jamais une paire qui a déjà une relation, n’ajoute jamais un blocage qui fermerait un cycle, et abandonne son résultat si le texte du ticket a changé pendant la décision. Elle ne marque jamais un doublon et ne change jamais un état.
+
+Les liens ajoutés ainsi apparaissent dans les relations du ticket comme les autres, et l’historique indique Smart-fill comme auteur. Vérifiez le sens d’une dépendance comme pour les vôtres. Pour retirer un lien, utilisez les commandes de relations : Smart-fill ne rajoute pas un lien retiré pour cette paire. Pour ne plus recevoir de nouveaux liens, désactivez **Relier les tickets liés** dans [vos préférences](#smart-fill-preferences). Les tickets créés avant cette fonctionnalité, les tickets importés et ceux synchronisés depuis un dépôt sont indexés progressivement en arrière-plan, mais ne reçoivent jamais de liens automatiques.
+
+L’indexation et les décisions de relation utilisent l’IA. Elles comptent dans la part **Automatisations** du compte à qui revient la passe : le compte facturé pour le Smart-fill du nouveau ticket, en général son créateur ; l’auteur de la modification pour une modification ; le propriétaire du projet pour l’indexation en arrière-plan. L’historique d’usage les affiche sous **Smart-fill · index des tickets** et **Smart-fill · relations**. Si ce budget est épuisé ou si le fournisseur échoue, la passe est ignorée et le ticket reste inchangé. L’administrateur de l’instance peut aussi désactiver la fonctionnalité pour tout le monde.
 
 ## Découper un ticket en sous-tickets {#sub-issues}
 

@@ -58,6 +58,8 @@ const DECISION_MODEL_ERROR_KEYS: Record<string, AdminKey> = {
   catalog_unavailable: "decisionModelErrors.catalog_unavailable",
   not_a_decision_model: "decisionModelErrors.not_a_decision_model",
   compatibility_check_failed: "decisionModelErrors.compatibility_check_failed",
+  // Embedding and transcription fields are checked against their catalog family (MIN-717).
+  capability_mismatch: "decisionModelErrors.capability_mismatch",
 };
 
 /**

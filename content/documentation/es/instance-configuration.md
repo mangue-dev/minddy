@@ -16,12 +16,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-677)",
+    "version": "0.11.1 candidate (MIN-677); MIN-717 issue-index schedule",
     "editions": [
       "self-hosted"
     ],
@@ -45,14 +45,16 @@
       "content/documentation/reviews/editorial-clarity-de-es-2026-10-09.md",
       "content/documentation/reviews/editorial-clarity-it-pt-BR-2026-10-09.md",
       "content/documentation/reviews/documentation-error-feedback-2026-10-10.md",
-      "content/documentation/reviews/min-677-routines.md"
+      "content/documentation/reviews/min-677-routines.md",
+      "app/api/cron/issue-index/route.ts",
+      "content/documentation/reviews/min-717-smart-fill-relations.md"
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun)",
-    "language": "agent:/root (es translation, label and retained-meaning self-review); agent:/root/min-721 (es runner-removal edits and full retained meaning)",
-    "date": "2026-10-16"
+    "revision": 8,
+    "fact": "agent:/root (MIN-677 source review and isolated PostgreSQL regressions; unchanged procedures retain prior evidence); agent:/root/min-721 (code-runner removal checked against the edited Compose profiles, installer, doctor, scheduler and capability source; existing figures and procedural evidence retained; no operational rerun); agent:/root (MIN-717 issue-index schedule row checked against deploy/self-hosted/scheduler.mjs and vercel.json; no scheduler run)",
+    "language": "agent:/root (es translation, label and retained-meaning self-review); agent:/root/min-721 (es runner-removal edits and full retained meaning); agent:/root (es MIN-717 table row: endpoint and cron expression only, no prose change)",
+    "date": "2026-10-17"
   },
   "related": [
     "workspace-encryption",
@@ -77,7 +79,7 @@
       "src": "/documentation/es/optional-providers-flow.svg",
       "alt": "Diagrama: Operador elige capacidad opcional. Credenciales completas y condiciones. Destino de datos externo explícito. Verificar conducta y controlar costes.",
       "caption": "Antes de activar una integración, compruebe adónde envía los datos y qué costes continuados genera.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,7 +111,7 @@
       "src": "/documentation/es/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Orígenes públicos de la aplicación y Supabase. Base de datos y puertos internos privados. Tareas autenticadas; paradas en mantenimiento.",
       "caption": "El acceso público queda separado de los servicios internos; el trabajo programado se autentica y se detiene durante el mantenimiento.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -197,6 +199,7 @@ El planificador publicado en v0.11.0 no incluye `numo-turns`. El candidato se ha
 | `/api/cron/forge-relay-deliveries` | `* * * * *` |
 | `/api/cron/forge-relay-maintenance` | `35 * * * *` |
 | `/api/cron/smart-assign` | `*/5 * * * *` |
+| `/api/cron/issue-index` | `25 * * * *` |
 | `/api/cron/routines` | `*/5 * * * *` |
 | `/api/cron/billing-sync` | `15 * * * *` |
 | `/api/cron/fx-rate` | `30 15 * * *` |

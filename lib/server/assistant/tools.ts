@@ -1605,6 +1605,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Automatically run Smart Fill on eligible triage issues and promoted feedback.",
           },
+          smart_fill_relations: {
+            type: "boolean",
+            description:
+              "Let Smart Fill link a saved issue to related issues and dependencies (related, blocks, blocked by). Requires smart_fill.",
+          },
+          issue_indexing: {
+            type: "boolean",
+            description:
+              "Allow embedding vectors of the user's issues (used to find related issues). Independent of smart_fill; off means no vectors are generated.",
+          },
           cycles_enabled: {
             type: "boolean",
             description:

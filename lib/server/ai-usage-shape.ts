@@ -101,7 +101,20 @@ export type AiFeature =
    * its cost per question must stay readable on its own line in the finance
    * view. The caller bills it to `{ platform }`.
    */
-  | "faq_ask";
+  | "faq_ask"
+  /**
+   * Smart Fill relations (MIN-717): one embeddings call per issue whose title
+   * or description changed, plus the bounded backfill of existing issues. The
+   * vector also serves as the query of the candidate search, so retrieval
+   * costs no second call. Billed to the account that owns the Smart Fill pass.
+   */
+  | "issue_embedding"
+  /**
+   * Smart Fill relations (MIN-717): the LLM fallback of the relation decision
+   * — ONE call per changed issue that has candidates, answering every
+   * candidate at once. The decision-model half rides `jev_decision`.
+   */
+  | "issue_relation";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

@@ -120,6 +120,23 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // cuts it everywhere at once, and the form falls back to hand entry.
   { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
+  // Smart Fill relations (lib/server/issue-relation-inference.ts, MIN-717):
+  // issues are indexed AFTER they are saved, and a bounded decision pass
+  // confirms whether an embedding-retrieved candidate is related, blocks or
+  // is blocked by the issue. Its own embedding model, never the feedback
+  // one: changing it versions the issue index (provider:model:dimensions)
+  // and old vectors are never compared with new ones. The relation model is
+  // the LLM fallback of the global decision model. The flag cuts indexing
+  // and relation inference everywhere at once; creation is unaffected.
+  { key: "smart_fill_relations_enabled", kind: "flag", fallback: "true", group: "automations" },
+  {
+    key: "issue_embedding_model",
+    kind: "model",
+    fallback: "openai/text-embedding-3-small",
+    group: "automations",
+    catalogCapability: "embedding",
+  },
+  { key: "issue_relation_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
   // Title of a Numo conversation (lib/server/assistant/title.ts): a call from
   // a few dozen tokens per new conversation — a small model is enough,
   // and that's exactly the kind of call where a big guy doesn't justify himself.
@@ -252,7 +269,7 @@ for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openroute
       // 2027-02-26); the OpenAI changelog names `gpt-transcribe` as its
       // replacement on the same /audio/transcriptions endpoint.
       fallback = provider.id === "openai" ? "gpt-transcribe" : "";
-    } else if (modelKey === "feedback_embedding_model") {
+    } else if (modelKey === "feedback_embedding_model" || modelKey === "issue_embedding_model") {
       fallback =
         provider.id === "openai"
           ? "text-embedding-3-small"

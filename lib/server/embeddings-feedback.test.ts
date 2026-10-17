@@ -54,3 +54,13 @@ it("searches all encrypted feedback pages and filters private rows before decryp
   expect(results).toMatchObject([{ id: "post-201", similarity: 1 }]);
   expect(JSON.stringify(results)).not.toContain("post-200");
 });
+
+it("keeps one embedding size per batch and drops malformed vectors", async () => {
+  const { keepVectors } = await import("./embeddings");
+  expect(keepVectors(3, [
+    { index: 0, embedding: [1, 2] },
+    { index: 1, embedding: [1, 2, 3] },
+    { index: 2, embedding: [1, Number.NaN] },
+  ], "any")).toEqual([[1, 2], null, null]);
+  expect(keepVectors(2, [{ embedding: [1, 2] }, { embedding: [1, 2, 3] }], 3)).toEqual([null, [1, 2, 3]]);
+});

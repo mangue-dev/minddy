@@ -15,7 +15,9 @@ const {
   setAppConfigValue,
   clearAppConfigValue,
   validateDecisionModelChoice,
+  validateCatalogCapabilityChoice,
 } = vi.hoisted(() => ({
+  validateCatalogCapabilityChoice: vi.fn(),
   getAuthedUser: vi.fn(),
   isAdminUser: vi.fn(),
   setAppConfigValue: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock("@/lib/server/app-config", () => ({
   clearAppConfigValue,
 }));
 vi.mock("@/lib/server/decisions/model-validation", () => ({ validateDecisionModelChoice }));
+vi.mock("@/lib/server/model-capability-validation", () => ({ validateCatalogCapabilityChoice }));
 
 const { PATCH } = await import("@/app/api/admin/app-config/route");
 
@@ -49,6 +52,7 @@ beforeEach(() => {
   setAppConfigValue.mockReset().mockResolvedValue(undefined);
   clearAppConfigValue.mockReset().mockResolvedValue(undefined);
   validateDecisionModelChoice.mockReset().mockResolvedValue({ ok: true });
+  validateCatalogCapabilityChoice.mockReset().mockResolvedValue({ ok: true, verified: true });
 });
 
 describe("PATCH /api/admin/app-config — decision model", () => {
@@ -94,5 +98,28 @@ describe("PATCH /api/admin/app-config — decision model", () => {
     await patch({ key: "smart_fill_model", value: "deepseek/deepseek-v4-flash" });
     expect(validateDecisionModelChoice).not.toHaveBeenCalled();
     expect(setAppConfigValue).toHaveBeenCalledWith("smart_fill_model", "deepseek/deepseek-v4-flash");
+  });
+});
+
+describe("PATCH /api/admin/app-config — embedding models (MIN-717)", () => {
+  it("stores an issue embedding model that matches its capability", async () => {
+    const response = await patch({ key: "issue_embedding_model", value: "openai/text-embedding-3-large" });
+    expect(response.status).toBe(200);
+    expect(validateCatalogCapabilityChoice).toHaveBeenCalledWith("openai/text-embedding-3-large", "embedding");
+    expect(setAppConfigValue).toHaveBeenCalledWith("issue_embedding_model", "openai/text-embedding-3-large");
+  });
+
+  it("refuses a chat model in the embedding field and writes nothing", async () => {
+    validateCatalogCapabilityChoice.mockResolvedValue({ ok: false, code: "capability_mismatch" });
+    const response = await patch({ key: "issue_embedding_model", value: "deepseek/deepseek-v4-flash" });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "capability_mismatch" });
+    expect(setAppConfigValue).not.toHaveBeenCalled();
+  });
+
+  it("does not check text fields such as the relation decision model", async () => {
+    await patch({ key: "issue_relation_model", value: "deepseek/deepseek-v4-flash" });
+    expect(validateCatalogCapabilityChoice).not.toHaveBeenCalled();
+    expect(setAppConfigValue).toHaveBeenCalledWith("issue_relation_model", "deepseek/deepseek-v4-flash");
   });
 });

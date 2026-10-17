@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
-  "sourceRevision": 5,
+  "revision": 6,
+  "sourceRevision": 6,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate with the global decision model (MIN-694)",
+    "version": "0.11.1 candidate with the global decision model (MIN-694); MIN-717 Smart Fill relations",
     "editions": [
       "self-hosted"
     ],
@@ -39,14 +39,18 @@
       "lib/ai-model-config.ts",
       "app/api/admin/app-config/route.ts",
       "lib/server/decisions/model-validation.ts",
-      "docs/plans/min-694-decision-model-selection.md"
+      "docs/plans/min-694-decision-model-selection.md",
+      "lib/server/issue-relation-inference.ts",
+      "lib/server/model-capability-validation.ts",
+      "app/api/cron/issue-index/route.ts",
+      "content/documentation/reviews/min-717-smart-fill-relations.md"
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-694 decision model selector, save validation and fallback source and test review; live decision probes recorded in docs/plans/min-694-decision-model-selection.md; existing figures unchanged)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-694 six-locale decision model section meaning review; agent review, not human acceptance)",
-    "date": "2026-10-16"
+    "revision": 6,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-694 decision model selector, save validation and fallback source and test review; live decision probes recorded in docs/plans/min-694-decision-model-selection.md; existing figures unchanged); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 6; it translation of added passages; no browser walkthrough)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-694 six-locale decision model section meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-17"
   },
   "related": [
     "authentication-and-email",
@@ -63,7 +67,7 @@
       "src": "/documentation/it/instance-administration-overview.png",
       "alt": "Panoramica amministratore con indicatori aggregati di account, introduzione e contenuti.",
       "caption": "Panoramica mostra gli indicatori aggregati dell’istanza. Finanze non compare in questo profilo dimostrativo perché non è configurata una chiave OpenRouter gestita.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -79,7 +83,7 @@
       "src": "/documentation/it/instance-administration-models.png",
       "alt": "Impostazioni dei modelli IA e del ragionamento dell’istanza.",
       "caption": "Modelli configura valori predefiniti e usi specifici. La schermata mostra la configurazione esistente; nessun modello o provider è stato modificato.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -114,6 +118,16 @@ La console comprende Panoramica, Utenti, Modelli e, quando disponibile, Finanze.
 In **Modelli**, sezione **Automazioni**, **Modello di decisione** imposta l’unico modello di decisione che risponde a tutte le decisioni IA dell’istanza: Smart Fill, Smart Assign e la revisione dei feedback. Non esiste una scelta per progetto, per utente o per funzione. Il selettore propone solo modelli OpenRouter che pubblicano la capacità di decisione; i modelli di chat, embedding e trascrizione non compaiono mai. Il salvataggio prova il candidato con una decisione rappresentativa. Un modello che non è di decisione, rifiuta la richiesta, restituisce una risposta non valida o impiega più di 5 secondi viene rifiutato, e il modello attuale resta in uso. Se il catalogo non può essere caricato, ogni modifica viene rifiutata. Le istanze self-hosted senza IA gestita non hanno un catalogo della piattaforma e mantengono il modello predefinito, Jev.
 
 Le nuove decisioni usano il modello salvato entro circa un minuto su ogni processo del server. Se il modello fallisce o risponde sotto la soglia di confidenza, la decisione ripiega sul modello LLM proprio della funzione, come prima. **Decisioni IA** resta l’interruttore per gli incidenti che invia tutte le decisioni a quel modello LLM. La soglia è stata calibrata su Jev e gli altri modelli di decisione distribuiscono la confidenza in modo diverso: dopo un cambio, controlla la concordanza per modello nella vista di database `ai_decision_evaluations_weekly`. Le righe di utilizzo registrano il modello che ha risposto.
+
+## Configurare le relazioni di Smart Fill {#smart-fill-relations}
+
+Dopo il salvataggio di un ticket, Smart Fill può indicizzarlo e collegarlo ai ticket correlati. Tre campi in **Modelli**, sezione **Automazioni**, regolano questo lavoro:
+
+- **Relazioni di Smart Fill** è l’interruttore dell’istanza. Disattivato, ferma ovunque l’indicizzazione dei ticket e l’inferenza delle relazioni, compresa l’indicizzazione in background dei ticket esistenti; creazione e modifica dei ticket non ne risentono. L’inferenza delle relazioni si ferma anche finché l’interruttore **Riempimento intelligente** dello stesso gruppo è disattivato.
+- **Embedding dei ticket** sceglie il modello che trasforma titolo e descrizione dei ticket in vettori. Il valore predefinito è `openai/text-embedding-3-small`. Cambiarlo avvia una nuova versione dell’indice: vettori vecchi e nuovi non vengono mai confrontati. Il job orario `/api/cron/issue-index` indicizza poi i ticket esistenti, 100 per esecuzione, addebitando il proprietario di ogni progetto; non crea mai relazioni. Finché un ticket non viene reindicizzato, la ricerca dei ticket correlati lo raggiunge solo tramite le sue parole.
+- **Modello di decisione delle relazioni** è il modello LLM di riserva che risponde alle decisioni sulle relazioni quando il [modello di decisione](#decision-model) fallisce o non è sicuro, come il modello LLM proprio di ogni funzione. Il valore predefinito è `deepseek/deepseek-v4-flash`.
+
+I campi di embedding e di trascrizione rifiutano al salvataggio un modello della famiglia sbagliata, per esempio un modello di chat in un campo di embedding, e il modello attuale resta in uso. Questo controllo richiede il catalogo della piattaforma: se non può essere caricato, come su un’istanza self-hosted senza IA gestita, la scelta non può essere verificata e viene accettata. Per i membri che eseguono le automazioni con la propria chiave, i valori predefiniti per provider includono `issue_embedding_model`: `text-embedding-3-small` per OpenAI e `gemini-embedding-001` per Google.
 
 ## Mantenere responsabilità operative {#responsibilities}
 

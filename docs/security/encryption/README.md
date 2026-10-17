@@ -2552,6 +2552,36 @@ transfer does not copy them, because project ids are rebound on import.
 Migration `20270109200050` is additive and was not applied to a remote database
 by this change.
 
+## Issue embedding index and relation decisions (MIN-717)
+
+Smart Fill relations add two service-only tables. Both have RLS enabled with no
+policy, and the anon and authenticated grants are revoked.
+
+- `issue_embeddings` stores one vector per issue and index version. Its
+  primary key is `(issue_id, index_version)`, where the version is
+  `provider:model:dimensions`, so vectors from different embedding spaces are
+  never compared, even when their dimensions are equal.
+  - The vector and the SHA-256 fingerprint of the indexed title and
+    description are encrypted together under the project content key by
+    `lib/server/issue-embedding-store.ts`. That module is the only reader and
+    writer the access check allows.
+  - The table follows the issue's own encryption rule: a project whose issues
+    are encrypted gets encrypted vectors.
+  - `content_version` is a random UUID that changes whenever the fingerprint
+    changes. It carries no content.
+  - Similarity is computed in the server after decryption. Postgres holds no
+    plaintext vector index.
+- `issue_relation_inferences` caches Smart Fill's relation verdicts per issue
+  pair and content-version pair. It holds identifiers, a bounded verdict, the
+  engine and timestamps only, so it has no encryption target.
+
+Both tables cascade with the issue and the project. A trashed issue keeps its
+vector, but retrieval only returns issues that are not deleted. A purge
+removes the vector together with the issue.
+
+Migration `20270109200052` is additive and was not applied to a remote database
+by this change.
+
 ## Numo worker completion authority (2026-10-11)
 
 Migration `20270109200041` moves the worker-generation check into the service-only

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ISSUE_INDEXING_META_KEY,
+  resolveIssueIndexing,
   resolveSmartFill,
+  resolveSmartFillRelations,
   resolveSmartFillScope,
   SMART_FILL_CREATED_META_KEY,
   SMART_FILL_META_KEY,
+  SMART_FILL_RELATIONS_META_KEY,
   SMART_FILL_TRIAGE_META_KEY,
 } from "./smart-fill";
 
@@ -60,5 +64,21 @@ describe("resolveSmartFillScope", () => {
     };
     expect(resolveSmartFillScope(meta, "created")).toBe(false);
     expect(resolveSmartFillScope(meta, "triage")).toBe(false);
+  });
+});
+
+describe("Smart Fill relations and issue indexing (MIN-717)", () => {
+  it("links relations by default, under the Smart Fill master switch", () => {
+    expect(resolveSmartFillRelations(undefined)).toBe(true);
+    expect(resolveSmartFillRelations({ [SMART_FILL_RELATIONS_META_KEY]: false })).toBe(false);
+    expect(
+      resolveSmartFillRelations({ [SMART_FILL_META_KEY]: false, [SMART_FILL_RELATIONS_META_KEY]: true }),
+    ).toBe(false);
+  });
+
+  it("keeps indexing independent of Smart Fill, so search can outlive automatic relations", () => {
+    expect(resolveIssueIndexing(undefined)).toBe(true);
+    expect(resolveIssueIndexing({ [SMART_FILL_META_KEY]: false })).toBe(true);
+    expect(resolveIssueIndexing({ [ISSUE_INDEXING_META_KEY]: false })).toBe(false);
   });
 });

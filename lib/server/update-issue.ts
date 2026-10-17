@@ -48,6 +48,7 @@ import {
 } from "@/lib/cycle-move";
 import { scheduleFeedbackStatusSync } from "@/lib/server/feedback/status-sync";
 import { scheduleRemoteStatusPush } from "@/lib/server/git/issue-push";
+import { scheduleIssueAiPass } from "@/lib/server/issue-relation-inference";
 import {
   cycleBelongsToUser,
   issueInProject,
@@ -780,6 +781,24 @@ export async function updateIssueFields({
         actorId,
       });
     }
+  }
+
+  // Smart Fill relations (MIN-717): a new title or description refreshes the
+  // issue's vector and may link it again — after the response. A forge sync
+  // is the repository speaking, not someone writing in minddy: the backfill
+  // reindexes it, nothing links it automatically.
+  const contentChanged =
+    ("title" in updates && updates.title !== before.title) ||
+    ("description" in updates && (updates.description ?? null) !== (before.description ?? null));
+  if (contentChanged && !forgeSync) {
+    scheduleIssueAiPass({
+      issueId,
+      projectId,
+      projectName,
+      trigger: "edited",
+      actorId,
+      mcpKeyId,
+    });
   }
 
   // Server Analytics (MIN-78): same reason as for creation — a good one

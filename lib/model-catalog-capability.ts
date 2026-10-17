@@ -53,7 +53,7 @@ export function isAdminCatalogCapability(
 /** Capability required by a configured runtime model. */
 export function modelCatalogCapabilityForKey(key: string): ModelCatalogCapability {
   if (key === "transcription_model") return "transcription";
-  if (key === "feedback_embedding_model") return "embedding";
+  if (key === "feedback_embedding_model" || key === "issue_embedding_model") return "embedding";
   return "text";
 }
 

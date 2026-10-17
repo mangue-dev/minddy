@@ -192,6 +192,7 @@ export async function addIssueRelation({
   targetType = "issue",
   viaAssistant = false,
   mcpKeyId = null,
+  viaSmartFill = false,
 }: {
   projectId: string;
   actorId: string;
@@ -204,6 +205,8 @@ export async function addIssueRelation({
   targetType?: RelationEndpointType;
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
+  /** Smart Fill relations (MIN-717): the timeline names Smart Fill, under the payer's account. */
+  viaSmartFill?: boolean;
 }): Promise<AddRelationResult> {
   if (!isRelationType(type)) {
     return { ok: false, status: 400, errorKey: "invalidRelationType" };
@@ -261,12 +264,12 @@ export async function addIssueRelation({
   }
 
   const row = data as IssueRelationRow;
+  const events = relationEvents("relation_added", row, actorId).map((event) =>
+    viaSmartFill ? { ...event, via_smart_fill: true } : event
+  );
   await insertEvents(
     service,
-    stampMcpKey(
-      stampViaAssistant(relationEvents("relation_added", row, actorId), viaAssistant),
-      mcpKeyId
-    )
+    stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId)
   );
 
   // Cycle coherence (MIN-32): a fresh `blocks` edge whose BLOCKED issue sits in

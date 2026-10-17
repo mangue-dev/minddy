@@ -445,6 +445,8 @@
     "historyFeatureJevDecision": "Decisione IA",
     "historyFeatureJevShadow": "Verifica delle decisioni",
     "historyFeatureSmartTriage": "Triage intelligente",
+    "historyFeatureIssueEmbedding": "Smart-fill · indice dei ticket",
+    "historyFeatureIssueRelation": "Smart-fill · relazioni",
     "agentsGateTitle": "Il lavoro con Numo non è disponibile",
     "agentsGateDescription": "Il lavoro con Numo non è attivo per questo account.",
     "agentsGateCta": "Visualizza piani",
@@ -1365,7 +1367,7 @@
       "subIssues": "Inserisci un ticket in sotto-issue senza perdere il ticket genitore.",
       "relations": "I ticket di collegamento come blocco, blocco da, o correlati.",
       "plan": "Aggiungere un piano di attuazione insieme alla descrizione di un ticket.",
-      "smartFill": "Smart-fill può stabilire la priorità, lo sforzo, l'obiettivo e le categorie di un ticket.",
+      "smartFill": "Smart-fill può stabilire la priorità, lo sforzo, l'obiettivo e le categorie di un ticket, e collegarlo ai ticket correlati.",
       "smartAssign": "Smart Assign utilizza le regole per assegnare ticket idonei al giusto compagno di squadra.",
       "autoAssignOnStart": "Assegna automaticamente un ticket non assegnato a te stesso quando lo avvii.",
       "drafts": "Chiudi un ticket non ancora inviato e ritrovalo più tardi nelle bozze recenti.",
@@ -1528,8 +1530,8 @@
     "changeObjectiveAria": "Obiettivo di cambiamento",
     "issueCreatedToast": "Ticket creato.",
     "smartFillChip": "Riempimento intelligente",
-    "smartFillOffHint": "Off per questo ticket: impostare le proprieta' da solo. Attivare per lasciare che lo faccia Smart-fill.",
-    "smartFillOnHint": "On: Smart-fill legge il ticket e definisce la sua priorità, sforzo, categorie e obiettivo per voi. Spegni di impostare voi stessi.",
+    "smartFillOffHint": "Off per questo ticket: imposti tu proprietà e relazioni. Riattivalo per lasciarlo fare a Smart-fill.",
+    "smartFillOnHint": "On: Smart-fill legge il ticket, ne imposta priorità, sforzo, categorie e obiettivo, poi lo collega ai ticket correlati dopo il salvataggio. Disattivalo per impostarli tu.",
     "smartFillPendingToast": "Smart-fill sta riempiendo il ticket, si presenterà in pochi secondi.",
     "newIssueTitle": "Nuovo ticket",
     "createDescriptionPlaceholder": "Descrizione del ticket",
@@ -2375,6 +2377,10 @@
     "smartFillCreatedLabel": "Completa i ticket creati",
     "smartFillTriageDesc": "Completa i valori mancanti nei ticket in triage e nei feedback promossi nei progetti di tua proprietà.",
     "smartFillTriageLabel": "Completa i ticket in triage",
+    "smartFillRelationsLabel": "Collega i ticket correlati",
+    "smartFillRelationsDesc": "Dopo il salvataggio di un ticket, lo collega ai ticket correlati e alle dipendenze evidenti. Puoi rimuovere ogni collegamento; un collegamento rimosso non viene aggiunto di nuovo.",
+    "issueIndexingLabel": "Indicizza i ticket",
+    "issueIndexingDesc": "Trasforma titolo e descrizione dei tuoi ticket in vettori privati, usati per trovare i ticket correlati. Disattivato, nessun vettore viene creato e la ricerca dei ticket correlati usa solo le parole.",
     "numoStatusTitle": "Stato per i ticket che crea Numo",
     "numoStatusDesc": "Triage aggiunge un passo di revisione manuale; Backlog e Todo saltarlo.",
     "promptAutoStartDesc": "Si applica solo ai ticket e alle attività del notebook che non sono ancora iniziate.",
@@ -4165,6 +4171,18 @@
         "label": "Modello Smart-fill",
         "desc": "Legge il titolo e la descrizione di un nuovo ticket e ne compila i campi. Qualcuno ne attende il risultato: scegli un modello veloce."
       },
+      "smart_fill_relations_enabled": {
+        "label": "Relazioni di Smart Fill",
+        "desc": "Indicizza i ticket dopo il salvataggio e lascia che Smart Fill colleghi ticket correlati e dipendenze. Disattivato qui, indicizzazione e relazioni si fermano ovunque; la creazione non cambia."
+      },
+      "issue_embedding_model": {
+        "label": "Embedding dei ticket",
+        "desc": "Vettorizza titolo e descrizione dei ticket per trovare relazioni candidate. Cambiarlo avvia un nuovo indice; vettori vecchi e nuovi non vengono mai confrontati."
+      },
+      "issue_relation_model": {
+        "label": "Modello di decisione delle relazioni",
+        "desc": "Conferma se un candidato è correlato, blocca o è bloccato da un ticket quando il modello di decisione è incerto. Nessuno attende la risposta."
+      },
       "conversation_title_model": {
         "label": "Titoli di conversazione",
         "desc": "Nomina una conversazione di Numo in poche parole, dal suo primo messaggio. Un piccolo modello è sufficiente."
@@ -4244,7 +4262,8 @@
     "decisionModelErrors": {
       "catalog_unavailable": "Il catalogo dei modelli di decisione non è disponibile. Il modello attuale è stato mantenuto.",
       "not_a_decision_model": "Questo modello non è un modello di decisione. Il modello attuale è stato mantenuto.",
-      "compatibility_check_failed": "Questo modello non ha superato la decisione di prova (rifiutata, non valida o più lenta di 5 secondi). Il modello attuale è stato mantenuto."
+      "compatibility_check_failed": "Questo modello non ha superato la decisione di prova (rifiutata, non valida o più lenta di 5 secondi). Il modello attuale è stato mantenuto.",
+      "capability_mismatch": "Questo modello non corrisponde a questo campo (ad esempio un modello di chat in un campo di embedding). Il modello attuale è stato mantenuto."
     },
     "finance": {
       "title": "Finanze",
@@ -4326,7 +4345,9 @@
         "brief_split": "Breve ripartizione",
         "landing_demo": "Demo pubblica della dettatura",
         "jev_decision": "Decisioni IA",
-        "jev_shadow": "Verifiche delle decisioni"
+        "jev_shadow": "Verifiche delle decisioni",
+        "issue_embedding": "Embedding dei ticket",
+        "issue_relation": "Relazioni Smart-fill"
       },
       "stripeHidden": "Il ricavo di Stripe è nascosto: la fatturazione non è collegata in questa istanza."
     },

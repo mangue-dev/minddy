@@ -445,6 +445,8 @@
     "historyFeatureJevDecision": "KI-Entscheidung",
     "historyFeatureJevShadow": "Entscheidungsprüfung",
     "historyFeatureSmartTriage": "Smart-Triage",
+    "historyFeatureIssueEmbedding": "Smart-fill · Problemindex",
+    "historyFeatureIssueRelation": "Smart-fill · Beziehungen",
     "agentsGateTitle": "Numo-Arbeit ist nicht verfügbar",
     "agentsGateDescription": "Numo-Arbeit ist für dieses Konto nicht aktiviert.",
     "agentsGateCta": "Pläne anzeigen",
@@ -1365,7 +1367,7 @@
       "subIssues": "Teilen Sie ein Problem in Unterprobleme auf, ohne das übergeordnete Problem zu verlieren.",
       "relations": "Verknüpfen Sie Probleme als blockierend, blockiert von oder verwandt.",
       "plan": "Fügen Sie neben der Beschreibung eines Problems einen Implementierungsplan hinzu.",
-      "smartFill": "Smart-Fill kann die Priorität, den Aufwand, das Ziel und die Kategorien eines Problems festlegen.",
+      "smartFill": "Smart-Fill kann die Priorität, den Aufwand, das Ziel und die Kategorien eines Problems festlegen und es mit verwandten Problemen verknüpfen.",
       "smartAssign": "Smart Assign verwendet Ihre Regeln, um berechtigte Probleme dem richtigen Teamkollegen zuzuweisen.",
       "autoAssignOnStart": "Weisen Sie ein nicht zugewiesenes Problem automatisch sich selbst zu, wenn Sie es starten.",
       "drafts": "Schließen Sie ein unvollständiges Problem und finden Sie es später in Ihren letzten Entwürfen wieder.",
@@ -1528,8 +1530,8 @@
     "changeObjectiveAria": "Ziel ändern",
     "issueCreatedToast": "Problem erstellt.",
     "smartFillChip": "Smart-Fill",
-    "smartFillOffHint": "Aus für dieses Problem: Sie legen seine Eigenschaften selbst fest. Schalten Sie es wieder ein, damit Smart-Fill das erledigt.",
-    "smartFillOnHint": "Ein: Smart-Fill liest das Problem und legt seine Priorität, seinen Aufwand, seine Kategorien und sein Ziel für Sie fest. Deaktivieren Sie die Option, um sie selbst festzulegen.",
+    "smartFillOffHint": "Aus für dieses Problem: Sie legen seine Eigenschaften und Beziehungen selbst fest. Schalten Sie es wieder ein, damit Smart-Fill das erledigt.",
+    "smartFillOnHint": "Ein: Smart-Fill liest das Problem, legt Priorität, Aufwand, Kategorien und Ziel fest und verknüpft es nach dem Speichern mit verwandten Problemen. Deaktivieren Sie die Option, um das selbst zu tun.",
     "smartFillPendingToast": "Smart-Fill füllt das Problem aus, es wird in wenigen Sekunden angezeigt.",
     "newIssueTitle": "Neues Problem",
     "createDescriptionPlaceholder": "Problembeschreibung",
@@ -2375,6 +2377,10 @@
     "smartFillCreatedLabel": "Erstellte Vorgänge ausfüllen",
     "smartFillTriageDesc": "Ergänzt fehlende Werte bei Triage-Vorgängen und hochgestuftem Feedback in Projekten, deren Eigentümer Sie sind.",
     "smartFillTriageLabel": "Triage-Vorgänge ausfüllen",
+    "smartFillRelationsLabel": "Verwandte Vorgänge verknüpfen",
+    "smartFillRelationsDesc": "Verknüpft einen Vorgang nach dem Speichern mit verwandten Vorgängen und eindeutigen Abhängigkeiten. Sie können jede Verknüpfung entfernen; eine entfernte Verknüpfung wird nicht erneut angelegt.",
+    "issueIndexingLabel": "Vorgänge indexieren",
+    "issueIndexingDesc": "Wandelt Titel und Beschreibung Ihrer Vorgänge in private Vektoren um, mit denen verwandte Vorgänge gefunden werden. Ausgeschaltet wird kein Vektor erstellt und die Suche nach verwandten Vorgängen nutzt nur Wörter.",
     "numoStatusTitle": "Status für Probleme, die Numo erstellt",
     "numoStatusDesc": "Triage fügt einen manuellen Überprüfungsschritt hinzu; Backlog und Todo überspringen es.",
     "promptAutoStartDesc": "Gilt nur für Probleme und Notebook-Aufgaben, die noch nicht begonnen haben.",
@@ -4165,6 +4171,18 @@
         "label": "Smart-Fill-Modell",
         "desc": "Liest den Titel und die Beschreibung eines neuen Problems und füllt seine Felder aus. Jemand wartet darauf: Wählen Sie ein schnelles Modell."
       },
+      "smart_fill_relations_enabled": {
+        "label": "Smart-Fill-Beziehungen",
+        "desc": "Indexiert Probleme nach dem Speichern und lässt Smart Fill verwandte Probleme und Abhängigkeiten verknüpfen. Hier ausgeschaltet, stoppen Indexierung und Beziehungsvorschläge überall; das Erstellen bleibt unberührt."
+      },
+      "issue_embedding_model": {
+        "label": "Problem-Embeddings",
+        "desc": "Vektorisiert Titel und Beschreibung von Problemen, um mögliche Beziehungen zu finden. Ein Wechsel startet einen neuen Index; alte und neue Vektoren werden nie verglichen."
+      },
+      "issue_relation_model": {
+        "label": "Modell für Beziehungsentscheidungen",
+        "desc": "Bestätigt, ob ein Kandidat verwandt ist, ein Problem blockiert oder von ihm blockiert wird, wenn das Entscheidungsmodell unsicher ist. Niemand wartet auf die Antwort."
+      },
       "conversation_title_model": {
         "label": "Konversationstitel",
         "desc": "Benennt eine Numo Konversation in wenigen Worten, beginnend mit der ersten Nachricht. Ein kleines Modell reicht aus."
@@ -4244,7 +4262,8 @@
     "decisionModelErrors": {
       "catalog_unavailable": "Der Katalog der Entscheidungsmodelle ist nicht verfügbar. Das aktuelle Modell bleibt erhalten.",
       "not_a_decision_model": "Dieses Modell ist kein Entscheidungsmodell. Das aktuelle Modell bleibt erhalten.",
-      "compatibility_check_failed": "Dieses Modell hat die Testentscheidung nicht bestanden (abgelehnt, ungültig oder langsamer als 5 Sekunden). Das aktuelle Modell bleibt erhalten."
+      "compatibility_check_failed": "Dieses Modell hat die Testentscheidung nicht bestanden (abgelehnt, ungültig oder langsamer als 5 Sekunden). Das aktuelle Modell bleibt erhalten.",
+      "capability_mismatch": "Dieses Modell passt nicht zu diesem Feld (zum Beispiel ein Chatmodell in einem Embedding-Feld). Das aktuelle Modell wurde beibehalten."
     },
     "finance": {
       "title": "Finanzen",
@@ -4326,7 +4345,9 @@
         "brief_split": "Briefaufschlüsselung",
         "landing_demo": "Öffentliche Diktat-Demo",
         "jev_decision": "KI-Entscheidungen",
-        "jev_shadow": "Entscheidungsprüfungen"
+        "jev_shadow": "Entscheidungsprüfungen",
+        "issue_embedding": "Problem-Embeddings",
+        "issue_relation": "Smart-fill-Beziehungen"
       },
       "stripeHidden": "Stripe Umsatz ist ausgeblendet: Abrechnung ist auf dieser Instanz nicht verbunden."
     },

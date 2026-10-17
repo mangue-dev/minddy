@@ -20,6 +20,7 @@ import { parseSubagentFavorites } from "@/lib/subagent-favorites";
 import { parseRecommendedModels } from "@/lib/recommended-models";
 import { isReasoningLevel, REASONING_LEVELS } from "@/lib/agent-reasoning";
 import { validateDecisionModelChoice } from "@/lib/server/decisions/model-validation";
+import { validateCatalogCapabilityChoice } from "@/lib/server/model-capability-validation";
 
 /** Error text per decision-model refusal; the dashboard localizes by `code`. */
 const DECISION_MODEL_ERRORS = {
@@ -148,6 +149,28 @@ export async function PATCH(request: NextRequest) {
           ...(check.reason ? { reason: check.reason } : {}),
         },
         { status: check.status }
+      );
+    }
+  }
+
+  // Embedding and transcription fields (MIN-717) must name a model of that
+  // family in the platform catalog. Only the platform namespace can be
+  // checked: BYOK provider defaults (`modelId`) live in the provider's own
+  // namespace, which this catalog does not describe.
+  const field = getAiConfigField(key);
+  if (
+    field?.kind === "model" &&
+    (field.catalogCapability === "embedding" || field.catalogCapability === "transcription") &&
+    trimmed
+  ) {
+    const check = await validateCatalogCapabilityChoice(trimmed, field.catalogCapability);
+    if (!check.ok) {
+      return NextResponse.json(
+        {
+          error: `Model is not a ${field.catalogCapability} model of the platform catalog`,
+          code: check.code,
+        },
+        { status: 400 }
       );
     }
   }

@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -97,13 +97,18 @@
       "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "lib/server/issue-relation-inference.ts",
+      "lib/server/issue-relation-decision.ts",
+      "lib/server/issue-embedding-store.ts",
+      "components/settings/account-preferences-section.tsx",
+      "content/documentation/reviews/min-717-smart-fill-relations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; it translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (it new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; it translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; it translation of added passages; no browser walkthrough)",
+    "language": "agent:/root (it new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_it (it translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_it with agent:/root (it MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (it translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -149,7 +154,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata con titolo, descrizione e proprietà selezionabili manualmente.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -165,7 +170,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo DOC-11 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,7 +186,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -197,7 +202,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +218,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "Ricerca di un ticket bloccante tramite identificativo.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +234,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sotto-ticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -245,7 +250,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -261,7 +266,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -277,7 +282,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -294,7 +299,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rimuovi.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -329,7 +334,7 @@ Il comando per eliminare una bozza salvata apre una conferma. Annullare conserva
 
 Devi essere il proprietario o un Membro del progetto di destinazione; i lettori possono aprire i ticket ma non crearli né modificarli. Apri il progetto e il controllo per creare un ticket. Inserisci un titolo che identifichi il lavoro, poi aggiungi contesto, risultato previsto e vincoli nella descrizione. Scegli il progetto consapevolmente quando crei da una vista personale o tra progetti.
 
-Per creare il ticket manualmente, disattiva Riempimento intelligente se il pulsante è visibile e attivo. Vengono così mostrati i controlli di priorità, impegno, categorie e obiettivo, che puoi impostare tu. La scelta vale per questo ticket; riaprendo il modulo di creazione viene ripristinata la preferenza dell’account. È indipendente dagli interruttori di automazione e Smart Assign del progetto.
+Per creare il ticket manualmente, disattiva Riempimento intelligente se il pulsante è visibile e attivo. Vengono così mostrati i controlli di priorità, impegno, categorie, obiettivo e relazioni, che puoi impostare tu. La scelta vale per questo ticket; riaprendo il modulo di creazione viene ripristinata la preferenza dell’account. È indipendente dagli interruttori di automazione e Smart Assign del progetto. Finché Riempimento intelligente è attivo, dopo il salvataggio [collega anche il ticket ai ticket correlati](#smart-fill-relations), perciò il selettore delle relazioni è nascosto. Le relazioni già scelte restano visibili sopra il titolo e vengono create insieme al ticket.
 
 Imposta le proprietà utili prima di confermare: stato, priorità, impegno, assegnatario, obiettivo, categorie, scadenza e ricorrenza. L’assegnatario è il proprietario del progetto o un Membro, mai un lettore; un obiettivo raggruppa ticket intorno a un risultato del progetto. Puoi lasciare vuote le proprietà opzionali anziché indovinarle. La priorità va da nessuna a bassa, media, alta e urgente; l’impegno usa XS, S, M, L e XL.
 
@@ -343,6 +348,17 @@ Conferma la creazione e apri il nuovo ticket. Controlla identificativo e progett
 Dopo aver cambiato una proprietà, verifica il valore visualizzato. I filtri possono rimuovere subito un ticket dalla vista attuale quando cambiano assegnatario, stato o categoria. Cerca il suo identificativo o apri il progetto senza quei filtri prima di creare un sostituto.
 
 Se la creazione o il salvataggio falliscono, conserva il testo, leggi l’errore e controlla che appartenenza e destinazione esistano ancora. Prima di riprovare dopo un errore di rete, verifica se il ticket sia già stato creato. Collega le pagine del progetto come risorse aggiornate quando serve il loro contenuto attuale e usa i commenti per discutere l’attività.
+
+### Scegliere cosa fa Riempimento intelligente {#smart-fill-preferences}
+
+Le preferenze di Riempimento intelligente appartengono al tuo account. Apri **Impostazioni account** → **Preferenze** e usa gli interruttori del gruppo **Ticket**:
+
+- **Attiva Smart Fill** attiva o disattiva Riempimento intelligente per il tuo account. Completa priorità, impegno, categorie e obiettivo mancanti; stato, assegnatario e scadenza restano una tua scelta. I tre interruttori successivi dipendono da questo.
+- **Completa i ticket creati** e **Completa i ticket in triage** scelgono quali nuovi ticket completa: quelli che crei e i ticket in triage di cui sei responsabile.
+- **Collega i ticket correlati**, attivo per impostazione predefinita, permette a Riempimento intelligente di [aggiungere relazioni](#smart-fill-relations) dopo il salvataggio di un ticket.
+- **Indicizza i ticket**, attivo per impostazione predefinita e indipendente da Riempimento intelligente, trasforma il titolo e la descrizione dei ticket che crei o modifichi in vettori privati usati per trovare i ticket correlati. Se sei proprietario di un progetto, copre anche l’indicizzazione in background dei ticket esistenti di quel progetto. I vettori sono cifrati con il progetto, come il ticket. Con l’interruttore disattivato non viene creato alcun vettore e la ricerca dei ticket correlati confronta solo le parole. I vettori già creati non vengono cancellati: restano cifrati e vengono eliminati insieme al ticket.
+
+Disattivare un interruttore annulla anche i passaggi non ancora eseguiti. Numo può modificare queste preferenze quando glielo chiedi.
 
 ## Valutare il lavoro in arrivo nel triage {#triage-incoming-work}
 
@@ -428,6 +444,16 @@ Un ticket aperto può ereditare un blocco attraverso il proprio obiettivo aperto
 Rimuovi una relazione dai suoi controlli quando non è più pertinente, poi verifica etichetta e indicatore di blocco. Contrassegnare un ticket come duplicato ha effetti sul ciclo di vita e rimanda al lavoro mantenuto. Usalo per le attività duplicate invece di creare un collegamento ordinario e supporre che chiuda il duplicato.
 
 Se il selettore di relazione non trova un ticket, controlla accesso al progetto e identificativo. Non esporre il contenuto di un altro progetto incollando un URL privato di ticket in una risposta pubblica al feedback.
+
+### Collegamenti aggiunti da Riempimento intelligente {#smart-fill-relations}
+
+Con **Collega i ticket correlati** attivo, Riempimento intelligente cerca i ticket correlati dopo la creazione di un ticket o la modifica del suo titolo o della sua descrizione. Il lavoro avviene in background dopo il salvataggio: creazione e modifica non lo attendono mai, e i collegamenti possono comparire qualche secondo dopo. Per un nuovo ticket segue le stesse scelte degli altri campi, quindi non viene eseguito se hai disattivato Riempimento intelligente per quel ticket. Non viene eseguito per i ticket importati da un repository collegato, per le copie ricorrenti né per le modifiche sincronizzate dal repository.
+
+Riempimento intelligente confronta il ticket con al massimo cinque candidati dello stesso progetto, escludendo i ticket annullati, duplicati o eliminati. Una decisione classifica poi ogni candidato come correlato, bloccante, bloccato da o senza relazione. La sola somiglianza non crea mai un collegamento, una dipendenza richiede indizi più solidi di una semplice correlazione e, nel dubbio, Riempimento intelligente non aggiunge nulla. Un singolo passaggio aggiunge al massimo tre relazioni. Non tocca mai una coppia che ha già una relazione, non aggiunge mai un blocco che chiuderebbe un ciclo e scarta il risultato se il testo del ticket è cambiato durante la decisione. Non segna mai un duplicato e non cambia mai uno stato.
+
+I collegamenti aggiunti in questo modo compaiono nelle relazioni del ticket come gli altri, e la cronologia indica Smart-fill come autore. Verifica la direzione di una dipendenza come faresti per le tue. Per rimuovere un collegamento usa i controlli delle relazioni: Riempimento intelligente non aggiunge di nuovo un collegamento rimosso per quella coppia. Per non ricevere nuovi collegamenti, disattiva **Collega i ticket correlati** nelle [tue preferenze](#smart-fill-preferences). I ticket creati prima di questa funzione, quelli importati e quelli sincronizzati da un repository vengono indicizzati gradualmente in background, ma non ricevono mai collegamenti automatici.
+
+L’indicizzazione e le decisioni sulle relazioni usano l’IA. Rientrano nella quota **Automazioni** dell’account a cui spetta il passaggio: l’account addebitato per il Riempimento intelligente del nuovo ticket, di solito chi lo ha creato; chi modifica, per una modifica; il proprietario del progetto, per l’indicizzazione in background. La cronologia di utilizzo le mostra come **Smart-fill · indice dei ticket** e **Smart-fill · relazioni**. Se quel budget è esaurito o il provider non risponde, il passaggio viene saltato e il ticket resta invariato. L’amministrazione dell’istanza può anche disattivare la funzione per tutti.
 
 ## Suddividere un ticket in sottoticket {#sub-issues}
 

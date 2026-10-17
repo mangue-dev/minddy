@@ -834,16 +834,21 @@ export function CreateIssueDialog({
                     />
                   </CreationProperty>
                 )}
-                <CreationProperty mobile={mobile} label={tRelations("relations")}>
-                  <CreationRelationsCompact
-                    projectId={projectId}
-                    projectKey={currentProject?.key ?? ""}
-                    active={open}
-                    value={relations}
-                    onChange={setRelations}
-                    disabled={submitting}
-                  />
-                </CreationProperty>
+                {/* Smart Fill also links related issues after the save (MIN-717):
+                    the picker leaves with the other inferred fields. Relations
+                    already chosen stay visible as pills above the title. */}
+                {!smartFill && (
+                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
+                    <CreationRelationsCompact
+                      projectId={projectId}
+                      projectKey={currentProject?.key ?? ""}
+                      active={open}
+                      value={relations}
+                      onChange={setRelations}
+                      disabled={submitting}
+                    />
+                  </CreationProperty>
+                )}
                 {smartFillAvailable && (
                   <SmartFillCompact
                       fullWidth={mobile}

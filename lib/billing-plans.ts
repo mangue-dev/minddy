@@ -211,6 +211,10 @@ export const BILLABLE_FEATURES = [
   // its own feature so the sampling delta stays readable (and removable)
   // next to the decisions it measures.
   "jev_shadow",
+  // Smart Fill relations (MIN-717): issue indexing and the relation decision's
+  // LLM fallback. Same segment as Smart Fill below: the same gesture.
+  "issue_embedding",
+  "issue_relation",
 ] as const;
 
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
@@ -278,7 +282,15 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
   // single product hid the other half of the line.
   {
     id: "automations",
-    features: ["smart_assign", "smart_fill", "jev_decision", "smart_triage", "jev_shadow"],
+    features: [
+      "smart_assign",
+      "smart_fill",
+      "jev_decision",
+      "smart_triage",
+      "jev_shadow",
+      "issue_embedding",
+      "issue_relation",
+    ],
     barClass: "bg-fuchsia-500",
   },
 ];

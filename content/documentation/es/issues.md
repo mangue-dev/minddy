@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -97,13 +97,18 @@
       "content/documentation/reviews/min-721-code-work-removal-2026-10-16.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "lib/server/issue-relation-inference.ts",
+      "lib/server/issue-relation-decision.ts",
+      "lib/server/issue-embedding-store.ts",
+      "components/settings/account-preferences-section.tsx",
+      "content/documentation/reviews/min-717-smart-fill-relations.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; es translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (es new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; es translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; es translation of added passages; no browser walkthrough)",
+    "language": "agent:/root (es new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
   "related": [
@@ -149,7 +154,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar con título, descripción y propiedades que se pueden elegir manualmente.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -165,7 +170,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,7 +186,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -197,7 +202,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -213,7 +218,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -229,7 +234,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -245,7 +250,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -261,7 +266,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -277,7 +282,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -294,7 +299,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Eliminar.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -329,7 +334,7 @@ El control para eliminar un borrador guardado abre una confirmación. Cancelar c
 
 Debes ser el propietario o un Miembro del proyecto de destino; los lectores pueden abrir incidencias, pero no crearlas ni editarlas. Abre el proyecto y su control para crear una incidencia. Escribe un título que identifique el trabajo y añade contexto, resultado esperado y restricciones en la descripción. Elige el proyecto deliberadamente cuando crees desde una vista personal o entre proyectos.
 
-Para crear la incidencia manualmente, desactiva Rellenado inteligente si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías y objetivo para que los establezcas. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de Smart Assign y las rutinas.
+Para crear la incidencia manualmente, desactiva Rellenado inteligente si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías, objetivo y relaciones para que los establezcas. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de Smart Assign y las rutinas. Mientras Rellenado inteligente está activado, también [vincula la incidencia con incidencias relacionadas](#smart-fill-relations) una vez guardada, por lo que el selector de relaciones queda oculto. Las relaciones que ya elegiste siguen visibles encima del título y se crean con la incidencia.
 
 Configura las propiedades útiles antes de confirmar: estado, prioridad, esfuerzo, responsable, objetivo, categorías, fecha límite y recurrencia. La persona responsable es el propietario del proyecto o un Miembro, nunca un lector; un objetivo agrupa incidencias alrededor de un resultado del proyecto. Puedes dejar las propiedades opcionales sin valor en lugar de adivinar. La prioridad va de ninguna a baja, media, alta y urgente; el esfuerzo utiliza XS, S, M, L y XL.
 
@@ -343,6 +348,17 @@ Confirma la creación y abre la nueva incidencia. Comprueba su identificador y p
 Tras cambiar una propiedad, verifica el valor mostrado. Los filtros pueden retirar de inmediato una incidencia de la vista actual cuando cambia su responsable, estado o categoría. Busca su identificador o abre el proyecto sin esos filtros antes de crear una sustituta.
 
 Si falla la creación o el guardado, conserva el texto, lee el error y comprueba que la pertenencia y el destino sigan existiendo. Antes de reintentar tras un fallo de red, comprueba si la incidencia ya se creó. Adjunta páginas del proyecto como recursos vinculados a su contenido actual cuando lo necesites y utiliza comentarios para discutir la tarea.
+
+### Elegir qué hace Rellenado inteligente {#smart-fill-preferences}
+
+Las preferencias de Rellenado inteligente pertenecen a tu cuenta. Abre **Configuración de la cuenta** → **Preferencias** y usa los interruptores del grupo **Incidencias**:
+
+- **Activar Smart Fill** activa o desactiva Rellenado inteligente para tu cuenta. Completa la prioridad, el esfuerzo, las categorías y el objetivo que falten; el estado, el responsable y la fecha límite siguen siendo cosa tuya. Los tres interruptores siguientes dependen de él.
+- **Completar incidencias creadas** y **Completar incidencias de triaje** eligen qué incidencias nuevas completa: las que creas y las incidencias de triaje de las que eres responsable.
+- **Vincular incidencias relacionadas**, activado por defecto, permite a Rellenado inteligente [añadir relaciones](#smart-fill-relations) después de guardar una incidencia.
+- **Indexar incidencias**, activado por defecto e independiente de Rellenado inteligente, convierte el título y la descripción de las incidencias que creas o editas en vectores privados que sirven para encontrar incidencias relacionadas. Si eres propietario de un proyecto, también cubre la indexación en segundo plano de las incidencias existentes de ese proyecto. Los vectores se cifran con el proyecto, igual que la incidencia. Con el interruptor desactivado no se crea ningún vector y la búsqueda de incidencias relacionadas solo compara palabras. Los vectores ya creados no se borran: siguen cifrados y se eliminan con la incidencia.
+
+Desactivar un interruptor también cancela las pasadas que aún no se han ejecutado. Numo puede cambiar estas preferencias cuando se lo pidas.
 
 ## Revisar el trabajo entrante en clasificación {#triage-incoming-work}
 
@@ -424,6 +440,16 @@ Una incidencia abierta puede heredar un bloqueo a través de su objetivo abierto
 Retira una relación desde sus controles cuando ya no corresponda y verifica tanto la etiqueta como el indicador de bloqueo. Marcar una incidencia como duplicada afecta a su ciclo de vida y remite al trabajo conservado. Úsalo para tareas duplicadas en lugar de crear un vínculo ordinario y suponer que eso cierra el duplicado.
 
 Si el selector no encuentra una incidencia, comprueba el acceso al proyecto y el identificador. No expongas contenido de otro proyecto pegando una URL privada de incidencia en una respuesta pública a una solicitud de feedback.
+
+### Vínculos añadidos por Rellenado inteligente {#smart-fill-relations}
+
+Con **Vincular incidencias relacionadas** activado, Rellenado inteligente busca incidencias relacionadas después de crear una incidencia o de cambiar su título o su descripción. El trabajo se hace en segundo plano tras el guardado: la creación y la edición nunca lo esperan, y los vínculos pueden aparecer unos segundos más tarde. Para una incidencia nueva sigue las mismas elecciones que los demás campos, así que no se ejecuta si desactivaste Rellenado inteligente para esa incidencia. Tampoco se ejecuta para incidencias importadas de un repositorio vinculado, para copias recurrentes ni para cambios sincronizados desde el repositorio.
+
+Rellenado inteligente compara la incidencia con cinco candidatas como máximo del mismo proyecto y descarta las incidencias canceladas, duplicadas o eliminadas. Después, una decisión clasifica cada candidata como relacionada, bloqueadora, bloqueada por o sin relación. La similitud por sí sola nunca crea un vínculo, una dependencia exige indicios más sólidos que una relación simple y, ante la duda, Rellenado inteligente no añade nada. Una pasada añade como máximo tres relaciones. Nunca toca un par que ya tenga una relación, nunca añade un bloqueo que cierre un ciclo y descarta su resultado si el texto de la incidencia cambió durante la decisión. Nunca marca un duplicado ni cambia un estado.
+
+Los vínculos añadidos así aparecen en las relaciones de la incidencia como cualquier otro, y el historial indica Smart-fill como autor. Comprueba la dirección de una dependencia como harías con las tuyas. Para quitar un vínculo, usa los controles de relaciones: Rellenado inteligente no vuelve a añadir un vínculo quitado para ese par. Para dejar de recibir vínculos nuevos, desactiva **Vincular incidencias relacionadas** en [tus preferencias](#smart-fill-preferences). Las incidencias creadas antes de esta función, las importadas y las sincronizadas desde un repositorio se indexan poco a poco en segundo plano, pero nunca reciben vínculos automáticos.
+
+La indexación y las decisiones de relación usan IA. Cuentan en la parte **Automatizaciones** de la cuenta a la que corresponde la pasada: la cuenta a la que se cobra el Rellenado inteligente de la incidencia nueva, normalmente quien la creó; quien edita, en una edición; y el propietario del proyecto, en la indexación en segundo plano. El historial de uso las muestra como **Smart-fill · índice de incidencias** y **Smart-fill · relaciones**. Si ese presupuesto se agota o el proveedor falla, la pasada se omite y la incidencia no cambia. La administración de la instancia también puede desactivar la función para todos.
 
 ## Dividir una incidencia en subincidencias {#sub-issues}
 

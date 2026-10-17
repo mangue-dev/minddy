@@ -21,13 +21,16 @@
 export type DecisionUseCase =
   | "smart_fill"
   | "smart_assign"
-  | "feedback_review";
+  | "feedback_review"
+  /** Smart Fill relations (MIN-717): is a retrieved candidate related, blocking or blocked? */
+  | "issue_relations";
 
 /** Every known use case, for config parsing (`jev_llm_first`, MIN-567). */
 export const DECISION_USE_CASES: DecisionUseCase[] = [
   "smart_fill",
   "smart_assign",
   "feedback_review",
+  "issue_relations",
 ];
 
 /**

@@ -42,3 +42,39 @@ export function resolveSmartFillScope(
     scope === "triage" ? SMART_FILL_TRIAGE_META_KEY : SMART_FILL_CREATED_META_KEY;
   return meta?.[key] !== false;
 }
+
+/**
+ * SMART FILL RELATIONS (MIN-717) — two more account preferences, kept apart.
+ *
+ * - `smart_fill_relations`: whether Smart Fill may LINK an issue to related
+ *   issues and dependencies after it is saved. It lives under the master
+ *   switch like the creation scopes: Smart Fill off means no relations.
+ * - `issue_indexing`: whether the account's issues may be turned into
+ *   embedding vectors at all. It is NOT under the Smart Fill switch: the same
+ *   index will serve semantic search, which must not force automatic
+ *   relations, and a refusal of vectors must hold whatever else is enabled.
+ *   With indexing off, relation inference falls back to lexical candidates
+ *   and no vector is generated or billed.
+ *
+ * Both are enabled by default, read like the others (only an explicit `false`
+ * disables), and belong to the account that pays the pass: the creator for a
+ * new issue (Smart Fill provenance), the editor for an edit, the project
+ * owner for the background backfill. Work already queued re-reads them
+ * before spending, so turning one off cancels what has not run yet. Vectors
+ * already stored stay encrypted with the project until the issue's content
+ * changes or the issue is purged.
+ */
+export const SMART_FILL_RELATIONS_META_KEY = "smart_fill_relations";
+export const ISSUE_INDEXING_META_KEY = "issue_indexing";
+
+export function resolveSmartFillRelations(
+  meta: Record<string, unknown> | null | undefined,
+): boolean {
+  return resolveSmartFill(meta) && meta?.[SMART_FILL_RELATIONS_META_KEY] !== false;
+}
+
+export function resolveIssueIndexing(
+  meta: Record<string, unknown> | null | undefined,
+): boolean {
+  return meta?.[ISSUE_INDEXING_META_KEY] !== false;
+}

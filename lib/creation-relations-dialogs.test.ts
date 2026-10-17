@@ -190,6 +190,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("portals the modal %s relation menu outside the clipping dialog after reopening", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     for (let opening = 0; opening < 2; opening++) {
       await click(en.Relations.addRelationAria);
@@ -221,6 +223,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("keeps %s selections when creation is rejected", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     dialog.create.mockRejectedValueOnce(new Error("Creation rejected"));
     await addRelation("blocks", "objective");
@@ -231,6 +235,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("submits removable %s pills with the keyboard shortcut and protects cross-project creation", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     await addRelation("blocked_by", "objective");
     const pill = host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)!;
@@ -250,16 +256,18 @@ describe("creation relation controls", () => {
     expect(host.textContent).not.toContain("MIN-12 Target issue");
   });
 
-  it("keeps relations immediately before Smart Fill when enabled or disabled and resets after create more", async () => {
+  it("hides the relation picker while Smart Fill is on, keeps chosen relations, and resets after create more", async () => {
+    fixture.smartFillCreated = false;
     const dialog = await mountDialog("issue");
     const relationButton = host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)!;
     const smartFill = [...host.querySelectorAll("button")].find((button) => button.textContent === "Smart Fill")!;
     expect(relationButton.closest("[data-picker]")!.nextElementSibling).toBe(smartFill);
     await addRelation("related", "objective");
+    // Smart Fill also links related issues after the save (MIN-717): the
+    // picker leaves, the relation already chosen stays as a pill.
     await click("Smart Fill");
-    expect(host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)).not.toBeNull();
+    expect(host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)).toBeNull();
     expect(host.textContent).toContain("Target objective");
-    await click("Smart Fill");
     await click("Create more toggle");
     await typeTitle("Smart Fill issue");
     await act(() => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
@@ -269,6 +277,8 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("saves and restores a %s draft with only relations", async (kind) => {
+    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
+    if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     await addRelation("related", "objective");
     await click("Close creation");
