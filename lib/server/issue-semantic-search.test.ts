@@ -14,6 +14,13 @@ const h = vi.hoisted(() => ({
   deleted: new Set<string>(),
   requestEmbeddings: vi.fn(),
   listProjectEmbeddings: vi.fn(),
+  signals: [] as AbortSignal[],
+}));
+vi.mock("@/lib/server/supabase-fetch", () => ({
+  withSupabaseAbortSignal: (signal: AbortSignal, work: () => Promise<unknown>) => {
+    h.signals.push(signal);
+    return work();
+  },
 }));
 
 vi.mock("server-only", () => ({}));
@@ -135,5 +142,7 @@ describe("searchIssuesSemantically", () => {
       userId: "u1", query: "single sign-on for enterprise customers", projectIds: ["p1"], deadlineMs: 20,
     });
     expect(result).toEqual({ status: "timeout", hits: [] });
+    // The reads still in flight are cancelled, not left running.
+    expect(h.signals.at(-1)?.aborted).toBe(true);
   });
 });

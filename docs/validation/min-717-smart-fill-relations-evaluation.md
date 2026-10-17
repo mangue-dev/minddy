@@ -116,3 +116,48 @@ relation pass.
 - Queries shorter than two words, or a single word of fewer than six letters,
   never leave the browser.
 - Identifiers are always answered by text.
+
+## Search latency and the compact vector format (2026-10-17)
+
+Measured after MIN-718 merged. A search reads every vector of one index
+version in up to 25 projects, decrypts them and ranks them in the server.
+
+| Step | Legacy JSON floats | Compact int8 |
+| --- | --- | --- |
+| Stored row, encrypted | 28.6 KB | 3.4 KB |
+| 3,000 rows read per query | 86 MB | 10.3 MB |
+| Decrypt and decode 3,000 rows | 504 ms | 150 ms |
+| Rank 3,000 vectors | 4 ms | 6 ms |
+| Query embedding (8 real calls) | median 0.6 s, max 1.0 s | unchanged |
+
+How each figure was measured:
+- **Rows, decoding and ranking:** an in-process benchmark with the real row
+  codec, AES encryption and random normalized 1,536-dimension vectors. Ranking
+  75,000 vectors took 79 ms.
+- **Throughput:** a PostgREST read of the production feedback embeddings
+  (same storage pattern, read-only) gave about 11 MB/s from a workstation;
+  encrypted content compresses poorly. At that rate 3,000 legacy rows took
+  about 8 s, past the 4 s search deadline, so any workspace with about 1,000
+  or more indexed issues fell back to text search. The same read is about
+  1 s with compact rows.
+- **Not measured:** throughput from a Vercel function in the database's
+  region, which should be higher.
+
+**Quality.** Vectors are quantized to int8 with one scale per vector, so each
+coordinate stays within half a step (`scale / 254`) of its value. Rerunning
+both evaluations with the corpus stored in this format gave the same relation
+verdicts (precision and recall 1.0) and the same search rankings. Cosine
+scores moved by at most 0.001.
+
+**Compatibility.** The embedding space is unchanged (same model and
+dimensions), so the index version stays the same. Legacy rows are still read,
+and the hourly `/api/cron/issue-index` walk rewrites them compactly under
+compare-and-swap, with no AI call.
+
+**Deadline.** The search deadline now also aborts the database reads still in
+flight; before, they ran on after the timeout answered.
+
+**Not changed.** Requesting 512 dimensions instead of 1,536 would cut a row to
+about 1.3 KB. It would also start a new index version, so every issue would be
+re-embedded, and it would need its own quality evaluation. With compact rows
+it is no longer needed to stay within the deadline.

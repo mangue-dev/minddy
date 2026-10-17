@@ -2575,6 +2575,11 @@ policy, and the anon and authenticated grants are revoked.
     and the clear state, so a concurrent rewrite wins. No AI call is made.
   - `content_version` is a random UUID that changes whenever the fingerprint
     changes. It carries no content.
+  - The vector is stored inside the encrypted payload in a compact int8 format
+    (`lib/server/issue-vector-format.ts`): one scale per vector plus base64
+    values, about 3.4 KB per encrypted row instead of 28.6 KB for the earlier
+    JSON float array. Legacy rows are still read, and the same hourly walk
+    rewrites them under compare-and-swap. No column changed.
   - Similarity is computed in the server after decryption. Postgres holds no
     plaintext vector index.
 - `issue_relation_inferences` caches Smart Fill's relation verdicts per issue

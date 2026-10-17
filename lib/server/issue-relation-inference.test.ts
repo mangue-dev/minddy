@@ -31,7 +31,7 @@ const h = vi.hoisted(() => ({
   requestEmbeddings: vi.fn(),
   addIssueRelation: vi.fn(),
   writeIssueEmbedding: vi.fn(),
-  reencodeClearEmbedding: vi.fn(),
+  rewriteStoredEmbedding: vi.fn(),
   deleted: [] as string[],
 }));
 
@@ -62,7 +62,7 @@ vi.mock("@/lib/server/issue-embedding-store", () => ({
     h.deleted.push(...versions.map((version) => `${issueId}@${version}`));
     h.embeddings = h.embeddings.filter((row) => !(row.issue_id === issueId && versions.includes(row.index_version as string)));
   },
-  reencodeClearEmbedding: h.reencodeClearEmbedding,
+  rewriteStoredEmbedding: h.rewriteStoredEmbedding,
   listProjectEmbeddings: async (_s: unknown, _p: string, version: string) =>
     h.embeddings.filter((row) => row.index_version === version),
   writeIssueEmbedding: h.writeIssueEmbedding,
@@ -189,7 +189,7 @@ beforeEach(() => {
     ok: true, relation: { id: `rel-${input.targetId}`, source_id: input.sourceId, target_id: input.targetId, type: "related" },
   }));
   h.writeIssueEmbedding.mockReset().mockResolvedValue(undefined);
-  h.reencodeClearEmbedding.mockReset().mockResolvedValue(false);
+  h.rewriteStoredEmbedding.mockReset().mockResolvedValue(false);
   h.deleted = [];
   issue("subject", "Add SSO login", "Use the new auth provider for sign-in.");
 });
@@ -481,7 +481,7 @@ describe("runIssueIndexBackfill", () => {
     h.metaByUser.refuser = { issue_indexing: false };
     indexRow("c2", [0, 1, 0]);
     h.embeddings[0].stored_clear = true;
-    h.reencodeClearEmbedding.mockResolvedValue(true);
+    h.rewriteStoredEmbedding.mockResolvedValue(true);
 
     const result = await runIssueIndexBackfill(100);
 
