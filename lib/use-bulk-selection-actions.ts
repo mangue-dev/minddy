@@ -33,6 +33,7 @@ import {
 } from "@/lib/issue-prompt";
 import {
   loadIssuePromptContext,
+  prefetchIssuePromptContext,
   UNAVAILABLE_FORGE_CONTEXT,
 } from "@/lib/issue-prompt-context";
 import {
@@ -82,6 +83,13 @@ export function useBulkSelectionActions({
     return acquireSelectionKeys();
   }, [hasSelection]);
 
+  // A selection is about to be copied (⇧P, bulk actions): warm its forge
+  // context so the copy never waits on it (MIN-723).
+  const selectedIdsKey = selectedIssues.map((issue) => issue.id).join(",");
+  useEffect(() => {
+    if (selectedIdsKey) prefetchIssuePromptContext(selectedIdsKey.split(","));
+  }, [selectedIdsKey]);
+
   /**
    * One combined prompt for the whole selection, copied to the clipboard.
    * The single-ticket side effects repeat per ticket: a waiting automation
@@ -99,8 +107,9 @@ export function useBulkSelectionActions({
         moved.add(issue.id);
       }
     }
-    // One bounded read for the whole selection: pull requests and repository
-    // per issue (MIN-719); an issue it could not load says so in its block.
+    // Pull requests and repository per issue (MIN-719), warmed with the
+    // selection and waited for only briefly (MIN-723); an issue it could not
+    // load in time says so in its block.
     const forge = await loadIssuePromptContext(issues.map((issue) => issue.id));
     const prompt = buildMultiIssuePrompt(
       issues.map((issue) => ({

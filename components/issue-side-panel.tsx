@@ -49,7 +49,10 @@ import {
   buildIssuePrompt,
   buildIssueVerifyPrompt,
 } from "@/lib/issue-prompt";
-import { loadOneIssuePromptContext } from "@/lib/issue-prompt-context";
+import {
+  loadOneIssuePromptContext,
+  prefetchIssuePromptContext,
+} from "@/lib/issue-prompt-context";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import {
   resolvePromptCopyAutoStart,
@@ -361,6 +364,13 @@ export function IssueSidePanel({
         .filter((name): name is string => !!name),
     };
   }, [issue, allIssues, resolvedRelations, categories, projectKey]);
+
+  // An open panel offers every copy action: warm their forge context so a
+  // copy never waits on it (MIN-723).
+  const promptIssueId = issue?.id;
+  useEffect(() => {
+    if (promptIssueId) prefetchIssuePromptContext([promptIssueId]);
+  }, [promptIssueId]);
 
   const copyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;

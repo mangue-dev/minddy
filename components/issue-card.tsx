@@ -82,7 +82,10 @@ import {
   buildIssuePrompt,
   buildIssueVerifyPrompt,
 } from "@/lib/issue-prompt";
-import { loadOneIssuePromptContext } from "@/lib/issue-prompt-context";
+import {
+  loadOneIssuePromptContext,
+  prefetchIssuePromptContext,
+} from "@/lib/issue-prompt-context";
 import { useAskNumoTarget } from "@/lib/ask-numo-context";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useCategoryCreateOption } from "@/lib/use-picker-create";
@@ -1307,6 +1310,13 @@ const IssueCardContent = memo(function IssueCardContent({
     <div
       ref={setCardRef}
       {...hoverProps}
+      // Hover, focus and right click announce a copy (⇧P, menu): warm the
+      // prompt's forge context so the copy itself never waits (MIN-723).
+      onMouseEnter={(e) => {
+        hoverProps.onMouseEnter(e);
+        prefetchIssuePromptContext([issue.id]);
+      }}
+      onFocus={() => prefetchIssuePromptContext([issue.id])}
       onClick={(e) => {
         if (e.shiftKey && onSelect) {
           e.preventDefault();
@@ -1319,6 +1329,7 @@ const IssueCardContent = memo(function IssueCardContent({
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        prefetchIssuePromptContext([issue.id]);
         pointerRef.current = { x: e.clientX, y: e.clientY };
         setMenuPosition(pointerRef.current);
       }}
