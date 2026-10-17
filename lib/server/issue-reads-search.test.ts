@@ -85,4 +85,16 @@ describe("searchIssues (hybrid)", () => {
     await searchIssues({ ...ctx(), actorId: undefined }, { query: "single sign-on" });
     expect(h.semantic).not.toHaveBeenCalled();
   });
+
+  it("orders text matches by status: under way first, triage and closed last (MIN-726)", async () => {
+    h.rows = [
+      issue("x1", 1, "Login done", { status: "done" }),
+      issue("x2", 2, "Login triage", { status: "triage" }),
+      issue("x3", 3, "Login todo", { status: "todo" }),
+      issue("x4", 4, "Login review", { status: "in_review" }),
+    ];
+    h.semantic.mockResolvedValue({ status: "ok", hits: [] });
+    const result = await searchIssues(ctx(), { query: "login" });
+    expect("issues" in result && result.issues.map((i) => i.id)).toEqual(["x4", "x3", "x1", "x2"]);
+  });
 });

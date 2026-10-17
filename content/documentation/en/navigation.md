@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,6 +53,7 @@
       "lib/server/issue-semantic-search.ts",
       "app/api/issues/semantic-search/route.ts",
       "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
@@ -160,6 +161,10 @@ Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette;
 Use the keyboard shortcuts help to inspect the commands available on your platform. minddy distinguishes application shortcuts, issue-property actions and native desktop tab or window shortcuts. Check where focus is before using a command: typing inside an editor and acting on the surrounding issue are different contexts.
 
 ![Search results for a demonstration issue identifier.](/documentation/en/work-search.png)
+
+### Order of issues in search {#issue-search-order}
+
+Every issue search lists issues in the same order: the palette, `@` mentions, the relation, duplicate and pull request pickers, the feedback **Link to an existing issue** dialog, and the search used by Numo and MCP agents. **In progress** and **In review** issues come first, then **Backlog** and **Todo** issues. **Triage**, **Done**, **Canceled** and **Duplicate** issues always come last and stay selectable. Within each group, the best text match comes first. An identifier typed in full, such as `MIN-42`, puts that issue first, whatever its status.
 
 ### Search issues by meaning {#search-by-meaning}
 

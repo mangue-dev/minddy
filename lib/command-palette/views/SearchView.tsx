@@ -100,6 +100,23 @@ export interface SearchViewProps {
 // COMPONENT
 // =============================================================================
 
+/**
+ * Stable reorder by `searchTier` (lowest first), with an item whose
+ * `exactKeywords` contains the query ahead of every tier. Items without a
+ * tier keep the relevance order the caller gave them. Categories are grouped
+ * afterwards, so only the order inside a category is affected.
+ */
+function orderByTier(items: PaletteItem[], query: string): PaletteItem[] {
+  if (!items.some((item) => item.searchTier !== undefined || item.exactKeywords)) return items;
+  const q = query.trim().toLocaleLowerCase().replace(/^#/, "");
+  const rank = (item: PaletteItem) =>
+    q && item.exactKeywords?.some((keyword) => keyword.toLocaleLowerCase() === q) ? -1 : item.searchTier ?? 0;
+  return items
+    .map((item, index) => ({ item, index, rank: rank(item) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ item }) => item);
+}
+
 export function SearchView({
   items,
   supplemental,
@@ -208,7 +225,7 @@ export function SearchView({
 
     // No query: return as-is (no scoring needed)
     if (!debouncedQuery.trim()) {
-      return result;
+      return orderByTier(result, "");
     }
 
     const matchingCategories = findMatchingCategories(debouncedQuery);
@@ -250,7 +267,7 @@ export function SearchView({
 
     scoredItems.sort((a, b) => b.score - a.score);
 
-    return scoredItems.map((s) => s.item);
+    return orderByTier(scoredItems.map((s) => s.item), debouncedQuery);
   }, [items, debouncedQuery, categoryFilter, searchContext, usageStats, categories, findMatchingCategories]);
 
   // Sort by category so activeIndex matches the visual position.

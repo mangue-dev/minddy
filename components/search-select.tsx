@@ -205,7 +205,7 @@ export function SearchSelect({
    * found by meaning in this scope are appended after the text matches.
    * `projectId: null` searches every readable project.
    */
-  semanticIssues?: { projectId: string | null };
+  semanticIssues?: { projectId: string | null; statusOf?: (value: string) => string | null | undefined };
   /** Last line “Add…” (see {@link PickerCreateOption}). */
   createOption?: PickerCreateOption;
   /** Controlled open state (e.g. driven by a keyboard shortcut). */
@@ -253,6 +253,7 @@ export function SearchSelect({
           projectId={semanticIssues.projectId}
           candidates={options}
           idOf={(opt) => opt.value}
+          statusOf={semanticIssues.statusOf ? (opt) => semanticIssues.statusOf?.(opt.value) : undefined}
           textOf={(opt) => ({ value: opt.value, keywords: [opt.label, ...(opt.keywords ?? [])] })}
           onSelect={(opt) => select(opt.value)}
           renderItem={(opt) => (

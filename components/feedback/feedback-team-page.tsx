@@ -3,6 +3,7 @@
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { semanticExtras } from "@/lib/issue-semantic-query";
+import { isExactIssueQuery, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
@@ -2154,21 +2155,28 @@ function LinkIssueDialog({
 
   const needle = search.trim().toLowerCase();
   const eligible = issues.filter((issue) => issue.status !== "canceled" && issue.status !== "duplicate");
-  const candidates = eligible
-    .filter(
+  // Work under way first, done and triage last; an exact identifier before
+  // all (MIN-726).
+  const candidates = orderIssuesForSearch(
+    eligible.filter(
       (issue) =>
         !needle ||
         issue.title.toLowerCase().includes(needle) ||
         issueIdentifier(projectKey, issue.number).toLowerCase().includes(needle)
-    )
-    .slice(0, 30);
+    ),
+    (issue) => issue.status,
+    (issue) => isExactIssueQuery(search, issueIdentifier(projectKey, issue.number), issue.number),
+  ).slice(0, 30);
   // Issues found by meaning (MIN-718), after the text matches and among the
   // same eligible issues: a feedback post rarely reuses the issue's words.
   const { ids: semanticIds } = useSemanticIssueSearch(search, { projectId, enabled: open });
-  const semantic = semanticExtras(
-    semanticIds,
-    new Map(eligible.map((issue) => [issue.id, issue])),
-    new Set(candidates.map((issue) => issue.id)),
+  const semantic = orderIssuesForSearch(
+    semanticExtras(
+      semanticIds,
+      new Map(eligible.map((issue) => [issue.id, issue])),
+      new Set(candidates.map((issue) => issue.id)),
+    ),
+    (issue) => issue.status,
   );
   const tPicker = useTranslations("Picker");
 

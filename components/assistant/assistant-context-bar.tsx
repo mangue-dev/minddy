@@ -25,7 +25,8 @@ import {
 } from "@/components/assistant/adaptive-context-row";
 import { ResourcePills, type ResourceLike } from "@/components/resources";
 import { displayName } from "@/lib/display-name";
-import { issueIdentifier, isClosedStatus } from "@/lib/issue-constants";
+import { issueIdentifier } from "@/lib/issue-constants";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useMentionSources } from "@/lib/use-mention-sources";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { flattenPageTree } from "@/lib/pages";
@@ -101,10 +102,9 @@ function AddContextButton({
 
   const issues = useMemo(() => {
     const list = board.data?.issues ?? [];
-    // Open first — closed ones remain selectable.
-    return [...list].sort(
-      (a, b) => (isClosedStatus(a.status) ? 1 : 0) - (isClosedStatus(b.status) ? 1 : 0),
-    );
+    // Work under way first, then open issues, triage and closed ones last
+    // — all remain selectable (MIN-726).
+    return orderIssuesForSearch(list, (issue) => issue.status);
   }, [board.data]);
 
   const close = () => {
@@ -302,6 +302,7 @@ function AddContextButton({
                   <CommandItem
                     key={issue.id}
                     value={`${identifier} ${issue.title} ${project?.name ?? ""}`}
+                    keywords={[identifier, issueTierKeyword(issue.status)]}
                     onSelect={() =>
                       pick({
                         kind: "issue",
@@ -328,6 +329,7 @@ function AddContextButton({
             projectId={null}
             candidates={issues}
             idOf={(issue) => issue.id}
+            statusOf={(issue) => issue.status}
             textOf={(issue) => {
               const project = projectById.get(issue.project_id);
               return { value: `${issueIdentifier(project?.key ?? "", issue.number)} ${issue.title} ${project?.name ?? ""}` };

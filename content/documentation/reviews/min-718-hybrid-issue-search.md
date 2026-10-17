@@ -99,3 +99,20 @@ Figure revisions were advanced with their articles without a content change.
 `npm run check:documentation`, `npm run check:knowledge`,
 `npm run check:owned-english` and `git diff --check` were run after the edits;
 results are listed in the pull request.
+
+## MIN-726: issue order in search
+
+`navigation` gains `#issue-search-order` in all six locales, placed before
+`#search-by-meaning`. It describes the shared order implemented in
+`lib/issue-search-order.ts`:
+
+- **In progress** and **In review** issues first;
+- then the other open issues;
+- **Triage**, **Done**, **Canceled** and **Duplicate** issues last;
+- text relevance within each group;
+- an identifier typed in full ahead of every group.
+
+The status and dialog labels are quoted from each catalog. The article's
+`compatibility.version` and evidence name MIN-726; its revision was already
+advanced earlier in this pull request. This is an agent source review, with
+no browser walkthrough and no new capture.

@@ -28,6 +28,7 @@ import {
   toast,
 } from "mangue-ui";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import {
   RELATION_PRIORITY,
   RELATION_TYPES,
@@ -97,7 +98,8 @@ export function ObjectiveRelationsSection({
     [resolved, step],
   );
   const issueCandidates = useMemo(
-    () => issues.filter((i) => !linked.has(i.id) && !isClosedStatus(i.status)),
+    // Work under way first, triage last (MIN-726).
+    () => orderIssuesForSearch(issues.filter((i) => !linked.has(i.id) && !isClosedStatus(i.status)), (i) => i.status),
     [issues, linked],
   );
   const objectiveCandidates = useMemo(
@@ -182,7 +184,7 @@ export function ObjectiveRelationsSection({
                     <CommandItem
                       key={candidate.id}
                       value={candidate.id}
-                      keywords={[id, candidate.title]}
+                      keywords={[id, candidate.title, issueTierKeyword(candidate.status)]}
                       onSelect={() => {
                         void addRelation(objective.id, step, candidate.id, {
                           sourceType: "objective",
@@ -227,6 +229,7 @@ export function ObjectiveRelationsSection({
                 projectId={projectId}
                 candidates={issueCandidates}
                 idOf={(candidate) => candidate.id}
+                statusOf={(candidate) => candidate.status}
                 textOf={(candidate) => ({
                   value: candidate.id,
                   keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],

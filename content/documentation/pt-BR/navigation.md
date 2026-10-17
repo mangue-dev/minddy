@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,6 +53,7 @@
       "lib/server/issue-semantic-search.ts",
       "app/api/issues/semantic-search/route.ts",
       "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
@@ -160,6 +161,10 @@ Pressione Command+K no macOS ou Ctrl+K no Windows/Linux para abrir a paleta de c
 Use a ajuda de atalhos de teclado para consultar os comandos disponíveis na sua plataforma. O minddy distingue atalhos da aplicação, ações de propriedades de problemas e atalhos nativos de abas ou janelas do desktop. Confira onde está o foco antes de usar um comando: digitar em um editor e agir no problema ao redor são contextos diferentes.
 
 ![Resultados de busca do identificador de um ticket de demonstração.](/documentation/pt-BR/work-search.png)
+
+### Ordem dos problemas na busca {#issue-search-order}
+
+Toda busca de problemas lista os problemas na mesma ordem: a paleta, as menções `@`, os seletores de relações, duplicados e pull requests, a janela **Link para um problema existente** dos feedbacks e a busca usada pelo Numo e pelos agentes MCP. Problemas **Em andamento** e **Em revisão** vêm primeiro, depois os de **Backlog** e **A fazer**. Problemas em **Triagem**, **Concluído**, **Cancelada** e **Duplicado** sempre vêm por último e continuam selecionáveis. Dentro de cada grupo, a melhor correspondência de texto vem primeiro. Um identificador digitado por inteiro, como `MIN-42`, coloca esse problema no topo, seja qual for o status.
 
 ### Buscar problemas pelo sentido {#search-by-meaning}
 

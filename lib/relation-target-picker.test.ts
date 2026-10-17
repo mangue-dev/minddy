@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { issueTierKeyword } from "@/lib/issue-search-order";
 import { resolve } from "node:path";
 import * as React from "react";
 import ts from "typescript-api";
@@ -157,7 +158,7 @@ describe("card relation target picker", () => {
       const nodes = elements(tree);
       expect(nodes.some((node) => node.props.heading === en.Relations.objectives)).toBe(true);
       expect(nodes.some((node) => node.props.heading === en.Relations[relation])).toBe(true);
-      for (const [target, kind, keywords] of [[other.id, "issue", ["MIN-2", other.title]], [objective.id, "objective", [objective.name]]] as const) {
+      for (const [target, kind, keywords] of [[other.id, "issue", ["MIN-2", other.title, issueTierKeyword(other.status)]], [objective.id, "objective", [objective.name]]] as const) {
         const item = nodes.find((node) => node.props.value === target)!;
         expect(item.props.keywords).toEqual(keywords);
         (item.props.onSelect as () => void)();

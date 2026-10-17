@@ -33,6 +33,7 @@ import { RelationObjectiveLabel } from "@/components/relation-objective-label";
 import { useTranslations } from "next-intl";
 import { Button, CommandGroup, CommandItem, cn, toast } from "mangue-ui";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import { RELATION_PRIORITY, RELATION_TYPES } from "@/lib/relation-constants";
 import {
   FEEDBACK_TO_ISSUE_STATUS,
@@ -120,9 +121,13 @@ export function RelationsSection({
         .filter((r) => !r.inheritedObjectiveId && r.relation === step)
         .map((r) => r.otherId),
     );
-    return allIssues.filter(
-      (i) =>
-        i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
+    // Work under way first, triage last (MIN-726).
+    return orderIssuesForSearch(
+      allIssues.filter(
+        (i) =>
+          i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status),
+      ),
+      (i) => i.status,
     );
   }, [allIssues, relations, issue.id, step]);
   const objectiveCandidates = useMemo<Objective[]>(() => {
@@ -215,7 +220,7 @@ export function RelationsSection({
                     <CommandItem
                       key={candidate.id}
                       value={candidate.id}
-                      keywords={[id, candidate.title]}
+                      keywords={[id, candidate.title, issueTierKeyword(candidate.status)]}
                       onSelect={() => {
                         onAddRelation(issue.id, step, candidate.id);
                         close();
@@ -257,6 +262,7 @@ export function RelationsSection({
                 projectId={issue.project_id}
                 candidates={candidates}
                 idOf={(candidate) => candidate.id}
+                statusOf={(candidate) => candidate.status}
                 textOf={(candidate) => ({
                   value: candidate.id,
                   keywords: [issueIdentifier(projectKey, candidate.number), candidate.title],

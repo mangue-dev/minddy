@@ -41,6 +41,17 @@ export interface PaletteItem {
    */
   filterCategory: string;
   /**
+   * Rank tier inside the item's category, lowest first (default 0). It beats
+   * the relevance score, which still orders items of the same tier — e.g.
+   * issues in progress before open ones before closed ones.
+   */
+  searchTier?: number;
+  /**
+   * Typed exactly (case-insensitive), any of these puts the item before every
+   * tier of its category — e.g. an issue identifier.
+   */
+  exactKeywords?: string[];
+  /**
    * Entity type used to route the item to ActionProviders.
    * Falls back to filterCategory when omitted.
    */

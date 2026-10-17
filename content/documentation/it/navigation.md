@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,6 +53,7 @@
       "lib/server/issue-semantic-search.ts",
       "app/api/issues/semantic-search/route.ts",
       "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
@@ -160,6 +161,10 @@ Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei com
 Usa la guida delle scorciatoie per esaminare i comandi disponibili sulla tua piattaforma. minddy distingue scorciatoie dell’applicazione, azioni sulle proprietà dei ticket e scorciatoie native per schede o finestre desktop. Controlla dove si trova il focus prima di usare un comando: scrivere dentro un editor e agire sul ticket circostante sono contesti diversi.
 
 ![Risultati della ricerca dell’identificativo di un ticket dimostrativo.](/documentation/it/work-search.png)
+
+### Ordine dei ticket nella ricerca {#issue-search-order}
+
+Ogni ricerca di ticket elenca i ticket nello stesso ordine: la palette, le menzioni `@`, i selettori di relazioni, duplicati e pull request, la finestra **Collegamento a un ticket esistente** dei feedback e la ricerca usata da Numo e dagli agenti MCP. I ticket **In corso** e **In revisione** vengono per primi, poi quelli in **Backlog** e **Da fare**. I ticket in **Triaggio**, **Fatto**, **Annullata** e **Duplicato** vengono sempre per ultimi e restano selezionabili. In ogni gruppo, la corrispondenza di testo migliore viene per prima. Un identificativo digitato per intero, come `MIN-42`, mette quel ticket in cima, qualunque sia il suo stato.
 
 ### Cercare i ticket per significato {#search-by-meaning}
 

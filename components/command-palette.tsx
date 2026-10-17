@@ -53,6 +53,7 @@ import {
   usePaletteStore,
 } from "@/lib/command-palette";
 import { semanticExtras } from "@/lib/issue-semantic-query";
+import { issueSearchTier } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
 
 /** Palette category of the issues found by meaning (MIN-718), always last. */
@@ -378,6 +379,16 @@ export function CommandPalette({
           return ProjectIcon ? <AppIcon icon={ProjectIcon} className="size-3.5" /> : undefined;
         })(),
         filterCategory: cat,
+        // Issue search order (MIN-726): work under way first, closed and
+        // triage issues last, the typed identifier before all.
+        ...(issue
+          ? {
+              searchTier: issueSearchTier(issue.status),
+              exactKeywords: [it.metaText, String((issue as { number?: number }).number ?? "")].filter(
+                (keyword): keyword is string => Boolean(keyword),
+              ),
+            }
+          : {}),
         entityType: it.entityType ?? (it.href ? "navigation" : undefined),
         // Line project: the motor boosts those of the current project
         // (SearchContext.currentContextId), without excluding others.
@@ -1340,7 +1351,9 @@ export function CommandPalette({
       semanticIds.map((id) => `issue-${id}`),
       issueRows,
       new Set<string>(),
-    ).map((item) => ({ ...item, filterCategory: SEMANTIC_CATEGORY }));
+    ).map((item) => ({ ...item, filterCategory: SEMANTIC_CATEGORY }))
+      // Same order as the text rows, by similarity within a tier (MIN-726).
+      .sort((a, b) => (a.searchTier ?? 1) - (b.searchTier ?? 1));
   }, [semanticEnabled, semanticIds, searchItems]);
 
   // In bulk mode, the palette displays the selection options instead of the

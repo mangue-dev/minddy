@@ -10,7 +10,15 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Command as CommandPrimitive } from "cmdk";
+import { Command as CommandPrimitive, defaultFilter } from "cmdk";
+import { issueAwareFilter } from "@/lib/issue-search-order";
+
+/**
+ * cmdk's own filter, plus the issue order of MIN-726 for items that carry an
+ * issue tier keyword (`issueTierKeyword`): work under way first, closed
+ * issues last, an exact identifier before all. Other items score as before.
+ */
+const searchMenuFilter = issueAwareFilter(defaultFilter);
 import { Command, CommandEmpty, CommandSeparator, cn } from "mangue-ui";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { Kbd } from "@/components/ui/kbd";
@@ -119,7 +127,7 @@ export function SearchMenu({
         triggerNode.current?.focus();
       } : undefined}
     >
-      <Command shouldFilter={shouldFilter}>
+      <Command shouldFilter={shouldFilter} filter={searchMenuFilter}>
         <DropdownSearchRow>
           <CommandPrimitive.Input
             autoFocus={allowInputAutoFocus()}

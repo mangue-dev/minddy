@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,6 +53,7 @@
       "lib/server/issue-semantic-search.ts",
       "app/api/issues/semantic-search/route.ts",
       "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
@@ -160,6 +161,10 @@ Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette
 Consultez l’aide des raccourcis pour votre plateforme. minddy distingue raccourcis de l’application, actions de propriétés des tickets et commandes natives d’onglets ou de fenêtres desktop. Vérifiez le focus avant une commande : saisir dans un éditeur et agir sur le ticket environnant sont des contextes différents.
 
 ![Résultats de recherche pour l’identifiant d’un ticket de démonstration.](/documentation/fr/work-search.png)
+
+### Ordre des tickets dans la recherche {#issue-search-order}
+
+Toutes les recherches de tickets affichent les tickets dans le même ordre : la palette, les mentions `@`, les sélecteurs de relations, de doublon et de pull request, la fenêtre **Lier à un ticket existant** des retours, et la recherche utilisée par Numo et les agents MCP. Les tickets **En cours** et **En revue** viennent d’abord, puis les tickets **Backlog** et **À faire**. Les tickets **Triage**, **Terminé**, **Annulé** et **Doublon** viennent toujours en dernier et restent sélectionnables. Dans chaque groupe, la meilleure correspondance de texte passe en premier. Un identifiant tapé en entier, comme `MIN-42`, place ce ticket en tête, quel que soit son statut.
 
 ### Chercher des tickets par le sens {#search-by-meaning}
 

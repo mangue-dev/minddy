@@ -7,6 +7,7 @@ import { CommandAnchor } from "@/components/command-anchor";
 import { SemanticIssueGroup } from "@/components/semantic-issue-group";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import type { Issue, IssueRelationType, Objective, RelationEndpointType } from "@/lib/types";
 
 export function RelationTargetPicker({
@@ -28,17 +29,19 @@ export function RelationTargetPicker({
 }) {
   const t = useTranslations("Relations");
   if (!position || !relation) return null;
+  // Work under way first, triage last (MIN-726).
+  const ordered = orderIssuesForSearch(issues, (issue) => issue.status);
 
   return (
     <CommandAnchor position={position} onClose={onClose}>
       <CommandGroup heading={t(relation)}>
-        {issues.map((issue) => {
+        {ordered.map((issue) => {
           const id = issueIdentifier(projectKey, issue.number);
           return (
             <CommandItem
               key={issue.id}
               value={issue.id}
-              keywords={[id, issue.title]}
+              keywords={[id, issue.title, issueTierKeyword(issue.status)]}
               onSelect={() => {
                 onClose();
                 onSelect(issue.id, "issue");
@@ -73,8 +76,9 @@ export function RelationTargetPicker({
       {/* Same eligible issues, found by meaning (MIN-718). */}
       <SemanticIssueGroup
         projectId={issues[0]?.project_id ?? null}
-        candidates={issues}
+        candidates={ordered}
         idOf={(issue) => issue.id}
+        statusOf={(issue) => issue.status}
         textOf={(issue) => ({ value: issue.id, keywords: [issueIdentifier(projectKey, issue.number), issue.title] })}
         onSelect={(issue) => {
           onClose();

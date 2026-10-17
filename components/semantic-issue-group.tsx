@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { defaultFilter, useCommandState } from "cmdk";
 import { CommandGroup, CommandItem } from "mangue-ui";
 import { semanticExtras } from "@/lib/issue-semantic-query";
+import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
 
 /**
@@ -26,6 +27,7 @@ export function SemanticIssueGroup<T>({
   candidates,
   idOf,
   textOf,
+  statusOf,
   renderItem,
   onSelect,
 }: {
@@ -36,6 +38,8 @@ export function SemanticIssueGroup<T>({
   idOf: (item: T) => string;
   /** The cmdk `value` and `keywords` of the same issue's text row in this picker. */
   textOf: (item: T) => { value: string; keywords?: string[] };
+  /** The issue's status: the rows follow the search order of MIN-726 (under way first, closed last). */
+  statusOf?: (item: T) => string | null | undefined;
   renderItem: (item: T) => React.ReactNode;
   onSelect: (item: T) => void;
 }) {
@@ -55,8 +59,11 @@ export function SemanticIssueGroup<T>({
         if (defaultFilter(value, search, keywords) > 0) shown.add(id);
       }
     }
-    return semanticExtras(ids, eligible, shown);
-  }, [ids, candidates, idOf, textOf, search]);
+    const extras = semanticExtras(ids, eligible, shown);
+    // Same order as the text rows: work under way first, closed last, by
+    // similarity within a tier.
+    return statusOf ? orderIssuesForSearch(extras, statusOf) : extras;
+  }, [ids, candidates, idOf, textOf, statusOf, search]);
 
   if (extras.length === 0) return null;
   return (

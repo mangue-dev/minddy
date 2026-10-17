@@ -1,5 +1,6 @@
 import { objectiveStore } from "@/lib/server/objective-store";
 import { searchIssuesSemantically } from "@/lib/server/issue-semantic-search";
+import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { commentStore } from "@/lib/server/comment-store";
 import { decodeIssue } from "@/lib/server/issue-store";
 import { decodeGithubIssueMetadata, legacyGithubIssueMetadataSchema } from
@@ -512,9 +513,13 @@ export async function searchIssues(
     }
   }
 
-  const matches: Array<Record<string, unknown>> = [];
+  // Collect a wider pool than `limit`, so the status order below (MIN-726:
+  // work under way first, triage and closed issues last) is not decided by
+  // recency alone; recency still orders issues within a tier.
+  const pool = Math.min(limit * 5, 500);
+  let matches: Array<Record<string, unknown>> = [];
   const needle = query.toLocaleLowerCase();
-  for (let offset = 0; matches.length < limit; offset += 200) {
+  for (let offset = 0; matches.length < pool; offset += 200) {
     const { data, error } = await ctx.db.from("issues")
       .select("*, issue_categories(category_id)")
       .is("deleted_at", null).eq("project_id", ctx.projectId)
@@ -527,11 +532,12 @@ export async function searchIssues(
       if (String(row.title).toLocaleLowerCase().includes(needle) ||
           String(row.description ?? "").toLocaleLowerCase().includes(needle)) {
         matches.push(compactIssue(row, ctx.projectKey));
-        if (matches.length === limit) break;
+        if (matches.length === pool) break;
       }
     }
     if (page.length < 200) break;
   }
+  matches = orderIssuesForSearch(matches, (issue) => issue.status as string | undefined).slice(0, limit);
 
   // Hybrid search (MIN-718): lexical matches stay first, and an exact
   // identifier never reaches this point. Issues found by meaning fill the
@@ -553,13 +559,18 @@ export async function searchIssues(
         .is("deleted_at", null).eq("project_id", ctx.projectId)
         .in("id", ids);
       const byId = new Map(((data ?? []) as Record<string, unknown>[]).map((row) => [row.id as string, row]));
+      const semanticMatches: Array<Record<string, unknown>> = [];
       for (const id of ids) {
         const stored = byId.get(id);
         if (!stored) continue;
         const row = await decodeIssue(stored, ctx.actorId ?? null);
-        matches.push({ ...compactIssue(row, ctx.projectKey), match: "semantic" });
-        if (matches.length === limit) break;
+        semanticMatches.push({ ...compactIssue(row, ctx.projectKey), match: "semantic" });
       }
+      // Meaning matches stay after the text ones, in the same status order.
+      matches.push(
+        ...orderIssuesForSearch(semanticMatches, (issue) => issue.status as string | undefined)
+          .slice(0, limit - matches.length),
+      );
     }
   }
   return { issues: matches };

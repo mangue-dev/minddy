@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { semanticExtras } from "@/lib/issue-semantic-query";
+import { orderIssuesForSearch } from "@/lib/issue-search-order";
 import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
 
 /**
@@ -25,7 +26,11 @@ export function useSemanticMentions<T extends { type: string; id: string }>(
     if (ids.length === 0) return [...filtered];
     const eligible = new Map(all.filter((option) => option.type === "issue").map((option) => [option.id, option]));
     const shown = new Set(filtered.filter((option) => option.type === "issue").map((option) => option.id));
-    const extras = semanticExtras(ids, eligible, shown).map((option) => ({ ...option, semantic: true }));
+    // Same order as the text rows (MIN-726), by similarity within a tier.
+    const extras = orderIssuesForSearch(
+      semanticExtras(ids, eligible, shown),
+      (option) => (option as { status?: string }).status,
+    ).map((option) => ({ ...option, semantic: true }));
     return [...filtered, ...extras];
   }, [ids, filtered, all]);
 }

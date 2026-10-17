@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,6 +53,7 @@
       "lib/server/issue-semantic-search.ts",
       "app/api/issues/semantic-search/route.ts",
       "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
@@ -160,6 +161,10 @@ Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspal
 Lies in der Tastenkürzelhilfe die Befehle für deine Plattform. minddy unterscheidet Anwendungskürzel, Aktionen für Problemeigenschaften und native Desktop-Kürzel für Tabs oder Fenster. Prüfe vor einem Befehl den Fokus: Schreiben im Editor und Handeln am umgebenden Problem sind verschiedene Kontexte.
 
 ![Suchergebnisse für die Kennung eines Demo-Tickets.](/documentation/de/work-search.png)
+
+### Reihenfolge der Probleme in der Suche {#issue-search-order}
+
+Jede Problemsuche listet Probleme in derselben Reihenfolge: die Befehlspalette, `@`-Erwähnungen, die Auswahl für Beziehungen, Duplikate und Pull Requests, der Feedback-Dialog **Link zu einem bestehenden Problem** und die Suche, die Numo und MCP-Agenten nutzen. Probleme **In Bearbeitung** und **In Überprüfung** kommen zuerst, dann Probleme im **Rückstand** und **Todo**. Probleme in **Triage**, **Fertig**, **Abgebrochen** und **Duplikat** stehen immer am Ende und bleiben auswählbar. Innerhalb jeder Gruppe kommt der beste Texttreffer zuerst. Eine vollständig eingegebene Kennung wie `MIN-42` stellt dieses Problem an den Anfang, unabhängig von seinem Status.
 
 ### Probleme inhaltlich suchen {#search-by-meaning}
 

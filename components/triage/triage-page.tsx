@@ -66,6 +66,7 @@ import { resolveRelations } from "@/lib/relation-constants";
 import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import {
   useAssistantContext,
   useAssistantPanelActions,
@@ -329,12 +330,15 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // project into JSX-bearing options with the picker closed.
   const duplicateOptions: PickerOption[] = useMemo(() => {
     if (!selected || !project) return [];
-    return issues
-      .filter((i) => i.id !== selected.id && i.status !== "duplicate")
+    // Work under way first, triage and closed issues last (MIN-726).
+    return orderIssuesForSearch(
+      issues.filter((i) => i.id !== selected.id && i.status !== "duplicate"),
+      (i) => i.status,
+    )
       .map((i) => ({
         value: i.id,
         label: i.title,
-        keywords: [issueIdentifier(project.key, i.number)],
+        keywords: [issueIdentifier(project.key, i.number), issueTierKeyword(i.status)],
         icon: (
           <span className="font-mono text-xs text-muted-foreground">
             {issueIdentifier(project.key, i.number)}
@@ -514,7 +518,10 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     if (id) void markDuplicate(selected, id);
                   }}
                   options={duplicateOptions}
-                  semanticIssues={{ projectId }}
+                  semanticIssues={{
+                    projectId,
+                    statusOf: (id) => issues.find((candidate) => candidate.id === id)?.status,
+                  }}
                   align="end"
                   trigger={
                     <Button variant="outline" size="sm">

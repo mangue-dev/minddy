@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search",
+    "version": "0.11.1 development (UI refinements); MIN-685 sidebar context menus; MIN-692 hidden projects; MIN-718 hybrid issue search; MIN-726 issue search order",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -53,6 +53,7 @@
       "lib/server/issue-semantic-search.ts",
       "app/api/issues/semantic-search/route.ts",
       "lib/use-semantic-mentions.ts",
+      "lib/issue-search-order.ts",
       "content/documentation/reviews/min-718-hybrid-issue-search.md"
     ]
   },
@@ -160,6 +161,10 @@ Pulsa Command+K en macOS o Ctrl+K en Windows/Linux para abrir la paleta de coman
 Utiliza la ayuda de atajos para consultar los comandos disponibles en tu plataforma. minddy distingue los atajos de la aplicación, las acciones de propiedades de incidencias y los atajos nativos de pestañas o ventanas de escritorio. Comprueba dónde está el foco antes de usar un comando: escribir en un editor y actuar sobre la incidencia que lo rodea son contextos diferentes.
 
 ![Resultados de búsqueda del identificador de una incidencia de demostración.](/documentation/es/work-search.png)
+
+### Orden de las incidencias en la búsqueda {#issue-search-order}
+
+Todas las búsquedas de incidencias muestran las incidencias en el mismo orden: la paleta, las menciones `@`, los selectores de relaciones, duplicados y pull requests, el diálogo **Vincular a una incidencia existente** de los comentarios y la búsqueda que usan Numo y los agentes MCP. Las incidencias **En curso** y **En examen** van primero, luego las de **Registro** y **Pendiente**. Las incidencias en **Clasificación**, **Hecho**, **Cancelado** y **Duplicado** siempre van al final y siguen siendo seleccionables. Dentro de cada grupo, la mejor coincidencia de texto va primero. Un identificador escrito completo, como `MIN-42`, pone esa incidencia primero, sea cual sea su estado.
 
 ### Buscar incidencias por el sentido {#search-by-meaning}
 
