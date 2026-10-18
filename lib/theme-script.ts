@@ -16,19 +16,54 @@
  * 2. localStorage — the device cache; anonymous visitors stop here.
  * 3. `defaultTheme` — the server default ("dark" for the app, "system" for
  *    public pages — MIN-60).
+ *
+ * The account's palettes (MIN-696) need no resolution: the proxy asserts them
+ * on every app document, so they are written onto <html> as they come, and
+ * never cached on the device — another account on the same browser starts
+ * from its own choice, not the previous one's.
  */
 
-/** `--background` of the two themes, in hexadecimal.
+import {
+  DEFAULT_THEME_PRESETS,
+  isDarkThemePreset,
+  isLightThemePreset,
+  THEME_PRESET_ATTRIBUTES,
+  THEME_PRESETS,
+  THEME_TRANSPARENCY_ATTRIBUTE,
+  type ThemeAppearance,
+} from "./theme-presets";
+
+/** `<meta name="theme-color">` per palette, keyed by preset id.
  *
  * `theme-color` is read by the browser OFF the page: it cannot point to
  * `var(--background)`, and not every engine parses `oklch()` in this tag.
- * Hence the conversion done by hand — `lib/mobile-touch.test.ts` re-reads the
- * mango-ui tokens and fails if either `--background` moves, so that these are
- * recalculated instead of derived.
- */
-const THEME_COLOR = {
-  light: "#f5f7fb", // oklch(0.975 0.006 266)
-  dark: "#070809", // oklch(0.135 0.003 250)
+ * Hence the hexadecimal values in the catalog (`lib/theme-presets.ts`); the
+ * Minddy defaults are a manual conversion of mango-ui's `--background`, which
+ * `lib/mobile-touch.test.ts` re-reads so that a moved token is recalculated.
+ * The script reads the attribute of the ACTIVE mode, so the bar follows both
+ * a mode switch and a palette switch. */
+const CHROME_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(THEME_PRESETS).map(([id, preset]) => {
+    // Only catalog-shaped values may reach executable script text.
+    if (!/^[a-z0-9-]+$/.test(id) || !/^#[0-9a-f]{6}$/.test(preset.chromeColor)) {
+      throw new Error(`Invalid theme preset chrome color: ${id}`);
+    }
+    return [id, preset.chromeColor];
+  }),
+);
+
+/** JSON that is also safe inside an inline <script>: `JSON.stringify` alone
+ * leaves `</script>`, `<!--` and the U+2028/U+2029 line separators intact. */
+function scriptLiteral(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[<>/\u2028\u2029]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
+const DEFAULT_CHROME = {
+  light: THEME_PRESETS[DEFAULT_THEME_PRESETS.light].chromeColor,
+  dark: THEME_PRESETS[DEFAULT_THEME_PRESETS.dark].chromeColor,
 } as const;
 
 /** What the fallback branch (localStorage unreadable) resolves to. A "system"
@@ -46,11 +81,31 @@ export interface ThemeScriptInput {
   defaultTheme: "dark" | "system" | "light";
   /** Theme saved on the signed-in account, when the proxy asserts one. */
   accountTheme?: "light" | "dark" | "system" | null;
+  /** Palettes and glass toggle of the signed-in account (MIN-696). Absent on
+   * public pages, which keep the Minddy palettes. */
+  appearance?: ThemeAppearance | null;
+}
+
+/** The root attributes for an account appearance — validated ids only, so
+ * nothing outside the catalog reaches executable script text. */
+function appearanceStatements(appearance: ThemeAppearance | null): string {
+  if (!appearance) return "";
+  const light = isLightThemePreset(appearance.light)
+    ? appearance.light
+    : DEFAULT_THEME_PRESETS.light;
+  const dark = isDarkThemePreset(appearance.dark)
+    ? appearance.dark
+    : DEFAULT_THEME_PRESETS.dark;
+  const glass = appearance.transparency === false ? "off" : "on";
+  return `r.setAttribute("${THEME_PRESET_ATTRIBUTES.light}","${light}");`
+    + `r.setAttribute("${THEME_PRESET_ATTRIBUTES.dark}","${dark}");`
+    + `r.setAttribute("${THEME_TRANSPARENCY_ATTRIBUTE}","${glass}");`;
 }
 
 export function buildThemeScript({
   defaultTheme,
   accountTheme = null,
+  appearance = null,
 }: ThemeScriptInput): string {
   const storageKey = "mangue-ui-theme";
   // Runtime allowlists keep arbitrary values out of executable script text.
@@ -64,7 +119,9 @@ export function buildThemeScript({
   const mirrorBack = accountLiteral
     ? `try{localStorage.setItem("${storageKey}",t);}catch(e){}`
     : "";
-  return `(function(){var r=document.documentElement;function p(d){var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.setAttribute("name","theme-color");document.head.appendChild(m);}m.setAttribute("content",d?"${THEME_COLOR.dark}":"${THEME_COLOR.light}");}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
+  // The palette attributes go first, outside the storage `try`: an
+  // unreadable localStorage must not cost the account its palettes.
+  return `(function(){var r=document.documentElement;var C=${scriptLiteral(CHROME_COLORS)};function p(){var d=r.classList.contains("dark");var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.setAttribute("name","theme-color");document.head.appendChild(m);}m.setAttribute("content",C[r.getAttribute(d?"${THEME_PRESET_ATTRIBUTES.dark}":"${THEME_PRESET_ATTRIBUTES.light}")]||(d?"${DEFAULT_CHROME.dark}":"${DEFAULT_CHROME.light}"));}${appearanceStatements(appearance)}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
     fallbackExpression(defaultTheme)
-  });}p(r.classList.contains("dark"));try{new MutationObserver(function(){p(r.classList.contains("dark"));}).observe(r,{attributes:true,attributeFilter:["class"]});}catch(e){}})();`;
+  });}p();try{new MutationObserver(p).observe(r,{attributes:true,attributeFilter:["class","${THEME_PRESET_ATTRIBUTES.light}","${THEME_PRESET_ATTRIBUTES.dark}"]});}catch(e){}})();`;
 }

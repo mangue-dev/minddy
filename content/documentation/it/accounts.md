@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -62,14 +62,17 @@
       "content/documentation/reviews/min-691-session-expiry.md",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
-      "content/documentation/reviews/sign-out-other-devices.md"
+      "content/documentation/reviews/sign-out-other-devices.md",
+      "lib/theme-presets.ts",
+      "app/theme-presets.css",
+      "content/documentation/reviews/min-696-theme-presets.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (it changed-text and retained-meaning self-review)",
-    "date": "2026-10-16"
+    "revision": 11,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
+    "language": "agent:/root (en source and it translation self-review of the changed paragraph)",
+    "date": "2026-10-18"
   },
   "related": [
     "choose-an-instance",
@@ -101,7 +104,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Controlli del profilo per avatar, nome utente ed email di sola lettura.",
       "caption": "Salva le modifiche al profilo dopo la validazione; l’indirizzo email rimane di sola lettura.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -133,14 +136,14 @@
       "id": "profile-and-preferences-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
-      "alt": "Selettore della lingua e controlli del tema chiaro, scuro e di sistema.",
+      "alt": "Selettore della lingua, controlli del tema chiaro, scuro e di sistema, selettori di palette delle modalità chiara e scura e interruttore della trasparenza.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-18",
       "viewport": [
         816,
-        212
+        421
       ],
       "theme": "light",
       "padding": 24,
@@ -152,7 +155,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -241,9 +244,11 @@ L’immagine sorgente non deve superare 10 MiB. Il server verifica byte leggibil
 
 Nelle preferenze seleziona lingua e tema e controlla un’altra pagina. La lingua dell’account riguarda il prodotto autenticato; il sito pubblico ha un selettore separato. Il tema viene salvato nell’account su tutti i dispositivi.
 
+Il tema sceglie la modalità chiara, scura o di sistema. **Palette modalità chiara** e **Palette modalità scura** impostano ciascuna i colori di una modalità. I **colori d'accento** (minddy, Blu, Viola, Verde, Arancione, Rosa) mantengono i colori di minddy e ricolorano solo i pulsanti e l'anello di focus; le **palette complete** (Solarized, Catppuccin, Nord) ricolorano tutte le superfici; **Contrasto elevato** si trova in Accessibilità. La palette della modalità visualizzata si applica subito; l’altra viene salvata e compare quando la sua modalità torna attiva, anche quando Sistema segue un cambio del sistema operativo. Contrasto elevato aumenta il contrasto di testo e bordi, contorna campi, menu, finestre di dialogo e schede, segnala la pagina corrente e l'elemento selezionato, mostra sempre il focus da tastiera e mantiene opachi i menu. Disattiva **Trasparenza** per rendere opachi, senza sfocatura, menu, popover e palette dei comandi. Palette e trasparenza vengono salvate nell’account; un altro dispositivo le applica al successivo caricamento di una pagina.
+
 Scegli la scorciatoia di invio nella sezione tastiera. Si applica a commenti e Numo. Usa il pulsante di invio quando la piattaforma intercetta la scorciatoia; i modificatori variano tra sistemi. Anche assegnazione automatica e stato dei ticket creati da Numo appartengono all’account, senza cambiare le preferenze degli altri membri.
 
-![Selettore della lingua e controlli del tema chiaro, scuro e di sistema.](/documentation/it/profile-and-preferences-preferences-workflow.png)
+![Selettore della lingua, controlli del tema chiaro, scuro e di sistema, selettori di palette delle modalità chiara e scura e interruttore della trasparenza.](/documentation/it/profile-and-preferences-preferences-workflow.png)
 
 ## Gestire analisi e cancellazione dell’account {#privacy-and-account-deletion}
 

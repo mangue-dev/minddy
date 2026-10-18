@@ -81,7 +81,10 @@ describe("issue embedding repository", () => {
     expect(stored.embedding).toBeNull();
     expect(stored.content_hash).toBeNull();
     expect(stored.encrypted_content).not.toBeNull();
-    expect(JSON.stringify(stored)).not.toContain("0.2");
+    // The vector must not leak in clear. `updated_at` is left out: a timestamp
+    // such as "…:30.2…" contains the same characters by chance.
+    const { updated_at: _updatedAt, ...columns } = stored;
+    expect(JSON.stringify(columns)).not.toContain("0.2");
     const decoded = await decodeIssueEmbedding(stored);
     expect(decoded.content_hash).toBe(row.content_hash);
     // int8 storage: each coordinate within one quantization step of its value.

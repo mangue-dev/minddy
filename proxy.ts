@@ -19,6 +19,10 @@ import {
   ACCOUNT_THEME_HEADER,
   resolveAccountTheme,
 } from "@/lib/account-theme";
+import {
+  resolveThemeAppearance,
+  themeAppearanceHeaders,
+} from "@/lib/theme-presets";
 import { supportedLocaleForTag } from "@/i18n/config";
 import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 import {
@@ -522,15 +526,19 @@ async function routeRequest(request: NextRequest) {
   // first paint, with no flash, even on a device that has never been seen.
   // Re-asserted on EVERY request (unlike the NEXT_LOCALE seed below, which is
   // written once): a stale theme is visible immediately, in every pixel.
+  // The palettes chosen per mode (MIN-696) ride along, ALWAYS asserted —
+  // defaults included — so an account without a choice never inherits the
+  // previous account's attributes or a stale device state.
   // Placed BEFORE the noindex header below: the rebuild replaces the
   // response, and anything set earlier on it would be lost.
   const userMetadata = sessionUserMetadata(session);
   const accountTheme = resolveAccountTheme(userMetadata);
-  if (accountTheme) {
-    response = nextClean(request, { [ACCOUNT_THEME_HEADER]: accountTheme });
-    for (const { name, value, options } of refreshedCookies) {
-      response.cookies.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS });
-    }
+  response = nextClean(request, {
+    ...(accountTheme ? { [ACCOUNT_THEME_HEADER]: accountTheme } : {}),
+    ...themeAppearanceHeaders(resolveThemeAppearance(userMetadata)),
+  });
+  for (const { name, value, options } of refreshedCookies) {
+    response.cookies.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS });
   }
 
   // The authenticated app has nothing to do in an index, whatever

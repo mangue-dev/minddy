@@ -27,6 +27,8 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 import { isAccountTheme } from "@/lib/account-theme";
+import { resolveThemeAppearance } from "@/lib/theme-presets";
+import { applyDocumentAppearance } from "@/lib/theme-appearance";
 
 import type { AssistantPinnedContext } from "@/lib/assistant-types";
 
@@ -95,6 +97,12 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       const nextTheme = (result as { settings?: { theme?: unknown } })
         ?.settings?.theme;
       if (isAccountTheme(nextTheme)) setTheme(nextTheme);
+      // Palettes and glass (MIN-696): the settings echo the saved values, so
+      // the screen follows without waiting for the next document.
+      const settings = (result as { settings?: Record<string, unknown> })?.settings;
+      if (settings && "theme_light" in settings) {
+        applyDocumentAppearance(document.documentElement, resolveThemeAppearance(settings));
+      }
     },
     [refreshUser, currentLocale, router, setTheme],
   );

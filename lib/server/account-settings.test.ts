@@ -97,3 +97,43 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
     expect(meta[ANALYTICS_CONSENT_META_KEY]).toBeUndefined();
   });
 });
+
+describe("updateAccountSettings — palettes per mode (MIN-696)", () => {
+  it("writes one mode's palette without touching the other or the mode", async () => {
+    const meta: Meta = { theme: "system", theme_dark: "nord-dark" };
+    setup({ meta });
+    const r = await updateAccountSettings({ userId: "user-1", input: { theme_light: "solarized-light" } });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.settings).toMatchObject({
+        theme: "system",
+        theme_light: "solarized-light",
+        theme_dark: "nord-dark",
+        theme_transparency: true,
+      });
+    }
+  });
+
+  it("refuses a palette of the other mode, or an unknown one", async () => {
+    for (const input of [{ theme_light: "nord-dark" }, { theme_dark: "neon" }, { theme_transparency: "no" }]) {
+      const r = await updateAccountSettings({ userId: "user-1", input });
+      expect(r.ok, JSON.stringify(input)).toBe(false);
+    }
+  });
+
+  it("null resets that mode to Minddy and the glass to its default", async () => {
+    const meta: Meta = { theme_light: "nord-light", theme_dark: "nord-dark", theme_transparency: false };
+    setup({ meta });
+    const r = await updateAccountSettings({
+      userId: "user-1",
+      input: { theme_dark: null, theme_transparency: null },
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.settings.theme_light).toBe("nord-light");
+      expect(r.settings.theme_dark).toBe("minddy-dark");
+      expect(r.settings.theme_transparency).toBe(true);
+    }
+    expect(meta).not.toHaveProperty("theme_dark");
+  });
+});

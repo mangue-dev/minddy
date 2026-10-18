@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -62,14 +62,17 @@
       "content/documentation/reviews/min-691-session-expiry.md",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
-      "content/documentation/reviews/sign-out-other-devices.md"
+      "content/documentation/reviews/sign-out-other-devices.md",
+      "lib/theme-presets.ts",
+      "app/theme-presets.css",
+      "content/documentation/reviews/min-696-theme-presets.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (en changed-text and retained-meaning self-review)",
-    "date": "2026-10-16"
+    "revision": 11,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
+    "language": "agent:/root (en source and fr, de, es, it, pt-BR translation self-review of the changed paragraph)",
+    "date": "2026-10-18"
   },
   "related": [
     "choose-an-instance",
@@ -101,7 +104,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile controls for avatar, username and read-only email.",
       "caption": "Save profile edits after validation; the email address remains read-only.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -133,14 +136,14 @@
       "id": "profile-and-preferences-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
-      "alt": "Language selector and light, dark and system theme controls.",
+      "alt": "Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-18",
       "viewport": [
         816,
-        212
+        421
       ],
       "theme": "light",
       "padding": 24,
@@ -152,7 +155,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -243,9 +246,11 @@ Uploaded source images must be no larger than 10 MiB. The server validates reada
 
 In Preferences, select the interface language and theme, then check another page. The account language governs the signed-in product; the public site's language selector controls public navigation separately. The theme is saved to the account across devices.
 
+Theme chooses light, dark or system mode. **Light mode palette** and **Dark mode palette** each set the colors of one mode. **Accent colors** (minddy, Blue, Violet, Green, Orange, Rose) keep minddy's colors and only recolor buttons and the focus ring; **Full palettes** (Solarized, Catppuccin, Nord) recolor every surface; **High contrast** sits under Accessibility. The palette of the mode on screen applies immediately; the other is saved and appears whenever its mode becomes active, including when System follows an operating-system switch. High contrast raises text and border contrast, outlines fields, menus, dialogs and tabs, marks the current page and selected item, always shows keyboard focus and keeps menus opaque. Turn off **Transparency** to paint menus, popovers and the command palette opaque, without blur. Palettes and transparency are saved to the account; another device applies them the next time it loads a page.
+
 Choose the message-send shortcut in Keyboard. This preference governs comments and Numo's composer. Use the send button when a platform intercepts the shortcut; do not assume every OS maps the modifier key identically. Issue preferences such as automatic assignment and the status for Numo-created issues also belong to the account and do not change another member's settings.
 
-![Language selector and light, dark and system theme controls.](/documentation/en/profile-and-preferences-preferences-workflow.png)
+![Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.](/documentation/en/profile-and-preferences-preferences-workflow.png)
 
 ## Control analytics and delete an account carefully {#privacy-and-account-deletion}
 

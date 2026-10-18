@@ -1,5 +1,6 @@
 import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 import { describe, expect, it } from "vitest";
+import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS } from "@/lib/theme-presets";
 
 import {
   ASSISTANT_TOOLS,
@@ -57,9 +58,19 @@ describe("Numo tool contracts", () => {
     for (const name of [
       "send_shortcut",
       "analytics_consent",
+      "theme_light",
+      "theme_dark",
+      "theme_transparency",
     ]) {
       expect(settings, name).toHaveProperty(name);
     }
+  });
+
+  it("offers each mode only its own palettes (MIN-696)", () => {
+    const settings = tool("update_account_settings")?.function.parameters.properties as
+      Record<string, { enum?: unknown[] }>;
+    expect(settings.theme_light.enum).toEqual([...LIGHT_THEME_PRESETS, null]);
+    expect(settings.theme_dark.enum).toEqual([...DARK_THEME_PRESETS, null]);
   });
 
   it("advertises the internal feedback comment tool", () => {

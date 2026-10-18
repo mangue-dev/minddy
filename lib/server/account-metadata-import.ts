@@ -1,6 +1,7 @@
 import "server-only";
 import { locales } from "@/i18n/config";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
+import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS, THEME_PRESET_META_KEYS, THEME_TRANSPARENCY_META_KEY } from "@/lib/theme-presets";
 import { ONBOARDING_CURRENT_VERSION, ONBOARDING_STEPS, ONBOARDING_VERSION_META_KEY } from "@/lib/onboarding";
 
 const BOOLEAN_KEYS = [
@@ -9,9 +10,12 @@ const BOOLEAN_KEYS = [
   "notif_assigned", "notif_mention", "notif_comment", "notif_agent", "notif_routine",
   "notif_pull_request", "notif_feedback", "notif_page", "onboarding_started",
   "onboarding_dismissed", "desktop_prompt_dismissed", "smart_fill_created", "smart_fill_triage",
+  THEME_TRANSPARENCY_META_KEY,
 ] as const;
 const ENUMS: Record<string, readonly string[]> = {
   theme: ["light", "dark", "system"], locale: locales,
+  // Mode-specific palettes (MIN-696): a dark id is not a valid light palette.
+  [THEME_PRESET_META_KEYS.light]: LIGHT_THEME_PRESETS, [THEME_PRESET_META_KEYS.dark]: DARK_THEME_PRESETS,
   analytics_consent: ["accepted", "declined"], cycle_intensity: ["light", "medium", "heavy"],
   send_shortcut: ["enter", "mod-enter"], numo_default_status: NUMO_DEFAULT_STATUS_OPTIONS,
 };

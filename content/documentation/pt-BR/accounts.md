@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -62,14 +62,17 @@
       "content/documentation/reviews/min-691-session-expiry.md",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
-      "content/documentation/reviews/sign-out-other-devices.md"
+      "content/documentation/reviews/sign-out-other-devices.md",
+      "lib/theme-presets.ts",
+      "app/theme-presets.css",
+      "content/documentation/reviews/min-696-theme-presets.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (pt-BR changed-text and retained-meaning self-review)",
-    "date": "2026-10-16"
+    "revision": 11,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
+    "language": "agent:/root (en source and pt-BR translation self-review of the changed paragraph)",
+    "date": "2026-10-18"
   },
   "related": [
     "choose-an-instance",
@@ -101,7 +104,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Controles do perfil para avatar, nome de usuário e email somente leitura.",
       "caption": "Salve as alterações do perfil após a validação; o endereço de email permanece somente leitura.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -133,14 +136,14 @@
       "id": "profile-and-preferences-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
-      "alt": "Seletor de idioma e controles de tema claro, escuro e do sistema.",
+      "alt": "Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-18",
       "viewport": [
         816,
-        212
+        421
       ],
       "theme": "light",
       "padding": 24,
@@ -152,7 +155,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -241,9 +244,11 @@ A imagem original não pode exceder 10 MiB. O servidor verifica se consegue ler 
 
 Selecione o idioma e o tema nas preferências e confira outra página. O idioma da conta controla o produto autenticado; o site público possui seu próprio seletor. O tema fica salvo na conta entre dispositivos.
 
+O tema escolhe o modo claro, escuro ou do sistema. **Paleta do modo claro** e **Paleta do modo escuro** definem cada uma as cores de um modo. As **cores de destaque** (minddy, Azul, Violeta, Verde, Laranja, Rosa) mantêm as cores do minddy e só mudam a cor dos botões e do anel de foco; as **paletas completas** (Solarized, Catppuccin, Nord) mudam todas as superfícies; **Alto contraste** fica em Acessibilidade. A paleta do modo exibido se aplica na hora; a outra fica salva e aparece quando seu modo volta a ficar ativo, inclusive quando Sistema acompanha uma troca do sistema operacional. Alto contraste reforça o contraste de texto e bordas, contorna campos, menus, diálogos e abas, marca a página atual e o item selecionado, sempre mostra o foco do teclado e mantém os menus opacos. Desative **Transparência** para deixar menus, popovers e a paleta de comandos opacos, sem desfoque. As paletas e a transparência ficam salvas na conta; outro dispositivo as aplica no próximo carregamento de página.
+
 Escolha o atalho de envio na seção de teclado. Ele vale para comentários e Numo. Use o botão de enviar se a plataforma interceptar o atalho; as teclas modificadoras variam entre sistemas. Preferências como atribuição automática e status de tarefas criadas pelo Numo também pertencem à conta e não alteram as de outros membros.
 
-![Seletor de idioma e controles de tema claro, escuro e do sistema.](/documentation/pt-BR/profile-and-preferences-preferences-workflow.png)
+![Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.](/documentation/pt-BR/profile-and-preferences-preferences-workflow.png)
 
 ## Controlar análises e excluir a conta {#privacy-and-account-deletion}
 

@@ -13,6 +13,7 @@ import { RECURRENCE_CADENCES } from "@/lib/recurrence";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { ACCOUNT_THEMES } from "@/lib/account-theme";
+import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS } from "@/lib/theme-presets";
 import { SEND_MODES } from "@/lib/keyboard/send-shortcut";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
@@ -1547,7 +1548,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, and analytics consent. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, light and dark color palettes, popover transparency, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, and analytics consent. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -1556,7 +1557,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_account_settings",
       description:
-        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme is saved on the account, so it applies to every device of the user.",
+        "Update the current user's OWN account settings. Only pass the fields to change. Applies to the requesting user only — never another account. The display theme, palettes and transparency are saved on the account, so they apply to every device of the user.",
       parameters: {
         type: "object",
         properties: {
@@ -1574,6 +1575,23 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...ACCOUNT_THEMES, null],
             description:
               "Display theme, saved on the account so every device of the user picks it up. null clears it: devices fall back to their own default.",
+          },
+          theme_light: {
+            type: ["string", "null"],
+            enum: [...LIGHT_THEME_PRESETS, null],
+            description:
+              "Color palette used while the interface is in light mode, independent of the dark one. 'high-contrast-light' raises text and border contrast. null resets it to 'minddy-light'.",
+          },
+          theme_dark: {
+            type: ["string", "null"],
+            enum: [...DARK_THEME_PRESETS, null],
+            description:
+              "Color palette used while the interface is in dark mode, independent of the light one. 'high-contrast-dark' raises text and border contrast. null resets it to 'minddy-dark'.",
+          },
+          theme_transparency: {
+            type: ["boolean", "null"],
+            description:
+              "Translucent, blurred popovers and menus (true by default). false paints them opaque. null resets it to the default.",
           },
           send_shortcut: {
             type: "string",

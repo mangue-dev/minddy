@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -62,14 +62,17 @@
       "content/documentation/reviews/min-691-session-expiry.md",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
-      "content/documentation/reviews/sign-out-other-devices.md"
+      "content/documentation/reviews/sign-out-other-devices.md",
+      "lib/theme-presets.ts",
+      "app/theme-presets.css",
+      "content/documentation/reviews/min-696-theme-presets.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (de changed-text and retained-meaning self-review)",
-    "date": "2026-10-16"
+    "revision": 11,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
+    "language": "agent:/root (en source and de translation self-review of the changed paragraph)",
+    "date": "2026-10-18"
   },
   "related": [
     "choose-an-instance",
@@ -101,7 +104,7 @@
       "src": "/documentation/de/account-security-workflow.png",
       "alt": "Karte zur Zwei-Faktor-Authentifizierung mit Aktivieren-Schaltfläche.",
       "caption": "Beginne hier, bestätige anschließend den Authenticator und bewahre die Wiederherstellungscodes sicher auf.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/de/profile-and-preferences-workflow.png",
       "alt": "Profileinstellungen mit Avatar, Benutzername und schreibgeschützter E-Mail-Adresse.",
       "caption": "Speichere die geprüften Profiländerungen. Die E-Mail-Adresse bleibt schreibgeschützt.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -133,14 +136,14 @@
       "id": "profile-and-preferences-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
-      "alt": "Sprachauswahl und Schalter für helles, dunkles und Systemdesign.",
+      "alt": "Sprachauswahl, Schalter für helles, dunkles und Systemdesign, Palettenauswahl für hellen und dunklen Modus und Transparenzschalter.",
       "caption": "Die Kontosprache und die Sprache der öffentlichen Website werden getrennt eingestellt.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-18",
       "viewport": [
         816,
-        212
+        421
       ],
       "theme": "light",
       "padding": 24,
@@ -152,7 +155,7 @@
       "src": "/documentation/de/privacy-and-account-deletion-workflow.png",
       "alt": "Löschvorschau mit eigenen Projekten, Tickets und Mitgliedern, die Zugriff verlieren.",
       "caption": "Lies die Vorschau und exportiere gewünschte Daten, bevor du die Löschbestätigung öffnest.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -239,9 +242,11 @@ Das Quellbild darf höchstens 10 MiB groß sein. Der Server prüft lesbare Bildd
 
 Wähle in den Präferenzen Sprache und Design und prüfe eine andere Seite. Die Kontosprache betrifft das angemeldete Produkt; die öffentliche Website besitzt eine eigene Sprachauswahl. Das Design wird im Konto geräteübergreifend gespeichert.
 
+Das Design wählt den hellen, dunklen oder System-Modus. **Palette für hellen Modus** und **Palette für dunklen Modus** legen jeweils die Farben eines Modus fest. **Akzentfarben** (minddy, Blau, Violett, Grün, Orange, Rosé) behalten die Farben von minddy und färben nur Schaltflächen und den Fokusring um; **Vollständige Paletten** (Solarized, Catppuccin, Nord) färben alle Flächen um; **Hoher Kontrast** steht unter Barrierefreiheit. Die Palette des angezeigten Modus gilt sofort; die andere wird gespeichert und erscheint, sobald ihr Modus aktiv wird, auch wenn System einem Wechsel des Betriebssystems folgt. Hoher Kontrast verstärkt den Kontrast von Text und Rahmen, umrandet Felder, Menüs, Dialoge und Tabs, markiert die aktuelle Seite und das ausgewählte Element, zeigt den Tastaturfokus immer an und hält Menüs deckend. Schalte **Transparenz** aus, damit Menüs, Popover und die Befehlspalette deckend und ohne Unschärfe erscheinen. Paletten und Transparenz werden im Konto gespeichert; ein anderes Gerät übernimmt sie beim nächsten Laden einer Seite.
+
 Wähle das Sendetastenkürzel unter Tastatur. Es gilt für Kommentare und Numo. Nutze die Sendeschaltfläche, wenn das Betriebssystem das Kürzel abfängt; Modifikatortasten unterscheiden sich je Plattform. Ticketpräferenzen wie automatische Zuweisung und Status von Numo-Tickets gehören ebenfalls zum Konto und ändern keine Einstellungen anderer Mitglieder.
 
-![Sprachauswahl und Schalter für helles, dunkles und Systemdesign.](/documentation/de/profile-and-preferences-preferences-workflow.png)
+![Sprachauswahl, Schalter für helles, dunkles und Systemdesign, Palettenauswahl für hellen und dunklen Modus und Transparenzschalter.](/documentation/de/profile-and-preferences-preferences-workflow.png)
 
 ## Analyse steuern und Konto sorgfältig löschen {#privacy-and-account-deletion}
 

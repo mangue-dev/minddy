@@ -82,7 +82,7 @@ for (const locale of locales) {
         const src = `/documentation/${locale}/${filename}.png`;
         const dimensions = await captureDocumentationControl(page, control.first(), "public" + src);
         records = records.filter(r => r.locale !== locale || r.screen !== screen);
-        records.push({ locale, screen, src, date: "2026-10-09", sourceCommit: commit, workingTreeChanges: true, runtime: CAPTURE.baseUrl, frameVersion: 2, stableFocus: true, route: path, ...dimensions, submitted: false, blockedWrites: [...writes], displayAdaptation: [...new Set(adaptations)], limitation: "Actual visible controls; no completed save, import, notification delivery or external action is claimed." });
+        records.push({ locale, screen, src, date: new Date().toISOString().slice(0, 10), sourceCommit: commit, workingTreeChanges: true, runtime: CAPTURE.baseUrl, frameVersion: 2, stableFocus: true, route: path, ...dimensions, submitted: false, blockedWrites: [...writes], displayAdaptation: [...new Set(adaptations)], limitation: "Actual visible controls; no completed save, import, notification delivery or external action is claimed." });
         console.log(`${locale}/${screen}: captured at ${dimensions.deviceScaleFactor}x in light mode`);
       } catch (error) {
         records.push({ locale, screen, error: error.message.split("\n")[0] });

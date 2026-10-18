@@ -49,6 +49,17 @@ import {
   resolveAccountTheme,
   type AccountTheme,
 } from "@/lib/account-theme";
+import {
+  DARK_THEME_PRESETS,
+  isThemePresetFor,
+  LIGHT_THEME_PRESETS,
+  resolveThemeAppearance,
+  THEME_PRESET_META_KEYS,
+  THEME_TRANSPARENCY_META_KEY,
+  type DarkThemePreset,
+  type LightThemePreset,
+  type ThemeMode,
+} from "@/lib/theme-presets";
 import { emailLocalPart } from "@/lib/display-name";
 import {
   SEND_MODE_META_KEY,
@@ -75,6 +86,12 @@ export interface AccountSettings {
   /** Appearance saved on the account (follows the user across devices).
    * `null` = never set: devices keep their own default. */
   theme: AccountTheme | null;
+  /** Palette used in light mode (MIN-696); the Minddy one when never set. */
+  theme_light: LightThemePreset;
+  /** Palette used in dark mode, chosen independently of the light one. */
+  theme_dark: DarkThemePreset;
+  /** Translucent, blurred popovers and menus. */
+  theme_transparency: boolean;
   numo_default_status: ReturnType<typeof resolveNumoDefaultStatus>;
   auto_assign_created: boolean;
   auto_assign_on_start: boolean;
@@ -119,6 +136,14 @@ function toSettings(
     email,
     locale,
     theme: resolveAccountTheme(meta),
+    ...(() => {
+      const appearance = resolveThemeAppearance(meta);
+      return {
+        theme_light: appearance.light,
+        theme_dark: appearance.dark,
+        theme_transparency: appearance.transparency,
+      };
+    })(),
     numo_default_status: resolveNumoDefaultStatus(meta),
     auto_assign_created: meta.auto_assign_created === true,
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
@@ -195,6 +220,30 @@ export async function updateAccountSettings({
       return { ok: false, error: "theme must be one of: light, dark, system." };
     } else {
       next[ACCOUNT_THEME_META_KEY] = input.theme;
+    }
+  }
+  for (const mode of ["light", "dark"] as const satisfies readonly ThemeMode[]) {
+    const key = THEME_PRESET_META_KEYS[mode];
+    if (!(key in input)) continue;
+    // `null` resets THIS mode to the Minddy palette; the other mode and the
+    // light/dark/system selector stay as they are.
+    if (input[key] === null) {
+      delete next[key];
+    } else if (!isThemePresetFor(mode, input[key])) {
+      const allowed = mode === "light" ? LIGHT_THEME_PRESETS : DARK_THEME_PRESETS;
+      return { ok: false, error: `${key} must be one of: ${allowed.join(", ")}.` };
+    } else {
+      next[key] = input[key];
+    }
+  }
+  if (THEME_TRANSPARENCY_META_KEY in input) {
+    const value = input[THEME_TRANSPARENCY_META_KEY];
+    if (value === null) {
+      delete next[THEME_TRANSPARENCY_META_KEY];
+    } else if (typeof value !== "boolean") {
+      return { ok: false, error: `${THEME_TRANSPARENCY_META_KEY} must be a boolean.` };
+    } else {
+      next[THEME_TRANSPARENCY_META_KEY] = value;
     }
   }
   if ("numo_default_status" in input) {
@@ -327,6 +376,9 @@ export async function updateAccountSettings({
     "display_name",
     "locale",
     "theme",
+    THEME_PRESET_META_KEYS.light,
+    THEME_PRESET_META_KEYS.dark,
+    THEME_TRANSPARENCY_META_KEY,
     "numo_default_status",
     "send_shortcut",
     "auto_assign_created",

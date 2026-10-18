@@ -32,6 +32,8 @@ import {SEND_MODE_META_KEY, resolveSendMode} from "@/lib/keyboard/send-shortcut"
 import type {SendMode} from "@/lib/keyboard/send-shortcut";
 import {useModKey} from "@/lib/keyboard/use-mod-shortcut";
 import {useAccountTheme} from "@/lib/use-account-theme";
+import {ThemePresetPicker} from "@/components/settings/theme-preset-picker";
+import type {ThemeMode, ThemePresetId} from "@/lib/theme-presets";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -59,7 +61,7 @@ export function AccountPreferencesSection() {
   const { user, updateUser, updateUserMetadata } = useAuth();
   // The theme is an ACCOUNT setting: the hook persists the choice to
   // user_metadata so it follows the account to every device.
-  const { theme, setTheme } = useAccountTheme();
+  const { theme, setTheme, appearance, setPreset, setTransparency } = useAccountTheme();
   const modKey = useModKey();
   const [switchingLocale, setSwitchingLocale] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -248,6 +250,15 @@ export function AccountPreferencesSection() {
     }
   };
 
+  // Palettes and glass apply on screen at once; a failed save has already put
+  // the previous value back, so only the failure needs saying.
+  const changePreset = async (mode: ThemeMode, preset: ThemePresetId) => {
+    if (!(await setPreset(mode, preset))) toast.error(ta("themeAppearanceSaveFailed"));
+  };
+  const changeTransparency = async (enabled: boolean) => {
+    if (!(await setTransparency(enabled))) toast.error(ta("themeAppearanceSaveFailed"));
+  };
+
   const sendModeOptions: SegmentedControlOption<SendMode>[] = [
     { value: "mod-enter", label: ta("sendShortcutModEnter", { mod: modKey }) },
     { value: "enter", label: ta("sendShortcutEnter") },
@@ -298,6 +309,47 @@ export function AccountPreferencesSection() {
               onChange={(v) => v && setTheme(v)}
               ariaLabel={ta("themeTitle")}
               className="w-60"
+            />
+          }
+        />
+
+        {/* One palette per mode (MIN-696): the active mode's choice repaints
+            the app at once, the other one is kept for when it comes back. */}
+        <SettingsRow
+          htmlFor="account-theme-light"
+          label={ta("themeLightPresetTitle")}
+          hint={ta("themeLightPresetHint")}
+          control={
+            <ThemePresetPicker
+              id="account-theme-light"
+              mode="light"
+              value={appearance.light}
+              onChange={(preset) => void changePreset("light", preset)}
+            />
+          }
+        />
+        <SettingsRow
+          htmlFor="account-theme-dark"
+          label={ta("themeDarkPresetTitle")}
+          hint={ta("themeDarkPresetHint")}
+          control={
+            <ThemePresetPicker
+              id="account-theme-dark"
+              mode="dark"
+              value={appearance.dark}
+              onChange={(preset) => void changePreset("dark", preset)}
+            />
+          }
+        />
+        <SettingsRow
+          htmlFor="account-theme-transparency"
+          label={ta("themeTransparencyTitle")}
+          hint={ta("themeTransparencyHint")}
+          control={
+            <Switch
+              id="account-theme-transparency"
+              checked={appearance.transparency}
+              onCheckedChange={(v) => void changeTransparency(v)}
             />
           }
         />
