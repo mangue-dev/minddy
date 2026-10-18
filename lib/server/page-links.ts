@@ -1,6 +1,7 @@
 import "server-only";
 
 import { contentMentionScanner, type MentionPage } from "@/lib/mention-scan";
+import { mentionedIds } from "@/lib/mention-link";
 import { pageBlockTexts } from "@/lib/pages-mentions";
 import { afterOrNow } from "@/lib/server/after-safe";
 import type { getServiceClient } from "@/lib/supabase-service";
@@ -93,6 +94,9 @@ export function citedPageIds(text: string, pages: MentionPage[]): string[] {
   for (const segment of scan(text)) {
     if (segment.mention?.type === "page") found.add(segment.mention.page.id);
   }
+  // A typed mention names its page (MIN-734); only this project's pages count.
+  const known = new Set(pages.map((page) => page.id));
+  for (const id of mentionedIds(text, "page")) if (known.has(id)) found.add(id);
   return [...found];
 }
 

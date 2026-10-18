@@ -8,6 +8,7 @@ import { KbdSequence } from "@/components/ui/kbd";
 import { useModKey, useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadProgress } from "@/lib/use-scratchpad-query";
+import { useRichDocument } from "@/lib/use-rich-document";
 import {
   Tooltip,
   TooltipContent,
@@ -28,6 +29,9 @@ export function ScratchpadTrigger({
   const shortcut = useModShiftShortcut("K");
   const { open } = useScratchpad();
   const { done, total } = useScratchpadProgress();
+  // Warm the note's editor document with its Markdown (MIN-728): the
+  // notebook then opens without waiting for it.
+  useRichDocument("notebook", "me");
   // What's still on the list — completed tasks drop out (a badge that never
   // goes down would just be noise), cancelled ones never counted.
   const left = Math.max(total - done, 0);

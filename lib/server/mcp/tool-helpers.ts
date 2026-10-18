@@ -1,5 +1,8 @@
 import "server-only";
 
+import { imagesIn } from "@/lib/server/document-images";
+import { readResultForReader } from "@/lib/server/mention-access";
+
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
@@ -33,6 +36,40 @@ export interface ToolResult {
 
 export function ok(payload: unknown): ToolResult {
   return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+}
+
+/**
+ * A tool reply as `userId` may read it (MIN-734): every typed mention in its
+ * text gets the target's current label, or the neutral one when the target
+ * is not theirs to see. JSON replies are rewritten value by value, so a
+ * label's escaping inside a JSON string never confuses the rewrite.
+ */
+export async function mentionsForReader(result: ToolResult, userId: string): Promise<ToolResult> {
+  const content = (result as { content?: unknown }).content;
+  if (!Array.isArray(content) || !content.some((item) =>
+    item?.type === "text" && typeof item.text === "string" && (item.text.includes("](mention:") || item.text.includes("[@")))) {
+    return result;
+  }
+  const next = await Promise.all(content.map(async (item) => {
+    if (item?.type !== "text" || typeof item.text !== "string" || !(item.text.includes("](mention:") || item.text.includes("[@"))) return item;
+    try {
+      const parsed = JSON.parse(item.text);
+      return { ...item, text: JSON.stringify(await readResultForReader(userId, parsed), null, 2) };
+    } catch {
+      return { ...item, text: await readResultForReader(userId, item.text) };
+    }
+  }));
+  return { ...result, content: next } as ToolResult;
+}
+
+/**
+ * A read whose text can show images (MIN-728): the payload plus `images`,
+ * each image's src and alt text, to open with minddy_get_image. Omitted when
+ * the text shows none.
+ */
+export function okWithImages(payload: Record<string, unknown>): ToolResult {
+  const images = imagesIn(payload);
+  return ok(images.length > 0 ? { ...payload, images, read_images_with: "minddy_get_image" } : payload);
 }
 
 export function fail(code: string, message: string): ToolResult {

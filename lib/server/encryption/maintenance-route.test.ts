@@ -63,6 +63,7 @@ const workers: Array<[string, string[]]> = [
   ["@/lib/server/encryption/rotation", ["rotateDueContentKeys"]],
   ["@/lib/server/encryption/scratchpad-backfill", ["backfillScratchpadsBatch"]],
   ["@/lib/server/encryption/stat-events-backfill", ["backfillStatEventsBatch"]],
+  ["@/lib/server/rich-documents", ["purgeClearRichDocuments"]],
 ];
 const callbacks = new Map<string, ReturnType<typeof vi.fn>>();
 for (const [module, names] of workers) {
@@ -123,7 +124,9 @@ describe("application-wide encryption maintenance", () => {
     expect(callbacks.get("backfillIssuesBatch")).toHaveBeenCalledWith(50, expect.any(AbortSignal));
     expect(callbacks.get("backfillHistoryBatch")).toHaveBeenCalledTimes(2);
     expect(callbacks.get("backfillCommentsBatch")).toHaveBeenCalledTimes(2);
+    expect(callbacks.get("purgeClearRichDocuments")).toHaveBeenCalledWith(200);
     expect(await response.json()).toMatchObject({
+      rich_documents: emptyBatch,
       issues: emptyBatch, feedback_users: emptyBatch, attachment_objects: emptyBatch,
       page_content: emptyBatch, numo_tool_content: emptyBatch,
     });

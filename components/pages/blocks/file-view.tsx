@@ -1,5 +1,6 @@
 "use client";
 
+import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Download01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import type { NodeViewRenderer } from "@tiptap/core";
@@ -36,6 +37,7 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
  * signed by a published page: cf. `fileDownloadHref` (lib/page-files.ts).
  */
 export function FileView({ node, selected, editor, deleteNode }: NodeViewProps) {
+  const editable = useEditorEditable(editor);
   const t = useTranslations("Pages");
   const locale = useLocale();
   const uploads = usePageUploadsContext();
@@ -169,7 +171,7 @@ export function FileView({ node, selected, editor, deleteNode }: NodeViewProps) 
         </a>
       )}
       {previewSrc && href && <FileViewer src={previewSrc} downloadHref={href} fileName={name} mimeType={mime}
-        open={previewOpen} onOpenChange={setPreviewOpen} onRemove={editor.isEditable ? deleteNode : undefined} />}
+        open={previewOpen} onOpenChange={setPreviewOpen} onRemove={editable ? deleteNode : undefined} />}
     </NodeViewWrapper>
   );
 }

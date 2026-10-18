@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
-import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import { useDescriptionMentions } from "./use-mention-sources";
 
 type PageRow = { id: string; project_id: string; title: string; icon: string | null; version: number; updated_at: string };
@@ -39,7 +39,7 @@ const row = (title: string, version: number): PageRow => ({
 it("keeps the mention catalog through save acknowledgements and rebuilds only page rows on rename", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const members: never[] = [];
-  let mentions!: MarkdownEditorMentions;
+  let mentions!: DocumentEditorMentions;
   function Surface() {
     mentions = useDescriptionMentions("p", members);
     return null;

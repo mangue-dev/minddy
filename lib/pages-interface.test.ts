@@ -91,7 +91,7 @@ describe("page interface regressions", () => {
   });
 
   it("rehydrates mention pills after an agent rewrites page markdown", () => {
-    const editor = source("components/pages/page-editor.tsx");
+    const editor = source("components/editor/rich-editor.tsx");
     const view = source("components/pages/page-view.tsx");
 
     expect(editor).toContain("hydrateMentions(editor, scan, { exact: !!collaboration })");

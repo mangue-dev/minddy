@@ -21,6 +21,7 @@ import type {
   Category,
   GlobalBoardResponse,
   Issue,
+  IssueUpdateInput,
   Objective,
   SearchIndexIssue,
 } from "../types";
@@ -126,6 +127,16 @@ export function findCachedIssue(
   return queryClient
     .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
     ?.issues.find((i) => i.id === issueId);
+}
+
+/**
+ * What an update writes into cached issue rows: everything but the editor
+ * document, which is not part of the issue (MIN-728) and has its own cache
+ * (lib/use-rich-document.ts).
+ */
+export function issueCachePatch(patch: IssueUpdateInput): Partial<Issue> {
+  const { description_doc: _document, ...fields } = patch;
+  return fields as Partial<Issue>;
 }
 
 /**

@@ -67,8 +67,10 @@ export function useObjectivesQuery(projectId: string | null) {
       // The opposite of PATCH, field by field: this is where the cache returns if
       // the server refuses, without touching the rest of the line.
       const before: Partial<Objective> = {};
+      // The editor document is not part of the cached objective (MIN-728).
+      const { description_doc: _document, ...cached } = updates;
       if (current) {
-        for (const field of Object.keys(updates) as (keyof ObjectiveUpdateInput)[]) {
+        for (const field of Object.keys(cached) as (keyof ObjectiveUpdateInput)[]) {
           (before as Record<string, unknown>)[field] =
             (current[field as keyof Objective] as unknown) ?? null;
         }
@@ -76,14 +78,14 @@ export function useObjectivesQuery(projectId: string | null) {
       const handle = objectiveWrites.begin({
         kind: "patch",
         id: objectiveId,
-        patch: updates as Partial<Objective>,
+        patch: cached as Partial<Objective>,
       });
       if (pid) {
         patchObjectiveEverywhere(
           queryClient,
           pid,
           objectiveId,
-          updates as Partial<Objective>
+          cached as Partial<Objective>
         );
       }
       try {

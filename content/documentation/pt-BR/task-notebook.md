@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-18",
   "compatibility": {
-    "version": "0.11.1 candidate (89ebb59a5)",
+    "version": "0.11.1 candidate (89ebb59a5); MIN-728 one editor engine",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -37,14 +37,19 @@
       "components/scratchpad/task-item-view.tsx",
       "lib/keyboard/shortcuts.ts",
       "lib/keyboard/keyboard-context.tsx",
-      "components/scratchpad/scratchpad-trigger.tsx"
+      "components/scratchpad/scratchpad-trigger.tsx",
+      "components/editor/rich-editor.tsx",
+      "components/editor/document-editor.tsx",
+      "components/editor/comment-editor.tsx",
+      "content/documentation/reviews/min-728-one-editor-engine.md",
+      "components/scratchpad/scratchpad-editor.tsx"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root (pt-BR translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "issues",
@@ -62,7 +67,7 @@
       "src": "/documentation/pt-BR/work-task-notebook.png",
       "alt": "Tarefas pessoais de demonstração traduzidas no caderno.",
       "caption": "O caderno acompanha etapas pessoais fora da hierarquia de tickets do projeto. Os status das tarefas de exemplo permanecem iguais.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,6 +87,8 @@
 ## Registrar uma ideia {#task-notebook}
 
 Abra o caderno de tarefas pelos controles pessoais do aplicativo, ou use Command+Shift+K no macOS e Ctrl+Shift+K no Windows/Linux quando o foco estiver fora de texto editável. Esse espaço de anotações e caixas de seleção pertence à sua conta. Acrescente o contexto, organize-o em seções se for útil e use as caixas de seleção das tarefas para acompanhar pequenas etapas pessoais antes que elas virem tickets de um projeto.
+
+O caderno usa o mesmo editor das páginas do projeto, com as mesmas alças de bloco: passe o cursor sobre um bloco para arrastá-lo, abrir seu menu ou adicionar um bloco com **+**. Digite `/` para inserir um título, uma lista, uma tarefa, uma citação, um **Destaque**, um bloco de código, um bloco **Alternar** ou um divisor, ou escolha **Ditar uma tarefa** para falar as tarefas em voz alta. O caderno continua salvo em Markdown, então Numo e os agentes conectados leem as mesmas tarefas e estados. Selecione um texto para formatá-lo ou adicionar um link, e cole ou solte uma imagem para inseri-la em uma nota. Os outros tipos de arquivo ficam nas páginas.
 
 O caderno é privado. Use uma página do projeto para informações que seus colegas precisam compartilhar. O Numo pode ler ou atualizar o caderno quando você pedir, mas a participação de outra pessoa no seu projeto não transforma suas anotações em um documento compartilhado.
 

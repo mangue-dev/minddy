@@ -18,11 +18,10 @@ import {
   cn,
   toast,
 } from "mangue-ui";
-import { AutoTextarea } from "@/components/auto-textarea";
+import { DocumentEditor } from "@/components/editor/document-editor";
 import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrHunk } from "@/components/pull-requests/pr-hunk";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
-import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import { GitLogin } from "@/components/git/git-login";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { Markdown } from "@/components/markdown";
@@ -475,7 +474,10 @@ function Composer({
   );
 }
 
-/** The front field, kept for surfaces without pull requests. */
+/**
+ * The line remark of a diff without a pull request: the same editor as every
+ * comment (MIN-728), without mentions or attachments, which need a forge.
+ */
 function PlainComposer({
   value,
   onChange,
@@ -496,24 +498,23 @@ function PlainComposer({
   autoFocus?: boolean;
 }) {
   const t = useTranslations("PullRequests");
-  const isSend = useIsSendShortcut();
+  const canPost = !submitting && !!value.trim();
 
   return (
     <div className="flex flex-col gap-2 font-sans">
       <div className="w-full rounded-lg bg-control transition-colors">
-        <AutoTextarea
-          autoFocus={autoFocus}
+        <DocumentEditor
           value={value}
-          onChange={(e) => onChange(() => e.target.value)}
-          onKeyDown={(e) => {
-            if (isSend(e)) {
-              e.preventDefault();
-              onSubmit();
-            }
-            if (e.key === "Escape") onCancel();
+          onChange={(markdown) => onChange(() => markdown)}
+          onCommit={(markdown) => onChange(() => markdown)}
+          onSubmit={() => {
+            if (canPost) onSubmit();
           }}
+          onEscape={onCancel}
+          autoFocus={autoFocus}
           placeholder={placeholder}
-          className="max-h-40 w-full overflow-y-auto bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+          className="max-h-40 min-w-0 max-w-full overflow-y-auto"
+          contentClassName="px-3 py-2 [&_p]:my-0"
         />
       </div>
       <div className="flex items-center justify-end gap-1.5">
@@ -521,7 +522,7 @@ function PlainComposer({
           {t("cancel")}
         </Button>
         <SendShortcutTooltip label={submitLabel}>
-          <Button size="sm" onClick={onSubmit} disabled={submitting || !value.trim()}>
+          <Button size="sm" onClick={onSubmit} disabled={!canPost}>
             {submitting ? <Spinner /> : null}
             {submitLabel}
           </Button>

@@ -1,10 +1,9 @@
 "use client";
 
-import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Edit04Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
-import { useMemo, useState } from "react";
+import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -14,49 +13,45 @@ import {
   DropdownMenuTrigger,
   Progress,
 } from "mangue-ui";
-import { Markdown } from "@/components/markdown";
-import { TaskRow } from "@/components/plan-task-row";
-import {
-  parsePlan,
-  setTaskState,
-  type PlanTask,
-  type PlanTaskState,
-} from "@/lib/plan";
-import { trackEvent } from "@/lib/analytics";
-import { isSendShortcut } from "@/lib/keyboard/send-shortcut";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { DeferredDocumentEditor } from "@/components/editor/document-editor-lazy";
+import type { DocumentEditorMentions } from "@/components/editor/document-editor";
+import type { DescriptionCollaborationSession } from "@/lib/use-description-collaboration";
+import { parsePlan } from "@/lib/plan";
 
 /**
- * The issue's implementation plan (Plan tab of the side panel): rendered
- * markdown with interactive task rows by default, raw-markdown editing behind
- * an explicit Save/Cancel (a blur-commit would fire spurious task events on a
- * half-edited plan). The markdown is the single source of truth — every task
- * interaction rewrites one line and commits the full document (lib/plan.ts).
+ * The issue's implementation plan (Plan tab of the side panel), edited in
+ * place like the description (MIN-728): the shared editor, live with the
+ * other people, Numo and agents on the same plan. Tasks are the editor's
+ * four-state task blocks; their Markdown is the plan format of lib/plan.ts,
+ * which every agent tool reads (`issues.plan` is the projection).
  *
- * Empty plan: two ways to fill it — copy the prompt for an external agent
- * (MCP), or write it by hand.
- *
- * Written plan: the actions copy a prompt for the user's own coding agent —
- * implement the ticket, check the implementation once a task is checked, or
- * resume the plan itself.
+ * The actions copy a prompt for the user's own coding agent: write or review
+ * the plan, implement the issue, or check the implementation once a task is
+ * done.
  */
 export function IssuePlan({
+  issueId,
+  projectId,
   plan,
+  live,
+  mentions,
   onCommit,
   onCopyPrompt,
   onCopyImplementPrompt,
   onCopyVerifyPrompt,
   readOnly = false,
 }: {
+  issueId: string;
+  projectId: string;
   plan: string | null;
+  /** The plan's live session (lib/use-description-collaboration.ts). */
+  live: DescriptionCollaborationSession;
+  mentions: DocumentEditorMentions;
+  /** Saves the Markdown when no live session is available. */
   onCommit: (plan: string | null) => void;
   /** Project readers: the plan is shown without edit or task controls. */
   readOnly?: boolean;
-  /** Copies the “write/verify plan” prompt to an external agent. */
+  /** Copies the “write/review plan” prompt to an external agent. */
   onCopyPrompt?: () => void;
   /** Copies the “implement ticket” prompt to an external agent. */
   onCopyImplementPrompt?: () => void;
@@ -65,120 +60,37 @@ export function IssuePlan({
 }) {
   const t = useTranslations("Plan");
   const tIssue = useTranslations("IssueUI");
-  const tCommon = useTranslations("Common");
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
+  // The text on screen, so the progress follows typing before its Markdown
+  // is written back to the issue.
+  const [typed, setTyped] = useState<string | null>(null);
+  const edited = useRef(false);
+  // Without a live session, a plan written elsewhere (an agent ticking a
+  // task) is taken in by remounting the editor, unless someone is typing.
+  const [fallbackKey, setFallbackKey] = useState(0);
+  const fallback = live.status === "unavailable";
+  useEffect(() => {
+    if (!fallback || edited.current) return;
+    setTyped(null);
+    setFallbackKey((current) => current + 1);
+  }, [plan, fallback]);
+  const shown = typed ?? plan ?? "";
 
-  const { segments, progress } = useMemo(() => parsePlan(plan), [plan]);
+  const { progress } = useMemo(() => parsePlan(shown), [shown]);
   const percent =
     progress.total === 0 ? 0 : Math.round((progress.done / progress.total) * 100);
-  // A plan with tasks CHECKS; markdown without stain (prose
-  // only) remains to be written — same definition as `hasPlanTasks`, so that the
-  // labels stick to the prompts that the callbacks trigger.
+  // A plan with tasks is REVIEWED; one without is still to be written — the
+  // same definition as `hasPlanTasks`, so the labels match the prompts.
   const reviewing = progress.total > 0;
-  // At least one task checked = work has been done, so there is something
-  // to be checked. Canceled tasks and questions don't count (parsePlan
-  // already excludes them from `done`): they are not written code.
+  // At least one task done = work to check. Cancelled tasks and questions do
+  // not count (parsePlan already excludes them from `done`).
   const started = progress.done > 0;
 
-  const startEditing = () => {
-    setDraft(plan ?? "");
-    setEditing(true);
-  };
-  const saveDraft = () => {
-    const next = draft.trim() ? draft : null;
-    if (next !== (plan ?? null)) onCommit(next);
-    setEditing(false);
-  };
-
-  const commitTaskState = (task: PlanTask, state: PlanTaskState) => {
-    if (!plan || task.state === state) return;
-    trackEvent("plan_task_toggled", { to_state: state });
-    onCommit(setTaskState(plan, task.line, state));
-  };
-
-  if (editing && !readOnly) {
-    return (
-      <div className="flex flex-col gap-2">
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            // The plan editor is a DOCUMENT, not a message: Enter done
-            // a line regardless of the account setting, hence the call without
-            // mode — but the definition of the gesture remains the only one in the app.
-            if (isSendShortcut(e)) {
-              e.preventDefault();
-              saveDraft();
-            }
-            if (e.key === "Escape") {
-              e.preventDefault();
-              setEditing(false);
-            }
-          }}
-          placeholder={t("editorPlaceholder")}
-          autoFocus={allowInputAutoFocus()}
-          spellCheck={false}
-          className="min-h-[45vh] w-full resize-y rounded-lg bg-control p-3 font-mono text-sm leading-relaxed outline-none placeholder:text-muted-foreground/50 focus-visible:bg-control-hover"
-        />
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-            {tCommon("cancel")}
-          </Button>
-          <Button size="sm" onClick={saveDraft}>
-            {tCommon("save")}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!plan && readOnly) {
-    return (
-      <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
-        <p className="text-sm text-muted-foreground">{t("emptyTitle")}</p>
-      </div>
-    );
-  }
-
-  if (!plan) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-        <p className="text-sm font-medium">{t("emptyTitle")}</p>
-        {/* Having the plan written by your own agent, then — behind — writing
-            it yourself. */}
-        {onCopyPrompt && (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {onCopyPrompt && (
-              // The wording does not say WHICH prompt: the tooltip says so.
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={onCopyPrompt}>
-                    <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                    {t("copyPlanPrompt")}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-64">
-                  {t("copyPlanPromptHint")}
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        )}
-        <Button
-          variant={onCopyPrompt ? "ghost" : "outline"}
-          size="sm"
-          onClick={startEditing}
-        >
-          {t("addPlan")}
-        </Button>
-      </div>
-    );
-  }
+  const liveReady = live.status === "ready" && !!live.collaboration;
+  const placeholder = readOnly ? t("emptyTitle") : t("placeholder");
 
   return (
-    <div>
-      <div className="mb-3 flex items-center gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="flex min-h-8 items-center gap-2">
         {progress.total > 0 && (
           <>
             <span className="text-xs text-muted-foreground">
@@ -188,85 +100,85 @@ export function IssuePlan({
           </>
         )}
         <span className="flex-1" />
-        {!readOnly && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("editAriaLabel")}
-            className="rounded-full text-muted-foreground hover:text-foreground"
-            onClick={startEditing}
-          >
-            <HugeiconsIcon icon={Edit04Icon} />
-          </Button>
+        {!readOnly && (onCopyPrompt || onCopyImplementPrompt || (started && onCopyVerifyPrompt)) && (
+          // The wording does not say WHICH prompt: the menu asks for it — the
+          // same ways of working on the ticket as the “⋯” menu.
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
+                <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+                {t("copyPlanPrompt")}
+                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {onCopyPrompt && (
+                <DropdownMenuItem onSelect={onCopyPrompt}>
+                  <HugeiconsIcon icon={TaskDone01Icon} className="size-4" />
+                  {tIssue(reviewing ? "actionReviewPlan" : "actionWritePlan")}
+                </DropdownMenuItem>
+              )}
+              {onCopyImplementPrompt && (
+                <DropdownMenuItem onSelect={onCopyImplementPrompt}>
+                  <AppIcon icon={Code2} className="size-4" />
+                  {tIssue("actionImplement")}
+                </DropdownMenuItem>
+              )}
+              {started && onCopyVerifyPrompt && (
+                <DropdownMenuItem onSelect={onCopyVerifyPrompt}>
+                  <HugeiconsIcon icon={Search01Icon} className="size-4" />
+                  {tIssue("actionVerifyImplementation")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
-      {/* What you do with a written plan: copy a prompt for your own coding
-          agent — implement it, check the implementation once a task is
-          checked, or resume the plan itself. */}
-      {!readOnly &&
-        (onCopyPrompt ||
-        onCopyImplementPrompt ||
-        onCopyVerifyPrompt) && (
-        <div className="mb-4 flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
-            {(onCopyPrompt ||
-              onCopyImplementPrompt ||
-              (started && onCopyVerifyPrompt)) && (
-              // The wording does not say WHICH prompt: the menu asks for it — the
-              // same ways of working on the ticket as the “⋯” menu.
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="grow basis-32">
-                    <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                    {t("copyPlanPrompt")}
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 opacity-60" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  {onCopyImplementPrompt && (
-                    <DropdownMenuItem onSelect={onCopyImplementPrompt}>
-                      <AppIcon icon={Code2} className="size-4" />
-                      {tIssue("actionImplement")}
-                    </DropdownMenuItem>
-                  )}
-                  {started && onCopyVerifyPrompt && (
-                    <DropdownMenuItem onSelect={onCopyVerifyPrompt}>
-                      <HugeiconsIcon icon={Search01Icon} className="size-4" />
-                      {tIssue("actionVerifyImplementation")}
-                    </DropdownMenuItem>
-                  )}
-                  {onCopyPrompt && (
-                    <DropdownMenuItem onSelect={onCopyPrompt}>
-                      <HugeiconsIcon icon={TaskDone01Icon} className="size-4" />
-                      {tIssue(reviewing ? "actionReviewPlan" : "actionWritePlan")}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
+      {live.status === "loading" ? (
+        // The plan, formatted, while its live session loads: the live editor
+        // then takes its place in the same frame.
+        <DeferredDocumentEditor
+          key={`${issueId}:plan-preview`}
+          mentions={mentions}
+          value={plan ?? ""}
+          placeholder={placeholder}
+          readOnly
+        />
+      ) : liveReady ? (
+        <DeferredDocumentEditor
+          key={`${issueId}:plan-live`}
+          mentions={mentions}
+          value={plan ?? ""}
+          uploadScope={`projects/${projectId}`}
+          document={live.doc}
+          collaboration={live.collaboration}
+          onChange={(markdown) => setTyped(markdown)}
+          placeholder={placeholder}
+          readOnly={readOnly}
+        />
+      ) : (
+        // Without a live session (an older server, a failed read), the plan
+        // is saved as Markdown when the editor loses focus.
+        <DeferredDocumentEditor
+          key={`${issueId}:plan:${fallbackKey}`}
+          mentions={mentions}
+          value={plan ?? ""}
+          uploadScope={`projects/${projectId}`}
+          onChange={(markdown) => setTyped(markdown)}
+          onEdit={() => {
+            edited.current = true;
+          }}
+          onCommit={(markdown) => {
+            if (!edited.current) return;
+            edited.current = false;
+            const next = markdown.trim() ? markdown : null;
+            if (next !== (plan ?? null)) onCommit(next);
+          }}
+          placeholder={placeholder}
+          readOnly={readOnly}
+        />
       )}
-
-      <div className="flex flex-col gap-1">
-        {segments.map((segment, i) =>
-          segment.kind === "prose" ? (
-            <Markdown key={i}>{segment.markdown}</Markdown>
-          ) : (
-            <div key={i} className="my-1 flex flex-col">
-              {segment.tasks.map((task) => (
-                <TaskRow
-                  key={`${task.line}-${task.text}`}
-                  task={task}
-                  onSetState={(state) => commitTaskState(task, state)}
-                  readOnly={readOnly}
-                />
-              ))}
-            </div>
-          )
-        )}
-      </div>
     </div>
   );
 }

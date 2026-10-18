@@ -1,14 +1,12 @@
 "use client";
 
-// The “/” menu of a page. Same mechanics as that of the notebook
-// (components/scratchpad/slash-command.tsx) — including porting to the body of the
-// document, for the same reason: in a scrolling panel, a menu in
-// position absolue se fait couper par son conteneur.
+// The “/” menu of every rich text surface (MIN-728): it is ported to the body
+// of the document, because in a scrolling panel a menu in absolute position is
+// cut by its container.
 //
-// The difference is in one line, and that's the whole point of the ticket: this menu
-// has NO block list. It displays what `slashItems()` returns to it and places
-// the block by `insertBlock()`. Adding a table block will not require any
-// revenir.
+// This menu has NO block list. It displays what `slashItems()` returns to it,
+// plus the actions a surface adds, and places a block with `insertBlock()`.
+// Adding a table block will not require coming back here.
 
 import {
   forwardRef,
@@ -30,28 +28,41 @@ import {
   type PageBlock,
 } from "@/components/pages/blocks";
 
-/** What the menu needs to know in one block, once the keys have been translated.
- The translation is done OUTSIDE: the register has no translator. */
-export interface PageSlashItem {
-  block: PageBlock;
-  label: string;
-}
+/** One entry of the menu, once the keys have been translated. The translation
+ is done OUTSIDE: the register has no translator.
+
+ A BLOCK entry carries its descriptor; a surface ACTION (the notebook's
+ dictation, MIN-728) carries what it runs instead. Both filter and render the
+ same way, so the menu itself never knows which is which. */
+export type PageSlashItem =
+  | { key: string; label: string; icon: PageBlock["icon"]; keywords: string[]; block: PageBlock }
+  | {
+      key: string;
+      label: string;
+      icon: PageBlock["icon"];
+      keywords: string[];
+      block?: undefined;
+      run: (editor: Editor, range: Range) => void;
+    };
 
 /** The translated catalog, in menu order. `t` comes from the calling component
  (namespace `Pages`), typed with its namespace — without it, TypeScript gives up
  (TS2589) and no longer checks any keys. */
 export function pageSlashItems(
-  t: (key: PageBlock["labelKey"]) => string
+  t: (key: PageBlock["labelKey"]) => string,
+  options?: Parameters<typeof slashItems>[0]
 ): PageSlashItem[] {
-  return slashItems().map((block) => ({
+  return slashItems(options).map((block) => ({
+    key: block.id,
     block,
     label: t(block.labelKey),
+    icon: block.icon,
+    keywords: block.slash.keywords,
   }));
 }
 
-/** The menu filter: the TRANSLATED label first, then the aliases of the
- descriptor — which carry both languages, because we type “quote” on
- a French interface. */
+/** The menu filter: the TRANSLATED label first, then the aliases — which
+ carry both languages, because we type “quote” on a French interface. */
 export function filterSlashItems(
   items: PageSlashItem[],
   query: string
@@ -61,8 +72,13 @@ export function filterSlashItems(
   return items.filter(
     (item) =>
       item.label.toLowerCase().includes(q) ||
-      item.block.slash.keywords.some((k) => k.toLowerCase().includes(q))
+      item.keywords.some((k) => k.toLowerCase().includes(q))
   );
+}
+
+/** Whether a mouse event comes from the pointer actually moving. */
+export function movedPointer(event: MouseEvent): boolean {
+  return event.movementX !== 0 || event.movementY !== 0;
 }
 
 interface SlashMenuRef {
@@ -91,10 +107,15 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   const [keyboard, setKeyboard] = useState(false);
   useEffect(() => {
     if (!keyboard) return;
-    const wake = () => setKeyboard(false);
-    // `mousemove` and not `mouseover`: it is the movement which returns the hand to the
-    // mouse, not the fact that a line went underneath by itself.
-    window.addEventListener("mousemove", wake, { once: true });
+    // A REAL movement only. Browsers dispatch a synthetic `mousemove` after
+    // scrolling content under a still pointer — exactly what holding an
+    // arrow does — and waking on it let the row under the pointer take the
+    // selection back between two key repeats: options seemed skipped.
+    const wake = (event: MouseEvent) => {
+      if (!movedPointer(event)) return;
+      setKeyboard(false);
+    };
+    window.addEventListener("mousemove", wake);
     return () => window.removeEventListener("mousemove", wake);
   }, [keyboard]);
 
@@ -139,19 +160,23 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   if (props.items.length === 0) return null;
 
   const rows: ReactNode[] = props.items.map((item, index) => {
-    const Icon = item.block.icon;
+    const Icon = item.icon;
     return (
       <button
         type="button"
-        key={item.block.id}
+        key={item.key}
         data-slash-index={index}
         onMouseDown={(e) => e.preventDefault()}
-        onMouseEnter={() => {
-          if (!keyboard) setSelected(index);
+        // `mousemove` with a real movement, not `mouseenter`: a row scrolled
+        // under a still pointer must not take the selection.
+        onMouseMove={(event) => {
+          if (!keyboard && movedPointer(event.nativeEvent)) setSelected(index);
         }}
         onClick={() => choose(index)}
         className={cn(
-          "flex w-full items-center gap-2.5 scroll-my-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
+          // No color transition: with a held arrow the highlight moves faster
+          // than a fade, which smeared it over several rows.
+          "flex w-full items-center gap-2.5 scroll-my-1.5 rounded-lg px-2 py-1.5 text-left text-sm",
           index === selected ? "bg-muted text-foreground" : "text-foreground/90",
           // During keyboard navigation, the mouse no longer paints anything:
           // two lines lit, that would be two responses to “Enter”.
@@ -166,6 +191,7 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
 
   return (
     <div
+      role="listbox"
       data-floating-surface
       className="min-w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg"
     >
@@ -249,7 +275,12 @@ function renderSlashMenu() {
 }
 
 /** The “/” extension of a page. Configured with the TRANSLATED catalog. */
-export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
+export const PageSlashCommand = Extension.create<{
+  /** The catalog, or a reader of it: a surface whose actions arrive after the
+   editor is built (a routine's repository skills) passes a reader, read at
+   each "/" — the plugin is built once. */
+  items: PageSlashItem[] | (() => PageSlashItem[]);
+}>({
   name: "pageSlashCommand",
 
   addOptions() {
@@ -257,7 +288,10 @@ export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
   },
 
   addProseMirrorPlugins() {
-    const items = () => this.options.items;
+    const items = () => {
+      const { items: catalog } = this.options;
+      return typeof catalog === "function" ? catalog() : catalog;
+    };
     return [
       Suggestion<PageSlashItem>({
         // pnpm resolves @tiptap/core twice (same version) — the editor
@@ -274,8 +308,10 @@ export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
         char: "/",
         allowSpaces: false,
         items: ({ query }) => filterSlashItems(items(), query),
-        command: ({ editor, range, props }) =>
-          insertBlock(props.block, editor as unknown as Editor, range as Range),
+        command: ({ editor, range, props }) => {
+          if (props.block) insertBlock(props.block, editor as unknown as Editor, range as Range);
+          else props.run(editor as unknown as Editor, range as Range);
+        },
         render: renderSlashMenu,
       }),
     ];

@@ -2,7 +2,7 @@
 
 // “@” mentions in a DESCRIPTION (tiptap) — person, ticket, objective.
 //
-// Same contract as in a comment (components/mention-textarea): what is
+// Same contract as in a comment (components/editor/comment-editor.tsx): what is
 // STORED is text, “@Name” / “@MIN-42” / “@Goal”, and the pill comes from it
 // re-inferred on each reread by the unique rule of lib/mention-scan. The knot
 // tiptap is just a coat placed on this text: it is serialized in markdown towards
@@ -11,7 +11,7 @@
 // by Numo and by the code agent.
 //
 // The menu is brought to the body of the document, like that of the “/” in the notebook
-// (components/scratchpad/slash-command) and for the same reasons: in the
+// (components/pages/page-slash-command.tsx) and for the same reasons: in the
 // panel or dialog, a menu in absolute position is cut by the
 // scrolling container.
 
@@ -35,7 +35,8 @@ import {
   type SuggestionProps,
   type Trigger,
 } from "@tiptap/suggestion";
-import { PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { MentionChip, NUMO_MENTION_ID } from "@/components/mention-chip";
 import { useMentionLinks } from "@/components/mention-links";
 import {
@@ -47,6 +48,10 @@ import {
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
+import { TypedMentionChip } from "@/components/typed-mention-chip";
+import { isMentionLinkType } from "@/lib/mention-link";
+import { primeMentionLabel, shownMentionLabel } from "@/lib/mention-resolution";
+import { Fragment, Slice, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { findActiveMentionQuery } from "@/lib/mention-menu";
 import {
   mentionAttrsFromOption,
@@ -58,9 +63,59 @@ import {
 /** The node PLUS its pill. The schema, attributes and serialization markdown
  live separately (components/mention-node.ts): the markdown projection of pages
  mounts the bare node, outside the browser, without React. */
+/** What a copied pill the reader could not see carries, as agents read it. */
+const UNAVAILABLE_COPY_LABEL = "unavailable";
+
 export const MentionNode = MentionNodeBase.extend({
   addNodeView() {
     return ReactNodeViewRenderer(MentionNodeView);
+  },
+
+  /**
+   * A pill is an atom the browser does not paint as selected text: inside a
+   * selection it looked left out. Every pill the selection covers gets
+   * `mention-selected` (app/globals.css), drawn in the selection color.
+   */
+  addProseMirrorPlugins() {
+    const name = this.name;
+    return [
+      new Plugin({
+        key: new PluginKey("mentionSelection"),
+        props: {
+          // A copied typed pill carries the label it showed — the target's
+          // current one, or the neutral one — never the label stored with it
+          // (MIN-734), in the HTML and in the plain text alike.
+          transformCopied: (slice) => {
+            const relabel = (fragment: Fragment): Fragment => {
+              const children: ProseMirrorNode[] = [];
+              fragment.forEach((child) => {
+                const attrs = child.attrs as Record<string, unknown>;
+                if (child.type.name === name && !attrs.legacy && isMentionLinkType(attrs.mentionType) &&
+                    typeof attrs.mentionId === "string") {
+                  const label = shownMentionLabel(attrs.mentionType, attrs.mentionId);
+                  children.push(child.type.create({ ...attrs, mentionLabel: label ?? UNAVAILABLE_COPY_LABEL }));
+                } else {
+                  children.push(child.isLeaf ? child : child.copy(relabel(child.content)));
+                }
+              });
+              return Fragment.fromArray(children);
+            };
+            return new Slice(relabel(slice.content), slice.openStart, slice.openEnd);
+          },
+          decorations: ({ doc, selection }) => {
+            if (selection.empty) return null;
+            const decorations: Decoration[] = [];
+            doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+              if (node.type.name !== name) return;
+              if (pos >= selection.from && pos + node.nodeSize <= selection.to) {
+                decorations.push(Decoration.node(pos, pos + node.nodeSize, { class: "mention-selected" }));
+              }
+            });
+            return decorations.length ? DecorationSet.create(doc, decorations) : null;
+          },
+        },
+      }),
+    ];
   },
 });
 
@@ -73,6 +128,20 @@ function MentionNodeView({ node }: NodeViewProps) {
   // pill then remains text, which it has always been.
   const links = useMentionLinks();
   const href = links?.href(type, id) ?? null;
+  // A typed reference (MIN-734) shows what the reader may see of its target,
+  // never the label stored with it; a pill found by its label is already
+  // the reader's own (legacy).
+  if (!node.attrs.legacy && isMentionLinkType(type) && node.attrs.mentionId) {
+    return (
+      <NodeViewWrapper as="span" className="inline-block align-baseline">
+        <TypedMentionChip
+          type={type}
+          id={id}
+          appearance={{ seed: node.attrs.seed, color: node.attrs.color, icon: node.attrs.icon }}
+        />
+      </NodeViewWrapper>
+    );
+  }
   return (
     // `align-baseline`, like the pill she carries: a centered envelope
     // on the height of x would restore the offset that the pill has just corrected.
@@ -148,7 +217,8 @@ export function hydrateMentions(
         offset += segment.text.length;
         continue;
       }
-      const attrs = mentionAttrsFromScanned(segment.mention);
+      // Found by its label: it stays `@Label` in the text (see mention-node.ts).
+      const attrs = { ...mentionAttrsFromScanned(segment.mention), legacy: true };
       if (!exact || `@${attrs.mentionLabel}` === segment.raw) {
         found.push({
           from: pos + offset,
@@ -375,6 +445,9 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
           return filterMentions(options.items(), query);
         },
         command: ({ editor, range, props }) => {
+          // The reader just picked it, so they can see it: its pill shows at
+          // once, without waiting for the server (MIN-734).
+          if (isMentionLinkType(props.type)) primeMentionLabel(props.type, props.id, props.label);
           editor
             .chain()
             .focus()

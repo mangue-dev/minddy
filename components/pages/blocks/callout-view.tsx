@@ -1,5 +1,6 @@
 "use client";
 
+import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { HappyIcon } from "@hugeicons/core-free-icons";
 import { useLayoutEffect, useRef } from "react";
@@ -109,6 +110,7 @@ function useFirstLineIconAlignment(icon: string | null) {
 
 /** The browser view adds the emoji picker; the headless schema stays React-free. */
 export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
+  const editable = useEditorEditable(editor);
   const t = useTranslations("Pages");
   const icon =
     typeof node.attrs.icon === "string" && node.attrs.icon.length > 0
@@ -130,7 +132,7 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
       {...{ [CALLOUT_ICON_ATTRIBUTE]: icon ?? "" }}
       className="page-callout"
     >
-      {editor.isEditable ? (
+      {editable ? (
         <EmojiPicker
           value={icon}
           onChange={(nextIcon) => updateAttributes({ icon: nextIcon })}
@@ -164,6 +166,18 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
   );
 }
 
+/** The icon button keeps its events: a click on the placeholder icon inside
+ it went to ProseMirror, which took the focus back and closed the emoji
+ picker (MIN-728; see stopCodeBlockChromeEvent). */
+function stopCalloutIconEvent({ event }: { event: Event }): boolean {
+  const target = event.target as Element | null;
+  if (!target || typeof target.closest !== "function") return false;
+  if (event.type.startsWith("drag") || event.type === "drop") return false;
+  return target.closest(".page-callout-icon-button") !== null;
+}
+
 export function calloutNodeView(): NodeViewRenderer {
-  return ReactNodeViewRenderer(CalloutView) as unknown as NodeViewRenderer;
+  return ReactNodeViewRenderer(CalloutView, {
+    stopEvent: stopCalloutIconEvent,
+  }) as unknown as NodeViewRenderer;
 }

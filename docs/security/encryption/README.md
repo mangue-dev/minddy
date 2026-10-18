@@ -2772,3 +2772,72 @@ EXCLUSIVE only for an encrypted write of the inserting table whose project has
 no marker yet, and SHARED otherwise. A rollback-only probe on production
 showed an existing sealed issue write holding both GitHub marker keys as
 `ExclusiveLock` before the fix and all three marker keys as `ShareLock` after.
+
+## Editor documents of descriptions, plans and the notebook (MIN-728)
+
+Issue and objective descriptions, issue plans and the task notebook are
+edited with the page editor engine. Their Markdown stays in its column
+(`issues.description`, `issues.plan`, `objectives.description`,
+`user_scratchpad.content`) and remains the only form
+external readers see: forge sync, MCP, Numo, notifications, webhooks, search
+and exports. The editor's ProseMirror document is stored next to it in
+`rich_documents`, a service-only table with RLS enabled, no policy, and the
+anon and authenticated grants revoked.
+
+- One row per parent and kind: `issue_id` for a description (`issue`) and a
+  plan (`plan`), `objective_id`, or `user_id` for the notebook. A description
+  and the notebook use their parent's id as the row id; a plan's row id is a
+  name-based UUID derived from its issue's id. Rows cascade with the parent,
+  the project and the account. A trashed issue or objective keeps its document; the read route
+  answers only for live parents.
+- `content` is the only encryption target. `lib/server/rich-documents.ts`, the
+  only reader and writer the access check allows, encrypts it under the
+  project key, or the user key for the notebook, when content encryption is on
+  or the parent row is encrypted.
+- The `guard_rich_document` trigger derives `project_id` from the parent, so a
+  document is never sealed under another project's scope, and refuses a clear
+  document under an encrypted parent and any downgrade.
+- Documents are not re-encoded by the maintenance walks. The hourly
+  encryption maintenance cron calls `purge_clear_rich_documents`, which
+  deletes clear documents whose parent has been encrypted since they were
+  written. The editor rebuilds the document from the Markdown on the next
+  open, losing only presentation (block identities, colors, pills).
+- The server derives the Markdown from a submitted document with the
+  projection bundle; it never stores a client projection. The notebook keeps
+  its Markdown and revision protocol: a document is stored only for a clean
+  write whose projection equals the stored Markdown.
+- The browser keeps documents in its memory query cache only; they are never
+  persisted to local storage.
+
+Live descriptions (MIN-728, [contract](../../document-collaboration.md)) add
+the stream state to `rich_documents` and a step journal:
+
+- `revision`, `materialized_revision`, `pending_since` and
+  `materializing_until` are clear stream metadata. `materialized_hash` is an
+  HMAC-SHA256 of the Markdown last materialized, keyed by HKDF from the data
+  root key (or the service role key without one), so it cannot confirm a
+  guessed description; it is classified as a token digest.
+- `rich_document_batches` journals accepted steps per description. `steps` is
+  the only encryption target, sealed with the parent's project key whenever
+  the document is sealed: `commit_rich_document` refuses clear steps for a
+  sealed document. Identifiers, revisions, the client session ID and the
+  author are clear routing metadata. The journal keeps the last 2,000
+  revisions and seven days, and cascades with its document. Sealing a clear
+  document deletes the clear steps it journaled, and
+  `purge_clear_rich_documents` also deletes clear steps of sealed documents
+  and of documents under encrypted parents.
+- Head moves broadcast `rich_document_heads` (kind, document, revision) on the
+  project topic, without content. Carets use the private
+  `issue-collaboration:<id>`, `plan-collaboration:<id>` (keyed by the issue)
+  and `objective-collaboration:<id>` topics, bound to the project membership
+  generation.
+
+Migrations `20270109200062`, `20270109200063` and `20270109200064` are
+additive. `20270109200065` adds the `plan` kind: it replaces the unique key on
+`issue_id` with one on `(issue_id, kind)`, extends the kind and owner checks,
+the guard and the purge to plans, and adds the plan caret topic.
+`20270109200066` purges clear steps on sealing, lets stream metadata
+(`materializing_until`, the claim's `materializing_token`, materialization
+marks, `pending_since`) move on a clear document under an encrypted parent
+while still refusing clear content, and restricts sending carets to members
+who may write the project.

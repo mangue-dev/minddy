@@ -121,8 +121,13 @@ export function openPageCollaborationPresence({
   onPeers,
   isMember,
   client,
+  topic: logicalTopic,
 }: {
   pageId: string;
+  /** The logical caret topic; a page's by default. Live descriptions
+   (MIN-728) use theirs, `issue-collaboration:<id>` or
+   `objective-collaboration:<id>`, with the same channel behavior. */
+  topic?: string;
   userId: string;
   sessionId: string;
   /**
@@ -135,6 +140,7 @@ export function openPageCollaborationPresence({
   client?: CaretClient;
 }): PageCollaborationPresence {
   const supabase = (client ?? getSupabase()) as CaretClient;
+  const caretTopic = logicalTopic ?? pageCollaborationTopic(pageId);
   let channel: RealtimeChannel | null = null;
   let joined = false;
   let closed = false;
@@ -208,7 +214,7 @@ export function openPageCollaborationPresence({
     void (async () => {
       try {
         await supabase.realtime.setAuth();
-        const topic = await resolveRealtimeTopic(supabase, pageCollaborationTopic(pageId));
+        const topic = await resolveRealtimeTopic(supabase, caretTopic);
         if (closed || version !== connectVersion) return;
         const ch = supabase.channel(topic, { config: { private: true, broadcast: { self: false } } });
         ch.on("broadcast", { event: CARET_EVENT }, ({ payload }) => receive(payload));
@@ -261,7 +267,7 @@ export function openPageCollaborationPresence({
     connect();
   }
 
-  const stopWatching = watchRealtimeTopic(supabase, pageCollaborationTopic(pageId),
+  const stopWatching = watchRealtimeTopic(supabase, caretTopic,
     () => ({ resolved, channel, version: connectVersion }), reconnect);
   connect();
 

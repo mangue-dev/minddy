@@ -325,6 +325,17 @@ export class CollabStream {
     this.settleWaiters(false);
   }
 
+  /**
+   * The document the stream carries while no editor is attached — its own
+   * state after a detach, confirmed steps plus pending work — or `null`. A
+   * new editor paints it first; `attach` then rebases that editor onto the
+   * stream exactly (MIN-728: a reopened description shows its latest text
+   * at once instead of an older snapshot).
+   */
+  detachedDoc(): unknown | null {
+    return this.host && this.headless ? this.options.toJSON(this.host.getState().doc) : null;
+  }
+
   /** Pending local work, in the editor or carried by the stream itself. */
   hasPending(): boolean {
     if (this.inFlight) return true;

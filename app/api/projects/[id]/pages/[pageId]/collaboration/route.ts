@@ -9,6 +9,7 @@ import {
 } from "@/lib/server/pages";
 import { COLLAB_TOKEN_HEADER } from "@/lib/server/page-collaboration-token";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
+import { boundedText } from "@/lib/server/bounded-body";
 import {
   MAX_COLLAB_REQUEST_BYTES,
   isCollabField,
@@ -28,30 +29,6 @@ const NO_STORE = { "Cache-Control": "no-store" };
  */
 const BATCHES_PER_MINUTE = 600;
 const READS_PER_MINUTE = 1_800;
-
-/**
- * The request body as text, refused past `limit` bytes without reading the
- * rest: `request.json()` would buffer any size before the batch is bounded.
- */
-async function boundedText(request: NextRequest, limit: number): Promise<string | null> {
-  const declared = Number(request.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > limit) return null;
-  if (!request.body) return "";
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > limit) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  return new TextDecoder().decode(Buffer.concat(chunks));
-}
 
 /** The answer's headers, with the session's renewed collaboration token. */
 const withToken = (token: string | null) =>

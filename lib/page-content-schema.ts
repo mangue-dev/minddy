@@ -145,6 +145,7 @@ export const PAGE_NODE_ATTRIBUTES: Record<string, readonly string[]> = {
     "color",
     "icon",
     "status",
+    "legacy",
   ],
 };
 

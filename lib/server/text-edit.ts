@@ -1,3 +1,4 @@
+import { restoreStoredMentions } from "@/lib/mention-link";
 import { applyEdit, ReplaceError } from "@/lib/server/agent/edit";
 
 /**
@@ -131,7 +132,9 @@ export function editTextPassage({
     };
   }
   try {
-    const edit = applyEdit(`${field}.md`, current, oldString, newString, replaceAll);
+    // Mentions the agent copied as it read them match the stored text again.
+    const edit = applyEdit(`${field}.md`, current, restoreStoredMentions(oldString, current),
+      restoreStoredMentions(newString, current), replaceAll);
     return {
       ok: true,
       content: edit.content,

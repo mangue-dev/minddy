@@ -43,7 +43,6 @@ import { toast } from "mangue-ui";
 import { compressImage } from "@/lib/image-compress";
 import {
   MAX_PAGE_FILE_BYTES,
-  MAX_PAGE_FILE_MB,
   isImageMime,
 } from "@/lib/page-files";
 
@@ -72,7 +71,17 @@ export interface PageUploads {
   get: (uploadId: string) => PageUpload | undefined;
   /** Restart a failed upload, with the file already in memory. */
   retry: (uploadId: string) => void;
+  /** How many uploads are still sending (failed ones do not count). */
+  sending?: number;
+  /** Only images are accepted (MIN-728): every surface but a page. */
+  imagesOnly?: boolean;
 }
+
+/** Sends one file and resolves with its final address and metadata. */
+export type UploadFile = (
+  file: File,
+  onProgress: (ratio: number) => void
+) => Promise<PageFileUploaded>;
 
 const Context = createContext<PageUploads | null>(null);
 
@@ -91,6 +100,9 @@ export function usePageUploadsContext(): PageUploads | null {
 }
 
 /* ── The engine ─────────────────────────────── ─────────────────────────────── */
+
+/** The largest image accepted before compression, whatever the upload limit. */
+const MAX_COMPRESSIBLE_BYTES = 25 * 1024 * 1024;
 
 /** Re-encoding a gif kills its animation, an svg its vectors: these leave
  as is. Exact mirror of lib/use-attachment-uploads.ts. */
@@ -126,13 +138,23 @@ function findUploadNode(editor: Editor, uploadId: string): number | null {
  * (the request flows are not deployed everywhere, and do not exist
  * at all on Safari). Without progress, an 8MB send over a slow connection is a gray block that doesn't move for fifteen seconds — the exact moment we start pasting again.
  */
-function postFile(
+export function postFile<T = PageFileUploaded>(
   url: string,
   file: File,
-  onProgress: (ratio: number) => void
-): Promise<PageFileUploaded> {
+  onProgress: (ratio: number) => void,
+  {
+    fields = {},
+    accept = (data) => !!(data as { src?: unknown } | null)?.src,
+  }: {
+    /** Extra form fields sent with the file. */
+    fields?: Record<string, string>;
+    /** Whether a 2xx payload is a complete answer. */
+    accept?: (data: unknown) => boolean;
+  } = {}
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
+    for (const [name, value] of Object.entries(fields)) form.append(name, value);
     form.append("file", file);
     const request = new XMLHttpRequest();
     request.open("POST", url);
@@ -148,8 +170,8 @@ function postFile(
       } catch {
         payload = null;
       }
-      const data = payload as (PageFileUploaded & { error?: string }) | null;
-      if (request.status >= 200 && request.status < 300 && data?.src) {
+      const data = payload as (T & { error?: string }) | null;
+      if (request.status >= 200 && request.status < 300 && data && accept(data)) {
         resolve(data);
       } else {
         reject(new Error(data?.error || `upload failed (${request.status})`));
@@ -171,12 +193,41 @@ export function usePageUploads(
   projectId: string,
   pageId: string,
   editorRef: { current: Editor | null }
-): PageUploads & {
+): EditorUploads {
+  const upload = useCallback<UploadFile>(
+    (file, onProgress) => postFile(`/api/projects/${projectId}/pages/${pageId}/files`, file, onProgress),
+    [projectId, pageId]
+  );
+  return useEditorUploads(editorRef, { upload, maxBytes: MAX_PAGE_FILE_BYTES });
+}
+
+/** What a surface hands its editor to accept dropped and pasted files. */
+export type EditorUploads = PageUploads & {
   /** Place the appropriate block on the file, and start sending it. */
   addFiles: (files: Iterable<File>, options?: { at?: number }) => void;
-} {
+};
+
+/**
+ * The upload engine of every editor (MIN-728): the queue of sendings, the
+ * block placed at once with a local preview, and the address sewn into the
+ * node when the bytes have arrived. Pages send to their files route; other
+ * surfaces send images only, to their own storage (`upload`).
+ */
+export function useEditorUploads(
+  editorRef: { current: Editor | null },
+  {
+    upload,
+    maxBytes,
+    imagesOnly = false,
+  }: {
+    upload: UploadFile;
+    maxBytes: number;
+    imagesOnly?: boolean;
+  }
+): EditorUploads {
   const t = useTranslations("Pages");
   const [uploads, setUploads] = useState<Map<string, PageUpload>>(new Map());
+  const sending = [...uploads.values()].filter((upload) => upload.status === "uploading").length;
   const uploadsRef = useRef(uploads);
   uploadsRef.current = uploads;
 
@@ -229,6 +280,7 @@ export function usePageUploads(
                 maxBytes: 2.5 * 1024 * 1024,
               })
             : file;
+          if (blob.size > maxBytes) throw new Error("file too large after compression");
           const payload =
             blob === file
               ? file
@@ -238,11 +290,7 @@ export function usePageUploads(
                   { type: blob.type || file.type }
                 );
 
-          const result = await postFile(
-            `/api/projects/${projectId}/pages/${pageId}/files`,
-            payload,
-            (ratio) => patch(uploadId, { progress: ratio })
-          );
+          const result = await upload(payload, (ratio) => patch(uploadId, { progress: ratio }));
 
           const editor = editorRef.current;
           if (!editor || editor.isDestroyed) {
@@ -286,7 +334,7 @@ export function usePageUploads(
         }
       })();
     },
-    [drop, editorRef, pageId, patch, projectId]
+    [drop, editorRef, patch, upload]
   );
 
   const addFiles = useCallback(
@@ -307,13 +355,23 @@ export function usePageUploads(
         // teaches the user nothing more than this immediate message, and it
         // leaves a hole in the document to clean up by hand. The server
         // recheck on his side.
-        if (file.size > MAX_PAGE_FILE_BYTES) {
-          toast.error(t("uploadTooLarge", { name: file.name, max: MAX_PAGE_FILE_MB }));
+        const image = isImageMime(file.type);
+        // Files other than images belong to pages; elsewhere they are refused
+        // before any block is placed, with the reason.
+        if (imagesOnly && !image) {
+          toast.error(t("uploadImagesOnly", { name: file.name }));
+          continue;
+        }
+        // An image is re-encoded before it is sent (`send`): a large capture
+        // is accepted here, and refused only if it is still over the limit
+        // once compressed.
+        const accepted = isCompressible(file.type) ? Math.max(maxBytes, MAX_COMPRESSIBLE_BYTES) : maxBytes;
+        if (file.size > accepted) {
+          toast.error(t("uploadTooLarge", { name: file.name, max: Math.floor(accepted / (1024 * 1024)) }));
           continue;
         }
 
         const uploadId = createUuid();
-        const image = isImageMime(file.type);
 
         setUploads((prev) => {
           const copy = new Map(prev);
@@ -350,23 +408,24 @@ export function usePageUploads(
         send(uploadId, file);
       }
     },
-    [editorRef, send, t]
+    [editorRef, send, t, imagesOnly, maxBytes]
   );
 
   const retry = useCallback(
     (uploadId: string) => {
       const upload = uploadsRef.current.get(uploadId);
       if (!upload) return;
-      if (upload.file.size > MAX_PAGE_FILE_BYTES) return;
+      if (upload.file.size > (isCompressible(upload.file.type)
+        ? Math.max(maxBytes, MAX_COMPRESSIBLE_BYTES) : maxBytes)) return;
       send(uploadId, upload.file);
     },
-    [send]
+    [send, maxBytes]
   );
 
   const get = useCallback((uploadId: string) => uploads.get(uploadId), [uploads]);
 
   return useMemo(
-    () => ({ get, retry, addFiles }),
-    [addFiles, get, retry]
+    () => ({ get, retry, addFiles, imagesOnly, sending }),
+    [addFiles, get, retry, imagesOnly, sending]
   );
 }

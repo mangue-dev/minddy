@@ -25,6 +25,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CancelCircleIcon as CircleSlash, CircleIcon, Copy01Icon, MoreHorizontalIcon, PlayIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
+import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { useRef, useState, type MouseEvent } from "react";
 import {
   NodeViewContent,
@@ -121,6 +122,9 @@ export function TaskItemView({
   const user = useAuthOptional()?.user ?? null;
   // Outside provider (an overview, an editor mounted without surface): the box remains,
   // the rest disappears. See task-surface.tsx.
+  // A reader (or a preview while a live plan loads) sees the states, and
+  // changes none of them (MIN-728).
+  const editable = useEditorEditable(editor);
   const surface = useTaskSurface();
 
   const raw = node.attrs.state;
@@ -128,7 +132,9 @@ export function TaskItemView({
   const struck = taskStruck(state);
   const toggled: PlanTaskState = struck ? "pending" : "completed";
 
-  const set = (next: PlanTaskState) => updateAttributes({ state: next });
+  const set = (next: PlanTaskState) => {
+    if (editable) updateAttributes({ state: next });
+  };
 
   // Entrusting the task to an agent means starting it: the handover does it
   // pass “in progress”, exactly like on a ticket, and with the same two
@@ -280,7 +286,7 @@ export function TaskItemView({
       data-state={state}
       className="group/task flex items-start gap-2.5 rounded-[3px] px-1 hover:bg-muted/50"
       onContextMenu={(e: MouseEvent) => {
-        if (!surface) return;
+        if (!surface || !editable) return;
         e.preventDefault();
         setMenuOpen(true);
       }}
@@ -292,6 +298,7 @@ export function TaskItemView({
           state={state}
           label={t("taskCheckboxAria", { text: taskOwnText(node) })}
           onToggle={() => set(toggled)}
+          disabled={!editable}
         />
       </span>
 
@@ -312,7 +319,7 @@ export function TaskItemView({
         )}
       />
 
-      {surface && (
+      {surface && editable && (
         <span contentEditable={false} className={TASK_LINE} data-task-checkbox>
           <SearchMenu
             open={menuOpen}

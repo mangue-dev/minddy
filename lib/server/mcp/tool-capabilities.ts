@@ -47,6 +47,8 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_list_objectives: "read",
   minddy_get_objective: "read",
   minddy_get_resource: "read",
+  // A notebook image is the caller's own (requireUser); a project image needs read.
+  minddy_get_image: "read",
   minddy_list_feedback: "read",
   minddy_get_feedback: "read",
   // Readers get the board settings without its public URL and token.

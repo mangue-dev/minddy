@@ -42,9 +42,21 @@ vi.mock("mangue-ui", async () => {
   };
 });
 
-vi.mock("@/components/search-select", () => ({
-  SearchSelect: ({ trigger }: { trigger: React.ReactNode }) => trigger,
-}));
+// The real picker opens through an `asChild` trigger: Radix clones the
+// trigger element with its click handler. The mock keeps that contract, so a
+// trigger that drops the props it receives cannot open the menu here either.
+vi.mock("@/components/search-select", async () => {
+  const { cloneElement } = await import("react");
+  return {
+    SearchSelect: ({
+      trigger,
+      onChange,
+    }: {
+      trigger: React.ReactElement<{ onClick?: () => void }>;
+      onChange: (value: string) => void;
+    }) => cloneElement(trigger, { onClick: () => onChange("python") }),
+  };
+});
 
 vi.mock("@/components/ui/tooltip", async () => {
   const { createElement, Fragment } = await import("react");
@@ -173,6 +185,21 @@ describe("TipTap code block node view", () => {
     wrap?.click();
     await vi.waitFor(() => expect(wrap?.getAttribute("aria-pressed")).toBe("false"));
 
+    live.destroy();
+  });
+
+  it("changes the language from the header picker", async () => {
+    const live = makeLiveEditor();
+    const { editor } = live;
+
+    let trigger: HTMLButtonElement | null = null;
+    await vi.waitFor(() => {
+      trigger = editor.view.dom.querySelector<HTMLButtonElement>(".code-block-node-language-trigger");
+      expect(trigger).not.toBeNull();
+    });
+    trigger!.click();
+
+    await vi.waitFor(() => expect(editor.getJSON().content?.[0]?.attrs?.language).toBe("python"));
     live.destroy();
   });
 

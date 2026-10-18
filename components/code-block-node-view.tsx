@@ -1,5 +1,6 @@
 "use client";
 
+import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import type { AnyExtension, NodeViewRenderer } from "@tiptap/core";
 import {
   NodeViewContent,
@@ -21,6 +22,7 @@ import {
 
 /** A searchable language picker and copy control for live TipTap code blocks. */
 export function CodeBlockView({ node, editor, updateAttributes }: NodeViewProps) {
+  const editable = useEditorEditable(editor);
   const t = useTranslations("Common");
   const language = typeof node.attrs.language === "string" ? node.attrs.language : "";
   const selected = CODE_LANGUAGE_OPTIONS.find((option) => option.value === language);
@@ -41,7 +43,7 @@ export function CodeBlockView({ node, editor, updateAttributes }: NodeViewProps)
             trigger={
               <CodeBlockLanguageTrigger
                 label={languageLabel}
-                disabled={!editor.isEditable}
+                disabled={!editable}
               />
             }
           />
@@ -53,8 +55,24 @@ export function CodeBlockView({ node, editor, updateAttributes }: NodeViewProps)
   );
 }
 
+/**
+ * Events in the block's header (language picker, wrap, copy, expand) are the
+ * header's own. Tiptap keeps an event from ProseMirror only when it lands on
+ * the `BUTTON` itself: a click on the label or the chevron inside it went to
+ * ProseMirror, which moved the selection and focus into the code, and the
+ * language menu, losing focus, closed as soon as it opened (MIN-728).
+ */
+export function stopCodeBlockChromeEvent({ event }: { event: Event }): boolean {
+  const target = event.target as Element | null;
+  if (!target || typeof target.closest !== "function") return false;
+  if (event.type.startsWith("drag") || event.type === "drop") return false;
+  return target.closest(".code-block-node-header") !== null;
+}
+
 export function codeBlockNodeView(): NodeViewRenderer {
-  return ReactNodeViewRenderer(CodeBlockView) as unknown as NodeViewRenderer;
+  return ReactNodeViewRenderer(CodeBlockView, {
+    stopEvent: stopCodeBlockChromeEvent,
+  }) as unknown as NodeViewRenderer;
 }
 
 export function codeBlockEditorExtension(): AnyExtension {

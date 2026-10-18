@@ -37,12 +37,13 @@ const detailsMarkdown = {
 /**
  * The summary is written IN a tag — and what we put there is already ESCAPED, without a line in this file taking care of it (checked in MIN-350, and written here because reading the code says exactly the opposite).
  *
- * It's tiptap-markdown that does it, on ANY text node in the document and not
- * only here: its text serializer goes through `escapeHTML`
- * (`tiptap-markdown/src/extensions/nodes/text.js`), which replaces `<` and `>` by
- * their entities. A summary “A <b> x” therefore comes out as `A &lt;b&gt; x`, and the
- * reading re-decodes it into text — the tag does not close, the round trip
- * returns identical, and `lib/pages-markdown.test.ts` holds it.
+ * The page text serializer does it, on ANY text node in the document and not
+ * only here (`escapeMarkdownTags` in components/pages/page-extensions.ts): a
+ * `<` that could open a tag, comment or declaration becomes `&lt;`. A summary
+ * “A <b> x” therefore comes out as `A &lt;b> x`, and the reading re-decodes
+ * it into text — the tag does not close, the round trip returns identical,
+ * and `lib/pages-markdown.test.ts` holds it. A bare `>` or a `<` before a
+ * space is text for an HTML parser too, so it stays as typed (MIN-728).
  *
  * The remaining assumed loss, tiny and from the same family as the others:
  * a summary whose text is literally `&lt;` returns to `<`. Nothing

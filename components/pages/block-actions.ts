@@ -21,6 +21,7 @@
 // Both are written below, along with what they fix.
 
 import type { Editor, JSONContent } from "@tiptap/core";
+import { Fragment, Slice } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import {
   BLOCK_ID_ATTRIBUTE,
@@ -389,6 +390,40 @@ export function duplicateBlocks(editor: Editor): boolean {
     .focus()
     .insertContentAt(range.to, withoutBlockIds(content))
     .run();
+}
+
+/**
+ * The selected blocks, children included, in the two clipboard formats a
+ * copy of the editor writes: ProseMirror's HTML, which pastes back as the
+ * same blocks, and the Markdown text other applications read. Block
+ * identities are left out, as for a duplicate, so a paste in the same
+ * document never carries a second block with the same ID.
+ */
+export function blockClipboard(editor: Editor): { html: string; text: string } | null {
+  const range = blockRange(editor);
+  if (!range) return null;
+  const content = editor.state.doc.slice(range.from, range.to).content.toJSON() as JSONContent[] | null;
+  if (!content || content.length === 0) return null;
+  const fragment = Fragment.fromJSON(editor.schema, withoutBlockIds(content));
+  const { dom, text } = editor.view.serializeForClipboard(new Slice(fragment, 0, 0));
+  return { html: dom.innerHTML, text };
+}
+
+/** Copy the selected blocks to the clipboard, without changing the document. */
+export async function copyBlocks(editor: Editor): Promise<boolean> {
+  const copied = blockClipboard(editor);
+  if (!copied) return false;
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/html": new Blob([copied.html], { type: "text/html" }),
+        "text/plain": new Blob([copied.text], { type: "text/plain" }),
+      }),
+    ]);
+  } else {
+    await navigator.clipboard.writeText(copied.text);
+  }
+  return true;
 }
 
 /** Delete the selection, including children. */

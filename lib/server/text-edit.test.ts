@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editIssueText, type IssueTextTools } from "./text-edit";
+import { editTextPassage, editIssueText, type IssueTextTools } from "./text-edit";
 
 /** Any set of surface names - the contract tested here is that
  * refusals refer to THESE names, never to those of another surface. */
@@ -241,5 +241,22 @@ describe("editIssueText — les refus nomment les tools de LA surface", () => {
     expect(onEmpty(AGENT, "description")).not.toContain("write_issue_plan");
     expect(onEmpty(NUMO, "plan")).toContain("update_issues { fields: { plan } }");
     expect(onEmpty(NUMO, "plan")).not.toContain("minddy_");
+  });
+});
+
+describe("passages with typed mentions (MIN-734)", () => {
+  const PAGE = "9f1c2a3b-0000-4000-8000-000000000002";
+  const stored = `Ship it after [@Secret roadmap](mention:page/${PAGE}) is approved.`;
+
+  it("matches a passage the agent copied with its relabeled mention", () => {
+    const result = editTextPassage({
+      field: "description",
+      current: stored,
+      oldString: `after [@unavailable](mention:page/${PAGE}) is approved`,
+      newString: `after [@unavailable](mention:page/${PAGE}) is signed off`,
+      read: "minddy_get_issue",
+      otherWay: "",
+    });
+    expect(result.ok && result.content).toBe(`Ship it after [@Secret roadmap](mention:page/${PAGE}) is signed off.`);
   });
 });

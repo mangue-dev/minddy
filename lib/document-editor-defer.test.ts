@@ -2,10 +2,10 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DeferredMarkdownEditor } from "../components/markdown-editor-lazy";
+import { DeferredDocumentEditor } from "../components/editor/document-editor-lazy";
 
-vi.mock("@/components/markdown-editor", () => ({
-  MarkdownEditor: (props: { value: string }) =>
+vi.mock("@/components/editor/document-editor", () => ({
+  DocumentEditor: (props: { value: string }) =>
     createElement("div", { "data-testid": "rich-editor" }, props.value),
 }));
 vi.mock("mangue-ui", () => ({
@@ -24,7 +24,7 @@ function flushFrames(count: number) {
   }
 }
 
-describe("DeferredMarkdownEditor", () => {
+describe("DeferredDocumentEditor", () => {
   let host: HTMLElement;
   let root: Root;
 
@@ -52,7 +52,7 @@ describe("DeferredMarkdownEditor", () => {
   it("mirrors the committed text first, then swaps in the rich editor", async () => {
     await act(async () => {
       root.render(
-        createElement(DeferredMarkdownEditor, {
+        createElement(DeferredDocumentEditor, {
           value: "hello plan",
           onCommit: () => {},
         }),
@@ -71,7 +71,7 @@ describe("DeferredMarkdownEditor", () => {
   it("does not mount the editor when unmounted before the frames elapse", async () => {
     await act(async () => {
       root.render(
-        createElement(DeferredMarkdownEditor, {
+        createElement(DeferredDocumentEditor, {
           value: "draft",
           onCommit: () => {},
         }),

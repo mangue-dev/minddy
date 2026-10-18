@@ -6,6 +6,10 @@ carets. This document is the contract between the browser session, the HTTP
 route, the server authority and the database. User-facing behavior is in the
 [Pages guide](../content/documentation/en/pages.md#editor-save).
 
+Issue and objective descriptions reuse this protocol with one stream and a
+simpler authority (MIN-728): see
+[live description collaboration](document-collaboration.md).
+
 ## Model
 
 Each page has two independent step streams:

@@ -32,6 +32,7 @@
 // contextual (⇧F10, and the “menu” key on keyboards that have one) there
 // brings. Same menu, same actions, without mouse.
 
+import { onEditorDom } from "@/components/editor/editor-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -88,12 +89,44 @@ const BUTTON = cn(
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 );
 
+/**
+ * Where a `position: fixed` descendant of `element` is measured from: the
+ * viewport, or the nearest ancestor that establishes a containing block for
+ * fixed elements (a transform or translate/scale/rotate, a filter, a
+ * perspective, `contain`, or
+ * `will-change` on one of them).
+ */
+export function fixedContainingBlockOffset(element: Element | null): { top: number; left: number } {
+  for (let node = element?.parentElement ?? null; node; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    if (
+      (style.transform && style.transform !== "none") ||
+      // Tailwind 4 translates and scales through the individual properties,
+      // which establish the same containing block.
+      (style.translate && style.translate !== "none") ||
+      (style.scale && style.scale !== "none") ||
+      (style.rotate && style.rotate !== "none") ||
+      (style.filter && style.filter !== "none") ||
+      (style.perspective && style.perspective !== "none") ||
+      /paint|layout|strict|content/.test(style.contain ?? "") ||
+      /transform|filter|perspective/.test(style.willChange ?? "")
+    ) {
+      const rect = node.getBoundingClientRect();
+      return { top: rect.top, left: rect.left };
+    }
+  }
+  return { top: 0, left: 0 };
+}
+
 export function BlockGutter({
   editor,
   onComment,
+  blockLinks = true,
 }: {
   editor: Editor;
   onComment?: (anchor: PageCommentAnchor) => void;
+  /** Offer “Copy link to block”: only where the document has an address. */
+  blockLinks?: boolean;
 }) {
   const t = useTranslations("Pages");
 
@@ -191,8 +224,13 @@ export function BlockGutter({
     editor.commands.setMeta("lockDragHandle", menuOpen);
   }, [editor, menuOpen]);
 
+  const anchorRef = useRef<HTMLSpanElement>(null);
   const openMenuAt = useCallback((rect: DOMRect) => {
-    setAnchor({ top: rect.top, left: rect.left });
+    // `position: fixed` is relative to the viewport only while no ancestor is
+    // transformed: inside a dialog (the notebook, MIN-728) it is relative to
+    // the dialog, and viewport coordinates put the menu beside the block.
+    const offset = fixedContainingBlockOffset(anchorRef.current);
+    setAnchor({ top: rect.top - offset.top, left: rect.left - offset.left });
     setMenuOpen(true);
   }, []);
 
@@ -200,21 +238,23 @@ export function BlockGutter({
       the cursor, anchored on this block. */
   useEffect(() => {
     if (editor.isDestroyed) return;
-    const dom = editor.view.dom;
-    const onKeyDown = (event: KeyboardEvent) => {
-      const wanted =
-        event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
-      if (!wanted) return;
-      const range = blockRange(editor);
-      if (!range) return;
-      event.preventDefault();
-      const node = editor.view.nodeDOM(range.from);
-      const element =
-        node instanceof HTMLElement ? node : (node?.parentElement ?? dom);
-      openMenuAt(element.getBoundingClientRect());
-    };
-    dom.addEventListener("keydown", onKeyDown);
-    return () => dom.removeEventListener("keydown", onKeyDown);
+    // The view may not be mounted yet, or may be remounted (MIN-728).
+    return onEditorDom(editor, (dom) => {
+      const onKeyDown = (event: KeyboardEvent) => {
+        const wanted =
+          event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
+        if (!wanted) return;
+        const range = blockRange(editor);
+        if (!range) return;
+        event.preventDefault();
+        const node = editor.view.nodeDOM(range.from);
+        const element =
+          node instanceof HTMLElement ? node : (node?.parentElement ?? dom);
+        openMenuAt(element.getBoundingClientRect());
+      };
+      dom.addEventListener("keydown", onKeyDown);
+      return () => dom.removeEventListener("keydown", onKeyDown);
+    });
   }, [editor, openMenuAt]);
 
   const anchorStyle = useMemo(
@@ -314,12 +354,13 @@ export function BlockGutter({
         open={menuOpen}
         onOpenChange={setMenuOpen}
         onComment={onComment}
+        blockLinks={blockLinks}
       >
         {/* The menu anchor: a dot, not a button. It exists so that the
             menu has where to put it when you open it with the keyboard, where the handle
             is not achievable. negative `tabIndex` — a point of 0 pixels does not
             should not be a tab step. */}
-        <span aria-hidden tabIndex={-1} style={anchorStyle} />
+        <span ref={anchorRef} aria-hidden tabIndex={-1} style={anchorStyle} />
       </BlockMenu>
     </>
   );

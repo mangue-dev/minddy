@@ -5,10 +5,12 @@ summary: The core concepts that organize work in minddy.
 category: concepts
 audience: end-user
 tags: [project, issue, ticket, objective, status, priority]
-lastReviewed: 2026-10-17
+lastReviewed: 2026-10-18
 ---
 
 Projects hold a team's issues, members, categories, saved views, pages, integrations, and feedback board. An issue is one discrete piece of work. It has a title and can also carry a description, status, priority, effort, assignee, objective, categories, a due date, recurrence, linked issues (including blocking dependencies), sub-issues, comments, resources, and an implementation plan.
+
+Issue and objective descriptions, comments, the creation dialogs and the task notebook use the same editor as project pages; the notebook also has the pages' block handles and + button, the other surfaces do not. Selecting text shows the formatting toolbar (bold, italic, strikethrough, code, link) everywhere, and images can be pasted or dropped into descriptions and the notebook; other kinds of files remain a page feature. Everywhere, "/" inserts headings, lists, tasks, quotes, callouts, code, toggles and dividers, and "@" mentions people, issues, objectives and pages. Their text is still stored as Markdown, which Numo, MCP agents, notifications and exports read. Issue and objective descriptions are edited live together, like pages: several people type in the same description at once, with each person's caret shown in their color and name, and changes by Numo or an MCP agent appear in open editors as they are saved. The Markdown that agents and integrations read follows a couple of seconds after typing stops. Comments, the creation dialogs and the task notebook are not shared live, and version history remains a page feature.
 
 Smart Fill is an optional account preference that fills an issue's missing priority, effort, categories, and objective, and, after the issue is saved, links it to related issues in the same project (related, blocks, or blocked by). It runs in the background, adds at most three relations per pass, abstains when unsure, never touches a pair that already has a relation, and never re-adds a link someone removed. Its links appear in the issue's relations and timeline under Smart-fill and are removed like any relation. The separate "Index issues" preference controls whether issue titles and descriptions become encrypted vectors used to find candidates; when off, candidates are found by shared words only.
 

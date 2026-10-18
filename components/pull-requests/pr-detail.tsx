@@ -35,7 +35,7 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PrActivitySkeleton, PrFilesSkeleton, PrHeaderActionsSkeleton, PrMetadataSkeleton, PrStatusSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
 import { QueryReadBoundary } from "@/components/query-read-boundary";
 import { PrCommitsPopover } from "@/components/pull-requests/pr-commits";
-import { PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
+import { ForgeMarkdownField, PrCommentComposer } from "@/components/pull-requests/pr-comment-composer";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { PrLinkIssue } from "@/components/pull-requests/pr-link-issue";
 import {
@@ -59,7 +59,6 @@ import {
   pasteFileHandler,
   useFileDrop,
 } from "@/components/resources";
-import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 import {
   usePullRequestQuery,
   usePrCommentsQuery,
@@ -640,7 +639,6 @@ export function PrDetail({
 }) {
   const t = useTranslations("PullRequests");
   const { open: openAssistant } = useAssistantPanelActions();
-  const isSend = useIsSendShortcut();
   const format = useFormatter();
 
   const {
@@ -2385,14 +2383,15 @@ export function PrDetail({
             {...reviewDrop.handlers}
           >
             <DropOverlay show={reviewDrop.dragging} />
-            <Textarea
+            {/* The review body is a forge message like the thread's (MIN-728):
+                the same editor, forge mentions and uploads; the dialog keeps
+                its own submit button. Height-capped like the merge dialog's
+                commit message: past the cap the box scrolls. */}
+            <ForgeMarkdownField
+              endpoint={prEndpoint(item.prId)}
               value={reviewMessage}
-              onChange={(e) => setReviewMessage(e.target.value)}
-              // Match the shortcut used by every other composer: the active
-              // send mode submits, while Shift+Enter keeps a newline.
-              onKeyDown={(e) => {
-                if (!isSend(e)) return;
-                e.preventDefault();
+              onChange={(transform) => setReviewMessage((draft) => transform(draft))}
+              onSubmit={() => {
                 if (!reviewSubmitDisabled) void submitReview();
               }}
               placeholder={t(
@@ -2402,13 +2401,9 @@ export function PrDetail({
                     ? "reviewApprovePlaceholder"
                     : "reviewPlaceholder",
               )}
-              rows={4}
               autoFocus={allowInputAutoFocus()}
-              // Height-capped like the merge dialog's commit message: the
-              // base `field-sizing-content` would grow the box with the
-              // message until it dwarfed the dialog — past the cap the box
-              // scrolls instead, and the handle still lets it be pulled.
-              className="min-w-0 w-full max-w-full max-h-44 resize-y overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-none border-0 bg-card pb-10 focus-visible:border-0 focus-visible:ring-0"
+              className="min-h-24 min-w-0 w-full max-w-full max-h-44 overflow-y-auto bg-card"
+              contentClassName="px-3 pt-2 pb-10 [&_p]:my-0"
             />
             <div className="absolute bottom-1.5 left-1.5 z-10">
               <AttachButton

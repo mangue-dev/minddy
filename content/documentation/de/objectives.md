@@ -15,12 +15,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-18",
   "compatibility": {
-    "version": "0.11.1 development (UI refinements); MIN-693 project roles",
+    "version": "0.11.1 development (UI refinements); MIN-693 project roles; MIN-728 one editor engine",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -44,14 +44,21 @@
       "content/documentation/reviews/ui-refinements-2026-10-11.md",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "content/documentation/reviews/min-693-project-roles.md"
+      "content/documentation/reviews/min-693-project-roles.md",
+      "components/editor/rich-editor.tsx",
+      "components/editor/document-editor.tsx",
+      "components/editor/comment-editor.tsx",
+      "content/documentation/reviews/min-728-one-editor-engine.md",
+      "lib/server/description-collaboration.ts",
+      "lib/use-description-collaboration.ts",
+      "docs/document-collaboration.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (de changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (de changed-passage parity and localized-label review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 11,
+    "fact": "agent:/root (MIN-671 target-date condition and retained calculation claims checked against source and render tests; earlier procedural evidence retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (UI refinements source and control review; unchanged procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (de changed-passage review against English revision 7; earlier unchanged prose reviews retained); agent:/root (MIN-670 source, de wording and new-control review; existing procedural evidence retained); agent:/root (de changed-passage parity and localized-label review); agent:/root/min693_de with agent:/root (de MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (de translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "issues",
@@ -72,7 +79,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog mit einem Beispielnamen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -94,6 +101,8 @@ Ein Ziel bündelt die Probleme eines Projekts um ein Ergebnis. Erstelle es und o
 ## Ein Ergebnis mit einem Ziel verfolgen {#objectives}
 
 Öffne den Zielbereich des Projekts und erstelle ein Ziel. Benenne das gewünschte Ergebnis, ergänze hilfreichen Kontext und setze die verfügbaren Felder für verantwortliche Person, Zieldatum, Farbe und Status. Ein Ziel gehört zu einem Projekt und ist von einem persönlichen Zyklus über mehrere Projekte zu unterscheiden. Die verantwortliche Person betreut das Ergebnis; ihre Auswahl überträgt nicht das Eigentum am Projekt. Nur der Eigentümer oder ein Mitglied kann ein Ziel verantworten, und eine verantwortliche Person, deren Rolle zu Leser wechselt, wird vom Ziel entfernt.
+
+Die Zielbeschreibung und ihre Kommentare verwenden denselben Editor wie Projektseiten, nur ohne Blockgriffe: Tippe `/`, um Blöcke einzufügen, und `@`, um eine Person, ein Problem, ein Ziel oder eine Seite zu erwähnen. Mehrere Personen können die Beschreibung gleichzeitig bearbeiten; der Cursor jeder Person erscheint mit ihrem Namen und ihrer Farbe. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen, und füge ein Bild ein oder ziehe es hinein, um es in die Beschreibung einzufügen.
 
 Öffne jedes passende Problem und wähle das Ziel in seinen Eigenschaften oder verwende die Problemfunktionen des Ziels. Prüfe, ob die vorgesehene Arbeit beim Ziel erscheint. Nutze dessen Diskussion und Ressourcen für Entscheidungen und Referenzseiten, die für das gesamte Ergebnis gelten.
 

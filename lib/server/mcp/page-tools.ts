@@ -17,6 +17,7 @@ import {
 } from "@/lib/server/page-tools";
 import {
   ok,
+  okWithImages,
   fail,
   requireProject,
   READ_ONLY,
@@ -224,7 +225,7 @@ export function registerPageTools(server: McpServer): void {
         actorId: scope.userId,
       });
       if (!result.ok) return refusal(result);
-      return ok(result.data);
+      return okWithImages(result.data as unknown as Record<string, unknown>);
     }
   );
 

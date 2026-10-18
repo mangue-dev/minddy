@@ -3,6 +3,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getScratchpad, setScratchpad } from "@/lib/server/scratchpad";
 import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
 import { withPrivateNoStore } from "@/lib/server/private-response";
+import { readRichDocumentInput, writeRichDocument } from "@/lib/server/rich-documents";
 
 /**
  * GET /api/me/scratchpad — the user's single personal notes doc (markdown +
@@ -52,6 +53,18 @@ async function writeScratchpad(request: NextRequest) {
       content,
       rev
     );
+    // The editor's document of the note (MIN-728), kept only for a clean write
+    // and only when its projection is exactly the Markdown just stored: the
+    // Markdown, which the notebook tools read line by line, stays the
+    // authority, and a merged or clipped write simply has no document.
+    const document = (body as { content_doc?: unknown } | null)?.content_doc;
+    if (!conflicted && document !== undefined && document !== null) {
+      const read = await readRichDocumentInput(document, "notebook");
+      if (read.ok && read.markdown.trim() === state.content.trim()) {
+        await writeRichDocument({ kind: "notebook", id: auth.user.id, projectId: null }, read.content)
+          .catch((error) => console.error("[api/me/scratchpad] document save failed:", (error as Error).message));
+      }
+    }
     // 409 with the CURRENT server state — the client 3-way merges its edit onto
     // this and retries with the fresh rev.
     return NextResponse.json(state, { status: conflicted ? 409 : 200 });

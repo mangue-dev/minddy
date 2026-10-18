@@ -4,6 +4,9 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { createIssueForProject } from "@/lib/server/create-issue";
+import { MAX_DESCRIPTION_LENGTH } from "@/lib/server/update-issue";
+import { takeRichDocumentInput } from "@/lib/server/rich-documents";
+import { seedDescriptionDocument } from "@/lib/server/description-collaboration";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -47,7 +50,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
-  const payload = (body ?? {}) as Record<string, unknown>;
+  const payload = { ...((body ?? {}) as Record<string, unknown>) };
+  // The creation dialog sends its editor document (MIN-728): the description
+  // is derived from it here.
+  const document = await takeRichDocumentInput(payload, {
+    document: "description_doc", markdown: "description", maxLength: MAX_DESCRIPTION_LENGTH,
+  });
+  if (!document.ok) {
+    return NextResponse.json({ error: t(document.errorKey) }, { status: 400 });
+  }
   const result = await createIssueForProject({
     projectId: id,
     projectName: access.project.name,
@@ -64,5 +75,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       result.rawMessage ?? t(result.errorKey ?? "databaseError", result.params);
     return NextResponse.json({ error: message }, { status: result.status });
   }
+  await seedDescriptionDocument(
+    { kind: "issue", id: result.issue.id as string, projectId: id },
+    document.content,
+    typeof payload.description === "string" ? payload.description : ""
+  );
   return NextResponse.json(result.issue, { status: 201 });
 }

@@ -17,6 +17,7 @@ import {
   reconcileBodyBlocksServer,
 } from "@/lib/server/pages-projection";
 import { editTextPassage } from "@/lib/server/text-edit";
+import { restoreStoredMentions } from "@/lib/mention-link";
 import {
   pageBacklinks,
   type BacklinkQueryable,
@@ -738,6 +739,15 @@ export async function updatePageForAgent({
   const input: Record<string, unknown> = {};
   let body = "";
   if (markdown !== undefined) {
+    // An agent's rewrite keeps the stored form of the mentions it copied
+    // (MIN-734): it read them relabeled for itself.
+    if (markdown.includes("](mention:")) {
+      const stored = await getPage(pageId, actorId);
+      if (stored.ok) {
+        markdown = restoreStoredMentions(markdown,
+          await pageBodyToMarkdownServer((stored.page.content as JSONContent | null) ?? null));
+      }
+    }
     // No header consumption on a page that exists: cf. `readBody`.
     const read = await readBody(markdown, { consumeHead: false });
     if (!read.ok) return read;
@@ -808,7 +818,9 @@ export async function appendToPageForAgent({
     mcpKeyId,
     derive: (current) => {
       const body = current.trim();
-      return { ok: true, markdown: body ? `${body}\n\n${markdown.trim()}` : markdown.trim() };
+      // Mentions the agent copied as it read them keep their stored form.
+      const block = restoreStoredMentions(markdown.trim(), body);
+      return { ok: true, markdown: body ? `${body}\n\n${block}` : block };
     },
   });
 }

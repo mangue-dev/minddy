@@ -109,6 +109,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["auth-sessions"], // lib/use-auth-sessions-query.ts: device list of live sign-ins, always re-read
   ["version"], // lib/use-new-version.ts
   ["page"], // ["page", pageId] — the BODY, not the list ["pages", projectId]
+  ["rich-document"], // lib/use-rich-document.ts: editor documents, like page bodies
 ];
 
 /** Exported for unit testing (lib/query-persist.test.ts). */

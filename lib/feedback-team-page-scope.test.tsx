@@ -85,9 +85,9 @@ vi.mock("@/components/auto-textarea", async () => {
   const { createElement } = await import("react");
   return { AutoTextarea: (props: Record<string, any>) => createElement("textarea", { ...props, "data-testid": "feedback-title" }) };
 });
-vi.mock("@/components/markdown-editor-lazy", async () => {
+vi.mock("@/components/editor/document-editor-lazy", async () => {
   const { createElement } = await import("react");
-  return { useIdleMarkdownEditorPreload: vi.fn(), MarkdownEditor: ({ value }: { value: string }) =>
+  return { useIdleDocumentEditorPreload: vi.fn(), LazyDocumentEditor: ({ value }: { value: string }) =>
     createElement("div", { "data-testid": "feedback-body", contentEditable: true, suppressContentEditableWarning: true }, value) };
 });
 vi.mock("@/components/issue-timeline", async () => {

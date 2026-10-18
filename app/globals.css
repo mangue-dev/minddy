@@ -935,10 +935,14 @@ button[data-variant="ghost"] {
   justify-content: flex-start;
   gap: 0.375rem;
   padding: 0;
-  color: var(--code-block-foreground);
+  color: var(--code-block-muted);
   font-size: inherit;
   font-weight: 400;
   line-height: 1.2;
+}
+.code-block-node-language-trigger:hover,
+.code-block-node-language-trigger[data-state="open"] {
+  color: var(--code-block-foreground);
 }
 .code-block-node-language-label {
   display: flex;
@@ -3426,4 +3430,33 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 .dark .page-collab-selection {
   background-color: color-mix(in oklab, var(--collab-color) 35%, transparent);
+}
+
+/* ─── Block-range selections (MIN-728) ─────────────────────────────────────
+   A drag or a ⇧-click across blocks selects whole blocks (`NodeRange`, see
+   components/editor/block-range.ts). ProseMirror does not draw that selection
+   as text, so its blocks are painted here in the selection color, and the
+   text's own highlight is hidden so the two do not stack. */
+.ProseMirror-noderangeselection *::selection {
+  background: transparent;
+}
+.ProseMirror-noderangeselection {
+  caret-color: transparent;
+}
+.ProseMirror-selectednoderange {
+  border-radius: 0.25rem;
+  background-color: color-mix(in srgb, Highlight 45%, transparent);
+}
+
+/* ─── Mentions inside a selection (MIN-734) ────────────────────────────────
+   A mention pill is an atom: the browser does not paint it as selected text,
+   so a selection seemed to skip it. The editor marks every pill the
+   selection covers (`mention-selected`, components/markdown-mention.tsx), and
+   the chip inside (the element carrying its tone) is overlaid with the
+   selection color, over its own background. */
+.mention-selected [style*="--mention-chip"] {
+  background-image: linear-gradient(
+    color-mix(in srgb, Highlight 55%, transparent),
+    color-mix(in srgb, Highlight 55%, transparent)
+  );
 }

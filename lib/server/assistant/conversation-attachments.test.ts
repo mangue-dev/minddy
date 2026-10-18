@@ -286,3 +286,34 @@ describe("multimodal rereads and durable replay", () => {
     expect(resource.function.parameters.required).toContain("project_id");
   });
 });
+
+describe("images in editor documents (view_image, MIN-728)", () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const src = `/api/attachments/file?path=${encodeURIComponent(`projects/${PROJECT}/shot.png`)}`;
+
+  it("names the image and supplies it to the model on the next round", async () => {
+    h.download.mockResolvedValue(PNG);
+    const execution = await executeTool("view_image", { src }, ctx());
+    expect(execution).toMatchObject({ success: true,
+      result: { kind: "stored", mime_type: "image/png", preview_image_src: src } });
+    const messages: ChatMessage[] = [
+      { role: "user", content: "What does the screenshot show?" },
+      { role: "tool", name: "view_image", tool_call_id: "view", content: JSON.stringify(execution.result) },
+    ];
+    const next = await withConversationAttachmentPreviews(messages, ctx(), async () => new Set(["image"]));
+    expect(next.at(-1)).toMatchObject({ role: "user", content: expect.arrayContaining([
+      expect.objectContaining({ type: "image_url" })]) });
+  });
+
+  it("refuses an image of a project the account cannot read", async () => {
+    h.access.mockResolvedValue(null);
+    const execution = await executeTool("view_image", { src }, ctx());
+    expect(execution.success).toBe(false);
+  });
+
+  it("returns an outside image as its URL without fetching it", async () => {
+    const execution = await executeTool("view_image", { src: "https://images.example.com/a.png" }, ctx());
+    expect(execution.result).toMatchObject({ kind: "external", url: "https://images.example.com/a.png" });
+    expect(h.download).not.toHaveBeenCalled();
+  });
+});

@@ -177,6 +177,17 @@ export async function pageBodyToMarkdownServer(
   return (await projection()).bodyToMarkdown(content);
 }
 
+/**
+ * The Markdown of a document written by another editor profile (MIN-728):
+ * a description or comment (`document`) or the notebook (`notebook`).
+ */
+export async function documentToMarkdownServer(
+  content: JSONContent | null,
+  profile: "document" | "notebook"
+): Promise<string> {
+  return (await projection()).bodyToMarkdown(content, profile);
+}
+
 /** The markdown reread on the page: title, icon, body ProseMirror. */
 export async function markdownToPageServer(markdown: string): Promise<{
   title: string;
@@ -212,6 +223,23 @@ export async function reconcileBodyBlocksServer(
  */
 export function pageCollaborationServer(): Pick<PagesMarkdown,
   "applyCollabSteps" | "canonicalBodyJSON" | "diffCollabSteps" |
-  "isCanonicalBodyJSON" | "rebaseCollabSteps" | "sameCollabValue"> {
+  "isCanonicalBodyJSON" | "rebaseCollabSteps" | "sameCollabValue" | "touchedBodyBlockIds"> {
   return pagesMarkdown();
+}
+
+/**
+ * The Markdown directions for descriptions (MIN-728): the `document` profile
+ * of the same bundle, with the DOM in place.
+ */
+export async function descriptionMarkdownServer(): Promise<{
+  toMarkdown: (content: JSONContent | null) => string;
+  fromMarkdown: (markdown: string) => JSONContent;
+  reconcile: (previous: JSONContent | null, next: JSONContent) => JSONContent;
+}> {
+  const bundle = await projection();
+  return {
+    toMarkdown: (content) => bundle.bodyToMarkdown(content, "document"),
+    fromMarkdown: (markdown) => bundle.bodyFromMarkdown(markdown, "document"),
+    reconcile: (previous, next) => bundle.reconcileBodyBlocks(previous, next, "document"),
+  };
 }

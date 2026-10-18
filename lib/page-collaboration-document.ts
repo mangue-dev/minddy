@@ -141,6 +141,55 @@ function docOf(field: CollabField, value: unknown): PMNode {
 }
 
 /**
+ * The ids of the top-level body blocks that `steps` changed, in the document
+ * they lead to (MIN-728). The authority keeps these blocks when it folds a
+ * Markdown written outside it while typing is still pending: typing wins on
+ * the blocks it touched. Each step's range is mapped through the steps that
+ * follow it; a step without a mapping (marks, attributes) counts by its own
+ * range. Unreadable steps touch nothing.
+ */
+export function touchedBodyBlockIds(result: unknown, steps: readonly unknown[]): string[] {
+  const schema = pageBodySchema();
+  let doc: PMNode;
+  try {
+    doc = docOf("body", result);
+  } catch {
+    return [];
+  }
+  const ranges: Array<{ from: number; to: number }> = [];
+  for (const json of steps) {
+    let step: Step;
+    try {
+      step = Step.fromJSON(schema, json as Parameters<typeof Step.fromJSON>[1]);
+    } catch {
+      continue;
+    }
+    const map = step.getMap();
+    for (const range of ranges) {
+      range.from = map.map(range.from, -1);
+      range.to = map.map(range.to, 1);
+    }
+    let mapped = false;
+    map.forEach((_oldStart, _oldEnd, newStart, newEnd) => {
+      mapped = true;
+      ranges.push({ from: newStart, to: newEnd });
+    });
+    const bounds = step as unknown as { from?: number; to?: number };
+    if (!mapped && typeof bounds.from === "number" && typeof bounds.to === "number") {
+      ranges.push({ from: bounds.from, to: bounds.to });
+    }
+  }
+  const touched: string[] = [];
+  doc.forEach((block, offset) => {
+    const end = offset + block.nodeSize;
+    const id = block.attrs[BLOCK_ID_ATTRIBUTE];
+    if (typeof id !== "string" || !id) return;
+    if (ranges.some((range) => range.from <= end && range.to >= offset)) touched.push(id);
+  });
+  return touched;
+}
+
+/**
  * Applies accepted-candidate steps to the stream's current value.
  *
  * `current` is the stored body JSON, or the title string. Every step must

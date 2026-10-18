@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useMemo, type ElementType, type JSX } from "react";
-import ReactMarkdown, { type ExtraProps, type Options } from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform, type ExtraProps, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
@@ -25,6 +25,8 @@ import type { RepositorySkillSummary } from "@/lib/repository-skills";
 import type { AssistantMention } from "@/lib/assistant-types";
 import { createAssistantMentionTokenSplitter } from "@/lib/agent-mentions";
 import type { Member } from "@/lib/types";
+import { parseMentionHref } from "@/lib/mention-link";
+import { TypedMentionChip, MENTION_REF_ATTR } from "@/components/typed-mention-chip";
 
 /* Minimal hast node shape — enough to walk text nodes and inject mention spans. */
 type HastNode = {
@@ -102,6 +104,8 @@ function rehypeMentions(scan: MentionScan) {
     // Code is quoted literally: “`@numo`” shows the gesture to be made, it does not
     // doesn't do it.
     if (node.tagName === "code" || node.tagName === "pre") return;
+    // A typed mention is already a reference: its "@Label" is not rescanned.
+    if (isMentionAnchor(node)) return;
     const next: HastNode[] = [];
     for (const child of node.children) {
       if (child.type === "text" && child.value?.includes("@")) {
@@ -115,6 +119,53 @@ function rehypeMentions(scan: MentionScan) {
   };
 
   return () => (tree: HastNode) => walk(tree);
+}
+
+/** react-markdown's URL rules, with typed mention links kept. */
+function keepMentionUrls(url: string): string {
+  return parseMentionHref(url) ? url : defaultUrlTransform(url);
+}
+
+/** A `mention:` link (MIN-734), which renders as a typed pill. */
+function isMentionAnchor(node: HastNode): boolean {
+  const href = (node as { properties?: Record<string, unknown> }).properties?.href;
+  return node.tagName === "a" && typeof href === "string" && href.startsWith("mention:");
+}
+
+/** The sanitizer's schema, with `mention:` links kept: they are references,
+    rendered by the app, never followed by the browser. */
+const SANITIZE_SCHEMA = {
+  ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), "mention"],
+  },
+};
+
+/**
+ * A copy of rendered text keeps its typed mentions (MIN-734): the HTML
+ * carries each pill as its `mention:` link, which every editor and composer
+ * reads back as the same mention, and the plain text as "@Label".
+ */
+function copyWithMentions(event: React.ClipboardEvent<HTMLDivElement>) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+  const fragment = selection.getRangeAt(0).cloneContents();
+  const pills = fragment.querySelectorAll<HTMLElement>(`[${MENTION_REF_ATTR}]`);
+  if (pills.length === 0) return;
+  for (const pill of pills) {
+    const match = /^\[@((?:[^\]\\]|\\.)*)\]\((mention:[^)]+)\)$/.exec(pill.getAttribute(MENTION_REF_ATTR) ?? "");
+    if (!match) continue;
+    const anchor = document.createElement("a");
+    anchor.href = match[2];
+    anchor.textContent = `@${match[1].replace(/\\(.)/g, "$1")}`;
+    pill.replaceWith(anchor);
+  }
+  const holder = document.createElement("div");
+  holder.append(fragment);
+  event.clipboardData.setData("text/html", holder.innerHTML);
+  event.clipboardData.setData("text/plain", holder.textContent ?? "");
+  event.preventDefault();
 }
 
 /** Restore saved mention chips from stable identities before scanning live sources. */
@@ -160,7 +211,7 @@ function rehypeResolvedMentions(mentions: AssistantMention[]) {
 
     const walk = (node: HastNode) => {
       if (!node.children) return;
-      if (node.tagName === "code" || node.tagName === "pre") {
+      if (node.tagName === "code" || node.tagName === "pre" || isMentionAnchor(node)) {
         advance(node);
         return;
       }
@@ -272,8 +323,8 @@ function rehypeChain(
   resolvedMentions: AssistantMention[] | undefined,
 ): Options["rehypePlugins"] {
   const chain: NonNullable<Options["rehypePlugins"]> = allowRawHtml
-    ? [rehypeRaw, [rehypeSanitize, defaultSchema]]
-    : [[rehypeSanitize, defaultSchema]];
+    ? [rehypeRaw, [rehypeSanitize, SANITIZE_SCHEMA]]
+    : [[rehypeSanitize, SANITIZE_SCHEMA]];
   if (resolvedMentions?.length)
     chain.push(rehypeResolvedMentions(resolvedMentions));
   if (scan) chain.push(rehypeMentions(scan));
@@ -336,11 +387,15 @@ function MarkdownRenderer({
         "text-sm leading-relaxed break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0",
         className,
       )}
+      onCopy={copyWithMentions}
     >
       <ReactMarkdown
         // Conversational surfaces treat a single newline as a visible break.
         // Markdown files opt out to preserve standard Markdown paragraph rules.
         remarkPlugins={[remarkGfm, ...(breaks ? [remarkBreaks] : [])]}
+        // `mention:` links are references the app renders (MIN-734); every
+        // other address keeps react-markdown's own safety rules.
+        urlTransform={keepMentionUrls}
         rehypePlugins={rehypeChain(
           scan,
           allowRawHtml,
@@ -350,6 +405,8 @@ function MarkdownRenderer({
         components={{
           p: styled("p", "my-3"),
           a: (props) => {
+            const target = parseMentionHref(typeof props.href === "string" ? props.href : null);
+            if (target) return <TypedMentionChip type={target.type} id={target.id} />;
             const LinkRenderer =
               linkVariant === "plain" ? PlainMarkdownLink : MarkdownLink;
             return <LinkRenderer {...props} target="_blank" rel="noreferrer" />;

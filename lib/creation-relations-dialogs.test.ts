@@ -72,7 +72,12 @@ vi.mock("@/lib/use-drafts", () => ({ useDrafts: () => ({
 vi.mock("@/lib/use-issue-dictation", () => ({ useIssueDictation: () => ({ busy: false, clearHistory: vi.fn(), reset: vi.fn() }) }));
 vi.mock("@/lib/use-objective-dictation", () => ({ useObjectiveDictation: () => ({ busy: false, reset: vi.fn() }) }));
 vi.mock("@/components/auto-textarea", () => ({ AutoTextarea: "textarea" }));
-vi.mock("@/components/markdown-editor-lazy", () => ({ MarkdownEditor: ({ className }: { className: string }) => React.createElement("div", { className }, React.createElement("div", { contentEditable: true, suppressContentEditableWarning: true, tabIndex: 0 }, "")), useIdleMarkdownEditorPreload: vi.fn() }));
+// Description documents (MIN-728) have their own tests; these surfaces open
+// their Markdown.
+vi.mock("@/lib/use-rich-document", () => ({
+  useRichDocument: () => ({ document: null, remember: () => {} }),
+}));
+vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor: ({ className }: { className: string }) => React.createElement("div", { className }, React.createElement("div", { contentEditable: true, suppressContentEditableWarning: true, tabIndex: 0 }, "")), useIdleDocumentEditorPreload: vi.fn() }));
 vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
 vi.mock("@/components/issue-compact-fields", () => ({
   AssigneeCompact: () => null, CategoriesCompact: () => null, DueDateCompact: () => null,

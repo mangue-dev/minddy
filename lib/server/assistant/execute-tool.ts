@@ -1,4 +1,5 @@
 import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
+import { materializePendingDescription } from "@/lib/server/description-collaboration";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
@@ -67,8 +68,10 @@ import {
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentOffset, listConversationAttachments, readConversationAttachment,
-  copyConversationAttachment } from "./conversation-attachments";
+  copyConversationAttachment, viewDocumentImage } from "./conversation-attachments";
 import { insertAttachments } from "@/lib/server/attachments";
+import { imagesIn } from "@/lib/server/document-images";
+import { readResultForReader } from "@/lib/server/mention-access";
 import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
 import {
@@ -486,11 +489,30 @@ async function readIssueText(
 ): Promise<
   { plan: string; description: string; updatedAt: string } | { error: string }
 > {
-  const { data, error } = await issueStore(ctx.supabase).select("plan, description, updated_at")
+  const { data, error } = await issueStore(ctx.supabase).select("plan, description, updated_at, project_id")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (error) return { error: error.message };
+  // Typing a person left pending is written first (MIN-728): Numo edits the
+  // text people see. Read again only when something was pending.
+  if (data && typeof data.project_id === "string") {
+    const [description, plan] = await Promise.all([
+      materializePendingDescription("issue", issueId, data.project_id),
+      materializePendingDescription("plan", issueId, data.project_id),
+    ]);
+    if (description === "materialized" || plan === "materialized") {
+      const fresh = await issueStore(ctx.supabase).select("plan, description, updated_at")
+        .is("deleted_at", null).eq("id", issueId).maybeSingle();
+      if (fresh.error) return { error: fresh.error.message };
+      if (!fresh.data) return { error: "Issue not found." };
+      return {
+        plan: typeof fresh.data.plan === "string" ? fresh.data.plan : "",
+        description: typeof fresh.data.description === "string" ? fresh.data.description : "",
+        updatedAt: typeof fresh.data.updated_at === "string" ? fresh.data.updated_at : "",
+      };
+    }
+  }
   if (!data) return { error: "Issue not found." };
   return {
     plan: typeof data?.plan === "string" ? data.plan : "",
@@ -749,7 +771,46 @@ async function executeWebSearch(
   });
 }
 
+/** Reads whose text can show images: their result lists them (MIN-728). */
+const DOCUMENT_READ_TOOLS = new Set([
+  "get_issue", "get_objective", "get_page", "get_scratchpad", "get_feedback",
+]);
+
 export async function executeTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  const raw = await executeToolUnlisted(toolName, args, ctx);
+  // Typed mentions in what Numo reads carry the target's current label, or a
+  // neutral one when the user may not see it (MIN-734).
+  const execution = raw.success ? await mentionsForNumo(raw, ctx.userId) : raw;
+  if (!execution.success || !DOCUMENT_READ_TOOLS.has(toolName)) return execution;
+  const result = execution.result;
+  if (!result || typeof result !== "object" || Array.isArray(result)) return execution;
+  const images = imagesIn(result);
+  if (images.length === 0) return execution;
+  // The images the text shows, to open with view_image: their src is a route
+  // the model cannot fetch itself.
+  return { ...execution, result: { ...result, images, read_images_with: "view_image" } };
+}
+
+async function mentionsForNumo(execution: ToolExecution, userId: string): Promise<ToolExecution> {
+  const mentions = (value: unknown) => {
+    const text = JSON.stringify(value ?? null);
+    return text.includes("](mention:") || text.includes("[@");
+  };
+  if (!mentions(execution.result) && !mentions(execution.modelResult)) return execution;
+  return {
+    ...execution,
+    result: await readResultForReader(userId, execution.result),
+    ...(execution.modelResult !== undefined
+      ? { modelResult: await readResultForReader(userId, execution.modelResult) }
+      : {}),
+  };
+}
+
+async function executeToolUnlisted(
   toolName: string,
   args: Record<string, unknown>,
   ctx: ToolContext,
@@ -951,6 +1012,9 @@ export async function executeTool(
     }
     if (toolName === "read_conversation_attachment") {
       return { result: await readConversationAttachment(ctx, args.attachment_id, attachmentOffset(args.offset)), success: true };
+    }
+    if (toolName === "view_image") {
+      return { result: await viewDocumentImage(ctx, args.src), success: true };
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────

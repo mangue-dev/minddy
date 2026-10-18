@@ -1,5 +1,9 @@
 "use client";
 
+import type { JSONContent } from "@tiptap/core";
+import { useRichDocument } from "@/lib/use-rich-document";
+import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
@@ -25,11 +29,11 @@ import {
 import { AutoTextarea } from "@/components/auto-textarea";
 import { AppContentHeader } from "@/components/app-content-header";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
-// see markdown-editor-lazy.tsx. Warmed from idle time in ObjectiveDetail.
+// see components/editor/document-editor-lazy.tsx. Warmed from idle time in ObjectiveDetail.
 import {
-  MarkdownEditor,
-  useIdleMarkdownEditorPreload,
-} from "@/components/markdown-editor-lazy";
+  LazyDocumentEditor,
+  useIdleDocumentEditorPreload,
+} from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import {
   AssigneeValue,
@@ -223,7 +227,7 @@ export function ObjectiveDetail({
   const tIssue = useTranslations("Issue");
   const { track } = useAnalytics();
   // Mounts with the objectives page: warm the editor chunk once painted.
-  useIdleMarkdownEditorPreload();
+  useIdleDocumentEditorPreload();
   // Project readers (MIN-693) read the objective; comments follow their option.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
   const readOnly = !canWrite;
@@ -233,6 +237,27 @@ export function ObjectiveDetail({
   // Remount the markdown editor when the description is rewritten under it
   // (dictation) — it only reads `value` when editing and only commits when blurring.
   const [editorKey, setEditorKey] = useState(0);
+  // The description's editor document (MIN-728); `undefined` while it loads.
+  // The live description (MIN-728): shared by every editor of the objective.
+  const tPages = useTranslations("Pages");
+  const liveDescription = useDescriptionCollaboration({
+    kind: "objective",
+    id: objective.id,
+    userId: user?.id ?? null,
+    enabled: true,
+    members,
+    onRefused: () => toast.error(tPages("liveEditRefused")),
+    onFatal: () => toast.error(tPages("saveFailed")),
+  });
+  const liveReady = liveDescription.status === "ready" && !!liveDescription.collaboration;
+  const liveReadyRef = useRef(liveReady);
+  liveReadyRef.current = liveReady;
+  const {
+    document: descriptionDocument,
+    remember: rememberDescriptionDocument,
+  } = useRichDocument("objective", objective.id, {
+    enabled: liveDescription.status === "unavailable",
+  });
   /** Editor container: serves as a focus marker (see effect below). */
   const descriptionRef = useRef<HTMLDivElement>(null);
   /** Latest version of the description already reflected on the screen: distinguishes a
@@ -295,6 +320,7 @@ export function ObjectiveDetail({
     if (
       next !== shownDescription.current &&
       !descriptionEdited.current &&
+      !liveReadyRef.current &&
       !descriptionRef.current?.contains(document.activeElement)
     ) {
       shownDescription.current = next;
@@ -385,14 +411,20 @@ export function ObjectiveDetail({
     else if (!trimmed) setName(objective.name);
   };
 
-  const commitDescription = (markdown: string) => {
+  const commitDescription = (markdown: string, content?: JSONContent) => {
     const next = markdown.trim() || null;
     descriptionEdited.current = false;
     if (next === (objective.description ?? null)) return;
     // What we have just written is already on the screen: writing it down prevents its echo
     // through the prop goes for a remote rewrite and returns the editor.
     shownDescription.current = next ?? "";
-    void patch({ description: next });
+    // With its document, the server derives the Markdown from it (MIN-728).
+    if (next && content) {
+      rememberDescriptionDocument(content);
+      void patch({ description: next, description_doc: content });
+    } else {
+      void patch({ description: next });
+    }
   };
 
   return (
@@ -527,10 +559,34 @@ export function ObjectiveDetail({
               setEditorKey((k) => k + 1);
             }}
           >
-            <MarkdownEditor
+            {liveDescription.status === "loading" ||
+            (!liveReady && descriptionDocument === undefined) ? (
+              // Formatted while the live session loads (see the issue panel).
+              <LazyDocumentEditor
+                key={`${objective.id}:preview`}
+                mentions={mentions}
+                value={objective.description ?? ""}
+                placeholder={t("descriptionPlaceholder")}
+                readOnly
+              />
+            ) : liveReady ? (
+              <LazyDocumentEditor
+                key={`${objective.id}:live`}
+                mentions={mentions}
+                value={objective.description ?? ""}
+                uploadScope={`projects/${objective.project_id}`}
+                document={liveDescription.doc}
+                collaboration={liveDescription.collaboration}
+                placeholder={t("descriptionPlaceholder")}
+                readOnly={readOnly}
+              />
+            ) : (
+            <LazyDocumentEditor
               key={`${objective.id}:${editorKey}`}
               mentions={mentions}
               value={objective.description ?? ""}
+              uploadScope={`projects/${objective.project_id}`}
+              document={descriptionDocument}
               onCommit={commitDescription}
               onEdit={() => {
                 descriptionEdited.current = true;
@@ -538,6 +594,7 @@ export function ObjectiveDetail({
               placeholder={t("descriptionPlaceholder")}
               readOnly={readOnly}
             />
+            )}
           </div>
 
           {/* Key/value properties — borderless, like the issue panel. The attached

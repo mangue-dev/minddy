@@ -26,9 +26,9 @@ import { AgentBeamOverlay } from "@/components/agent-beam";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { EmptyScene } from "@/components/empty-scene";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the public board's initial
-// payload — see markdown-editor-lazy.tsx. No idle preload here: an anonymous
+// payload — see components/editor/document-editor-lazy.tsx. No idle preload here: an anonymous
 // visitor may never post, and the plain-text fallback covers the rare wait.
-import { MarkdownEditor } from "@/components/markdown-editor-lazy";
+import { LazyDocumentEditor } from "@/components/editor/document-editor-lazy";
 import { NumoIcon } from "@/components/numo-icon";
 import { SearchMenu } from "@/components/search-menu";
 import { checkedProps } from "@/components/search-select";
@@ -517,7 +517,7 @@ function ComposerDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The MarkdownEditor only commits to blur — the ref always carries the
+  // The LazyDocumentEditor only commits to blur — the ref always carries the
   // last committed value, and submit() forces the blur before reading.
   const bodyRef = useRef("");
   const [initialBody, setInitialBody] = useState("");
@@ -824,7 +824,7 @@ function ComposerDialog({
           maxLength={200}
           className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
         />
-        <MarkdownEditor
+        <LazyDocumentEditor
           key={editorKey}
           value={initialBody}
           onCommit={(markdown) => {

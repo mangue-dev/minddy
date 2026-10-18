@@ -47,9 +47,20 @@ vi.mock("@/lib/use-objective-dictation", () => ({ useObjectiveDictation: () => (
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: () => ({ objectives: [] }), objectiveProgress: () => ({ done: 0, total: 0, percent: 0 }) }));
 vi.mock("@/lib/keyboard/use-mod-shortcut", () => ({ useModKey: () => "⌘" }));
-vi.mock("@/components/markdown-editor-lazy", async () => {
+// Description documents (MIN-728) have their own tests; these surfaces open
+// their Markdown.
+vi.mock("@/lib/use-rich-document", () => ({
+  useRichDocument: () => ({ document: null, remember: () => {} }),
+}));
+vi.mock("@/lib/use-description-collaboration", () => ({
+  useDescriptionCollaboration: () => ({
+    status: "unavailable", doc: null, collaboration: null,
+    flush: async () => true, hasUnsavedChanges: () => false,
+  }),
+}));
+vi.mock("@/components/editor/document-editor-lazy", async () => {
   const { useState } = await import("react");
-  return { useIdleMarkdownEditorPreload: () => {}, MarkdownEditor: ({ value, onEdit }: { value: string; onEdit: () => void }) => {
+  return { useIdleDocumentEditorPreload: () => {}, LazyDocumentEditor: ({ value, onEdit }: { value: string; onEdit: () => void }) => {
     const [draft, setDraft] = useState(value);
     return <textarea data-objective-description value={draft} onChange={(event) => { setDraft(event.target.value); onEdit(); }} />;
   } };

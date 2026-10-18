@@ -16,6 +16,7 @@ Electron shell has a separate package and build under `desktop/`.
 | Marketing and legal routes | `app/(marketing)/`, `app/(legal)/`, `lib/public-routes.ts` |
 | HTTP APIs and public capabilities | `app/api/`, `app/f/`, `app/p/` |
 | Reusable UI and client behavior | `components/`, `lib/` |
+| Rich text editor engine (every surface) and its block catalog | `components/editor/`, `components/pages/blocks/` |
 | Server business logic | `lib/server/` |
 | Browser, session, and privileged database clients | `lib/supabase.ts`, `lib/supabase-server.ts`, `lib/supabase-service.ts` |
 | Numo conversations and tools | `lib/server/numo/`, `lib/server/assistant/` |

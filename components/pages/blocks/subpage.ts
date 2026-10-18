@@ -184,6 +184,7 @@ export const subpageBlock: PageBlock = {
   id: "subpage",
   nodeName: "subpage",
   extensions: [Subpage],
+  sets: ["page"],
   icon: FileText,
   labelKey: "blockSubpage",
   slash: {

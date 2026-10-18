@@ -1,5 +1,8 @@
 "use client";
 
+import type { JSONContent } from "@tiptap/core";
+import { useRichDocument } from "@/lib/use-rich-document";
+
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
@@ -22,12 +25,13 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the objectives route —
-// see markdown-editor-lazy.tsx. The dialog mounts with the page, which warms
+// see components/editor/document-editor-lazy.tsx. The dialog mounts with the page, which warms
 // the chunk from idle time (hook below).
 import {
-  MarkdownEditor,
-  useIdleMarkdownEditorPreload,
-} from "@/components/markdown-editor-lazy";
+  DocumentEditorFallback,
+  LazyDocumentEditor,
+  useIdleDocumentEditorPreload,
+} from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
@@ -224,7 +228,7 @@ export function ObjectiveDialog({
   const tRelations = useTranslations("Relations");
   const { track } = useAnalytics();
   // Mounts with the objectives page: warm the editor chunk once painted.
-  useIdleMarkdownEditorPreload();
+  useIdleDocumentEditorPreload();
   const [form, setForm] = useState(EMPTY);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -244,6 +248,18 @@ export function ObjectiveDialog({
   // Remount the markdown editor to swap its content (it only reads `value` on
   // mount and commits on blur) when the dialog opens on a new/other objective.
   const [editorKey, setEditorKey] = useState(0);
+  /** The editor document of `form.description`, as last committed (MIN-728);
+      cleared whenever the description is replaced from outside the editor. */
+  const descriptionDocument = useRef<JSONContent | null>(null);
+  // Images of the description still being sent (MIN-728).
+  const [imagesUploading, setImagesUploading] = useState(false);
+  // Editing an existing objective opens its stored document, so a save does
+  // not drop what Markdown cannot carry.
+  const { document: storedDocument, remember: rememberDocument } = useRichDocument(
+    "objective",
+    objective?.id,
+    { enabled: open && !!objective }
+  );
   // A take being transcribed (the audio is gone, the text is not
   // income): with the Numo suite, this is the window where closing loses dictation.
   const [transcribing, setTranscribing] = useState(false);
@@ -269,6 +285,7 @@ export function ObjectiveDialog({
 
   useEffect(() => {
     if (!open) return;
+    descriptionDocument.current = null;
     setForm(
       objective
         ? {
@@ -288,6 +305,7 @@ export function ObjectiveDialog({
   }, [open, objective, initialName, projectId]);
 
   const closeAndReset = () => {
+    descriptionDocument.current = null;
     setForm(EMPTY);
     setRelations([]);
     editorNonEmptyRef.current = false;
@@ -375,6 +393,7 @@ export function ObjectiveDialog({
   const recoverDraft = (id: string) => {
     const draft = drafts.find(id);
     if (!draft) return;
+    descriptionDocument.current = null;
     setForm({
       name: draft.name,
       description: draft.description,
@@ -391,9 +410,15 @@ export function ObjectiveDialog({
   };
 
   // `target` is set only when creating in a different project (dropdown item).
+  const tPages = useTranslations("Pages");
   const submit = async (target?: Project) => {
     const name = form.name.trim();
     if (!name || submitting) return;
+    // An image still uploading has no address yet (MIN-728).
+    if (imagesUploading) {
+      toast.info(tPages("waitForUploads"));
+      return;
+    }
     if (target && target.id !== projectId && relations.length > 0) {
       toast.info(tRelations("crossProjectUnavailable"));
       return;
@@ -402,6 +427,9 @@ export function ObjectiveDialog({
     const payload = {
       name,
       description: form.description.trim() || null,
+      ...(form.description.trim() && descriptionDocument.current
+        ? { description_doc: descriptionDocument.current }
+        : {}),
       status: form.status,
       lead_user_id: form.lead_user_id,
       target_date: form.target_date,
@@ -412,6 +440,7 @@ export function ObjectiveDialog({
     try {
       if (objective) {
         await onUpdate(objective.id, payload);
+        if (payload.description_doc) rememberDocument(payload.description_doc);
         toast.success(t("updatedToast"));
       } else if (other && onCreateInProject) {
         // Cross-project: the lead references THIS project's members and doesn't
@@ -421,6 +450,9 @@ export function ObjectiveDialog({
         await onCreateInProject(other.id, {
           name,
           description: form.description.trim() || null,
+          ...(form.description.trim() && descriptionDocument.current
+            ? { description_doc: descriptionDocument.current }
+            : {}),
           status: form.status,
           target_date: form.target_date,
           color: form.color,
@@ -465,6 +497,7 @@ export function ObjectiveDialog({
       ...(patch.color !== undefined ? { color: patch.color } : {}),
     }));
     if (patch.description !== undefined) {
+      descriptionDocument.current = null;
       setEditorKey((k) => k + 1); // remount the editor with the new content
       editorNonEmptyRef.current = patch.description.trim() !== "";
     }
@@ -570,17 +603,36 @@ export function ObjectiveDialog({
                 className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
               />
               <div className="creation-field-label">{tField("description")}</div>
-              <MarkdownEditor
+              {objective && storedDocument === undefined ? (
+                <DocumentEditorFallback
+                  value={form.description}
+                  className="creation-description mt-2 min-h-16"
+                />
+              ) : (
+              <LazyDocumentEditor
                 key={editorKey}
                 mentions={mentions}
                 value={form.description}
-                onCommit={(description) => setForm((f) => ({ ...f, description }))}
+                uploadScope={projectId ? `projects/${projectId}` : null}
+                onUploadingChange={setImagesUploading}
+                document={objective ? storedDocument : null}
+                onCommit={(description, content) => {
+                  descriptionDocument.current = content;
+                  setForm((f) => ({ ...f, description }));
+                }}
+                // An image's address arrives when its upload ends, often
+                // after the field lost focus: follow every change too.
+                onChange={(description, content) => {
+                  descriptionDocument.current = content;
+                  setForm((f) => ({ ...f, description }));
+                }}
                 onEmptyChange={(empty) => {
                   editorNonEmptyRef.current = !empty;
                 }}
                 placeholder={t("descriptionPlaceholder")}
                 className="creation-description mt-2 min-h-16"
               />
+              )}
 
               {/* Property values stay compact on desktop and receive labels on mobile. */}
               <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">

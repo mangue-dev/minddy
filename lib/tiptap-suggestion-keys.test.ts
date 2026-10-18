@@ -57,17 +57,17 @@ describe("plugin keys for tiptap suggestions", () => {
       }
       for (const key of found) {
         const taken = keys.get(key);
-        expect(taken, `clé « ${key} » déjà prise par ${taken}`).toBeUndefined();
+        expect(taken, `key "${key}" already taken by ${taken}`).toBeUndefined();
         keys.set(key, where);
       }
     }
 
     expect(
       missing,
-      `suggestion sans pluginKey (donc sur la clé par défaut, partagée) : ${missing.join(", ")}`
+      `suggestion without a pluginKey (so on the shared default key): ${missing.join(", ")}`
     ).toEqual([]);
     // The guardrail only matters if it found the calls: the “@” for
-    // mentions, the “/” for the notebook, and the “/” for pages.
-    expect(keys.size).toBeGreaterThanOrEqual(3);
+    // mentions and the “/” that every rich text surface shares (MIN-728).
+    expect(keys.size).toBeGreaterThanOrEqual(2);
   });
 });

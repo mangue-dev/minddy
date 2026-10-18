@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-18",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -106,14 +106,21 @@
       "lib/issue-semantic-query.ts",
       "lib/server/issue-semantic-search.ts",
       "components/relation-target-picker.tsx",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "components/editor/rich-editor.tsx",
+      "components/editor/document-editor.tsx",
+      "components/editor/comment-editor.tsx",
+      "content/documentation/reviews/min-728-one-editor-engine.md",
+      "lib/server/description-collaboration.ts",
+      "lib/use-description-collaboration.ts",
+      "docs/document-collaboration.md"
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; es translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; es translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (es new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 17,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; es translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; es translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (es new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_es (es translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "feedback",
@@ -158,7 +165,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar con título, descripción y propiedades que se pueden elegir manualmente.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -174,7 +181,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración DOC-11 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -190,7 +197,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -206,7 +213,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -222,7 +229,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "Búsqueda de una incidencia bloqueante por identificador.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -238,7 +245,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -254,7 +261,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -270,7 +277,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -286,7 +293,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -303,7 +310,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Eliminar.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -346,6 +353,8 @@ Confirma la creación y abre la nueva incidencia. Comprueba su identificador y p
 
 
 ![Borrador sin enviar con título, descripción y propiedades que se pueden elegir manualmente.](/documentation/es/new-issue.png)
+
+La descripción, los comentarios y el diálogo de nueva incidencia usan el mismo editor que las páginas del proyecto, sin los controles de bloque. Escribe `/` para insertar un encabezado, una lista, una tarea, una cita, un **Destacado**, un bloque de código, un **Desplegable** o un divisor, y `@` para mencionar a una persona, una incidencia, un objetivo o una página. Varias personas pueden editar la misma descripción a la vez: el cursor de cada una aparece con su nombre y su color, y los cambios de Numo o de un agente conectado aparecen en cuanto se guardan. Numo, los agentes conectados y las exportaciones CSV leen el texto en Markdown, que se actualiza unos segundos después de dejar de escribir. Selecciona texto para ponerlo en negrita, cursiva, tachado o código, o para añadir un enlace. Pega o suelta una imagen para insertarla en la descripción; los demás tipos de archivo van en los recursos de la incidencia. Una mención apunta a su destino, no a su nombre: sigue un cambio de nombre y resiste las ediciones y el copiar y pegar en otra descripción, un comentario, una página o el compositor de Numo. Quien no puede abrir el destino ve una mención **No disponible**, sin su nombre ni su proyecto.
 
 ### Comprobar el guardado y la visibilidad {#issue-save}
 
@@ -475,15 +484,17 @@ No elimines una hija solo para reorganizar la jerarquía. Comprueba las relacion
 
 Abre la pestaña del plan de la incidencia. Su descripción ya debería indicar el problema y el resultado esperado. Añade los pasos de implementación manualmente o pide a Numo que examine el repositorio vinculado antes de proponer un plan a nivel de código. Una ruta o función generadas por IA no son una prueba si no se ha leído realmente el repositorio.
 
-Sangra cada línea de tarea con dos espacios por nivel de anidamiento; un tabulador cuenta como cuatro espacios. El anidamiento organiza los pasos del plan y no crea relaciones entre incidencias principales e hijas. Todas las tareas de trabajo no canceladas siguen contando para el progreso, incluidas las anidadas.
+El plan se edita en el sitio, como la descripción: haz clic en él y escribe, sin modo de edición ni botón de guardar. Un plan vacío muestra un texto de ayuda. Varios miembros, Numo y los agentes conectados pueden editar el mismo plan a la vez, cada uno con un cursor con su nombre, y una tarea que marca un agente aparece en tu editor mientras escribes en otra parte. Escribe `- [ ]` seguido de un espacio al principio de una línea, o elige **Lista de tareas** en el menú `/`, para añadir una tarea. Haz clic en la casilla de una tarea para completarla, o abre su menú para los demás estados.
 
-El plan utiliza líneas de tareas Markdown: `- [ ]` para pendientes, `- [~]` para en curso, `- [x]` para completadas y `- [-]` para canceladas. Escribe el texto después del marcador, por ejemplo `- [ ] Comprobar el enlace de contacto en móvil`. Las tareas canceladas no cuentan en el progreso. Las tareas bajo un encabezado Questions reconocido se tratan como preguntas y también quedan fuera del progreso; mantén los pasos de trabajo en otra sección con el mismo nivel de encabezado. El encabezado reconocido es `Questions`, con esa palabra en inglés. Guarda las modificaciones explícitas con el control de guardado; cancelar descarta el borrador. Marcar una tarea mostrada actualiza su estado. Utiliza pendiente, en curso, completada y cancelada para reflejar lo ocurrido, sin dar por realizadas comprobaciones que aún no se han ejecutado.
+Pulsa Tab en una tarea para anidarla bajo la anterior y Mayús+Tab para devolverla a su nivel; en el Markdown guardado, cada nivel se sangra con dos espacios. El anidamiento organiza los pasos del plan y no crea relaciones entre incidencias principales e hijas. Todas las tareas de trabajo no canceladas siguen contando para el progreso, incluidas las anidadas.
+
+El plan utiliza líneas de tareas Markdown: `- [ ]` para pendientes, `- [~]` para en curso, `- [x]` para completadas y `- [-]` para canceladas. Escribe el texto después del marcador, por ejemplo `- [ ] Comprobar el enlace de contacto en móvil`. Las tareas canceladas no cuentan en el progreso. Las tareas bajo un encabezado Questions reconocido se tratan como preguntas y también quedan fuera del progreso; mantén los pasos de trabajo en otra sección con el mismo nivel de encabezado. El encabezado reconocido es `Questions`, con esa palabra en inglés. El editor muestra estas líneas como tareas y las vuelve a escribir en el mismo formato, el que leen Numo y los agentes conectados. Utiliza pendiente, en curso, completada y cancelada para reflejar lo ocurrido, sin dar por realizadas comprobaciones que aún no se han ejecutado.
 
 ![Plan de demostración con dos tareas de trabajo completadas de seis.](/documentation/es/work-implementation-plan.png)
 
 ### Conservar el progreso y las ediciones simultáneas {#plan-progress}
 
-Amplía o modifica el plan existente en lugar de sustituirlo por una copia nueva sin marcar. Conserva los pasos completados y las explicaciones de los cambios de alcance. Antes de guardar una reescritura importante, compárala con el plan más reciente si otro miembro o agente ha trabajado en la incidencia.
+Amplía o modifica el plan existente en lugar de sustituirlo por una copia nueva sin marcar. Conserva los pasos completados y las explicaciones de los cambios de alcance. Los cambios de otros miembros y agentes aparecen en el plan a medida que se hacen. Una herramienta que sustituye el plan entero sigue sustituyendo los pasajes que reescribe, así que pide a los agentes que editen solo la parte que cambian.
 
 Para que se implemente el plan, copia el prompt de la incidencia para tu propio agente de código, como se describe a continuación. Una tarea marcada no demuestra por sí sola que el código pase las pruebas. Lee el resultado, los cambios y las comprobaciones antes de marcar la incidencia como hecha.
 

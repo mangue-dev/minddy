@@ -2,12 +2,13 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon, Copy01Icon, TextWrapIcon as WrapText, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUp01Icon, Copy01Icon, TextWrapIcon as WrapText, CheckIcon } from "@hugeicons/core-free-icons";
 import {
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  type ComponentProps,
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
@@ -25,22 +26,27 @@ const COLLAPSED_CODE_HEIGHT_PX = 460;
 export function CodeBlockLanguageTrigger({
   label,
   disabled,
-}: {
+  className,
+  ...props
+}: ComponentProps<typeof Button> & {
   label: string;
   disabled: boolean;
 }) {
   const t = useTranslations("Common");
+  // The picker renders this as its `asChild` trigger: the ref, click handler
+  // and ARIA state it injects must reach the button, or the menu never opens.
   return (
     <Button
       type="button"
       variant="ghost"
       size="sm"
-      disabled={disabled}
       aria-label={t("codeLanguage")}
-      className="code-block-node-language-trigger"
+      {...props}
+      disabled={disabled}
+      className={cn("code-block-node-language-trigger", className)}
     >
       <span className="truncate">{label}</span>
-      <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5 shrink-0 opacity-50" />
+      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0" />
     </Button>
   );
 }

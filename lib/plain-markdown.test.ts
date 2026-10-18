@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { plainMarkdown } from "./plain-markdown";
+import { plainMarkdown, plainMarkdownParts } from "./plain-markdown";
 
 describe("plainMarkdown", () => {
   it("removes formatting while keeping readable text", () => {
@@ -12,5 +12,25 @@ describe("plainMarkdown", () => {
     expect(plainMarkdown("- first\n- ![image](image.png)\n```ts\nconst x = 1;\n```\nlast")).toBe(
       "first last"
     );
+  });
+});
+
+describe("plain previews with typed mentions (MIN-734)", () => {
+  const PROJECT = "11111111-1111-4111-8111-111111111111";
+
+  it("keeps each mention apart, so its stored label is never printed", () => {
+    const parts = plainMarkdownParts(`Ask **[@Secret project](mention:project/${PROJECT})** about it`);
+    expect(parts).toEqual(["Ask ", { type: "project", id: PROJECT, label: "Secret project" }, " about it"]);
+    expect(parts.filter((part) => typeof part === "string").join("")).not.toContain("Secret");
+  });
+
+  it("holds out a mention whatever escapes its stored label used", () => {
+    const parts = plainMarkdownParts(`See [@Secret\\_Plan](mention:page/${PROJECT})`);
+    expect(parts).toEqual(["See ", { type: "page", id: PROJECT, label: "Secret_Plan" }]);
+  });
+
+  it("drops a mention the slice cut in half", () => {
+    expect(plainMarkdownParts("Ask [@Secret pro")).toEqual(["Ask @…"]);
+    expect(plainMarkdownParts(`Ask [@Secret](mention:project/${PROJECT.slice(0, 8)}`)).toEqual(["Ask @…"]);
   });
 });

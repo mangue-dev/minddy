@@ -89,6 +89,9 @@ const rules = [
       "lib/server/git/issue-sync.ts",
       "lib/server/comment-store.ts", "app/api/issues/[id]/comments/route.ts",
       "app/api/issues/[id]/route.ts", "lib/server/assistant/comment-agent.ts",
+      // Parent checks of editor documents (MIN-728): id, project and
+      // encryption version only, never content.
+      "lib/server/rich-documents.ts", "app/api/documents/[kind]/[id]/route.ts",
       "lib/server/cycles.ts", "lib/server/recurrence.ts", "lib/server/smart-assign.ts",
       "captures/world/seed/002-projet-aurora.mjs", "captures/world/seed/003-projet-beacon.mjs",
       "captures/world/seed/004-cycle.mjs", "captures/world/seed/006-numo.mjs",
@@ -125,6 +128,12 @@ const rules = [
     access: /\.\s*(?:from\s*\(\s*["'`]issue_encryption_scopes["'`]|rpc\s*\(\s*["'`]migrate_issue_ciphertext["'`])/,
     allowed: new Set(["lib/server/issue-store.ts", "lib/server/encryption/issue-backfill.ts",
       "lib/server/issue-embedding-store.ts", "captures/world/seed/_issues.mjs"]),
+  },
+  {
+    // Editor documents of descriptions and the notebook (MIN-728) are
+    // encrypted content: only their repository reads or writes the table.
+    access: /\.\s*(?:from\s*\(\s*["'`]rich_documents["'`]\s*\)|rpc\s*\(\s*["'`]purge_clear_rich_documents["'`])/,
+    allowed: new Set(["lib/server/rich-documents.ts"]),
   },
   {
     // Issue vectors and their content fingerprints (MIN-717) are encrypted
@@ -171,7 +180,9 @@ const rules = [
   {
     access: /\.\s*from\s*\(\s*["'`]objectives["'`]\s*\)/,
     allowed: new Set(["lib/server/objective-store.ts", "lib/server/objectives.ts",
-      "lib/server/account-import.ts", "lib/server/encryption/objective-backfill.ts"]),
+      "lib/server/account-import.ts", "lib/server/encryption/objective-backfill.ts",
+      // Parent checks of editor documents (MIN-728): metadata only.
+      "lib/server/rich-documents.ts", "app/api/documents/[kind]/[id]/route.ts"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`](?:comments|page_comments)["'`]\s*\)/,
@@ -202,7 +213,9 @@ const rules = [
   },
   {
     access: /\.\s*from\s*\(\s*["'`]user_scratchpad["'`]\s*\)/,
-    allowed: new Set(["lib/server/scratchpad.ts", "lib/server/encryption/scratchpad-backfill.ts", "captures/world/seed/005-carnet.mjs"]),
+    allowed: new Set(["lib/server/scratchpad.ts", "lib/server/encryption/scratchpad-backfill.ts", "captures/world/seed/005-carnet.mjs",
+      // The notebook document's parent check (MIN-728): encryption version only.
+      "lib/server/rich-documents.ts"]),
   },
   {
     access: /\.\s*from\s*\(\s*["'`]project_invitations["'`]\s*\)/,
@@ -240,6 +253,9 @@ const protectedReaderContracts = new Map([
     "decodePageProjection", "decodePullRequestContentRow"]],
   ["lib/server/page-backlinks.ts", ["decodeIssue", "decodeObjective",
     "decodePageProjection"]],
+  // Mention targets (MIN-734): page titles and project names, decoded for an
+  // access-checked reader.
+  ["lib/server/mention-access.ts", ["decodePageProjection", "decodeProjectName"]],
 ]);
 
 const violations = [];

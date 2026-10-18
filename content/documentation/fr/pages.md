@@ -66,7 +66,7 @@
       "content/documentation/reviews/min-693-project-roles.md",
       "lib/use-semantic-mentions.ts",
       "components/markdown-mention.tsx",
-      "components/mention-textarea.tsx",
+      "components/editor/comment-editor.tsx",
       "content/documentation/reviews/min-718-hybrid-issue-search.md",
       "docs/page-collaboration.md",
       "lib/use-page-collaboration.ts",

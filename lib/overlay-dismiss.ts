@@ -8,7 +8,7 @@ import { hasVisibleOverlay } from "./visible-overlays";
 // through, so we guard `onInteractOutside` at the call sites.
 
 const POPPER_CONTENT =
-  '[data-radix-popper-content-wrapper],[data-slot="dropdown-menu-content"],[data-slot="select-content"],[data-slot="popover-content"],[role="menu"],[role="listbox"]';
+  '[data-radix-popper-content-wrapper],[data-slot="dropdown-menu-content"],[data-slot="select-content"],[data-slot="popover-content"],[role="menu"],[role="listbox"],[data-selection-toolbar]';
 
 const OPEN_POPPER =
   '[data-slot="dropdown-menu-content"][data-state="open"],[data-slot="select-content"][data-state="open"],[data-slot="popover-content"][data-state="open"],[role="menu"][data-state="open"],[role="listbox"][data-state="open"]';

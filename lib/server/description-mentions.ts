@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { contentMentionScanner } from "@/lib/mention-scan";
+import { mentionedIds } from "@/lib/mention-link";
 import { toNamed, fetchAuthUsersById } from "@/lib/server/auth-users";
 import {
   insertNotifications,
@@ -32,6 +33,9 @@ export function newlyMentionedUserIds(params: {
     for (const segment of scan(text)) {
       if (segment.mention?.type === "member") ids.add(segment.mention.member.user_id);
     }
+    // A typed mention names its account (MIN-734); only members count.
+    const allowed = new Set(params.members.map((member) => member.user_id));
+    for (const id of mentionedIds(text, "member")) if (allowed.has(id)) ids.add(id);
     return ids;
   };
 

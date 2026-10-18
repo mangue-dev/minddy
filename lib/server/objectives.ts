@@ -1,4 +1,5 @@
 import "server-only";
+import { restoreStoredMentions } from "@/lib/mention-link";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeObjective, encodeObjective } from "@/lib/server/objective-store";
@@ -8,6 +9,8 @@ import { OBJECTIVE_STATUS_VALUES } from "@/lib/objective-constants";
 import { isDateOrNull } from "@/lib/issue-validation";
 import { isValidColor } from "@/lib/category-colors";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
+import { syncDescriptionWrite } from "@/lib/server/description-collaboration";
+import type { JSONContent } from "@tiptap/core";
 import { queuePageLinks } from "@/lib/server/page-links";
 import {
   copyResourcesToProject,
@@ -55,7 +58,7 @@ export type ObjectiveResult =
 // Length limits (MIN-118): same name limit as ticket titles;
 // the description is free markdown, bounded like the plan. Beyond that we truncate.
 const MAX_NAME_LENGTH = 500;
-const MAX_DESCRIPTION_LENGTH = 65_536;
+export const MAX_OBJECTIVE_DESCRIPTION_LENGTH = 65_536;
 
 function objectiveGuardError(message: string):
   | "forbidden"
@@ -93,7 +96,7 @@ export async function createObjective({
     description: null,
   };
   if (typeof input.description === "string") {
-    row.description = input.description.slice(0, MAX_DESCRIPTION_LENGTH);
+    row.description = input.description.slice(0, MAX_OBJECTIVE_DESCRIPTION_LENGTH);
   }
   if (
     typeof input.status === "string" &&
@@ -251,6 +254,8 @@ export async function updateObjective({
   input,
   viaAssistant = false,
   mcpKeyId = null,
+  descriptionDocument = null,
+  descriptionFromDocument = false,
 }: {
   objectiveId: string;
   actorId: string;
@@ -259,6 +264,10 @@ export async function updateObjective({
   viaAssistant?: boolean;
   /** Assigns events to an MCP (agent) key instead of the user. */
   mcpKeyId?: string | null;
+  /** The editor document `input.description` was derived from (MIN-728). */
+  descriptionDocument?: JSONContent | null;
+  /** The write IS the materialization of the live description. */
+  descriptionFromDocument?: boolean;
 }): Promise<ObjectiveResult> {
   const updates: Record<string, unknown> = {};
 
@@ -272,7 +281,7 @@ export async function updateObjective({
   if ("description" in input) {
     updates.description =
       typeof input.description === "string"
-        ? input.description.slice(0, MAX_DESCRIPTION_LENGTH)
+        ? input.description.slice(0, MAX_OBJECTIVE_DESCRIPTION_LENGTH)
         : null;
   }
   if ("status" in input) {
@@ -331,6 +340,11 @@ export async function updateObjective({
     previousObjective = await decodeObjective(objective, actorId);
   } catch {
     return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  // An agent's rewrite keeps the stored form of the mentions it copied (MIN-734).
+  if ((viaAssistant || mcpKeyId) && typeof updates.description === "string") {
+    updates.description = restoreStoredMentions(updates.description,
+      previousObjective.description as string | null);
   }
 
   // Same guard as at creation (MIN-339).
@@ -405,6 +419,19 @@ export async function updateObjective({
     updatedObjective = await decodeObjective(mutation.objective, actorId);
   } catch {
     return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+
+  // Live descriptions (MIN-728): the write reaches connected editors as steps.
+  if ("description" in updates && !descriptionFromDocument &&
+      ((updates.description ?? null) !== (previous.description ?? null) || descriptionDocument)) {
+    await syncDescriptionWrite({
+      kind: "objective",
+      id: objectiveId,
+      projectId: updatedObjective.project_id as string,
+      markdown: (updates.description as string | null) ?? "",
+      content: descriptionDocument,
+      authorId: actorId,
+    });
   }
 
   const events = buildObjectiveFieldChangeEvents(

@@ -43,14 +43,17 @@ import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { BulkIssueActions } from "@/components/bulk-issue-actions";
 import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the triage route —
-// see markdown-editor-lazy.tsx. Warmed from idle time in TriagePage.
+// see components/editor/document-editor-lazy.tsx. Warmed from idle time in TriagePage.
 import {
-  MarkdownEditor,
-  useIdleMarkdownEditorPreload,
-} from "@/components/markdown-editor-lazy";
+  LazyDocumentEditor,
+  useIdleDocumentEditorPreload,
+} from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
+import { CommentEditor, extractMentions } from "@/components/editor/comment-editor";
+import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
+import { useRichDocument } from "@/lib/use-rich-document";
+import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
 import { addCommentApi } from "@/lib/comments-api";
 import { useAuth } from "@/lib/auth-context";
@@ -90,7 +93,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   // Mounts with the page: warm the deferred editor chunk once painted.
-  useIdleMarkdownEditorPreload();
+  useIdleDocumentEditorPreload();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const router = useRouter();
@@ -137,6 +140,21 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // only on the side where there is still something to discover.
   const detailFade = useScrollFade<HTMLDivElement>();
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
+  // The selected issue's description document (MIN-728); `undefined` while it loads.
+  // The selected issue's live description (MIN-728), as in the issue panel.
+  const tPages = useTranslations("Pages");
+  const liveDescription = useDescriptionCollaboration({
+    kind: "issue",
+    id: selected?.id ?? null,
+    userId: user?.id ?? null,
+    enabled: !!selected,
+    members,
+    onRefused: () => toast.error(tPages("liveEditRefused")),
+    onFatal: () => toast.error(tPages("saveFailed")),
+  });
+  const liveReady = liveDescription.status === "ready" && !!liveDescription.collaboration;
+  const { document: selectedDocument, remember: rememberSelectedDocument } =
+    useRichDocument("issue", selected?.id, { enabled: liveDescription.status === "unavailable" });
 
   /**
    * Group selection (MIN-75), the same gesture as on the board: Shift+click on
@@ -568,19 +586,48 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
                     placeholder={tIssueUI("titlePlaceholder")}
                   />
-                  <MarkdownEditor
+                  {liveDescription.status === "loading" ||
+                  (!liveReady && selectedDocument === undefined) ? (
+                    // Formatted while the live session loads (see the issue panel).
+                    <LazyDocumentEditor
+                      key={`${selected.id}:preview`}
+                      mentions={mentions}
+                      value={selected.description ?? ""}
+                      placeholder={tIssueUI("descriptionPlaceholder")}
+                      readOnly
+                    />
+                  ) : liveReady ? (
+                    <LazyDocumentEditor
+                      key={`${selected.id}:live`}
+                      mentions={mentions}
+                      value={selected.description ?? ""}
+                      uploadScope={`projects/${selected.project_id}`}
+                      document={liveDescription.doc}
+                      collaboration={liveDescription.collaboration}
+                      placeholder={tIssueUI("descriptionPlaceholder")}
+                      readOnly={readOnly}
+                    />
+                  ) : (
+                  <LazyDocumentEditor
                     key={selected.id}
                     mentions={mentions}
                     value={selected.description ?? ""}
-                    onCommit={(markdown) => {
+                    uploadScope={`projects/${selected.project_id}`}
+                    document={selectedDocument}
+                    onCommit={(markdown, content) => {
                       const next = markdown.trim() || null;
                       if (next !== (selected.description ?? null)) {
-                        void patch(selected, { description: next });
+                        // With its document, the server derives the Markdown (MIN-728).
+                        if (next) rememberSelectedDocument(content);
+                        void patch(selected, next
+                          ? { description: next, description_doc: content }
+                          : { description: next });
                       }
                     }}
                     placeholder={tIssueUI("descriptionPlaceholder")}
                     readOnly={readOnly}
                   />
+                  )}
                 </div>
 
                 {/* Key/value properties — same borderless rows as the side panel */}
@@ -699,7 +746,12 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
           if (!next && !confirmBusy) setConfirming(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          // The editor portals its “@” and “/” menus to <body>: a pick in them
+          // must not read as a click outside the dialog.
+          onInteractOutside={keepOverlayOpenForPopper}
+        >
           <DialogHeader>
             <DialogTitle>
               {confirming &&
@@ -719,7 +771,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                   : "declineConfirmDescription"
               )}
           </p>
-          <MentionTextarea
+          <CommentEditor
             value={message}
             onChange={setMessage}
             members={members}
@@ -728,7 +780,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
             rows={3}
             autoFocus={allowInputAutoFocus()}
             includeNumo
-            className="w-full rounded-lg bg-control px-3 py-2 text-sm outline-none [&:empty]:before:text-muted-foreground/60 focus-visible:bg-control-hover"
+            className="border-0 bg-control focus-within:bg-control-hover focus-within:ring-0"
             onSubmit={() => void runConfirm()}
           />
           <DialogFooter>

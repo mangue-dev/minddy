@@ -250,6 +250,7 @@ export interface ProcessChatContext extends ToolContext {
 const RETRYABLE_READ_TOOLS = new Set([
   "list_conversation_attachments",
   "read_conversation_attachment",
+  "view_image",
   "get_help",
   "list_projects",
   "list_global_filter_options",

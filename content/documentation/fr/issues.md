@@ -25,12 +25,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-18",
   "compatibility": {
-    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search",
+    "version": "0.11.1 candidate (MIN-680); MIN-721 removal of Numo code work; MIN-693 project roles; MIN-717 Smart Fill relations; MIN-718 hybrid issue search; MIN-728 one editor engine",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -106,14 +106,21 @@
       "lib/issue-semantic-query.ts",
       "lib/server/issue-semantic-search.ts",
       "components/relation-target-picker.tsx",
-      "content/documentation/reviews/min-718-hybrid-issue-search.md"
+      "content/documentation/reviews/min-718-hybrid-issue-search.md",
+      "components/editor/rich-editor.tsx",
+      "components/editor/document-editor.tsx",
+      "components/editor/comment-editor.tsx",
+      "content/documentation/reviews/min-728-one-editor-engine.md",
+      "lib/server/description-collaboration.ts",
+      "lib/use-description-collaboration.ts",
+      "docs/document-collaboration.md"
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; fr translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
-    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-17"
+    "revision": 17,
+    "fact": "agent:/root (MIN-719 prompt builders, prompt-context route and focused builder/caller tests; prior controls retain existing evidence); agent:/root/min721_docs (MIN-721 source review inherited from en revision 12; fr translation of removal edits; no operational rerun); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-717 Smart Fill relations source review inherited from en revision 14; fr translation of added passages; no browser walkthrough); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 one editor engine: source and unit-test review of the shared editor on this surface; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-734 typed mentions: source and unit-test review of the mention format, rendering and access rules; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root (fr new copied-prompt section, translation and retained-meaning self-review); agent:/root/min721_fr (fr translation of MIN-721 removal edits, equivalent meaning reviewed; agent review, not human acceptance); agent:/root/min693_fr with agent:/root (fr MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (fr translation of MIN-717 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr translation of the MIN-728 passage with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "feedback",
@@ -158,7 +165,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé avec titre, description et propriétés manuelles.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -174,7 +181,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration DOC-11 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -190,7 +197,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -206,7 +213,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -222,7 +229,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "Recherche d’un préalable par identifiant de ticket.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -238,7 +245,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -254,7 +261,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -270,7 +277,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -286,7 +293,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -303,7 +310,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Retirer.",
-      "revision": 15,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -346,6 +353,8 @@ Confirmez la création et ouvrez le ticket. Vérifiez son identifiant et son pro
 
 
 ![Brouillon de ticket non envoyé avec titre, description et propriétés manuelles.](/documentation/fr/new-issue.png)
+
+La description, les commentaires et la fenêtre de création utilisent le même éditeur que les pages du projet, sans les poignées de bloc. Tapez `/` pour insérer un titre, une liste, une tâche, une citation, un **Encadré**, un bloc de code, un **Dépliant** ou un séparateur, et `@` pour mentionner une personne, un ticket, un objectif ou une page. Plusieurs personnes peuvent modifier la même description en même temps : le curseur de chacune s’affiche avec son nom et sa couleur, et les modifications de Numo ou d’un agent connecté apparaissent dès leur enregistrement. Numo, les agents connectés et les exports CSV lisent le texte en Markdown, qui suit quelques secondes après la fin de la saisie. Sélectionnez du texte pour le mettre en gras, en italique, barré ou en code, ou pour ajouter un lien. Collez ou déposez une image pour l’insérer dans la description ; les autres types de fichiers vont dans les ressources du ticket. Une mention désigne sa cible, et non son nom : elle suit un renommage et résiste aux modifications comme au copier-coller vers une autre description, un commentaire, une page ou le compositeur de Numo. Un lecteur qui ne peut pas ouvrir la cible voit une mention **Indisponible**, sans son nom ni son projet.
 
 ### Vérifier l’enregistrement et la visibilité {#issue-save}
 
@@ -482,15 +491,17 @@ Ne supprimez pas un enfant pour réorganiser la hiérarchie. Vérifiez les relat
 
 Ouvrez l’onglet Plan du ticket. La description doit déjà préciser problème et résultat attendu. Ajoutez les étapes manuellement, ou demandez à Numo de lire le dépôt lié avant de proposer un plan technique. Un chemin ou une fonction générés par IA ne sont pas une preuve si le dépôt n’a pas été inspecté.
 
-Indentez une ligne de tâche de deux espaces par niveau ; une tabulation compte pour quatre espaces. Cette imbrication organise les étapes du plan, sans créer de relation parent-enfant entre tickets. Chaque tâche de travail non annulée contribue à la progression, y compris les tâches imbriquées.
+Le plan se modifie sur place, comme la description : cliquez dedans et écrivez, sans mode d’édition ni bouton d’enregistrement. Un plan vide affiche un texte d’invite. Plusieurs membres, Numo et les agents connectés peuvent modifier le même plan en même temps, chacun avec un curseur nommé, et une tâche cochée par un agent apparaît dans votre éditeur pendant que vous écrivez ailleurs. Tapez `- [ ]` suivi d’une espace en début de ligne, ou choisissez **Liste de tâches** dans le menu `/`, pour ajouter une tâche. Cliquez sur la case d’une tâche pour la terminer, ou ouvrez son menu pour les autres états.
 
-Le plan utilise des lignes de tâches Markdown : `- [ ]` pour une tâche en attente, `- [~]` pour une tâche en cours, `- [x]` pour une tâche terminée et `- [-]` pour une tâche annulée. Placez le texte après le marqueur, par exemple `- [ ] Vérifier le lien de contact sur mobile`. Les tâches annulées ne comptent pas dans la progression. Les tâches sous un titre Questions reconnu sont traitées comme des questions et sont aussi exclues du calcul ; placez donc le travail dans une autre section de même niveau de titre. Enregistrez explicitement les modifications ; annuler abandonne le brouillon. Cocher une case du plan affiché modifie l’état de cette tâche. Utilisez les états en attente, en cours, terminé et annulé pour refléter ce qui s’est passé, sans suggérer une vérification qui n’a pas été exécutée.
+Appuyez sur Tab dans une tâche pour l’imbriquer sous la précédente, et sur Maj+Tab pour la remonter ; dans le Markdown enregistré, chaque niveau est indenté de deux espaces. Cette imbrication organise les étapes du plan, sans créer de relation parent-enfant entre tickets. Chaque tâche de travail non annulée contribue à la progression, y compris les tâches imbriquées.
+
+Le plan utilise des lignes de tâches Markdown : `- [ ]` pour une tâche en attente, `- [~]` pour une tâche en cours, `- [x]` pour une tâche terminée et `- [-]` pour une tâche annulée. Placez le texte après le marqueur, par exemple `- [ ] Vérifier le lien de contact sur mobile`. Les tâches annulées ne comptent pas dans la progression. Les tâches sous un titre Questions reconnu sont traitées comme des questions et sont aussi exclues du calcul ; placez donc le travail dans une autre section de même niveau de titre. L’éditeur affiche ces lignes comme des tâches et les réécrit dans le même format, celui que lisent Numo et les agents connectés. Utilisez les états en attente, en cours, terminé et annulé pour refléter ce qui s’est passé, sans suggérer une vérification qui n’a pas été exécutée.
 
 ![Plan de démonstration avec deux tâches de travail terminées sur six.](/documentation/fr/work-implementation-plan.png)
 
 ### Conserver le progrès et les changements concurrents {#plan-progress}
 
-Complétez ou corrigez le plan existant plutôt que de le remplacer par une nouvelle copie décochée. Gardez les étapes terminées et les raisons des changements de périmètre. Avant une réécriture importante, comparez avec le dernier plan si un membre ou un agent travaille aussi sur le ticket.
+Complétez ou corrigez le plan existant plutôt que de le remplacer par une nouvelle copie décochée. Gardez les étapes terminées et les raisons des changements de périmètre. Les modifications des autres membres et des agents apparaissent dans le plan au moment où elles sont faites. Un outil qui remplace le plan entier remplace tout de même les passages qu’il réécrit : demandez aux agents de ne modifier que la partie qu’ils changent.
 
 Pour faire implémenter le plan, copiez le prompt du ticket pour votre propre agent de code, comme décrit ci-dessous. Une étape cochée ne prouve pas à elle seule que le code passe les tests. Lisez résultat, modifications et contrôles avant de terminer le ticket.
 

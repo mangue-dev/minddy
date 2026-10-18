@@ -31,6 +31,8 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   list_global_filter_options: "personal",
   list_conversation_attachments: "personal",
   read_conversation_attachment: "personal",
+  // Access is decided from the image's own project or owner.
+  view_image: "personal",
   list_inbox: "personal",
   get_account_settings: "personal",
   get_user_stats: "personal",

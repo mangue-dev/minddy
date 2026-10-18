@@ -30,7 +30,7 @@
 // that a color cannot render: a face, an orb, an emoji.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Book02Icon, Layers01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Book02Icon, Layers01Icon, LockIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { CSSProperties, MouseEvent } from "react";
 import { cn } from "mangue-ui";
 import {
@@ -61,7 +61,10 @@ export type MentionChipType =
   | "issue"
   | "objective"
   | "page"
-  | "skill";
+  | "skill"
+  /** A mention whose target the reader may not see (MIN-734): no name, no
+   figure of its own, no link — the label is the neutral one it is given. */
+  | "unavailable";
 
 export function MentionChip({
   type,
@@ -147,6 +150,8 @@ export function MentionChip({
         ) : (
           <span className="size-[0.7em] rounded-full bg-current" />
         )
+      ) : type === "unavailable" ? (
+        <HugeiconsIcon icon={LockIcon} className="size-full" aria-hidden />
       ) : type === "skill" ? (
         <HugeiconsIcon icon={Layers01Icon} className="size-full" aria-hidden />
       ) : type === "page" ? (
@@ -278,6 +283,8 @@ function mentionTone(
       return "var(--mention-page)";
     case "skill":
       return "var(--color-emerald-500)";
+    case "unavailable":
+      return "var(--muted-foreground)";
     case "objective":
       // Fallback understood: a lens without color gives the gray of the text
       // secondary, therefore a gray pill — and that's right, he doesn't have one.

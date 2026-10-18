@@ -1,5 +1,7 @@
 "use client";
 
+import type { JSONContent } from "@tiptap/core";
+
 import {
   useCallback,
   useEffect,
@@ -52,11 +54,17 @@ type PutResult =
   | { ok: true; content: string; updated_at: string | null; rev: number }
   | { ok: false; content: string; rev: number };
 
-async function putScratchpad(content: string, rev: number): Promise<PutResult> {
+async function putScratchpad(
+  content: string,
+  rev: number,
+  document?: JSONContent | null
+): Promise<PutResult> {
   const res = await fetch("/api/me/scratchpad", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, rev }),
+    // The editor's document travels with the Markdown it projects to
+    // (MIN-728); the server keeps it only for a clean write of that Markdown.
+    body: JSON.stringify(document ? { content, rev, content_doc: document } : { content, rev }),
   });
   const text = await res.text();
   let data: unknown = null;
@@ -174,13 +182,14 @@ export function useScratchpadDoc({
   // conflict ever happens, so `res.content === ours` and the editor is left
   // completely alone — no setContent, no cursor jump, no revert.
   const commitOnce = useCallback(
-    async (ours: string) => {
+    async (ours: string, document?: JSONContent | null) => {
       let attempt = ours;
       let mergeBase = baseRef.current.content;
       let expectRev = baseRef.current.rev;
 
       for (let i = 0; i < 8; i++) {
-        const res = await putScratchpad(attempt, expectRev);
+        // A merged attempt is no longer what the document says.
+        const res = await putScratchpad(attempt, expectRev, attempt === ours ? document : null);
         if (res.ok) {
           baseRef.current = { content: res.content, rev: res.rev };
           qc.setQueryData(
@@ -220,11 +229,12 @@ export function useScratchpadDoc({
   // editor's markdown is cumulative, so a save that fails is picked up in full by
   // the next one.
   const pendingRef = useRef<string | null>(null);
+  const pendingDocumentRef = useRef<JSONContent | null>(null);
   const runningRef = useRef(false);
   const commitRef = useRef(commitOnce);
   commitRef.current = commitOnce;
 
-  const save = useCallback((content: string) => {
+  const save = useCallback((content: string, document?: JSONContent | null) => {
     // Blur and unmount can both flush the editor. Avoid starting a CAS write
     // when the submitted document is already the last server-confirmed one.
     if (
@@ -235,6 +245,7 @@ export function useScratchpadDoc({
       return;
     }
     pendingRef.current = content;
+    pendingDocumentRef.current = document ?? null;
     if (runningRef.current) return;
     runningRef.current = true;
     setSaving(true);
@@ -242,9 +253,11 @@ export function useScratchpadDoc({
       try {
         while (pendingRef.current !== null) {
           const next = pendingRef.current;
+          const nextDocument = pendingDocumentRef.current;
           pendingRef.current = null;
+          pendingDocumentRef.current = null;
           try {
-            await commitRef.current(next);
+            await commitRef.current(next, nextDocument);
           } catch {
             // Transient failure — drop this attempt; the next edit's full-content
             // save includes it, so nothing the user typed is lost.
@@ -272,7 +285,7 @@ export function useScratchpadDoc({
     // pull up the React views of the tasks, and tiptap mounts them in `flushSync`.
     // Called directly in the effect, React refuses — “flushSync was called
     // from inside a lifecycle method” (same trap as putting mentions,
-    // cf. components/markdown-editor.tsx). A microtask runs right after
+    // cf. components/editor/document-editor.tsx). A microtask runs right after
     // commit it, therefore out of any rendering.
     const adopted = data.content;
     queueMicrotask(() => applyExternal(adopted, { emitUpdate: false }));

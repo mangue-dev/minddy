@@ -1,5 +1,7 @@
 "use client";
 
+import type { JSONContent } from "@tiptap/core";
+
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 
 import { createUuid } from "@/lib/create-uuid";
@@ -19,12 +21,12 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
 // Deferred editor: keeps tiptap (~1.5 MB) out of every board route's graph —
-// see markdown-editor-lazy.tsx. The chunk is warmed from idle time by the
+// see components/editor/document-editor-lazy.tsx. The chunk is warmed from idle time by the
 // hook below, so the first open waits on nothing.
 import {
-  MarkdownEditor,
-  useIdleMarkdownEditorPreload,
-} from "@/components/markdown-editor-lazy";
+  LazyDocumentEditor,
+  useIdleDocumentEditorPreload,
+} from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
@@ -172,6 +174,11 @@ export function CreateIssueDialog({
   const { track } = useAnalytics();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  /** The editor document of `description`, as last committed (MIN-728);
+      cleared whenever the description is replaced from outside the editor. */
+  const descriptionDocument = useRef<JSONContent | null>(null);
+  // Images of the description still being sent (MIN-728).
+  const [imagesUploading, setImagesUploading] = useState(false);
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
@@ -218,7 +225,7 @@ export function CreateIssueDialog({
   const mentions = useDescriptionMentions(projectId, members);
   // This dialog mounts with its board: warm the editor chunk once the page
   // has painted, so opening the form never shows the loading fallback.
-  useIdleMarkdownEditorPreload();
+  useIdleDocumentEditorPreload();
 
   /**
    * SMART-FILL (MIN-260) — armed by the count, guilty by the ticket.
@@ -311,6 +318,7 @@ export function CreateIssueDialog({
     if (initialTitle) setTitle(initialTitle);
     if (initialDescription) {
       setDescription(initialDescription);
+      descriptionDocument.current = null;
       editorNonEmptyRef.current = true;
       setEditorKey((k) => k + 1); // remount the editor with the seeded content
     }
@@ -370,6 +378,7 @@ export function CreateIssueDialog({
   const clearContent = () => {
     setTitle("");
     setDescription("");
+    descriptionDocument.current = null;
     setEditorKey((k) => k + 1);
     uploads.clear();
     setRelations([]);
@@ -480,6 +489,7 @@ export function CreateIssueDialog({
     track("issue_draft_recovered", {});
     setTitle(draft.title);
     setDescription(draft.description);
+    descriptionDocument.current = null;
     setEditorKey((k) => k + 1); // remount the editor with the draft's content
     editorNonEmptyRef.current = draft.description.trim() !== "";
     setFields({
@@ -501,9 +511,15 @@ export function CreateIssueDialog({
   };
 
   // `target` is set only when creating in a different project (dropdown item).
+  const tPages = useTranslations("Pages");
   const submit = async (keepOpen: boolean, target?: Project) => {
     const trimmed = title.trim();
     if (!trimmed || submitting) return;
+    // An image still uploading has no address yet (MIN-728).
+    if (imagesUploading) {
+      toast.info(tPages("waitForUploads"));
+      return;
+    }
     const other = target && target.id !== projectId ? target : null;
     if (other && relations.length > 0) {
       toast.info(tRelations("crossProjectUnavailable"));
@@ -525,6 +541,9 @@ export function CreateIssueDialog({
         await onCreateInProject(other.id, {
           title: trimmed,
           description: description.trim() || null,
+          ...(description.trim() && descriptionDocument.current
+            ? { description_doc: descriptionDocument.current }
+            : {}),
           status: fields.status,
           priority: fields.priority,
           effort: fields.effort,
@@ -544,6 +563,9 @@ export function CreateIssueDialog({
         await onCreate({
           title: trimmed,
           description: description.trim() || null,
+          ...(description.trim() && descriptionDocument.current
+            ? { description_doc: descriptionDocument.current }
+            : {}),
           ...fields,
           category_ids: categoryIds,
           resources: uploads.inputs,
@@ -607,6 +629,7 @@ export function CreateIssueDialog({
     if (typeof patch.title === "string") setTitle(patch.title);
     if (typeof patch.description === "string") {
       setDescription(patch.description);
+      descriptionDocument.current = null;
       setEditorKey((k) => k + 1); // remount the editor with the new content
     }
     setFields((f) => ({
@@ -735,11 +758,22 @@ export function CreateIssueDialog({
                 className="creation-title w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
               />
               <div className="creation-field-label">{tField("description")}</div>
-              <MarkdownEditor
+              <LazyDocumentEditor
                 mentions={mentions}
                 key={editorKey}
                 value={description}
-                onCommit={setDescription}
+                uploadScope={`projects/${projectId}`}
+                onUploadingChange={setImagesUploading}
+                onCommit={(markdown, content) => {
+                  setDescription(markdown);
+                  descriptionDocument.current = content;
+                }}
+                // An image's address arrives when its upload ends, often
+                // after the field lost focus: follow every change too.
+                onChange={(markdown, content) => {
+                  setDescription(markdown);
+                  descriptionDocument.current = content;
+                }}
                 onEmptyChange={(empty) => {
                   editorNonEmptyRef.current = !empty;
                 }}

@@ -126,6 +126,7 @@ export const fileBlock: PageBlock = {
   extensions: [PageFile],
   icon: Paperclip,
   labelKey: "blockFile",
+  needsUploads: "file",
   slash: {
     group: "advanced",
     order: 7,

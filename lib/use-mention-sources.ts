@@ -34,7 +34,7 @@ import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { pagesHref, pushPagesHistory } from "@/lib/pages-navigation";
-import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
 import type {
@@ -193,11 +193,18 @@ export function useMentionSources(
  * yet arrived, the ticket belongs to a project that we left — returns `null`
  * and rest of the text.
  */
+const NO_MEMBERS: Member[] = [];
+const NO_PROJECTS: Array<{ id: string; name: string }> = [];
+
 export function useMentionLinksFor(
   sources: {
     issues: MentionIssue[];
     objectives: MentionObjective[];
     pages: MentionPage[];
+    /** People and projects the surface already shows, so their pills need
+     no server round trip (MIN-734). */
+    members?: Member[];
+    projects?: Array<{ id: string; name: string }>;
     references?: Parameters<typeof mentionProjectLookup>[0]["references"];
   },
   onOpenIssue?: (projectId: string, issueId: string) => void,
@@ -207,6 +214,8 @@ export function useMentionLinksFor(
   const pathname = usePathname();
   const { openIssue, closeIssue } = useIssuePanelActions();
   const { issues, objectives, pages, references } = sources;
+  const members = sources.members ?? NO_MEMBERS;
+  const projects = sources.projects ?? NO_PROJECTS;
 
   const projectOf = useMemo(
     () => mentionProjectLookup({ issues, objectives, pages, references }),
@@ -217,9 +226,18 @@ export function useMentionLinksFor(
     const href: MentionLinks["href"] = (type, id) =>
       mentionTargetPath(type, id, projectOf(type, id));
     const statusByIssueId = new Map(issues.map((issue) => [issue.id, issue.status]));
+    const labels = new Map<string, string>([
+      ...issues.map((issue) => [`issue:${issue.id}`, issue.identifier] as [string, string]),
+      ...objectives.map((objective) => [`objective:${objective.id}`, objective.name] as [string, string]),
+      ...pages.filter((page) => page.title.trim())
+        .map((page) => [`page:${page.id}`, page.title] as [string, string]),
+      ...members.map((member) => [`member:${member.user_id}`, displayName(member)] as [string, string]),
+      ...projects.map((project) => [`project:${project.id}`, project.name] as [string, string]),
+    ]);
     return {
       href,
       issueStatus: (id) => statusByIssueId.get(id) ?? null,
+      label: (type, id) => labels.get(`${type}:${id}`) ?? null,
       navigate: (type, id) => {
         const target = mentionNavigationTarget(type, id, projectOf(type, id));
         if (!target) return;
@@ -241,11 +259,11 @@ export function useMentionLinksFor(
         }
       },
     };
-  }, [projectOf, router, openDestination, pathname, onOpenIssue, openIssue, closeIssue]);
+  }, [projectOf, issues, objectives, pages, members, projects, router, openDestination, pathname, onOpenIssue, openIssue, closeIssue]);
 }
 
 /**
- * What to pass to `<MarkdownEditor mentions={…} />`: the proposed list
+ * What to pass to `<DocumentEditor mentions={…} />`: the proposed list
  * after the “@”, and the rule which rereads a text already written.
  *
  * The two lists are not the same, and that is intentional. We PROPOSE the members
@@ -258,10 +276,10 @@ export function useDescriptionMentions(
   projectId: string | null | undefined,
   members: Member[],
   onOpenIssue?: (projectId: string, issueId: string) => void,
-): MarkdownEditorMentions {
+): DocumentEditorMentions {
   const { projects, issues, objectives, pages, armNow } =
     useMentionSources(projectId);
-  const links = useMentionLinksFor({ issues, objectives, pages }, onOpenIssue);
+  const links = useMentionLinksFor({ issues, objectives, pages, members, projects }, onOpenIssue);
 
   // Split from the pages: renaming a page rebuilds its few rows, not the
   // thousands of ticket rows of the index.

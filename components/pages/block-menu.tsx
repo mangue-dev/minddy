@@ -60,8 +60,8 @@ import {
 import {
   blockRange,
   blockLink,
+  copyBlocks,
   deleteBlocks,
-  duplicateBlocks,
   focusBlockRange,
   insertSubpageAfter,
   selectedBlockCount,
@@ -150,12 +150,15 @@ export function BlockMenu({
   open,
   onOpenChange,
   onComment,
+  blockLinks = true,
   children,
 }: {
   editor: Editor;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComment?: (anchor: PageCommentAnchor) => void;
+  /** Offer “Copy link to block”: only where the document has an address. */
+  blockLinks?: boolean;
   /** The trigger — the margin handle, or any button. */
   children: React.ReactNode;
 }) {
@@ -221,6 +224,17 @@ export function BlockMenu({
   const closeAndFocus = () => {
     onOpenChange(false);
     focusBlockRange(editor, blockRange(editor));
+  };
+
+  // “Copy” only fills the clipboard; the document is unchanged until a
+  // paste. A subpage keeps “Duplicate”, which copies the page itself: a
+  // copied subpage block would paste a second link to the same page.
+  const copySelection = async () => {
+    try {
+      if (await copyBlocks(editor)) toast.success(t("blockCopied"));
+    } catch {
+      toast.error(t("blockCopyFailed"));
+    }
   };
 
   const copyLink = async () => {
@@ -312,24 +326,26 @@ export function BlockMenu({
           <DropdownMenuItem
             onSelect={() => {
               if (subpageId) void duplicateSubpage(subpageId);
-              else duplicateBlocks(editor);
+              else void copySelection();
               close();
             }}
           >
             <HugeiconsIcon icon={Copy01Icon} />
-            <span className="truncate">{t("duplicateBlock")}</span>
+            <span className="truncate">{t(subpageId ? "duplicateBlock" : "copyBlock")}</span>
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuItem
-          onSelect={() => {
-            void copyLink();
-            close();
-          }}
-        >
-          <HugeiconsIcon icon={Link02Icon} />
-          <span className="truncate">{t("copyBlockLink")}</span>
-        </DropdownMenuItem>
+        {blockLinks && (
+          <DropdownMenuItem
+            onSelect={() => {
+              void copyLink();
+              close();
+            }}
+          >
+            <HugeiconsIcon icon={Link02Icon} />
+            <span className="truncate">{t("copyBlockLink")}</span>
+          </DropdownMenuItem>
+        )}
 
         {onComment && count === 1 ? (
           <DropdownMenuItem

@@ -55,6 +55,7 @@ import {
   signalRealtimeRevalidate,
   watchRealtimeTopic,
 } from "./realtime-topic";
+import { emitDocumentHead } from "./document-collaboration-signals";
 import { emitPageHead } from "./page-collaboration-signals";
 
 /**
@@ -116,6 +117,11 @@ function applyProjectEvent(
   // (MIN-688), our own echoes included: an acknowledgement and a broadcast
   // can race, and the session sorts them out by revision.
   if (change.table === "page_collaboration_heads") emitPageHead(change.record);
+  // Live descriptions (MIN-728): the same content-free wake-up.
+  if (change.table === "rich_document_heads") {
+    emitDocumentHead(change.record);
+    return;
+  }
   if (isOwnEcho(change)) return;
   adoptRemoteRow(queryClient, projectId, remoteEchoOf(change));
 }

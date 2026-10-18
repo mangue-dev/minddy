@@ -19,6 +19,7 @@ import {
   mergeServerIssue,
   patchIssueEverywhere,
   removeIssueEverywhere,
+  issueCachePatch,
 } from "./optimistic/issue-writes";
 import { trackEvent } from "./analytics";
 import {
@@ -138,9 +139,9 @@ export function useGlobalBoardQuery() {
       const handle = issueWrites.begin({
         kind: "patch",
         id: issueId,
-        patch: patch as Partial<Issue>,
+        patch: issueCachePatch(patch),
       });
-      patchIssueEverywhere(queryClient, projectId, issueId, patch as Partial<Issue>);
+      patchIssueEverywhere(queryClient, projectId, issueId, issueCachePatch(patch));
       // Single record point for updateIssue/moveIssue/setIssueCycle — recorded
       // with the optimistic patch so an instant ⌘Z works; retracted on failure.
       const request = updateIssueApi(issueId, patch, {
