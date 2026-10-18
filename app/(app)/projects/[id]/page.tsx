@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Layout3ColumnIcon, FileUploadIcon, LayoutGridIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Layout3ColumnIcon, FileUploadIcon } from "@hugeicons/core-free-icons";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -58,6 +58,7 @@ import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { NumoIcon } from "@/components/numo-icon";
 import { EmptyScene } from "@/components/empty-scene";
 import { KanbanBoard } from "@/components/kanban-board";
+import { BOARD_ICON } from "@/components/feature-icons";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { ObjectiveBoardHeader } from "@/components/objective-banner";
@@ -700,7 +701,7 @@ function ProjectBoard() {
  remains. Import and seed remain with the owner (the API reserves them for him, and he pays for the call). */
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
-            <EmptyScene icon={LayoutGridIcon} title={t("emptyTitle")}>
+            <EmptyScene icon={BOARD_ICON} title={t("emptyTitle")}>
               {isOwner ? (
                 <SplitButton
                   onClick={() => openCreate()}

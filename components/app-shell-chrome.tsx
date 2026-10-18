@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { ContentToaster } from "@/components/content-toaster";
-import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, BubbleChatDelayIcon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AiAutoRotateIcon as CycleIcon, Alert01Icon, ArrowLeft01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
   startTransition,
   useCallback,
@@ -76,6 +76,7 @@ import {
   type AppNavSection,
 } from "@/components/app-sidebar";
 import { SidebarNavOverlay } from "@/components/sidebar-nav-overlay";
+import { BOARD_ICON, ROUTINE_ICON } from "@/components/feature-icons";
 import {
   settingsSectionHref,
   useSettingsSections,
@@ -726,7 +727,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 // entry into primary navigation.
                 key: "go-routines",
                 label: tRoutines("title"),
-                icon: BubbleChatDelayIcon,
+                icon: ROUTINE_ICON,
                 href: "/routines",
                 keys: ["G", "U"],
                 entityType: "navigation",
@@ -747,7 +748,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
          {
           key: "go-all-global",
           label: t("allIssues"),
-          icon: Layout3ColumnIcon,
+          icon: BOARD_ICON,
           href: "/all",
           keys: ["G", "B"],
           entityType: "navigation",
@@ -848,7 +849,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: `pg-tickets-${p.id}`,
             label: t("tickets"),
-            icon: Layout3ColumnIcon,
+            icon: BOARD_ICON,
             keywords: kw,
             meta: chip,
             metaText,
@@ -1159,7 +1160,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const routinesItem: AppNavItem = {
     key: "routines",
     label: t("routines"),
-    icon: BubbleChatDelayIcon,
+    icon: ROUTINE_ICON,
     href: "/routines",
     active: isRoutines,
     shortcut: "U",
@@ -1192,14 +1193,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           {
             key: "all-global",
             label: t("allIssues"),
-            icon: Layout3ColumnIcon,
+            icon: BOARD_ICON,
             href: "/all",
             active: pathname === "/all",
             shortcut: "B",
             contextActions: projects.length > 0 ? [{
               id: "all-new-issue",
               label: t("newIssue"),
-              icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
+              icon: <HugeiconsIcon icon={BOARD_ICON} className="size-4" />,
               transfersFocus: true,
               onSelect: () => openCreateIssue(),
             }] : undefined,
@@ -1299,7 +1300,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             {
               key: "tickets",
               label: t("tickets"),
-              icon: Layout3ColumnIcon,
+              icon: BOARD_ICON,
               href: base,
               active: pathname === base && !objectiveBoardId,
               // P (project) — B is the all-project board, from a project too.
@@ -1431,7 +1432,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} />,
         backBadge: projectToSortBadge(project.id) });
       panels.set(project.id, { key: `project-${project.id}`, title: project.name, project, sections: [{ items: [
-        { key: "tickets", label: t("tickets"), contextActions: projectContext.tabActions(project, "tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
+        { key: "tickets", label: t("tickets"), contextActions: projectContext.tabActions(project, "tickets"), icon: menuIcon(BOARD_ICON), href: base, active: pathname === base && !objectiveBoardId },
         { key: "objectives", label: t("objectives"), contextActions: projectContext.tabActions(project, "objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
         { key: "pages", label: t("pages"), contextActions: projectContext.tabActions(project, "pages"), icon: menuIcon(File02Icon), panel: resource("pages"), active: pathname.startsWith(`${base}/pages`) },
         { key: "triage", label: t("triage"), icon: menuIcon(TriageNavIcon), panel: resource("triage"), active: pathname.startsWith(`${base}/triage`), ...countBadges(triageCounts[project.id]?.triage ?? 0, t("triageBadge", {count: triageCounts[project.id]?.triage ?? 0})) },

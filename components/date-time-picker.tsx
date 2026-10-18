@@ -9,7 +9,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/responsive-popover";
 import { PointerAnchor } from "@/components/pointer-anchor";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { DateTimeIcon, RepeatIcon } from "@hugeicons/core-free-icons";
+import { RepeatIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
@@ -47,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Locale } from "@/i18n/config";
+import { DATE_ICON } from "@/components/feature-icons";
 
 /** Default time applied when the time toggle is switched on. */
 const DEFAULT_HOUR = 9;
@@ -339,7 +340,7 @@ export function DateTimePicker({
   // A recurring ticket has the repeat icon wherever its due date
   // is displayed: this is what distinguishes “August 12” from “every month,
   // August 12” without extending the chip. The cadence can be read on hover.
-  const TriggerIcon = isRecurring ? RepeatIcon : DateTimeIcon;
+  const TriggerIcon = isRecurring ? RepeatIcon : DATE_ICON;
 
   let trigger: React.ReactNode;
   if (variant === "value") {

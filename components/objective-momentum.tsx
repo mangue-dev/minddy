@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, Calendar01Icon, CancelCircleIcon as CircleSlash2, MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, CancelCircleIcon as CircleSlash2, MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
 import { useFormatter, useNow, useTimeZone, useTranslations } from "next-intl";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/objective-momentum";
 import type { Issue, Objective } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { DATE_ICON } from "@/components/feature-icons";
 
 const STATE_META: Record<
   ObjectiveMomentumState,
@@ -114,7 +115,7 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
   );
   const titleId = `objective-momentum-${objective.id}`;
   const canceled = insight.state === "canceled";
-  const SummaryIcon = canceled ? CircleSlash2 : Calendar01Icon;
+  const SummaryIcon = canceled ? CircleSlash2 : DATE_ICON;
   const pace = insight.targetPace ? PACE_META[insight.targetPace] : null;
   const periodDate = (value: string) =>
     format.dateTime(new Date(value), {

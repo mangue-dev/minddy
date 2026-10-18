@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, DateTimeIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { startTransition } from "react";
 import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
@@ -18,6 +18,7 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { pushObjectiveBoardHistory } from "@/lib/objective-board-navigation";
 import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
 import type { Issue, Member, Objective } from "@/lib/types";
+import { DATE_ICON } from "@/components/feature-icons";
 import {
   Tooltip,
   TooltipContent,
@@ -200,7 +201,7 @@ export function ObjectiveBoardHeader({
               )}
               aria-hidden
             >
-              <HugeiconsIcon icon={DateTimeIcon} className="size-5" />
+              <HugeiconsIcon icon={DATE_ICON} className="size-5" />
             </span>
             <div className="flex flex-col leading-tight">
               <span className="text-[11px] text-muted-foreground">

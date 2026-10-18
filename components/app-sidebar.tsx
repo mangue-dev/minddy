@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Analytics01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -73,6 +73,7 @@ import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { UsageIndicator } from "@/components/usage-indicator";
+import { STATISTICS_ICON } from "@/components/feature-icons";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
   SIDEBAR_TOOLTIP_DELAY_MS,
@@ -617,7 +618,7 @@ function AccountButton({
       ...(hasManagedService ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
       { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
       { href: "/trash", label: t("trash"), icon: Delete02Icon },
-      { href: "/statistics", label: t("statistics"), icon: Analytics01Icon },
+      { href: "/statistics", label: t("statistics"), icon: STATISTICS_ICON },
       ...(isAdmin ? [{ href: "/admin", label: t("adminDashboard"), icon: Shield01Icon }] : []),
     ];
     return <>
@@ -706,7 +707,7 @@ function AccountButton({
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/statistics">
-                  <HugeiconsIcon icon={Analytics01Icon} />
+                  <HugeiconsIcon icon={STATISTICS_ICON} />
                   {t("statistics")}
                 </Link>
               </DropdownMenuItem>

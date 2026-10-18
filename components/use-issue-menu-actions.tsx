@@ -5,7 +5,7 @@ import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { toast } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Copy01Icon, DateTimeIcon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Copy01Icon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { RelationIcon } from "@/components/issue-indicators";
 import { KEY_FOR_FIELD, type ShortcutField } from "@/components/issue-field-shortcuts";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -15,6 +15,7 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type { IssuePr } from "@/lib/agent-api";
 import type { Issue, IssueRelationType } from "@/lib/types";
+import { DATE_ICON } from "@/components/feature-icons";
 
 export interface IssueMenuOptions {
   issue: Issue;
@@ -170,7 +171,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
                 "calendrier",
                 "calendar",
               ],
-              icon: <HugeiconsIcon icon={DateTimeIcon} className="size-4" />,
+              icon: <HugeiconsIcon icon={DATE_ICON} className="size-4" />,
               shortcut: KEY_FOR_FIELD.dueDate,
               transfersFocus: true,
               onSelect: () => onOpenField("dueDate"),

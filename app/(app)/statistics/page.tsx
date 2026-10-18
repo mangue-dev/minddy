@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, BarChartIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Button, cn } from "mangue-ui";
@@ -34,6 +34,7 @@ import {
   TotalItem,
 } from "@/components/stats/stats-chrome";
 import type { StatsCycles } from "@/lib/types";
+import { STATISTICS_ICON } from "@/components/feature-icons";
 
 /**
  * Personal activity story (MIN-433): annual activity, where the work landed,
@@ -202,7 +203,7 @@ export default function StatisticsPage() {
           className="min-h-0 flex-1 overflow-y-auto"
         >
           <div className="mx-auto w-full max-w-5xl px-6 py-10">
-            <EmptyScene icon={BarChartIcon} title={t("emptyTitle")}>
+            <EmptyScene icon={STATISTICS_ICON} title={t("emptyTitle")}>
               {canCreate ? (
                 <Button onClick={() => openCreateIssue()}>
                   <HugeiconsIcon icon={Add01Icon} />

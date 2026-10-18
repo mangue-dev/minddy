@@ -2,7 +2,7 @@
 
 import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, HierarchySquare01Icon, Calendar01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, HierarchySquare01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -47,6 +47,7 @@ import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { useIssuePr, useIssuePrReadiness } from "@/components/issue-pr-context";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
+import { DATE_ICON } from "@/components/feature-icons";
 import {
   isPrWorthShowing,
   type IssuePr,
@@ -477,7 +478,7 @@ function DueDatePick({
         {recurrence ? (
           <HugeiconsIcon icon={RepeatIcon} className="size-3 shrink-0" />
         ) : (
-          <HugeiconsIcon icon={Calendar01Icon} className="size-3 shrink-0" />
+          <HugeiconsIcon icon={DATE_ICON} className="size-3 shrink-0" />
         )}
         {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
       </span>
