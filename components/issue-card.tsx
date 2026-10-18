@@ -569,28 +569,28 @@ function PlanPick({
     its review. Read-only (a span without a handler) in the drag overlay / public board.
 
     The colors are GitHub's, as everywhere else: GREEN when open,
-    PURPLE when merged, NEUTRAL when the PR is still a draft — and the
-    words follow the state: “PR open” once reviewable, “PR available”
-    while it is still a draft. The chip used to be green in every state — announcing
-    “PR available” in green for work already delivered, while the side-panel
-    chip said “PR merged” in purple one click away. */
+    PURPLE when merged, NEUTRAL when the PR is still a draft. The color and
+    icon already say the state, so the chip shows the PR's number (MIN-735);
+    the state words stay in the tooltip and for screen readers. */
 function PrPick({
   state,
+  number,
   onOpen,
 }: {
   state: IssuePr["state"];
+  number: number;
   onOpen?: () => void;
 }) {
   const t = useTranslations("Agent");
   const merged = state === "merged";
   const draft = state === "draft";
   const Icon = merged ? GitMergeIcon : draft ? GitPullRequestDraftIcon : GitPullRequestIcon;
+  const stateLabel = merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen");
   const content = (
     <>
       <AppIcon icon={Icon} className="size-3.5 shrink-0" />
-      <span className="truncate">
-        {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
-      </span>
+      <span className="truncate tabular-nums">#{number}</span>
+      <span className="sr-only">{stateLabel}</span>
     </>
   );
   const tone = merged
@@ -617,7 +617,7 @@ function PrPick({
       <TooltipTrigger asChild>
         <button
           type="button"
-          aria-label={t("viewPullRequest")}
+          aria-label={`${t("viewPullRequest")} #${number}, ${stateLabel}`}
           onClick={(e) => {
             stop(e);
             onOpen();
@@ -632,7 +632,7 @@ function PrPick({
           {content}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{t("viewPullRequest")}</TooltipContent>
+      <TooltipContent>{`${t("viewPullRequest")} · ${stateLabel}`}</TooltipContent>
     </Tooltip>
   );
 }
@@ -828,7 +828,7 @@ export const IssueCardBody = memo(function IssueCardBody({
         <span className="flex shrink-0 items-center gap-1.5">
           {/* An actionable PR takes the place of plan progress. */}
           {pr && isPrWorthShowing(pr) ? (
-            <PrPick state={pr.state} onOpen={onOpenPr} />
+            <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
           ) : plan.total > 0 ? (
             <PlanPick progress={plan} onOpen={onOpenPlan} />
           ) : null}
