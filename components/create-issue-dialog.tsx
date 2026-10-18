@@ -27,6 +27,7 @@ import {
   LazyDocumentEditor,
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
+import { hasPendingUploads } from "@/components/editor/document-uploads";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
@@ -509,9 +510,15 @@ export function CreateIssueDialog({
   };
 
   // `target` is set only when creating in a different project (dropdown item).
+  const tPages = useTranslations("Pages");
   const submit = async (keepOpen: boolean, target?: Project) => {
     const trimmed = title.trim();
     if (!trimmed || submitting) return;
+    // An image still uploading has no address yet (MIN-728).
+    if (hasPendingUploads(descriptionDocument.current)) {
+      toast.info(tPages("uploadInProgress"));
+      return;
+    }
     const other = target && target.id !== projectId ? target : null;
     if (other && relations.length > 0) {
       toast.info(tRelations("crossProjectUnavailable"));

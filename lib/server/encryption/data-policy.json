@@ -4186,6 +4186,7 @@
       "routing_identity": [
         "id",
         "issue_id",
+        "materializing_token",
         "objective_id",
         "project_id",
         "user_id"

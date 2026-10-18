@@ -198,6 +198,8 @@ describe("copy", () => {
     editor.commands.setTextSelection(editor.state.doc.content.size - 1);
     // jsdom has no ClipboardEvent; pasteHTML only needs an event to carry.
     vi.stubGlobal("ClipboardEvent", class extends Event {});
+    // jsdom has no layout to scroll the pasted selection into.
+    (editor.view as unknown as { scrollToSelection: () => void }).scrollToSelection = () => {};
     try {
       editor.view.pasteHTML(copied.html);
       expect(topLevel(editor).filter((name) => name === "blockquote")).toHaveLength(2);

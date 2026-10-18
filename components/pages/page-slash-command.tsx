@@ -275,7 +275,12 @@ function renderSlashMenu() {
 }
 
 /** The “/” extension of a page. Configured with the TRANSLATED catalog. */
-export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
+export const PageSlashCommand = Extension.create<{
+  /** The catalog, or a reader of it: a surface whose actions arrive after the
+   editor is built (a routine's repository skills) passes a reader, read at
+   each "/" — the plugin is built once. */
+  items: PageSlashItem[] | (() => PageSlashItem[]);
+}>({
   name: "pageSlashCommand",
 
   addOptions() {
@@ -283,7 +288,10 @@ export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
   },
 
   addProseMirrorPlugins() {
-    const items = () => this.options.items;
+    const items = () => {
+      const { items: catalog } = this.options;
+      return typeof catalog === "function" ? catalog() : catalog;
+    };
     return [
       Suggestion<PageSlashItem>({
         // pnpm resolves @tiptap/core twice (same version) — the editor

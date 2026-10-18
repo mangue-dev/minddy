@@ -107,4 +107,20 @@ run the capture pipeline, which writes the demo world on the production base.
 - Pull request diff remarks: `components/pull-requests/pr-review-comments.tsx`;
   in a pull request they already used the shared composer.
 
+- Pull request review body: `components/pull-requests/pr-detail.tsx` and
+  `ForgeMarkdownField` in `components/pull-requests/pr-comment-composer.tsx`;
+  the review dialog's message now uses the shared editor with forge mentions
+  and its existing uploads. `code-work` does not describe the field, so it is
+  unchanged.
+- Review fixes, no documented behavior change: a project reader cannot change
+  a task's state in a plan or description (`task-item-view.tsx`); the
+  selection toolbar takes clicks inside modal dialogs; a creation dialog waits
+  for an image still uploading (`Pages.uploadInProgress`); the routine
+  prompt's `/` lists skills that load after it opens; a live session that
+  failed falls back to saving Markdown. Server side
+  (`20270109200066`): the materialization signs with the last author of the
+  pending typing, keeps typed blocks when an outside write lands meanwhile,
+  and no longer blocks the cron's queue; clear steps are purged once a
+  document is sealed; carets are sent by members who may write.
+
 No two-member browser session or forge round trip was run for this review.

@@ -471,25 +471,45 @@ export async function markDocumentMaterialized(
 
 /**
  * Claim the writing of a description's Markdown, so materializations of one
- * description never overlap across instances. The claim expires on its own.
+ * description never overlap across instances. The claim expires on its own;
+ * the token returned releases it, and only it.
  */
 export async function claimDocumentMaterialization(
   documentId: string,
   service: SupabaseClient = getServiceClient()
-): Promise<boolean> {
+): Promise<string | null> {
+  const token = crypto.randomUUID();
   const { data, error } = await service.rpc("claim_rich_document_materialization", {
-    p_id: documentId, p_seconds: 30,
+    p_id: documentId, p_token: token, p_seconds: 30,
   });
   if (error) throw new Error("Unable to claim the materialization");
-  return data === true;
+  return data === true ? token : null;
 }
 
 export async function releaseDocumentMaterialization(
   documentId: string,
+  token: string,
   service: SupabaseClient = getServiceClient()
 ): Promise<void> {
-  const { error } = await service.rpc("release_rich_document_materialization", { p_id: documentId });
+  const { error } = await service.rpc("release_rich_document_materialization", {
+    p_id: documentId, p_token: token,
+  });
   if (error) console.error("[rich-documents] materialization release failed");
+}
+
+/**
+ * Send a document whose Markdown could not be written (its parent is gone,
+ * or its signer may no longer write it) to the back of the cron's queue, so
+ * it never holds the queue's head.
+ */
+export async function deferDocumentMaterialization(
+  documentId: string,
+  service: SupabaseClient = getServiceClient()
+): Promise<void> {
+  const { error } = await service.from("rich_documents")
+    .update({ pending_since: new Date().toISOString() })
+    .eq("id", documentId).not("pending_since", "is", null);
+  if (error) console.error("[rich-documents] materialization deferral failed");
 }
 
 /** Descriptions and plans whose typing has waited longer than `olderThanMs` for

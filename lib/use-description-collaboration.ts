@@ -202,10 +202,22 @@ export function useDescriptionCollaboration({
 }): DescriptionCollaborationSession {
   const key = id && enabled ? `${kind}:${id}` : null;
   const sessionRef = useRef<Session | null>(null);
-  const [status, setStatus] = useState<DescriptionCollaborationSession["status"]>(() => {
+  // The status is kept WITH the key it describes: re-enabled (a panel
+  // reopened, the Plan tab shown again), the hook reads "loading" for the new
+  // key instead of the "unavailable" its previous key left behind, which
+  // mounted a fallback editor for a frame.
+  const [state, setState] = useState<{ key: string | null; status: DescriptionCollaborationSession["status"] }>(() => {
     if (key && !sessionRef.current) sessionRef.current = reusable(key);
-    return key && sessionRef.current?.key === key ? "ready" : "loading";
+    return { key, status: key && sessionRef.current?.key === key ? "ready" : "loading" };
   });
+  const status: DescriptionCollaborationSession["status"] = !key
+    ? "unavailable"
+    : state.key === key ? state.status : "loading";
+  const setStatus = useCallback(
+    (next: DescriptionCollaborationSession["status"], forKey: string | null) =>
+      setState({ key: forKey, status: next }),
+    []
+  );
   const [, setRevision] = useState(0);
   const rerender = useCallback(() => setRevision((n) => n + 1), []);
 
@@ -220,32 +232,32 @@ export function useDescriptionCollaboration({
   /* ── Creating the session from a snapshot ──────────────────────────────── */
   useEffect(() => {
     if (!key || !id) {
-      setStatus("unavailable");
+      setStatus("unavailable", key);
       return;
     }
     if (sessionRef.current?.key === key) {
       retain(sessionRef.current);
-      setStatus("ready");
+      setStatus("ready", key);
       return;
     }
     const kept = reusable(key);
     if (kept) {
       sessionRef.current = kept;
       retain(kept);
-      setStatus("ready");
+      setStatus("ready", key);
       return;
     }
     // The previous description's stream is not closed: detached, it keeps
     // sending whatever was still unsaved.
     sessionRef.current = null;
-    setStatus("loading");
+    setStatus("loading", key);
     const controller = new AbortController();
     void takeDescriptionSnapshot(kind, id, controller.signal)
       .then((snapshot) => {
         if (controller.signal.aborted) return;
         // A plan's document has its own id; a description's is its parent's.
         if (snapshot.kind !== kind || (kind !== "plan" && snapshot.documentId !== id)) {
-          setStatus("unavailable");
+          setStatus("unavailable", key);
           return;
         }
         canWriteRef.current = snapshot.canWrite;
@@ -282,7 +294,17 @@ export function useDescriptionCollaboration({
             }
             onRefusedRef.current(reason);
           },
-          onFatal: (error) => onFatalRef.current(error),
+          // A stopped stream sends nothing more: it leaves the retained set,
+          // and the surface falls back to saving Markdown rather than keep
+          // an editor whose typing would go nowhere.
+          onFatal: (error) => {
+            if (retained.get(key) === created) retained.delete(key);
+            if (sessionRef.current === created) {
+              sessionRef.current = null;
+              setStatus("unavailable", key);
+            }
+            onFatalRef.current(error);
+          },
           onDiscarded: () => onRefusedRef.current("step-failed"),
           onAttached: (attached) => {
             for (const listener of attachedListeners) listener(attached);
@@ -301,10 +323,10 @@ export function useDescriptionCollaboration({
         };
         sessionRef.current = created;
         retain(created);
-        setStatus("ready");
+        setStatus("ready", key);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setStatus("unavailable");
+        if (!controller.signal.aborted) setStatus("unavailable", key);
       });
     return () => controller.abort();
   }, [key, kind, id]);
@@ -404,7 +426,9 @@ export function useDescriptionCollaboration({
       },
       publishCaret: (selection) => {
         if (!session.presence) return;
-        if (!selection || !canWriteRef.current) {
+        // The session's own right: a hook that adopted a retained session
+        // never read its snapshot.
+        if (!selection || !session.snapshot.canWrite) {
           session.presence.publish(null);
           return;
         }

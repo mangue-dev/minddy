@@ -40,6 +40,7 @@ Markdown cannot carry: block identities, colors, mention pills.
 | `supabase/migrations/20270109200063_description_collaboration.sql` | Stream columns, journal, commit RPC, head wake-ups, caret topics |
 | `supabase/migrations/20270109200064_description_materialization_claim.sql` | One materialization at a time |
 | `supabase/migrations/20270109200065_issue_plan_documents.sql` | The `plan` kind and its caret topic |
+| `supabase/migrations/20270109200066_description_collaboration_review_fixes.sql` | Clear steps purged on sealing, metadata writes on clear documents, writer-only carets, claim tokens |
 
 ## The authority
 
@@ -91,7 +92,10 @@ Every description write reaches live editors as steps:
 - A writer that bypasses both (the forge sync) is noticed through
   `materialized_hash`: the next snapshot, catch-up or batch folds that
   Markdown into the head, the same way, but only while nothing is pending.
-  With typing pending, the materialization folds it first, under its claim.
+  With typing pending, the materialization folds it first, under its claim,
+  into every block the pending steps did not touch (`touchedBodyBlockIds`):
+  typing wins on the blocks it touched. The Markdown last materialized is not
+  kept, so a block both sides rewrote keeps the typed version.
 
 A whole-description replacement written from an older read remains a
 replacement: typing that was not materialized when the writer read the text
@@ -105,16 +109,19 @@ every-minute `/api/cron/page-materialization` job also materializes
 descriptions whose typing has waited more than 15 s, 50 per run.
 
 A materializer claims the document first
-(`claim_rich_document_materialization`, 30 s): batches of one session can be
-accepted by different instances, and two concurrent materializations would
-each read the other's fresh Markdown as a foreign write. Under the claim it
-folds a foreign Markdown in, then writes the head's Markdown through the
-ordinary writer (`updateIssueFields` or `updateObjective` with
-`descriptionFromDocument`), signed by the account that typed it, so
-mentions, page links, activity, webhooks and the issue index follow as for
-any edit. It then records the revision and fingerprint and releases the
-claim. Presentation-only batches (mention pills rebuilt from text) are not
-signed and write no Markdown.
+(`claim_rich_document_materialization`, 30 s, with a token that alone
+releases it): batches of one session can be accepted by different instances,
+and two concurrent materializations would each read the other's fresh
+Markdown as a foreign write. Under the claim it folds a foreign Markdown in,
+then writes the head's Markdown through the ordinary writer
+(`updateIssueFields` or `updateObjective` with `descriptionFromDocument`,
+`planFromDocument` for a plan), signed by the last author of the pending
+batches in the journal, so mentions, page links, activity, webhooks and the
+issue index follow as for any edit. It then records the revision and
+fingerprint and releases the claim. Presentation-only batches (mention pills
+rebuilt from text) are not signed, and pending presentation alone writes no
+Markdown. A parent that is gone, or a write its signer may no longer make,
+moves the document to the back of the cron's queue (`pending_since`).
 
 ## Wake-ups and carets
 
@@ -126,8 +133,8 @@ editor is attached.
 
 Carets travel as client Broadcast on the private `issue-collaboration:<id>`,
 `plan-collaboration:<id>` and `objective-collaboration:<id>` topics. The database binds them to the
-parent's project membership generation and only lets members of that project
-send or receive, while the parent is not trashed; the channel behavior is the
+parent's project membership generation; members of that project receive,
+members who may write it send, while the parent is not trashed; the channel behavior is the
 page caret channel's (`lib/page-collaboration-presence.ts`).
 
 ## Surfaces

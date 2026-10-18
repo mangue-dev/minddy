@@ -234,7 +234,7 @@
       "functionReferences": []
     },
     "guard_rich_document()": {
-      "sha256": "47334bda043479e47bbc99a631acf8c046c51a64b6ff7f0c9cbfc059c96086cc",
+      "sha256": "cff5da215afa2a86c54279994e15002644d6d6c7fd09aba1b57f6e73b694854d",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3353,7 +3353,7 @@
       "functionReferences": []
     },
     "purge_clear_rich_documents(integer)": {
-      "sha256": "c67aafeffabc83d393bf805d577186b864a919c3d4342b1f05cc69458cb35bd6",
+      "sha256": "854608f650e49ac49e4444f6f1c07cc00acf3669f93cd9f63df09d8ec63b4447",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3363,13 +3363,15 @@
         "issues",
         "objectives",
         "rich_documents",
-        "user_scratchpad"
+        "user_scratchpad",
+        "rich_document_batches"
       ],
       "protectedRelations": [
         "issues",
         "objectives",
         "rich_documents",
-        "user_scratchpad"
+        "user_scratchpad",
+        "rich_document_batches"
       ],
       "functionReferences": []
     },
@@ -4584,21 +4586,6 @@
       "protectedRelations": [],
       "functionReferences": []
     },
-    "release_rich_document_materialization(uuid)": {
-      "sha256": "34c19059aab7d9bd4b802682b5d36ea69e1bb67c51480a5399ef37db3933d845",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "rich_documents"
-      ],
-      "protectedRelations": [
-        "rich_documents"
-      ],
-      "functionReferences": []
-    },
     "accept_project_invitation_guarded(uuid,uuid)": {
       "sha256": "1a80bf6331269d3989f97bd55805ebffa2823e518daf7b2cab8d1fd3c51b8a9c",
       "securityDefiner": true,
@@ -5217,6 +5204,21 @@
       ],
       "functionReferences": []
     },
+    "release_rich_document_materialization(uuid,uuid)": {
+      "sha256": "08347a89fec11ebe5f61e090c830edee68ab3f531212d68aec8fbf42c6795309",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "rich_documents"
+      ],
+      "protectedRelations": [
+        "rich_documents"
+      ],
+      "functionReferences": []
+    },
     "unlink_pull_request_from_issue_atomic(uuid,uuid)": {
       "sha256": "870a49370ba378ffb4bf0a9da298e0255a11ece1d5411fcdc6a0678e166522f4",
       "securityDefiner": true,
@@ -5254,21 +5256,6 @@
         "pages",
         "projects",
         "page_collaboration_batches"
-      ],
-      "functionReferences": []
-    },
-    "claim_rich_document_materialization(uuid,integer)": {
-      "sha256": "2468d339e273110021535b1910d32279a3cccd0cbd8eb07da12b9ee836afca4e",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "rich_documents"
-      ],
-      "protectedRelations": [
-        "rich_documents"
       ],
       "functionReferences": []
     },
@@ -5716,6 +5703,21 @@
         "forge_relay_refresh_lineage"
       ],
       "protectedRelations": [],
+      "functionReferences": []
+    },
+    "claim_rich_document_materialization(uuid,uuid,integer)": {
+      "sha256": "003123afc862d2892abed1f3a9fd1fe8c10db590c210908e87bd616ad8797716",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "rich_documents"
+      ],
+      "protectedRelations": [
+        "rich_documents"
+      ],
       "functionReferences": []
     },
     "fail_numo_routine_occurrence(uuid,uuid,text,text,text)": {
@@ -6279,7 +6281,7 @@
       ]
     },
     "commit_rich_document(uuid,bigint,jsonb,jsonb,integer,jsonb,text)": {
-      "sha256": "15401ff555167f0f3b213687c57097b5d0f8ee0e3e45c4c292653250918f6d56",
+      "sha256": "1c820de6c7cb17f4efe3424b27fac8017e13f7c08f1add1a0c2777122c5fffc5",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

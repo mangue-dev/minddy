@@ -40,10 +40,10 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
 const skills = [{ path: "s/review/SKILL.md", name: "review", description: "Review", source: ".agents/skills" }] as never;
 const mentions = [{ type: "member" as const, id: "u1", label: "Alice", occurrence: 0 }];
 
-function render(value: string, onChange: (text: string, found: unknown[]) => void) {
+function render(value: string, onChange: (text: string, found: unknown[]) => void, available: unknown = skills) {
   return act(async () => {
     root.render(createElement(PromptEditor, {
-      value, mentions, onChange, skills,
+      value, mentions, onChange, skills: (available ?? undefined) as typeof skills,
       mentionSources: { options: [], scan: (text) => [{ type: "text", text }] },
     }));
     await settle();
@@ -91,9 +91,25 @@ it("pastes text as typed, without Markdown entities", async () => {
   vi.stubGlobal("ClipboardEvent", class extends Event {});
   await act(async () => {
     const editor = liveEditor();
-    editor.commands.focus("end");
+    // jsdom has no layout: a paste scrolls to the selection, which measures
+    // text through getClientRects.
+    (editor.view as unknown as { scrollToSelection: () => void }).scrollToSelection = () => {};
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
     editor.view.pasteText(" if 5 > 3, add <Button>");
     await settle();
   });
   expect(onChange).toHaveBeenLastCalledWith("Start if 5 > 3, add <Button>", []);
+});
+
+it("offers skills in \"/\" that load after the field opened", async () => {
+  const onChange = vi.fn();
+  await render("Start", onChange, null);
+  const slash = () => {
+    const extension = liveEditor().extensionManager.extensions.find((item) => item.name === "pageSlashCommand");
+    const items = (extension!.options as { items: unknown }).items;
+    return (typeof items === "function" ? items() : items) as Array<{ label: string }>;
+  };
+  expect(slash().map((item) => item.label)).toEqual([]);
+  await render("Start", onChange);
+  expect(slash().map((item) => item.label)).toEqual(["review"]);
 });

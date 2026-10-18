@@ -70,6 +70,7 @@ export {
   isCanonicalBodyJSON,
   rebaseCollabSteps,
   sameCollabValue,
+  touchedBodyBlockIds,
 } from "@/lib/page-collaboration-document";
 
 /**

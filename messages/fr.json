@@ -2124,6 +2124,7 @@
     "uploadRetry": "Réessayer",
     "uploadTooLarge": "{name} dépasse {max} Mo",
     "uploadImagesOnly": "{name} n’est pas une image : seules les pages acceptent les autres fichiers",
+    "uploadInProgress": "Attendez la fin de l’envoi de l’image.",
     "uploadEmpty": "{name} est vide",
     "promotePrompt": "Convertis cette tâche de la page « {page} » de mon projet en ticket :\n\n{note}\n\nSi la tâche n'est pas assez claire pour en faire un bon ticket, relis le reste de la page pour le contexte, et pose-moi des questions avant de le créer. Une fois le ticket créé, coche cette tâche sur la page : elle vit désormais dans le ticket.",
     "subpageUntitled": "Page sans titre",

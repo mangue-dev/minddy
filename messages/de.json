@@ -2124,6 +2124,7 @@
     "uploadRetry": "Wiederholen",
     "uploadTooLarge": "{name} ist größer als {max} MB",
     "uploadImagesOnly": "{name} ist kein Bild: Andere Dateien sind nur in Seiten möglich",
+    "uploadInProgress": "Warte, bis das Bild hochgeladen ist.",
     "uploadEmpty": "{name} ist leer",
     "promotePrompt": "Wandle diese Aufgabe von der Seite „{page}“ meines Projekts in ein Problem um:\n\n{note}\n\nWenn die Aufgabe nicht klar genug ist, um daraus ein gutes Problem zu erstellen, lies den Rest der Seite, um den Kontext zu verstehen, und stelle mir vor dem Erstellen Fragen. Sobald das Problem erstellt wurde, hake die Aufgabe auf der Seite ab. Sie befindet sich jetzt im Problem.",
     "subpageUntitled": "Unbenannte Seite",

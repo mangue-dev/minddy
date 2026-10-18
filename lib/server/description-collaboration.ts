@@ -17,6 +17,7 @@ import {
   commitDocument,
   releaseDocumentMaterialization,
   createDocumentStream,
+  deferDocumentMaterialization,
   documentBatchReceipt,
   documentIdOf,
   markDocumentMaterialized,
@@ -253,6 +254,63 @@ async function foldExternalWrite(owner: Owner, description: string, actorId: str
 }
 
 /**
+ * The head's blocks that pending typing touched take precedence over the
+ * merged document: `merged` is the head reconciled with a Markdown written
+ * outside the authority. The text last materialized is not kept, so a block
+ * the outside writer also rewrote cannot be told from one it left as it was:
+ * typing wins on every block it touched, the outside write on all others. A
+ * typed block the reconciliation dropped is put back after the block that
+ * preceded it.
+ */
+function keepTypedBlocks(head: JSONContent, merged: JSONContent, touched: ReadonlySet<string>): JSONContent {
+  const idOf = (block: JSONContent | undefined) =>
+    typeof block?.attrs?.blockId === "string" ? block.attrs.blockId : null;
+  const headBlocks = head.content ?? [];
+  const blocks = [...(merged.content ?? [])];
+  headBlocks.forEach((block, index) => {
+    const id = idOf(block);
+    if (!id || !touched.has(id)) return;
+    const at = blocks.findIndex((candidate) => idOf(candidate) === id);
+    if (at >= 0) {
+      blocks[at] = block;
+      return;
+    }
+    let insertAt = 0;
+    for (let previous = index - 1; previous >= 0; previous -= 1) {
+      const before = idOf(headBlocks[previous]);
+      const position = before ? blocks.findIndex((candidate) => idOf(candidate) === before) : -1;
+      if (position >= 0) {
+        insertAt = position + 1;
+        break;
+      }
+    }
+    blocks.splice(insertAt, 0, block);
+  });
+  return { ...merged, content: blocks };
+}
+
+/**
+ * Under the materialization claim, typing is pending and the parent's
+ * Markdown was written outside the authority meanwhile (the forge sync). The
+ * outside write is folded into every block typing did not touch; the typed
+ * blocks stay. Nothing is recorded as materialized: the caller writes the
+ * merged text next.
+ */
+async function foldExternalWriteUnderTyping(owner: Owner, description: string) {
+  const markdown = await descriptionMarkdownServer();
+  const collab = pageCollaborationServer();
+  return commitServerEdit(owner, null, async (head) => {
+    const batches = await readDocumentBatches(owner, head.materializedRevision, null);
+    const steps = batches
+      .filter((batch) => batch.base >= head.materializedRevision)
+      .flatMap((batch) => batch.steps);
+    const touched = new Set(collab.touchedBodyBlockIds(head.content, steps));
+    const merged = markdown.reconcile(head.content, markdown.fromMarkdown(description));
+    return keepTypedBlocks(head.content, merged, touched);
+  }, { authorId: null, markdownForHash: null });
+}
+
+/**
  * A writer of the parent's Markdown has just written it (MIN-728): the issue
  * and objective writers call this after their update, so connected editors
  * receive the change as steps. `content` is the editor document when the
@@ -441,8 +499,11 @@ async function runMaterialization(
 /**
  * Write the parent's Markdown for the head, through the ordinary writer so
  * mentions, links, activity, webhooks and indexing follow as for any edit.
- * It is signed by the account whose typing it is (`authorId`), or the last
- * author in the journal.
+ * It is signed by the last account whose typing is pending, read from the
+ * journal — batches of one description can reach several instances — or by
+ * `authorId` when the journal no longer has it. A parent that is gone, or a
+ * write the signer may no longer make, sends the document to the back of the
+ * cron's queue rather than blocking it.
  */
 export async function materializeDescription(
   owner: Owner,
@@ -452,24 +513,28 @@ export async function materializeDescription(
   if (!first) return "missing";
   if (first.materializedRevision >= first.revision) return "unchanged";
   const documentId = documentIdOf(owner);
-  if (!await claimDocumentMaterialization(documentId)) return "busy";
+  const claim = await claimDocumentMaterialization(documentId);
+  if (!claim) return "busy";
   try {
     const parent = await readParent(owner.kind, owner.id);
-    if (!parent) return "missing";
+    if (!parent) {
+      await deferDocumentMaterialization(documentId);
+      return "missing";
+    }
     // Under the claim, a Markdown that is not the one last materialized was
-    // written outside the authority: fold it in before writing over it.
+    // written outside the authority: fold it into the blocks typing did not
+    // touch before writing over it.
     let head = first;
-    if (first.materializedHash !== markdownFingerprint(documentIdOf(owner), parent.description)) {
-      head = await foldExternalWrite(owner, parent.description, null) ?? first;
+    if (first.materializedHash !== markdownFingerprint(documentId, parent.description)) {
+      head = await foldExternalWriteUnderTyping(owner, parent.description) ?? first;
     }
     head = await readDocumentHead(owner, null) ?? head;
     if (head.materializedRevision >= head.revision) return "unchanged";
     const markdown = (await descriptionMarkdownServer()).toMarkdown(head.content);
-    let actor = authorId;
-    if (!actor) {
-      const batches = await readDocumentBatches(owner, Math.max(0, head.revision - 1), null);
-      actor = [...batches].reverse().find((batch) => batch.authorId)?.authorId ?? null;
-    }
+    // A presentation batch (pills rebuilt by a reader) has no author: the
+    // signer is the last author across everything pending.
+    const pending = await readDocumentBatches(owner, head.materializedRevision, null);
+    const actor = [...pending].reverse().find((batch) => batch.authorId)?.authorId ?? authorId;
     const hash = markdownFingerprint(documentIdOf(owner), markdown);
     if (!actor || markdown.trim() === parent.description.trim()) {
       // Nothing to sign: presentation-only batches, or a text already written.
@@ -489,12 +554,13 @@ export async function materializeDescription(
         });
     if (!result.ok) {
       console.error("[description-collaboration] materialization write refused:", result.status);
+      await deferDocumentMaterialization(documentId);
       return "unchanged";
     }
     await markDocumentMaterialized(documentIdOf(owner), head.revision, hash);
     return "materialized";
   } finally {
-    await releaseDocumentMaterialization(documentId);
+    await releaseDocumentMaterialization(documentId, claim);
   }
 }
 

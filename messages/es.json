@@ -2124,6 +2124,7 @@
     "uploadRetry": "Reintentar",
     "uploadTooLarge": "{name} supera los {max} MB",
     "uploadImagesOnly": "{name} no es una imagen: solo las páginas aceptan otros archivos",
+    "uploadInProgress": "Espera a que termine de subirse la imagen.",
     "uploadEmpty": "{name} está vacío",
     "promotePrompt": "Convierte esta tarea de la página «{page}» de mi proyecto en una incidencia:\n\n{note}\n\nSi la tarea no está lo bastante clara como para crear una buena incidencia, lee el resto de la página para obtener contexto y hazme preguntas antes de crearla. Cuando exista la incidencia, marca la tarea como completada en la página; ahora su lugar está en la incidencia.",
     "subpageUntitled": "Página sin título",

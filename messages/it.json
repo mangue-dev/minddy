@@ -2124,6 +2124,7 @@
     "uploadRetry": "Riprova",
     "uploadTooLarge": "{name} è finita {max} MB",
     "uploadImagesOnly": "{name} non è un'immagine: solo le pagine accettano altri file",
+    "uploadInProgress": "Attendi il termine del caricamento dell’immagine.",
     "uploadEmpty": "{name} è vuoto",
     "promotePrompt": "Trasforma questa attività della pagina «{page}» del mio progetto in un ticket:\n\n{note}\n\nSe l'attività non è abbastanza chiara per creare un buon ticket, leggi il resto della pagina per capirne il contesto e fammi delle domande prima di crearlo. Una volta creato il ticket, seleziona l'attività nella pagina: ora si trova nel ticket.",
     "subpageUntitled": "Pagina senza titolo",

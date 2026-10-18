@@ -163,7 +163,9 @@ export function PageCommentBubble({
         {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
         className={cn(
           "flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 shadow-md",
-          floating && "z-[70]",
+          // On the body, under a modal dialog that sets `pointer-events: none`
+          // on it: the toolbar takes its clicks back, like the "/" and "@" menus.
+          floating && "pointer-events-auto z-[70]",
         )}
       >
         <ToolbarButton

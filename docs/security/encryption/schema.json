@@ -10287,6 +10287,11 @@
         "nullable": true,
         "generated": false
       },
+      "materializing_token": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
       "materialized_revision": {
         "type": "bigint",
         "nullable": false,

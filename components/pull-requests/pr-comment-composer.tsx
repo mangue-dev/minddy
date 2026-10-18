@@ -109,43 +109,6 @@ export function PrCommentComposer({
     document.addEventListener("mousedown", onDocumentMouseDown);
     return () => document.removeEventListener("mousedown", onDocumentMouseDown);
   }, []);
-  const [wantsMentions, setWantsMentions] = useState(false);
-  const { members } = usePrMembersQuery(endpoint, wantsMentions);
-  // The WYSIWYG surface owns the text; the draft stays with the CALLER
-  // (quote, dictate and uploads write through it). What the editor pushed
-  // last: the mirror compares to it to know when a value came from
-  // OUTSIDE (quote) and must be poured back in.
-  const editorApiRef = useRef<DocumentEditorApi | null>(null);
-  const lastEmittedRef = useRef(value);
-  useEffect(() => {
-    if (value === lastEmittedRef.current) return;
-    lastEmittedRef.current = value;
-    const api = editorApiRef.current;
-    if (api) api.setMarkdown(value);
-  }, [value]);
-  // “Quote” wrote into the draft: the caret must land after it.
-  useEffect(() => {
-    if (!focusSignal) return;
-    editorApiRef.current?.focus();
-  }, [focusSignal]);
-  const editorMentions = useMemo(() => {
-    // The LOGIN, never a displayed name: it is what the text carries and
-    // what the forge resolves in notification. Numo leads the list — she is
-    // the only mention minddy processes herself.
-    return {
-      options: [
-        { type: "numo" as const, id: NUMO_MENTION_ID, label: "Numo" },
-        ...members.map((m) => ({
-          type: "forge" as const,
-          id: m.login,
-          label: m.login,
-          iconUrl: m.avatar_url,
-        })),
-      ],
-      scan: forgeMentionScanner(members),
-      onQuery: () => setWantsMentions(true),
-    };
-  }, [members]);
   const uploads = useForgeUploads(endpoint, onChange);
   const drop = useFileDrop(uploads.addFiles);
 
@@ -181,23 +144,14 @@ export function PrCommentComposer({
             switch. Markdown still flows in (quote, dictation, pasted upload
             links) and the forge accounts carry their own portrait in the
             pills. */}
-        <DocumentEditor
+        <ForgeMarkdownField
+          endpoint={endpoint}
           value={value}
-          onCommit={(markdown) => {
-            lastEmittedRef.current = markdown;
-            onChange(() => markdown);
-          }}
-          apiRef={(api) => {
-            editorApiRef.current = api;
-          }}
-          onChange={(markdown) => {
-            lastEmittedRef.current = markdown;
-            onChange(() => markdown);
-          }}
+          onChange={onChange}
           onSubmit={() => {
             if (canPost) onSubmit();
           }}
-          mentions={editorMentions}
+          focusSignal={focusSignal}
           autoFocus={autoFocus}
           placeholder={placeholder}
           // Paddings live on the CONTENT, not on the editor envelope: the
@@ -248,5 +202,97 @@ export function PrCommentComposer({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The WYSIWYG body of a forge message: the shared editor (MIN-728) with the
+ * forge's mentions — the repository's collaborators, loaded at the first
+ * "@", and `@Numo` — over a Markdown draft the caller owns. Quote, dictation
+ * and uploads write into that draft; a value that did not come from the
+ * editor is poured back in. Used by the thread and line composers and by the
+ * review dialog, which brings its own submit button.
+ */
+export function ForgeMarkdownField({
+  endpoint,
+  value,
+  onChange,
+  onSubmit,
+  onEscape,
+  focusSignal,
+  autoFocus,
+  placeholder,
+  className,
+  contentClassName,
+}: {
+  endpoint: PrEndpoint;
+  value: string;
+  onChange: (transform: (draft: string) => string) => void;
+  onSubmit?: () => void;
+  onEscape?: () => void;
+  /** Incremented when text was written into the draft from outside and the
+   caret must follow it (“Quote”). */
+  focusSignal?: number;
+  autoFocus?: boolean;
+  placeholder: string;
+  className?: string;
+  contentClassName?: string;
+}) {
+  // The forge accounts are only loaded at the first “@” typed: opening a PR
+  // should not cost an extra query. Once requested, the list stays cached.
+  const [wantsMentions, setWantsMentions] = useState(false);
+  const { members } = usePrMembersQuery(endpoint, wantsMentions);
+  // What the editor pushed last: the mirror compares to it to know when a
+  // value came from OUTSIDE (quote, upload) and must be poured back in.
+  const editorApiRef = useRef<DocumentEditorApi | null>(null);
+  const lastEmittedRef = useRef(value);
+  useEffect(() => {
+    if (value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value;
+    editorApiRef.current?.setMarkdown(value);
+  }, [value]);
+  useEffect(() => {
+    if (!focusSignal) return;
+    editorApiRef.current?.focus();
+  }, [focusSignal]);
+  const mentions = useMemo(() => ({
+    // The LOGIN, never a displayed name: it is what the text carries and
+    // what the forge resolves in notification. Numo leads the list — she is
+    // the only mention minddy processes herself.
+    options: [
+      { type: "numo" as const, id: NUMO_MENTION_ID, label: "Numo" },
+      ...members.map((m) => ({
+        type: "forge" as const,
+        id: m.login,
+        label: m.login,
+        iconUrl: m.avatar_url,
+      })),
+    ],
+    scan: forgeMentionScanner(members),
+    onQuery: () => setWantsMentions(true),
+  }), [members]);
+
+  return (
+    <DocumentEditor
+      value={value}
+      onCommit={(markdown) => {
+        lastEmittedRef.current = markdown;
+        onChange(() => markdown);
+      }}
+      onChange={(markdown) => {
+        lastEmittedRef.current = markdown;
+        onChange(() => markdown);
+      }}
+      apiRef={(api) => {
+        editorApiRef.current = api;
+      }}
+      onSubmit={onSubmit}
+      onEscape={onEscape}
+      mentions={mentions}
+      autoFocus={autoFocus}
+      placeholder={placeholder}
+      className={className}
+      contentClassName={contentClassName}
+    />
   );
 }

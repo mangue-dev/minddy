@@ -33,25 +33,29 @@ export function TaskCheckbox({
   state,
   label,
   onToggle,
+  disabled = false,
   className,
 }: {
   state: PlanTaskState;
   /** What the screen reader announces — the text of the task, to the caller. */
   label: string;
   onToggle: () => void;
+  /** A read-only editor shows the state without changing it. */
+  disabled?: boolean;
   className?: string;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
+      disabled={disabled}
       // `preventDefault` to `mousedown`: without it the caret is placed in the
       // button and the next keystroke writes next to the task text.
       onMouseDown={(event) => event.preventDefault()}
       onClick={onToggle}
       className={cx(
         "flex size-4 items-center justify-center rounded-[4px] border transition-colors",
-        state === "pending" && "border-input hover:border-muted-foreground/60",
+        state === "pending" && "border-input enabled:hover:border-muted-foreground/60",
         state === "in_progress" && "border-primary",
         state === "completed" && "border-primary bg-primary text-primary-foreground",
         state === "cancelled" && "border-input bg-muted text-muted-foreground",

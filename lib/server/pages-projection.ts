@@ -223,7 +223,7 @@ export async function reconcileBodyBlocksServer(
  */
 export function pageCollaborationServer(): Pick<PagesMarkdown,
   "applyCollabSteps" | "canonicalBodyJSON" | "diffCollabSteps" |
-  "isCanonicalBodyJSON" | "rebaseCollabSteps" | "sameCollabValue"> {
+  "isCanonicalBodyJSON" | "rebaseCollabSteps" | "sameCollabValue" | "touchedBodyBlockIds"> {
   return pagesMarkdown();
 }
 

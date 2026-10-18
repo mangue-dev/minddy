@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Button,
@@ -64,6 +64,15 @@ export function IssuePlan({
   // is written back to the issue.
   const [typed, setTyped] = useState<string | null>(null);
   const edited = useRef(false);
+  // Without a live session, a plan written elsewhere (an agent ticking a
+  // task) is taken in by remounting the editor, unless someone is typing.
+  const [fallbackKey, setFallbackKey] = useState(0);
+  const fallback = live.status === "unavailable";
+  useEffect(() => {
+    if (!fallback || edited.current) return;
+    setTyped(null);
+    setFallbackKey((current) => current + 1);
+  }, [plan, fallback]);
   const shown = typed ?? plan ?? "";
 
   const { progress } = useMemo(() => parsePlan(shown), [shown]);
@@ -152,7 +161,7 @@ export function IssuePlan({
         // Without a live session (an older server, a failed read), the plan
         // is saved as Markdown when the editor loses focus.
         <DeferredDocumentEditor
-          key={`${issueId}:plan`}
+          key={`${issueId}:plan:${fallbackKey}`}
           mentions={mentions}
           value={plan ?? ""}
           uploadScope={`projects/${projectId}`}

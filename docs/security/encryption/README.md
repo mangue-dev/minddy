@@ -2822,7 +2822,10 @@ the stream state to `rich_documents` and a step journal:
   the document is sealed: `commit_rich_document` refuses clear steps for a
   sealed document. Identifiers, revisions, the client session ID and the
   author are clear routing metadata. The journal keeps the last 2,000
-  revisions and seven days, and cascades with its document.
+  revisions and seven days, and cascades with its document. Sealing a clear
+  document deletes the clear steps it journaled, and
+  `purge_clear_rich_documents` also deletes clear steps of sealed documents
+  and of documents under encrypted parents.
 - Head moves broadcast `rich_document_heads` (kind, document, revision) on the
   project topic, without content. Carets use the private
   `issue-collaboration:<id>`, `plan-collaboration:<id>` (keyed by the issue)
@@ -2833,3 +2836,8 @@ Migrations `20270109200062`, `20270109200063` and `20270109200064` are
 additive. `20270109200065` adds the `plan` kind: it replaces the unique key on
 `issue_id` with one on `(issue_id, kind)`, extends the kind and owner checks,
 the guard and the purge to plans, and adds the plan caret topic.
+`20270109200066` purges clear steps on sealing, lets stream metadata
+(`materializing_until`, the claim's `materializing_token`, materialization
+marks, `pending_since`) move on a clear document under an encrypted parent
+while still refusing clear content, and restricts sending carets to members
+who may write the project.

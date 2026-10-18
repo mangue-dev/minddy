@@ -373,6 +373,11 @@ export function RichEditor({
     [t, blocks, uploadKinds, slashActions]
   );
 
+  // Read at each "/": the plugin is built once, and a surface's actions can
+  // arrive after it (a routine's repository skills).
+  const slashItemsRef = useRef(slashItems);
+  slashItemsRef.current = slashItems;
+
   // Memorized: tiptap reapplies everything that changes identity between two
   // rendered, and a remade function each time would remount the plugin.
   const [fixedPlaceholder] = useState(() => placeholder);
@@ -477,7 +482,7 @@ export function RichEditor({
         // is written in block-placeholder.ts, and it fits in two words — the
         // nested blocks, and the cursor read one keystroke late.
         BlockPlaceholder.configure({ text: placeholderFor }),
-        PageSlashCommand.configure({ items: slashItems }),
+        PageSlashCommand.configure({ items: () => slashItemsRef.current }),
         // Block flashes use decorations: ProseMirror undoes DOM mutations
         // made outside its rendering (see block-flash.ts).
         BlockFlash,
@@ -492,7 +497,6 @@ export function RichEditor({
       ] as unknown as Extensions,
     [
       placeholderFor,
-      slashItems,
       mentionSuggest,
       leaveTop,
       hasTitle,

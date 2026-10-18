@@ -45,4 +45,10 @@ describe("routine prompt documents", () => {
     expect(types).toEqual(["text", "promptSkill", "text"]);
     expect(promptFromDocument(doc).text).toBe("Run /review on /unknown");
   });
+
+  it("keeps an issue mention's captured status", () => {
+    const issue: AssistantMention = { type: "issue", id: "i1", label: "MIN-42", status: "in_progress" };
+    const back = promptFromDocument(promptToDocument("Check @MIN-42", { mentions: [issue] }));
+    expect(back.mentions[0]).toMatchObject({ id: "i1", status: "in_progress" });
+  });
 });

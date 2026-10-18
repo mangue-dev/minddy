@@ -127,6 +127,9 @@ export function promptFromDocument(doc: JSONContent): { text: string; mentions: 
             ...(attrs.seed ? { avatarSeed: String(attrs.seed) } : {}),
             ...(attrs.color !== null && attrs.color !== undefined ? { color: String(attrs.color) } : {}),
             ...(attrs.icon !== null && attrs.icon !== undefined ? { icon: String(attrs.icon) } : {}),
+            ...(typeof attrs.status === "string" && attrs.status
+              ? { status: attrs.status as AssistantMention["status"] }
+              : {}),
           },
         });
       }

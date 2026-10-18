@@ -32,6 +32,7 @@ import {
   LazyDocumentEditor,
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
+import { hasPendingUploads } from "@/components/editor/document-uploads";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
@@ -408,9 +409,15 @@ export function ObjectiveDialog({
   };
 
   // `target` is set only when creating in a different project (dropdown item).
+  const tPages = useTranslations("Pages");
   const submit = async (target?: Project) => {
     const name = form.name.trim();
     if (!name || submitting) return;
+    // An image still uploading has no address yet (MIN-728).
+    if (hasPendingUploads(descriptionDocument.current)) {
+      toast.info(tPages("uploadInProgress"));
+      return;
+    }
     if (target && target.id !== projectId && relations.length > 0) {
       toast.info(tRelations("crossProjectUnavailable"));
       return;

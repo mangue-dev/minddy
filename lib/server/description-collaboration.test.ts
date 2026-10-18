@@ -17,8 +17,10 @@ type Row = {
 const h = vi.hoisted(() => ({
   description: "",
   plan: "",
+  parentMissing: false,
   row: null as null | Row,
   claimed: false,
+  deferred: 0,
   updateIssueFields: vi.fn(),
   access: { canWrite: true } as { canWrite: boolean } | null,
   /** Called before each commit, to simulate typing landing first. */
@@ -33,7 +35,9 @@ vi.mock("@/lib/server/project-access", () => ({ hasProjectAccess: async () => h.
 vi.mock("@/lib/server/issue-store", () => ({
   issueStore: () => ({
     select: () => ({ eq: () => ({ is: () => ({ maybeSingle: async () => ({
-      data: { id: "issue-1", project_id: "project-1", description: h.description, plan: h.plan },
+      data: h.parentMissing
+        ? null
+        : { id: "issue-1", project_id: "project-1", description: h.description, plan: h.plan },
       error: null,
     }) }) }) }),
   }),
@@ -85,9 +89,12 @@ vi.mock("@/lib/server/rich-documents", async () => {
       h.row!.materializedHash = hash;
     },
     claimDocumentMaterialization: async () => {
-      if (h.claimed) return false;
+      if (h.claimed) return null;
       h.claimed = true;
-      return true;
+      return "claim-token";
+    },
+    deferDocumentMaterialization: async () => {
+      h.deferred += 1;
     },
     releaseDocumentMaterialization: async () => {
       h.claimed = false;
@@ -128,9 +135,11 @@ beforeEach(() => {
     batches: [],
   };
   h.claimed = false;
+  h.deferred = 0;
   h.access = { canWrite: true };
   h.beforeCommit = null;
   h.plan = "";
+  h.parentMissing = false;
   h.updateIssueFields.mockReset().mockImplementation(async ({ input }) => {
     if ("plan" in input) h.plan = input.plan ?? "";
     else h.description = input.description ?? "";
@@ -259,6 +268,51 @@ describe("materialization", () => {
       input: { description: "Context\n\nSteps, typed" }, descriptionFromDocument: true,
     }));
     expect(h.row!.materializedRevision).toBe(h.row!.revision);
+    expect(h.claimed).toBe(false);
+  });
+
+  it("signs with the last author even when a presentation batch came after", async () => {
+    const typed = doc(paragraph("Context", "a"), paragraph("Steps, typed by A", "b"));
+    await authority.submitDescriptionBatch("issue", "issue-1",
+      submission(3, stepsBetween(h.row!.content, typed)), "user-a");
+    // A reader's editor rebuilds pills: same text, no author.
+    const head = h.row!;
+    h.row!.batches.push({ base: head.revision, stepCount: 1, clientId: "reader", authorId: null,
+      steps: [], batchId: crypto.randomUUID() });
+    head.revision += 1;
+    expect(await authority.materializeDescription(
+      { kind: "issue", id: "issue-1", projectId: "project-1" }, null)).toBe("materialized");
+    expect(h.updateIssueFields).toHaveBeenCalledWith(expect.objectContaining({ actorId: "user-a" }));
+    expect(h.description).toBe("Context\n\nSteps, typed by A");
+  });
+
+  it("keeps pending typing when a forge write lands before the materialization", async () => {
+    const typed = doc(paragraph("Context", "a"), paragraph("Steps, typed live", "b"));
+    await authority.submitDescriptionBatch("issue", "issue-1",
+      submission(3, stepsBetween(h.row!.content, typed)), "user-1");
+    // The forge rewrites the other block meanwhile, outside the authority.
+    h.description = "Context from GitHub\n\nSteps";
+    expect(await authority.materializeDescription(
+      { kind: "issue", id: "issue-1", projectId: "project-1" }, null)).toBe("materialized");
+    expect(h.description).toBe("Context from GitHub\n\nSteps, typed live");
+    expect(await markdownOf(h.row!.content)).toBe("Context from GitHub\n\nSteps, typed live");
+  });
+
+  it("lets typing win on a block the forge also rewrote", async () => {
+    const typed = doc(paragraph("Context", "a"), paragraph("Steps, typed live", "b"));
+    await authority.submitDescriptionBatch("issue", "issue-1",
+      submission(3, stepsBetween(h.row!.content, typed)), "user-1");
+    h.description = "Context\n\nSteps from GitHub";
+    await authority.materializeDescription({ kind: "issue", id: "issue-1", projectId: "project-1" }, null);
+    expect(h.description).toBe("Context\n\nSteps, typed live");
+  });
+
+  it("sends a description whose issue is gone to the back of the queue", async () => {
+    h.row!.revision += 1;
+    h.parentMissing = true;
+    expect(await authority.materializeDescription(
+      { kind: "issue", id: "issue-1", projectId: "project-1" }, null)).toBe("missing");
+    expect(h.deferred).toBe(1);
     expect(h.claimed).toBe(false);
   });
 
