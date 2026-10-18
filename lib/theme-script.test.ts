@@ -17,6 +17,12 @@ interface ScriptEnv {
 
 interface RunResult {
   htmlHasDarkClass: boolean;
+  /** Attributes the script wrote onto <html>. */
+  attributes: Record<string, string>;
+  /** Attributes the theme-color observer listens to. */
+  observedAttributes: string[];
+  /** Flip the mode class / an attribute, then re-run the observer callback. */
+  mutate: (change: { dark?: boolean; attribute?: [string, string] }) => string | null;
   themeColor: string | null;
   /** What the script mirrored back into localStorage, if anything. */
   storedAfter: string | null;
@@ -24,6 +30,9 @@ interface RunResult {
 
 function run(scriptBody: string, env: ScriptEnv): RunResult {
   const classes = new Set<string>();
+  const attributes: Record<string, string> = {};
+  let observedAttributes: string[] = [];
+  let observerCallback: (() => void) | null = null;
   let themeColor: string | null = null;
   const metaTag = {
     setAttribute(name: string, value: string) {
@@ -43,6 +52,8 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
           },
           contains: (name: string) => classes.has(name),
         },
+        setAttribute: (name: string, value: string) => void (attributes[name] = value),
+        getAttribute: (name: string) => attributes[name] ?? null,
       },
       querySelector: () => null,
       createElement: () => metaTag,
@@ -50,7 +61,12 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
     },
     matchMedia: () => ({ matches: env.osPrefersDark }),
     MutationObserver: class {
-      observe() {}
+      constructor(callback: () => void) {
+        observerCallback = callback;
+      }
+      observe(_target: unknown, options: { attributeFilter: string[] }) {
+        observedAttributes = options.attributeFilter;
+      }
     },
     localStorage: env.localStorageThrows
       ? {
@@ -73,6 +89,17 @@ function run(scriptBody: string, env: ScriptEnv): RunResult {
   new Function(...keys, `"use strict";${scriptBody}`)(...values);
 
   return {
+    attributes,
+    observedAttributes,
+    mutate({ dark, attribute }) {
+      if (dark !== undefined) {
+        if (dark) classes.add("dark");
+        else classes.delete("dark");
+      }
+      if (attribute) attributes[attribute[0]] = attribute[1];
+      observerCallback?.();
+      return themeColor;
+    },
     htmlHasDarkClass: classes.has("dark"),
     themeColor,
     storedAfter: storage.get("mangue-ui-theme") ?? null,
@@ -184,5 +211,68 @@ describe("buildThemeScript — runtime input boundaries", () => {
     const script = buildThemeScript({ defaultTheme: input as "dark" });
     expect(script).not.toContain(input);
     expect(run(script, { storedTheme: null, osPrefersDark: false }).htmlHasDarkClass).toBe(true);
+  });
+});
+
+describe("buildThemeScript — account palettes (MIN-696)", () => {
+  const appearance = {
+    light: "solarized-light",
+    dark: "nord-dark",
+    transparency: false,
+  } as const;
+
+  it("writes both palettes and the glass toggle onto <html> before paint", () => {
+    const result = run(
+      buildThemeScript({ defaultTheme: "dark", accountTheme: "dark", appearance }),
+      { storedTheme: null, osPrefersDark: false },
+    );
+    expect(result.attributes).toEqual({
+      "data-theme-light": "solarized-light",
+      "data-theme-dark": "nord-dark",
+      "data-transparency": "off",
+    });
+    // The bar takes the ACTIVE palette's chrome, not mango-ui's dark.
+    expect(result.themeColor).toBe("#272c36");
+  });
+
+  it("follows mode and palette switches through the observer", () => {
+    const result = run(
+      buildThemeScript({ defaultTheme: "dark", accountTheme: "system", appearance }),
+      { storedTheme: null, osPrefersDark: true },
+    );
+    expect(result.observedAttributes).toEqual(["class", "data-theme-light", "data-theme-dark"]);
+    // The OS goes light: the LIGHT palette's chrome, saved independently.
+    expect(result.mutate({ dark: false })).toBe("#eee8d5");
+    expect(result.mutate({ attribute: ["data-theme-light", "catppuccin-latte"] })).toBe("#e6e9ef");
+  });
+
+  it("still applies the palettes when localStorage throws", () => {
+    const result = run(
+      buildThemeScript({ defaultTheme: "light", accountTheme: "light", appearance }),
+      { storedTheme: null, osPrefersDark: true, localStorageThrows: true },
+    );
+    expect(result.attributes["data-theme-light"]).toBe("solarized-light");
+    expect(result.themeColor).toBe("#eee8d5");
+  });
+
+  it("writes no palette attribute without an account (public pages)", () => {
+    const result = run(buildThemeScript({ defaultTheme: "system" }), {
+      storedTheme: null,
+      osPrefersDark: false,
+    });
+    expect(result.attributes).toEqual({});
+    expect(result.themeColor).toBe("#f5f7fb");
+  });
+
+  it("keeps ids outside the catalog, or of the other mode, out of the script", () => {
+    const hostile = '"/><script>alert(1)</script>';
+    const script = buildThemeScript({
+      defaultTheme: "dark",
+      appearance: { light: "nord-dark" as "nord-light", dark: hostile as "nord-dark", transparency: true },
+    });
+    expect(script).not.toContain(hostile);
+    const result = run(script, { storedTheme: null, osPrefersDark: true });
+    expect(result.attributes["data-theme-light"]).toBe("minddy-light");
+    expect(result.attributes["data-theme-dark"]).toBe("minddy-dark");
   });
 });

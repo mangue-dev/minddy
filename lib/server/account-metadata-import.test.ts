@@ -55,3 +55,15 @@ describe("imported onboarding metadata", () => {
     expect(selectImportedAccountMetadata({ onboarding_steps: steps })).toEqual({});
   });
 });
+
+describe("imported appearance metadata (MIN-696)", () => {
+  it("keeps valid palettes and the glass toggle", () => {
+    const source = { theme: "dark", theme_light: "catppuccin-latte", theme_dark: "high-contrast-dark", theme_transparency: false };
+    expect(selectImportedAccountMetadata(source)).toEqual(source);
+  });
+
+  it("drops unknown or opposite-mode palettes", () => {
+    expect(selectImportedAccountMetadata({ theme_light: "nord-dark", theme_dark: "neon", theme_transparency: "off" }))
+      .toEqual({});
+  });
+});

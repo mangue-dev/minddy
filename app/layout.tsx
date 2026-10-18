@@ -25,6 +25,10 @@ import {
   ACCOUNT_THEME_HEADER,
   isAccountTheme,
 } from "@/lib/account-theme";
+import {
+  parseThemeAppearanceHeaders,
+  THEME_PRESET_HEADERS,
+} from "@/lib/theme-presets";
 import { ogImageUrl } from "@/lib/seo";
 import { SITE_NAME, SITE_URL, SITE_VERIFICATION } from "@/lib/site";
 import type { Locale } from "@/i18n/config";
@@ -175,6 +179,12 @@ export default async function RootLayout({
     : null;
   const defaultTheme: "light" | "dark" | "system" =
     isPublicSite ? "system" : accountTheme ?? "dark";
+  // The account's palettes (MIN-696): asserted by the proxy on app routes
+  // only, so their presence is what marks a signed-in document. Public pages
+  // and the auth screens keep the Minddy palettes.
+  const appearance = !isPublicSite && headerList.has(THEME_PRESET_HEADERS.light)
+    ? parseThemeAppearanceHeaders((name) => headerList.get(name))
+    : null;
 
   // This provider only sends the four namespaces of the public site to the browser
   // instead of the 67 in the catalog: the messages are a component PROP
@@ -206,7 +216,11 @@ export default async function RootLayout({
             complaining about React 19 every time the client re-renders the root layout — see the
             composant. */}
         <AppLayoutInitScript />
-        <ThemeInitScript defaultTheme={defaultTheme} accountTheme={accountTheme} />
+        <ThemeInitScript
+          defaultTheme={defaultTheme}
+          accountTheme={accountTheme}
+          appearance={appearance}
+        />
       </head>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}

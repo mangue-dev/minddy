@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { THEME_PRESETS } from "./theme-presets";
+
 /**
  * MIN-284 — finger comfort is also a contract between two packages.
  *
@@ -276,21 +278,23 @@ describe("les autres pièges du tactile", () => {
     }
   });
 
-  it("la barre d'état suit le thème réel, et ses couleurs suivent les tokens", () => {
+  it("keeps the status bar on the actual theme, with colors that follow the tokens", () => {
     // The BODY of the pre-paint script lives in lib/theme-script.ts (pure
     // module); the component only injects it.
     const script = read(join(REPO, "lib/theme-script.ts"));
     expect(script).toContain('name","theme-color"');
-    // The observer keeps the tag current when we switch themes.
+    // The observer keeps the tag current when we switch themes or palettes.
     expect(script).toContain("MutationObserver");
 
-    // The two hex values are a manual CONVERSION of the mangue-ui tokens, which
-    // `theme-color` cannot read through `var()`. If a token changes, these must
-    // be recalculated — this test prevents discovering that on a phone.
+    // The Minddy defaults are a manual CONVERSION of the mangue-ui tokens,
+    // which `theme-color` cannot read through `var()`. If a token changes,
+    // these must be recalculated — this test prevents discovering that on a
+    // phone. The other palettes' chrome colors are checked against
+    // app/theme-presets.css by lib/theme-presets.test.ts.
     const tokens = read(join(REPO, "node_modules/mangue-ui/src/styles/tokens.css"));
     expect(tokens).toContain("--background: oklch(0.975 0.006 266);"); // light
     expect(tokens).toContain("--background: oklch(0.135 0.003 250);"); // dark
-    expect(script).toContain('light: "#f5f7fb"');
-    expect(script).toContain('dark: "#070809"');
+    expect(THEME_PRESETS["minddy-light"].chromeColor).toBe("#f5f7fb");
+    expect(THEME_PRESETS["minddy-dark"].chromeColor).toBe("#070809");
   });
 });

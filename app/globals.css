@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "mangue-ui/tokens.css";
+/* Per-mode palettes chosen on the account (MIN-696). Their selectors outweigh
+   the mode overrides below, so the import can stay with the others. */
+@import "./theme-presets.css";
 @import "streamdown/styles.css";
 @source "../node_modules/mangue-ui/src";
 /* Streamdown (Numo markdown rendering): without these @sources, Tailwind does not generate

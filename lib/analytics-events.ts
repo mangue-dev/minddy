@@ -379,6 +379,7 @@ export interface AnalyticsEventProps {
   profile_updated: { field: "name" | "email" | "password" | "avatar" };
   language_changed: { locale: string };
   theme_changed: { theme: string };
+  theme_preset_changed: { mode: "light" | "dark"; preset: string };
   account_preference_toggled: { key: string; enabled: boolean };
   settings_assistant_prompt_sent: { scope: "account" | "project" };
 
@@ -748,6 +749,7 @@ const EVENT_NAMES = [
   "profile_updated",
   "language_changed",
   "theme_changed",
+  "theme_preset_changed",
   "account_preference_toggled",
   "settings_assistant_prompt_sent",
   "mcp_connect_opened",

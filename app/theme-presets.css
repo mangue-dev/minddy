@@ -1,0 +1,601 @@
+/* ── Theme presets (MIN-696) ──────────────────────────────────────────────
+   One palette per mode, chosen on the account (`lib/theme-presets.ts`). The
+   pre-paint script writes both choices onto <html> before the first paint:
+
+     <html class="dark" data-theme-light="nord-light" data-theme-dark="nord-dark">
+
+   and the mode class decides which one is read. A light palette is keyed on
+   `html:not(.dark)`, a dark one on `html.dark`, so switching modes (or the OS
+   switching under "system") lands on the palette saved for that mode.
+
+   Specificity is deliberate: `html:not(.dark)[…]` and `html.dark[…]` weigh
+   (0,2,1), above every mode-level override in globals.css — `:root`, `.dark`
+   and the app shell's `.dark[data-app-shell]` (0,2,0). That is why the
+   presets live in their own file without having to come last.
+
+   The minddy presets have NO rule here: an absent or default attribute leaves
+   the existing tokens untouched, pixel for pixel.
+
+   Only neutral surfaces, text, borders, focus rings and the primary action
+   move. Status, priority, destructive, project, mention and rich-text colors
+   keep their meaning in every palette. Values are plain hexadecimal so
+   `lib/theme-presets.test.ts` can measure each pair's WCAG contrast: normal
+   text 4.5:1, focus ring 3:1, and 7:1 text with 3:1 borders for the
+   high-contrast presets. */
+
+/* ── Accent presets ── only the accent color changes: primary actions and
+   the focus ring. Every surface — content, sidebar, top and bottom bars,
+   tabs, selection — keeps minddy's own neutral values. */
+html:not(.dark)[data-theme-light="blue-light"] {
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --ring: #2563eb;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #2563eb;
+}
+
+html.dark[data-theme-dark="blue-dark"] {
+  --primary: #60a5fa;
+  --primary-foreground: #0a0a0a;
+  --ring: #60a5fa;
+  --sidebar-primary: #60a5fa;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-ring: #60a5fa;
+}
+
+html:not(.dark)[data-theme-light="violet-light"] {
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --ring: #7c3aed;
+  --sidebar-primary: #7c3aed;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #7c3aed;
+}
+
+html.dark[data-theme-dark="violet-dark"] {
+  --primary: #a78bfa;
+  --primary-foreground: #0a0a0a;
+  --ring: #a78bfa;
+  --sidebar-primary: #a78bfa;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-ring: #a78bfa;
+}
+
+html:not(.dark)[data-theme-light="green-light"] {
+  --primary: #15803d;
+  --primary-foreground: #ffffff;
+  --ring: #15803d;
+  --sidebar-primary: #15803d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #15803d;
+}
+
+html.dark[data-theme-dark="green-dark"] {
+  --primary: #4ade80;
+  --primary-foreground: #0a0a0a;
+  --ring: #4ade80;
+  --sidebar-primary: #4ade80;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-ring: #4ade80;
+}
+
+html:not(.dark)[data-theme-light="orange-light"] {
+  --primary: #c2410c;
+  --primary-foreground: #ffffff;
+  --ring: #c2410c;
+  --sidebar-primary: #c2410c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #c2410c;
+}
+
+html.dark[data-theme-dark="orange-dark"] {
+  --primary: #fb923c;
+  --primary-foreground: #0a0a0a;
+  --ring: #fb923c;
+  --sidebar-primary: #fb923c;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-ring: #fb923c;
+}
+
+html:not(.dark)[data-theme-light="rose-light"] {
+  --primary: #e11d48;
+  --primary-foreground: #ffffff;
+  --ring: #e11d48;
+  --sidebar-primary: #e11d48;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #e11d48;
+}
+
+html.dark[data-theme-dark="rose-dark"] {
+  --primary: #fb7185;
+  --primary-foreground: #0a0a0a;
+  --ring: #fb7185;
+  --sidebar-primary: #fb7185;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-ring: #fb7185;
+}
+
+/* ── Solarized Light ── base3 / base2 surfaces, base02 ink, blue focus. */
+html:not(.dark)[data-theme-light="solarized-light"] {
+  --background: #fdf6e3;
+  --foreground: #073642;
+  --card: #fdf6e3;
+  --card-foreground: #073642;
+  --popover: #fdf6e3;
+  --popover-foreground: #073642;
+  --primary: #073642;
+  --primary-foreground: #fdf6e3;
+  --secondary: #eee8d5;
+  --secondary-foreground: #073642;
+  --muted: #eee8d5;
+  --muted-foreground: #4f646b;
+  --accent: #e9e2cc;
+  --accent-foreground: #073642;
+  --border: #e2dbc4;
+  --input: #e2dbc4;
+  --ring: #268bd2;
+  --sidebar: #eee8d5;
+  --sidebar-foreground: #073642;
+  --sidebar-primary: #073642;
+  --sidebar-primary-foreground: #fdf6e3;
+  --sidebar-accent: #e4ddc6;
+  --sidebar-accent-foreground: #073642;
+  --sidebar-border: #e2dbc4;
+  --sidebar-ring: #268bd2;
+  --control: #f4eddb;
+  --control-hover: #e9e2cc;
+  --surface-raised: #fdf6e3;
+  --surface-sunken: #eee8d5;
+  --surface-glass: rgb(238 232 213 / 60%);
+  --text-tertiary: #4f646b;
+}
+
+/* ── Catppuccin Latte ── base / mantle / crust, text, mauve action. */
+html:not(.dark)[data-theme-light="catppuccin-latte"] {
+  --background: #eff1f5;
+  --foreground: #4c4f69;
+  --card: #eff1f5;
+  --card-foreground: #4c4f69;
+  --popover: #eff1f5;
+  --popover-foreground: #4c4f69;
+  --primary: #8839ef;
+  --primary-foreground: #ffffff;
+  --secondary: #e6e9ef;
+  --secondary-foreground: #4c4f69;
+  --muted: #e6e9ef;
+  --muted-foreground: #5c5f77;
+  --accent: #dce0e8;
+  --accent-foreground: #4c4f69;
+  --border: #ccd0da;
+  --input: #ccd0da;
+  --ring: #1e66f5;
+  --sidebar: #e6e9ef;
+  --sidebar-foreground: #4c4f69;
+  --sidebar-primary: #8839ef;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dce0e8;
+  --sidebar-accent-foreground: #4c4f69;
+  --sidebar-border: #ccd0da;
+  --sidebar-ring: #1e66f5;
+  --control: #e6e9ef;
+  --control-hover: #dce0e8;
+  --surface-raised: #eff1f5;
+  --surface-sunken: #e6e9ef;
+  --surface-glass: rgb(230 233 239 / 60%);
+  --text-tertiary: #5c5f77;
+}
+
+/* ── Nord Light ── Snow Storm surfaces, Polar Night ink, Frost action. */
+html:not(.dark)[data-theme-light="nord-light"] {
+  --background: #eceff4;
+  --foreground: #2e3440;
+  --card: #eceff4;
+  --card-foreground: #2e3440;
+  --popover: #eceff4;
+  --popover-foreground: #2e3440;
+  --primary: #4a6b94;
+  --primary-foreground: #ffffff;
+  --secondary: #e5e9f0;
+  --secondary-foreground: #2e3440;
+  --muted: #e5e9f0;
+  --muted-foreground: #4c566a;
+  --accent: #d8dee9;
+  --accent-foreground: #2e3440;
+  --border: #d8dee9;
+  --input: #d8dee9;
+  --ring: #5e81ac;
+  --sidebar: #e5e9f0;
+  --sidebar-foreground: #2e3440;
+  --sidebar-primary: #4a6b94;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d8dee9;
+  --sidebar-accent-foreground: #2e3440;
+  --sidebar-border: #d8dee9;
+  --sidebar-ring: #5e81ac;
+  --control: #e5e9f0;
+  --control-hover: #d8dee9;
+  --surface-raised: #eceff4;
+  --surface-sunken: #e5e9f0;
+  --surface-glass: rgb(229 233 240 / 60%);
+  --text-tertiary: #4c566a;
+}
+
+/* ── High contrast (light) ── pure black on white, borders that read. */
+html:not(.dark)[data-theme-light="high-contrast-light"] {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #ebebeb;
+  --secondary-foreground: #000000;
+  --muted: #ebebeb;
+  --muted-foreground: #333333;
+  --accent: #e0e0e0;
+  --accent-foreground: #000000;
+  --border: #767676;
+  --input: #767676;
+  --ring: #0047b3;
+  --sidebar: #f0f0f0;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dcdcdc;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #767676;
+  --sidebar-ring: #0047b3;
+  --control: #ebebeb;
+  --control-hover: #dcdcdc;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f0f0f0;
+  --surface-glass: rgb(240 240 240 / 95%);
+  --text-tertiary: #333333;
+  --scrollbar-thumb: rgb(0 0 0 / 45%);
+  --scrollbar-thumb-hover: rgb(0 0 0 / 65%);
+}
+
+/* ── Solarized Dark ── base03 content, base02 chrome, base2 ink. */
+html.dark[data-theme-dark="solarized-dark"] {
+  --background: #002b36;
+  --foreground: #eee8d5;
+  --card: #002b36;
+  --card-foreground: #eee8d5;
+  --popover: #002b36;
+  --popover-foreground: #eee8d5;
+  --primary: #eee8d5;
+  --primary-foreground: #002b36;
+  --secondary: #0a3d4a;
+  --secondary-foreground: #eee8d5;
+  --muted: #073642;
+  --muted-foreground: #93a1a1;
+  --accent: #0d4351;
+  --accent-foreground: #eee8d5;
+  --border: #164651;
+  --input: #1a4c58;
+  --ring: #268bd2;
+  --sidebar: #073642;
+  --sidebar-foreground: #eee8d5;
+  --sidebar-primary: #eee8d5;
+  --sidebar-primary-foreground: #002b36;
+  --sidebar-accent: #0d4351;
+  --sidebar-accent-foreground: #eee8d5;
+  --sidebar-border: #164651;
+  --sidebar-ring: #268bd2;
+  --control: #0a3d4a;
+  --control-hover: #114957;
+  --surface-raised: #073642;
+  --surface-sunken: #00222b;
+  --surface-glass: rgb(7 54 66 / 60%);
+  --text-tertiary: #93a1a1;
+}
+
+/* ── Catppuccin Mocha ── base / mantle / crust, text, mauve action. */
+html.dark[data-theme-dark="catppuccin-mocha"] {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card: #1e1e2e;
+  --card-foreground: #cdd6f4;
+  --popover: #181825;
+  --popover-foreground: #cdd6f4;
+  --primary: #cba6f7;
+  --primary-foreground: #11111b;
+  --secondary: #313244;
+  --secondary-foreground: #cdd6f4;
+  --muted: #313244;
+  --muted-foreground: #a6adc8;
+  --accent: #313244;
+  --accent-foreground: #cdd6f4;
+  --border: #313244;
+  --input: #45475a;
+  --ring: #b4befe;
+  --sidebar: #181825;
+  --sidebar-foreground: #cdd6f4;
+  --sidebar-primary: #cba6f7;
+  --sidebar-primary-foreground: #11111b;
+  --sidebar-accent: #313244;
+  --sidebar-accent-foreground: #cdd6f4;
+  --sidebar-border: #313244;
+  --sidebar-ring: #b4befe;
+  --control: #313244;
+  --control-hover: #45475a;
+  --surface-raised: #1e1e2e;
+  --surface-sunken: #11111b;
+  --surface-glass: rgb(24 24 37 / 60%);
+  --text-tertiary: #9399b2;
+}
+
+/* ── Nord ── Polar Night surfaces, Snow Storm ink, Frost action. */
+html.dark[data-theme-dark="nord-dark"] {
+  --background: #2e3440;
+  --foreground: #eceff4;
+  --card: #2e3440;
+  --card-foreground: #eceff4;
+  --popover: #2e3440;
+  --popover-foreground: #eceff4;
+  --primary: #88c0d0;
+  --primary-foreground: #2e3440;
+  --secondary: #3b4252;
+  --secondary-foreground: #eceff4;
+  --muted: #3b4252;
+  --muted-foreground: #b4bccb;
+  --accent: #434c5e;
+  --accent-foreground: #eceff4;
+  --border: #3b4252;
+  --input: #434c5e;
+  --ring: #88c0d0;
+  --sidebar: #272c36;
+  --sidebar-foreground: #eceff4;
+  --sidebar-primary: #88c0d0;
+  --sidebar-primary-foreground: #2e3440;
+  --sidebar-accent: #3b4252;
+  --sidebar-accent-foreground: #eceff4;
+  --sidebar-border: #3b4252;
+  --sidebar-ring: #88c0d0;
+  --control: #3b4252;
+  --control-hover: #434c5e;
+  --surface-raised: #3b4252;
+  --surface-sunken: #242933;
+  --surface-glass: rgb(46 52 64 / 60%);
+  --text-tertiary: #b4bccb;
+}
+
+/* ── High contrast (dark) ── pure white on black, borders that read. */
+html.dark[data-theme-dark="high-contrast-dark"] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #0d0d0d;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #ffffff;
+  --muted: #1f1f1f;
+  --muted-foreground: #d4d4d4;
+  --accent: #2b2b2b;
+  --accent-foreground: #ffffff;
+  --border: #8c8c8c;
+  --input: #8c8c8c;
+  --ring: #66b3ff;
+  --sidebar: #0d0d0d;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #2b2b2b;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #8c8c8c;
+  --sidebar-ring: #66b3ff;
+  --control: #1f1f1f;
+  --control-hover: #2e2e2e;
+  --surface-raised: #0d0d0d;
+  --surface-sunken: #000000;
+  --surface-glass: rgb(13 13 13 / 95%);
+  --text-tertiary: #d4d4d4;
+  --scrollbar-thumb: rgb(255 255 255 / 45%);
+  --scrollbar-thumb-hover: rgb(255 255 255 / 65%);
+}
+
+/* Code blocks carry a fixed GitHub-like surface (globals.css). Under a
+   preset they take the palette's sunken surface instead, so a Solarized page
+   does not hold a gray box; the syntax colors stay the GitHub ones, which
+   read on every light (resp. dark) surface above. */
+/* Accent presets keep minddy's surfaces, so they keep its code blocks too. */
+:is(
+  html:not(.dark):is(
+    [data-theme-light="solarized-light"],
+    [data-theme-light="catppuccin-latte"],
+    [data-theme-light="nord-light"],
+    [data-theme-light="high-contrast-light"]
+  ),
+  html.dark:is(
+    [data-theme-dark="solarized-dark"],
+    [data-theme-dark="catppuccin-mocha"],
+    [data-theme-dark="nord-dark"],
+    [data-theme-dark="high-contrast-dark"]
+  )
+) .code-block-node-view {
+  --code-block-border: var(--border);
+  --code-block-background: var(--surface-sunken);
+  --code-block-foreground: var(--foreground);
+  --code-block-muted: var(--muted-foreground);
+  --code-block-hover: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+/* ── Transparency off ─────────────────────────────────────────────────────
+   The account can turn the glass of floating surfaces off (Account →
+   Preferences). Popovers, menus, selects and the command palette then paint
+   their opaque `--popover`, and no backdrop blur runs anywhere in the app.
+   The high-contrast presets imply it: a menu showing the page through itself
+   loses exactly the contrast those presets exist to guarantee. */
+:is(
+  html[data-transparency="off"],
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) :is(
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-floating-surface],
+  [role="menu"],
+  .desktop-palette-overlay > .desktop-palette-surface
+) {
+  background-color: var(--popover);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Pseudo-elements cannot sit inside `:is()`, hence three selectors. */
+:is(
+  html[data-transparency="off"],
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) *,
+:is(
+  html[data-transparency="off"],
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) *::before,
+:is(
+  html[data-transparency="off"],
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ── High contrast: boundaries the borderless design leaves out ────────────
+   minddy draws controls and surfaces without borders on purpose; separation
+   comes from soft fills that high contrast cannot rely on (a #ebebeb input
+   on white is 1.2:1). These rules apply ONLY under the two high-contrast
+   palettes and add what WCAG 1.4.11 asks of them: a visible boundary of at
+   least 3:1 for controls and floating surfaces, a visible keyboard focus —
+   mangue-ui's fields and selects declare `outline-none ring-0` — and a
+   current/selected state that does not depend on a faint background.
+
+   Outlines rather than borders: they take no layout space, so nothing moves
+   in this mode either, and they follow `border-radius`. Unlayered, they win
+   over the Tailwind utilities (`outline-none`, `outline-hidden`) that live in
+   the utilities layer. `--border` is #767676 / #8c8c8c here (≥ 4.5:1). */
+
+/* Controls: fields, selects, outline buttons, switches, input groups. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) :is(
+  [data-slot="input"],
+  [data-slot="textarea"],
+  [data-slot="select-trigger"],
+  [data-slot="input-group"],
+  [data-slot="command-input-wrapper"],
+  [data-slot="switch"],
+  button[data-variant="outline"],
+  /* App-built fields (rich-text composers, filters, chips) share the same
+     borderless fill rather than a slot. */
+  [class~="bg-control"],
+  textarea,
+  input:is([type="text"], [type="search"], [type="email"], [type="password"], [type="url"], [type="number"], :not([type])):not([data-slot="input-group-control"])
+) {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+
+/* An unchecked switch's white thumb sat on a near-white track. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) [data-slot="switch-thumb"] {
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+/* Floating surfaces, dialogs and sheets: their edge, not their shadow. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) :is(
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-slot="hover-card-content"],
+  [data-slot="tooltip-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"],
+  [data-slot="side-panel-content"],
+  [data-floating-surface],
+  [role="menu"],
+  .desktop-palette-surface
+) {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+
+/* Scrims dim the page enough to read the dialog as the only active layer. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) :is([data-slot="dialog-overlay"], [data-slot="sheet-overlay"], [data-slot="side-panel-overlay"]) {
+  background-color: rgb(0 0 0 / 55%);
+}
+
+/* Translucent borders (`border-border/60` on issue cards…) lose the contrast
+   the palette gives `--border`: draw them at full strength. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) [class*="border-border/"] {
+  border-color: var(--border);
+}
+
+/* Tabs: every tab gets an edge; the selected one a strong one. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) .app-tab {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+
+/* Current, selected and highlighted states: a 2px ink outline, readable
+   whatever the fill underneath — sidebar page, selected tab, pressed
+   segment, highlighted menu / select / command-palette row. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) :is(
+  [aria-current]:not([aria-current="false"]),
+  [role="tab"][aria-selected="true"],
+  [aria-pressed="true"],
+  [role="option"][aria-selected="true"],
+  [data-slot="command-item"][data-selected="true"],
+  [data-highlighted],
+  [data-slot="select-item"]:focus,
+  [role="menuitem"]:focus,
+  [role="menuitemradio"]:focus,
+  [role="menuitemcheckbox"]:focus
+) {
+  outline: 2px solid var(--foreground);
+  outline-offset: -2px;
+}
+
+/* Keyboard focus, everywhere: the focus ring color, outside the element.
+   Menu rows and options keep the inset outline above — outside, their
+   scrolling list would clip it. Containers that take focus when they open
+   (dialogs, panels, menus) keep their 1px edge instead of a frame. */
+:is(
+  html:not(.dark)[data-theme-light="high-contrast-light"],
+  html.dark[data-theme-dark="high-contrast-dark"]
+) :focus-visible:not(
+  [role^="menuitem"], [role="option"], [data-slot="select-item"],
+  [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"],
+  [data-slot$="-content"], .desktop-palette-surface
+) {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}

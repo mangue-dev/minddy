@@ -330,3 +330,39 @@ describe("account theme header (x-minddy-theme)", () => {
     warn.mockRestore();
   });
 });
+
+describe("account palette headers (MIN-696)", () => {
+  it("asserts both palettes and the glass toggle from the session metadata", async () => {
+    const meta = { theme_light: "nord-light", theme_dark: "catppuccin-mocha", theme_transparency: false };
+    session = { user: { id: "u1", user_metadata: meta }, access_token: accessToken(meta) };
+
+    const forwarded = forwardedHeaders(await proxy(request("/home")));
+
+    expect(forwarded["x-minddy-theme-light"]).toBe("nord-light");
+    expect(forwarded["x-minddy-theme-dark"]).toBe("catppuccin-mocha");
+    expect(forwarded["x-minddy-transparency"]).toBe("off");
+    // No mode was ever chosen: the mode header stays absent on its own.
+    expect(forwarded["x-minddy-theme"]).toBeUndefined();
+  });
+
+  it("asserts the Minddy defaults when the account has no palette, and rejects opposite-mode ids", async () => {
+    const meta = { theme_light: "solarized-dark" };
+    session = { user: { id: "u1", user_metadata: meta }, access_token: accessToken(meta) };
+
+    const forwarded = forwardedHeaders(await proxy(request("/home")));
+
+    expect(forwarded["x-minddy-theme-light"]).toBe("minddy-light");
+    expect(forwarded["x-minddy-theme-dark"]).toBe("minddy-dark");
+    expect(forwarded["x-minddy-transparency"]).toBe("on");
+  });
+
+  it("strips client-sent palette headers on public pages", async () => {
+    session = null;
+    const response = await proxy(
+      request("/fr/tarifs", { "x-minddy-theme-dark": "nord-dark", "x-minddy-transparency": "off" }),
+    );
+
+    expect(forwardedHeaders(response)["x-minddy-theme-dark"]).toBeUndefined();
+    expect(forwardedHeaders(response)["x-minddy-transparency"]).toBeUndefined();
+  });
+});

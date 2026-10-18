@@ -8,6 +8,11 @@ import {
   resolveAccountTheme,
   resolveStoredAccountTheme,
 } from "@/lib/account-theme";
+import { resolveThemeAppearance } from "@/lib/theme-presets";
+import {
+  applyDocumentAppearance,
+  clearDocumentAppearance,
+} from "@/lib/theme-appearance";
 
 /**
  * Reconciles the device theme with the ACCOUNT theme, once per sign-in.
@@ -47,6 +52,11 @@ export function ThemeAccountSync() {
     if (!user || syncedFor.current === user.id) return;
     syncedFor.current = user.id;
 
+    applyDocumentAppearance(
+      document.documentElement,
+      resolveThemeAppearance(user.user_metadata),
+    );
+
     const saved = resolveAccountTheme(user.user_metadata);
     if (saved) {
       if (themeRef.current !== saved) setTheme(saved);
@@ -60,6 +70,16 @@ export function ThemeAccountSync() {
       );
     }
   }, [user, setTheme, updateUserMetadata]);
+
+  // On unmount the palettes leave with the shell. Resetting the guard lets a
+  // remount (React's development double-mount included) apply them again.
+  useEffect(
+    () => () => {
+      syncedFor.current = null;
+      clearDocumentAppearance(document.documentElement);
+    },
+    [],
+  );
 
   return null;
 }
