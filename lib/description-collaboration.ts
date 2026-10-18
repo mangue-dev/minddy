@@ -14,7 +14,9 @@ import type { CollabResetReason, CollabStepsPage } from "./page-collaboration";
 
 export const DESCRIPTION_COLLABORATION_PROTOCOL = 1;
 
-export type DescriptionKind = "issue" | "objective";
+/** An issue or objective description, or an issue's plan (`plan`, keyed by
+ its issue's id). */
+export type DescriptionKind = "issue" | "objective" | "plan";
 
 /** Where a session starts: the document at the stream head. */
 export interface DescriptionSnapshot {

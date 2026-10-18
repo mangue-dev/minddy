@@ -31,11 +31,34 @@ Articles, in `en`, `fr`, `de`, `es`, `it`, `pt-BR`:
   `/` offers the block catalog and **Dictate a task**, and storage stays
   Markdown with the same task states.
 
+- `issues`, revision 16, `implementation-plans` and `plan-progress`: the plan
+  is edited in place like the description, with a placeholder when empty and
+  without an edit mode or save control; several members, Numo and agents edit
+  it live; a task is added with `- [ ]` or **Task list** in `/`
+  (`Pages.blockTaskList`), nested with Tab and Shift+Tab, completed with its
+  box or set through its menu; the stored Markdown keeps the plan format. The
+  concurrent-edit advice now says other edits appear live and that a
+  whole-plan replacement still replaces what it rewrites.
+
 Knowledge (English only): `core-tracker` gains one paragraph on the shared
-editor.
+editor; `plans-and-agents` says the plan is edited in place, live.
+
+`scheduled-routines` was reviewed for the routine instruction moving to the
+shared editor: the article does not describe the field's mechanics, and what
+it says (write the instruction, mention issues, pages or objectives) stays
+accurate, so it is unchanged. The pull request diff remark without a pull
+request (an agent session's diff) moves to the shared editor without any
+documented behavior change.
 
 No figure changed: the existing new-issue, objective and notebook captures
 show the same surfaces without block handles, and their content is unchanged.
+
+Pending: `implementation-plans-steps` (`work-implementation-plan.png`, six
+locales) still shows the former Plan tab, with its edit control and the
+full-width prompt button. The tasks, states and progress it shows are
+unchanged, but the figure must be recaptured with
+`captures/shots/documentation-work` before publication; this review did not
+run the capture pipeline, which writes the demo world on the production base.
 
 ## Sources checked
 
@@ -66,5 +89,22 @@ show the same surfaces without block handles, and their content is unchanged.
   `lib/editor-block-sets.test.ts` (notebook Markdown round trip, block sets),
   `lib/server/description-collaboration.test.ts` (two sessions converge, an
   agent edit is rebased over concurrent typing).
+
+- Plans: `components/issue-plan.tsx` (live editor, placeholder
+  `Plan.placeholder`, read-only `Plan.emptyTitle`, progress from the text on
+  screen), `lib/server/description-collaboration.ts` and
+  `lib/server/rich-documents.ts` (`plan` kind, `documentIdOf`),
+  `lib/server/update-issue.ts` (plan writes reach live editors),
+  `supabase/migrations/20270109200065_issue_plan_documents.sql`,
+  `components/scratchpad/task-markdown.ts` (a list mixing bullets and tasks no
+  longer gains an empty task). Tests: `lib/server/description-collaboration.test.ts`
+  (plans), `lib/editor-block-sets.test.ts` (plan round trip, mixed lists).
+- Routine instruction: `components/editor/prompt-editor.tsx`,
+  `lib/prompt-document.ts`, `components/editor/prompt-skill-node.tsx` and
+  `components/routines/routine-prompt-field.tsx`: plain text, mention
+  identities with occurrences and `/name` skills as before; tests
+  `lib/prompt-document.test.ts`, `components/editor/prompt-editor.test.tsx`.
+- Pull request diff remarks: `components/pull-requests/pr-review-comments.tsx`;
+  in a pull request they already used the shared composer.
 
 No two-member browser session or forge round trip was run for this review.

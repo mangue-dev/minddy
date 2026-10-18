@@ -90,9 +90,11 @@ export const PAGE_BLOCKS: readonly PageBlock[] = [
 
 /** The catalog one block set mounts (MIN-728), in registry order. */
 export function blocksIn(set: BlockSet): readonly PageBlock[] {
-  return set === "page"
-    ? PAGE_BLOCKS
-    : PAGE_BLOCKS.filter((block) => !block.sets || block.sets.includes(set));
+  if (set === "page") return PAGE_BLOCKS;
+  // A prompt is lines of plain text with mentions and skills (MIN-728): it is
+  // stored as the text an agent reads, so it has no block to convert into.
+  if (set === "prompt") return PAGE_BLOCKS.filter((block) => block.id === "paragraph");
+  return PAGE_BLOCKS.filter((block) => !block.sets || block.sets.includes(set));
 }
 
 export const blockById = new Map<PageBlockId, PageBlock>(
@@ -286,6 +288,8 @@ export const PageBlockShortcuts = Extension.create({
       if (!shortcut || !turnInto) continue;
       bindings[shortcut.keys] = () => {
         const editor = this.editor as unknown as Editor;
+        // A catalog without this block (a prompt) leaves the keys alone.
+        if (!editor.schema.nodes[block.nodeName]) return false;
         // `turnBlocksInto` and not `turnInto`: the conversion covers the entire
         // selection, delinked lists included (see block-actions.ts). The menu ⋯
         // goes through the same door — a shortcut that would convert otherwise than

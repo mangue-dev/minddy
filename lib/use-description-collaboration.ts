@@ -243,7 +243,8 @@ export function useDescriptionCollaboration({
     void takeDescriptionSnapshot(kind, id, controller.signal)
       .then((snapshot) => {
         if (controller.signal.aborted) return;
-        if (snapshot.documentId !== id || snapshot.kind !== kind) {
+        // A plan's document has its own id; a description's is its parent's.
+        if (snapshot.kind !== kind || (kind !== "plan" && snapshot.documentId !== id)) {
           setStatus("unavailable");
           return;
         }
@@ -313,7 +314,8 @@ export function useDescriptionCollaboration({
   useEffect(() => {
     if (!session || !id) return;
     const { stream } = session;
-    const stopHeads = onDocumentHead(kind, id, (revision) => {
+    // Head wake-ups name the document row, which is a plan's own.
+    const stopHeads = onDocumentHead(kind, session.snapshot.documentId, (revision) => {
       if (revision !== null) stream.noteRemoteHead(revision);
       else void stream.pull();
     });

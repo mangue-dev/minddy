@@ -32,15 +32,23 @@ interface MdToken {
   attrIndex(name: string): number;
   attrPush(attr: [string, string]): void;
   attrs: [string, string][] | null;
+  markup?: string;
+}
+interface MdTokenConstructor {
+  new (type: string, tag: string, nesting: number): MdToken & {
+    markup: string;
+    block: boolean;
+    map: [number, number] | null;
+  };
+}
+interface MdState {
+  tokens: MdToken[];
+  Token: MdTokenConstructor;
 }
 interface MarkdownIt {
   core: {
     ruler: {
-      after(
-        after: string,
-        name: string,
-        fn: (state: { tokens: MdToken[] }) => void
-      ): void;
+      after(after: string, name: string, fn: (state: MdState) => void): void;
     };
   };
 }
@@ -91,5 +99,49 @@ export function scratchpadTaskMarkdownIt(md: MarkdownIt): void {
       const parent = parentListIndex(tokens, i - 2);
       if (parent >= 0) attrSet(tokens[parent], "data-type", "taskList");
     }
+    splitMixedLists(state);
   });
+}
+
+const isTaskItem = (token: MdToken) =>
+  token.attrs?.some(([name, value]) => name === "data-type" && value === "taskItem") ?? false;
+
+/**
+ * A bullet list whose items are partly tasks — a task followed by plain
+ * bullets, as plans write sub-steps — is split into consecutive runs of the
+ * same kind. Marked whole as a task list, its plain items would not fit the
+ * schema, and the parser opened an empty task for them (MIN-728). Adjacent
+ * runs serialize as one Markdown list again, so the split is stable.
+ */
+function splitMixedLists(state: MdState): void {
+  const { tokens } = state;
+  for (let open = tokens.length - 1; open >= 0; open--) {
+    if (tokens[open].type !== "bullet_list_open") continue;
+    const level = tokens[open].level;
+    const items: number[] = [];
+    for (let i = open + 1; i < tokens.length; i++) {
+      if (tokens[i].type === "bullet_list_close" && tokens[i].level === level) break;
+      if (tokens[i].type === "list_item_open" && tokens[i].level === level + 1) items.push(i);
+    }
+    if (items.length < 2) continue;
+    const kinds = items.map((index) => isTaskItem(tokens[index]));
+    if (kinds.every((kind) => kind === kinds[0])) continue;
+    for (let k = items.length - 1; k > 0; k--) {
+      if (kinds[k] === kinds[k - 1]) continue;
+      const close = new state.Token("bullet_list_close", "ul", -1);
+      close.level = level;
+      close.markup = tokens[open].markup ?? "-";
+      close.block = true;
+      const reopen = new state.Token("bullet_list_open", "ul", 1);
+      reopen.level = level;
+      reopen.markup = close.markup;
+      reopen.block = true;
+      if (kinds[k]) reopen.attrPush(["data-type", "taskList"]);
+      tokens.splice(items[k], 0, close, reopen);
+    }
+    const first = tokens[open];
+    if (!kinds[0] && first.attrs) {
+      first.attrs = first.attrs.filter(([name]) => name !== "data-type");
+    }
+  }
 }

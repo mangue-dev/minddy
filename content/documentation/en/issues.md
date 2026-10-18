@@ -491,15 +491,17 @@ Do not delete a child merely to reorganize the hierarchy. Check existing parent 
 
 Open the issue's Plan tab. Its description should already state the problem and expected result. Add the implementation steps manually, or ask Numo to inspect the linked repository before proposing a code-level plan. An AI-generated path or function is not evidence unless the repository was actually read.
 
-Indent a task line with two spaces for each nesting level; a tab counts as four spaces. Nesting organizes steps in the plan and does not create issue parent/child relationships. Each noncanceled work task still contributes to progress, including nested tasks.
+The plan is edited in place, like the description: click in it and type, without an edit mode or a save button. An empty plan shows a placeholder. Several members, Numo and connected agents can edit the same plan at once, each with a named caret, and a task an agent checks appears in your editor while you write elsewhere. Type `- [ ]` followed by a space at the start of a line, or choose **Task list** in the `/` menu, to add a task. Click a task's box to complete it, or open its menu for the other states.
 
-The plan uses Markdown task lines: `- [ ]` for pending, `- [~]` for in progress, `- [x]` for completed and `- [-]` for canceled. Put the task text after the marker, for example `- [ ] Check the contact link on mobile`. Canceled tasks are excluded from the completion count. Tasks under a recognized Questions heading are treated as questions and are also excluded from progress, so keep work steps in a separate section of the same heading level. Save explicit edits with the save control; cancel discards the draft. Checking a rendered task updates that task's state. Use pending, in progress, completed and canceled states to reflect what happened rather than to imply verification that has not run.
+Press Tab in a task to nest it under the previous one and Shift+Tab to bring it back; in the stored Markdown, each level is indented by two spaces. Nesting organizes steps in the plan and does not create issue parent/child relationships. Each noncanceled work task still contributes to progress, including nested tasks.
+
+The plan uses Markdown task lines: `- [ ]` for pending, `- [~]` for in progress, `- [x]` for completed and `- [-]` for canceled. Put the task text after the marker, for example `- [ ] Check the contact link on mobile`. Canceled tasks are excluded from the completion count. Tasks under a recognized Questions heading are treated as questions and are also excluded from progress, so keep work steps in a separate section of the same heading level. The editor shows these lines as tasks and writes them back in the same format, which Numo and connected agents read. Use pending, in progress, completed and canceled states to reflect what happened rather than to imply verification that has not run.
 
 ![Demonstration plan showing two of six work tasks complete.](/documentation/en/work-implementation-plan.png)
 
 ### Preserve progress and concurrent edits {#plan-progress}
 
-Extend or patch the existing plan instead of replacing it with a new unchecked copy. Retain completed steps and explanations of changed scope. Before saving a substantial rewrite, compare it with the latest plan if another member or agent has been working on the issue.
+Extend or patch the existing plan instead of replacing it with a new unchecked copy. Retain completed steps and explanations of changed scope. Changes made by other members and agents appear in the plan as they are made. A tool that replaces the whole plan still replaces the passages it rewrote, so ask agents to edit only the part they change.
 
 To have the plan implemented, copy the issue's prompt for your own coding agent, as described below. A checked task does not itself prove the code passes tests. Read the result, changes and checks before marking the issue done.
 

@@ -132,6 +132,7 @@ export async function updateIssueFields({
   cycleMove = null,
   descriptionDocument = null,
   descriptionFromDocument = false,
+  planFromDocument = false,
 }: {
   issueId: string;
   actorId: string;
@@ -169,6 +170,8 @@ export async function updateIssueFields({
   /** The write IS the materialization of the live description: its document
    already holds this text, so it is not sent back to it. */
   descriptionFromDocument?: boolean;
+  /** The same for the issue's live plan. */
+  planFromDocument?: boolean;
 }): Promise<UpdateIssueResult> {
   if ("automation_override" in input) {
     return { ok: false, status: 400, rawMessage: "Issue automation overrides were retired. Configure a routine instead." };
@@ -542,6 +545,18 @@ export async function updateIssueFields({
       projectId: before.project_id as string,
       markdown: (updates.description as string | null) ?? "",
       content: descriptionDocument,
+      authorId: actorId,
+    });
+  }
+  // Plans are live documents too: a task an agent ticks reaches the plan's
+  // open editors as steps, rebased over concurrent typing.
+  if ("plan" in updates && !planFromDocument &&
+      (updates.plan ?? null) !== (before.plan ?? null)) {
+    await syncDescriptionWrite({
+      kind: "plan",
+      id: issueId,
+      projectId: before.project_id as string,
+      markdown: (updates.plan as string | null) ?? "",
       authorId: actorId,
     });
   }

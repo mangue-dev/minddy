@@ -365,7 +365,9 @@ export function RichEditor({
     !uploads ? "none" : uploads.imagesOnly ? "images" : "all");
   const slashItems = useMemo(
     () => [
-      ...pageSlashItems(t, { set: blocks, uploads: uploadKinds }),
+      // A prompt has no block to insert: its "/" offers the surface's actions
+      // (repository skills) alone.
+      ...(blocks === "prompt" ? [] : pageSlashItems(t, { set: blocks, uploads: uploadKinds })),
       ...(slashActions ?? []),
     ],
     [t, blocks, uploadKinds, slashActions]
@@ -740,9 +742,10 @@ export function RichEditor({
           input.click();
         }
       : null;
-    editor.storage.image.pick = pick;
+    // A catalog without these blocks (a prompt) has no storage for them.
+    if (editor.storage.image) editor.storage.image.pick = pick;
     // Other files belong to pages (MIN-728).
-    editor.storage.pageFile.pick = uploads?.imagesOnly ? null : pick;
+    if (editor.storage.pageFile) editor.storage.pageFile.pick = uploads?.imagesOnly ? null : pick;
   }, [editor, uploads]);
 
   const chrome = !!editor && editable && blockChrome;

@@ -1,7 +1,10 @@
 # Live description collaboration
 
 MIN-728. Several people, Numo and MCP-connected agents edit the same issue or
-objective description at the same time, with named colored carets. This
+objective description, or the same issue plan, at the same time, with named
+colored carets. A plan is a second document of its issue (kind `plan`): what
+this document says about descriptions applies to it, with `issues.plan` as
+its Markdown. This
 document is the contract between the browser session, the HTTP route, the
 server authority and the database. It reuses the page protocol of
 [live page collaboration](page-collaboration.md) and only describes what
@@ -36,6 +39,7 @@ Markdown cannot carry: block identities, colors, mention pills.
 | `supabase/migrations/20270109200062_rich_documents.sql` | The document table and its encryption guard |
 | `supabase/migrations/20270109200063_description_collaboration.sql` | Stream columns, journal, commit RPC, head wake-ups, caret topics |
 | `supabase/migrations/20270109200064_description_materialization_claim.sql` | One materialization at a time |
+| `supabase/migrations/20270109200065_issue_plan_documents.sql` | The `plan` kind and its caret topic |
 
 ## The authority
 
@@ -54,6 +58,20 @@ collaboration tokens. The author is always the authenticated account.
 
 A description's stream is created on its first snapshot, from the document
 its Markdown reads as, or by a creation dialog with the document it edited.
+
+### Plans
+
+An issue's plan is the stream of kind `plan`, addressed by its issue's id
+(`/api/documents/plan/<issue id>/collaboration`). Its row id is derived from
+the issue's (`documentIdOf` in `lib/server/rich-documents.ts`), since the
+description's row already uses the issue's id; head wake-ups and receipts
+name that row id. The plan is projected with the `document` profile, whose
+task blocks write the four states of `lib/plan.ts` back line for line, so
+`minddy_update_plan_task` indices stay stable. The Markdown limit is the
+plan's (`MAX_PLAN_LENGTH`). Every plan write in `updateIssueFields` (Numo,
+MCP task updates and appends, a PATCH) reaches open editors as steps, and
+the plan tools of Numo and MCP materialize pending typing first. The panel
+opens a plan session only while the Plan tab shows.
 
 ### Writers outside a session
 
@@ -106,8 +124,8 @@ session, which reads the missing steps over HTTP; the session also catches up
 on `online`, `focus`, `pageshow`, visibility and every 45 seconds while an
 editor is attached.
 
-Carets travel as client Broadcast on the private `issue-collaboration:<id>`
-and `objective-collaboration:<id>` topics. The database binds them to the
+Carets travel as client Broadcast on the private `issue-collaboration:<id>`,
+`plan-collaboration:<id>` and `objective-collaboration:<id>` topics. The database binds them to the
 parent's project membership generation and only lets members of that project
 send or receive, while the parent is not trashed; the channel behavior is the
 page caret channel's (`lib/page-collaboration-presence.ts`).
@@ -144,12 +162,14 @@ and the next reader rebuilds the document from the Markdown. See
 
 - `lib/server/description-collaboration.test.ts`: batches on the head,
   catch-up and rebase of two sessions, retries, refusals, agent writes rebased
-  over concurrent typing, external writes, materialization and its claim.
+  over concurrent typing, external writes, materialization and its claim;
+  plans: their own document id, materialization into `issues.plan`, and an
+  agent's task tick rebased over concurrent typing.
 - `lib/server/rich-documents-route.test.ts`: description routes derive the
   Markdown on the server and hand the document to the writers.
 - `components/editor/document-editor.test.tsx`, `lib/editor-block-sets.test.ts`,
-  `lib/rich-document-reconcile.test.ts`: the editor, block sets and
-  reconciliation.
+  `lib/rich-document-reconcile.test.ts`: the editor, block sets (including a
+  plan's line-for-line task round trip) and reconciliation.
 
 A two-member browser session (convergence, carets, a live Numo edit) and a
 forge round trip on the disposable repository were not run for this change.

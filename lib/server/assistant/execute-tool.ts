@@ -487,11 +487,30 @@ async function readIssueText(
 ): Promise<
   { plan: string; description: string; updatedAt: string } | { error: string }
 > {
-  const { data, error } = await issueStore(ctx.supabase).select("plan, description, updated_at")
+  const { data, error } = await issueStore(ctx.supabase).select("plan, description, updated_at, project_id")
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
   if (error) return { error: error.message };
+  // Typing a person left pending is written first (MIN-728): Numo edits the
+  // text people see. Read again only when something was pending.
+  if (data && typeof data.project_id === "string") {
+    const [description, plan] = await Promise.all([
+      materializePendingDescription("issue", issueId, data.project_id),
+      materializePendingDescription("plan", issueId, data.project_id),
+    ]);
+    if (description === "materialized" || plan === "materialized") {
+      const fresh = await issueStore(ctx.supabase).select("plan, description, updated_at")
+        .is("deleted_at", null).eq("id", issueId).maybeSingle();
+      if (fresh.error) return { error: fresh.error.message };
+      if (!fresh.data) return { error: "Issue not found." };
+      return {
+        plan: typeof fresh.data.plan === "string" ? fresh.data.plan : "",
+        description: typeof fresh.data.description === "string" ? fresh.data.description : "",
+        updatedAt: typeof fresh.data.updated_at === "string" ? fresh.data.updated_at : "",
+      };
+    }
+  }
   if (!data) return { error: "Issue not found." };
   return {
     plan: typeof data?.plan === "string" ? data.plan : "",
@@ -1445,9 +1464,6 @@ export async function executeTool(
         if (args.field !== "plan" && args.field !== "description") {
           return toolError('field must be "plan" or "description".');
         }
-        // Typing a person left pending is written first (MIN-728): Numo edits
-        // the text people see.
-        if (field === "description") await materializePendingDescription("issue", issueId, projectId);
         const current = await readIssueText(ctx, issueId);
         if ("error" in current) return toolError(current.error);
 

@@ -227,6 +227,7 @@ export interface PageBlock {
 
 /**
  * The block catalogs an editor can mount (MIN-728): `page` is the whole
- * registry, `document` everything that is not tied to the page tree.
+ * registry, `document` everything that is not tied to the page tree, and
+ * `prompt` paragraphs only, for instructions stored as plain text.
  */
-export type BlockSet = "page" | "document";
+export type BlockSet = "page" | "document" | "prompt";

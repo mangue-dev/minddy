@@ -234,7 +234,7 @@
       "functionReferences": []
     },
     "guard_rich_document()": {
-      "sha256": "6c92b009fa8be9e690fb2b3e5e1f9387ca9b34e2c7558fca18370594d9fcfcb7",
+      "sha256": "47334bda043479e47bbc99a631acf8c046c51a64b6ff7f0c9cbfc059c96086cc",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1580,7 +1580,7 @@
       ]
     },
     "current_realtime_topic(text)": {
-      "sha256": "5261fab0dd572d6eea2710a20c5443afcb4c618b842fd72a467ccc51d3f4b709",
+      "sha256": "5cb73300f0486f59337fc4ac53263691059bf46820467096c9a8be785dfcad38",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -1743,7 +1743,7 @@
       "functionReferences": []
     },
     "resolve_realtime_topic(text)": {
-      "sha256": "3d6ff2c5c2a3f30995d3b0fb33d3fa9946410d04d3d393d616861a9fec91bd3e",
+      "sha256": "13f401b7eafdd9c5fc3219c50176ec0a05dc862866020f5d356ced5a77885aa4",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2740,7 +2740,7 @@
       "functionReferences": []
     },
     "realtime_topic_project_ids(text)": {
-      "sha256": "4c30a1c252cba7e640d20c7e88caa261c217435d1c29f8eadd2eeb65e9219b07",
+      "sha256": "68a99c5acfc38ae4d601a31ddbcd3761d9c90e1aebbfa7b31f97b4e16d741f87",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -2797,7 +2797,7 @@
       "functionReferences": []
     },
     "version_realtime_message_topic()": {
-      "sha256": "adf330b49079f2dbeb6e465e93f54128e902ea5c0aba62e68168e0d3cee9df67",
+      "sha256": "fb6712bf6ca12ff8b7ff779c1e64a55064245372534fb20412602b32f92f9831",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3353,7 +3353,7 @@
       "functionReferences": []
     },
     "purge_clear_rich_documents(integer)": {
-      "sha256": "536ba68497c728b7439949f32bbaa1fb8f7d7b0c7014557314a672e992f3c1c6",
+      "sha256": "c67aafeffabc83d393bf805d577186b864a919c3d4342b1f05cc69458cb35bd6",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

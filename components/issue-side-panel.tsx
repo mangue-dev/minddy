@@ -196,6 +196,16 @@ export function IssueSidePanel({
     onFatal: () => toast.error(tPages("saveFailed")),
   });
   const liveReady = liveDescription.status === "ready" && !!liveDescription.collaboration;
+  // The plan is a live document of its own, opened while its tab shows.
+  const livePlan = useDescriptionCollaboration({
+    kind: "plan",
+    id: issue?.id ?? null,
+    userId: user?.id ?? null,
+    enabled: open && !!issue && tab === "plan",
+    members,
+    onRefused: () => toast.error(tPages("liveEditRefused")),
+    onFatal: () => toast.error(tPages("saveFailed")),
+  });
   liveReadyRef.current = liveReady;
   // Without a live session (an older server, a failed read), the editor
   // saves Markdown with its document, as before.
@@ -641,7 +651,8 @@ export function IssueSidePanel({
     const [saved, liveSaved] = await Promise.all([
       Promise.all(pendingWrites.current),
       liveDescription.flush(),
-    ]);
+      livePlan.flush(),
+    ]).then(([written, description, plan]) => [written, description && plan] as const);
     return saved.every(Boolean) && liveSaved && !titleEdited.current && !descriptionEdited.current;
   });
   const handleOpenChange = (next: boolean) => {
@@ -953,7 +964,11 @@ export function IssueSidePanel({
               <TabsContent value="plan" className="mt-4">
                 <IssuePlan
                   key={issue.id}
+                  issueId={issue.id}
+                  projectId={issue.project_id}
                   plan={issue.plan}
+                  live={livePlan}
+                  mentions={mentions}
                   readOnly={readOnly}
                   onCommit={(plan) => void patch({ plan })}
                   // Copyable prompts serve the user's own coding agent.

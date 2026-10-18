@@ -2773,19 +2773,22 @@ no marker yet, and SHARED otherwise. A rollback-only probe on production
 showed an existing sealed issue write holding both GitHub marker keys as
 `ExclusiveLock` before the fix and all three marker keys as `ShareLock` after.
 
-## Editor documents of descriptions and the notebook (MIN-728)
+## Editor documents of descriptions, plans and the notebook (MIN-728)
 
-Issue and objective descriptions and the task notebook are edited with the
-page editor engine. Their Markdown stays in its column (`issues.description`,
-`objectives.description`, `user_scratchpad.content`) and remains the only form
+Issue and objective descriptions, issue plans and the task notebook are
+edited with the page editor engine. Their Markdown stays in its column
+(`issues.description`, `issues.plan`, `objectives.description`,
+`user_scratchpad.content`) and remains the only form
 external readers see: forge sync, MCP, Numo, notifications, webhooks, search
 and exports. The editor's ProseMirror document is stored next to it in
 `rich_documents`, a service-only table with RLS enabled, no policy, and the
 anon and authenticated grants revoked.
 
-- One row per parent, keyed by the parent's id: `issue_id`, `objective_id`, or
-  `user_id` for the notebook. Rows cascade with the parent, the project and
-  the account. A trashed issue or objective keeps its document; the read route
+- One row per parent and kind: `issue_id` for a description (`issue`) and a
+  plan (`plan`), `objective_id`, or `user_id` for the notebook. A description
+  and the notebook use their parent's id as the row id; a plan's row id is a
+  name-based UUID derived from its issue's id. Rows cascade with the parent,
+  the project and the account. A trashed issue or objective keeps its document; the read route
   answers only for live parents.
 - `content` is the only encryption target. `lib/server/rich-documents.ts`, the
   only reader and writer the access check allows, encrypts it under the
@@ -2822,8 +2825,11 @@ the stream state to `rich_documents` and a step journal:
   revisions and seven days, and cascades with its document.
 - Head moves broadcast `rich_document_heads` (kind, document, revision) on the
   project topic, without content. Carets use the private
-  `issue-collaboration:<id>` and `objective-collaboration:<id>` topics, bound
-  to the project membership generation.
+  `issue-collaboration:<id>`, `plan-collaboration:<id>` (keyed by the issue)
+  and `objective-collaboration:<id>` topics, bound to the project membership
+  generation.
 
 Migrations `20270109200062`, `20270109200063` and `20270109200064` are
-additive.
+additive. `20270109200065` adds the `plan` kind: it replaces the unique key on
+`issue_id` with one on `(issue_id, kind)`, extends the kind and owner checks,
+the guard and the purge to plans, and adds the plan caret topic.

@@ -16,6 +16,7 @@ type Row = {
 
 const h = vi.hoisted(() => ({
   description: "",
+  plan: "",
   row: null as null | Row,
   claimed: false,
   updateIssueFields: vi.fn(),
@@ -32,7 +33,8 @@ vi.mock("@/lib/server/project-access", () => ({ hasProjectAccess: async () => h.
 vi.mock("@/lib/server/issue-store", () => ({
   issueStore: () => ({
     select: () => ({ eq: () => ({ is: () => ({ maybeSingle: async () => ({
-      data: { id: "issue-1", project_id: "project-1", description: h.description }, error: null,
+      data: { id: "issue-1", project_id: "project-1", description: h.description, plan: h.plan },
+      error: null,
     }) }) }) }),
   }),
 }));
@@ -50,6 +52,7 @@ vi.mock("@/lib/server/rich-documents", async () => {
   };
   return {
     usesPageOnlyNodes: actual.usesPageOnlyNodes,
+    documentIdOf: actual.documentIdOf,
     markdownFingerprint: fingerprint,
     readDocumentHead: async () => head(),
     createDocumentStream: async (_owner: unknown, content: JSONContent, hash: string) => {
@@ -94,6 +97,7 @@ vi.mock("@/lib/server/rich-documents", async () => {
 });
 
 const authority = await import("./description-collaboration");
+const { documentIdOf } = await vi.importActual<typeof import("./rich-documents")>("./rich-documents");
 const { pageCollaborationServer, descriptionMarkdownServer } = await import("./pages-projection");
 
 const paragraph = (text: string, blockId: string): JSONContent => ({
@@ -126,8 +130,10 @@ beforeEach(() => {
   h.claimed = false;
   h.access = { canWrite: true };
   h.beforeCommit = null;
+  h.plan = "";
   h.updateIssueFields.mockReset().mockImplementation(async ({ input }) => {
-    h.description = input.description ?? "";
+    if ("plan" in input) h.plan = input.plan ?? "";
+    else h.description = input.description ?? "";
     return { ok: true, issue: {} };
   });
 });
@@ -262,5 +268,62 @@ describe("materialization", () => {
     expect(await authority.materializeDescription(
       { kind: "issue", id: "issue-1", projectId: "project-1" }, "user-1")).toBe("busy");
     expect(h.updateIssueFields).not.toHaveBeenCalled();
+  });
+});
+
+describe("live plans", () => {
+  const plan = "## Steps\n\n- [ ] Write the migration\n- [ ] Ship it";
+
+  beforeEach(async () => {
+    h.plan = plan;
+    const content = (await descriptionMarkdownServer()).fromMarkdown(plan);
+    h.row = {
+      revision: 0, materializedRevision: 0,
+      materializedHash: fingerprint(documentIdOf({ kind: "plan", id: "issue-1" }), plan),
+      content: pageCollaborationServer().canonicalBodyJSON(content) as JSONContent, batches: [],
+    };
+  });
+
+  it("keeps the plan's document apart from the description's", () => {
+    const id = documentIdOf({ kind: "plan", id: "11111111-1111-4111-8111-111111111111" });
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(id).not.toBe("11111111-1111-4111-8111-111111111111");
+    expect(documentIdOf({ kind: "plan", id: "11111111-1111-4111-8111-111111111111" })).toBe(id);
+    expect(documentIdOf({ kind: "issue", id: "issue-1" })).toBe("issue-1");
+  });
+
+  it("writes typed plans back to issues.plan, never to the description", async () => {
+    const markdown = await descriptionMarkdownServer();
+    const typed = markdown.reconcile(h.row!.content,
+      markdown.fromMarkdown(`${plan}\n- [ ] Announce it`));
+    await authority.submitDescriptionBatch("plan", "issue-1",
+      submission(0, stepsBetween(h.row!.content, typed!)), "user-1");
+    expect(await authority.materializeDescription(
+      { kind: "plan", id: "issue-1", projectId: "project-1" }, null)).toBe("materialized");
+    expect(h.updateIssueFields).toHaveBeenCalledWith(expect.objectContaining({
+      issueId: "issue-1", actorId: "user-1",
+      input: { plan: `${plan}\n- [ ] Announce it` }, planFromDocument: true,
+    }));
+    expect(h.description).toBe("Context\n\nSteps");
+  });
+
+  it("keeps typing when an agent ticks a task meanwhile", async () => {
+    const markdown = await descriptionMarkdownServer();
+    const typing = markdown.reconcile(h.row!.content,
+      markdown.fromMarkdown("## Steps, being renamed\n\n- [ ] Write the migration\n- [ ] Ship it"))!;
+    h.beforeCommit = () => {
+      // A person's batch lands while the agent's write is computed.
+      const steps = stepsBetween(h.row!.content, typing);
+      const applied = pageCollaborationServer().applyCollabSteps("body", h.row!.content, steps);
+      if (!applied.ok) throw new Error("typing did not apply");
+      h.row!.batches.push({ base: h.row!.revision, stepCount: steps.length, clientId: "browser",
+        authorId: "user-2", steps, batchId: crypto.randomUUID() });
+      h.row!.revision += steps.length;
+      h.row!.content = applied.doc as JSONContent;
+    };
+    await authority.syncDescriptionWrite({ kind: "plan", id: "issue-1", projectId: "project-1",
+      markdown: "## Steps\n\n- [x] Write the migration\n- [ ] Ship it", authorId: "agent" });
+    expect(await markdownOf(h.row!.content))
+      .toBe("## Steps, being renamed\n\n- [x] Write the migration\n- [ ] Ship it");
   });
 });

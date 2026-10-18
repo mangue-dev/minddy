@@ -7,6 +7,7 @@ import { hasProjectAccess } from "@/lib/server/project-access";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { readPageContent } from "@/lib/server/page-content-input";
+import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import {
   descriptionMarkdownServer,
   pageCollaborationServer,
@@ -17,6 +18,7 @@ import {
   releaseDocumentMaterialization,
   createDocumentStream,
   documentBatchReceipt,
+  documentIdOf,
   markDocumentMaterialized,
   markdownFingerprint,
   readDocumentBatches,
@@ -41,7 +43,8 @@ import {
 /**
  * The OPERATION AUTHORITY of live descriptions (MIN-728).
  *
- * An issue or objective description is a step stream like a page body
+ * An issue or objective description, or an issue's plan, is a step stream
+ * like a page body
  * (docs/document-collaboration.md). Its head document lives in
  * `rich_documents`; the parent's Markdown — what every other reader uses — is
  * materialized from it a couple of seconds after typing stops.
@@ -75,7 +78,10 @@ const COMMIT_ATTEMPTS = 5;
 const MAX_DESCRIPTION_LENGTH = 65_536;
 
 export const isDescriptionKind = (value: unknown): value is DescriptionKind =>
-  value === "issue" || value === "objective";
+  value === "issue" || value === "objective" || value === "plan";
+
+/** Materializations in flight on this instance, per document. */
+const keyOf = (owner: { kind: DescriptionKind; id: string }) => `${owner.kind}:${owner.id}`;
 
 function serverClientId(): string {
   return `srv-${crypto.randomUUID().replace(/-/g, "")}`;
@@ -85,6 +91,7 @@ function serverClientId(): string {
 
 interface Parent {
   projectId: string;
+  /** The parent's Markdown for this document: its description, or its plan. */
   description: string;
 }
 
@@ -92,16 +99,18 @@ interface Parent {
  decide access first. */
 async function readParent(kind: DescriptionKind, id: string): Promise<Parent | null> {
   const service = getServiceClient();
-  const { data, error } = kind === "issue"
-    ? await issueStore(service).select("id, project_id, description")
+  const column = kind === "plan" ? "plan" : "description";
+  const { data, error } = kind === "objective"
+    ? await objectiveStore(service).select("id, project_id, description")
         .eq("id", id).is("deleted_at", null).maybeSingle()
-    : await objectiveStore(service).select("id, project_id, description")
+    : await issueStore(service).select(`id, project_id, ${column}`)
         .eq("id", id).is("deleted_at", null).maybeSingle();
   if (error) throw new Error("Unable to read the description");
-  if (!data || typeof data.project_id !== "string") return null;
+  const row = data as Record<string, unknown> | null;
+  if (!row || typeof row.project_id !== "string") return null;
   return {
-    projectId: data.project_id,
-    description: typeof data.description === "string" ? data.description : "",
+    projectId: row.project_id,
+    description: typeof row[column] === "string" ? row[column] as string : "",
   };
 }
 
@@ -147,7 +156,7 @@ async function ensureHead(
     const markdown = await descriptionMarkdownServer();
     const content = pageCollaborationServer().canonicalBodyJSON(
       markdown.fromMarkdown(parent.description)) as JSONContent;
-    await createDocumentStream(owner, content, markdownFingerprint(owner.id, parent.description));
+    await createDocumentStream(owner, content, markdownFingerprint(documentIdOf(owner), parent.description));
     head = await readDocumentHead(owner, actorId);
     if (!head) throw new Error("Document stream was not created");
   }
@@ -155,7 +164,7 @@ async function ensureHead(
   // is pending: with typing pending, a materialization is due, and it folds
   // such a write itself under its claim (`materializeDescription`).
   if (head.revision === head.materializedRevision &&
-      head.materializedHash !== markdownFingerprint(owner.id, parent.description)) {
+      head.materializedHash !== markdownFingerprint(documentIdOf(owner), parent.description)) {
     head = await foldExternalWrite(owner, parent.description, actorId) ?? head;
   }
   return head;
@@ -186,12 +195,12 @@ async function commitServerEdit(
   if (!first) return null;
   const target = await build(first);
   if (!target) return first;
-  const hash = markdownForHash === null ? null : markdownFingerprint(owner.id, markdownForHash);
+  const hash = markdownForHash === null ? null : markdownFingerprint(documentIdOf(owner), markdownForHash);
   const ours = collab.diffCollabSteps("body", first.content,
     collab.canonicalBodyJSON(target) as JSONContent);
   if (ours.length === 0) {
     if (hash && hash !== first.materializedHash && first.materializedRevision >= first.revision) {
-      await markDocumentMaterialized(owner.id, first.revision, hash);
+      await markDocumentMaterialized(documentIdOf(owner), first.revision, hash);
     }
     return first;
   }
@@ -210,7 +219,7 @@ async function commitServerEdit(
       authorId,
     }, rebased ? null : hash);
     if (outcome.status === "accepted" || outcome.status === "duplicate") {
-      if (rebased && hash) await markDocumentMaterialized(owner.id, head.materializedRevision, hash);
+      if (rebased && hash) await markDocumentMaterialized(documentIdOf(owner), head.materializedRevision, hash);
       return { ...head, revision: outcome.revision, content: applied.doc as JSONContent };
     }
     if (outcome.status === "missing") return null;
@@ -290,7 +299,8 @@ async function snapshotOf(
   return {
     protocol: DESCRIPTION_COLLABORATION_PROTOCOL,
     kind: owner.kind,
-    documentId: owner.id,
+    // The id the head wake-ups carry: the row's, which is a plan's own.
+    documentId: documentIdOf(owner),
     projectId: owner.projectId,
     revision: head.revision,
     doc: head.content,
@@ -349,7 +359,7 @@ export async function submitDescriptionBatch(
   // answered once access holds.
   const [access, receipt] = await Promise.all([
     authorizeDescription(kind, id, actorId, { write: true }),
-    documentBatchReceipt(id, submission.batchId),
+    documentBatchReceipt(documentIdOf({ kind, id }), submission.batchId),
   ]);
   if (!access.ok) return access;
   const { owner } = access;
@@ -373,7 +383,7 @@ export async function submitDescriptionBatch(
   }
   const markdown = await descriptionMarkdownServer();
   const projected = markdown.toMarkdown(next);
-  if (projected.length > MAX_DESCRIPTION_LENGTH) return { ok: true, result: refused("too-large") };
+  if (projected.length > (kind === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH)) return { ok: true, result: refused("too-large") };
   if (submission.presentation && projected !== markdown.toMarkdown(head.content)) {
     return { ok: true, result: refused("presentation-changed") };
   }
@@ -394,30 +404,38 @@ export async function submitDescriptionBatch(
 /* ── Materialization ──────────────────────────────────────────────────────── */
 
 const materializeGenerations = new Map<string, number>();
-const materializing = new Map<string, Promise<void>>();
+const materializing = new Map<string, Promise<"materialized" | "unchanged">>();
 
 /** Write the Markdown of the head once typing rests, on this instance. */
 function scheduleMaterialization(owner: Owner, authorId: string): void {
-  const generation = (materializeGenerations.get(owner.id) ?? 0) + 1;
-  materializeGenerations.set(owner.id, generation);
+  const key = keyOf(owner);
+  const generation = (materializeGenerations.get(key) ?? 0) + 1;
+  materializeGenerations.set(key, generation);
   afterOrNow(async () => {
     await new Promise((resolve) => setTimeout(resolve, MATERIALIZE_QUIET_MS));
-    if (materializeGenerations.get(owner.id) !== generation) return;
-    materializeGenerations.delete(owner.id);
+    if (materializeGenerations.get(key) !== generation) return;
+    materializeGenerations.delete(key);
     await runMaterialization(owner, authorId);
   });
 }
 
-async function runMaterialization(owner: Owner, authorId: string | null): Promise<void> {
-  const running = materializing.get(owner.id);
+async function runMaterialization(
+  owner: Owner,
+  authorId: string | null
+): Promise<"materialized" | "unchanged"> {
+  const key = keyOf(owner);
+  const running = materializing.get(key);
   if (running) await running;
-  const task = materializeDescription(owner, authorId).then(() => {}, (error: unknown) => {
-    console.error("[description-collaboration] materialization failed:", (error as Error).message);
-  }).finally(() => {
-    if (materializing.get(owner.id) === task) materializing.delete(owner.id);
+  const task = materializeDescription(owner, authorId).then(
+    (outcome) => outcome === "materialized" ? "materialized" as const : "unchanged" as const,
+    (error: unknown) => {
+      console.error("[description-collaboration] materialization failed:", (error as Error).message);
+      return "unchanged" as const;
+    }).finally(() => {
+    if (materializing.get(key) === task) materializing.delete(key);
   });
-  materializing.set(owner.id, task);
-  await task;
+  materializing.set(key, task);
+  return task;
 }
 
 /**
@@ -433,14 +451,15 @@ export async function materializeDescription(
   const first = await readDocumentHead(owner, null);
   if (!first) return "missing";
   if (first.materializedRevision >= first.revision) return "unchanged";
-  if (!await claimDocumentMaterialization(owner.id)) return "busy";
+  const documentId = documentIdOf(owner);
+  if (!await claimDocumentMaterialization(documentId)) return "busy";
   try {
     const parent = await readParent(owner.kind, owner.id);
     if (!parent) return "missing";
     // Under the claim, a Markdown that is not the one last materialized was
     // written outside the authority: fold it in before writing over it.
     let head = first;
-    if (first.materializedHash !== markdownFingerprint(owner.id, parent.description)) {
+    if (first.materializedHash !== markdownFingerprint(documentIdOf(owner), parent.description)) {
       head = await foldExternalWrite(owner, parent.description, null) ?? first;
     }
     head = await readDocumentHead(owner, null) ?? head;
@@ -451,16 +470,18 @@ export async function materializeDescription(
       const batches = await readDocumentBatches(owner, Math.max(0, head.revision - 1), null);
       actor = [...batches].reverse().find((batch) => batch.authorId)?.authorId ?? null;
     }
-    const hash = markdownFingerprint(owner.id, markdown);
+    const hash = markdownFingerprint(documentIdOf(owner), markdown);
     if (!actor || markdown.trim() === parent.description.trim()) {
       // Nothing to sign: presentation-only batches, or a text already written.
-      await markDocumentMaterialized(owner.id, head.revision, hash);
+      await markDocumentMaterialized(documentIdOf(owner), head.revision, hash);
       return "unchanged";
     }
-    const result = owner.kind === "issue"
+    const result = owner.kind === "issue" || owner.kind === "plan"
       ? await (await import("@/lib/server/update-issue")).updateIssueFields({
-          issueId: owner.id, actorId: actor, input: { description: markdown || null },
-          descriptionFromDocument: true,
+          issueId: owner.id, actorId: actor,
+          input: owner.kind === "plan" ? { plan: markdown || null } : { description: markdown || null },
+          descriptionFromDocument: owner.kind === "issue",
+          planFromDocument: owner.kind === "plan",
         })
       : await (await import("@/lib/server/objectives")).updateObjective({
           objectiveId: owner.id, actorId: actor, input: { description: markdown || null },
@@ -470,10 +491,10 @@ export async function materializeDescription(
       console.error("[description-collaboration] materialization write refused:", result.status);
       return "unchanged";
     }
-    await markDocumentMaterialized(owner.id, head.revision, hash);
+    await markDocumentMaterialized(documentIdOf(owner), head.revision, hash);
     return "materialized";
   } finally {
-    await releaseDocumentMaterialization(owner.id);
+    await releaseDocumentMaterialization(documentId);
   }
 }
 
@@ -485,11 +506,12 @@ export async function materializePendingDescription(
   kind: DescriptionKind,
   id: string,
   projectId: string
-): Promise<void> {
+): Promise<"materialized" | "unchanged"> {
   try {
-    await runMaterialization({ kind, id, projectId }, null);
+    return await runMaterialization({ kind, id, projectId }, null);
   } catch (error) {
     console.error("[description-collaboration] read-time materialization failed:", (error as Error).message);
+    return "unchanged";
   }
 }
 
@@ -514,7 +536,7 @@ export async function seedDescriptionDocument(
   try {
     await createDocumentStream(owner,
       pageCollaborationServer().canonicalBodyJSON(content) as JSONContent,
-      markdownFingerprint(owner.id, markdown));
+      markdownFingerprint(documentIdOf(owner), markdown));
   } catch (error) {
     console.error("[description-collaboration] seed failed:", (error as Error).message);
   }

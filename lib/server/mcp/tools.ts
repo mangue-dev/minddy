@@ -299,7 +299,10 @@ async function readIssueText(
 > {
   // Typing a person left pending is written first (MIN-728): an agent edits
   // the text people see.
-  await materializePendingDescription("issue", issueId, projectId);
+  await Promise.all([
+    materializePendingDescription("issue", issueId, projectId),
+    materializePendingDescription("plan", issueId, projectId),
+  ]);
   const { data, error } = await issueStore(getServiceClient(), actorId)
     .select("plan, description, updated_at")
     .is("deleted_at", null)

@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createHmac, hkdfSync } from "node:crypto";
+import { createHash, createHmac, hkdfSync } from "node:crypto";
 import type { JSONContent } from "@tiptap/core";
 import { getServiceClient } from "@/lib/supabase-service";
 import { isContentEncryptionEnabled } from "./encryption/content-config";
@@ -12,8 +12,8 @@ import { documentToMarkdownServer } from "./pages-projection";
 
 /**
  * The ProseMirror documents of the rich text surfaces outside pages (MIN-728):
- * issue and objective descriptions and the notebook. Comments use the same
- * editor but are rendered from their Markdown, so they keep none.
+ * issue and objective descriptions, issue plans and the notebook. Comments use
+ * the same editor but are rendered from their Markdown, so they keep none.
  *
  * The parent keeps its Markdown, which stays what every external reader sees.
  * The document here is the editor's richer form of the same text, valid only
@@ -23,18 +23,36 @@ import { documentToMarkdownServer } from "./pages-projection";
  * the parent with the requester's own client first.
  */
 
-export type RichDocumentKind = "issue" | "objective" | "notebook";
+export type RichDocumentKind = "issue" | "objective" | "plan" | "notebook";
 
 const OWNER_COLUMN: Record<RichDocumentKind, string> = {
   issue: "issue_id",
   objective: "objective_id",
+  plan: "issue_id",
   notebook: "user_id",
 };
+
+/**
+ * The row id of a document. A description and the notebook use their
+ * parent's id; an issue's plan is a second document of the same issue, so its
+ * id is derived from the issue's (a name-based UUID, version 8): stable, so
+ * every instance finds the same row, and never equal to an issue id.
+ */
+export function documentIdOf(owner: { kind: RichDocumentKind; id: string }): string {
+  if (owner.kind !== "plan") return owner.id;
+  const bytes = createHash("sha256").update("minddy:issue-plan-document:").update(owner.id)
+    .digest().subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x80;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 /** The parent a document belongs to, as its route already resolved it. */
 export interface RichDocumentOwner {
   kind: RichDocumentKind;
-  /** The parent's id: the issue, the objective, or the notebook's user. */
+  /** The parent's id: the issue (description or plan), the objective, or the
+   notebook's user. */
   id: string;
   /** The parent's project; absent for the notebook. */
   projectId: string | null;
@@ -120,7 +138,7 @@ export async function takeRichDocumentInput(
 async function shouldEncryptFor(owner: RichDocumentOwner, service: SupabaseClient): Promise<boolean> {
   if (isContentEncryptionEnabled()) return true;
   if (owner.parentEncryptionVersion !== undefined) return owner.parentEncryptionVersion > 0;
-  const { data, error } = owner.kind === "issue"
+  const { data, error } = owner.kind === "issue" || owner.kind === "plan"
     ? await service.from("issues").select("encryption_version").eq("id", owner.id).maybeSingle()
     : owner.kind === "objective"
       ? await service.from("objectives").select("encryption_version").eq("id", owner.id).maybeSingle()
@@ -137,7 +155,7 @@ export async function writeRichDocument(
 ): Promise<void> {
   const scope = scopeOf(owner);
   const row: Row = {
-    id: owner.id,
+    id: documentIdOf(owner),
     kind: owner.kind,
     [OWNER_COLUMN[owner.kind]]: owner.id,
     // The trigger derives it from the parent; it is written so the envelope is
@@ -167,7 +185,7 @@ export async function readRichDocument(
 ): Promise<JSONContent | null> {
   const { data, error } = await service.from("rich_documents")
     .select("id, kind, issue_id, objective_id, user_id, project_id, content, encrypted_content, encryption_version")
-    .eq("id", owner.id).eq("kind", owner.kind).maybeSingle();
+    .eq("id", documentIdOf(owner)).eq("kind", owner.kind).maybeSingle();
   if (error) throw new Error("Unable to read the document");
   if (!data) return null;
   const row = data as Row;
@@ -197,7 +215,7 @@ export async function purgeClearRichDocuments(limit = 200): Promise<{ removed: n
 
 /* ── Live descriptions (MIN-728, migration 20270109200063) ──────────────── */
 
-/** The project-owned documents that are step streams. */
+/** The project-owned documents that are step streams: descriptions and plans. */
 export type DescriptionKind = Exclude<RichDocumentKind, "notebook">;
 
 let fingerprintKey: { source: string; key: Buffer } | null = null;
@@ -246,7 +264,7 @@ export async function readDocumentHead(
   service: SupabaseClient = getServiceClient()
 ): Promise<DocumentHead | null> {
   const { data, error } = await service.from("rich_documents").select(HEAD_COLUMNS)
-    .eq("id", owner.id).eq("kind", owner.kind).maybeSingle();
+    .eq("id", documentIdOf(owner)).eq("kind", owner.kind).maybeSingle();
   if (error) throw new Error("Unable to read the document");
   if (!data) return null;
   const row = data as unknown as Row;
@@ -273,7 +291,7 @@ export async function readDocumentHead(
 
 async function sealDocumentRow(owner: RichDocumentOwner, content: JSONContent, encrypt: boolean) {
   const row: Row = {
-    id: owner.id,
+    id: documentIdOf(owner),
     kind: owner.kind,
     [OWNER_COLUMN[owner.kind]]: owner.id,
     project_id: owner.kind === "notebook" ? null : owner.projectId,
@@ -341,7 +359,7 @@ export async function commitDocument(
     sealDocumentRow(owner, content, encrypt),
     encrypt
       ? new EncryptedRowCodec(getEncryptedStore()).encode({
-          document_id: owner.id,
+          document_id: documentIdOf(owner),
           base_revision: batch.base,
           project_id: owner.projectId,
           steps: batch.steps,
@@ -351,7 +369,7 @@ export async function commitDocument(
       : null,
   ]);
   const { data, error } = await service.rpc("commit_rich_document", {
-    p_id: owner.id,
+    p_id: documentIdOf(owner),
     p_base: batch.base,
     p_content: sealed.content ?? null,
     p_encrypted_content: sealed.encrypted_content ?? null,
@@ -409,10 +427,10 @@ export async function readDocumentBatches(
   // The batches from `since` on, plus the one that may contain `since`.
   const [after, before] = await Promise.all([
     service.from("rich_document_batches").select(columns)
-      .eq("document_id", owner.id).gte("base_revision", since)
+      .eq("document_id", documentIdOf(owner)).gte("base_revision", since)
       .order("base_revision", { ascending: true }).limit(200),
     service.from("rich_document_batches").select(columns)
-      .eq("document_id", owner.id).lt("base_revision", since)
+      .eq("document_id", documentIdOf(owner)).lt("base_revision", since)
       .order("base_revision", { ascending: false }).limit(1),
   ]);
   if (after.error || before.error) throw new Error("Unable to read the document journal");
@@ -474,21 +492,27 @@ export async function releaseDocumentMaterialization(
   if (error) console.error("[rich-documents] materialization release failed");
 }
 
-/** Descriptions whose typing has waited longer than `olderThanMs` for their Markdown. */
+/** Descriptions and plans whose typing has waited longer than `olderThanMs` for
+ their Markdown, by parent. */
 export async function staleDocumentStreams(
   olderThanMs: number,
   limit: number,
   service: SupabaseClient = getServiceClient()
 ): Promise<Array<{ kind: DescriptionKind; id: string; projectId: string }>> {
   const { data, error } = await service.from("rich_documents")
-    .select("id, kind, project_id")
+    .select("id, kind, issue_id, objective_id, project_id")
     .lt("pending_since", new Date(Date.now() - olderThanMs).toISOString())
     .order("pending_since", { ascending: true })
     .limit(limit);
   if (error) throw new Error("Unable to list pending documents");
   return ((data ?? []) as Row[])
-    .filter((row) => (row.kind === "issue" || row.kind === "objective") && typeof row.project_id === "string")
-    .map((row) => ({ kind: row.kind as DescriptionKind, id: String(row.id), projectId: String(row.project_id) }));
+    .filter((row) => (row.kind === "issue" || row.kind === "objective" || row.kind === "plan") &&
+      typeof row.project_id === "string")
+    .map((row) => ({
+      kind: row.kind as DescriptionKind,
+      id: String(row.kind === "objective" ? row.objective_id : row.issue_id),
+      projectId: String(row.project_id),
+    }));
 }
 
 export { usesPageOnlyNodes };

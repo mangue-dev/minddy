@@ -11,6 +11,7 @@ import { blocksIn, slashItems, PAGE_BLOCKS } from "@/components/pages/blocks";
 import { pageExtensions } from "@/components/pages/page-extensions";
 import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
 import { SPACER_LINE } from "@/lib/scratchpad";
+import { parsePlan } from "@/lib/plan";
 
 function roundTrip(markdown: string, options: Parameters<typeof pageExtensions>[0]): string {
   const editor = new Editor({
@@ -79,5 +80,42 @@ describe("the notebook on the document schema", () => {
     expect(
       roundTrip(notebook, { blocks: "document", extensions: { paragraph: ScratchpadParagraph } })
     ).toBe(notebook);
+  });
+});
+
+describe("issue plans on the document schema", () => {
+  // Plans are edited live (MIN-728); agents address their tasks by position,
+  // so the Markdown the editor writes back must keep every task as it was.
+  const plan = [
+    "## Context",
+    "",
+    "Goal: one editor.",
+    "",
+    "## Steps",
+    "",
+    "- [x] Extract the engine",
+    "- [~] Split the extensions",
+    "- [ ] Switch the readers:",
+    "  - forge sync;",
+    "  - MCP tools;",
+    "  - [ ] the nested check",
+    "- [-] Backfill",
+    "",
+    "## Questions",
+    "",
+    "- [ ] Keep the textarea?",
+  ].join("\n");
+
+  it("keeps every task, its state, depth and text", () => {
+    const back = roundTrip(plan, { blocks: "document" });
+    const shape = (markdown: string) =>
+      parsePlan(markdown).tasks.map(({ state, depth, text, question }) => ({ state, depth, text, question }));
+    expect(shape(back)).toEqual(shape(plan));
+    expect(back).not.toMatch(/^\s*- \[ \]\s*$/m);
+  });
+
+  it("splits a list mixing bullets and tasks without inventing an empty task", () => {
+    expect(roundTrip("- a\n- [ ] b", { blocks: "document" })).toBe("- a\n\n- [ ] b");
+    expect(roundTrip("- [ ] t\n  - a\n  - [ ] b", { blocks: "document" })).toBe("- [ ] t\n  - a\n  - [ ] b");
   });
 });
