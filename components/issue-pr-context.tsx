@@ -61,7 +61,10 @@ export async function fetchIssuePrs(
   const res = await fetch(url);
   if (!res.ok) throw new Error(`issue-pull-requests ${res.status}`);
   const data = (await res.json()) as IssuePrPayload;
-  return { pullRequests: data.pullRequests ?? {} };
+  return {
+    pullRequests: data.pullRequests ?? {},
+    linkedPullRequestIds: data.linkedPullRequestIds ?? {},
+  };
 }
 
 export function IssuePrProvider({

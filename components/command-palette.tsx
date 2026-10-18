@@ -27,7 +27,7 @@
 // share it); this component is controlled via `open` / `onOpenChange`.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, Cancel01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useMemo,
@@ -1136,6 +1136,16 @@ export function CommandPalette({
         keywords: ["pull request", "pr", "lier", "link", "merge request"],
         ...field("link-pr"),
       } as CpPaletteItem);
+    }
+    if (pullRequestLinks && pullRequestLinks.unlinkCount > 0) {
+      list.push({
+        id: "bulk-unlink-pr",
+        title: tPr("unlinkFromPullRequests", { count: pullRequestLinks.unlinkCount }),
+        icon: <HugeiconsIcon icon={Cancel01Icon} className="size-4" />,
+        keywords: ["pull request", "pr", "délier", "unlink", "detach"],
+        filterCategory: "bulk",
+        execute: () => pullRequestLinks.onUnlinkAll(),
+      });
     }
     for (const pr of pullRequestLinks?.partial ?? []) {
       list.push({

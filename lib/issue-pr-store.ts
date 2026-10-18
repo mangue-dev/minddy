@@ -9,6 +9,8 @@ export interface IssuePrReadiness {
 
 export interface IssuePrPayload {
   pullRequests?: Record<string, IssuePr>;
+  /** Every PR linked to each issue, in any state (the chip shows only one). */
+  linkedPullRequestIds?: Record<string, string[]>;
 }
 
 function samePr(left: IssuePr | null, right: IssuePr | null): boolean {
@@ -20,6 +22,7 @@ function samePr(left: IssuePr | null, right: IssuePr | null): boolean {
 export function createIssuePrStore(initial?: IssuePrPayload) {
   let prs = new Map<string, IssuePr>();
   let readiness = new Map<string, IssuePrReadiness>();
+  let linkedIds: Record<string, string[]> = {};
   const listeners = new Map<string, Set<() => void>>();
   const notify = (issueId: string) => {
     for (const listener of listeners.get(issueId) ?? []) listener();
@@ -31,8 +34,9 @@ export function createIssuePrStore(initial?: IssuePrPayload) {
       const pr = prs.get(issueId);
       return pr ? readiness.get(pr.prId) ?? null : null;
     },
-    /** Every issue's pull request, for actions over a selection. */
-    entries: (): ReadonlyMap<string, IssuePr> => prs,
+    /** Every PR linked to the issue, in any state, for actions over a selection. */
+    linkedPullRequestIds: (issueId: string): readonly string[] =>
+      linkedIds[issueId] ?? (prs.get(issueId) ? [prs.get(issueId)!.prId] : []),
     subscribe(issueId: string, listener: () => void) {
       let issueListeners = listeners.get(issueId);
       if (!issueListeners) listeners.set(issueId, issueListeners = new Set());
@@ -43,6 +47,7 @@ export function createIssuePrStore(initial?: IssuePrPayload) {
       };
     },
     update(payload?: IssuePrPayload) {
+      linkedIds = payload?.linkedPullRequestIds ?? {};
       const incoming = payload?.pullRequests ?? {};
       const next = new Map<string, IssuePr>();
       const changed = new Set(prs.keys());

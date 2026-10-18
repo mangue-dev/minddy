@@ -22,6 +22,28 @@ describe("bulkPullRequestLinks", () => {
     expect(options.map((pr) => pr.prNumber)).toEqual([1, 3]);
   });
 
+  it("does not offer a pull request for the selection once a selected ticket has any link", () => {
+    const links = bulkPullRequestLinks(
+      [{ id: "a", project_id: "p1" }, { id: "done", project_id: "p1" }],
+      prOf,
+      [openPr("pr-1", 1, "p1")],
+      // "done" only has a merged pull request: still linked, so no global pick.
+      (id) => (id === "done" ? ["pr-merged"] : []),
+    );
+    expect(links.options).toEqual([]);
+    expect(links.unlinkable).toEqual([{ issueId: "done", prIds: ["pr-merged"] }]);
+  });
+
+  it("lists every link of every selected ticket for unlinking", () => {
+    const links = bulkPullRequestLinks(
+      [{ id: "linked", project_id: "p1" }, { id: "free", project_id: "p1" }],
+      prOf,
+      [],
+      (id) => (id === "linked" ? ["pr-447", "pr-12"] : []),
+    );
+    expect(links.unlinkable).toEqual([{ issueId: "linked", prIds: ["pr-447", "pr-12"] }]);
+  });
+
   it("extends a pull request some selected tickets have to the others of its project", () => {
     const links = bulkPullRequestLinks(
       [{ id: "linked", project_id: "p1" }, { id: "other", project_id: "p1" }, { id: "elsewhere", project_id: "p2" }],

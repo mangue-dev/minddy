@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CommandIcon } from "@hugeicons/core-free-icons";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
@@ -15,7 +15,7 @@ import {
 import { useIssuePrStore } from "@/components/issue-pr-context";
 import { useLinkablePullRequests } from "@/components/pull-requests/pr-link-target-picker";
 import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
-import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
+import { useLinkIssuesToPullRequest, useUnlinkIssuesFromPullRequests } from "@/lib/use-link-issues-to-pull-request";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 import {
   Tooltip,
@@ -63,7 +63,7 @@ export function BulkIssueActions({
   surface?: string;
 }) {
   const t = useTranslations("BulkActions");
-  const { requestBulkActions } = useBulkActions();
+  const { requestBulkActions, registerSelectionActions } = useBulkActions();
 
   // Cross-project boards flatten every project's members, so the same person can
   // appear once per shared project — de-dupe by user id (also fixes the React
@@ -84,15 +84,18 @@ export function BulkIssueActions({
     : null;
   const { pullRequests: openPullRequests } = useLinkablePullRequests(selectionProject);
   const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
+  const unlinkIssuesFromPullRequests = useUnlinkIssuesFromPullRequests();
 
   const pullRequestLinks = (): BulkPullRequestLinks | undefined => {
     if (!issues?.length) return undefined;
-    const links = bulkPullRequestLinks(issues, prStore.get, openPullRequests);
-    if (links.options.length === 0 && links.partial.length === 0) return undefined;
+    const links = bulkPullRequestLinks(issues, prStore.get, openPullRequests, prStore.linkedPullRequestIds);
+    if (links.options.length === 0 && links.partial.length === 0 && links.unlinkable.length === 0) return undefined;
     return {
       options: links.options,
       partial: links.partial,
       onLink: (pr) => void linkIssuesToPullRequest(links.targets(pr.prId), pr),
+      unlinkCount: links.unlinkable.length,
+      onUnlinkAll: () => void unlinkIssuesFromPullRequests(links.unlinkable),
     };
   };
 
@@ -110,6 +113,15 @@ export function BulkIssueActions({
       onLink,
       pullRequestLinks: pullRequestLinks(),
     });
+
+  // ⌘K while tickets are selected opens these actions, not the search palette:
+  // the pill hands its latest gesture to the launcher for as long as it lives.
+  const openActionsRef = useRef(openActions);
+  openActionsRef.current = openActions;
+  useEffect(() => {
+    registerSelectionActions(() => openActionsRef.current());
+    return () => registerSelectionActions(null);
+  }, [registerSelectionActions]);
 
   // No `backdrop-blur`: `bg-background/95` already completely hides the background,
   // the blur was not visible and cost a composition layer (MIN-323).

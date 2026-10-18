@@ -21,6 +21,10 @@ export function bulkPullRequestLinks(
   issues: readonly SelectedIssue[],
   prOf: (issueId: string) => IssuePr | null,
   openPullRequests: readonly PullRequestListItem[],
+  linkedPullRequestIds: (issueId: string) => readonly string[] = (issueId) => {
+    const pr = prOf(issueId);
+    return pr ? [pr.prId] : [];
+  },
 ) {
   const projects = new Set(issues.map((issue) => issue.project_id));
   const projectOfPr = new Map<string, string>();
@@ -51,10 +55,19 @@ export function bulkPullRequestLinks(
       .map((issue) => issue.id);
   };
 
+  // Every link of every selected issue, for "unlink from pull requests".
+  const unlinkable = issues
+    .map((issue) => ({ issueId: issue.id, prIds: linkedPullRequestIds(issue.id) }))
+    .filter((link) => link.prIds.length > 0);
+  // Picking a pull request for the whole selection is only offered while no
+  // selected issue is linked to any pull request yet; `partial` covers the
+  // mixed case, and "unlink" clears the slate first.
+  const linkable = unlinkable.length === 0 ? options : [];
+
   const partial = [...live.values()]
     .map(({ projectId: _projectId, ...pr }) => ({ ...pr, missing: targets(pr.prId).length }))
     .filter((pr) => pr.missing > 0)
     .sort((left, right) => left.prNumber - right.prNumber);
 
-  return { options, partial, targets };
+  return { options: linkable, partial, targets, unlinkable };
 }

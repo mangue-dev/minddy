@@ -66,6 +66,20 @@ function prState(raw: string): IssuePrRef["state"] {
 }
 
 /**
+ * Every pull request linked to each issue, in any state — what "unlink from
+ * all pull requests" has to remove, where the board chip shows only one.
+ */
+export function issuePullRequestIds(rows: IssuePrRow[]): Record<string, string[]> {
+  const linked: Record<string, string[]> = {};
+  for (const row of rows) {
+    if (!row.issue_id) continue;
+    const ids = linked[row.issue_id] ??= [];
+    if (!ids.includes(row.id)) ids.push(row.id);
+  }
+  return linked;
+}
+
+/**
  * Selects a live PR over terminal PRs, then keeps the most recently updated row.
  */
 export function pickIssuePullRequests(rows: IssuePrRow[]): Record<string, IssuePrRef> {

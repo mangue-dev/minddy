@@ -85,6 +85,10 @@ export interface BulkPullRequestLinks {
   partial: Array<BulkPullRequestOption & { missing: number }>;
   /** Links every selected ticket of the PR's project not yet linked to it. */
   onLink: (pr: BulkPullRequestOption) => void;
+  /** Selected tickets with at least one linked pull request, in any state. */
+  unlinkCount: number;
+  /** Unlinks those tickets from all of their pull requests. */
+  onUnlinkAll: () => void;
 }
 
 interface BulkActionsContextValue {
@@ -96,6 +100,11 @@ interface BulkActionsContextValue {
   consumeOpenSignal: (signal: number) => boolean;
   /** Called by the pill's "Actions" button — stores the request and opens ⌘K. */
   requestBulkActions: (request: BulkActionsRequest) => void;
+  /** The mounted selection pill registers its "Actions" gesture (null on unmount). */
+  registerSelectionActions: (open: (() => void) | null) => void;
+  /** ⌘K with a selection: opens its actions instead of the search palette.
+   *  False when nothing is selected. */
+  openSelectionActions: () => boolean;
 }
 
 const BulkActionsContext = createContext<BulkActionsContextValue | null>(null);
@@ -104,6 +113,15 @@ export function BulkActionsProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<BulkActionsRequest | null>(null);
   const [openSignal, setOpenSignal] = useState(0);
   const consumedOpenSignal = useRef(0);
+  const selectionActions = useRef<(() => void) | null>(null);
+  const registerSelectionActions = useCallback((open: (() => void) | null) => {
+    selectionActions.current = open;
+  }, []);
+  const openSelectionActions = useCallback(() => {
+    if (!selectionActions.current) return false;
+    selectionActions.current();
+    return true;
+  }, []);
 
   const consumeOpenSignal = useCallback((signal: number) => {
     if (signal <= consumedOpenSignal.current) return false;
@@ -124,8 +142,8 @@ export function BulkActionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<BulkActionsContextValue>(
-    () => ({ request, openSignal, consumeOpenSignal, requestBulkActions }),
-    [request, openSignal, consumeOpenSignal, requestBulkActions]
+    () => ({ request, openSignal, consumeOpenSignal, requestBulkActions, registerSelectionActions, openSelectionActions }),
+    [request, openSignal, consumeOpenSignal, requestBulkActions, registerSelectionActions, openSelectionActions]
   );
 
   return (
