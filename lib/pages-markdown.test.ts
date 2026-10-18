@@ -335,11 +335,10 @@ describe("ce qui a un sens dans une balise ou dans un lien", () => {
   const FILE = "22222222-2222-4222-8222-222222222222";
 
   // The leaflet projects HTML: a `<` in a summary would close the
-  // tag. It comes out escaped — not by blocks/details.ts, but by the
-  // tiptap-markdown TEXT serializer, which passes any text node through
-  // `escapeHTML` (see the comment of `summaryMarkdown`). This case is here for
-  // that the guarantee is VERIFIED rather than assumed: it is due to a
-  // dependence, and it is this test which will tell the day it moves.
+  // tag. It comes out escaped — not by blocks/details.ts, but by the page
+  // TEXT serializer, which escapes any `<` that could open a tag
+  // (`escapeMarkdownTags`, see the comment of `summaryMarkdown`). This case is
+  // here so the guarantee is VERIFIED rather than assumed.
   it("échappe le `<` d'un résumé de dépliant, dans les deux sens", () => {
     const json = bodyFromMarkdown(
       "<details>\n<summary>A &lt;b&gt; x</summary>\n\nHidden\n\n</details>"
@@ -349,7 +348,7 @@ describe("ce qui a un sens dans une balise ou dans un lien", () => {
       "A <b> x"
     );
     const markdown = bodyToMarkdown(json);
-    expect(markdown).toContain("<summary>A &lt;b&gt; x</summary>");
+    expect(markdown).toContain("<summary>A &lt;b> x</summary>");
     expect(roundTrip(markdown)).toBe(markdown);
   });
 

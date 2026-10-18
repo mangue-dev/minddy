@@ -20,6 +20,7 @@
 import type { AnyExtension, Extensions, NodeViewRenderer } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
+import { Text } from "@tiptap/extension-text";
 import { MarkdownLinkMark } from "@/components/markdown-link-mark";
 import UniqueID from "@tiptap/extension-unique-id";
 import { Markdown } from "tiptap-markdown";
@@ -89,6 +90,31 @@ export interface PageExtensionsOptions {
   blocks?: BlockSet;
 }
 
+/**
+ * Text as people typed it. tiptap-markdown writes every `<` and `>` of a text
+ * node as an entity, so "5 > 3" reached Numo, agents, the forge and exports as
+ * "5 &gt; 3". Only a `<` that could open an HTML tag, comment or declaration
+ * needs escaping for the Markdown to read back the same (it is parsed with
+ * `html: true`); a `>` at the start of a line is escaped by the serializer
+ * itself, as a quote marker.
+ */
+export function escapeMarkdownTags(text: string): string {
+  return text.replace(/<(?=[A-Za-z/!?])/g, "&lt;");
+}
+
+const MarkdownText = Text.extend({
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: { text(text: string): void }, node: { text?: string }) {
+          state.text(escapeMarkdownTags(node.text ?? ""));
+        },
+        parse: {},
+      },
+    };
+  },
+});
+
 export function pageExtensions(
   options: PageExtensionsOptions = {}
 ): Extensions {
@@ -107,6 +133,7 @@ export function pageExtensions(
     // BLOCK nodes are cut — they come from the registry, and two definitions
     // from the same node raise tiptap.
     StarterKit.configure({
+      text: false,
       paragraph: false,
       heading: false,
       blockquote: false,
@@ -118,6 +145,7 @@ export function pageExtensions(
       link: false,
       ...(trailingNode ? {} : { trailingNode: false }),
     }),
+    MarkdownText,
     MarkdownLinkMark,
     ...blockExtensions({ headless, nodeViews, extensions, set: blocks }),
     ...pageColorExtensions(),
