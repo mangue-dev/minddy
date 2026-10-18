@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-12",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate",
     "editions": [
@@ -51,14 +51,15 @@
       "components/pages/page-database-properties.tsx",
       "components/date-time-picker.tsx",
       "lib/page-databases.ts",
-      "scripts/page-database-date-times.integration.test.mjs"
+      "scripts/page-database-date-times.integration.test.mjs",
+      "content/documentation/reviews/database-property-types-2026-10-18.json"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence)",
-    "language": "agent:/root (fr changed-passage and figure parity self-review)",
-    "date": "2026-10-12"
+    "revision": 12,
+    "fact": "agent:/root (optional-time and option-control source, component and isolated SQL review; unchanged claims retain prior evidence); agent:/root (MIN-690 recapture of create-a-database-steps on next dev at 8371778c4 with a throwaway database, record content/documentation/reviews/database-property-types-2026-10-18.json; other figures unchanged, evidence retained)",
+    "language": "agent:/root (fr changed-passage and figure parity self-review); agent:/root (fr updated alt text for the column type picker; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "pages"
@@ -82,7 +83,7 @@
       "src": "/documentation/fr/database-setup-cards.png",
       "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
       "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -97,17 +98,18 @@
       "id": "create-a-database-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/database-property-types.png",
-      "alt": "Sélecteur de type de colonne : texte, nombre, sélections, dates, personnes et case à cocher.",
+      "alt": "Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-08",
+      "capturedAt": "2026-10-18",
       "viewport": [
-        464,
-        336
+        448,
+        357
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "database-cells-and-entries-steps",
@@ -115,7 +117,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -131,7 +133,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -147,7 +149,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -163,7 +165,7 @@
       "src": "/documentation/fr/database-options.png",
       "alt": "Aperçu du composant Modifier les options avec des statuts en français, des flèches vers le haut et le bas, des corbeilles et l’explication de la suppression.",
       "caption": "Modifiez ensemble les noms, les couleurs et l’ordre des options. La corbeille retire une option des modifications en cours ; Enregistrer applique les changements. Données de démonstration.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -180,7 +182,7 @@
       "src": "/documentation/fr/database-date-time.png",
       "alt": "Aperçu du sélecteur de date avec le 12 octobre 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 14:30.",
       "caption": "Activez Préciser l’heure pour saisir une heure. Cet aperçu du composant utilise des données de démonstration et le fuseau horaire de l’appareil.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -223,7 +225,7 @@ Personnes sélectionne les membres du projet, pas des e-mails arbitraires. Les m
 Formules avancées, automatisations et vues supplémentaires ne sont pas disponibles. Utilisez une propriété texte ou un document lié si les données ne correspondent pas à un type proposé ; ne présentez pas une formule non prise en charge comme une colonne fonctionnelle.
 
 
-![Sélecteur de type de colonne : texte, nombre, sélections, dates, personnes et case à cocher.](/documentation/fr/database-property-types.png)
+![Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.](/documentation/fr/database-property-types.png)
 
 ## Modifier les cellules et pages d’une base {#database-cells-and-entries}
 
