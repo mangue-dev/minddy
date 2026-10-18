@@ -1,4 +1,4 @@
-import { mentionLinks, mentionMarkdown, stripCutMention, type MentionLink } from "@/lib/mention-link";
+import { splitMentionLinks, stripCutMention, type MentionLink } from "@/lib/mention-link";
 
 /** Strip common Markdown syntax so a compact preview reads as plain text. */
 export function plainMarkdown(md: string): string {
@@ -23,14 +23,16 @@ const TOKEN = "\u0000";
  */
 export function plainMarkdownParts(markdown: string): Array<string | MentionLink> {
   // A mention cut by the caller's slice keeps no label either.
-  const md = stripCutMention(markdown);
-  const links = mentionLinks(md);
-  if (links.length === 0) return [plainMarkdown(md)];
-  let protectedText = md;
-  links.forEach((link, index) => {
-    protectedText = protectedText.replace(mentionMarkdown(link.type, link.id, link.label), `${TOKEN}${index}${TOKEN}`);
-  });
-  const flat = plainMarkdown(protectedText);
-  return flat.split(new RegExp(`${TOKEN}(\\d+)${TOKEN}`)).map((piece, index) =>
+  const pieces = splitMentionLinks(stripCutMention(markdown));
+  if (!pieces.some((piece) => typeof piece !== "string")) return [plainMarkdown(pieces.join(""))];
+  // Mentions are held out by their position, whatever escapes their label
+  // used, then the text around them is flattened as one.
+  const links: MentionLink[] = [];
+  const protectedText = pieces.map((piece) => {
+    if (typeof piece === "string") return piece;
+    links.push(piece);
+    return `${TOKEN}${links.length - 1}${TOKEN}`;
+  }).join("");
+  return plainMarkdown(protectedText).split(new RegExp(`${TOKEN}(\\d+)${TOKEN}`)).map((piece, index) =>
     index % 2 === 1 ? links[Number(piece)] : piece).filter((piece) => piece !== "");
 }

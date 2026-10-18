@@ -19,7 +19,10 @@ Fix [@MIN-42](mention:issue/9f1c2a3b-…) with [@Jean Dupont](mention:member/5ad
 
 `lib/mention-link.ts` builds, parses and rewrites the format
 (`mentionMarkdown`, `parseMentionHref`, `mentionLinks`, `mentionedIds`,
-`relabelMentions`). Link text escapes `[`, `]` and `\`.
+`relabelMentions`, `splitMentionLinks`, `restoreStoredMentions`). Link text
+escapes every Markdown punctuation (`[ ] \ * _ \` ~ < > & | ! #`), so a label
+reads back unchanged, and is capped at 256 characters; the parsers are linear
+on any text.
 
 Two mentions are not typed links, on purpose:
 
@@ -69,7 +72,7 @@ Access rules:
 | --- | --- |
 | issue, objective, page | the reader has access to its project, and it is not trashed |
 | project | the reader has access to it |
-| member | the reader shares a project with them, or is them |
+| member | the reader shares a project with them (as a member or its owner), or is them |
 
 In an editor, the pills a selection covers are marked `mention-selected` and
 painted in the selection color: an atom is not painted as selected text by
@@ -78,7 +81,9 @@ the browser.
 Read-only renders (`components/markdown.tsx`) keep `mention:` links through
 react-markdown's URL rules and the sanitizer, and do not rescan their text.
 Copying rendered text puts each pill in the clipboard as its `mention:`
-anchor (HTML) and as `@Label` (plain text).
+anchor (HTML) and as `@Label` (plain text). Copying from an editor carries
+the label each pill showed (`transformCopied`, `shownMentionLabel`): the
+current label, or `unavailable`, never the stored one.
 
 ## Plain-text previews and excerpts
 
@@ -99,8 +104,17 @@ A preview that flattens Markdown must not print a stored label either:
 Every MCP tool reply (`mentionsForReader` in `lib/server/mcp/tool-helpers.ts`)
 and every Numo tool result (`executeTool`) is rewritten for the caller before
 it is returned: each typed mention carries the target's current label, or
-`@unavailable` when the caller may not see it. The reference itself is kept,
-so an agent can write it back unchanged.
+`@unavailable` when the caller may not see it. Distinct targets are resolved
+in chunks; deeper than the walk goes, mentions read as unavailable. The
+reference itself is kept.
+
+What an agent writes back is restored (`restoreStoredMentions`): a mention
+of a target the stored text already names takes its stored link again, in
+passage edits (`editTextPassage`), in whole rewrites of a description, plan
+or objective (`updateIssueFields`, `updateObjective`, for Numo and MCP
+writes) and in page rewrites and appends. A passage copied as the agent read
+it therefore matches, and a rewrite never stores `unavailable` in place of
+the author's label.
 
 ## Server consumers
 
@@ -111,7 +125,8 @@ so an agent can write it back unchanged.
   agent's comment, which has no client-side mention list, now notifies the
   people its typed mentions name.
 - Page backlinks read page ids from typed mentions (`citedPageIds` in
-  `lib/server/page-links.ts`).
+  `lib/server/page-links.ts`); a page body's text keeps its typed nodes as
+  links (`pageBlockTexts`), so a renamed page stays cited.
 
 ## Paste
 

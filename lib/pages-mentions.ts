@@ -25,6 +25,7 @@
 // components/pages/block-actions.ts), and the page follows it when opened.
 
 import { contentMentionScanner } from "@/lib/mention-scan";
+import { isMentionLinkType, mentionMarkdown } from "@/lib/mention-link";
 import type { Member } from "@/lib/types";
 
 /** The attribute which carries the stable ID of a block — the same string as
@@ -46,6 +47,13 @@ function textOf(node: DocNode): string {
   // — the most common case — would be invisible to the scanner.
   if (node.type === "mention") {
     const label = node.attrs?.mentionLabel;
+    const type = node.attrs?.mentionType;
+    const id = node.attrs?.mentionId;
+    // A typed mention keeps its reference (MIN-734), so backlinks and
+    // notifications read its target rather than its label.
+    if (!node.attrs?.legacy && isMentionLinkType(type) && typeof id === "string" && id) {
+      return mentionMarkdown(type, id, typeof label === "string" ? label : "");
+    }
     return typeof label === "string" && label ? `@${label}` : "";
   }
   if (!Array.isArray(node.content)) return "";

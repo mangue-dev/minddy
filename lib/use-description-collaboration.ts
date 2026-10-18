@@ -179,6 +179,8 @@ interface Session {
   hydrationRefused: boolean;
   caretListeners: Set<() => void>;
   attachedListeners: Set<(attached: boolean) => void>;
+  /** Whoever holds the session now, told when its stream stops for good. */
+  fatalListeners: Set<(error: unknown) => void>;
   presence: PageCollaborationPresence | null;
 }
 
@@ -295,15 +297,19 @@ export function useDescriptionCollaboration({
             onRefusedRef.current(reason);
           },
           // A stopped stream sends nothing more: it leaves the retained set,
-          // and the surface falls back to saving Markdown rather than keep
-          // an editor whose typing would go nowhere.
+          // and the hook holding it — the creator, or one that adopted it
+          // later — falls back to saving Markdown.
           onFatal: (error) => {
             if (retained.get(key) === created) retained.delete(key);
-            if (sessionRef.current === created) {
+            // Before any surface subscribed, its creator still holds it.
+            if (created.fatalListeners.size === 0 && sessionRef.current === created) {
               sessionRef.current = null;
               setStatus("unavailable", key);
+              onFatalRef.current(error);
+              return;
             }
-            onFatalRef.current(error);
+            // A copy: a listener's surface may unsubscribe while being told.
+            for (const listener of Array.from(created.fatalListeners)) listener(error);
           },
           onDiscarded: () => onRefusedRef.current("step-failed"),
           onAttached: (attached) => {
@@ -319,6 +325,7 @@ export function useDescriptionCollaboration({
           hydrationRefused: false,
           caretListeners: new Set(),
           attachedListeners,
+          fatalListeners: new Set(),
           presence: null,
         };
         sessionRef.current = created;
@@ -333,6 +340,20 @@ export function useDescriptionCollaboration({
 
   /* ── What stops with visibility ────────────────────────────────────────── */
   const session = status === "ready" && key && sessionRef.current?.key === key ? sessionRef.current : null;
+  useEffect(() => {
+    if (!session) return;
+    const onSessionFatal = (error: unknown) => {
+      if (sessionRef.current === session) {
+        sessionRef.current = null;
+        setStatus("unavailable", session.key);
+      }
+      onFatalRef.current(error);
+    };
+    session.fatalListeners.add(onSessionFatal);
+    return () => {
+      session.fatalListeners.delete(onSessionFatal);
+    };
+  }, [session, setStatus]);
   useEffect(() => {
     if (!session || !id) return;
     const { stream } = session;

@@ -300,14 +300,39 @@ async function foldExternalWriteUnderTyping(owner: Owner, description: string) {
   const markdown = await descriptionMarkdownServer();
   const collab = pageCollaborationServer();
   return commitServerEdit(owner, null, async (head) => {
-    const batches = await readDocumentBatches(owner, head.materializedRevision, null);
-    const steps = batches
-      .filter((batch) => batch.base >= head.materializedRevision)
-      .flatMap((batch) => batch.steps);
-    const touched = new Set(collab.touchedBodyBlockIds(head.content, steps));
+    const pending = await readPendingBatches(owner, head.materializedRevision, head.revision);
     const merged = markdown.reconcile(head.content, markdown.fromMarkdown(description));
+    // Without the whole pending journal (trimmed, or cleared when the
+    // document was sealed), the typed blocks are unknown: typing wins on
+    // every block rather than losing any of it.
+    if (!pending) return head.content;
+    const touched = new Set(collab.touchedBodyBlockIds(head.content,
+      pending.flatMap((batch) => batch.steps)));
     return keepTypedBlocks(head.content, merged, touched);
   }, { authorId: null, markdownForHash: null });
+}
+
+/**
+ * Every batch from revision `from` to `to`, in order, or `null` when the
+ * journal no longer holds them all without a gap. Read page by page: a long
+ * typing burst spans more batches than one read returns.
+ */
+async function readPendingBatches(owner: Owner, from: number, to: number) {
+  const batches: Awaited<ReturnType<typeof readDocumentBatches>> = [];
+  let at = from;
+  while (at < to) {
+    const page = (await readDocumentBatches(owner, at, null))
+      .filter((batch) => batch.base >= at)
+      .sort((a, b) => a.base - b.base);
+    if (page.length === 0 || page[0].base !== at) return null;
+    for (const batch of page) {
+      if (batch.base !== at) return null;
+      batches.push(batch);
+      at = batch.base + batch.stepCount;
+      if (at >= to) break;
+    }
+  }
+  return at === to ? batches : null;
 }
 
 /**
@@ -533,27 +558,45 @@ export async function materializeDescription(
     const markdown = (await descriptionMarkdownServer()).toMarkdown(head.content);
     // A presentation batch (pills rebuilt by a reader) has no author: the
     // signer is the last author across everything pending.
-    const pending = await readDocumentBatches(owner, head.materializedRevision, null);
-    const actor = [...pending].reverse().find((batch) => batch.authorId)?.authorId ?? authorId;
+    const pending = await readPendingBatches(owner, head.materializedRevision, head.revision)
+      ?? await readDocumentBatches(owner, head.materializedRevision, null);
+    // The signers to try, latest first: the last author of the pending
+    // typing, then the earlier ones — one may have lost write access since.
+    const authors = [...new Set([
+      ...[...pending].reverse().map((batch) => batch.authorId).filter((id): id is string => !!id),
+      ...(authorId ? [authorId] : []),
+    ])];
     const hash = markdownFingerprint(documentIdOf(owner), markdown);
-    if (!actor || markdown.trim() === parent.description.trim()) {
+    if (authors.length === 0 || markdown.trim() === parent.description.trim()) {
       // Nothing to sign: presentation-only batches, or a text already written.
       await markDocumentMaterialized(documentIdOf(owner), head.revision, hash);
       return "unchanged";
     }
-    const result = owner.kind === "issue" || owner.kind === "plan"
-      ? await (await import("@/lib/server/update-issue")).updateIssueFields({
+    const write = async (actor: string) => owner.kind === "issue" || owner.kind === "plan"
+      ? (await import("@/lib/server/update-issue")).updateIssueFields({
           issueId: owner.id, actorId: actor,
           input: owner.kind === "plan" ? { plan: markdown || null } : { description: markdown || null },
           descriptionFromDocument: owner.kind === "issue",
           planFromDocument: owner.kind === "plan",
         })
-      : await (await import("@/lib/server/objectives")).updateObjective({
+      : (await import("@/lib/server/objectives")).updateObjective({
           objectiveId: owner.id, actorId: actor, input: { description: markdown || null },
           descriptionFromDocument: true,
         });
-    if (!result.ok) {
-      console.error("[description-collaboration] materialization write refused:", result.status);
+    let result: Awaited<ReturnType<typeof write>> | null = null;
+    for (const actor of authors) {
+      result = await write(actor);
+      // Refused for this account (403/404): the next author may still write.
+      if (result.ok || (result.status !== 403 && result.status !== 404)) break;
+    }
+    if (!result?.ok) {
+      console.error("[description-collaboration] materialization write refused:", result?.status);
+      if (result && (result.status === 403 || result.status === 404)) {
+        // No author of this typing may write it any more: it is dropped, and
+        // the document returns to the text everyone else reads.
+        await foldExternalWrite(owner, parent.description, null);
+        return "unchanged";
+      }
       await deferDocumentMaterialization(documentId);
       return "unchanged";
     }

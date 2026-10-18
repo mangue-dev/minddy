@@ -1,7 +1,7 @@
 // A paste that carries typed mentions (MIN-734), split into text and
 // mentions so a composer can rebuild its pills with their ids.
 
-import { mentionLinks, mentionMarkdown, parseMentionHref, type MentionLink } from "@/lib/mention-link";
+import { parseMentionHref, splitMentionLinks, type MentionLink } from "@/lib/mention-link";
 
 /**
  * A paste split into text and typed mentions (MIN-734): `mention:` anchors of
@@ -32,17 +32,5 @@ export function pastedMentionPieces(html: string, text: string): Array<string | 
       return pieces;
     }
   }
-  const links = mentionLinks(text);
-  if (links.length === 0) return [text];
-  const pieces: Array<string | MentionLink> = [];
-  let rest = text;
-  for (const link of links) {
-    const written = mentionMarkdown(link.type, link.id, link.label);
-    const at = rest.indexOf(written);
-    if (at < 0) continue;
-    pieces.push(rest.slice(0, at), link);
-    rest = rest.slice(at + written.length);
-  }
-  pieces.push(rest);
-  return pieces;
+  return splitMentionLinks(text);
 }

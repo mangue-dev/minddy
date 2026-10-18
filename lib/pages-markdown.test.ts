@@ -212,7 +212,8 @@ describe("mentions", () => {
 
   it("keep special characters of a label as they are", () => {
     expect(bodyToMarkdown(withMention(bodyFromMarkdown("Hello"), "Jean*Marc", true))).toBe("Hello @Jean*Marc");
-    expect(bodyToMarkdown(withMention(bodyFromMarkdown("Hello"), "Jean*Marc"))).toBe("Hello [@Jean*Marc](mention:issue/x)");
+    // In a typed link the label is escaped, and reads back unchanged.
+    expect(bodyToMarkdown(withMention(bodyFromMarkdown("Hello"), "Jean*Marc"))).toBe("Hello [@Jean\\*Marc](mention:issue/x)");
   });
 });
 

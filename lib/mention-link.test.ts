@@ -12,6 +12,7 @@ import {
   mentionedIds,
   parseMentionHref,
   relabelMentions,
+  restoreStoredMentions,
   stripCutMention,
 } from "@/lib/mention-link";
 import { bodyFromMarkdown, bodyToMarkdown } from "@/lib/pages-markdown";
@@ -40,10 +41,33 @@ describe("the mention link format", () => {
     expect(mentionPlainText(markdown)).toBe("Ask @Jean [Ops] about @MIN-42.");
   });
 
+  it("round-trips labels with Markdown punctuation through the editor", () => {
+    const markdown = `See ${mentionMarkdown("page", ISSUE, "a *b* `c` | d_e [x]")}`;
+    expect(bodyToMarkdown(bodyFromMarkdown(markdown, "document"), "document")).toBe(markdown);
+    expect(mentionLinks(markdown)[0].label).toBe("a *b* `c` | d_e [x]");
+  });
+
+  it("stays fast on hostile text", () => {
+    const started = performance.now();
+    stripCutMention(`${"[@".repeat(50_000)}`);
+    mentionLinks(`${"[@a".repeat(30_000)}](mention:issue/x)`);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
   it("keeps nothing of a mention a truncation cut", () => {
     expect(stripCutMention("Fix [@Secret ro…")).toBe("Fix @…");
     expect(stripCutMention(`Fix [@Secret](mention:page/${ISSUE.slice(0, 6)}`)).toBe("Fix @…");
     expect(stripCutMention("Plain [@ text]")).toBe("Plain [@ text]");
+    expect(stripCutMention("see [@\\[Draft\\] Secret pla…")).toBe("see @…");
+  });
+
+  it("gives an agent's copied mentions back their stored form", () => {
+    const stored = `Review ${mentionMarkdown("page", ISSUE, "Secret roadmap")} today`;
+    const seen = relabelMentions(stored, () => "unavailable");
+    expect(restoreStoredMentions(seen, stored)).toBe(stored);
+    // A new mention the agent adds is kept as written.
+    const added = `${seen} with ${mentionMarkdown("member", MEMBER, "Jean")}`;
+    expect(restoreStoredMentions(added, stored)).toBe(`${stored} with ${mentionMarkdown("member", MEMBER, "Jean")}`);
   });
 
   it("relabels without moving the reference", () => {

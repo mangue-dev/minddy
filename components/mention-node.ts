@@ -12,7 +12,7 @@
 // (lib/mention-link.ts), so the reference survives renames, homonyms and
 // copy-paste. `@Numo` and forge logins stay plain `@text`, which their
 // readers resolve themselves. Older `@Label` text is still re-deduced by
-// lib/mention-scan and written back as a link by the next save.
+// lib/mention-scan and written back as that text (`legacy`).
 
 import { Node } from "@tiptap/core";
 import {

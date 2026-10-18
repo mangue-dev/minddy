@@ -43,6 +43,10 @@ export const mentionKey = (ref: MentionRef) => `${ref.type}:${ref.id}`;
 
 /** Above this, a request is refused rather than resolved partially. */
 export const MAX_MENTION_REFS = 200;
+/** Distinct targets resolved in one agent reply. */
+const MAX_RESULT_REFS = 1_000;
+/** How deep an agent reply is walked for mentions. */
+const MAX_DEPTH = 12;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -92,13 +96,16 @@ export async function resolveMentionTargets(
         .select("id, key, name, deleted_at, encrypted_content, encryption_version")
         .in("id", idsOf("project")).then((result) => rows(result, "project"))
       : none,
+    // A member of a project, or its owner — who has no `project_members` row.
     idsOf("member").length
-      ? service.from("project_members").select("project_id, user_id").in("user_id", idsOf("member"))
-        .then(({ data, error }) => {
-          if (error) throw new Error("Unable to resolve member mentions");
-          return (data ?? []) as Row[];
-        })
-      : Promise.resolve([] as Row[]),
+      ? Promise.all([
+          service.from("project_members").select("project_id, user_id").in("user_id", idsOf("member"))
+            .then((result) => rows(result, "member")),
+          service.from("projects").select("id, owner_id").in("owner_id", idsOf("member"))
+            .then((result) => rows(result, "owner")
+              .map((row) => ({ project_id: row.id, user_id: row.owner_id }))),
+        ]).then(([members, owners]) => [...members, ...owners])
+      : none,
   ]);
 
   const projectIds = new Set<string>();
@@ -179,31 +186,49 @@ export async function markdownForReader(
  * descriptions, plans, comments, page bodies.
  */
 export async function readResultForReader<T>(userId: string, value: T, service?: SupabaseClient): Promise<T> {
-  const refs: MentionRef[] = [];
+  const refs = new Map<string, MentionRef>();
+  let deep = false;
+  let cut = false;
   const collect = (node: unknown, depth: number) => {
-    if (depth > 12 || node === null || node === undefined) return;
+    if (node === null || node === undefined) return;
+    if (depth > MAX_DEPTH) {
+      deep = true;
+      return;
+    }
     if (typeof node === "string") {
-      if (node.includes("](mention:")) refs.push(...mentionLinks(node));
-      if (node.includes("[@")) cut = true;
+      if (node.includes("](mention:")) {
+        for (const link of mentionLinks(node)) refs.set(mentionKey(link), { type: link.type, id: link.id });
+      }
+      if (node.endsWith("…") && node.includes("[@")) cut = true;
       return;
     }
     if (Array.isArray(node)) for (const item of node) collect(item, depth + 1);
     else if (typeof node === "object") for (const item of Object.values(node)) collect(item, depth + 1);
   };
-  let cut = false;
   collect(value, 0);
-  if (refs.length === 0 && !cut) return value;
-  const resolution: MentionResolution = refs.length
-    ? await resolveMentionTargets(userId, refs.slice(0, MAX_MENTION_REFS), service)
-    : new Map();
+  if (refs.size === 0 && !cut && !deep) return value;
+  // Distinct targets only, resolved in bounded chunks; any beyond the last
+  // chunk read as unavailable.
+  const resolution: MentionResolution = new Map();
+  const distinct = [...refs.values()].slice(0, MAX_RESULT_REFS);
+  for (let start = 0; start < distinct.length; start += MAX_MENTION_REFS) {
+    const chunk = await resolveMentionTargets(userId, distinct.slice(start, start + MAX_MENTION_REFS), service);
+    for (const [key, label] of chunk) resolution.set(key, label);
+  }
+  const relabel = (text: string, known: boolean) => {
+    const relabeled = text.includes("](mention:")
+      ? relabelMentions(text, (link) =>
+        (known ? resolution.get(mentionKey(link)) : null) ?? UNAVAILABLE_MENTION_LABEL)
+      : text;
+    // A truncation marks its cut with "…": only such a text can end in a
+    // mention cut in half. Code, patches and files are left as they are.
+    return relabeled.endsWith("…") ? stripCutMention(relabeled) : relabeled;
+  };
   const rewrite = (node: unknown, depth: number): unknown => {
-    if (depth > 12 || node === null || node === undefined) return node;
-    if (typeof node === "string") {
-      const relabeled = node.includes("](mention:")
-        ? relabelMentions(node, (link) => resolution.get(mentionKey(link)) ?? UNAVAILABLE_MENTION_LABEL)
-        : node;
-      return stripCutMention(relabeled);
-    }
+    if (node === null || node === undefined) return node;
+    // Beyond the walk's depth nothing is resolved: mentions there read as
+    // unavailable rather than keeping their stored label.
+    if (typeof node === "string") return relabel(node, depth <= MAX_DEPTH);
     if (Array.isArray(node)) return node.map((item) => rewrite(item, depth + 1));
     if (typeof node === "object") {
       return Object.fromEntries(Object.entries(node).map(([key, item]) => [key, rewrite(item, depth + 1)]));

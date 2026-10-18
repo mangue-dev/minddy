@@ -2125,7 +2125,7 @@
     "uploadRetry": "Tentar novamente",
     "uploadTooLarge": "{name} excede {max} MB",
     "uploadImagesOnly": "{name} não é uma imagem: só as páginas aceitam outros arquivos",
-    "uploadInProgress": "Aguarde o envio da imagem terminar.",
+    "waitForUploads": "Aguarde o envio da imagem terminar.",
     "uploadEmpty": "{name} está vazio",
     "promotePrompt": "Transforme esta tarefa da página “{page}” do meu projeto em um problema:\n\n{note}\n\nSe a tarefa não estiver clara o suficiente para criar um bom problema, leia o restante da página para obter contexto e faça perguntas antes de criá-lo. Assim que o problema existir, marque a tarefa como concluída na página; agora ela está no problema.",
     "subpageUntitled": "Página sem título",

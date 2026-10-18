@@ -8,7 +8,7 @@
 // stay a page feature.
 
 import { useCallback } from "react";
-import type { Editor, JSONContent } from "@tiptap/core";
+import type { Editor } from "@tiptap/core";
 import { MAX_ATTACHMENT_UPLOAD_BYTES } from "@/lib/attachment-upload-limits";
 import {
   postFile,
@@ -17,17 +17,6 @@ import {
   type PageFileUploaded,
   type UploadFile,
 } from "@/components/pages/page-uploads";
-
-/**
- * Whether a document still holds an image whose bytes are being uploaded: its
- * address arrives when the upload ends, so a form submitted before then would
- * store an image without one.
- */
-export function hasPendingUploads(node: JSONContent | null | undefined): boolean {
-  if (!node) return false;
-  if (typeof node.attrs?.uploadId === "string" && node.attrs.uploadId) return true;
-  return (node.content ?? []).some(hasPendingUploads);
-}
 
 /** The stable address an uploaded image is read from. */
 export function attachmentImageSrc(storagePath: string): string {

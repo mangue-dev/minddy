@@ -24,6 +24,11 @@ describe("plain previews with typed mentions (MIN-734)", () => {
     expect(parts.filter((part) => typeof part === "string").join("")).not.toContain("Secret");
   });
 
+  it("holds out a mention whatever escapes its stored label used", () => {
+    const parts = plainMarkdownParts(`See [@Secret\\_Plan](mention:page/${PROJECT})`);
+    expect(parts).toEqual(["See ", { type: "page", id: PROJECT, label: "Secret_Plan" }]);
+  });
+
   it("drops a mention the slice cut in half", () => {
     expect(plainMarkdownParts("Ask [@Secret pro")).toEqual(["Ask @…"]);
     expect(plainMarkdownParts(`Ask [@Secret](mention:project/${PROJECT.slice(0, 8)}`)).toEqual(["Ask @…"]);

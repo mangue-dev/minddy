@@ -151,6 +151,22 @@ describe("sourceText", () => {
     };
     expect(sourceText({ doc: withNode })).toContain("@Spec API");
   });
+
+  it("keeps a typed page mention's reference, so a renamed page stays cited (MIN-734)", () => {
+    const pages = [{ id: "11111111-1111-4111-8111-111111111111", project_id: "p1", title: "Spec API v2", icon: null }];
+    const doc = {
+      type: "doc",
+      content: [{
+        type: "paragraph",
+        attrs: { blockId: "b1" },
+        content: [{
+          type: "mention",
+          attrs: { mentionType: "page", mentionId: pages[0].id, mentionLabel: "Spec API" },
+        }],
+      }],
+    };
+    expect(citedPageIds(sourceText({ doc }), pages)).toEqual([pages[0].id]);
+  });
 });
 
 describe("syncPageLinks", () => {

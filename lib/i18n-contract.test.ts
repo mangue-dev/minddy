@@ -170,4 +170,25 @@ describe("i18n catalog ↔ code contract", () => {
       expect([...requiredLocale].sort(), locale).toEqual([...requiredEn].sort());
     }
   });
+
+  it("declares no key twice in the same namespace", () => {
+    // JSON keeps the last of two equal keys without a word: a new message
+    // silently replaced an existing one and broke its call sites (MIN-728).
+    for (const locale of ["de", "en", "es", "fr", "it", "pt-BR"]) {
+      const lines = readFileSync(`messages/${locale}.json`, "utf8").split("\n");
+      const stack: Array<{ indent: number; keys: Set<string> }> = [{ indent: -1, keys: new Set() }];
+      const duplicates: string[] = [];
+      for (const line of lines) {
+        const match = /^(\s*)"((?:[^"\\]|\\.)*)":/.exec(line);
+        if (!match) continue;
+        const indent = match[1].length;
+        while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop();
+        const scope = stack[stack.length - 1];
+        if (scope.keys.has(match[2])) duplicates.push(match[2]);
+        scope.keys.add(match[2]);
+        if (/:\s*\{\s*$/.test(line)) stack.push({ indent, keys: new Set() });
+      }
+      expect(duplicates, locale).toEqual([]);
+    }
+  });
 });

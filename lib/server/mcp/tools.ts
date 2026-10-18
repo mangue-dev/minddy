@@ -6,6 +6,7 @@ import {
   readDocumentImage,
   resolveDocumentImage,
   signedDocumentImageUrl,
+  storedDocumentImageSize,
 } from "@/lib/server/document-images";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { issueStore } from "@/lib/server/issue-store";
@@ -3028,10 +3029,23 @@ export function registerMinddyTools(
         return fail("not_found", "Image not found, or not readable with this account.");
       }
       const image = resolved.image;
-      const [read, url] = await Promise.all([
-        readDocumentImage(service, image),
+      // An image too large to inline, or a file that is not an image, is not
+      // read at all: its signed address is the way in.
+      const [stored, url] = await Promise.all([
+        storedDocumentImageSize(service, image),
         signedDocumentImageUrl(service, image),
       ]);
+      if ((stored !== null && stored > MAX_INLINE_IMAGE_BYTES) ||
+          (image.mimeType && !image.mimeType.startsWith("image/"))) {
+        return ok({
+          src: args.src, kind: "stored", file_name: image.fileName, mime_type: image.mimeType,
+          size_bytes: stored, download_url: url, download_url_expires_in_seconds: 600,
+          content_omitted: stored !== null && stored > MAX_INLINE_IMAGE_BYTES
+            ? "Image is larger than the 10 MB inline cap. Fetch download_url instead."
+            : "This address is not an image. Fetch download_url instead.",
+        });
+      }
+      const read = await readDocumentImage(service, image);
       if (!read) return fail("not_found", "The stored image could not be read.");
       const meta = {
         src: args.src,

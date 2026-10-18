@@ -1,4 +1,5 @@
 import "server-only";
+import { restoreStoredMentions } from "@/lib/mention-link";
 
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeObjective, encodeObjective } from "@/lib/server/objective-store";
@@ -339,6 +340,11 @@ export async function updateObjective({
     previousObjective = await decodeObjective(objective, actorId);
   } catch {
     return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  // An agent's rewrite keeps the stored form of the mentions it copied (MIN-734).
+  if ((viaAssistant || mcpKeyId) && typeof updates.description === "string") {
+    updates.description = restoreStoredMentions(updates.description,
+      previousObjective.description as string | null);
   }
 
   // Same guard as at creation (MIN-339).

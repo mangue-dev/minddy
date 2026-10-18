@@ -50,7 +50,8 @@ import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
 import { isMentionLinkType } from "@/lib/mention-link";
-import { primeMentionLabel } from "@/lib/mention-resolution";
+import { primeMentionLabel, shownMentionLabel } from "@/lib/mention-resolution";
+import { Fragment, Slice, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { findActiveMentionQuery } from "@/lib/mention-menu";
 import {
   mentionAttrsFromOption,
@@ -62,6 +63,9 @@ import {
 /** The node PLUS its pill. The schema, attributes and serialization markdown
  live separately (components/mention-node.ts): the markdown projection of pages
  mounts the bare node, outside the browser, without React. */
+/** What a copied pill the reader could not see carries, as agents read it. */
+const UNAVAILABLE_COPY_LABEL = "unavailable";
+
 export const MentionNode = MentionNodeBase.extend({
   addNodeView() {
     return ReactNodeViewRenderer(MentionNodeView);
@@ -78,6 +82,26 @@ export const MentionNode = MentionNodeBase.extend({
       new Plugin({
         key: new PluginKey("mentionSelection"),
         props: {
+          // A copied typed pill carries the label it showed — the target's
+          // current one, or the neutral one — never the label stored with it
+          // (MIN-734), in the HTML and in the plain text alike.
+          transformCopied: (slice) => {
+            const relabel = (fragment: Fragment): Fragment => {
+              const children: ProseMirrorNode[] = [];
+              fragment.forEach((child) => {
+                const attrs = child.attrs as Record<string, unknown>;
+                if (child.type.name === name && !attrs.legacy && isMentionLinkType(attrs.mentionType) &&
+                    typeof attrs.mentionId === "string") {
+                  const label = shownMentionLabel(attrs.mentionType, attrs.mentionId);
+                  children.push(child.type.create({ ...attrs, mentionLabel: label ?? UNAVAILABLE_COPY_LABEL }));
+                } else {
+                  children.push(child.isLeaf ? child : child.copy(relabel(child.content)));
+                }
+              });
+              return Fragment.fromArray(children);
+            };
+            return new Slice(relabel(slice.content), slice.openStart, slice.openEnd);
+          },
           decorations: ({ doc, selection }) => {
             if (selection.empty) return null;
             const decorations: Decoration[] = [];

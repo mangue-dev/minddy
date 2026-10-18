@@ -11,6 +11,7 @@ const ISSUE_HIDDEN = "33333333-3333-4333-8333-333333333332";
 const PAGE_HIDDEN = "44444444-4444-4444-8444-444444444441";
 const MEMBER = "55555555-5555-4555-8555-555555555551";
 const STRANGER = "55555555-5555-4555-8555-555555555552";
+const OWNER = "55555555-5555-4555-8555-555555555553";
 
 const h = vi.hoisted(() => ({ tables: {} as Record<string, Array<Record<string, unknown>>> }));
 
@@ -53,7 +54,7 @@ beforeEach(() => {
       { id: ISSUE_HIDDEN, project_id: HIDDEN, number: 7, deleted_at: null },
     ],
     projects: [
-      { id: ALLOWED, key: "MIN", name: "Minddy", deleted_at: null },
+      { id: ALLOWED, key: "MIN", name: "Minddy", deleted_at: null, owner_id: OWNER },
       { id: HIDDEN, key: "SEC", name: "Secret project", deleted_at: null },
     ],
     pages: [{ id: PAGE_HIDDEN, project_id: HIDDEN, title: "Secret roadmap", deleted_at: null }],
@@ -74,6 +75,7 @@ describe("resolving mention targets", () => {
       { type: "project", id: HIDDEN },
       { type: "member", id: MEMBER },
       { type: "member", id: STRANGER },
+      { type: "member", id: OWNER },
       { type: "issue", id: "not-a-uuid" },
     ]);
     expect(Object.fromEntries(resolution)).toEqual({
@@ -83,6 +85,7 @@ describe("resolving mention targets", () => {
       [`project:${HIDDEN}`]: null,
       [`member:${MEMBER}`]: "Jean Dupont",
       [`member:${STRANGER}`]: null,
+      [`member:${OWNER}`]: "Someone",
       "issue:not-a-uuid": null,
     });
   });

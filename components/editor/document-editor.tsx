@@ -99,6 +99,9 @@ export interface DocumentEditorProps {
       that). Shift+Enter stays a newline, and an open menu (“@”, “/”)
       consumes the key before this fires. */
   onSubmit?: () => void;
+  /** Whether images are still being sent: a form waits for them before it
+   submits, since their address arrives when the upload ends. */
+  onUploadingChange?: (uploading: boolean) => void;
   /** Escape with no menu open: a composer closes or cancels with it. */
   onEscape?: () => void;
   autoFocus?: boolean;
@@ -131,6 +134,7 @@ export function DocumentEditor({
   onEdit,
   onChange,
   onSubmit,
+  onUploadingChange,
   onEscape,
   autoFocus,
   apiRef,
@@ -157,6 +161,12 @@ export function DocumentEditor({
   editorRef.current = editor;
   const imageUploads = useAttachmentImageUploads(editorRef, uploadScope ?? "");
   const [canUpload] = useState(() => !!uploadScope && !readOnly);
+  const uploadingRef = useRef(onUploadingChange);
+  uploadingRef.current = onUploadingChange;
+  const uploading = (imageUploads.sending ?? 0) > 0;
+  useEffect(() => {
+    uploadingRef.current?.(uploading);
+  }, [uploading]);
 
   const mentionsRef = useRef(mentions);
   mentionsRef.current = mentions;

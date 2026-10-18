@@ -2125,7 +2125,7 @@
     "uploadRetry": "Retry",
     "uploadTooLarge": "{name} is over {max} MB",
     "uploadImagesOnly": "{name} is not an image: only pages accept other files",
-    "uploadInProgress": "Wait for the image to finish uploading.",
+    "waitForUploads": "Wait for the image to finish uploading.",
     "uploadEmpty": "{name} is empty",
     "promotePrompt": "Turn this task from the page “{page}” of my project into an issue:\n\n{note}\n\nIf the task isn't clear enough to make a good issue, read the rest of the page for context, and ask me questions before creating it. Once the issue exists, tick that task off on the page; it lives in the issue now.",
     "subpageUntitled": "Untitled page",

@@ -32,7 +32,6 @@ import {
   LazyDocumentEditor,
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
-import { hasPendingUploads } from "@/components/editor/document-uploads";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { AssigneeCompact } from "@/components/issue-compact-fields";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
@@ -252,6 +251,8 @@ export function ObjectiveDialog({
   /** The editor document of `form.description`, as last committed (MIN-728);
       cleared whenever the description is replaced from outside the editor. */
   const descriptionDocument = useRef<JSONContent | null>(null);
+  // Images of the description still being sent (MIN-728).
+  const [imagesUploading, setImagesUploading] = useState(false);
   // Editing an existing objective opens its stored document, so a save does
   // not drop what Markdown cannot carry.
   const { document: storedDocument, remember: rememberDocument } = useRichDocument(
@@ -414,8 +415,8 @@ export function ObjectiveDialog({
     const name = form.name.trim();
     if (!name || submitting) return;
     // An image still uploading has no address yet (MIN-728).
-    if (hasPendingUploads(descriptionDocument.current)) {
-      toast.info(tPages("uploadInProgress"));
+    if (imagesUploading) {
+      toast.info(tPages("waitForUploads"));
       return;
     }
     if (target && target.id !== projectId && relations.length > 0) {
@@ -613,6 +614,7 @@ export function ObjectiveDialog({
                 mentions={mentions}
                 value={form.description}
                 uploadScope={projectId ? `projects/${projectId}` : null}
+                onUploadingChange={setImagesUploading}
                 document={objective ? storedDocument : null}
                 onCommit={(description, content) => {
                   descriptionDocument.current = content;

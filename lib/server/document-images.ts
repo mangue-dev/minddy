@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { downloadAttachment, signedAttachmentUrl } from "@/lib/server/attachments";
+import { downloadAttachment, resolveAttachmentObjectPath, signedAttachmentUrl } from "@/lib/server/attachments";
 import { getPageFilePath } from "@/lib/server/page-files";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { SITE_URL } from "@/lib/site";
@@ -163,6 +163,22 @@ export async function resolveDocumentImage(
       storagePath: located.storagePath, mimeType: null,
     },
   };
+}
+
+/**
+ * The stored size of an image without reading it, or `null` when unknown.
+ * An encrypted object is a little larger than its content: close enough to
+ * decide whether it is worth reading inline.
+ */
+export async function storedDocumentImageSize(
+  service: SupabaseClient,
+  image: Extract<DocumentImage, { kind: "stored" }>
+): Promise<number | null> {
+  const path = await resolveAttachmentObjectPath(service, image.storagePath);
+  const { data, error } = await service.storage.from("attachments").info(path);
+  if (error || !data) return null;
+  const size = Number((data as { size?: unknown }).size);
+  return Number.isFinite(size) ? size : null;
 }
 
 /** The bytes of a stored image, with the type read from them. */

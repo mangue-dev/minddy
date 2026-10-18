@@ -1,5 +1,6 @@
 import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import "server-only";
+import { restoreStoredMentions } from "@/lib/mention-link";
 
 import { after } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -333,6 +334,15 @@ export async function updateIssueFields({
   const previousEncryptionVersion = (before.encryption_version as number | undefined) ?? 0;
   try {
     Object.assign(before, await decodeIssue(before, actorId));
+    // An agent's rewrite keeps the stored form of the mentions it copied
+    // (MIN-734): it read them relabeled for itself.
+    if (viaAssistant || mcpKeyId) {
+      for (const field of ["description", "plan"] as const) {
+        if (typeof updates[field] === "string") {
+          updates[field] = restoreStoredMentions(updates[field] as string, before[field] as string | null);
+        }
+      }
+    }
   } catch {
     console.error("[update-issue] decryption failed");
     return { ok: false, status: 500, errorKey: "databaseError" };

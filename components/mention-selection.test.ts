@@ -35,3 +35,24 @@ it("marks the pills a selection covers, and only those", () => {
   editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 1, 6)));
   expect(marked()).toBe(1);
 });
+
+it("copies a typed pill with the label it showed, never the stored one", async () => {
+  const { rememberShownMention, resetMentionResolution } = await import("@/lib/mention-resolution");
+  resetMentionResolution();
+  const page = "9f1c2a3b-0000-4000-8000-000000000002";
+  rememberShownMention("page", page, null);
+  editor = new Editor({
+    element: document.createElement("div"),
+    content: `See [@Secret roadmap](mention:page/${page}) now`,
+    extensions: pageExtensions({ headless: true, blocks: "document", mention: MentionNode }),
+  });
+  editor.view.dispatch(editor.state.tr.setSelection(new AllSelection(editor.state.doc)));
+  const { dom, slice } = editor.view.serializeForClipboard(editor.state.selection.content());
+  expect(dom.innerHTML).not.toContain("Secret");
+  // The app's editors write the copied text as Markdown, from this same slice.
+  const markdown = (editor.storage as unknown as {
+    markdown: { serializer: { serialize(content: unknown): string } };
+  }).markdown.serializer.serialize(slice.content);
+  expect(markdown).not.toContain("Secret");
+  expect(markdown).toContain(`[@unavailable](mention:page/${page})`);
+});

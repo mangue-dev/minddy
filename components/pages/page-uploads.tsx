@@ -71,6 +71,8 @@ export interface PageUploads {
   get: (uploadId: string) => PageUpload | undefined;
   /** Restart a failed upload, with the file already in memory. */
   retry: (uploadId: string) => void;
+  /** How many uploads are still sending (failed ones do not count). */
+  sending?: number;
   /** Only images are accepted (MIN-728): every surface but a page. */
   imagesOnly?: boolean;
 }
@@ -225,6 +227,7 @@ export function useEditorUploads(
 ): EditorUploads {
   const t = useTranslations("Pages");
   const [uploads, setUploads] = useState<Map<string, PageUpload>>(new Map());
+  const sending = [...uploads.values()].filter((upload) => upload.status === "uploading").length;
   const uploadsRef = useRef(uploads);
   uploadsRef.current = uploads;
 
@@ -422,7 +425,7 @@ export function useEditorUploads(
   const get = useCallback((uploadId: string) => uploads.get(uploadId), [uploads]);
 
   return useMemo(
-    () => ({ get, retry, addFiles, imagesOnly }),
-    [addFiles, get, retry, imagesOnly]
+    () => ({ get, retry, addFiles, imagesOnly, sending }),
+    [addFiles, get, retry, imagesOnly, sending]
   );
 }

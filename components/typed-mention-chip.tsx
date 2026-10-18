@@ -4,7 +4,8 @@ import { useTranslations } from "next-intl";
 import { MentionChip } from "@/components/mention-chip";
 import { useMentionLinks } from "@/components/mention-links";
 import { mentionMarkdown, type MentionLinkType } from "@/lib/mention-link";
-import { useResolvedMentionLabel } from "@/lib/mention-resolution";
+import { rememberShownMention, useResolvedMentionLabel } from "@/lib/mention-resolution";
+import { useEffect } from "react";
 
 /** Marks a typed pill so a copy of rendered text keeps its reference. */
 export const MENTION_REF_ATTR = "data-mention-ref";
@@ -35,6 +36,10 @@ export function TypedMentionChip({
   const local = links?.label?.(type, id) ?? null;
   const resolved = useResolvedMentionLabel(local ? null : type, local ? null : id);
   const label = local ?? resolved;
+  // A copy of this pill carries what it shows, never its stored label.
+  useEffect(() => {
+    if (label !== undefined) rememberShownMention(type, id, label);
+  }, [type, id, label]);
 
   if (label === null) {
     return <MentionChip type="unavailable" id={id} label={t("mentionUnavailable")} />;

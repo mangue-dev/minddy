@@ -27,7 +27,6 @@ import {
   LazyDocumentEditor,
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
-import { hasPendingUploads } from "@/components/editor/document-uploads";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { DraftRecoveryRow } from "@/components/draft-recovery-row";
@@ -178,6 +177,8 @@ export function CreateIssueDialog({
   /** The editor document of `description`, as last committed (MIN-728);
       cleared whenever the description is replaced from outside the editor. */
   const descriptionDocument = useRef<JSONContent | null>(null);
+  // Images of the description still being sent (MIN-728).
+  const [imagesUploading, setImagesUploading] = useState(false);
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
@@ -515,8 +516,8 @@ export function CreateIssueDialog({
     const trimmed = title.trim();
     if (!trimmed || submitting) return;
     // An image still uploading has no address yet (MIN-728).
-    if (hasPendingUploads(descriptionDocument.current)) {
-      toast.info(tPages("uploadInProgress"));
+    if (imagesUploading) {
+      toast.info(tPages("waitForUploads"));
       return;
     }
     const other = target && target.id !== projectId ? target : null;
@@ -762,6 +763,7 @@ export function CreateIssueDialog({
                 key={editorKey}
                 value={description}
                 uploadScope={`projects/${projectId}`}
+                onUploadingChange={setImagesUploading}
                 onCommit={(markdown, content) => {
                   setDescription(markdown);
                   descriptionDocument.current = content;

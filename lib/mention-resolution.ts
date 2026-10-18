@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { MentionLinkType } from "@/lib/mention-link";
 
 /**
@@ -88,11 +88,17 @@ export function useResolvedMentionLabel(
   type: MentionLinkType | null,
   id: string | null
 ): string | null | undefined {
-  useSyncExternalStore(subscribe, () => version, () => 0);
-  if (!type || !id) return null;
-  const key = keyOf(type, id);
-  const entry = cache.get(key);
-  if (!entry || Date.now() - entry.at > TTL_MS) request(key);
+  // The server render resolves nothing (`0`): it has no session, and the
+  // browser's first render must match it.
+  const current = useSyncExternalStore(subscribe, () => version, () => -1);
+  const key = type && id ? keyOf(type, id) : null;
+  const entry = key && current !== -1 ? cache.get(key) : undefined;
+  const stale = !entry || Date.now() - entry.at > TTL_MS;
+  // The request is a side effect: it runs after the render, never during it.
+  useEffect(() => {
+    if (key && stale) request(key);
+  }, [key, stale]);
+  if (!key) return null;
   return entry ? entry.label : undefined;
 }
 
@@ -106,9 +112,23 @@ export function primeMentionLabel(type: MentionLinkType, id: string, label: stri
   notify();
 }
 
+/** What each typed pill on screen showed: what a copy of it may carry. */
+const shown = new Map<string, string | null>();
+
+/** Record the label a pill shows (`null`: the neutral one). */
+export function rememberShownMention(type: MentionLinkType, id: string, label: string | null): void {
+  shown.set(keyOf(type, id), label);
+}
+
+/** The label a pill showed for this target, `undefined` if none showed it. */
+export function shownMentionLabel(type: MentionLinkType, id: string): string | null | undefined {
+  return shown.get(keyOf(type, id));
+}
+
 /** For tests: forget everything resolved so far. */
 export function resetMentionResolution(): void {
   cache.clear();
+  shown.clear();
   queued.clear();
   inFlight.clear();
   if (timer) clearTimeout(timer);

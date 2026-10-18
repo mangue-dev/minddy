@@ -307,6 +307,43 @@ describe("materialization", () => {
     expect(h.description).toBe("Context\n\nSteps, typed live");
   });
 
+  it("keeps all typing when the journal no longer holds every pending step", async () => {
+    const typed = doc(paragraph("Context", "a"), paragraph("Steps, typed live", "b"));
+    await authority.submitDescriptionBatch("issue", "issue-1",
+      submission(3, stepsBetween(h.row!.content, typed)), "user-1");
+    h.row!.batches = []; // trimmed, or cleared when the document was sealed
+    h.description = "Context from GitHub\n\nSteps from GitHub";
+    await authority.materializeDescription({ kind: "issue", id: "issue-1", projectId: "project-1" }, "user-1");
+    expect(h.description).toBe("Context\n\nSteps, typed live");
+  });
+
+  it("signs with an earlier author when the last one may no longer write", async () => {
+    const first = doc(paragraph("Context by A", "a"), paragraph("Steps", "b"));
+    await authority.submitDescriptionBatch("issue", "issue-1",
+      submission(3, stepsBetween(h.row!.content, first)), "user-a");
+    const second = doc(paragraph("Context by A", "a"), paragraph("Steps by B", "b"));
+    await authority.submitDescriptionBatch("issue", "issue-1",
+      submission(h.row!.revision, stepsBetween(h.row!.content, second)), "user-b");
+    h.updateIssueFields.mockImplementation(async ({ actorId, input }) => {
+      if (actorId === "user-b") return { ok: false, status: 403 };
+      h.description = input.description ?? "";
+      return { ok: true, issue: {} };
+    });
+    expect(await authority.materializeDescription(
+      { kind: "issue", id: "issue-1", projectId: "project-1" }, null)).toBe("materialized");
+    expect(h.description).toBe("Context by A\n\nSteps by B");
+  });
+
+  it("drops typing no author may write any more", async () => {
+    const typed = doc(paragraph("Context", "a"), paragraph("Steps by a removed member", "b"));
+    await authority.submitDescriptionBatch("issue", "issue-1",
+      submission(3, stepsBetween(h.row!.content, typed)), "user-gone");
+    h.updateIssueFields.mockResolvedValue({ ok: false, status: 403 });
+    await authority.materializeDescription({ kind: "issue", id: "issue-1", projectId: "project-1" }, null);
+    expect(await markdownOf(h.row!.content)).toBe("Context\n\nSteps");
+    expect(h.deferred).toBe(0);
+  });
+
   it("sends a description whose issue is gone to the back of the queue", async () => {
     h.row!.revision += 1;
     h.parentMissing = true;
