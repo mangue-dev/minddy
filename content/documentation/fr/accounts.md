@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-16",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (MIN-677)",
     "editions": [
@@ -62,14 +62,17 @@
       "content/documentation/reviews/min-691-session-expiry.md",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
-      "content/documentation/reviews/sign-out-other-devices.md"
+      "content/documentation/reviews/sign-out-other-devices.md",
+      "lib/theme-presets.ts",
+      "app/theme-presets.css",
+      "content/documentation/reviews/min-696-theme-presets.md"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root (session list, single-session and sign-out-other-devices controls source and test review; unchanged controls retain prior capture evidence)",
-    "language": "agent:/root (fr changed-text and retained-meaning self-review)",
-    "date": "2026-10-16"
+    "revision": 11,
+    "fact": "agent:/root (theme palette, high-contrast and transparency controls: source and test review; the preferences capture predates these rows and is retained)",
+    "language": "agent:/root (en source and fr translation self-review of the changed paragraph)",
+    "date": "2026-10-18"
   },
   "related": [
     "choose-an-instance",
@@ -101,7 +104,7 @@
       "src": "/documentation/fr/account-security-workflow.png",
       "alt": "Carte de double authentification avec le bouton Activer.",
       "caption": "Commencez ici, puis vérifiez l’authentificateur et conservez les codes de récupération à l’abri.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -118,7 +121,7 @@
       "src": "/documentation/fr/profile-and-preferences-workflow.png",
       "alt": "Réglages du profil : avatar, nom d’utilisateur et adresse email en lecture seule.",
       "caption": "Enregistrez les changements du profil après validation ; l’adresse email reste en lecture seule.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -133,14 +136,14 @@
       "id": "profile-and-preferences-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
-      "alt": "Sélecteur de langue et commandes des thèmes clair, sombre et système.",
+      "alt": "Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.",
       "caption": "La langue du compte et celle du site public se règlent séparément.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-09",
+      "capturedAt": "2026-10-18",
       "viewport": [
         816,
-        212
+        421
       ],
       "theme": "light",
       "padding": 24,
@@ -152,7 +155,7 @@
       "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
       "alt": "Aperçu de suppression listant les projets possédés, les tickets et les membres privés d’accès.",
       "caption": "Lisez l’aperçu et exportez les données à conserver avant d’ouvrir la confirmation de suppression.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -245,9 +248,11 @@ L’image source ne doit pas dépasser 10 MiB. Le serveur vérifie les octets li
 
 Dans les préférences, sélectionnez la langue et le thème puis vérifiez une autre page. La langue du compte concerne le produit connecté ; le sélecteur du site public règle sa navigation séparément. Le thème est enregistré sur le compte et partagé entre appareils.
 
+Le thème choisit le mode clair, sombre ou système. **Palette du mode clair** et **Palette du mode sombre** règlent chacune les couleurs d'un mode. Les **couleurs d'accent** (minddy, Bleu, Violet, Vert, Orange, Rose) gardent les couleurs de minddy et ne recolorent que les boutons et l'anneau de focus ; les **palettes complètes** (Solarized, Catppuccin, Nord) recolorent toutes les surfaces ; **Contraste élevé** figure sous Accessibilité. La palette du mode affiché s'applique immédiatement ; l'autre est enregistrée et apparaît dès que son mode redevient actif, y compris quand Système suit un changement du système d'exploitation. Contraste élevé renforce le contraste du texte et des bordures, détoure les champs, menus, dialogues et onglets, marque la page courante et l'élément sélectionné, affiche toujours le focus clavier et garde les menus opaques. Désactivez **Transparence** pour rendre opaques, sans flou, les menus, les pop-overs et la palette de commandes. Palettes et transparence sont enregistrées sur le compte ; un autre appareil les applique au prochain chargement de page.
+
 Choisissez le raccourci d’envoi dans les réglages clavier. Il s’applique aux commentaires et à Numo. Utilisez le bouton d’envoi si la plateforme intercepte le raccourci ; les touches modificatrices diffèrent selon l’OS. Les préférences de tickets, comme l’assignation automatique et le statut des tickets créés par Numo, appartiennent aussi au compte et ne changent pas celles des autres membres.
 
-![Sélecteur de langue et commandes des thèmes clair, sombre et système.](/documentation/fr/profile-and-preferences-preferences-workflow.png)
+![Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.](/documentation/fr/profile-and-preferences-preferences-workflow.png)
 
 ## Gérer la confidentialité et supprimer son compte {#privacy-and-account-deletion}
 

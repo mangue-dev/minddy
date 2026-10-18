@@ -1034,38 +1034,6 @@
   },
   {
     "locale": "en",
-    "screen": "profile-and-preferences-preferences-workflow",
-    "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=preferences&section=account-appearance",
-    "viewport": [
-      816,
-      212
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "46258e47da42f41aca117ef72d09c987283fbf0abea27f5ccc7a8674a499f26a"
-  },
-  {
-    "locale": "en",
     "screen": "account-security-workflow",
     "src": "/documentation/en/account-security-workflow.png",
     "date": "2026-10-09",
@@ -1515,38 +1483,6 @@
     "displayAdaptation": [],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "b7e311058eb9802242f43a5c35d26f0a5e9106988f50381199340ab2234c962f"
-  },
-  {
-    "locale": "fr",
-    "screen": "profile-and-preferences-preferences-workflow",
-    "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=preferences&section=account-appearance",
-    "viewport": [
-      816,
-      212
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "377c7d492958d96f5591690a43cf59f759ea0340614294ca320645faa2f02fdf"
   },
   {
     "locale": "fr",
@@ -2003,38 +1939,6 @@
   },
   {
     "locale": "de",
-    "screen": "profile-and-preferences-preferences-workflow",
-    "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=preferences&section=account-appearance",
-    "viewport": [
-      816,
-      212
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "eb56b10671a42b1b2f67440c771e663c2469fd30a4de2871e3d66d18acfc6edb"
-  },
-  {
-    "locale": "de",
     "screen": "account-security-workflow",
     "src": "/documentation/de/account-security-workflow.png",
     "date": "2026-10-09",
@@ -2485,38 +2389,6 @@
     "displayAdaptation": [],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "bb3fcc331cc67d46820f891d0e99a54e77b821bc55620279a5cdcb8da1863bef"
-  },
-  {
-    "locale": "es",
-    "screen": "profile-and-preferences-preferences-workflow",
-    "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=preferences&section=account-appearance",
-    "viewport": [
-      816,
-      212
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "b450fa04b4b619df6076e10babb4219093ab05d4ad795b9ca2399d80a9666a0a"
   },
   {
     "locale": "es",
@@ -2974,38 +2846,6 @@
     "displayAdaptation": [],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "d8370f51ae938173968936ac41eaf376d663930b119bf0587f8271fca55d0f0b"
-  },
-  {
-    "locale": "it",
-    "screen": "profile-and-preferences-preferences-workflow",
-    "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "route": "/settings?tab=preferences&section=account-appearance",
-    "viewport": [
-      816,
-      212
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "3dedd5eac068ffc83b53bad60e73a6c764d65fa92ca4a34f79dc20fada10a31b"
   },
   {
     "locale": "it",
@@ -3473,39 +3313,6 @@
     "displayAdaptation": [],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "100c3dcdf19cc882b5ff2157d8909b7a4d02478da25eef269618913cb75f09bb"
-  },
-  {
-    "locale": "pt-BR",
-    "screen": "profile-and-preferences-preferences-workflow",
-    "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
-    "date": "2026-10-09",
-    "sourceCommit": "18c7563d7ca61bb737a6827ac3e159a41b9d5c3e",
-    "workingTreeChanges": true,
-    "runtime": "https://www.minddy.app",
-    "frameVersion": 2,
-    "stableFocus": true,
-    "route": "/settings?tab=preferences&section=account-appearance",
-    "viewport": [
-      816,
-      212
-    ],
-    "padding": 24,
-    "deviceScaleFactor": 2,
-    "theme": "light",
-    "submitted": false,
-    "blockedWrites": [
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      },
-      {
-        "method": "POST",
-        "path": "/api/me/local-snapshots"
-      }
-    ],
-    "displayAdaptation": [],
-    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
-    "sha256": "3e59af4e3d525fc7e3f9d8e76a4faeb63500dc79897ccb16db83c09f234270ea"
   },
   {
     "locale": "pt-BR",
@@ -4703,5 +4510,204 @@
     ],
     "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed.",
     "sha256": "560165b9e397264ddc4bb608acbe11f203716a0940d02164a8f168480f245bd5"
+  },
+  {
+    "locale": "en",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-18",
+    "sourceCommit": "89f28acafd5d9298f513957a23e968bcfa2c870f",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      421
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "fr",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-18",
+    "sourceCommit": "89f28acafd5d9298f513957a23e968bcfa2c870f",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      421
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "de",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/de/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-18",
+    "sourceCommit": "89f28acafd5d9298f513957a23e968bcfa2c870f",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      421
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "it",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-18",
+    "sourceCommit": "89f28acafd5d9298f513957a23e968bcfa2c870f",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      421
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "pt-BR",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-18",
+    "sourceCommit": "89f28acafd5d9298f513957a23e968bcfa2c870f",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      421
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
+  },
+  {
+    "locale": "es",
+    "screen": "profile-and-preferences-preferences-workflow",
+    "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
+    "date": "2026-10-18",
+    "sourceCommit": "89f28acafd5d9298f513957a23e968bcfa2c870f",
+    "workingTreeChanges": true,
+    "runtime": "http://localhost:3000",
+    "frameVersion": 2,
+    "stableFocus": true,
+    "route": "/settings?tab=preferences&section=account-appearance",
+    "viewport": [
+      816,
+      421
+    ],
+    "padding": 24,
+    "deviceScaleFactor": 2,
+    "theme": "light",
+    "submitted": false,
+    "blockedWrites": [
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      },
+      {
+        "method": "POST",
+        "path": "/api/me/local-snapshots"
+      }
+    ],
+    "displayAdaptation": [
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/issues",
+      "/api/projects/6cd36606-c297-4920-8ce3-31b5f3697be8/pages"
+    ],
+    "limitation": "Actual visible controls; no completed save, import, notification delivery or external action is claimed."
   }
 ]
