@@ -54,16 +54,18 @@ it("maintains only five recent details and shares foreground/realtime reads", as
   } finally { await view.close(); }
 });
 
-it("respects account Retry-After before any new background network request", async () => {
+it("respects account Retry-After before any new background forge request", async () => {
   const view = await setup();
+  // The list is a database read and keeps its one-minute poll (MIN-729).
+  const forgeCalls = () => view.fetch.mock.calls.filter(([url]) => !String(url).startsWith("/api/pull-requests?")).length;
   try {
     const error = new ApiError("Quota exhausted"); error.status = 429; error.retryAt = Date.now() + 120_000;
     await view.client.fetchQuery({ queryKey: ["pr-comments", "other"], queryFn: async () => { throw error; } }).catch(() => {});
-    const count = view.fetch.mock.calls.length;
+    const count = forgeCalls();
     await act(async () => { await vi.advanceTimersByTimeAsync(119_000); });
-    expect(view.fetch).toHaveBeenCalledTimes(count);
+    expect(forgeCalls()).toBe(count);
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
-    expect(view.fetch.mock.calls.length).toBeGreaterThan(count);
+    expect(forgeCalls()).toBeGreaterThan(count);
   } finally { await view.close(); }
 });
 
@@ -78,4 +80,22 @@ it("keeps the existing live observers when one recent PR enters the cohort", asy
     await act(async () => { await view.client.invalidateQueries({ queryKey: allPullRequestsQueryKey() }); await vi.advanceTimersByTimeAsync(10); });
     expect(removed).toEqual(["pr-4"]);
   } finally { stop(); await view.close(); }
+});
+
+it("keeps the list current through an account pause and prepares a newly arrived PR when it ends (MIN-729)", async () => {
+  const view = await setup();
+  try {
+    view.setIds([]);
+    await act(async () => { await view.client.invalidateQueries({ queryKey: allPullRequestsQueryKey() }); await vi.advanceTimersByTimeAsync(10); });
+    const error = new ApiError("Quota exhausted"); error.status = 429; error.retryAt = Date.now() + 120_000;
+    await view.client.fetchQuery({ queryKey: ["pr-comments", "other"], queryFn: async () => { throw error; } }).catch(() => {});
+    // The badge already counts it: the list must show it too, pause or not.
+    view.setIds(["new"]);
+    await act(async () => { await view.client.invalidateQueries({ queryKey: allPullRequestsQueryKey() }); await vi.advanceTimersByTimeAsync(10); });
+    expect(view.client.getQueryData<{ pullRequests: { prId: string }[] }>(allPullRequestsQueryKey())?.pullRequests.map((pr) => pr.prId)).toEqual(["new"]);
+    expect(view.client.getQueryCache().find({ queryKey: ["pull-request", "new"], exact: true })?.getObserversCount()).toBe(1);
+    expect(view.fetch.mock.calls.some(([url]) => String(url) === "/api/pull-requests/new")).toBe(false);
+    await act(async () => { await vi.advanceTimersByTimeAsync(121_000); });
+    expect(view.fetch.mock.calls.some(([url]) => String(url) === "/api/pull-requests/new")).toBe(true);
+  } finally { await view.close(); }
 });

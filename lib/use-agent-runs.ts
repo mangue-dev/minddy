@@ -5,7 +5,7 @@ import { useAppTabActive, useAppTabActivation } from "./app-tab-route-context";
 import { cachedPullRequestListForPin } from "./pull-request-list-cache";
 import { prCommentsQueryOptions, prCommitsQueryOptions, prReviewCommentsQueryOptions } from "./pr-activity-query";
 
-import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestDisplayReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
 import { nextReadActivationSequence } from "./read-activation-sequence";
@@ -154,14 +154,19 @@ export function allPullRequestsQueryKey(
   return ["pull-requests", "all", state, limit, pin?.pr ?? null] as const;
 }
 
-/** Shared authorized list read for foreground observers and idle preparation. */
+/**
+ * Shared authorized list read for foreground observers and idle preparation.
+ *
+ * Not gated by the account's forge quota (MIN-729): the list is a database
+ * read, and the server bounds the sweeps it starts with the repository sync
+ * stamp, like the badge count. Gating it froze the list for a whole Retry-After
+ * window while the badge kept counting the new PR, so the PR never reached the
+ * shell's background cohort either.
+ */
 export function allPullRequestsQueryOptions(state: PullRequestStateFilter = "open", limit = PULL_REQUESTS_PAGE, pin?: PullRequestPin) {
   return {
     queryKey: allPullRequestsQueryKey(state, limit, pin),
-    queryFn: ({ client, signal }: { client: QueryClient; signal: AbortSignal }) => {
-      assertPullRequestReadBudget(client);
-      return fetchAllPullRequestsApi({ state, limit, pin }, signal);
-    },
+    queryFn: ({ signal }: { signal: AbortSignal }) => fetchAllPullRequestsApi({ state, limit, pin }, signal),
     retry: pullRequestReadRetry,
   };
 }
@@ -226,10 +231,8 @@ export function useCompletedPullRequestsQuery(enabled: boolean) {
   const query = useInfiniteQuery({
     queryKey: ["pull-requests", "all", "completed", COMPLETED_PULL_REQUESTS_PAGE],
     initialPageParam: 0,
-    queryFn: ({ client, pageParam }) => {
-      assertPullRequestReadBudget(client);
-      return fetchAllPullRequestsApi({ state: "completed", limit: COMPLETED_PULL_REQUESTS_PAGE, offset: pageParam });
-    },
+    // A database read like the open list: a forge pause must not freeze it.
+    queryFn: ({ pageParam }) => fetchAllPullRequestsApi({ state: "completed", limit: COMPLETED_PULL_REQUESTS_PAGE, offset: pageParam }),
     getNextPageParam: (lastPage, _pages, lastOffset) => lastPage.hasMore ? lastOffset + COMPLETED_PULL_REQUESTS_PAGE : undefined,
     enabled,
     retry: pullRequestReadRetry,
