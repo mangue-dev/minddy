@@ -19,7 +19,7 @@
 // - `size`: the page typography, or the compact one of panels and comments.
 //
 // What it adds on top, and which does not affect the document:
-// - `NodeRange`: selection of several blocks with a drag or a ⇧-click,
+// - `BlockRange` (NodeRange without its ⌘A): selection of several blocks with a drag or a ⇧-click,
 //   on which all menu actions operate ⋯ ;
 // - the mention pill (components/markdown-mention.tsx) placed on the node
 //   bare of the schema, and its suggestion “@”;
@@ -38,7 +38,7 @@ import {
   type JSONContent,
 } from "@tiptap/react";
 import type { AnyExtension } from "@tiptap/core";
-import { NodeRange } from "@tiptap/extension-node-range";
+import { BlockRange } from "@/components/editor/block-range";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 import { useTranslations } from "next-intl";
@@ -477,7 +477,7 @@ export function RichEditor({
         // INPUT rule, so nothing in the diagram: the markdown projection sees
         // nothing, and the document bears the real arrow.
         Arrows,
-        NodeRange,
+        BlockRange,
         // The placeholder is US and not @tiptap/extensions: why
         // is written in block-placeholder.ts, and it fits in two words — the
         // nested blocks, and the cursor read one keystroke late.

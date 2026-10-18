@@ -1,5 +1,12 @@
 import { ROUTINE_TRIGGER_SCHEMA, CREATE_ROUTINE_DESCRIPTION, UPDATE_ROUTINE_DESCRIPTION } from "@/lib/server/routine-tool-schema";
 import { materializePendingDescription } from "@/lib/server/description-collaboration";
+import {
+  locateDocumentImage,
+  MAX_INLINE_IMAGE_BYTES,
+  readDocumentImage,
+  resolveDocumentImage,
+  signedDocumentImageUrl,
+} from "@/lib/server/document-images";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
@@ -154,6 +161,7 @@ import {
   ok,
   fail,
   getUserId,
+  okWithImages,
   requireProject,
   requireUser,
   resolveProject,
@@ -1161,7 +1169,7 @@ export function registerMinddyTools(
 
       const plan = r.issue.plan;
       const parsed = typeof plan === "string" && plan ? parsePlan(plan) : null;
-      return ok({
+      return okWithImages({
         ...r,
         activity,
         ...(parsed
@@ -1749,7 +1757,7 @@ export function registerMinddyTools(
           points * statusCompletionCredit(issue.status as IssueStatus);
       }
 
-      return ok({
+      return okWithImages({
         linked_feedback: await listFeedbackForObjective(scope.access.project.id, objective.id),
         objective: {
           ...objective,
@@ -2965,6 +2973,87 @@ export function registerMinddyTools(
   );
 
   server.registerTool(
+    "minddy_get_image",
+    {
+      title: "Get image",
+      description:
+        "View an image shown in an issue or objective description, a plan, a " +
+        "comment, a page or the notebook. Their Markdown writes it as " +
+        "`![alt](src)`, and the reads list them under `images`; pass that src " +
+        "exactly. Returns the image viewable inline (up to 10 MB) with a " +
+        "short-lived signed download_url (~10 min). An image hosted outside " +
+        "minddy comes back as its url only: fetch it yourself.",
+      inputSchema: z.object({
+        src: z.string().min(1).max(2048).describe(
+          "The image address exactly as written in the Markdown (e.g. " +
+            "/api/attachments/file?path=… or /api/projects/…/pages/files/…).",
+        ),
+        project_id: PROJECT_ID.optional().describe(
+          "The project the image belongs to. Optional: it is read from src; " +
+            "when given, it must match.",
+        ),
+      }),
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const located = locateDocumentImage(args.src.trim());
+      if (!located) {
+        return fail("invalid_params", "This src is not an image address minddy recognizes.");
+      }
+      if (located.kind === "external") {
+        return ok({ src: args.src, kind: "external", url: located.url, fetch_yourself: true });
+      }
+      let userId: string;
+      if (located.projectId) {
+        const scope = await requireProject(extra, args.project_id ?? located.projectId);
+        if ("error" in scope) return scope.error;
+        if (scope.access.project.id !== located.projectId) {
+          return fail("not_found", "Image not found in this project.");
+        }
+        userId = scope.userId;
+      } else {
+        const auth = requireUser(extra);
+        if ("error" in auth) return auth.error;
+        userId = auth.userId;
+      }
+      const service = getServiceClient();
+      const resolved = await resolveDocumentImage(service, args.src, { userId });
+      if (!resolved.ok || resolved.image.kind !== "stored") {
+        return fail("not_found", "Image not found, or not readable with this account.");
+      }
+      const image = resolved.image;
+      const [read, url] = await Promise.all([
+        readDocumentImage(service, image),
+        signedDocumentImageUrl(service, image),
+      ]);
+      if (!read) return fail("not_found", "The stored image could not be read.");
+      const meta = {
+        src: args.src,
+        kind: "stored",
+        file_name: image.fileName,
+        mime_type: read.mimeType,
+        size_bytes: read.data.length,
+        download_url: url,
+        download_url_expires_in_seconds: 600,
+      };
+      if (!read.mimeType.startsWith("image/") || read.data.length > MAX_INLINE_IMAGE_BYTES) {
+        return ok({
+          ...meta,
+          content_omitted: read.mimeType.startsWith("image/")
+            ? "Image is larger than the 10 MB inline cap. Fetch download_url instead."
+            : "This address is not an image. Fetch download_url instead.",
+        });
+      }
+      return {
+        content: [
+          { type: "text", text: JSON.stringify(meta, null, 2) },
+          { type: "image", data: read.data.toString("base64"), mimeType: read.mimeType },
+        ],
+      } as unknown as ToolResult;
+    },
+  );
+
+  server.registerTool(
     "minddy_link_issues",
     {
       title: "Link issues",
@@ -3335,7 +3424,7 @@ export function registerMinddyTools(
       if ("error" in auth) return auth.error;
       try {
         const state = await getScratchpad(getServiceClient(), auth.userId);
-        return ok({
+        return okWithImages({
           content: state.content,
           updated_at: state.updated_at,
           rev: state.rev,
@@ -4114,7 +4203,7 @@ export function registerMinddyTools(
           .filter((v): v is string => !!v),
       );
 
-      return ok({
+      return okWithImages({
         feedback: {
           id: detail.id,
           title: detail.title,

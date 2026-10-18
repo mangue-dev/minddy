@@ -35,6 +35,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_get_cycle",
   "minddy_get_feedback",
   "minddy_get_feedback_board",
+  "minddy_get_image",
   "minddy_get_issue",
   "minddy_get_objective",
   "minddy_get_page",

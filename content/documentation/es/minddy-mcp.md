@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-17",
   "compatibility": {
@@ -66,8 +66,8 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained)",
+    "revision": 10,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (technical-reference formatting; prior factual evidence retained; no operational rerun); agent:/root (MIN-672 MCP availability and network guidance checked against route, origin, discovery, registration and local launcher source; no operational rerun); agent:/root with agent:/root/review_de_es (light pre-merge source and retained-claim review; existing operational evidence retained; no operational rerun); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root (MIN-693 project roles: decision record, permission matrix and source review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-718 hybrid issue search source and unit-test review; no browser walkthrough, no new captures; unchanged evidence retained); agent:/root (MIN-728 agent image access: source and unit-test review of view_image and minddy_get_image; no browser walkthrough, no new captures; unchanged evidence retained)",
     "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root/editorial_de_es (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (inline-code syntax and unchanged-text review); agent:/root (MIN-672 es network guidance and terminology review); agent:/root/review_de_es with agent:/root (es pre-merge wording, correction and retained-meaning review); agent:/root (MIN-670 source, es wording and new-control review; existing procedural evidence retained); agent:/root/min693_es with agent:/root (es MIN-693 translation of the changed passages, localized labels and retained-meaning review; agent review, not human acceptance); agent:/root (es translation of MIN-718 added passages with catalog UI labels, equivalent meaning self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-17"
   },
@@ -90,7 +90,7 @@
       "src": "/documentation/es/external-minddy-mcp-workflow.png",
       "alt": "Selector de clientes MCP de minddy con Claude, Codex y otros asistentes.",
       "caption": "Selecciona tu cliente para ver su comando o configuración de instalación.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -107,7 +107,7 @@
       "src": "/documentation/es/external-minddy-mcp-install-workflow.png",
       "alt": "Diálogo de instalación de Codex con el endpoint de minddy Cloud.",
       "caption": "Este ejemplo conecta con minddy Cloud. Para el autoalojamiento, utilice el origen de su propia instancia; el comando mostrado no se ejecutó para esta captura.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-09",
       "viewport": [
@@ -166,6 +166,8 @@ minddy expone `/api/mcp` mediante Streamable HTTP, herramientas sin estado y OAu
 Para encontrar una incidencia, llame a `minddy_list_issues` con `query`: busca palabras del título y la descripción, un identificador o un número. Las coincidencias de texto y los identificadores exactos van primero; una búsqueda descriptiva puede añadir después incidencias del mismo proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning), marcadas con `match: "semantic"`. Lea esa incidencia antes de actuar sobre ella. La búsqueda por el sentido se cobra a su cuenta como **Búsqueda de incidencias** y no se realiza si desactivó **Indexar incidencias**.
 
 `minddy_get_issue` acepta un UUID de incidencia, un identificador como `DEMO-42` o un número de incidencia con `project_id`. Sus `plan_tasks` proporcionan `task_index` desde cero. `minddy_update_plan_task` recibe un lote `tasks` con estados `pending`, `in_progress`, `completed` o `cancelled`; un índice inválido rechaza todo el lote. Añada contenido con `minddy_append_to_plan` y cambie un pasaje con `minddy_edit_issue_text` usando `old_string`/`new_string` exactos y únicos. Relea si el texto ha cambiado: reemplazar todo el plan puede sobrescribir el progreso de otra persona. Las preguntas bajo `## Questions` no cuentan como tareas del plan.
+
+Las lecturas que devuelven texto con imágenes (`minddy_get_issue`, `minddy_get_objective`, `minddy_get_page`, `minddy_get_feedback`, `minddy_get_scratchpad`) las listan en `images`, cada una con su `src` y su texto alternativo. Pase ese `src` sin cambios a `minddy_get_image`: comprueba su acceso al proyecto de la imagen, o que una imagen del cuaderno sea suya, y devuelve la imagen hasta 10 MB con una `download_url` firmada válida unos diez minutos. Una imagen alojada fuera de minddy se devuelve solo como su URL.
 
 ### Respetar revisiones y propiedad {#pages-and-routines}
 

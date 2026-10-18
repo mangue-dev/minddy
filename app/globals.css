@@ -3431,3 +3431,19 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 .dark .page-collab-selection {
   background-color: color-mix(in oklab, var(--collab-color) 35%, transparent);
 }
+
+/* ─── Block-range selections (MIN-728) ─────────────────────────────────────
+   A drag or a ⇧-click across blocks selects whole blocks (`NodeRange`, see
+   components/editor/block-range.ts). ProseMirror does not draw that selection
+   as text, so its blocks are painted here in the selection color, and the
+   text's own highlight is hidden so the two do not stack. */
+.ProseMirror-noderangeselection *::selection {
+  background: transparent;
+}
+.ProseMirror-noderangeselection {
+  caret-color: transparent;
+}
+.ProseMirror-selectednoderange {
+  border-radius: 0.25rem;
+  background-color: color-mix(in srgb, Highlight 45%, transparent);
+}

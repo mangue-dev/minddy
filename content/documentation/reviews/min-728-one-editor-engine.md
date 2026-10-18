@@ -123,4 +123,19 @@ run the capture pipeline, which writes the demo world on the production base.
   and no longer blocks the cron's queue; clear steps are purged once a
   document is sealed; carets are sent by members who may write.
 
+- Agent access to editor images: `lib/server/document-images.ts` (finding
+  images in Markdown, resolving an image `src` with the access rules of
+  `/api/attachments/file` and the page file route), the MCP tool
+  `minddy_get_image` and the `images` list of `minddy_get_issue`,
+  `minddy_get_objective`, `minddy_get_page`, `minddy_get_feedback` and
+  `minddy_get_scratchpad`; Numo's `view_image`, supplied to the model like a
+  conversation attachment, and the `images` list of its document reads.
+  Articles `minddy-mcp` (revision 10, `issue-plans`) and `numo` (revision 15,
+  `work-with-numo`) gain one paragraph each in the six locales. Tests:
+  `lib/server/document-images.test.ts`,
+  `lib/server/assistant/conversation-attachments.test.ts`.
+- Select all: ⌘A / Ctrl+A selects the text natively again
+  (`components/editor/block-range.ts`), and block-range selections are painted
+  (`.ProseMirror-selectednoderange`); no documented behavior change.
+
 No two-member browser session or forge round trip was run for this review.

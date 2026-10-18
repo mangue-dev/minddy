@@ -1,5 +1,7 @@
 import "server-only";
 
+import { imagesIn } from "@/lib/server/document-images";
+
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
@@ -33,6 +35,16 @@ export interface ToolResult {
 
 export function ok(payload: unknown): ToolResult {
   return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+}
+
+/**
+ * A read whose text can show images (MIN-728): the payload plus `images`,
+ * each image's src and alt text, to open with minddy_get_image. Omitted when
+ * the text shows none.
+ */
+export function okWithImages(payload: Record<string, unknown>): ToolResult {
+  const images = imagesIn(payload);
+  return ok(images.length > 0 ? { ...payload, images, read_images_with: "minddy_get_image" } : payload);
 }
 
 export function fail(code: string, message: string): ToolResult {

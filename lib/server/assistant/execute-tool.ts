@@ -68,8 +68,9 @@ import {
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentOffset, listConversationAttachments, readConversationAttachment,
-  copyConversationAttachment } from "./conversation-attachments";
+  copyConversationAttachment, viewDocumentImage } from "./conversation-attachments";
 import { insertAttachments } from "@/lib/server/attachments";
+import { imagesIn } from "@/lib/server/document-images";
 import { FaviconError } from "@/lib/server/favicon";
 import { resolveLinkResource } from "@/lib/server/link-resource";
 import {
@@ -769,7 +770,28 @@ async function executeWebSearch(
   });
 }
 
+/** Reads whose text can show images: their result lists them (MIN-728). */
+const DOCUMENT_READ_TOOLS = new Set([
+  "get_issue", "get_objective", "get_page", "get_scratchpad", "get_feedback",
+]);
+
 export async function executeTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  const execution = await executeToolUnlisted(toolName, args, ctx);
+  if (!execution.success || !DOCUMENT_READ_TOOLS.has(toolName)) return execution;
+  const result = execution.result;
+  if (!result || typeof result !== "object" || Array.isArray(result)) return execution;
+  const images = imagesIn(result);
+  if (images.length === 0) return execution;
+  // The images the text shows, to open with view_image: their src is a route
+  // the model cannot fetch itself.
+  return { ...execution, result: { ...result, images, read_images_with: "view_image" } };
+}
+
+async function executeToolUnlisted(
   toolName: string,
   args: Record<string, unknown>,
   ctx: ToolContext,
@@ -971,6 +993,9 @@ export async function executeTool(
     }
     if (toolName === "read_conversation_attachment") {
       return { result: await readConversationAttachment(ctx, args.attachment_id, attachmentOffset(args.offset)), success: true };
+    }
+    if (toolName === "view_image") {
+      return { result: await viewDocumentImage(ctx, args.src), success: true };
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
