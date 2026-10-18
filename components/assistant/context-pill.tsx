@@ -15,7 +15,7 @@
 // hand, he withdraws for good — a cross.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, File02Icon, BubbleChatDelayIcon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, File02Icon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, MessageMultiple01Icon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "mangue-ui";
 import { AppIcon } from "@/components/icon";
@@ -28,6 +28,7 @@ import {
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
+import { BOARD_ICON, ROUTINE_ICON } from "@/components/feature-icons";
 import type {
   AssistantContextChip,
   AssistantContextKind,
@@ -69,7 +70,7 @@ const STYLES: Record<
   },
   // Match the Routines tab and sidebar.
   routine: {
-    icon: BubbleChatDelayIcon,
+    icon: ROUTINE_ICON,
     tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   },
   inbox: {
@@ -82,7 +83,7 @@ const STYLES: Record<
     tint: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
   },
   view: {
-    icon: Layout3ColumnIcon,
+    icon: BOARD_ICON,
     tint: "bg-cyan-500/12 text-cyan-600 dark:text-cyan-400",
   },
   cycle: {

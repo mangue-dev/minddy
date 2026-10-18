@@ -124,6 +124,11 @@ export interface CommandPaletteProps {
 // COMPONENT
 // =============================================================================
 
+/** Matches `paletteSlideOut` in CommandPalette.module.css. */
+const EXIT_MS = 120;
+/** Covers the mobile sheet's own close transition. */
+const MOBILE_EXIT_MS = 300;
+
 export function CommandPalette({
   isOpen,
   supplemental,
@@ -194,11 +199,39 @@ export function CommandPalette({
   // === Query history ===
   const queryHistory = useQueryHistory(storagePrefix);
 
+  // === Exit animation ===
+  // Closing keeps the last frame mounted for EXIT_MS so it can animate out;
+  // the store is reset once it is gone, so the content does not flash back
+  // to an empty search while it fades.
+  const [closing, setClosing] = useState(false);
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    setClosing(!isOpen);
+  }
+  useEffect(() => {
+    if (!closing) return;
+    const timer = window.setTimeout(() => {
+      setClosing(false);
+      reset();
+    }, mobile ? MOBILE_EXIT_MS : EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [closing, mobile, reset]);
+
+  // While it fades out, the view is still mounted with its document keydown
+  // handlers: a capture listener swallows keys so Enter cannot run a result
+  // the user just dismissed.
+  useEffect(() => {
+    if (!closing) return;
+    const swallow = (event: KeyboardEvent) => event.stopImmediatePropagation();
+    document.addEventListener("keydown", swallow, true);
+    return () => document.removeEventListener("keydown", swallow, true);
+  }, [closing]);
+
   // === Action execution context ===
   const handleClose = useCallback(() => {
-    reset();
     onClose();
-  }, [reset, onClose]);
+  }, [onClose]);
 
   const execContext = useMemo<ActionExecutionContext>(
     () => ({
@@ -269,8 +302,8 @@ export function CommandPalette({
     };
   }, [onSelectItem]);
 
-  // Don't render if not open
-  if (!isOpen) return null;
+  // Don't render if not open, past the exit animation
+  if (!isOpen && !closing) return null;
 
   // Render current view
   const renderView = () => {
@@ -336,11 +369,12 @@ export function CommandPalette({
  to close" didn't close anything in the top 60 px — macOS swallowed
  the click and the window started sliding. */}
       <div
-        className={`${styles.overlay} desktop-palette-overlay`}
-        onClick={handleOverlayClick}
+        className={`${styles.overlay} desktop-palette-overlay ${closing ? styles.overlayClosing : ""}`}
+        onClick={closing ? undefined : handleOverlayClick}
+        inert={closing}
       >
         <div
-          className={`desktop-palette-surface ${styles.palette} ${isSuccess ? styles.paletteSuccess : ""}`}
+          className={`desktop-palette-surface ${styles.palette} ${isSuccess ? styles.paletteSuccess : ""} ${closing ? styles.paletteClosing : ""}`}
           role="dialog"
           aria-modal="true"
           aria-label={t("search.ariaLabel")}

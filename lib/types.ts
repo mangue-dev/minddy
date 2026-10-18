@@ -368,6 +368,12 @@ export interface StatsHeatmap {
   max: number;
   /** DENSE start→end series (one point per day, count 0 included). */
   days: HeatmapDay[];
+  /**
+   * Distinct issues and tasks completed over the window. An issue completed
+   * again marks each day in `days` but counts once here, like the all-time
+   * total. Absent while an older RPC is still deployed.
+   */
+  completed?: { issues: number; tasks: number };
 }
 
 export interface StatsWorkload {

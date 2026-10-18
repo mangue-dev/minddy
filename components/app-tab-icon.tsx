@@ -1,13 +1,14 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Analytics01Icon, BubbleChatDelayIcon, CircleDotDashedIcon, CreditCardIcon, Delete02Icon, File02Icon, Folder01Icon, GitPullRequestIcon, Home01Icon, InboxIcon, Layout3ColumnIcon, MessageMultiple01Icon, Settings01Icon, Shield01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { CircleDotDashedIcon, CreditCardIcon, Delete02Icon, File02Icon, Folder01Icon, GitPullRequestIcon, Home01Icon, InboxIcon, MessageMultiple01Icon, Settings01Icon, Shield01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { objectiveColor } from "./objective-icon";
 import type { Project } from "@/lib/types";
+import { BOARD_ICON, ROUTINE_ICON, STATISTICS_ICON } from "@/components/feature-icons";
 
-const icons = { home: Home01Icon, all: Layout3ColumnIcon, tickets: Layout3ColumnIcon, inbox: InboxIcon, routines: BubbleChatDelayIcon,
-  "pull-requests": GitPullRequestIcon, statistics: Analytics01Icon, trash: Delete02Icon, settings: Settings01Icon, billing: CreditCardIcon,
+const icons = { home: Home01Icon, all: BOARD_ICON, tickets: BOARD_ICON, inbox: InboxIcon, routines: ROUTINE_ICON,
+  "pull-requests": GitPullRequestIcon, statistics: STATISTICS_ICON, trash: Delete02Icon, settings: Settings01Icon, billing: CreditCardIcon,
   admin: Shield01Icon, pages: File02Icon, objectives: Target01Icon, feedback: MessageMultiple01Icon, triage: CircleDotDashedIcon };
 
 export function AppTabIcon({ section, project, projectId, objectiveColor: color }: {

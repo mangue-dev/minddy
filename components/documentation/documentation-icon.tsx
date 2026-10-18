@@ -1,16 +1,7 @@
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import {
-  AiAutoRotateIcon, Analytics01Icon, ApiIcon, BookOpen01Icon, BotIcon,
-  Calendar01Icon, CheckmarkCircle01Icon, CloudServerIcon, CodeSimpleIcon,
-  Compass01Icon, ComputerIcon, DatabaseIcon, Delete02Icon, File02Icon,
-  FilterIcon, FlowIcon, Folder01Icon, GitBranchIcon, GitPullRequestIcon,
-  InboxIcon, LockIcon, Mail01Icon, MessageMultiple01Icon, PlugIcon,
-  Rocket01Icon, ServerStack01Icon, Share01Icon, ShieldCheckIcon,
-  Shield01Icon, StickyNote02Icon, Target01Icon, Upload01Icon,
-  UserGroupIcon, UserIcon, WorkflowSquare01Icon, Wrench01Icon,
-  Layout3ColumnIcon,
-} from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, ApiIcon, BookOpen01Icon, BotIcon, CheckmarkCircle01Icon, CloudServerIcon, CodeSimpleIcon, Compass01Icon, ComputerIcon, DatabaseIcon, Delete02Icon, File02Icon, FilterIcon, FlowIcon, Folder01Icon, GitBranchIcon, GitPullRequestIcon, InboxIcon, LockIcon, Mail01Icon, MessageMultiple01Icon, PlugIcon, Rocket01Icon, ServerStack01Icon, Share01Icon, ShieldCheckIcon, Shield01Icon, StickyNote02Icon, Target01Icon, Upload01Icon, UserGroupIcon, UserIcon, WorkflowSquare01Icon, Wrench01Icon, Layout3ColumnIcon } from "@hugeicons/core-free-icons";
 import { NumoFace } from "@/components/numo-face";
+import { ROUTINE_ICON, STATISTICS_ICON } from "@/components/feature-icons";
 
 /** Stable article IDs share the same feature icon across languages and surfaces. */
 const articleIcons: Record<string, IconSvgElement> = {
@@ -43,10 +34,10 @@ const articleIcons: Record<string, IconSvgElement> = {
   pages: File02Icon,
   "permissions-and-public-links": UserGroupIcon,
   "personal-cycle": AiAutoRotateIcon,
-  "personal-statistics": Analytics01Icon,
+  "personal-statistics": STATISTICS_ICON,
   projects: Folder01Icon,
   "repository-skills": CodeSimpleIcon,
-  "scheduled-routines": Calendar01Icon,
+  "scheduled-routines": ROUTINE_ICON,
   "self-hosted-diagnostics": Wrench01Icon,
   "storage-and-attachments": Upload01Icon,
   "task-notebook": StickyNote02Icon,

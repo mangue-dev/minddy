@@ -40,7 +40,7 @@ export interface UserStatsToolResult {
 export function userStatsForAssistantTool(
   stats: UserStats,
 ): UserStatsToolResult {
-  const activity = heatmapTotals(stats.heatmap.days);
+  const activity = heatmapTotals(stats.heatmap.days, stats.heatmap.completed);
   return {
     activityWindow: { start: stats.heatmap.start, end: stats.heatmap.end },
     activeDays: activity.activeDays,

@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, Calendar01Icon, File02Icon, GitPullRequestIcon, Layers01Icon, StickyNote02Icon, TaskDone01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, BubbleChatDelayIcon, File02Icon, GitPullRequestIcon, Layers01Icon, StickyNote02Icon, TaskDone01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { getTranslations } from "next-intl/server";
 import { MCP_PRESETS } from "@/lib/mcp-catalog";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
@@ -22,7 +22,7 @@ const NUMO_TOOLS = [
   { key: "tasks", icon: TaskDone01Icon },
   { key: "pages", icon: File02Icon },
   { key: "pullRequests", icon: GitPullRequestIcon },
-  { key: "routines", icon: Calendar01Icon },
+  { key: "routines", icon: BubbleChatDelayIcon },
   { key: "notes", icon: StickyNote02Icon },
 ] as const;
 
@@ -92,7 +92,7 @@ export async function SectionAgents() {
             details={<div className="space-y-5"><p>{t("routinesCardDetailsBody")}</p><p>{t("workflowSubtitle")}</p><ScreenshotSlot id="routines" expandable sizes="(min-width: 1024px) 960px, 100vw" /></div>}>
             <div className="grid h-full items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-2">
               <div className="flex h-full flex-col">
-                <HugeiconsIcon icon={Calendar01Icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <HugeiconsIcon icon={BubbleChatDelayIcon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
                 <h3 className="text-2xl font-medium tracking-tight">{t("routinesCardTitle")}</h3>
                 <p className="mt-3 max-w-md text-sm leading-relaxed opacity-80">{t("routinesCardBody")}</p>
               </div>

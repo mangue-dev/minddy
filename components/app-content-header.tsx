@@ -1,6 +1,15 @@
 import type { ComponentProps } from "react";
 import { cn } from "mangue-ui";
 
+/**
+ * Left inset for plain leading content — a title, an identifier, a project
+ * icon. The right side holds ghost icon buttons whose 16px glyph sits 8px
+ * inside a 32px button; text or a bare icon starting the strip would otherwise
+ * look closer to the pane edge than those glyphs. Not for a leading button or
+ * pill, which already carries that inset.
+ */
+export const APP_CONTENT_HEADER_LEADING_INSET = "ml-2";
+
 type AppContentHeaderProps = ComponentProps<"div"> & {
   contentClassName?: string;
 };

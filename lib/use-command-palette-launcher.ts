@@ -20,7 +20,7 @@ export function useCommandPaletteLauncher({
   onNewTab?: () => void;
 }) {
   const { track } = useAnalytics();
-  const { openSignal } = useBulkActions();
+  const { openSignal, openSelectionActions } = useBulkActions();
   const openRef = useRef(open);
 
   useEffect(() => {
@@ -39,14 +39,17 @@ export function useCommandPaletteLauncher({
         }
         return;
       }
+      // With tickets selected, ⌘K opens the selection's actions (the same
+      // palette in its bulk mode) rather than the search.
+      if (!openRef.current && openSelectionActions()) return;
       if (!openRef.current) {
         track("command_palette_opened", { source: "shortcut" });
       }
-      onOpenChange(shortcut === "toggle" ? !openRef.current : true);
+      onOpenChange(!openRef.current);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onOpenChange, onNewTab, track]);
+  }, [onOpenChange, onNewTab, track, openSelectionActions]);
 
   useEffect(() => {
     if (openSignal > 0) onOpenChange(true);

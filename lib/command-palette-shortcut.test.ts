@@ -38,28 +38,12 @@ describe("commandPaletteShortcut", () => {
     expect(commandPaletteShortcut(keyEvent("t"))).toBeNull();
   });
 
-  it("opens for plain F outside an editing surface", () => {
-    expect(commandPaletteShortcut(keyEvent("f"))).toBe("open");
-    expect(
-      commandPaletteShortcut(
-        keyEvent("f", {
-          target: { tagName: "BUTTON", isContentEditable: false } as HTMLElement,
-        }),
-      ),
-    ).toBe("open");
+  it("ignores plain letters, including the retired F shortcut", () => {
+    expect(commandPaletteShortcut(keyEvent("f"))).toBeNull();
+    expect(commandPaletteShortcut(keyEvent("k"))).toBeNull();
   });
 
-  it("leaves editing and modified shortcuts alone", () => {
-    for (const target of [
-      { tagName: "INPUT", isContentEditable: false },
-      { tagName: "TEXTAREA", isContentEditable: false },
-      { tagName: "DIV", isContentEditable: true },
-    ]) {
-      expect(
-        commandPaletteShortcut(keyEvent("f", { target: target as HTMLElement })),
-      ).toBeNull();
-    }
-    expect(commandPaletteShortcut(keyEvent("f", { altKey: true }))).toBeNull();
+  it("leaves modified shortcuts alone", () => {
     expect(
       commandPaletteShortcut(keyEvent("k", { metaKey: true, shiftKey: true })),
     ).toBeNull();

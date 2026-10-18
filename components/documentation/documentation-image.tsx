@@ -21,13 +21,13 @@ export function DocumentationImage({ src, alt, width, height, caption, openLabel
   return <LayoutGroup id={id}>
     <span className="my-5 block">
       <button type="button" aria-label={alt ? `${openLabel}: ${alt}` : openLabel} aria-haspopup="dialog"
-        className="block w-fit max-w-full cursor-zoom-in rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+        className="block w-fit max-w-full cursor-zoom-in text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         onClick={() => setOpen(true)}>
         <motion.span layoutId={reducedMotion ? undefined : layoutId}
           animate={{ opacity: open ? 0 : 1 }}
           transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}
           className="block">
-          <img src={src} alt={alt} loading="lazy" width={width} height={height} className="h-auto max-w-full rounded-lg" />
+          <img src={src} alt={alt} loading="lazy" width={width} height={height} className="h-auto max-w-full" />
         </motion.span>
       </button>
       {caption && <span className="mt-2 block text-sm text-muted-foreground"><DocumentationInlineText>{caption}</DocumentationInlineText></span>}

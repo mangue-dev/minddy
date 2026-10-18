@@ -2,7 +2,7 @@ import { listIssuePullRequests } from "@/lib/server/agent/issue-pull-requests";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { pickIssuePullRequests } from "@/lib/server/agent/activity";
+import { issuePullRequestIds, pickIssuePullRequests } from "@/lib/server/agent/activity";
 
 /**
  * Pull request by issue of one project (MIN-163), in every state. `pull_requests`
@@ -18,5 +18,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
 
   const prs = await listIssuePullRequests(auth.supabase, { projectId: id });
-  return NextResponse.json({ pullRequests: pickIssuePullRequests(prs) });
+  return NextResponse.json({
+    pullRequests: pickIssuePullRequests(prs),
+    linkedPullRequestIds: issuePullRequestIds(prs),
+  });
 }

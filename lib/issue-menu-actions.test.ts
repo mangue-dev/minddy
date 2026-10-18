@@ -15,6 +15,11 @@ const dependencies = vi.hoisted(() => ({
   hasAppTabs: true,
   routerRead: vi.fn(),
   reuseDestination: vi.fn(() => false),
+  toastSuccess: vi.fn(),
+}));
+vi.mock("mangue-ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("mangue-ui")>()),
+  toast: { success: dependencies.toastSuccess },
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => {
@@ -74,7 +79,7 @@ describe("shared issue menu actions", () => {
   it("keeps agent, PR, relation, field, cycle, and trash actions in the same order", () => {
     const { actions, action, options } = build();
     expect(actions.map((item) => item.id)).toEqual([
-      "copy-prompt", "launch-agent", "open-pr", "unlink-pr", "relations",
+      "copy-prompt", "launch-agent", "copy-identifier", "open-pr", "unlink-pr", "relations",
       "set-objective", "set-due-date", "cycle-add", "delete",
     ]);
     expect(actions.slice(0, 2)).toEqual(options.agentActions);
@@ -125,8 +130,29 @@ describe("shared issue menu actions", () => {
       issue: { id: "issue", number: 623, objective_id: "objective", due_date: "2026-10-01" } as Issue,
       pr: null, onSelectRelation: undefined, onDelete: undefined,
     });
-    expect(actions.map((item) => item.id)).toEqual(["copy-prompt", "launch-agent", "cycle-add"]);
+    expect(actions.map((item) => item.id)).toEqual(["copy-prompt", "launch-agent", "copy-identifier", "cycle-add"]);
     expect(build({ hasObjectives: false }).actions.map((item) => item.id)).not.toContain("set-objective");
+  });
+
+  it("offers linking to a pull request only while the issue has no live one", () => {
+    const onLinkPullRequest = vi.fn();
+    const unlinked = build({ pr: null, onLinkPullRequest });
+    unlinked.action("link-pr").onSelect?.();
+    expect(onLinkPullRequest).toHaveBeenCalledOnce();
+    expect(unlinked.action("link-pr").transfersFocus).toBe(true);
+    expect(build({ onLinkPullRequest }).actions.map((item) => item.id)).not.toContain("link-pr");
+    expect(build({ pr: { prId: "pr", state: "merged", prNumber: 42 }, onLinkPullRequest }).actions.map((item) => item.id)).toContain("link-pr");
+    expect(build({ pr: null, onLinkPullRequest, readOnly: true }).actions.map((item) => item.id)).not.toContain("link-pr");
+  });
+
+  it("copies the issue identifier, for readers too", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    build().action("copy-identifier").onSelect?.();
+    await Promise.resolve();
+    expect(writeText).toHaveBeenCalledWith("MIN-623");
+    expect(dependencies.toastSuccess).toHaveBeenCalledWith("MIN-623");
+    expect(build({ readOnly: true }).actions.map((item) => item.id)).toEqual(["copy-identifier", "open-pr"]);
   });
 
   it("opens PRs in the requested app tab and unlinks the exact issue", () => {

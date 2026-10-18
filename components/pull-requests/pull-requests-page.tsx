@@ -442,9 +442,31 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const { hasMore, repoCount, anyPr, loading, readFailed } = active;
   const fetching = active.fetching || completed.isFetching;
   const truncated = active.truncated || completed.data?.pages.some((page) => page.truncated);
-  const pullRequests = useMemo(() => [...new Map([
-    ...active.pullRequests, ...completed.pullRequests,
-  ].map((pr) => [pr.prId, pr])).values()], [active.pullRequests, completed.pullRequests]);
+  /**
+   * The PR the reader had open when it reached a terminal state (merged or
+   * closed) from this page. It stays in the list and on screen even after it
+   * leaves the lens, so merging never moves the focus to another PR; picking
+   * another row releases it.
+   */
+  const [retainedPrId, setRetainedPrId] = useState<string | null>(null);
+  const selectedIdRef = useRef<string | null>(null);
+  // The last row seen for the selection: a refetch of the "open" lens drops
+  // the merged row, and the retained PR must still have a row to render.
+  const selectedRowRef = useRef<PullRequestListItem | null>(null);
+  const pullRequests = useMemo(() => {
+    const rows = new Map([
+      ...active.pullRequests, ...completed.pullRequests,
+    ].map((pr) => [pr.prId, pr]));
+    const retainedRow = selectedRowRef.current;
+    if (retainedPrId && retainedRow?.prId === retainedPrId && !rows.has(retainedPrId)) {
+      rows.set(retainedPrId, retainedRow);
+    }
+    return [...rows.values()];
+  }, [active.pullRequests, completed.pullRequests, retainedPrId]);
+  const selectPr = useCallback((prId: string) => {
+    setSelectedPrId(prId);
+    setRetainedPrId((current) => (current === prId ? current : null));
+  }, []);
   const refetch = () => {
     void active.refetch();
     if (sections.has("completed")) void completed.refetch();
@@ -509,6 +531,10 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         prId,
       ]);
       updateCachedPullRequestState(queryClient, prId, state);
+      if (isTerminalPrState(state) && prId === selectedIdRef.current) {
+        setSelectedPrId(prId);
+        setRetainedPrId(prId);
+      }
       return () => {
         for (const [key, data] of previous) queryClient.setQueryData(key, data);
         queryClient.setQueryData(["pull-request", prId], previousDetail);
@@ -531,8 +557,9 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   );
 
   const filtered = useMemo(
-    () => pullRequests.filter((pr) => sections.has(pullRequestSection(pr))),
-    [pullRequests, sections],
+    () => pullRequests.filter((pr) =>
+      pr.prId === retainedPrId || sections.has(pullRequestSection(pr))),
+    [pullRequests, retainedPrId, sections],
   );
 
   /**
@@ -559,7 +586,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         browse.onSelect(`/pull-requests?pr=${encodeURIComponent(prId)}&action=merge`);
         return;
       }
-      setSelectedPrId(prId);
+      selectPr(prId);
       setMergeIntentPrId(prId);
     },
   });
@@ -604,13 +631,11 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * deep-link, then the first in the list — and nothing as long as a fetch is in effect.
    * flight, otherwise we would open a defect just before the good PR arrives.
    *
-   * A line that LEAVES the lens releases its selection: merging the last
-   * open PR empties the default “open” list and the selection falls from
-   * one to zero. The filter stays where it is — widening it to keep the
-   * merged PR in view is the READER's gesture (the filter menu), never a
-   * side effect of the merge. Selecting it again is still one click: the
-   * click state survives, so switching the lens to “merged” reopens exactly
-   * the PR that was on screen.
+   * Merging or closing the PR on screen keeps it selected: `retainedPrId`
+   * holds its row in the list although it left the lens. The filter stays
+   * where it is — widening it is the READER's gesture (the filter menu),
+   * never a side effect of the merge. Any other row that leaves the lens
+   * (a refetch, a change made elsewhere) still releases its selection.
    */
   const clicked =
     selectedPrId && filtered.some((p) => p.prId === selectedPrId) ? selectedPrId : null;
@@ -622,6 +647,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     clicked ??
     (waitingForDeepLink ? null : (filtered[0]?.prId ?? null));
   const selected = filtered.find((p) => p.prId === selectedId) ?? null;
+  selectedIdRef.current = selectedId;
+  if (selected) selectedRowRef.current = selected;
 
   // “Save current view” (⌘K): the open PR is a selection of
   // the page, derived rather than pushed into the address — `?pr=` is precisely
@@ -774,7 +801,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                 onLoadNextPage={() => void completed.fetchNextPage()}
                 onToggle={() => toggleGroup(g.key)}
                 onShowAll={() => setExpandedGroups((prev) => toggledSet(prev, g.key))}
-                onSelect={setSelectedPrId}
+                onSelect={selectPr}
               />
             ))}
 

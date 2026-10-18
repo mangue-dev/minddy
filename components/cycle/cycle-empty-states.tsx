@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AiAutoRotateIcon as CycleIcon, Calendar01Icon, CheckIcon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, CheckIcon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import type { CycleInfo } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { EmptyScene } from "@/components/empty-scene";
+import { DATE_ICON } from "@/components/feature-icons";
 
 /**
  * The three empty states of the cycle view (MIN-32):
@@ -88,7 +89,7 @@ export function CycleFutureNotice({ cycle }: { cycle: CycleInfo }) {
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
       <div className="mx-auto max-w-5xl">
         <EmptyScene
-          icon={Calendar01Icon}
+          icon={DATE_ICON}
           title={t("futureCycle", { date: start })}
         />
       </div>

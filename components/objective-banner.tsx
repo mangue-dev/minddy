@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, DateTimeIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { startTransition } from "react";
 import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
@@ -18,6 +18,7 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { pushObjectiveBoardHistory } from "@/lib/objective-board-navigation";
 import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
 import type { Issue, Member, Objective } from "@/lib/types";
+import { DATE_ICON } from "@/components/feature-icons";
 import {
   Tooltip,
   TooltipContent,
@@ -121,14 +122,15 @@ export function ObjectiveBoardHeader({
         </Link>
       </Button>
 
-      {/* Identity: color dot, name, and status. */}
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+      {/* Identity: color dot, name, and status. It takes only its own width,
+          so the indicators follow the name instead of the header's far edge. */}
+      <div className="flex min-w-0 items-center gap-3">
         <span
           className="size-3 shrink-0 rounded-full"
           style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
           aria-hidden
         />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <ObjectiveSwitch
             objective={objective}
             objectives={objectives}
@@ -140,8 +142,6 @@ export function ObjectiveBoardHeader({
           </div>
         </div>
       </div>
-
-      <div className="hidden h-9 w-px shrink-0 bg-border sm:block" aria-hidden />
 
       {/* Indicators — progress · lead · target */}
       <div className="flex shrink-0 items-center gap-x-6">
@@ -201,7 +201,7 @@ export function ObjectiveBoardHeader({
               )}
               aria-hidden
             >
-              <HugeiconsIcon icon={DateTimeIcon} className="size-5" />
+              <HugeiconsIcon icon={DATE_ICON} className="size-5" />
             </span>
             <div className="flex flex-col leading-tight">
               <span className="text-[11px] text-muted-foreground">

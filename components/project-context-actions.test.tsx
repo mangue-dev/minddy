@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   openCreateIssue: vi.fn(), openCreateObjective: vi.fn(), push: vi.fn(), replace: vi.fn(),
   deleteProject: vi.fn(), toast: { error: vi.fn(), success: vi.fn() },
   dialog: null as null | { open: boolean; onConfirm: () => Promise<void>; title: string },
+  hideDialog: null as null | { open: boolean; onConfirm: () => void; title: string },
   hidden: new Set<string>(), setProjectHidden: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }));
@@ -26,8 +27,12 @@ vi.mock("@/lib/use-hidden-projects", () => ({ useHiddenProjects: () => ({
 }) }));
 vi.mock("mangue-ui", () => ({
   toast: state.toast,
+  // The trash dialog and the hide confirmation both use it; the title's
+  // namespace tells them apart.
   ConfirmDeleteDialog: (props: { open: boolean; onConfirm: () => Promise<void>; title: string }) => {
-    state.dialog = props; return null;
+    if (props.title.startsWith("Nav.")) state.hideDialog = props;
+    else state.dialog = props;
+    return null;
   },
 }));
 
@@ -43,7 +48,7 @@ const render = () => act(() => root.render(<Probe />));
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
-  state.pathname = "/projects/a/settings"; state.user = { id: "owner" }; state.dialog = null; state.hidden = new Set();
+  state.pathname = "/projects/a/settings"; state.user = { id: "owner" }; state.dialog = null; state.hideDialog = null; state.hidden = new Set();
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
 });
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
@@ -65,15 +70,21 @@ describe("useProjectContextActions", () => {
     expect(ids).toContain("project-hide");
   });
 
-  it("hides or shows the right-clicked project through the shared preference, never destructively", async () => {
+  it("asks before hiding the right-clicked project, and shows a hidden one at once", async () => {
     state.hidden = new Set(["c"]);
     await render();
     const hide = actions.projectActions(project("b")).find((entry) => entry.id === "project-hide")!;
     const show = actions.projectActions(project("c")).find((entry) => entry.id === "project-show")!;
-    expect(hide.variant).toBeUndefined();
+    expect(hide.variant).toBe("destructive");
     expect(show.variant).toBeUndefined();
-    hide.onSelect?.(); show.onSelect?.();
+
+    act(() => hide.onSelect!());
+    expect(state.setProjectHidden).not.toHaveBeenCalled();
+    expect(state.hideDialog?.open).toBe(true);
+    act(() => state.hideDialog!.onConfirm());
     expect(state.setProjectHidden).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: "b" }), true);
+
+    show.onSelect?.();
     expect(state.setProjectHidden).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: "c" }), false);
   });
 

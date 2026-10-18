@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
 import {
+  issuePullRequestIds,
   issuePullRequestsForBindings,
   pickIssuePullRequests,
   type ProjectRepoBindingRow,
@@ -34,5 +35,8 @@ export async function GET(request: NextRequest) {
     prs,
     (links ?? []) as ProjectRepoBindingRow[],
   );
-  return NextResponse.json({ pullRequests: pickIssuePullRequests(scopedPrs) });
+  return NextResponse.json({
+    pullRequests: pickIssuePullRequests(scopedPrs),
+    linkedPullRequestIds: issuePullRequestIds(scopedPrs),
+  });
 }

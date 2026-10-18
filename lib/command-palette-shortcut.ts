@@ -1,6 +1,6 @@
 import { eventKey } from "@/lib/keyboard/event-key";
 
-export type CommandPaletteShortcut = "toggle" | "open" | "newTab" | null;
+export type CommandPaletteShortcut = "toggle" | "newTab" | null;
 
 /** Resolve only the global shortcuts that must work before the palette chunk loads. */
 export function commandPaletteShortcut(
@@ -17,13 +17,5 @@ export function commandPaletteShortcut(
   if (isMod && !event.shiftKey && !event.altKey && key === "t") {
     return "newTab";
   }
-  if (isMod || event.altKey || key !== "f") return null;
-
-  const target = event.target as HTMLElement | null;
-  const typing =
-    target &&
-    (target.tagName === "INPUT" ||
-      target.tagName === "TEXTAREA" ||
-      target.isContentEditable);
-  return typing ? null : "open";
+  return null;
 }

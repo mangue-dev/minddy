@@ -4,13 +4,18 @@
  * cropping the label. `label` is used as a reading for the screen reader, for
  * whom a "12" next to a project name means nothing.
  */
+/** "99+" past two digits, shared by every counter (sidebar, tabs, Inbox pill). */
+export function countLabel(count: number): string {
+  return count > 99 ? "99+" : String(count);
+}
+
 export function countBadge(count: number, label?: string) {
   return (
     <span
       className="text-xs tabular-nums text-muted-foreground"
       aria-label={label}
     >
-      {count > 99 ? "99+" : count}
+      {countLabel(count)}
     </span>
   );
 }

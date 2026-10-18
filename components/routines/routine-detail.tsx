@@ -23,7 +23,7 @@ import {
   toast,
 } from "mangue-ui";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
-import { AppContentHeader } from "@/components/app-content-header";
+import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";
 import { Markdown } from "@/components/markdown";
 import { ProjectOrb } from "@/components/project-orb";
@@ -320,7 +320,7 @@ export function RoutineDetail({
           <ProjectOrb
             seed={projectOrbSeed(project)}
             iconUrl={project.icon_url}
-            className="size-4 shrink-0"
+            className={`size-4 shrink-0 ${APP_CONTENT_HEADER_LEADING_INSET}`}
           />
         ) : null}
         <span className="min-w-0 flex-1 truncate text-sm font-medium">

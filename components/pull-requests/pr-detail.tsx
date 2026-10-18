@@ -25,7 +25,7 @@ import {
 } from "mangue-ui";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
-import { AppContentHeader } from "@/components/app-content-header";
+import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { BotBadge, GitLogin } from "@/components/git/git-login";
 import { Markdown } from "@/components/markdown";
 import { TAB_LIST_DENSE, TAB_TRIGGER_DENSE } from "@/components/tab-bar";
@@ -1474,7 +1474,7 @@ export function PrDetail({
           <ProjectOrb
             seed={projectOrbSeed(item.project)}
             iconUrl={item.project.icon_url}
-            className="size-4 shrink-0"
+            className={`size-4 shrink-0 ${APP_CONTENT_HEADER_LEADING_INSET}`}
           />
         ) : null}
         <span className="flex shrink-0 items-center gap-1 font-mono text-sm">

@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, CheckIcon, CircleDotDashedIcon, CircleIcon, LayoutGridIcon, MessageMultiple01Icon, MoreHorizontalIcon, Settings01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, CheckIcon, CircleDotDashedIcon, CircleIcon, MessageMultiple01Icon, MoreHorizontalIcon, Settings01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +19,7 @@ import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import type { Project } from "@/lib/types";
+import { BOARD_ICON } from "@/components/feature-icons";
 import {
   Tooltip,
   TooltipContent,
@@ -125,7 +126,7 @@ export function ProjectCard({ project }: { project: Project }) {
             <DropdownMenuItem
               onSelect={() => router.push(`/projects/${project.id}`)}
             >
-              <HugeiconsIcon icon={LayoutGridIcon} />
+              <HugeiconsIcon icon={BOARD_ICON} />
               {t("tickets")}
             </DropdownMenuItem>
             <DropdownMenuItem

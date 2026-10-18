@@ -139,9 +139,11 @@ export async function generateMetadata(): Promise<Metadata> {
         : {}),
     },
     // Renders <meta name="apple-mobile-web-app-title" content="minddy" />.
-    // The favicon/icon/manifest tags are auto-wired from the files in app/
-    // (favicon.ico, icon0.svg, icon1.png, apple-icon.png, manifest.json).
+    // The favicon/icon tags are auto-wired from the files in app/ (favicon.ico,
+    // icon.tsx, icon1.png, apple-icon.tsx). The manifest is a route handler
+    // (app/manifest.json/route.ts), which the file convention does not link.
     appleWebApp: { title: "minddy" },
+    manifest: "/manifest.json",
   };
 }
 

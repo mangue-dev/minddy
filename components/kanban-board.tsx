@@ -512,6 +512,7 @@ export const KanbanBoard = memo(function KanbanBoard({
             {canWrite && selectedIssues.length > 0 && (
               <BulkIssueActions
                 count={selectedIssues.length}
+                issues={selectedIssues}
                 members={members}
                 onUpdate={updateSelected}
                 onDelete={

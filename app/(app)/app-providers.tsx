@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import dynamic from "next/dynamic";
 import { OnboardingProvider } from "@/lib/use-onboarding";
 import { AuthProvider } from "@/lib/auth-context";
@@ -58,7 +58,10 @@ const KeyboardCheatsheet = dynamic(
 
 function DeferredKeyboardCheatsheet() {
   const { open } = useCheatsheet();
-  return open ? <KeyboardCheatsheet /> : null;
+  // Loaded on first open, then kept mounted so the panel can animate out.
+  const [opened, setOpened] = useState(open);
+  if (open && !opened) setOpened(true);
+  return opened ? <KeyboardCheatsheet /> : null;
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {

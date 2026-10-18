@@ -3,8 +3,9 @@
 import { useCallback } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
+import { toast } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, DateTimeIcon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Copy01Icon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { RelationIcon } from "@/components/issue-indicators";
 import { KEY_FOR_FIELD, type ShortcutField } from "@/components/issue-field-shortcuts";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -14,6 +15,7 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type { IssuePr } from "@/lib/agent-api";
 import type { Issue, IssueRelationType } from "@/lib/types";
+import { DATE_ICON } from "@/components/feature-icons";
 
 export interface IssueMenuOptions {
   issue: Issue;
@@ -25,6 +27,8 @@ export interface IssueMenuOptions {
   onOpenField: (field: ShortcutField) => void;
   extraActions?: ContextMenuAction[];
   onDelete?: () => void;
+  /** Opens the picker of open pull requests to link this issue to. */
+  onLinkPullRequest?: () => void;
   /** Project readers (MIN-693): only navigation survives, never a mutation. */
   readOnly?: boolean;
 }
@@ -48,7 +52,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
 
   return useCallback(({
     issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation,
-    onOpenField, extraActions = [], onDelete, readOnly = false,
+    onOpenField, extraActions = [], onDelete, onLinkPullRequest, readOnly = false,
   }: IssueMenuOptions): ContextMenuAction[] => {
     const identifier = issueIdentifier(projectKey, issue.number);
     const openPr: ContextMenuAction[] = pr
@@ -86,9 +90,24 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
           },
         ]
       : [];
-    if (readOnly) return openPr;
+    // Right under "Copy as prompt"; a reader may copy it too, since it
+    // changes nothing. Same gesture and toast as the command palette's.
+    const copyId: ContextMenuAction = {
+      id: "copy-identifier",
+      label: tAction("copyIdentifier", { identifier }),
+      keywords: ["copy", "copier", "identifier", "identifiant", "id", identifier],
+      icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+      onSelect: () => {
+        void navigator.clipboard.writeText(identifier).then(
+          () => toast.success(identifier),
+          () => toast.error(tPr("copyFailed")),
+        );
+      },
+    };
+    if (readOnly) return [copyId, ...openPr];
     return [
       ...agentActions,
+      copyId,
       // Open pull request — only offered when a PR exists for the ticket.
       ...openPr,
       ...(pr ? [{
@@ -99,6 +118,16 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
         disabled: isPending,
         transfersFocus: true,
         onSelect: () => requestUnlink({ prId: pr.prId, issueId: issue.id, identifier }),
+      }] : []),
+      // An issue keeps at most one live pull request (the server refuses a
+      // second), so the entry only shows while it has none.
+      ...(onLinkPullRequest && !(pr && (pr.state === "open" || pr.state === "draft")) ? [{
+        id: "link-pr",
+        label: tPr("linkToPullRequest"),
+        keywords: ["link", "lier", "pull request", "pr", "merge request"],
+        icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: onLinkPullRequest,
       }] : []),
       ...(onSelectRelation
         ? [
@@ -145,7 +174,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
                 "calendrier",
                 "calendar",
               ],
-              icon: <HugeiconsIcon icon={DateTimeIcon} className="size-4" />,
+              icon: <HugeiconsIcon icon={DATE_ICON} className="size-4" />,
               shortcut: KEY_FOR_FIELD.dueDate,
               transfersFocus: true,
               onSelect: () => onOpenField("dueDate"),

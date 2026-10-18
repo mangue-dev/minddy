@@ -1,6 +1,6 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AlertCircleIcon, Home01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, AlertCircleIcon, Home01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
@@ -39,6 +39,13 @@ import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
 import { useOpenPullRequestCountQuery } from "@/lib/use-agent-runs";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
+import { appTabIndicator } from "@/lib/app-tab-indicators";
+import { NotificationBadge } from "./notification-badge";
+import { countLabel } from "./nav-badge";
+import { useNotifications } from "@/lib/use-notifications";
+import { useMyInvitations } from "@/lib/use-invitations-query";
+import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
+import { useTriageCountsQuery } from "@/lib/use-triage-counts-query";
 import { AppTabIcon } from "./app-tab-icon";
 import { AppTabItem } from "./app-tab-item";
 import { AppTabSkeleton } from "./app-tab-skeleton";
@@ -73,26 +80,49 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const hrefs = tabs.map((tab) => tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
   const { pageById, objectiveById, prById, routineById, issueById } = useAppTabMetadata(hrefs);
 
-  // Notification badges on the tabs follow the same rules as the sidebar (same
-  // counter, same caching): open PRs on the PR tab. They sit ON the tab icon's top-right corner, drawn
-  // plain — no pill, no ring — as if laid directly over the icon.
+  // Notification badges on the tabs follow the same rules as the sidebar
+  // (MIN-695): each tab carries its page's sidebar badge, from the same
+  // queries, so inactive tabs stay current too. They sit ON the tab icon's
+  // top-right corner, drawn plain — no pill, no ring — as if laid directly
+  // over the icon.
   const openPrCount = useOpenPullRequestCountQuery();
   const { agentsAllowed } = usePlanGates();
-  const sectionBadges = (section: string): ReactNode => {
-    if (section === "pull-requests") {
-      if (!agentsAllowed || openPrCount <= 0) return null;
-      // Smaller than the sidebar sticker: the tab icon badge reads as a dot
-      // of digits; the tab paints its own background around it.
+  const { unreadCount } = useNotifications();
+  const { invitations } = useMyInvitations();
+  const { warnings: smartAssignWarnings } = useSmartAssignWarningsQuery();
+  const { counts: triageCounts } = useTriageCountsQuery();
+  const indicatorData = {
+    openPullRequests: agentsAllowed ? openPrCount : 0,
+    inbox: unreadCount + invitations.length,
+    smartAssignWarning: smartAssignWarnings.length > 0,
+    triageCounts,
+  };
+  const sectionBadges = (section: string, projectId: string | null): ReactNode => {
+    const indicator = appTabIndicator({ section, projectId }, indicatorData);
+    if (!indicator) return null;
+    if (indicator.kind === "alert") {
       return (
-        <span
-          aria-label={nav("pullRequestsBadge", { count: openPrCount })}
-          className="px-1 text-[9px] font-medium leading-3 tabular-nums text-muted-foreground"
-        >
-          {openPrCount > 99 ? "99+" : openPrCount}
-        </span>
+        <HugeiconsIcon icon={Alert01Icon} className="size-2.5 text-amber-500"
+          aria-label={nav("smartAssignIncomplete")} />
       );
     }
-    return null;
+    // The Inbox count asks for attention, like its sidebar entry (MIN-727).
+    if (indicator.label === "inboxBadge") {
+      return (
+        <NotificationBadge size="sm" count={indicator.count}
+          label={nav("inboxBadge", { count: indicator.count })} />
+      );
+    }
+    // Smaller than the sidebar sticker: the tab icon badge reads as a dot
+    // of digits; the tab paints its own background around it.
+    return (
+      <span
+        aria-label={nav(indicator.label, { count: indicator.count })}
+        className="px-1 text-[9px] font-medium leading-3 tabular-nums text-muted-foreground"
+      >
+        {countLabel(indicator.count)}
+      </span>
+    );
   };
 
   const strip = useRef<HTMLDivElement>(null);
@@ -272,7 +302,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
               ? <span className="text-sm leading-none" aria-hidden>{pageIcon}</span>
               : <AppTabIcon section={section} project={project} projectId={projectId}
                   objectiveColor={objectiveId ? objective?.color ?? null : undefined} />}
-            badge={sectionBadges(section)} busy={busy} last={tabs.length <= 1}
+            badge={sectionBadges(section, projectId ?? null)} busy={busy} last={tabs.length <= 1}
             compositeIcon={composite} width={tab.pinned ? undefined : regularWidth}
             onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
             onWarm={() => { if (tab.id !== activeId) session.prefetch(tab.href); }}
@@ -317,6 +347,10 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
                 <AppTabIcon section={view.section} project={view.project} projectId={view.projectId}
                   objectiveColor={view.objectiveId ? view.objective?.color ?? null : undefined} />
                 <span className="truncate">{view.label}</span>
+                {(() => {
+                  const badge = sectionBadges(view.section, view.projectId ?? null);
+                  return badge ? <span className="ml-auto flex shrink-0 items-center">{badge}</span> : null;
+                })()}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

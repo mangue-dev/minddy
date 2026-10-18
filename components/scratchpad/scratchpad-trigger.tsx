@@ -72,7 +72,12 @@ export function ScratchpadTrigger({
           )}
         </Button>
       </TooltipTrigger>
-      <TooltipContent className="flex items-center gap-2">
+      {/* In the bottom chrome bar, sit at the same height as the Numo tooltip next to it. */}
+      <TooltipContent
+        side={chrome ? "top" : undefined}
+        sideOffset={chrome ? 10 : undefined}
+        className="flex items-center gap-2"
+      >
         <span>{t("open")}</span>
         <KbdSequence
           keys={[[modKey, "⇧", "K"]]}

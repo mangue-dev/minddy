@@ -166,6 +166,7 @@ describe("display dependencies through objective membership", () => {
         resolved: false,
         otherNumber: 7,
         otherName: "Prepare API",
+        otherStatus: "in_progress",
         inheritedObjectiveId: "goal",
         inheritedObjectiveName: "Launch",
       },

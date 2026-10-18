@@ -877,6 +877,8 @@ export interface LinkedPullRequestIssue {
   title: string;
   project_id: string;
   project_key: string;
+  /** Shown next to the issue in the PR's linked-issues popover. */
+  status: string;
 }
 
 export interface PullRequestWithIssue extends PullRequestRow {
@@ -898,12 +900,12 @@ export async function loadPullRequestIssues(
   const links = (data ?? []) as { pull_request_id: string; issue_id: string }[];
   if (links.length === 0) return result;
   const { data: issues, error: issueError } = await issueStore(supabase)
-    .select("id, number, title, project_id, project:projects(key)")
+    .select("id, number, title, status, project_id, project:projects(key)")
     .in("id", [...new Set(links.map((link) => link.issue_id))]).is("deleted_at", null);
   if (issueError) throw new Error(issueError.message);
   const byId = new Map((issues ?? []).map((issue) => [issue.id, {
     id: issue.id, number: issue.number, title: issue.title,
-    project_id: issue.project_id,
+    project_id: issue.project_id, status: issue.status,
     project_key: (issue.project as { key: string } | null)?.key ?? "",
   } as LinkedPullRequestIssue]));
   for (const link of links) {

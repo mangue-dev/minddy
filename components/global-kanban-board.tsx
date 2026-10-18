@@ -564,6 +564,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
           {selectedIssues.length > 0 && (
             <BulkIssueActions
               count={selectedIssues.length}
+              issues={selectedIssues}
               members={Array.from(memberMapByProject.values()).flatMap(
                 (members) => Array.from(members.values()),
               )}

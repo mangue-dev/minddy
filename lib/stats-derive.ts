@@ -44,8 +44,13 @@ export function computeStreaks(days: HeatmapDay[]): {
 }
 
 /** Totals from the heatmap window (the last 12 months), to give a
- * leading number to the grid of squares rather than leaving it without a scale. */
-export function heatmapTotals(days: HeatmapDay[]): {
+ * leading number to the grid of squares rather than leaving it without a scale.
+ * `completed`, when the server sends it, counts each issue once: summing the
+ * days would count an issue completed again once per completion. */
+export function heatmapTotals(
+  days: HeatmapDay[],
+  completed?: { issues: number; tasks: number },
+): {
   total: number;
   issues: number;
   tasks: number;
@@ -60,6 +65,14 @@ export function heatmapTotals(days: HeatmapDay[]): {
     issues += d.issues;
     tasks += d.tasks;
     if (d.count > 0) activeDays++;
+  }
+  if (completed) {
+    return {
+      total: completed.issues + completed.tasks,
+      issues: completed.issues,
+      tasks: completed.tasks,
+      activeDays,
+    };
   }
   return { total, issues, tasks, activeDays };
 }

@@ -157,7 +157,7 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
     const chips = resolveRelations(issue.id, relations, statusById)
       .map((r): ChipRelation | null => {
         const other = allIssueMap.get(r.otherId);
-        return other ? { ...r, otherNumber: other.number } : null;
+        return other ? { ...r, otherNumber: other.number, otherStatus: other.status } : null;
       })
       .filter((r): r is ChipRelation => r !== null);
     return {

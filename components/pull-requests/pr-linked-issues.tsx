@@ -8,9 +8,10 @@ import { Button, Popover, PopoverContent, PopoverTrigger, Spinner } from "mangue
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { usePrUnlinkConfirmation } from "./pr-unlink-confirmation";
 import { issueIdentifier } from "@/lib/issue-constants";
+import { StatusIndicator } from "@/components/issue-indicators";
 import type { PullRequestListItem } from "@/lib/agent-api";
 
-export function linkedIssues(item: PullRequestListItem) {
+export function linkedIssues(item: PullRequestListItem): NonNullable<PullRequestListItem["issues"]> {
   return item.issues ?? (item.issue && item.project ? [{
     ...item.issue, project_id: item.project.id, project_key: item.project.key,
   }] : []);
@@ -71,8 +72,12 @@ export function PrLinkedIssues({ item, onOpenIssue }: {
                 <button type="button"
                   className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none hover:bg-muted focus-visible:bg-muted"
                   onClick={() => { setOpen(false); onOpenIssue(issue.id, issue.project_id); }}>
+                  {/* The issue's status, as in the relations popover. */}
+                  {issue.status ? (
+                    <StatusIndicator status={issue.status} className="size-4 shrink-0" />
+                  ) : null}
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">{issueIdentifier(issue.project_key, issue.number)}</span>
-                  <span className="truncate">{issue.title}</span>
+                  <span className={issue.status === "done" ? "truncate text-muted-foreground line-through" : "truncate"}>{issue.title}</span>
                 </button>
                 {unlinkButton(issue)}
               </div>

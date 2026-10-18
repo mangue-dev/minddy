@@ -1105,20 +1105,20 @@ export function IssueSidePanel({
                       }}
                     />
                   </PropertyRow>
-                  <PropertyRow label={tField("dueDate")}>
-                    <DueDateValue
-                      value={issue.due_date}
-                      onChange={(due_date) => void patch({ due_date })}
-                      recurrence={issue.recurrence}
-                      onRecurrenceChange={(next) => void patch(next)}
-                    />
-                  </PropertyRow>
                   <PropertyRow label={tField("objectiveLinked")}>
                     <ObjectiveValue
                       value={issue.objective_id}
                       objectives={objectives}
                       projectId={issue.project_id}
                       onChange={(objective_id) => void patch({ objective_id })}
+                    />
+                  </PropertyRow>
+                  <PropertyRow label={tField("dueDate")}>
+                    <DueDateValue
+                      value={issue.due_date}
+                      onChange={(due_date) => void patch({ due_date })}
+                      recurrence={issue.recurrence}
+                      onRecurrenceChange={(next) => void patch(next)}
                     />
                   </PropertyRow>
                   </fieldset>

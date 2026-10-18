@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, FolderAddIcon, LayoutGridIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, FolderAddIcon } from "@hugeicons/core-free-icons";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -50,6 +50,7 @@ import {
 } from "@/components/cycle/cycle-empty-states";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
+import { BOARD_ICON } from "@/components/feature-icons";
 import type {
   Category,
   Issue,
@@ -616,7 +617,7 @@ function GlobalBoardInner() {
                 </Button>
               </EmptyScene>
             ) : (
-              <EmptyScene icon={LayoutGridIcon} title={tBoard("emptyTitle")}>
+              <EmptyScene icon={BOARD_ICON} title={tBoard("emptyTitle")}>
                 <Button onClick={() => openCreateIssue()}>
                   <HugeiconsIcon icon={Add01Icon} />
                   {tBoard("newIssue")}

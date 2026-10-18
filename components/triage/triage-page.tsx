@@ -23,7 +23,7 @@ import {
 } from "mangue-ui";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyScene } from "@/components/empty-scene";
-import { AppContentHeader } from "@/components/app-content-header";
+import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { IntegrationIndicator } from "@/components/integration-indicator";
@@ -522,7 +522,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
  it caps (same part as the pull request and the
  agent conversation). */}
             <AppContentHeader contentClassName="gap-2">
-              <span className="font-mono text-sm text-muted-foreground">
+              <span className={`font-mono text-sm text-muted-foreground ${APP_CONTENT_HEADER_LEADING_INSET}`}>
                 {issueIdentifier(project.key, selected.number)}
               </span>
               {/* Same order as the actions of a pull request (pr-detail):
@@ -669,18 +669,18 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                       }}
                     />
                   </PropertyRow>
-                  <PropertyRow label={tField("dueDate")}>
-                    <DueDateValue
-                      value={selected.due_date}
-                      onChange={(due_date) => void patch(selected, { due_date })}
-                    />
-                  </PropertyRow>
                   <PropertyRow label={tField("objectiveLinked")}>
                     <ObjectiveValue
                       value={selected.objective_id}
                       objectives={objectives}
                       projectId={selected.project_id}
                       onChange={(objective_id) => void patch(selected, { objective_id })}
+                    />
+                  </PropertyRow>
+                  <PropertyRow label={tField("dueDate")}>
+                    <DueDateValue
+                      value={selected.due_date}
+                      onChange={(due_date) => void patch(selected, { due_date })}
                     />
                   </PropertyRow>
                 </fieldset>
@@ -807,6 +807,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         <BulkIssueActions
           surface="triage"
           count={bulkIssues.length}
+          issues={bulkIssues}
           members={members}
           onUpdate={updateBulk}
           onDelete={async () => {

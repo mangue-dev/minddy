@@ -138,7 +138,7 @@ export function MentionChip({
         <ProjectOrb
           seed={avatarSeed ?? id}
           iconUrl={iconUrl}
-          className="size-full rounded-full"
+          className="size-full rounded-[0.28em]"
         />
       ) : type === "numo" ? (
         // The face of the assistant, exactly the one who signs his answers —

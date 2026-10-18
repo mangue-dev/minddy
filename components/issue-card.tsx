@@ -2,7 +2,7 @@
 
 import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, HierarchySquare01Icon, Calendar01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon, HierarchySquare01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -41,8 +41,13 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
+import { PrLinkTargetPicker } from "@/components/pull-requests/pr-link-target-picker";
+import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
-import { useIssuePr } from "@/components/issue-pr-context";
+import { useIssuePr, useIssuePrReadiness } from "@/components/issue-pr-context";
+import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
+import type { IssuePrReadiness } from "@/lib/issue-pr-store";
+import { DATE_ICON } from "@/components/feature-icons";
 import {
   isPrWorthShowing,
   type IssuePr,
@@ -473,7 +478,7 @@ function DueDatePick({
         {recurrence ? (
           <HugeiconsIcon icon={RepeatIcon} className="size-3 shrink-0" />
         ) : (
-          <HugeiconsIcon icon={Calendar01Icon} className="size-3 shrink-0" />
+          <HugeiconsIcon icon={DATE_ICON} className="size-3 shrink-0" />
         )}
         {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
       </span>
@@ -569,28 +574,28 @@ function PlanPick({
     its review. Read-only (a span without a handler) in the drag overlay / public board.
 
     The colors are GitHub's, as everywhere else: GREEN when open,
-    PURPLE when merged, NEUTRAL when the PR is still a draft — and the
-    words follow the state: “PR open” once reviewable, “PR available”
-    while it is still a draft. The chip used to be green in every state — announcing
-    “PR available” in green for work already delivered, while the side-panel
-    chip said “PR merged” in purple one click away. */
+    PURPLE when merged, NEUTRAL when the PR is still a draft. The color and
+    icon already say the state, so the chip shows the PR's number (MIN-735);
+    the state words stay in the tooltip and for screen readers. */
 function PrPick({
   state,
+  number,
   onOpen,
 }: {
   state: IssuePr["state"];
+  number: number;
   onOpen?: () => void;
 }) {
   const t = useTranslations("Agent");
   const merged = state === "merged";
   const draft = state === "draft";
   const Icon = merged ? GitMergeIcon : draft ? GitPullRequestDraftIcon : GitPullRequestIcon;
+  const stateLabel = merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen");
   const content = (
     <>
       <AppIcon icon={Icon} className="size-3.5 shrink-0" />
-      <span className="truncate">
-        {merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen")}
-      </span>
+      <span className="truncate tabular-nums">#{number}</span>
+      <span className="sr-only">{stateLabel}</span>
     </>
   );
   const tone = merged
@@ -617,7 +622,7 @@ function PrPick({
       <TooltipTrigger asChild>
         <button
           type="button"
-          aria-label={t("viewPullRequest")}
+          aria-label={`${t("viewPullRequest")} #${number}, ${stateLabel}`}
           onClick={(e) => {
             stop(e);
             onOpen();
@@ -632,7 +637,7 @@ function PrPick({
           {content}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{t("viewPullRequest")}</TooltipContent>
+      <TooltipContent>{`${t("viewPullRequest")} · ${stateLabel}`}</TooltipContent>
     </Tooltip>
   );
 }
@@ -662,6 +667,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   dragging,
   selected,
   pr,
+  prReadiness,
   onOpenPr,
   onOpenObjective,
 }: {
@@ -696,6 +702,9 @@ export const IssueCardBody = memo(function IssueCardBody({
       REJECTED PR calls for nothing, and hiding the plan's progress for it would
       lose useful information. The menu still leads to it in every state. */
   pr?: IssuePr | null;
+  /** Merge readiness of a live PR, shown next to its number like the Code
+      review rows; absent on surfaces without the board's PR provider. */
+  prReadiness?: IssuePrReadiness | null;
   /** Opens the pull request review (clicking the “PR available” chip). */
   onOpenPr?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
@@ -828,7 +837,12 @@ export const IssueCardBody = memo(function IssueCardBody({
         <span className="flex shrink-0 items-center gap-1.5">
           {/* An actionable PR takes the place of plan progress. */}
           {pr && isPrWorthShowing(pr) ? (
-            <PrPick state={pr.state} onOpen={onOpenPr} />
+            <span className="flex items-center gap-0.5">
+              <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
+              {prReadiness && pr.state === "open" ? (
+                <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable} />
+              ) : null}
+            </span>
           ) : plan.total > 0 ? (
             <PlanPick progress={plan} onOpen={onOpenPlan} />
           ) : null}
@@ -976,6 +990,7 @@ const IssueCardContent = memo(function IssueCardContent({
   const queryClient = useQueryClient();
   // One issue-scoped subscription drives the pull request chip.
   const pr = useIssuePr(issue.id);
+  const prReadiness = useIssuePrReadiness(issue.id);
 
   // Card bindings are made HERE rather than by the column (MIN-316).
   // The received props take the ticket as an argument and are therefore stable
@@ -1045,6 +1060,8 @@ const IssueCardContent = memo(function IssueCardContent({
   // the same place as the menu that just closed.
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation being added (type chosen) → opens the target picker.
+  const [linkPrOpen, setLinkPrOpen] = useState(false);
+  const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
   const [relationType, setRelationType] = useState<IssueRelationType | null>(
     null,
   );
@@ -1227,7 +1244,7 @@ const IssueCardContent = memo(function IssueCardContent({
       "shift+p": () => void copyPrompt(),
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
-  const interactionOpen = !!(menuPosition || relationType || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
+  const interactionOpen = !!(menuPosition || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
   useLayoutEffect(() => {
     onInteractionChange?.(issue.id, interactionOpen);
     // Activity disconnects effects while retaining dialog state and its owner.
@@ -1292,6 +1309,7 @@ const IssueCardContent = memo(function IssueCardContent({
       onOpenField: openFieldAtPointer,
       extraActions: canWrite ? buildMenuActions?.(issue) : undefined,
       onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
+      onLinkPullRequest: canWrite ? () => setLinkPrOpen(true) : undefined,
       readOnly: !canWrite,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1372,6 +1390,7 @@ const IssueCardContent = memo(function IssueCardContent({
             onOpenObjective={onOpenRelated ? openObjective : undefined}
             onOpenPlan={openPlan}
             pr={pr}
+            prReadiness={prReadiness}
             onOpenPr={openPr}
             onUpdate={canWrite ? updateCard : undefined}
             onSetCategories={canWrite ? setCardCategories : undefined}
@@ -1386,6 +1405,16 @@ const IssueCardContent = memo(function IssueCardContent({
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
         actions={menuActions}
+      />
+      <PrLinkTargetPicker
+        position={linkPrOpen ? pointerRef.current : null}
+        projectId={issue.project_id}
+        onClose={() => setLinkPrOpen(false)}
+        onSelect={(target) => {
+          void linkIssuesToPullRequest([issue.id], {
+            prId: target.prId, prNumber: target.pr_number, state: target.pr_state,
+          });
+        }}
       />
       <RelationTargetPicker
         position={relationType ? pointerRef.current : null}

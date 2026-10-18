@@ -12,6 +12,7 @@ import type {
 } from "@/lib/pr-review-reactions";
 import { trackEvent } from "./analytics";
 import type { PullRequestReadiness } from "./pr-readiness";
+import type { IssueStatus } from "./issue-constants";
 
 /**
  * Pull request client fetchers (MIN-138, MIN-143): the PR list, its detail,
@@ -484,7 +485,7 @@ export interface PullRequestListItem {
   created_at: string;
   updated_at: string;
   issue: { id: string; number: number; title: string } | null;
-  issues?: Array<{ id: string; number: number; title: string; project_id: string; project_key: string }>;
+  issues?: Array<{ id: string; number: number; title: string; project_id: string; project_key: string; status?: IssueStatus }>;
   project: {
     id: string;
     key: string;

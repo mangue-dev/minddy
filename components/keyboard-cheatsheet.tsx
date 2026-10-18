@@ -1,18 +1,20 @@
 "use client";
 
-// Keyboard-shortcuts cheat sheet. Opened by `?` (global) or from the command
-// palette ("Keyboard shortcuts"). Renders the shared registry in lib/keyboard.
+// Keyboard-shortcuts cheat sheet, docked as a side panel like the issue panel.
+// Opened by `?` (global) or from the command palette ("Keyboard shortcuts").
+// Renders the shared registry in lib/keyboard.
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Input,
 } from "mangue-ui";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { KbdSequence } from "@/components/ui/kbd";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
+import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { filterCheatsheet } from "@/lib/keyboard/filter-cheatsheet";
 import { CHEATSHEET, resolveKeyToken } from "@/lib/keyboard/shortcuts";
 
@@ -22,22 +24,30 @@ export function KeyboardCheatsheet() {
   const tSection = useTranslations("Keyboard.sections");
   const tShortcut = useTranslations("Keyboard.shortcuts");
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const filteredCheatsheet = filterCheatsheet(CHEATSHEET, query, {
     sectionTitle: tSection,
     shortcutLabel: tShortcut,
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{tk("shortcutsTitle")}</DialogTitle>
-          <DialogDescription>{tk("shortcutsDescription")}</DialogDescription>
-        </DialogHeader>
+    <SidePanel open={open} onOpenChange={setOpen}>
+      <SidePanelContent
+        side="right"
+        // Typing filters right away on desktop; on mobile the keyboard stays shut.
+        onOpenAutoFocus={() => {
+          if (allowInputAutoFocus()) searchRef.current?.focus({ preventScroll: true });
+        }}
+      >
+        <SidePanelHeader>
+          <SidePanelTitle>{tk("shortcutsTitle")}</SidePanelTitle>
+          <SidePanelDescription>{tk("shortcutsDescription")}</SidePanelDescription>
+        </SidePanelHeader>
 
-        <div className="relative">
-          <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative shrink-0 px-6 pt-4 pb-2">
+          <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute left-9 top-[calc(50%+0.25rem)] size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={searchRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={tk("searchPlaceholder")}
@@ -46,7 +56,7 @@ export function KeyboardCheatsheet() {
           />
         </div>
 
-        <div className="-mr-2 flex max-h-[65vh] flex-col gap-5 overflow-y-auto pr-2">
+        <SidePanelBody className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pt-2 pb-6">
           {filteredCheatsheet.map((section) => (
             <section key={section.id}>
               <h3 className="mb-1 text-xs font-medium text-muted-foreground">
@@ -88,8 +98,8 @@ export function KeyboardCheatsheet() {
               {tk("noSearchResults")}
             </p>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </SidePanelBody>
+      </SidePanelContent>
+    </SidePanel>
   );
 }

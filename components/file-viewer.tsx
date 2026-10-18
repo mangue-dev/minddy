@@ -224,7 +224,7 @@ export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpen
   const props = { label: fileName, open, onOpenChange, action };
   if (kind === "image") return <ImageViewer {...props} src={src} alt={fileName} />;
   return <PreviewViewer {...props}>
-    <div className="flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-lg sm:rounded-[30px]">
+    <div className="flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden border border-border bg-background shadow-lg">
       <div className="shrink-0 truncate border-b border-border px-5 py-3 text-sm font-medium">{fileName}</div>
       <div className="min-h-0 flex-1"><AttachmentPreview kind={kind} src={src} fileName={fileName} mimeType={mimeType} /></div>
     </div>

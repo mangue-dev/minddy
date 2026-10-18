@@ -987,7 +987,8 @@ function PageSurface({
       {/* A structural, non-scrolling header: breadcrumb on the left; presence,
           versions, comments, and document actions on the right. */}
       {!panel && <AppContentHeader contentClassName="gap-2">
-        <div className="flex min-w-0 flex-1 items-center">
+        {/* The breadcrumb's links carry 4px of their own padding. */}
+        <div className="ml-1 flex min-w-0 flex-1 items-center">
           <PageBreadcrumb
             trail={trail}
             hrefFor={(id) => `${base}/${id}`}

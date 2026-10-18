@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, CommandIcon } from "@hugeicons/core-free-icons";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
 import { Kbd } from "@/components/ui/kbd";
@@ -10,7 +10,15 @@ import { NumoIcon } from "@/components/numo-icon";
 import {
   useBulkActions,
   type BulkCycleActions,
+  type BulkPullRequestLinks,
 } from "@/lib/bulk-actions-context";
+import { useIssuePrStore } from "@/components/issue-pr-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { linkablePullRequests } from "@/components/pull-requests/pr-link-target-picker";
+import { allPullRequestsQueryOptions } from "@/lib/use-agent-runs";
+import type { PullRequestListItem } from "@/lib/agent-api";
+import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
+import { useLinkIssuesToPullRequest, useUnlinkIssuesFromPullRequests } from "@/lib/use-link-issues-to-pull-request";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 import {
   Tooltip,
@@ -37,6 +45,7 @@ export function BulkIssueActions({
   cycle,
   objectives,
   onLink,
+  issues,
   surface,
 }: {
   count: number;
@@ -51,11 +60,13 @@ export function BulkIssueActions({
   cycle?: BulkCycleActions;
   objectives?: Objective[];
   onLink?: () => void;
+  /** The selected tickets, for the pull request links. Absent: none offered. */
+  issues?: ReadonlyArray<{ id: string; project_id: string }>;
   /** The screen from which the selection starts, for analytics (“board” default). */
   surface?: string;
 }) {
   const t = useTranslations("BulkActions");
-  const { requestBulkActions } = useBulkActions();
+  const { requestBulkActions, registerSelectionActions } = useBulkActions();
 
   // Cross-project boards flatten every project's members, so the same person can
   // appear once per shared project — de-dupe by user id (also fixes the React
@@ -69,7 +80,44 @@ export function BulkIssueActions({
     });
   }, [members]);
 
-  const openActions = () =>
+  const prStore = useIssuePrStore();
+  const queryClient = useQueryClient();
+  const selectionProject = issues && new Set(issues.map((issue) => issue.project_id)).size === 1
+    ? issues[0].project_id
+    : null;
+  // The open pull requests are read when the actions open (or on hover of
+  // Actions), never just because tickets are selected.
+  const openPullRequestsQuery = { ...allPullRequestsQueryOptions("open"), staleTime: 30_000 };
+  const readOpenPullRequests = async (): Promise<PullRequestListItem[]> => {
+    if (!issues?.length) return [];
+    try {
+      const data = await queryClient.fetchQuery(openPullRequestsQuery);
+      return linkablePullRequests(data.pullRequests, selectionProject);
+    } catch {
+      return [];
+    }
+  };
+  const warmPullRequests = () => {
+    if (issues?.length) void queryClient.prefetchQuery(openPullRequestsQuery);
+  };
+  const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
+  const unlinkIssuesFromPullRequests = useUnlinkIssuesFromPullRequests();
+
+  const pullRequestLinks = (openPullRequests: PullRequestListItem[]): BulkPullRequestLinks | undefined => {
+    if (!issues?.length) return undefined;
+    const links = bulkPullRequestLinks(issues, prStore.get, openPullRequests, prStore.linkedPullRequestIds);
+    if (links.options.length === 0 && links.partial.length === 0 && links.unlinkable.length === 0) return undefined;
+    return {
+      options: links.options,
+      partial: links.partial,
+      onLink: (pr) => void linkIssuesToPullRequest(links.targets(pr.prId), pr),
+      unlinkCount: links.unlinkable.length,
+      onUnlinkAll: () => void unlinkIssuesFromPullRequests(links.unlinkable),
+    };
+  };
+
+  const openActions = async () => {
+    const openPullRequests = await readOpenPullRequests();
     requestBulkActions({
       count,
       surface,
@@ -81,7 +129,18 @@ export function BulkIssueActions({
       cycle,
       objectives,
       onLink,
+      pullRequestLinks: pullRequestLinks(openPullRequests),
     });
+  };
+
+  // ⌘K while tickets are selected opens these actions, not the search palette:
+  // the pill hands its latest gesture to the launcher for as long as it lives.
+  const openActionsRef = useRef(openActions);
+  openActionsRef.current = openActions;
+  useEffect(() => {
+    registerSelectionActions(() => void openActionsRef.current());
+    return () => registerSelectionActions(null);
+  }, [registerSelectionActions]);
 
   // No `backdrop-blur`: `bg-background/95` already completely hides the background,
   // the blur was not visible and cost a composition layer (MIN-323).
@@ -94,7 +153,9 @@ export function BulkIssueActions({
         type="button"
         size="sm"
         className="h-8 gap-1.5 rounded-full px-3 text-xs"
-        onClick={openActions}
+        onClick={() => void openActions()}
+        onPointerEnter={warmPullRequests}
+        onFocus={warmPullRequests}
       >
         <HugeiconsIcon icon={CommandIcon} className="size-3.5" />
         {t("actions")}

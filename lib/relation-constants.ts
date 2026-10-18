@@ -234,6 +234,8 @@ export function resolveRelationsByIssue(
 /** A hydrated dependency, optionally inherited from objective membership. */
 export interface DisplayRelation extends ResolvedRelation {
   otherNumber?: number;
+  /** The other issue's status, shown next to it like the issue panel does. */
+  otherStatus?: IssueStatus;
   otherName?: string;
   inheritedObjectiveId?: string;
   inheritedObjectiveName?: string;
@@ -255,7 +257,7 @@ export function resolveDisplayRelationsByIssue(
     const other = r.otherType === "objective" ? objectiveById.get(r.otherId) : issueById.get(r.otherId);
     if (!other) return null;
     return "number" in other
-      ? { ...r, otherNumber: other.number, otherName: other.title }
+      ? { ...r, otherNumber: other.number, otherName: other.title, otherStatus: other.status }
       : { ...r, otherName: other.name };
   };
   const members = new Map<string, Issue[]>();

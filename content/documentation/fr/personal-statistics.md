@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,14 +36,15 @@
       "lib/stats-derive.ts",
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
-      "supabase/migrations/20270107720000_project_content_encryption.sql"
+      "supabase/migrations/20270107720000_project_content_encryption.sql",
+      "supabase/migrations/20270109200067_stats_distinct_year.sql"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (fr editorial, feature-scope and retained-meaning review); agent:/root (fr headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "personal-cycle",
@@ -61,7 +62,7 @@
       "src": "/documentation/fr/reader-statistics.png",
       "alt": "Statistiques personnelles avec grille annuelle, répartitions, rythme de travail et totaux depuis le début.",
       "caption": "Ce compte de démonstration compte un ticket terminé et onze tickets créés. Les statistiques affichées sont réelles ; les noms du projet et de l’objectif ont été localisés pour l’illustration.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +83,7 @@
 
 Ouvrez les statistiques depuis la navigation du compte. Lisez la grille d’activité annuelle, les répartitions par projet, catégorie et objectif, la section du rythme et les totaux historiques. L’écran affiche ses périodes prévues ; il n’a pas de filtre de dates pour choisir un autre intervalle. Cet écran résume votre travail ; il n’établit pas un classement des performances d’un autre membre.
 
-Consultez tickets terminés, rythme, jours actifs, séries et temps pour examiner votre activité. La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. Un jour actif contient au moins un de ces événements ; la série courante tolère l’absence d’activité aujourd’hui, puis s’arrête au premier jour sans activité dans les jours précédents. Le total historique des tickets terminés déduplique les identifiants : un compte d’événements et un total de tickets distincts ne répondent pas à la même question.
+Consultez tickets terminés, rythme, jours actifs, séries et temps pour examiner votre activité. La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. Un jour actif contient au moins un de ces événements ; la série courante tolère l’absence d’activité aujourd’hui, puis s’arrête au premier jour sans activité dans les jours précédents. Le total historique des tickets terminés déduplique les identifiants : un compte d’événements et un total de tickets distincts ne répondent pas à la même question. Le chiffre affiché au-dessus de la grille compte lui aussi chaque ticket une seule fois sur ses 12 mois : un ticket terminé à nouveau marque chacun de ses jours dans la grille, mais n’ajoute qu’un ticket au chiffre.
 
 Le temps par effort est la médiane du temps écoulé entre le premier passage enregistré d’un ticket en cours et sa réalisation, pour les tickets terminés qui vous sont attribués et possèdent effort et horodatages nécessaires. Il comprend le temps d’attente écoulé ; ce n’est pas un chronomètre d’heures travaillées. La vue des quantités montre la taille de l’échantillon. Une médiane absente peut indiquer l’absence de mesures admissibles, pas une durée nulle. Lisez les unités et la période décrite par chaque section avant de comparer les valeurs.
 

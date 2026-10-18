@@ -1,12 +1,8 @@
-import {
-  BubbleChatDelayIcon,
-  FlowIcon,
-  MessageMultiple01Icon,
-  Mic01Icon,
-} from "@hugeicons/core-free-icons";
+import { FlowIcon, MessageMultiple01Icon, Mic01Icon } from "@hugeicons/core-free-icons";
 import type { UsageSegmentId } from "@/lib/billing-plans";
 import { AppIcon } from "@/components/icon";
 import { NumoIcon } from "@/components/numo-icon";
+import { ROUTINE_ICON } from "@/components/feature-icons";
 
 function NumoRowIcon({
   className,
@@ -32,7 +28,7 @@ export const SEGMENT_UI: Record<
   }
 > = {
   routines: {
-    icon: BubbleChatDelayIcon,
+    icon: ROUTINE_ICON,
     text: "text-sky-600 dark:text-sky-400",
     labelKey: "segmentRoutines",
   },
