@@ -807,6 +807,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         <BulkIssueActions
           surface="triage"
           count={bulkIssues.length}
+          issues={bulkIssues}
           members={members}
           onUpdate={updateBulk}
           onDelete={async () => {

@@ -26,6 +26,8 @@ export interface IssueMenuOptions {
   onOpenField: (field: ShortcutField) => void;
   extraActions?: ContextMenuAction[];
   onDelete?: () => void;
+  /** Opens the picker of open pull requests to link this issue to. */
+  onLinkPullRequest?: () => void;
   /** Project readers (MIN-693): only navigation survives, never a mutation. */
   readOnly?: boolean;
 }
@@ -49,7 +51,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
 
   return useCallback(({
     issue, projectKey, agentActions, pr, hasObjectives, onSelectRelation,
-    onOpenField, extraActions = [], onDelete, readOnly = false,
+    onOpenField, extraActions = [], onDelete, onLinkPullRequest, readOnly = false,
   }: IssueMenuOptions): ContextMenuAction[] => {
     const identifier = issueIdentifier(projectKey, issue.number);
     const openPr: ContextMenuAction[] = pr
@@ -112,6 +114,16 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
         disabled: isPending,
         transfersFocus: true,
         onSelect: () => requestUnlink({ prId: pr.prId, issueId: issue.id, identifier }),
+      }] : []),
+      // An issue keeps at most one live pull request (the server refuses a
+      // second), so the entry only shows while it has none.
+      ...(onLinkPullRequest && !(pr && (pr.state === "open" || pr.state === "draft")) ? [{
+        id: "link-pr",
+        label: tPr("linkToPullRequest"),
+        keywords: ["link", "lier", "pull request", "pr", "merge request"],
+        icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: onLinkPullRequest,
       }] : []),
       ...(onSelectRelation
         ? [

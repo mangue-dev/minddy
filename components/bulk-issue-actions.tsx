@@ -10,7 +10,12 @@ import { NumoIcon } from "@/components/numo-icon";
 import {
   useBulkActions,
   type BulkCycleActions,
+  type BulkPullRequestLinks,
 } from "@/lib/bulk-actions-context";
+import { useIssuePrStore } from "@/components/issue-pr-context";
+import { useLinkablePullRequests } from "@/components/pull-requests/pr-link-target-picker";
+import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
+import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 import {
   Tooltip,
@@ -37,6 +42,7 @@ export function BulkIssueActions({
   cycle,
   objectives,
   onLink,
+  issues,
   surface,
 }: {
   count: number;
@@ -51,6 +57,8 @@ export function BulkIssueActions({
   cycle?: BulkCycleActions;
   objectives?: Objective[];
   onLink?: () => void;
+  /** The selected tickets, for the pull request links. Absent: none offered. */
+  issues?: ReadonlyArray<{ id: string; project_id: string }>;
   /** The screen from which the selection starts, for analytics (“board” default). */
   surface?: string;
 }) {
@@ -69,6 +77,25 @@ export function BulkIssueActions({
     });
   }, [members]);
 
+  // Read while the selection lives, so the list is ready when Actions opens.
+  const prStore = useIssuePrStore();
+  const selectionProject = issues && new Set(issues.map((issue) => issue.project_id)).size === 1
+    ? issues[0].project_id
+    : null;
+  const { pullRequests: openPullRequests } = useLinkablePullRequests(selectionProject);
+  const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
+
+  const pullRequestLinks = (): BulkPullRequestLinks | undefined => {
+    if (!issues?.length) return undefined;
+    const links = bulkPullRequestLinks(issues, prStore.get, openPullRequests);
+    if (links.options.length === 0 && links.partial.length === 0) return undefined;
+    return {
+      options: links.options,
+      partial: links.partial,
+      onLink: (pr) => void linkIssuesToPullRequest(links.targets(pr.prId), pr),
+    };
+  };
+
   const openActions = () =>
     requestBulkActions({
       count,
@@ -81,6 +108,7 @@ export function BulkIssueActions({
       cycle,
       objectives,
       onLink,
+      pullRequestLinks: pullRequestLinks(),
     });
 
   // No `backdrop-blur`: `bg-background/95` already completely hides the background,

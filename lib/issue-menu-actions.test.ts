@@ -134,6 +134,17 @@ describe("shared issue menu actions", () => {
     expect(build({ hasObjectives: false }).actions.map((item) => item.id)).not.toContain("set-objective");
   });
 
+  it("offers linking to a pull request only while the issue has no live one", () => {
+    const onLinkPullRequest = vi.fn();
+    const unlinked = build({ pr: null, onLinkPullRequest });
+    unlinked.action("link-pr").onSelect?.();
+    expect(onLinkPullRequest).toHaveBeenCalledOnce();
+    expect(unlinked.action("link-pr").transfersFocus).toBe(true);
+    expect(build({ onLinkPullRequest }).actions.map((item) => item.id)).not.toContain("link-pr");
+    expect(build({ pr: { prId: "pr", state: "merged", prNumber: 42 }, onLinkPullRequest }).actions.map((item) => item.id)).toContain("link-pr");
+    expect(build({ pr: null, onLinkPullRequest, readOnly: true }).actions.map((item) => item.id)).not.toContain("link-pr");
+  });
+
   it("copies the issue identifier, for readers too", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     vi.stubGlobal("navigator", { clipboard: { writeText } });

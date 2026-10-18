@@ -27,7 +27,7 @@
 // share it); this component is controlled via `open` / `onOpenChange`.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, Bookmark01Icon, BookmarkAdd01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, Edit04Icon, SignalFull01Icon, Sun01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
   useCallback,
   useMemo,
@@ -240,6 +240,7 @@ export function CommandPalette({
   const tPriority = useTranslations("Priority");
   const tField = useTranslations("Field");
   const tBulk = useTranslations("BulkActions");
+  const tPr = useTranslations("PullRequests");
   const tCycles = useTranslations("Cycles");
   const tNav = useTranslations("Nav");
   const tAction = useTranslations("CommandPaletteActions");
@@ -1003,6 +1004,7 @@ export function CommandPalette({
       cycle,
       objectives,
       onLink,
+      pullRequestLinks,
     } = bulkRequest;
     const field = (f: string): Partial<CpPaletteItem> => ({
       filterCategory: "bulk",
@@ -1124,6 +1126,28 @@ export function CommandPalette({
       });
     }
 
+    // Pull requests (MIN-735 follow-up): pick one for the whole selection, or
+    // extend a PR some selected tickets already have to the others.
+    if (pullRequestLinks?.options.length) {
+      list.push({
+        id: "bulk-link-pr",
+        title: tPr("linkToPullRequest"),
+        icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+        keywords: ["pull request", "pr", "lier", "link", "merge request"],
+        ...field("link-pr"),
+      } as CpPaletteItem);
+    }
+    for (const pr of pullRequestLinks?.partial ?? []) {
+      list.push({
+        id: `bulk-link-pr-${pr.prId}`,
+        title: tPr("linkOthersToPullRequest", { number: pr.prNumber }),
+        icon: <HugeiconsIcon icon={GitPullRequestIcon} className="size-4" />,
+        keywords: ["pull request", "pr", "lier", "link", `#${pr.prNumber}`],
+        filterCategory: "bulk",
+        execute: () => pullRequestLinks?.onLink(pr),
+      });
+    }
+
     if (onDelete) {
       list.push({
         id: "bulk-delete",
@@ -1146,7 +1170,7 @@ export function CommandPalette({
     }
 
     return list;
-  }, [bulkRequest, tBulk, tCycles, tIssueUI]);
+  }, [bulkRequest, tBulk, tCycles, tIssueUI, tPr]);
 
   // A single group, titled with the number of tickets selected.
   const bulkCategories = useMemo<CategoryDefinition[]>(
@@ -1261,6 +1285,32 @@ export function CommandPalette({
             },
           ];
         }
+        if (fieldKey === "link-pr" && req.pullRequestLinks) {
+          const links = req.pullRequestLinks;
+          return [
+            {
+              id: "bulk.link-pr",
+              label: tPr("linkToPullRequest"),
+              icon: GitPullRequestIcon,
+              category: "primary",
+              requiresForm: {
+                ...selectField(
+                  "pullRequest",
+                  tPr("linkToPullRequest"),
+                  links.options.map((pr) => ({
+                    value: pr.prId,
+                    label: `#${pr.prNumber} ${pr.title}`,
+                  }))
+                ),
+                onSubmit: async (values): Promise<ActionResult> => {
+                  const pr = links.options.find((option) => option.prId === values.pullRequest);
+                  if (pr) links.onLink(pr);
+                  return { success: true, closeMenu: true };
+                },
+              },
+            },
+          ];
+        }
         if (fieldKey === "objective") {
           return [
             {
@@ -1326,7 +1376,7 @@ export function CommandPalette({
         return [];
       },
     };
-  }, [bulkRequest, tIssueUI, tStatus, tPriority, tField]);
+  }, [bulkRequest, tIssueUI, tStatus, tPriority, tField, tPr]);
 
   const providers = useMemo(
     () => [issueProvider, entityProvider, themeProvider, savedViewProvider, bulkFieldProvider],

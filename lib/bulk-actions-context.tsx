@@ -64,6 +64,27 @@ export interface BulkActionsRequest {
   /** Marks the selection as related to each other (MIN-25). Only wired when
    *  the selection is EXACTLY two tickets of the same project. */
   onLink?: () => void;
+  /** Linking the selection to a pull request — absent when no open pull
+   *  request can take any selected ticket. */
+  pullRequestLinks?: BulkPullRequestLinks;
+}
+
+/** A pull request a selection can be linked to. */
+export interface BulkPullRequestOption {
+  prId: string;
+  prNumber: number;
+  state: string;
+  title: string;
+}
+
+export interface BulkPullRequestLinks {
+  /** Open pull requests of the selection's projects. */
+  options: BulkPullRequestOption[];
+  /** Pull requests already live on part of the selection, with the number of
+   *  selected tickets of their project still unlinked. */
+  partial: Array<BulkPullRequestOption & { missing: number }>;
+  /** Links every selected ticket of the PR's project not yet linked to it. */
+  onLink: (pr: BulkPullRequestOption) => void;
 }
 
 interface BulkActionsContextValue {

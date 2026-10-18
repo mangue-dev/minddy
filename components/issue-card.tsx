@@ -41,8 +41,12 @@ import {
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationTargetPicker } from "@/components/relation-target-picker";
+import { PrLinkTargetPicker } from "@/components/pull-requests/pr-link-target-picker";
+import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
-import { useIssuePr } from "@/components/issue-pr-context";
+import { useIssuePr, useIssuePrReadiness } from "@/components/issue-pr-context";
+import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
+import type { IssuePrReadiness } from "@/lib/issue-pr-store";
 import {
   isPrWorthShowing,
   type IssuePr,
@@ -662,6 +666,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   dragging,
   selected,
   pr,
+  prReadiness,
   onOpenPr,
   onOpenObjective,
 }: {
@@ -696,6 +701,9 @@ export const IssueCardBody = memo(function IssueCardBody({
       REJECTED PR calls for nothing, and hiding the plan's progress for it would
       lose useful information. The menu still leads to it in every state. */
   pr?: IssuePr | null;
+  /** Merge readiness of a live PR, shown next to its number like the Code
+      review rows; absent on surfaces without the board's PR provider. */
+  prReadiness?: IssuePrReadiness | null;
   /** Opens the pull request review (clicking the “PR available” chip). */
   onOpenPr?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
@@ -828,7 +836,12 @@ export const IssueCardBody = memo(function IssueCardBody({
         <span className="flex shrink-0 items-center gap-1.5">
           {/* An actionable PR takes the place of plan progress. */}
           {pr && isPrWorthShowing(pr) ? (
-            <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
+            <span className="flex items-center gap-0.5">
+              <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
+              {prReadiness && (pr.state === "open" || pr.state === "draft") ? (
+                <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable} />
+              ) : null}
+            </span>
           ) : plan.total > 0 ? (
             <PlanPick progress={plan} onOpen={onOpenPlan} />
           ) : null}
@@ -976,6 +989,7 @@ const IssueCardContent = memo(function IssueCardContent({
   const queryClient = useQueryClient();
   // One issue-scoped subscription drives the pull request chip.
   const pr = useIssuePr(issue.id);
+  const prReadiness = useIssuePrReadiness(issue.id);
 
   // Card bindings are made HERE rather than by the column (MIN-316).
   // The received props take the ticket as an argument and are therefore stable
@@ -1045,6 +1059,8 @@ const IssueCardContent = memo(function IssueCardContent({
   // the same place as the menu that just closed.
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   // Relation being added (type chosen) → opens the target picker.
+  const [linkPrOpen, setLinkPrOpen] = useState(false);
+  const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
   const [relationType, setRelationType] = useState<IssueRelationType | null>(
     null,
   );
@@ -1227,7 +1243,7 @@ const IssueCardContent = memo(function IssueCardContent({
       "shift+p": () => void copyPrompt(),
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
-  const interactionOpen = !!(menuPosition || relationType || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
+  const interactionOpen = !!(menuPosition || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
   useLayoutEffect(() => {
     onInteractionChange?.(issue.id, interactionOpen);
     // Activity disconnects effects while retaining dialog state and its owner.
@@ -1292,6 +1308,7 @@ const IssueCardContent = memo(function IssueCardContent({
       onOpenField: openFieldAtPointer,
       extraActions: canWrite ? buildMenuActions?.(issue) : undefined,
       onDelete: onDelete ? () => setConfirmDelete(true) : undefined,
+      onLinkPullRequest: canWrite ? () => setLinkPrOpen(true) : undefined,
       readOnly: !canWrite,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1372,6 +1389,7 @@ const IssueCardContent = memo(function IssueCardContent({
             onOpenObjective={onOpenRelated ? openObjective : undefined}
             onOpenPlan={openPlan}
             pr={pr}
+            prReadiness={prReadiness}
             onOpenPr={openPr}
             onUpdate={canWrite ? updateCard : undefined}
             onSetCategories={canWrite ? setCardCategories : undefined}
@@ -1386,6 +1404,16 @@ const IssueCardContent = memo(function IssueCardContent({
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
         actions={menuActions}
+      />
+      <PrLinkTargetPicker
+        position={linkPrOpen ? pointerRef.current : null}
+        projectId={issue.project_id}
+        onClose={() => setLinkPrOpen(false)}
+        onSelect={(target) => {
+          void linkIssuesToPullRequest([issue.id], {
+            prId: target.prId, prNumber: target.pr_number, state: target.pr_state,
+          });
+        }}
       />
       <RelationTargetPicker
         position={relationType ? pointerRef.current : null}

@@ -14,8 +14,13 @@ import type { IssuePr } from "@/lib/agent-api";
 import {
   createIssuePrStore,
   type IssuePrPayload,
+  type IssuePrReadiness,
   type IssuePrStore,
 } from "@/lib/issue-pr-store";
+import { usePullRequestReadinessBatchQuery } from "@/lib/use-agent-runs";
+
+/** The readiness endpoint's batch limit. */
+const READINESS_BATCH_MAX = 100;
 
 /**
  * One scoped query supplies the pull request chip of every board card. Each card
@@ -80,6 +85,23 @@ export function IssuePrProvider({
   const store = useMemo(() => createIssuePrStore(), [scope]);
   useLayoutEffect(() => store.update(data), [store, data]);
 
+  // Merge readiness of the live PRs on the board, in ONE batch: the same
+  // request, polling and realtime invalidation as the Code review page rows.
+  const livePrIds = useMemo(
+    () => [...new Set(Object.values(data?.pullRequests ?? {})
+      .filter((pr) => pr.state === "open" || pr.state === "draft")
+      .map((pr) => pr.prId))].sort().slice(0, READINESS_BATCH_MAX),
+    [data],
+  );
+  const { readinessByPrId, unavailablePrIds, error } = usePullRequestReadinessBatchQuery(livePrIds);
+  const unavailableKey = error ? livePrIds.join(",") : [...unavailablePrIds].sort().join(",");
+  useLayoutEffect(
+    () => store.updateReadiness(readinessByPrId, new Set(unavailableKey ? unavailableKey.split(",") : [])),
+    // `unavailablePrIds` is a fresh Set each render; its sorted key is the dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [store, readinessByPrId, unavailableKey],
+  );
+
   return (
     <IssuePrContext.Provider value={store}>
       {children}
@@ -102,4 +124,20 @@ export function useIssuePr(issueId: string): IssuePr | null {
   );
   const getSnapshot = useCallback(() => store.get(issueId), [store, issueId]);
   return useSyncExternalStore(subscribe, getSnapshot, () => null);
+}
+
+/** Merge readiness of the ticket's live pull request, or null. */
+export function useIssuePrReadiness(issueId: string): IssuePrReadiness | null {
+  const store = useContext(IssuePrContext);
+  const subscribe = useCallback(
+    (listener: () => void) => store.subscribe(issueId, listener),
+    [store, issueId],
+  );
+  const getSnapshot = useCallback(() => store.getReadiness(issueId), [store, issueId]);
+  return useSyncExternalStore(subscribe, getSnapshot, () => null);
+}
+
+/** The board's store, read on demand by actions over a selection. */
+export function useIssuePrStore(): IssuePrStore {
+  return useContext(IssuePrContext);
 }
