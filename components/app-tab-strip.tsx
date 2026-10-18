@@ -40,6 +40,7 @@ import { useOpenPullRequestCountQuery } from "@/lib/use-agent-runs";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
 import { appTabIndicator } from "@/lib/app-tab-indicators";
+import { NotificationBadge } from "./notification-badge";
 import { useNotifications } from "@/lib/use-notifications";
 import { useMyInvitations } from "@/lib/use-invitations-query";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
@@ -102,6 +103,13 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       return (
         <HugeiconsIcon icon={Alert01Icon} className="size-2.5 text-amber-500"
           aria-label={nav("smartAssignIncomplete")} />
+      );
+    }
+    // The Inbox count asks for attention, like its sidebar entry (MIN-727).
+    if (indicator.label === "inboxBadge") {
+      return (
+        <NotificationBadge size="sm" count={indicator.count}
+          label={nav("inboxBadge", { count: indicator.count })} />
       );
     }
     // Smaller than the sidebar sticker: the tab icon badge reads as a dot

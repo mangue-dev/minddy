@@ -223,6 +223,8 @@ const TriageNavIcon = ({ className }: { className?: string }) => (
 TriageNavIcon.displayName = "TriageNavIcon";
 
 import { countBadge, countBadges } from "@/components/nav-badge";
+import { NotificationBadge } from "@/components/notification-badge";
+import { getDesktopBridge } from "@/lib/desktop/bridge";
 
 /**
  * The mark of a draft project, in the exact place of the “to sort” counter
@@ -1132,8 +1134,19 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     icon: InboxIcon,
     onClick: openInbox,
     shortcut: "I",
-    ...countBadges(inboxCount, t("inboxBadge", { count: inboxCount })),
+    // The one counter that asks for attention (MIN-727): a filled pill.
+    badge: inboxCount > 0
+      ? <NotificationBadge count={inboxCount} label={t("inboxBadge", { count: inboxCount })} />
+      : undefined,
   };
+
+  // The installed PWA's icon carries the same count (Badging API). The desktop
+  // shell sets its own dock badge (lib/use-desktop-notifications.ts).
+  useEffect(() => {
+    if (getDesktopBridge() || typeof navigator === "undefined" || !("setAppBadge" in navigator)) return;
+    const badge = inboxCount > 0 ? navigator.setAppBadge(inboxCount) : navigator.clearAppBadge();
+    void badge.catch(() => {});
+  }, [inboxCount]);
 
   // Verrous de plan (MIN-72) : Agents & Pull Requests restent visibles mais
   // grayed out when the plan does not include them; “New project” turns gray
