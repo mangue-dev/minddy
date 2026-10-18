@@ -43,8 +43,24 @@ import {
  * The script reads the attribute of the ACTIVE mode, so the bar follows both
  * a mode switch and a palette switch. */
 const CHROME_COLORS: Record<string, string> = Object.fromEntries(
-  Object.entries(THEME_PRESETS).map(([id, preset]) => [id, preset.chromeColor]),
+  Object.entries(THEME_PRESETS).map(([id, preset]) => {
+    // Only catalog-shaped values may reach executable script text.
+    if (!/^[a-z0-9-]+$/.test(id) || !/^#[0-9a-f]{6}$/.test(preset.chromeColor)) {
+      throw new Error(`Invalid theme preset chrome color: ${id}`);
+    }
+    return [id, preset.chromeColor];
+  }),
 );
+
+/** JSON that is also safe inside an inline <script>: `JSON.stringify` alone
+ * leaves `</script>`, `<!--` and the U+2028/U+2029 line separators intact. */
+function scriptLiteral(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[<>/\u2028\u2029]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
 const DEFAULT_CHROME = {
   light: THEME_PRESETS[DEFAULT_THEME_PRESETS.light].chromeColor,
   dark: THEME_PRESETS[DEFAULT_THEME_PRESETS.dark].chromeColor,
@@ -105,7 +121,7 @@ export function buildThemeScript({
     : "";
   // The palette attributes go first, outside the storage `try`: an
   // unreadable localStorage must not cost the account its palettes.
-  return `(function(){var r=document.documentElement;var C=${JSON.stringify(CHROME_COLORS)};function p(){var d=r.classList.contains("dark");var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.setAttribute("name","theme-color");document.head.appendChild(m);}m.setAttribute("content",C[r.getAttribute(d?"${THEME_PRESET_ATTRIBUTES.dark}":"${THEME_PRESET_ATTRIBUTES.light}")]||(d?"${DEFAULT_CHROME.dark}":"${DEFAULT_CHROME.light}"));}${appearanceStatements(appearance)}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
+  return `(function(){var r=document.documentElement;var C=${scriptLiteral(CHROME_COLORS)};function p(){var d=r.classList.contains("dark");var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement("meta");m.setAttribute("name","theme-color");document.head.appendChild(m);}m.setAttribute("content",C[r.getAttribute(d?"${THEME_PRESET_ATTRIBUTES.dark}":"${THEME_PRESET_ATTRIBUTES.light}")]||(d?"${DEFAULT_CHROME.dark}":"${DEFAULT_CHROME.light}"));}${appearanceStatements(appearance)}try{var t=${source};${mirrorBack}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);}catch(e){r.classList.toggle("dark",${
     fallbackExpression(defaultTheme)
   });}p();try{new MutationObserver(p).observe(r,{attributes:true,attributeFilter:["class","${THEME_PRESET_ATTRIBUTES.light}","${THEME_PRESET_ATTRIBUTES.dark}"]});}catch(e){}})();`;
 }

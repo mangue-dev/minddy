@@ -276,3 +276,14 @@ describe("buildThemeScript — account palettes (MIN-696)", () => {
     expect(result.attributes["data-theme-dark"]).toBe("minddy-dark");
   });
 });
+
+describe("buildThemeScript — inline script safety", () => {
+  it("embeds no markup-breaking characters in the chrome color map", () => {
+    const script = buildThemeScript({
+      defaultTheme: "dark",
+      appearance: { light: "nord-light", dark: "nord-dark", transparency: true },
+    });
+    expect(script).not.toMatch(/<|\u2028|\u2029/);
+    expect(script).toContain('"nord-dark":"#272c36"');
+  });
+});
