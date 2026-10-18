@@ -159,17 +159,19 @@ export function ConversationSettings() {
                 loadingLabel={t("modelSearchLoading")}
                 freeTextLabel={(query) => t("modelUseCustom", { model: query })}
                 variant="compact"
-                triggerClassName="h-auto min-w-0 flex-col gap-0 rounded-md px-3 py-0.5 hover:bg-transparent"
+                triggerClassName="group/model-trigger h-auto min-w-0 flex-col gap-0 rounded-md px-3 py-0.5 hover:bg-transparent"
                 triggerContent={(
                   <span className="flex min-w-0 flex-col items-center leading-tight">
-                    <span className="flex items-center gap-0.5 text-sm font-medium text-blue-500">
+                    <span className="text-sm font-medium text-blue-500">
                       {t(REASONING_LABEL_KEYS[displayedReasoning])}
-                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden />
                     </span>
-                    <span className="max-w-[13rem] truncate text-sm font-normal text-muted-foreground">
-                      {resolvedModel
-                        ? formatModelName(resolvedModel)
-                        : t("modelSearchLoading")}
+                    <span className="flex min-w-0 max-w-[13rem] items-center gap-0.5 text-sm font-normal text-muted-foreground transition-colors group-hover/model-trigger:text-foreground">
+                      <span className="min-w-0 truncate">
+                        {resolvedModel
+                          ? formatModelName(resolvedModel)
+                          : t("modelSearchLoading")}
+                      </span>
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0" aria-hidden />
                     </span>
                   </span>
                 )}

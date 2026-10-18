@@ -105,7 +105,6 @@ export const CHEATSHEET: CheatsheetSection[] = [
       // The tab-bar "+" button as a keyboard gesture: opens the palette
       // directly in new-tab (destination) mode.
       { id: "gen.newTab", labelKey: "newTab", keys: [["mod", "T"]] },
-      { id: "gen.search", labelKey: "search", keys: [["F"]] },
       // The filter in the left column, on screens that have one
       // (triage, returns, pull requests, sessions, settings). It REDUCES the list
       // displayed — the palette searches everywhere and takes it elsewhere.

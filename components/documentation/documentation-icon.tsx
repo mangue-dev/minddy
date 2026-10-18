@@ -1,7 +1,7 @@
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
   AiAutoRotateIcon, Analytics01Icon, ApiIcon, BookOpen01Icon, BotIcon,
-  Calendar01Icon, CheckmarkCircle01Icon, CloudServerIcon, CodeSimpleIcon,
+  BubbleChatDelayIcon, CheckmarkCircle01Icon, CloudServerIcon, CodeSimpleIcon,
   Compass01Icon, ComputerIcon, DatabaseIcon, Delete02Icon, File02Icon,
   FilterIcon, FlowIcon, Folder01Icon, GitBranchIcon, GitPullRequestIcon,
   InboxIcon, LockIcon, Mail01Icon, MessageMultiple01Icon, PlugIcon,
@@ -46,7 +46,7 @@ const articleIcons: Record<string, IconSvgElement> = {
   "personal-statistics": Analytics01Icon,
   projects: Folder01Icon,
   "repository-skills": CodeSimpleIcon,
-  "scheduled-routines": Calendar01Icon,
+  "scheduled-routines": BubbleChatDelayIcon,
   "self-hosted-diagnostics": Wrench01Icon,
   "storage-and-attachments": Upload01Icon,
   "task-notebook": StickyNote02Icon,

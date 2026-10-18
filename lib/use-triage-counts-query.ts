@@ -39,3 +39,14 @@ export function useTriageCountsQuery() {
 export function triageCountTotal(count: ProjectTriageCount | undefined): number {
   return count ? count.triage + count.feedback : 0;
 }
+
+/**
+ * Home's total (MIN-695): the sum of the badges on Home's project rows, so
+ * every control going back to Home shows exactly what Home will show.
+ */
+export function triageCountTotalAcross(
+  projects: ReadonlyArray<{ id: string }>,
+  counts: Record<string, ProjectTriageCount>,
+): number {
+  return projects.reduce((sum, project) => sum + triageCountTotal(counts[project.id]), 0);
+}

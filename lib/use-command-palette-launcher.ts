@@ -42,7 +42,7 @@ export function useCommandPaletteLauncher({
       if (!openRef.current) {
         track("command_palette_opened", { source: "shortcut" });
       }
-      onOpenChange(shortcut === "toggle" ? !openRef.current : true);
+      onOpenChange(!openRef.current);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

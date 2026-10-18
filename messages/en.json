@@ -1344,7 +1344,6 @@
     "tips": {
       "palette": "Search for any screen or issue and run actions from the command palette.",
       "cheatsheet": "See every keyboard shortcut in one place.",
-      "search": "Search across all your projects, including pages and issues.",
       "filterList": "On screens like triage or code review, filter the current list without leaving the keyboard.",
       "undo": "Undo changes made to issues, including moves and deletions.",
       "newIssue": "Create an issue from anywhere in the app.",
@@ -1800,7 +1799,7 @@
     "pullRequestsBadge": "{count, plural, one {# open pull request} other {# open pull requests}}",
     "feedbackBadge": "{count, plural, one {# open feedback item} other {# open feedback items}}",
     "triageBadge": "{count, plural, one {# item to triage} other {# items to triage}}",
-    "triageElsewhereBadge": "{count, plural, one {# item to triage in your other projects} other {# items to triage in your other projects}}",
+    "toSortEverywhereBadge": "{count, plural, one {# item to triage across your projects} other {# items to triage across your projects}}",
     "objectives": "Objectives",
     "triage": "Triage",
     "projectSettings": "Project settings",
@@ -1838,7 +1837,7 @@
     "version": "Version",
     "webVersion": "Web version",
     "appVersion": "App version",
-    "viewFullChangelog": "View full changelog",
+    "changelog": "What's new",
     "account": "Account",
     "appearance": "Appearance",
     "hideSidebar": "Hide sidebar",
@@ -1864,6 +1863,8 @@
     "nameThisView": "Name this view",
     "documentation": "Documentation",
     "hideProject": "Hide project",
+    "hideProjectConfirmTitle": "Hide “{name}”?",
+    "hideProjectConfirmDescription": "It leaves your sidebar and home. Only you are affected: other members still see it, and its routines and notifications keep running. You can show it again from Account settings → Hidden projects.",
     "showProject": "Show project"
   },
   "CommandPaletteActions": {
@@ -1932,7 +1933,6 @@
       "pageCopyForAgent": "Copy the open page for an agent",
       "palette": "Command palette",
       "newTab": "New tab",
-      "search": "Search",
       "filterList": "Filter the list",
       "toggleSidebar": "Hide or show the sidebar",
       "accountSettings": "Account settings",

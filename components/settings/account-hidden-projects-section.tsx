@@ -47,7 +47,7 @@ export function AccountHiddenProjectsSection() {
               <ProjectOrb
                 seed={projectOrbSeed(project)}
                 iconUrl={project.icon_url}
-                className="size-8 shrink-0 rounded-lg"
+                className="size-8 shrink-0 rounded-[9px]"
               />
             }
             title={project.name}

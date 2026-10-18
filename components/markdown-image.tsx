@@ -23,7 +23,7 @@ export function MarkdownImage({
         {...props}
         alt={alt ?? ""}
         loading="lazy"
-        className={cn("inline-block max-w-full rounded-md", canPreview && "cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", className)}
+        className={cn("inline-block max-w-full", canPreview && "cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", className)}
         role={canPreview ? "button" : undefined}
         tabIndex={canPreview ? 0 : undefined}
         aria-label={canPreview ? `${t("preview")}: ${label}` : undefined}

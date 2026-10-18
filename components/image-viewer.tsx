@@ -105,7 +105,7 @@ export function ImageViewer({ src, alt, layoutId, ...props }: Omit<PreviewViewer
   return <PreviewViewer {...props} closeOnContentClick>
     <motion.div layoutId={reducedMotion ? undefined : layoutId}
       transition={reducedMotion ? { duration: 0 } : IMAGE_HERO_TRANSITION}
-      className="cursor-zoom-out overflow-hidden rounded-2xl sm:rounded-[30px]">
+      className="cursor-zoom-out overflow-hidden">
       <img src={src} alt={alt} draggable={false}
         className="block max-h-[calc(100dvh-9rem)] max-w-[calc(100vw-1rem)] select-none object-contain sm:max-w-[calc(100vw-4rem)]" />
     </motion.div>

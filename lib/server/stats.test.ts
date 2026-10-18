@@ -61,6 +61,7 @@ function fakeSupabase(byEffort: RawEffort[]) {
             data: {
               totals: {},
               breakdown_total: 3,
+              year: { issues: 2, tasks: 5 },
               per_project: [
                 {
                   id: "project-1",
@@ -159,6 +160,8 @@ describe("getUserStats — work landscape", () => {
     const stats = await call([]);
 
     expect(stats.breakdownTotal).toBe(3);
+    // The hero's deduplicated 12-month count rides with the heatmap.
+    expect(stats.heatmap.completed).toEqual({ issues: 2, tasks: 5 });
     expect(stats.perProject).toEqual([
       {
         id: "project-1",

@@ -1344,7 +1344,6 @@
     "tips": {
       "palette": "Suchen Sie nach einem Bildschirm oder Problem und führen Sie Aktionen aus der Befehlspalette aus.",
       "cheatsheet": "Sehen Sie alle Tastenkombinationen an einem Ort.",
-      "search": "Durchsuchen Sie alle Ihre Projekte, einschließlich Seiten und Probleme.",
       "filterList": "Auf Bildschirmen wie Triage oder Code-Review filtern Sie die aktuelle Liste, ohne die Tastatur zu verlassen.",
       "undo": "Machen Sie an Problemen vorgenommene Änderungen rückgängig, einschließlich Verschiebungen und Löschungen.",
       "newIssue": "Erstellen Sie ein Problem von überall in der App.",
@@ -1800,7 +1799,7 @@
     "pullRequestsBadge": "{count, plural, one {# Pull-Anfrage öffnen} other {# Pull-Anfragen öffnen}}",
     "feedbackBadge": "{count, plural, one {# Feedback-Element öffnen} other {# Feedback-Elemente öffnen}}",
     "triageBadge": "{count, plural, one {# Element zur Triage} other {# Elemente zur Triage}}",
-    "triageElsewhereBadge": "{count, plural, one {# Element zur Triage in Ihren anderen Projekten} other {# Elemente zur Triage in Ihren anderen Projekten}}",
+    "toSortEverywhereBadge": "{count, plural, one {# Element zur Triage in allen Ihren Projekten} other {# Elemente zur Triage in allen Ihren Projekten}}",
     "objectives": "Ziele",
     "triage": "Triage",
     "projectSettings": "Projekteinstellungen",
@@ -1838,7 +1837,7 @@
     "version": "Version",
     "webVersion": "Webversion",
     "appVersion": "App-Version",
-    "viewFullChangelog": "Vollständiges Änderungsprotokoll anzeigen",
+    "changelog": "Neuigkeiten",
     "account": "Konto",
     "appearance": "Aussehen",
     "hideSidebar": "Seitenleiste ausblenden",
@@ -1864,6 +1863,8 @@
     "nameThisView": "Diese Ansicht benennen",
     "documentation": "Dokumentation",
     "hideProject": "Projekt ausblenden",
+    "hideProjectConfirmTitle": "„{name}“ ausblenden?",
+    "hideProjectConfirmDescription": "Das Projekt verschwindet aus deiner Seitenleiste und deiner Startseite. Nur du bist betroffen: Andere Mitglieder sehen es weiterhin, und seine Routinen und Benachrichtigungen laufen weiter. Du kannst es unter Kontoeinstellungen → Ausgeblendete Projekte wieder einblenden.",
     "showProject": "Projekt einblenden"
   },
   "CommandPaletteActions": {
@@ -1932,7 +1933,6 @@
       "pageCopyForAgent": "Die geöffnete Seite für einen Agenten kopieren",
       "palette": "Befehlspalette",
       "newTab": "Neuer Tab",
-      "search": "Suchen",
       "filterList": "Liste filtern",
       "toggleSidebar": "Seitenleiste ein- oder ausblenden",
       "accountSettings": "Kontoeinstellungen",

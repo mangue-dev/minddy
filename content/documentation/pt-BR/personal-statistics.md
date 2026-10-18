@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,14 +36,15 @@
       "lib/stats-derive.ts",
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
-      "supabase/migrations/20270107720000_project_content_encryption.sql"
+      "supabase/migrations/20270107720000_project_content_encryption.sql",
+      "supabase/migrations/20270109200067_stats_distinct_year.sql"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root consolidation review; agent:/root/italian_portuguese_review retained-meaning comparison with prior procedural evidence (no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/italian_portuguese_review (localized feature scope, summaries and heading review; retained source procedures); agent:/root/editorial_it_pt (editorial clarity pass); agent:/root (figure removals and captions); agent:/root (pt-BR headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "personal-cycle",
@@ -61,7 +62,7 @@
       "src": "/documentation/pt-BR/reader-statistics.png",
       "alt": "Estatísticas pessoais com grade anual, distribuições, ritmo de trabalho e totais históricos.",
       "caption": "Esta conta de demonstração tem uma tarefa concluída e onze criadas. As estatísticas exibidas são reais; os nomes do projeto e do objetivo foram traduzidos para a ilustração.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +83,7 @@
 
 Abra Estatísticas pela navegação da sua conta. Consulte a grade anual de atividade, as divisões por projeto, categoria e objetivo, a seção de ritmo e os totais de todo o período. A página mostra os períodos configurados; não há filtro de datas para escolher outro intervalo. Ela resume seu trabalho, sem criar um ranking de desempenho dos outros membros.
 
-Use a quantidade de tickets concluídos, o ritmo, os dias ativos, as sequências e as medições de tempo para examinar sua própria atividade. A grade de atividade conta eventos de conclusão de problemas e de tarefas do caderno, agrupados em dias de calendário no seu fuso horário. Um dia ativo tem pelo menos um desses eventos; a sequência atual permite que hoje ainda esteja vazio, mas termina no próximo dia vazio. Os totais de problemas concluídos de todo o período contam cada identificador apenas uma vez; portanto, a contagem de eventos e o total de problemas distintos respondem a perguntas diferentes.
+Use a quantidade de tickets concluídos, o ritmo, os dias ativos, as sequências e as medições de tempo para examinar sua própria atividade. A grade de atividade conta eventos de conclusão de problemas e de tarefas do caderno, agrupados em dias de calendário no seu fuso horário. Um dia ativo tem pelo menos um desses eventos; a sequência atual permite que hoje ainda esteja vazio, mas termina no próximo dia vazio. Os totais de problemas concluídos de todo o período contam cada identificador apenas uma vez; portanto, a contagem de eventos e o total de problemas distintos respondem a perguntas diferentes. O número acima da grade também conta cada problema uma única vez nos seus 12 meses: um problema concluído de novo marca cada um dos seus dias na grade, mas soma um só problema ao número.
 
 O tempo por esforço é a mediana do tempo decorrido entre a primeira mudança registrada de um problema para Em andamento e sua conclusão. São considerados problemas elegíveis em Concluído, atribuídos a você, com esforço e ambos os horários registrados. Esse tempo inclui a espera; não é um cronômetro de horas trabalhadas. A visualização de quantidade mostra o tamanho da amostra usada. Uma mediana ausente pode indicar que não há medições elegíveis, não uma duração zero.
 

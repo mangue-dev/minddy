@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Calendar01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AiAutoRotateIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, BubbleChatDelayIcon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, cn } from "mangue-ui";
@@ -626,7 +626,7 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Routines (MIN-185) ───────────────────────────────────────────────
   create_routine: {
-    icon: Calendar01Icon,
+    icon: BubbleChatDelayIcon,
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingRoutine");
       if (!success) return t("createRoutineFailed");
@@ -639,14 +639,14 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   list_routines: {
-    icon: Calendar01Icon,
+    icon: BubbleChatDelayIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingRoutines");
       return t("foundRoutines", { count: resultCount(result, "routines") });
     },
   },
   update_routine: {
-    icon: Calendar01Icon,
+    icon: BubbleChatDelayIcon,
     getLabel: (args, _result, success, status, t) => {
       if (status === "running") return t("updatingRoutine");
       if (!success) return t("updateRoutineFailed");
@@ -658,14 +658,14 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Routine runs (MIN-589) ─────────────────────────────────────────────
   list_routine_runs: {
-    icon: Calendar01Icon,
+    icon: BubbleChatDelayIcon,
     getLabel: (_args, result, _success, status, t) => {
       if (status === "running") return t("loadingRoutineRuns");
       return t("foundRoutineRuns", { count: resultCount(result, "runs") });
     },
   },
   read_routine_occurrence: {
-    icon: Calendar01Icon,
+    icon: BubbleChatDelayIcon,
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("loadingRoutineOccurrence");
       return success ? t("routineOccurrenceLoaded") : t("routineOccurrenceNotFound");

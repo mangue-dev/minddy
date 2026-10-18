@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,14 +36,15 @@
       "lib/stats-derive.ts",
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
-      "supabase/migrations/20270107720000_project_content_encryption.sql"
+      "supabase/migrations/20270107720000_project_content_encryption.sql",
+      "supabase/migrations/20270109200067_stats_distinct_year.sql"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/english_french_review with agent:/root (consolidation and retained-claim review; prior procedural evidence inherited; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/english_french_review (en editorial, feature-scope and retained-meaning review); agent:/root (en headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "personal-cycle",
@@ -61,7 +62,7 @@
       "src": "/documentation/en/reader-statistics.png",
       "alt": "Personal statistics showing the annual activity grid, breakdowns, work rhythm and all-time totals.",
       "caption": "This demonstration account has one completed issue and eleven created issues. The displayed statistics are real; project and objective names were localized for display.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +83,7 @@
 
 Open Statistics from your account navigation. Read the annual activity grid, the breakdowns by project, category and objective, the rhythm section and the all-time totals. The page shows its configured periods; it has no date-range filter to select another interval. The surface summarizes your work rather than establishing another member's performance ranking.
 
-Use completed issue counts, pace, active days, streaks and time measurements to inspect your own activity. The activity grid counts issue-completion and notebook-task-completion events, grouped into calendar days in your time zone. An active day has at least one such event; the current streak tolerates an empty today but ends at the next empty day. All-time completed-issue totals deduplicate issue identifiers, so an event count and a distinct-issue total answer different questions.
+Use completed issue counts, pace, active days, streaks and time measurements to inspect your own activity. The activity grid counts issue-completion and notebook-task-completion events, grouped into calendar days in your time zone. An active day has at least one such event; the current streak tolerates an empty today but ends at the next empty day. All-time completed-issue totals deduplicate issue identifiers, so an event count and a distinct-issue total answer different questions. The headline above the grid also counts each issue once over its 12 months: an issue completed again marks each of its days in the grid but adds one issue to the headline.
 
 Time by effort is the median elapsed time from an issue’s first recorded move to in progress until completion, for eligible done issues assigned to you with an effort and both timestamps. It includes elapsed waiting time; it is not a stopwatch of hours worked. The quantity view shows the underlying sample size. A missing median can reflect no eligible measurements rather than zero duration. Read the unit and the period each section describes before comparing values.
 

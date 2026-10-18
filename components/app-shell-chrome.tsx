@@ -49,7 +49,7 @@ import {
   useOpenPullRequestCountQuery,
 } from "@/lib/use-agent-runs";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
-import { useTriageCountsQuery, triageCountTotal } from "@/lib/use-triage-counts-query";
+import { useTriageCountsQuery, triageCountTotal, triageCountTotalAcross } from "@/lib/use-triage-counts-query";
 import { issueIdentifier } from "@/lib/issue-constants";
 import {
   type PaletteGroup,
@@ -522,38 +522,56 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ) : undefined;
 
   // What's waiting to be sorted in each of my projects — tickets in triage +
-  // open returns, the “To be sorted” queue at reception viewed by project. Out of a
-  // project, the sidebar didn't show any of that: it lists the projects
-  // without a single badge, and the sorting, moreover, remained invisible as long as we
-  // didn't get into it. Each project line therefore now carries the sum
-  // of the two counters that can be read on its tabs once inside.
-  // From a project, the same information on OTHERS: the return entry
-  // “Home” brings the total (that of the current project is already on its
-  // their own tabs, two lines below).
-  const triageElsewhere = useMemo(
-    () =>
-      Object.entries(triageCounts).reduce(
-        (sum, [projectId, count]) =>
-          projectId === currentProjectId ? sum : sum + triageCountTotal(count),
-        0
-      ),
-    [triageCounts, currentProjectId]
+  // open returns, the “To be sorted” queue at reception viewed by project.
+  // Each home project row carries its project's total; the controls that go
+  // back to Home carry the sum of those rows (MIN-695), so the number read on
+  // "Home" is exactly what Home shows, current project included. Projects I
+  // hid leave Home, so they leave its total too.
+  const toSortEverywhere = useMemo(
+    () => triageCountTotalAcross(listedProjects, triageCounts),
+    [listedProjects, triageCounts]
   );
-  // The “Home” entry therefore combines two marks. The corner of the icon does not hold
-  // only ONE: the triangle passes in front, because an incomplete adjustment does not
-  // Don't catch up alone where a line always ends up emptying.
+  // The “Home” entry therefore combines two marks. The triangle passes in
+  // front, because an incomplete setting does not clear itself the way a
+  // queue ends up emptying.
+  const homeBadgeLabel = [
+    smartAssignBadge ? t("smartAssignIncomplete") : null,
+    toSortEverywhere > 0
+      ? t("toSortEverywhereBadge", { count: toSortEverywhere })
+      : null,
+  ].filter(Boolean).join(" · ");
   const homeBadge =
-    smartAssignBadge || triageElsewhere > 0 ? (
+    smartAssignBadge || toSortEverywhere > 0 ? (
       <span className="flex items-center gap-1.5">
         {smartAssignBadge}
-        {triageElsewhere > 0
+        {toSortEverywhere > 0
           ? countBadge(
-              triageElsewhere,
-              t("triageElsewhereBadge", { count: triageElsewhere })
+              toSortEverywhere,
+              t("toSortEverywhereBadge", { count: toSortEverywhere })
             )
           : null}
       </span>
     ) : undefined;
+  // A project's own total, for the back rows that return to its panel.
+  const projectToSortBadge = useCallback(
+    (projectId: string) => {
+      const total = triageCountTotal(triageCounts[projectId]);
+      return total > 0
+        ? countBadge(total, t("triageBadge", { count: total }))
+        : undefined;
+    },
+    [triageCounts, t]
+  );
+  // The badge of the level a back row returns to: Home's aggregate, or the
+  // project's own total. Same data and rules as the rows of that level.
+  const backBadgeFor = useCallback(
+    (href: string) => {
+      if (href === "/home") return homeBadge;
+      const project = /^\/projects\/([^/]+)$/.exec(href);
+      return project ? projectToSortBadge(project[1]) : undefined;
+    },
+    [homeBadge, projectToSortBadge]
+  );
 
   const commandGroups = useMemo<PaletteGroup[]>(() => {
     const groups: PaletteGroup[] = [];
@@ -1272,6 +1290,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               href: "/home",
               shortcut: "H",
               badge: homeBadge,
+              tooltip: homeBadgeLabel || undefined,
             },
           ],
         },
@@ -1402,12 +1421,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       title: project ? t("projectSettings") : t("accountSettings"),
       sidebarRoute: project ? `/projects/${project.id}/settings` : "/settings",
       render: (navigation: MobileMenuNavigation) => <MobileSettingsMenu {...navigation} projectId={project?.id} />,
+      // Back from a project's settings returns to its panel, else to Home.
+      backBadge: project ? projectToSortBadge(project.id) : homeBadge,
     });
     const panels = new Map<string, MobileMenuPanel>();
     projects.forEach((project) => {
       const base = `/projects/${project.id}`;
       const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind === "pages" && pathname.startsWith(`${base}/pages`) ? pathname : `${base}/${kind}`,
-        render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} /> });
+        render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} />,
+        backBadge: projectToSortBadge(project.id) });
       panels.set(project.id, { key: `project-${project.id}`, title: project.name, project, sections: [{ items: [
         { key: "tickets", label: t("tickets"), contextActions: projectContext.tabActions(project, "tickets"), icon: menuIcon(Layout3ColumnIcon), href: base, active: pathname === base && !objectiveBoardId },
         { key: "objectives", label: t("objectives"), contextActions: projectContext.tabActions(project, "objectives"), icon: menuIcon(Target01Icon), panel: resource("objectives"), active: pathname.startsWith(`${base}/objectives`) || (currentProject?.id === project.id && !!objectiveBoardId) },
@@ -1420,17 +1442,20 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const root = toMenuSections(homeSections).map((section) => ({ ...section,
       items: section.items.map((item) => ({ ...item,
         panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length))
-          : item.key === "routines" ? { key: "routines", title: t("routines"), sidebarRoute: "/routines", render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
-          : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), sidebarRoute: "/pull-requests", render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
+          : item.key === "routines" ? { key: "routines", title: t("routines"), sidebarRoute: "/routines", backBadge: homeBadge, render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
+          : item.key === "pull-requests" ? { key: "pull-requests", title: t("pullRequests"), sidebarRoute: "/pull-requests", backBadge: homeBadge, render: (navigation: MobileMenuNavigation) => <MobilePullRequestsMenu {...navigation} /> }
           : undefined,
       })),
     }));
     const projectPanel = currentProject ? panels.get(currentProject.id) : undefined;
     const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
     const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
-      ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname } : undefined);
-    return { sections: root, projects: switcherProjects, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
-  }, [projects, switcherProjects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t]);
+      ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname, backBadge: homeBadge } : undefined);
+    return { sections: root, projects: switcherProjects, homeBadge, homeBadgeLabel, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
+    // `homeBadge` is a fresh element each render; `toSortEverywhere` and the
+    // Smart Assign warnings it is built from are the real dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects, switcherProjects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t, projectToSortBadge, homeBadgeLabel, toSortEverywhere, smartAssignWarnings.length]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).
@@ -1506,6 +1531,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             modeKey={modeKey}
             currentProject={currentProject}
             projects={switcherProjects}
+            backBadgeFor={backBadgeFor}
             onLayerOpenChange={setSidebarLayerOpen}
           />
         </SidebarNavOverlay>
@@ -1528,7 +1554,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       <AppTabChangeEffect onChange={closeIssuePanel} />
       <AppTabPanel>{children}</AppTabPanel>
       <ContentToaster />
-      {/* Command palette (⌘K / ⌘P / F, sidebar search) — same groups as
+      {/* Command palette (⌘K / ⌘P, sidebar search) — same groups as
  mobile nav search, tickets enriched with actions (⌘;). The cross-project
  index also serves these actions: members and categories of the project
  OF THE TICKET, which is not necessarily that of the page (MIN-91). */}

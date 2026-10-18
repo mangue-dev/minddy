@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, BotIcon, CodeSimpleIcon as Code2, Download01Icon, File02Icon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, RepeatOne02Icon, Target01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, BotIcon, BubbleChatDelayIcon, CodeSimpleIcon as Code2, Download01Icon, File02Icon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, Target01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,7 +23,7 @@ const FEATURES = {
   agents: { icon: BotIcon, tone: CARD_TONES.lavender, screenshot: "workflowAgent" },
   pages: { icon: File02Icon, tone: CARD_TONES.sky, screenshot: "pagesEditor" },
   numo: { icon: BotIcon, tone: CARD_TONES.butter },
-  routines: { icon: RepeatOne02Icon, tone: CARD_TONES.peach },
+  routines: { icon: BubbleChatDelayIcon, tone: CARD_TONES.peach },
   planning: { icon: Target01Icon, tone: CARD_TONES.sage },
   feedback: { icon: MessageMultiple01Icon, tone: CARD_TONES.sky },
   capture: { icon: Mic01Icon, tone: CARD_TONES.lavender },

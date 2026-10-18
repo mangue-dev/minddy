@@ -34,7 +34,6 @@ export const HOME_TIPS: HomeTip[] = [
   // Keyboard shortcuts for everyday actions.
   tip("palette", "gen.palette"),
   tip("cheatsheet", "gen.cheatsheet"),
-  tip("search", "gen.search"),
   tip("filterList", "gen.filterList"),
   tip("undo", "gen.undo"),
   tip("newIssue", "create.issue"),

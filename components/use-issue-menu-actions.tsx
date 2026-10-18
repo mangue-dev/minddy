@@ -3,8 +3,9 @@
 import { useCallback } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
+import { toast } from "mangue-ui";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, DateTimeIcon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Copy01Icon, DateTimeIcon, Delete02Icon, LinkSquare01Icon, GitPullRequestIcon, Link02Icon, Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
 import { RelationIcon } from "@/components/issue-indicators";
 import { KEY_FOR_FIELD, type ShortcutField } from "@/components/issue-field-shortcuts";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -86,9 +87,21 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
           },
         ]
       : [];
-    if (readOnly) return openPr;
+    // Right under "Copy as prompt"; a reader may copy it too, since it
+    // changes nothing. Same gesture and toast as the command palette's.
+    const copyId: ContextMenuAction = {
+      id: "copy-identifier",
+      label: tAction("copyIdentifier", { identifier }),
+      keywords: ["copy", "copier", "identifier", "identifiant", "id", identifier],
+      icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+      onSelect: () => {
+        void navigator.clipboard.writeText(identifier).then(() => toast.success(identifier));
+      },
+    };
+    if (readOnly) return [copyId, ...openPr];
     return [
       ...agentActions,
+      copyId,
       // Open pull request — only offered when a PR exists for the ticket.
       ...openPr,
       ...(pr ? [{

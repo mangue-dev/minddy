@@ -118,7 +118,7 @@ export function WorkLandscape({
         </p>
       </div>
 
-      <div className="grid overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+      <div className="grid overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-3 lg:divide-x lg:divide-y-0">
         <BreakdownGroup
           icon={<AppIcon icon={FolderKanbanIcon} className="size-4 text-muted-foreground" />}
           title={t("projectsBreakdown")}

@@ -447,16 +447,26 @@ export function ProjectContextRow({
                 event.preventDefault();
                 setHomeMenuPosition({ x: event.clientX, y: event.clientY });
               }}
-              className="relative flex h-9 w-12 shrink-0 items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground"
+              className={cn(
+                "relative flex h-9 min-w-12 shrink-0 items-center justify-center gap-0.5 rounded-lg outline-hidden text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
+                // The global badge (MIN-695) rides inside the button, so the
+                // whole back gesture stays one click target.
+                homeItem.badge != null && "gap-1.5 px-2",
+              )}
               whileTap={{ scale: 0.97 }}
               transition={transitions.snappy}
             >
               <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" aria-hidden />
               <HugeiconsIcon icon={Home01Icon} className="size-[18px]" aria-hidden />
+              {homeItem.badge}
             </motion.button>
           </TooltipTrigger>
           <TooltipContent side="right" className="flex items-center gap-2">
             <span>{homeItem.label}</span>
+            {/* Says the badge's scope: every project, not this one. */}
+            {homeItem.tooltip ? (
+              <span className="text-muted-foreground">{homeItem.tooltip}</span>
+            ) : null}
             {homeItem.shortcut ? (
               <KbdSequence
                 keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
@@ -815,7 +825,9 @@ function ChangelogButton({
         <MobileSheetScrollArea>
           <a href={documentationHref} target="_blank" rel="noopener noreferrer" onClick={() => handleMenuOpenChange(false)}
             className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
-            <AppIcon icon={HelpCircleIcon} className="size-[18px] shrink-0" />{t("documentation")}
+            <AppIcon icon={HelpCircleIcon} className="size-[18px] shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
+            <AppIcon icon={ArrowUpRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
           </a>
           <button
             type="button"
@@ -827,7 +839,7 @@ function ChangelogButton({
             }}
           >
             <AppIcon icon={HistoryIcon} className="size-[18px] shrink-0" />
-            <span className="min-w-0 truncate">{t("viewFullChangelog")}</span>
+            <span className="min-w-0 truncate">{t("changelog")}</span>
           </button>
           {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
             handleMenuOpenChange(false);
@@ -857,7 +869,9 @@ function ChangelogButton({
         >
           <DropdownMenuItem asChild>
             <a href={documentationHref} target="_blank" rel="noopener noreferrer">
-              <HugeiconsIcon icon={HelpCircleIcon} className="size-4 shrink-0 text-muted-foreground" />{t("documentation")}
+              <HugeiconsIcon icon={HelpCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
+              <HugeiconsIcon icon={ArrowUpRight01Icon} className="ml-auto size-4 shrink-0 text-muted-foreground" aria-hidden />
             </a>
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -870,7 +884,7 @@ function ChangelogButton({
           >
             <HugeiconsIcon icon={HistoryIcon} className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
-              {t("viewFullChangelog")}
+              {t("changelog")}
             </span>
           </DropdownMenuItem>
           {productFeedbackIntegrationEnabled || productFeedbackUrl ? (
@@ -1008,8 +1022,10 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
 }
 
 /** The secondary-level browse row uses the same geometry in both layouts. */
-export function SidebarBackRow({ label, onBack, ariaLabel }: {
+export function SidebarBackRow({ label, onBack, ariaLabel, badge }: {
   label: string; onBack: () => void; ariaLabel?: string;
+  /** The badge of the level this row returns to (MIN-695). */
+  badge?: ReactNode;
 }) {
   return <div className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2">
     <div className={GUTTER}>
@@ -1017,6 +1033,9 @@ export function SidebarBackRow({ label, onBack, ariaLabel }: {
         className={cn("relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors", ROW_PL, "pr-3 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground")}>
         <HugeiconsIcon icon={ArrowLeft01Icon} className="absolute left-[9px] top-1/2 size-[18px] shrink-0 -translate-y-1/2" aria-hidden />
         <span className="min-w-0 flex-1 truncate text-center">{label}</span>
+        {badge != null && (
+          <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center">{badge}</span>
+        )}
       </button>
     </div>
   </div>;
@@ -1090,6 +1109,7 @@ export function AppSidebar({
   modeKey,
   currentProject,
   projects,
+  backBadgeFor,
   onLayerOpenChange,
 }: {
   sections: AppNavSection[];
@@ -1099,6 +1119,8 @@ export function AppSidebar({
   currentProject: Project | null;
   projects: Project[];
   onLayerOpenChange?: (open: boolean) => void;
+  /** The badge of the level a back row returns to, by its href (MIN-695). */
+  backBadgeFor?: (href: string) => ReactNode;
 }) {
   const reduce = useReducedMotion();
   const t = useTranslations("Nav");
@@ -1115,6 +1137,26 @@ export function AppSidebar({
     backLevel,
   );
   const showSecondary = panel === "secondary";
+
+  // The level 2/3 top fade only shows once the page's list has scrolled: at
+  // rest it would dim the first option for nothing. Scroll does not bubble,
+  // so the slot listens in the capture phase to whichever list the page
+  // teleported in.
+  const [slotNode, setSlotNode] = useState<HTMLDivElement | null>(null);
+  const [listScrolled, setListScrolled] = useState(false);
+  const slotRef = useCallback((node: HTMLDivElement | null) => {
+    setSlotNode(node);
+    setSlot(node);
+  }, [setSlot]);
+  useEffect(() => {
+    setListScrolled(false);
+    if (!slotNode) return;
+    const onScroll = (event: Event) => {
+      if (event.target instanceof HTMLElement) setListScrolled(event.target.scrollTop > 0);
+    };
+    slotNode.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => slotNode.removeEventListener("scroll", onScroll, { capture: true });
+  }, [slotNode, pathname]);
 
   // Menus open out of the bar (Radix portal); while one is up, the hidden
   // navigation overlay must stay pinned (see SidebarNavOverlay).
@@ -1156,7 +1198,9 @@ export function AppSidebar({
    * Level 2/3 panel: the back row — one level up, named after the current
    * page — and, under it, the empty frame the page's bar teleports into.
    * The panel stays mounted across sibling routes (pull requests →
-   * routines); only the back row swaps.
+   * routines), and so does the back row: only its label changes, because
+   * moving between pages of the same level is not a level change and must
+   * not replay the level animation.
    */
   const level2 = (
     <>
@@ -1164,19 +1208,19 @@ export function AppSidebar({
       <AnimatePresence mode="sync" initial={false}>
         {back && (
           <SidebarPanelTransition
-            key={`back:${back.href}:${back.label}`}
+            key="back"
             className="absolute inset-x-0 top-0"
             offset={16}
             transition={shellTransition}
           >
-            <SidebarBackRow label={back.label} onBack={goBack} />
+            <SidebarBackRow label={back.label} onBack={goBack} badge={backBadgeFor?.(back.href)} />
           </SidebarPanelTransition>
         )}
       </AnimatePresence>
       </div>
       {/* Same horizontal gutter as the level-1 rows: whatever the level or
           the page, the options start and end at the same width. */}
-      <div ref={setSlot} className={cn("flex min-h-0 flex-1 flex-col", GUTTER)} />
+      <div ref={slotRef} className={cn("flex min-h-0 flex-1 flex-col", GUTTER)} />
     </>
   );
 
@@ -1241,11 +1285,15 @@ export function AppSidebar({
             requests, and a fade there just dims it). Starts BELOW the first
             row — geometry: row top padding + h-9 (2.25rem) + pb-2. Kept short
             (h-5): the panel's own scroll gap is wide, and a taller fade
-            would sit on the first option row. */}
+            would sit on the first option row. Shown only once the list has
+            scrolled under it. */}
         {showSecondary ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] h-5 bg-gradient-to-b from-sidebar to-transparent"
+            className={cn(
+              "pointer-events-none absolute inset-x-0 top-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] h-4 bg-gradient-to-b from-sidebar to-transparent transition-opacity duration-150",
+              listScrolled ? "opacity-100" : "opacity-0",
+            )}
           />
         ) : null}
         {/* Bottom fade, on every level: options dissolve just above the

@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { Skeleton as BaseSkeleton, cn } from "mangue-ui";
-import { AppContentHeader } from "@/components/app-content-header";
+import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 
 function Skeleton({ className, ...props }: ComponentProps<typeof BaseSkeleton>) {
@@ -140,7 +140,7 @@ export function PrDetailSkeleton() {
   return (
     <div aria-busy="true" data-testid="pr-detail-skeleton" className="flex h-full min-h-0 flex-1 flex-col">
       <AppContentHeader contentClassName="gap-2">
-        <Skeleton aria-hidden className="size-4 rounded" />
+        <Skeleton aria-hidden className={`size-4 rounded ${APP_CONTENT_HEADER_LEADING_INSET}`} />
         <Skeleton aria-hidden className="h-4 w-24" />
         <PrHeaderActionsSkeleton />
       </AppContentHeader>

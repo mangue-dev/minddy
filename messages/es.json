@@ -1344,7 +1344,6 @@
     "tips": {
       "palette": "Busca cualquier pantalla o incidencia y ejecuta acciones desde la paleta de comandos.",
       "cheatsheet": "Consulta todos los atajos de teclado en un solo lugar.",
-      "search": "Busca en todos tus proyectos, incluidas páginas e incidencias.",
       "filterList": "En pantallas como la clasificación o la revisión de código, filtra la lista actual sin dejar el teclado.",
       "undo": "Deshaz los cambios realizados en incidencias, incluidos movimientos y eliminaciones.",
       "newIssue": "Crea una incidencia desde cualquier punto de la aplicación.",
@@ -1800,7 +1799,7 @@
     "pullRequestsBadge": "{count, plural, one {# pull request abierta} other {# pull requests abiertas}}",
     "feedbackBadge": "{count, plural, one {# sugerencia abierta} other {# sugerencias abiertas}}",
     "triageBadge": "{count, plural, one {# elemento por clasificar} other {# elementos por clasificar}}",
-    "triageElsewhereBadge": "{count, plural, one {# elemento por clasificar en tus otros proyectos} other {# elementos por clasificar en tus otros proyectos}}",
+    "toSortEverywhereBadge": "{count, plural, one {# elemento por clasificar en todos tus proyectos} other {# elementos por clasificar en todos tus proyectos}}",
     "objectives": "Objetivos",
     "triage": "Clasificación",
     "projectSettings": "Configuración del proyecto",
@@ -1838,7 +1837,7 @@
     "version": "Versión",
     "webVersion": "Versión web",
     "appVersion": "Versión de la aplicación",
-    "viewFullChangelog": "Ver el registro de cambios completo",
+    "changelog": "Novedades",
     "account": "Cuenta",
     "appearance": "Apariencia",
     "hideSidebar": "Ocultar barra lateral",
@@ -1864,6 +1863,8 @@
     "nameThisView": "Ponle un nombre a esta vista",
     "documentation": "Documentación",
     "hideProject": "Ocultar proyecto",
+    "hideProjectConfirmTitle": "¿Ocultar «{name}»?",
+    "hideProjectConfirmDescription": "Desaparece de tu barra lateral y de tu inicio. Solo te afecta a ti: los demás miembros lo siguen viendo, y sus rutinas y notificaciones siguen funcionando. Puedes volver a mostrarlo desde Configuración de la cuenta → Proyectos ocultos.",
     "showProject": "Mostrar proyecto"
   },
   "CommandPaletteActions": {
@@ -1932,7 +1933,6 @@
       "pageCopyForAgent": "Copia la página abierta para un agente",
       "palette": "Paleta de comandos",
       "newTab": "Nueva pestaña",
-      "search": "Buscar",
       "filterList": "Filtrar la lista",
       "toggleSidebar": "Mostrar u ocultar la barra lateral",
       "accountSettings": "Configuración de la cuenta",

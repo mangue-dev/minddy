@@ -15,7 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { RelationIcon } from "@/components/issue-indicators";
+import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
 
 export type ChipRelation = DisplayRelation;
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -118,6 +118,12 @@ export function RelationChips({
                           className="mt-0.5 size-4 shrink-0 text-muted-foreground"
                         />
                       )}
+                      {r.otherStatus && (
+                        <StatusIndicator
+                          status={r.otherStatus}
+                          className="mt-0.5 size-4 shrink-0"
+                        />
+                      )}
                       {identifier && (
                         <span className="shrink-0 whitespace-nowrap font-mono text-xs leading-5 text-muted-foreground">
                           {identifier}
@@ -126,7 +132,15 @@ export function RelationChips({
                       <span className="min-w-0 flex-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="block truncate">{name}</span>
+                            <span
+                              className={cn(
+                                "block truncate",
+                                r.otherStatus === "done" &&
+                                  "text-muted-foreground line-through",
+                              )}
+                            >
+                              {name}
+                            </span>
                           </TooltipTrigger>
                           <TooltipContent>{name}</TooltipContent>
                         </Tooltip>

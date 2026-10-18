@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 4,
-  "sourceRevision": 4,
+  "revision": 5,
+  "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-18",
   "compatibility": {
     "version": "0.11.1 candidate (89ebb59a5)",
     "editions": [
@@ -36,14 +36,15 @@
       "lib/stats-derive.ts",
       "lib/server/stats.ts",
       "supabase/migrations/20270107070000_history_encryption.sql",
-      "supabase/migrations/20270107720000_project_content_encryption.sql"
+      "supabase/migrations/20270107720000_project_content_encryption.sql",
+      "supabase/migrations/20270109200067_stats_distinct_year.sql"
     ]
   },
   "review": {
-    "revision": 4,
-    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained)",
-    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison)",
-    "date": "2026-10-09"
+    "revision": 5,
+    "fact": "agent:/root/german_spanish_review (structural consolidation review; prior procedural evidence retained; no operational rerun); agent:/root (visual usefulness, figure framing and preserved procedures; previous operational evidence retained); agent:/root (12-month headline deduplication: get_user_stats migration 20270109200067, lib/stats-derive.ts and a production read of one account (685 events, 603 distinct issues); no browser walkthrough, no new captures; unchanged evidence retained)",
+    "language": "agent:/root/german_spanish_review (es title, summary, lead and heading review; retained body comparison); agent:/root (es headline deduplication sentence and retained-meaning self-review; agent review, not human acceptance)",
+    "date": "2026-10-18"
   },
   "related": [
     "personal-cycle",
@@ -61,7 +62,7 @@
       "src": "/documentation/es/reader-statistics.png",
       "alt": "Estadísticas personales con cuadrícula anual, desgloses, ritmo de trabajo y totales históricos.",
       "caption": "Esta cuenta de demostración tiene un ticket completado y once creados. Las estadísticas mostradas son reales; los nombres del proyecto y del objetivo se tradujeron para la ilustración.",
-      "revision": 4,
+      "revision": 5,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -82,7 +83,7 @@
 
 Abre Estadísticas desde la navegación de tu cuenta. Consulta la cuadrícula anual de actividad, los desgloses por proyecto, categoría y objetivo, la sección de ritmo y los totales históricos. La página muestra sus períodos configurados; no tiene un filtro de fechas para elegir otro intervalo. Resume tu trabajo, sin establecer una clasificación del rendimiento de otros miembros.
 
-Utiliza los tickets completados, el ritmo, los días activos, las rachas y las mediciones de tiempo para examinar tu propia actividad. La cuadrícula de actividad cuenta eventos de finalización de incidencias y de tareas del cuaderno, agrupados por días del calendario en tu zona horaria. Un día activo tiene al menos uno de esos eventos; la racha actual permite que hoy aún esté vacío, pero termina en el siguiente día vacío. Los totales históricos de incidencias completadas eliminan identificadores repetidos, por lo que el número de eventos y el total de incidencias distintas responden a preguntas diferentes.
+Utiliza los tickets completados, el ritmo, los días activos, las rachas y las mediciones de tiempo para examinar tu propia actividad. La cuadrícula de actividad cuenta eventos de finalización de incidencias y de tareas del cuaderno, agrupados por días del calendario en tu zona horaria. Un día activo tiene al menos uno de esos eventos; la racha actual permite que hoy aún esté vacío, pero termina en el siguiente día vacío. Los totales históricos de incidencias completadas eliminan identificadores repetidos, por lo que el número de eventos y el total de incidencias distintas responden a preguntas diferentes. La cifra sobre la cuadrícula también cuenta cada incidencia una sola vez en sus 12 meses: una incidencia completada de nuevo marca cada uno de sus días en la cuadrícula, pero suma una sola incidencia a la cifra.
 
 El tiempo por esfuerzo es la mediana del tiempo transcurrido desde el primer cambio registrado de una incidencia a En curso hasta su finalización. Se consideran incidencias aptas en Hecho, asignadas a ti, con esfuerzo y ambas marcas temporales. Incluye el tiempo de espera; no es un cronómetro de horas trabajadas. La vista de cantidad muestra el tamaño de la muestra utilizada. La ausencia de mediana puede indicar que no hay mediciones aptas, no una duración cero. Lee la unidad y el período de cada sección antes de comparar los valores.
 

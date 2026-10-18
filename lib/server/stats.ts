@@ -25,6 +25,8 @@ interface RawStats {
     tasks_completed: number;
   };
   breakdown_total: number;
+  /** Distinct issues and tasks completed since the heatmap's first day. */
+  year?: { issues: number; tasks: number };
   per_project: Array<{
     id: string;
     name: string;
@@ -332,7 +334,12 @@ export async function getUserStats(
           ]
         : [],
     ).sort((left, right) => right.completed - left.completed || left.name.localeCompare(right.name)),
-    heatmap: { tz, start, end, max, days },
+    heatmap: {
+      tz, start, end, max, days,
+      ...(raw.year
+        ? { completed: { issues: num(raw.year.issues) ?? 0, tasks: num(raw.year.tasks) ?? 0 } }
+        : {}),
+    },
     workload,
     week: weekTotals(days),
     cycles,

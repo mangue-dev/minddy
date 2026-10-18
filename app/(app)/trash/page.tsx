@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Calendar01Icon, CircleIcon, DatabaseIcon, Delete02Icon, File02Icon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { BubbleChatDelayIcon, CircleIcon, DatabaseIcon, Delete02Icon, File02Icon, MessageMultiple01Icon, MoreHorizontalIcon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useMemo, useState, type SVGProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -45,7 +45,7 @@ const TYPE_ICON: Record<TrashType, IconSvgElement> = {
   objective: Target01Icon,
   page: File02Icon,
   feedback: MessageMultiple01Icon,
-  routine: Calendar01Icon,
+  routine: BubbleChatDelayIcon,
   project: Delete02Icon,
 };
 
@@ -101,7 +101,7 @@ function TrashRow({
           <ProjectOrb
             seed={item.project_orb_seed || item.id}
             iconUrl={item.project_icon_url}
-            className="size-10 rounded-lg"
+            className="size-10 rounded-[11px]"
           />
         ) : (
           <span

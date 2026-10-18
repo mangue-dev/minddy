@@ -40,7 +40,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // ChevronUp renders the post vote count.
 import { EmptyScene } from "@/components/empty-scene";
-import { AppContentHeader } from "@/components/app-content-header";
+import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { DeferredFeedbackSetupWizard } from "@/components/feedback/deferred-feedback-setup-wizard";
 import { feedbackDetailOptions } from "@/lib/secondary-view-queries";
 import { feedbackNeedsHumanReview, feedbackSelectionItems, matchesFeedbackState, secondarySelectionId } from "@/lib/secondary-view-selection";
@@ -1395,7 +1395,7 @@ function FeedbackDetail({
         {/* What's left here: review alerts, the only things that require
             a reaction. The voices, the date and the origin came down
             in the key/value table, with the rest of what the return IS. */}
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className={`flex items-center gap-2 text-xs text-muted-foreground ${APP_CONTENT_HEADER_LEADING_INSET}`}>
           <ReviewBadges
             reviewState={post.review_state}
             sensitivity={post.sensitivity}

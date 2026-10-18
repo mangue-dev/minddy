@@ -28,6 +28,8 @@ export type MobileMenuPanel = {
   sidebarRoute?: string;
   sections?: MobileMenuSection[];
   render?: (navigation: MobileMenuNavigation) => ReactNode;
+  /** The badge of the level this panel's back row returns to (MIN-695). */
+  backBadge?: ReactNode;
 };
 export type MobileMenuSection = Omit<NavSection, "items"> & {
   items: (NavItem & { panel?: MobileMenuPanel; contextActions?: ContextMenuAction[] })[];
@@ -42,11 +44,14 @@ export function MobileMenuRows({ sections, onBrowse, onNavigate }: { sections: M
   })) }))} />;
 }
 
-export function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], onSearch }: {
+export function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], homeBadge, homeBadgeLabel, onSearch }: {
   sections: MobileMenuSection[];
   initialPanel?: MobileMenuPanel;
   initialPanels?: MobileMenuPanel[];
   projects?: Project[];
+  /** Home's aggregate badge and its scope, for the project panels' back control. */
+  homeBadge?: ReactNode;
+  homeBadgeLabel?: string;
   onSearch: () => void;
 }) {
   const t = useTranslations("Nav");
@@ -103,13 +108,14 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
             animate={{ opacity: showCollection ? 1 : 0, x: showCollection ? 0 : 16 }}
             transition={panelTransition}
             style={{ pointerEvents: showCollection ? "auto" : "none" }}>
-            <SidebarBackRow label={collectionPanel.title} ariaLabel={tc("back")} onBack={onBack} />
+            <SidebarBackRow label={collectionPanel.title} ariaLabel={tc("back")} onBack={onBack} badge={collectionPanel.backBadge} />
             <MobileCollectionMenu route={pathname} active={showCollection} onNavigate={onNavigate} headerHost={headerHost} />
           </motion.div>}
           <AnimatePresence mode="sync" initial={false}>
             {!showCollection && <SidebarPanelTransition key={panel?.key ?? "home"}
               className="absolute inset-0 flex min-h-0 flex-col" offset={panel ? 16 : -16} transition={panelTransition}>
               <MobileBrowsePanel panel={panel} sections={sections} projects={projects} navigation={navigation} onBack={onBack}
+                homeBadge={homeBadge} homeBadgeLabel={homeBadgeLabel}
                 onProjectSelect={(project) => {
                   const next = sections.flatMap((section) => section.items).find((item) => item.panel?.project?.id === project.id)?.panel;
                   if (next) { browsing.current = true; setPanels([next]); }
@@ -123,7 +129,9 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
 }
 
 /** Exiting levels keep their rows visible, but only the current level owns the filter band. */
-function MobileBrowsePanel({ panel, sections, projects, navigation, onBack, onProjectSelect }: {
+function MobileBrowsePanel({ panel, sections, projects, navigation, onBack, onProjectSelect, homeBadge, homeBadgeLabel }: {
+  homeBadge?: ReactNode;
+  homeBadgeLabel?: string;
   panel?: MobileMenuPanel;
   sections: MobileMenuSection[];
   projects: Project[];
@@ -136,10 +144,10 @@ function MobileBrowsePanel({ panel, sections, projects, navigation, onBack, onPr
   const tc = useTranslations("Common");
   const currentNavigation = { ...navigation, headerHost: present ? navigation.headerHost : null };
   return <div data-mobile-sidebar-panel={panel?.key ?? "home"} className="flex min-h-0 flex-1 flex-col">
-    {!!panel && !panel.project && <SidebarBackRow label={panel.title} ariaLabel={tc("back")} onBack={onBack} />}
+    {!!panel && !panel.project && <SidebarBackRow label={panel.title} ariaLabel={tc("back")} onBack={onBack} badge={panel.backBadge} />}
     <MobileSheetScrollArea className={`space-y-4 px-2.5 pb-2 ${!panel || panel.project ? "pt-[calc((var(--app-content-header-height)-2.25rem)/2)]" : ""}`}>
       {panel?.project && <ProjectContextRow
-        homeItem={{ key: "home-back", label: t("home"), href: "/home" }} currentProject={panel.project} projects={projects}
+        homeItem={{ key: "home-back", label: t("home"), href: "/home", badge: homeBadge, tooltip: homeBadgeLabel || undefined }} currentProject={panel.project} projects={projects}
         onBack={onBack} onProjectSelect={onProjectSelect} />}
       {panel?.render ? panel.render(currentNavigation) : panel && !panel.project ?
         <MobileStaticMenu sections={panel.sections ?? []} {...currentNavigation} /> :

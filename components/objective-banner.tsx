@@ -121,14 +121,15 @@ export function ObjectiveBoardHeader({
         </Link>
       </Button>
 
-      {/* Identity: color dot, name, and status. */}
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+      {/* Identity: color dot, name, and status. It takes only its own width,
+          so the indicators follow the name instead of the header's far edge. */}
+      <div className="flex min-w-0 items-center gap-3">
         <span
           className="size-3 shrink-0 rounded-full"
           style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
           aria-hidden
         />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <ObjectiveSwitch
             objective={objective}
             objectives={objectives}
@@ -140,8 +141,6 @@ export function ObjectiveBoardHeader({
           </div>
         </div>
       </div>
-
-      <div className="hidden h-9 w-px shrink-0 bg-border sm:block" aria-hidden />
 
       {/* Indicators — progress · lead · target */}
       <div className="flex shrink-0 items-center gap-x-6">

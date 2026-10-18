@@ -20,7 +20,7 @@ import {
 import { trackEvent } from "@/lib/analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import { EmptyScene } from "@/components/empty-scene";
-import { AppContentHeader } from "@/components/app-content-header";
+import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { EffortDurations } from "@/components/stats/effort-durations";
 import { MentionChip } from "@/components/mention-chip";
 import { StatsHero } from "@/components/stats/stats-hero";
@@ -140,7 +140,11 @@ export default function StatisticsPage() {
 
   const days = stats?.heatmap.days;
   const streak = useMemo(() => computeStreaks(days ?? []), [days]);
-  const year = useMemo(() => heatmapTotals(days ?? []), [days]);
+  const completedInYear = stats?.heatmap.completed;
+  const year = useMemo(
+    () => heatmapTotals(days ?? [], completedInYear),
+    [days, completedInYear],
+  );
   // Day of registration, converted into the SAME time zone as bucketing of
   // events (`heatmap.tz`) — otherwise the marked box could fall one
   // next day for an account created at the end of the evening.
@@ -152,7 +156,7 @@ export default function StatisticsPage() {
 
   const header = (
     <AppContentHeader contentClassName="gap-2">
-      <h1 className="flex min-w-0 items-center gap-1.5 text-base font-medium">
+      <h1 className={cn("flex min-w-0 items-center gap-1.5 text-base font-medium", APP_CONTENT_HEADER_LEADING_INSET)}>
         <span>{t("titlePrefix")}</span>
         <MentionChip
           type="member"

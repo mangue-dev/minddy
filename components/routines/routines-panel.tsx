@@ -3,7 +3,7 @@
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Calendar01Icon, Clock01Icon, Delete02Icon, Edit04Icon, PauseCircleIcon, PlayCircleIcon, PlayIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, BubbleChatDelayIcon, Clock01Icon, Delete02Icon, Edit04Icon, PauseCircleIcon, PlayCircleIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
@@ -395,7 +395,7 @@ export function RoutinesPanel({
  its `job` step — providing them twice would require keeping them updated in
  two places. */
     <div className="px-3 py-6">
-      <EmptyScene icon={Calendar01Icon} title={emptyTitle} size="compact">
+      <EmptyScene icon={BubbleChatDelayIcon} title={emptyTitle} size="compact">
         {anyEligible ? (
           <Button size="sm" onClick={() => openWizard()}>
             <HugeiconsIcon icon={Add01Icon} />
@@ -563,7 +563,7 @@ export function RoutinesPanel({
  leaving “choose a routine” when there is none
  sent searching in an empty column. */
           <div className="flex flex-1 flex-col items-center justify-center p-6">
-            <EmptyScene icon={Calendar01Icon} title={emptyTitle}>
+            <EmptyScene icon={BubbleChatDelayIcon} title={emptyTitle}>
               {anyEligible ? (
                 <Button onClick={() => openWizard()}>
                   <HugeiconsIcon icon={Add01Icon} className="size-4" />

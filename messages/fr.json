@@ -1344,7 +1344,6 @@
     "tips": {
       "palette": "Recherchez un écran ou un ticket et lancez une action depuis la palette de commandes.",
       "cheatsheet": "Affichez tous les raccourcis clavier au même endroit.",
-      "search": "Recherchez dans tous vos projets, pages et tickets compris.",
       "filterList": "Sur des écrans comme le triage ou la code review, filtrez la liste affichée sans quitter le clavier.",
       "undo": "Annulez les modifications faites sur les tickets, y compris les déplacements et les suppressions.",
       "newIssue": "Créez un ticket depuis n'importe où dans l'app.",
@@ -1800,7 +1799,7 @@
     "pullRequestsBadge": "{count, plural, one {# pull request ouverte} other {# pull requests ouvertes}}",
     "feedbackBadge": "{count, plural, one {# retour ouvert} other {# retours ouverts}}",
     "triageBadge": "{count, plural, one {# élément à trier} other {# éléments à trier}}",
-    "triageElsewhereBadge": "{count, plural, one {# élément à trier dans vos autres projets} other {# éléments à trier dans vos autres projets}}",
+    "toSortEverywhereBadge": "{count, plural, one {# élément à trier dans tous vos projets} other {# éléments à trier dans tous vos projets}}",
     "objectives": "Objectifs",
     "triage": "Triage",
     "projectSettings": "Paramètres du projet",
@@ -1838,7 +1837,7 @@
     "version": "Version",
     "webVersion": "Version web",
     "appVersion": "Version de l'application",
-    "viewFullChangelog": "Voir le changelog entier",
+    "changelog": "Nouveautés",
     "account": "Compte",
     "appearance": "Apparence",
     "hideSidebar": "Masquer la sidebar",
@@ -1864,6 +1863,8 @@
     "nameThisView": "Donner un nom à la vue",
     "documentation": "Documentation",
     "hideProject": "Masquer le projet",
+    "hideProjectConfirmTitle": "Masquer « {name} » ?",
+    "hideProjectConfirmDescription": "Il disparaît de votre barre latérale et de votre accueil. Vous seul êtes concerné : les autres membres le voient toujours, et ses routines et notifications continuent. Vous pourrez le réafficher depuis Paramètres du compte → Projets masqués.",
     "showProject": "Réafficher le projet"
   },
   "CommandPaletteActions": {
@@ -1932,7 +1933,6 @@
       "pageCopyForAgent": "Copier la page ouverte pour un agent",
       "palette": "Palette de commandes",
       "newTab": "Nouvel onglet",
-      "search": "Rechercher",
       "filterList": "Filtrer la liste",
       "toggleSidebar": "Afficher ou masquer la barre latérale",
       "accountSettings": "Paramètres du compte",

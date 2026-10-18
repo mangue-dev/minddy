@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -13,7 +13,7 @@ import {
   ViewIcon,
   ViewOffIcon,
 } from "@hugeicons/core-free-icons";
-import { toast } from "mangue-ui";
+import { ConfirmDeleteDialog, toast } from "mangue-ui";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -115,6 +115,10 @@ export function useProjectContextActions({
   const pathname = usePathname();
   const { isHidden, setProjectHidden } = useHiddenProjects();
   const [trashTarget, setTrashTarget] = useState<Project | null>(null);
+  const [hideTarget, setHideTarget] = useState<Project | null>(null);
+  // The title keeps naming the project while the dialog animates out.
+  const shownHideTarget = useRef(hideTarget);
+  if (hideTarget) shownHideTarget.current = hideTarget;
 
   const createActions = useCallback(
     (project: Project): Record<ProjectTabKind, ContextMenuAction> => ({
@@ -170,8 +174,10 @@ export function useProjectContextActions({
           icon: icon(Settings01Icon),
           onSelect: () => router.push(`/projects/${project.id}/settings`),
         },
-        // A personal preference (MIN-692), open to every member: it only
-        // changes my own navigation, so it is never presented as destructive.
+        // A personal preference (MIN-692), open to every member. Hiding takes
+        // the project out of my navigation, so it asks first and reads as
+        // destructive, right above Move to trash; showing it again is
+        // harmless and immediate.
         isHidden(project.id)
           ? {
             id: "project-show",
@@ -183,7 +189,9 @@ export function useProjectContextActions({
             id: "project-hide",
             label: t("hideProject"),
             icon: icon(ViewOffIcon),
-            onSelect: () => { void setProjectHidden(project, true); },
+            variant: "destructive",
+            transfersFocus: true,
+            onSelect: () => setHideTarget(project),
           },
       ];
       // Same rule as the settings' danger zone: only the owner may trash.
@@ -218,18 +226,31 @@ export function useProjectContextActions({
   );
 
   const dialog = (
-    <ProjectTrashDialog
-      project={trashTarget}
-      open={trashTarget !== null}
-      onOpenChange={(open) => { if (!open) setTrashTarget(null); }}
-      onTrashed={onTrashed}
-    />
+    <>
+      <ProjectTrashDialog
+        project={trashTarget}
+        open={trashTarget !== null}
+        onOpenChange={(open) => { if (!open) setTrashTarget(null); }}
+        onTrashed={onTrashed}
+      />
+      <ConfirmDeleteDialog
+        open={hideTarget !== null}
+        onOpenChange={(open) => { if (!open) setHideTarget(null); }}
+        title={t("hideProjectConfirmTitle", { name: shownHideTarget.current?.name ?? "" })}
+        description={t("hideProjectConfirmDescription")}
+        confirmLabel={t("hideProject")}
+        cancelLabel={tc("cancel")}
+        onConfirm={() => {
+          if (hideTarget) void setProjectHidden(hideTarget, true);
+        }}
+      />
+    </>
   );
 
   return useMemo(
     () => ({ projectActions, tabActions, dialog }),
     // `dialog` is a fresh element each render; it only depends on these.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [projectActions, tabActions, trashTarget, onTrashed],
+    [projectActions, tabActions, trashTarget, hideTarget, onTrashed],
   );
 }

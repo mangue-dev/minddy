@@ -116,7 +116,7 @@ vi.mock("@/components/ui/tooltip", async () => { const { createElement } = await
   return { Tooltip: Box, TooltipContent: Box, TooltipTrigger: Box }; });
 vi.mock("@/components/app-content-header", async () => { const { createElement } = await import("react");
   const Box = ({ children }: { children?: React.ReactNode }) => createElement("div", null, children);
-  return { AppContentHeader: Box }; });
+  return { AppContentHeader: Box, APP_CONTENT_HEADER_LEADING_INSET: "" }; });
 vi.mock("@/components/empty-scene", async () => { const { createElement } = await import("react");
   const Box = ({ children }: { children?: React.ReactNode }) => createElement("div", null, children);
   return { EmptyScene: Box }; });

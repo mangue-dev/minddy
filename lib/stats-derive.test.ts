@@ -74,6 +74,20 @@ describe("heatmapTotals", () => {
     });
   });
 
+  it("counts an issue completed again once when the server dedupes the window", () => {
+    // One issue completed on two days: two day events, one ticket.
+    const window: HeatmapDay[] = [
+      { date: "2026-01-01", count: 1, issues: 1, tasks: 0 },
+      { date: "2026-01-02", count: 2, issues: 1, tasks: 1 },
+    ];
+    expect(heatmapTotals(window, { issues: 1, tasks: 1 })).toEqual({
+      total: 2,
+      issues: 1,
+      tasks: 1,
+      activeDays: 2,
+    });
+  });
+
   it("is zero on an empty window", () => {
     expect(heatmapTotals([])).toEqual({
       total: 0,
