@@ -1,5 +1,6 @@
 "use client";
 
+import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AiAutoRotateIcon, HierarchySquare01Icon, Calendar01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
 import {
@@ -1317,6 +1318,8 @@ const IssueCardContent = memo(function IssueCardContent({
         prefetchIssuePromptContext([issue.id]);
       }}
       onFocus={() => prefetchIssuePromptContext([issue.id])}
+      // A click opens the issue: its live description starts loading now.
+      onMouseDown={() => prefetchDescriptionSnapshot("issue", issue.id)}
       onClick={(e) => {
         if (e.shiftKey && onSelect) {
           e.preventDefault();

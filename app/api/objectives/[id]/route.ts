@@ -2,7 +2,8 @@ import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { updateObjective } from "@/lib/server/objectives";
+import { MAX_OBJECTIVE_DESCRIPTION_LENGTH, updateObjective } from "@/lib/server/objectives";
+import { takeRichDocumentInput } from "@/lib/server/rich-documents";
 import { softDeleteItem } from "@/lib/server/trash";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -41,10 +42,21 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
+  // The editor sends its document (MIN-728): the description is derived from
+  // it here, never taken from the client.
+  const input = { ...((body ?? {}) as Record<string, unknown>) };
+  const document = await takeRichDocumentInput(input, {
+    document: "description_doc", markdown: "description",
+    maxLength: MAX_OBJECTIVE_DESCRIPTION_LENGTH,
+  });
+  if (!document.ok) {
+    return NextResponse.json({ error: t(document.errorKey) }, { status: 400 });
+  }
   const result = await updateObjective({
     objectiveId: id,
     actorId: auth.user.id,
-    input: (body ?? {}) as Record<string, unknown>,
+    input,
+    descriptionDocument: document.content,
   });
   if (!result.ok) {
     const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");

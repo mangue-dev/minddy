@@ -2,7 +2,7 @@
 
 // “@” mentions in a DESCRIPTION (tiptap) — person, ticket, objective.
 //
-// Same contract as in a comment (components/mention-textarea): what is
+// Same contract as in a comment (components/editor/comment-editor.tsx): what is
 // STORED is text, “@Name” / “@MIN-42” / “@Goal”, and the pill comes from it
 // re-inferred on each reread by the unique rule of lib/mention-scan. The knot
 // tiptap is just a coat placed on this text: it is serialized in markdown towards
@@ -11,7 +11,7 @@
 // by Numo and by the code agent.
 //
 // The menu is brought to the body of the document, like that of the “/” in the notebook
-// (components/scratchpad/slash-command) and for the same reasons: in the
+// (components/pages/page-slash-command.tsx) and for the same reasons: in the
 // panel or dialog, a menu in absolute position is cut by the
 // scrolling container.
 

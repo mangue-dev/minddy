@@ -4,7 +4,8 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { JSONContent } from "@tiptap/core";
 import { useFormatter, useTranslations } from "next-intl";
 import {
   Button,
@@ -23,8 +24,9 @@ import { useAuth } from "@/lib/auth-context";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadDoc } from "@/lib/use-scratchpad-query";
+import { useRichDocument } from "@/lib/use-rich-document";
 import { ScratchpadEditor } from "@/components/scratchpad/scratchpad-editor";
-import { SLASH_MENU_ATTR } from "@/components/scratchpad/slash-command";
+import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
 import {
   Tooltip,
@@ -48,13 +50,10 @@ export function ScratchpadModal() {
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
         showCloseButton={mobile}
-        // The `/` menu is portaled to <body> so the window, not the note's
+        // The “/” and “@” menus are portaled to <body> so the window, not the note's
         // scroll box, bounds it — which makes Radix read a click in it as a
         // click outside the dialog. Keep the notebook open for those.
-        onInteractOutside={(event) => {
-          const target = event.target as Element | null;
-          if (target?.closest?.(`[${SLASH_MENU_ATTR}]`)) event.preventDefault();
-        }}
+        onInteractOutside={keepOverlayOpenForPopper}
         className="scratchpad-shell-dialog flex -translate-x-0 -translate-y-0 h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 rounded-(--app-pane-radius) sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
       >
         <DialogTitle className="sr-only">{t("title")}</DialogTitle>
@@ -109,6 +108,17 @@ function ScratchpadBody() {
     liveRef: markdownRef,
     applyRef,
   });
+  // The note's editor document (MIN-728); `undefined` while it loads.
+  const { document: noteDocument, remember: rememberNoteDocument } =
+    useRichDocument("notebook", "me", { enabled: isOpen });
+  // The document being saved is the next opening's: no read needed then.
+  const saveNote = useCallback(
+    (content: string, document: JSONContent | null) => {
+      save(content, document);
+      rememberNoteDocument(document);
+    },
+    [save, rememberNoteDocument]
+  );
 
   // Soft fade at the scroll edges (same pattern as the Kanban columns and the
   // agent feed) so it's clear the notes continue past the top/bottom.
@@ -230,14 +240,16 @@ function ScratchpadBody() {
         className="flex flex-1 flex-col overflow-y-auto px-6 pt-48 pb-12"
       >
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
-          {isLoading ? (
+          {isLoading || noteDocument === undefined ? (
             <div className="flex justify-center py-16 text-muted-foreground">
               <Spinner />
             </div>
           ) : (
             <ScratchpadEditor
               initialValue={content}
-              onChange={save}
+              initialDocument={noteDocument}
+              uploadScope={user ? `chat/${user.id}` : null}
+              onChange={saveNote}
               onCopySection={copySection}
               startOnCopy={startOnCopy}
               placeholder={t("placeholder")}

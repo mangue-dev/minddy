@@ -20,9 +20,8 @@ import { Extension, textInputRule } from "@tiptap/core";
  * of sample code is still code). And a substitution that we didn't want
  * does not cancel with a Backspace, which returns the typed characters.
  *
- * Placed on the two rich text surfaces — the task notebook and
- * <MarkdownEditor> (description d'un ticket, d'un objectif, d'un retour), donc
- * the mode of creation understood.
+ * Mounted by the shared editor engine (components/editor/rich-editor.tsx),
+ * so every rich text surface converts arrows the same way.
  */
 export const Arrows = Extension.create({
   name: "arrows",

@@ -38,9 +38,9 @@ import {
 } from "@/components/resources";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
-  MarkdownEditor,
-  type MarkdownEditorApi,
-} from "@/components/markdown-editor";
+  DocumentEditor,
+  type DocumentEditorApi,
+} from "@/components/editor/document-editor";
 import { forgeMentionScanner } from "@/lib/mention-scan";
 import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
@@ -115,7 +115,7 @@ export function PrCommentComposer({
   // (quote, dictate and uploads write through it). What the editor pushed
   // last: the mirror compares to it to know when a value came from
   // OUTSIDE (quote) and must be poured back in.
-  const editorApiRef = useRef<MarkdownEditorApi | null>(null);
+  const editorApiRef = useRef<DocumentEditorApi | null>(null);
   const lastEmittedRef = useRef(value);
   useEffect(() => {
     if (value === lastEmittedRef.current) return;
@@ -181,7 +181,7 @@ export function PrCommentComposer({
             switch. Markdown still flows in (quote, dictation, pasted upload
             links) and the forge accounts carry their own portrait in the
             pills. */}
-        <MarkdownEditor
+        <DocumentEditor
           value={value}
           onCommit={(markdown) => {
             lastEmittedRef.current = markdown;

@@ -422,6 +422,8 @@ export function AddLinkDialog({
 /** Forward pasted files into a composer's upload queue. */
 export function pasteFileHandler(addFiles: (files: Iterable<File>) => void) {
   return (e: React.ClipboardEvent) => {
+    // An editor inside the surface already placed the pasted image inline.
+    if (e.defaultPrevented) return;
     if (e.clipboardData.files.length > 0) {
       e.preventDefault();
       addFiles(e.clipboardData.files);
@@ -462,6 +464,12 @@ export function useFileDrop(onFiles: (files: FileList) => void) {
     },
     onDrop: (e: React.DragEvent) => {
       if (!dragHasFiles(e)) return;
+      // An editor inside the surface already placed the dropped image inline.
+      if (e.defaultPrevented) {
+        depth.current = 0;
+        setDragging(false);
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       depth.current = 0;

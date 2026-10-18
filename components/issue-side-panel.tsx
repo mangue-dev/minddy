@@ -68,12 +68,15 @@ import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { IssueResourcesSection } from "@/components/issue-resources-section";
 import { IssuePlan } from "@/components/issue-plan";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the board routes that mount
-// this panel — see markdown-editor-lazy.tsx. Warmed from idle time below.
+// this panel — see components/editor/document-editor-lazy.tsx. Warmed from idle time below.
 import {
-  DeferredMarkdownEditor,
-  useIdleMarkdownEditorPreload,
-} from "@/components/markdown-editor-lazy";
+  DeferredDocumentEditor,
+  useIdleDocumentEditorPreload,
+} from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
+import { useRichDocument } from "@/lib/use-rich-document";
+import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
+import type { JSONContent } from "@tiptap/core";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { NumoIcon } from "@/components/numo-icon";
@@ -164,7 +167,7 @@ export function IssueSidePanel({
   const readOnly = !canWrite;
   // The panel mounts with its board: warm the editor chunk once the page has
   // painted, so opening a ticket never shows the loading fallback.
-  useIdleMarkdownEditorPreload();
+  useIdleDocumentEditorPreload();
   const [title, setTitle] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const buildIssueMenuActions = useIssueMenuActions();
@@ -177,6 +180,31 @@ export function IssueSidePanel({
   // (dictation, or distant writing) — it only reads `value` during editing and
   // ne commite qu'au blur.
   const [editorKey, setEditorKey] = useState(0);
+  // The description's editor document (MIN-728): what Markdown cannot carry —
+  // block identities, colors, pills. `undefined` while it loads.
+  // The live description (MIN-728): every editor of this issue shares one
+  // document, and typing travels as steps instead of Markdown commits.
+  const tPages = useTranslations("Pages");
+  const liveReadyRef = useRef(false);
+  const liveDescription = useDescriptionCollaboration({
+    kind: "issue",
+    id: issue?.id ?? null,
+    userId: user?.id ?? null,
+    enabled: open && !!issue,
+    members,
+    onRefused: () => toast.error(tPages("liveEditRefused")),
+    onFatal: () => toast.error(tPages("saveFailed")),
+  });
+  const liveReady = liveDescription.status === "ready" && !!liveDescription.collaboration;
+  liveReadyRef.current = liveReady;
+  // Without a live session (an older server, a failed read), the editor
+  // saves Markdown with its document, as before.
+  const {
+    document: descriptionDocument,
+    remember: rememberDescriptionDocument,
+  } = useRichDocument("issue", issue?.id, {
+    enabled: open && liveDescription.status === "unavailable",
+  });
   const { data: githubIssueData } = useQuery<{ github_metadata?: Record<string, unknown> | null }>({
     queryKey: ["github-issue-metadata", issue?.id ?? ""],
     queryFn: async () => {
@@ -221,6 +249,8 @@ export function IssueSidePanel({
       switch or a window blur commit what is on screen even though the
       editor's own blur never ran. */
   const latestDescription = useRef("");
+  /** The editor document of `latestDescription`, sent with it. */
+  const latestDescriptionDocument = useRef<JSONContent | null>(null);
   /** Raised when a description commit just went out: the container's blur —
       which always follows the editor's in the same event — must not remount
       the surface with the stale reflection the prop still carries. One-shot:
@@ -284,6 +314,7 @@ export function IssueSidePanel({
       shownTitle.current = issue.title;
       shownDescription.current = description;
       latestDescription.current = description;
+      latestDescriptionDocument.current = null;
       justCommitted.current = false;
       titleEdited.current = false;
       descriptionEdited.current = false;
@@ -304,14 +335,17 @@ export function IssueSidePanel({
     }
 
     // The editor does not reread `value`: to adopt it is to reassemble it — the same
-    // lever than dictation. So never while writing there.
+    // lever than dictation. So never while writing there. A live description
+    // receives remote writes as steps and is never remounted for them.
     if (
+      !liveReadyRef.current &&
       description !== shownDescription.current &&
       !descriptionEdited.current &&
       !descriptionRef.current?.contains(document.activeElement)
     ) {
       shownDescription.current = description;
       latestDescription.current = description;
+      latestDescriptionDocument.current = null;
       setEditorKey((k) => k + 1);
     }
   }, [issue?.id, issue?.title, issue?.description]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -603,8 +637,12 @@ export function IssueSidePanel({
     // rather than refuse the departure — the text is the user's, committing
     // it is what they intend (refusing used to wedge the tab switch instead).
     commitPendingEditsRef.current();
-    const saved = await Promise.all(pendingWrites.current);
-    return saved.every(Boolean) && !titleEdited.current && !descriptionEdited.current;
+    // A live description's typing must have reached the server (MIN-728).
+    const [saved, liveSaved] = await Promise.all([
+      Promise.all(pendingWrites.current),
+      liveDescription.flush(),
+    ]);
+    return saved.every(Boolean) && liveSaved && !titleEdited.current && !descriptionEdited.current;
   });
   const handleOpenChange = (next: boolean) => {
     // Dictation edits THIS ticket: the transcript, then the Numo patch, goes there
@@ -657,7 +695,7 @@ export function IssueSidePanel({
     } else if (!trimmed) setTitle(issue.title);
   };
 
-  const commitDescription = (markdown: string) => {
+  const commitDescription = (markdown: string, content?: JSONContent | null) => {
     // Same caveat as for the title: a blur without typing does not rewrite anything.
     if (!issue || !descriptionEdited.current) return;
     descriptionEdited.current = false;
@@ -665,13 +703,19 @@ export function IssueSidePanel({
     if (next === (issue.description ?? null)) return;
     shownDescription.current = next ?? "";
     justCommitted.current = true;
-    void patch({ description: next });
+    // With its document, the server derives the Markdown from it (MIN-728).
+    if (next && content) {
+      rememberDescriptionDocument(content);
+      void patch({ description: next, description_doc: content });
+    } else {
+      void patch({ description: next });
+    }
   };
 
   /** Commit the description that is on screen, whether or not the editor ever
       blurred (Escape, ✕, tab switch, window blur all skip its blur). */
   const commitDescriptionNow = () => {
-    commitDescription(latestDescription.current);
+    commitDescription(latestDescription.current, latestDescriptionDocument.current);
   };
 
   /** Flush both editable fields. Clears the edited flags, so remote adoption
@@ -949,16 +993,45 @@ export function IssueSidePanel({
                     setEditorKey((k) => k + 1);
                   }}
                 >
-                  <DeferredMarkdownEditor
+                  {liveDescription.status === "loading" ||
+                  (!liveReady && descriptionDocument === undefined) ? (
+                    // The description, formatted, while its live session
+                    // loads: the live editor then takes its place in the same
+                    // frame, never the raw Markdown first.
+                    <DeferredDocumentEditor
+                      key={`${issue.id}:preview`}
+                      mentions={mentions}
+                      value={issue.description ?? ""}
+                      placeholder={t("descriptionPlaceholder")}
+                      readOnly
+                    />
+                  ) : liveReady ? (
+                    <DeferredDocumentEditor
+                      key={`${issue.id}:live`}
+                      mentions={mentions}
+                      value={issue.description ?? ""}
+                      uploadScope={`projects/${issue.project_id}`}
+                      document={liveDescription.doc}
+                      collaboration={liveDescription.collaboration}
+                      placeholder={
+                        readOnly ? t("descriptionEmptyReadOnly") : t("descriptionPlaceholder")
+                      }
+                      readOnly={readOnly}
+                    />
+                  ) : (
+                  <DeferredDocumentEditor
                     key={`${issue.id}:${editorKey}`}
                     mentions={mentions}
                     value={issue.description ?? ""}
+                    uploadScope={`projects/${issue.project_id}`}
+                    document={descriptionDocument}
                     onCommit={commitDescription}
                     // Live markdown on every edit: a close (Escape, ✕, outside
                     // click), a tab switch or a window blur can all skip the
                     // editor's blur — the flush reads this instead.
-                    onChange={(markdown) => {
+                    onChange={(markdown, content) => {
                       latestDescription.current = markdown;
+                      latestDescriptionDocument.current = content;
                     }}
                     onEdit={() => {
                       descriptionEdited.current = true;
@@ -968,6 +1041,7 @@ export function IssueSidePanel({
                     }
                     readOnly={readOnly}
                   />
+                  )}
                 </div>
 
                 {/* Key/value properties — borderless, like the issue cards.

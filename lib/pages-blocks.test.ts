@@ -194,7 +194,7 @@ describe("le menu « / » et « transformer en »", () => {
 
   it("l'image et le fichier demandent leur sélecteur", () => {
     // The other half of the same gesture: the descriptor calls the hook that
-    // the surface sets (`storage.<node>.pick`, cf. page-editor.tsx). Without it,
+    // the surface sets (`storage.<node>.pick`, cf. components/editor/rich-editor.tsx). Without it,
     // “/image” would not open any dialog box.
     for (const [id, node, accept] of [
       ["image", "image", "image/*"],
@@ -280,7 +280,7 @@ describe("le montage headless", () => {
     // The counterpart of the previous case: without it, “no view” would also be true
     // of a `blockExtensions` who would have ceased to know how to place one. And it is
     // the subpage we are looking at, because it is HIS view which has moved from
-    // block file to surface (components/pages/page-editor.tsx).
+    // block file to surface (components/editor/rich-editor.tsx).
     const view = (() => null) as unknown as NodeViewRenderer;
     const node = blockExtensions({ nodeViews: { subpage: view } }).find(
       (extension) => extension.name === "subpage"

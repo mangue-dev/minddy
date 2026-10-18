@@ -23,6 +23,7 @@ import {
 } from "@tiptap/core";
 import { turnBlocksInto } from "@/components/pages/block-actions";
 import type {
+  BlockSet,
   PageBlock,
   PageBlockId,
   SlashGroup,
@@ -47,6 +48,7 @@ import { imageBlock } from "@/components/pages/blocks/image";
 import { fileBlock } from "@/components/pages/blocks/file";
 
 export type {
+  BlockSet,
   PageBlock,
   PageBlockId,
   SlashGroup,
@@ -85,6 +87,13 @@ export const PAGE_BLOCKS: readonly PageBlock[] = [
   imageBlock,
   fileBlock,
 ];
+
+/** The catalog one block set mounts (MIN-728), in registry order. */
+export function blocksIn(set: BlockSet): readonly PageBlock[] {
+  return set === "page"
+    ? PAGE_BLOCKS
+    : PAGE_BLOCKS.filter((block) => !block.sets || block.sets.includes(set));
+}
 
 export const blockById = new Map<PageBlockId, PageBlock>(
   PAGE_BLOCKS.map((block) => [block.id, block])
@@ -159,11 +168,13 @@ export function blockExtensions(
     headless?: boolean;
     nodeViews?: Record<string, NodeViewRenderer>;
     extensions?: Record<string, AnyExtension>;
+    /** Which catalog to mount; the whole registry by default. */
+    set?: BlockSet;
   } = {}
 ): Extensions {
   const seen = new Set<string>();
   const extensions: AnyExtension[] = [];
-  for (const block of PAGE_BLOCKS) {
+  for (const block of blocksIn(options.set ?? "page")) {
     for (const extension of block.extensions as AnyExtension[]) {
       if (seen.has(extension.name)) continue;
       seen.add(extension.name);
@@ -210,9 +221,20 @@ export const SLASH_GROUPS: ReadonlyArray<{
 /** The catalog in the order of the “/” menu: group by group, `order` by
     `order`. LABELS are not resolved here — the registry has no
     translator, it renders descriptors and the menu displays them. */
-export function slashItems(): PageBlock[] {
+export function slashItems(
+  options: {
+    set?: BlockSet;
+    /** What the surface can upload: everything (pages), images only (other
+     surfaces, MIN-728), or nothing — which keeps image and file out. */
+    uploads?: "all" | "images" | "none";
+  } = {}
+): PageBlock[] {
+  const { set = "page", uploads = "all" } = options;
+  const offered = (block: PageBlock) =>
+    !block.needsUploads || uploads === "all" ||
+    (uploads === "images" && block.needsUploads === "image");
   const rank = new Map(SLASH_GROUPS.map(({ group }, index) => [group, index]));
-  return [...PAGE_BLOCKS].sort(
+  return blocksIn(set).filter(offered).sort(
     (a, b) =>
       (rank.get(a.slash.group) ?? 0) - (rank.get(b.slash.group) ?? 0) ||
       a.slash.order - b.slash.order

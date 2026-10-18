@@ -34,7 +34,7 @@ import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { pagesHref, pushPagesHistory } from "@/lib/pages-navigation";
-import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import type { MentionLinks } from "@/components/mention-links";
 import type { MentionOption } from "@/components/mention-suggest";
 import type {
@@ -245,7 +245,7 @@ export function useMentionLinksFor(
 }
 
 /**
- * What to pass to `<MarkdownEditor mentions={…} />`: the proposed list
+ * What to pass to `<DocumentEditor mentions={…} />`: the proposed list
  * after the “@”, and the rule which rereads a text already written.
  *
  * The two lists are not the same, and that is intentional. We PROPOSE the members
@@ -258,7 +258,7 @@ export function useDescriptionMentions(
   projectId: string | null | undefined,
   members: Member[],
   onOpenIssue?: (projectId: string, issueId: string) => void,
-): MarkdownEditorMentions {
+): DocumentEditorMentions {
   const { projects, issues, objectives, pages, armNow } =
     useMentionSources(projectId);
   const links = useMentionLinksFor({ issues, objectives, pages }, onOpenIssue);

@@ -2,12 +2,15 @@
 
 import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "mangue-ui";
-import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type {
+  DocumentEditorMentions,
+  DocumentEditorProps,
+} from "@/components/editor/document-editor";
 
-export type { MarkdownEditorMentions };
+export type { DocumentEditorMentions };
 
 /**
- * Deferred access to the rich markdown editor.
+ * Deferred access to the document editor (MIN-728).
  *
  * The editor pulls tiptap + lowlight (~1.5 MB minified) into every route that
  * hosts an editing surface — both boards through the issue side panel and the
@@ -15,41 +18,38 @@ export type { MarkdownEditorMentions };
  * ones users navigate between constantly, yet the editor only runs once a
  * dialog or panel actually opens. Rendering it through this boundary keeps
  * tiptap out of the route graph: the hosting page paints without it, and the
- * chunk streams in during idle time (see `useIdleMarkdownEditorPreload`) so a
+ * chunk streams in during idle time (see `useIdleDocumentEditorPreload`) so a
  * first open waits on nothing.
  *
  * While the chunk loads, the fallback mirrors the committed value as plain
  * text at the same typography, so an opened description never flashes empty;
  * the rich surface replaces it in place. The same visual contract as the
- * committed markdown is intentional — see PROSE in markdown-editor.tsx.
+ * committed markdown is intentional — see PROSE in components/editor/rich-editor.tsx.
  */
-const MarkdownEditorImpl = lazy(() =>
-  import("@/components/markdown-editor").then((m) => ({
-    default: m.MarkdownEditor,
-  }))
+type EditorModule = typeof import("@/components/editor/document-editor");
+
+/** The module once loaded: later surfaces use it directly (MIN-728). */
+let loaded: EditorModule | null = null;
+
+function loadEditor(): Promise<EditorModule> {
+  return import("@/components/editor/document-editor").then((module) => {
+    loaded = module;
+    return module;
+  });
+}
+
+const DocumentEditorImpl = lazy(() =>
+  loadEditor().then((m) => ({ default: m.DocumentEditor }))
 );
 
-export type MarkdownEditorProps = {
-  value: string;
-  onCommit: (markdown: string) => void;
-  /** Live emptiness signal (fires on mount and on each edit) — see the real
-      editor: onCommit only fires on blur, callers track typing through this. */
-  onEmptyChange?: (empty: boolean) => void;
-  onEdit?: () => void;
-  /** Live markdown on every edit — lets a caller commit what is on screen
-      without a blur (close, tab switch, window blur). */
-  onChange?: (markdown: string) => void;
-  mentions?: MarkdownEditorMentions;
-  placeholder?: string;
-  className?: string;
-  /** Rendered without editing (project readers). */
-  readOnly?: boolean;
-};
+export type LazyDocumentEditorProps = DocumentEditorProps;
 
-function EditorFallback({
+/** The committed text at the editor's typography, while the editor is not
+ mounted yet (its chunk, or the document it waits for). */
+export function DocumentEditorFallback({
   value,
   className,
-}: Pick<MarkdownEditorProps, "value" | "className">) {
+}: Pick<LazyDocumentEditorProps, "value" | "className">) {
   if (value.trim() === "") {
     return (
       <div
@@ -71,16 +71,22 @@ function EditorFallback({
   );
 }
 
-export function MarkdownEditor(props: MarkdownEditorProps) {
+export function LazyDocumentEditor(props: LazyDocumentEditorProps) {
+  // Once the chunk is loaded the editor renders in this very commit: even an
+  // already-resolved `lazy` suspends once, which painted the raw text first.
+  // Decided once per instance, so an editor is never remounted by the switch.
+  const [ready] = useState(() => loaded);
+  if (ready) return <ready.DocumentEditor {...props} />;
   return (
-    <Suspense fallback={<EditorFallback value={props.value} className={props.className} />}>
-      <MarkdownEditorImpl {...props} />
+    <Suspense fallback={<DocumentEditorFallback value={props.value} className={props.className} />}>
+      <DocumentEditorImpl {...props} />
     </Suspense>
   );
 }
 
 /**
- * Mount the rich editor one paint after the surface that hosts it.
+ * Mount the rich editor one paint after the surface that hosts it — only
+ * while its chunk is still loading (see below).
  *
  * Constructing the Tiptap/ProseMirror view is a long synchronous task (hundreds
  * of DOM nodes plus the extension set). Mounting it inside the same commit as
@@ -97,8 +103,10 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
  * own key), and drafts are safe: the wrapper holds no state; the editor only
  * mounts once its props are final for this instance.
  */
-export function DeferredMarkdownEditor(props: MarkdownEditorProps) {
-  const [ready, setReady] = useState(false);
+export function DeferredDocumentEditor(props: LazyDocumentEditorProps) {
+  // With the chunk already loaded there is nothing to defer: the editor builds
+  // its document during this render, formatted from the first frame.
+  const [ready, setReady] = useState(() => loaded !== null);
   useEffect(() => {
     if (ready) return;
     let second = 0;
@@ -111,17 +119,17 @@ export function DeferredMarkdownEditor(props: MarkdownEditorProps) {
     };
   }, [ready]);
   if (!ready) {
-    return <EditorFallback value={props.value} className={props.className} />;
+    return <DocumentEditorFallback value={props.value} className={props.className} />;
   }
-  return <MarkdownEditor {...props} />;
+  return <LazyDocumentEditor {...props} />;
 }
 
 let preloadStarted = false;
 
 /** Fetch the editor module now. Safe to call repeatedly: ES module evaluation
     runs once, and every later call awaits the same cached promise. */
-export function preloadMarkdownEditor() {
-  void import("@/components/markdown-editor");
+export function preloadDocumentEditor() {
+  void loadEditor();
 }
 
 /**
@@ -137,14 +145,14 @@ export function preloadMarkdownEditor() {
  * download check forever. `timeout` bounds how long a busy main thread may
  * starve the callback before it fires anyway.
  */
-export function useIdleMarkdownEditorPreload() {
+export function useIdleDocumentEditorPreload() {
   useEffect(() => {
     if (preloadStarted || typeof window === "undefined") return;
     preloadStarted = true;
     if (typeof window.requestIdleCallback === "function") {
-      window.requestIdleCallback(() => preloadMarkdownEditor(), { timeout: 3000 });
+      window.requestIdleCallback(() => preloadDocumentEditor(), { timeout: 3000 });
     } else {
-      window.setTimeout(preloadMarkdownEditor, 1500);
+      window.setTimeout(preloadDocumentEditor, 1500);
     }
   }, []);
 }

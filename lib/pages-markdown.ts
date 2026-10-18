@@ -49,7 +49,11 @@
  */
 
 import { Editor, type JSONContent } from "@tiptap/core";
-import { pageExtensions } from "@/components/pages/page-extensions";
+import {
+  pageExtensions,
+  type PageExtensionsOptions,
+} from "@/components/pages/page-extensions";
+import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
 import {
   BLOCK_ID_ATTRIBUTE,
   BLOCK_ID_TYPES,
@@ -67,6 +71,24 @@ export {
   rebaseCollabSteps,
   sameCollabValue,
 } from "@/lib/page-collaboration-document";
+
+/**
+ * Which editor a document comes from (MIN-728). The projection must mount the
+ * same schema and serializers as the editor that wrote the document:
+ * - `page`: the whole catalog;
+ * - `document`: descriptions and comments, without the page-tree blocks;
+ * - `notebook`: the document set with the notebook's paragraph, which keeps
+ *   deliberate empty lines as spacer lines.
+ * A name rather than extensions, so a server reaching this module through the
+ * bundle can choose it.
+ */
+export type DocumentProfile = "page" | "document" | "notebook";
+
+function profileExtensions(profile: DocumentProfile): PageExtensionsOptions {
+  if (profile === "page") return {};
+  if (profile === "document") return { blocks: "document" };
+  return { blocks: "document", extensions: { paragraph: ScratchpadParagraph } };
+}
 
 /** A page as the projection sees it: its header, and its body. */
 export interface PageProjection {
@@ -117,9 +139,12 @@ function headLine({ title, icon }: PageProjection): string {
 }
 
 /** The body alone - what a surface sees which already has the title elsewhere. */
-export function bodyToMarkdown(content: JSONContent | null | undefined): string {
+export function bodyToMarkdown(
+  content: JSONContent | null | undefined,
+  profile: DocumentProfile = "page"
+): string {
   if (!content) return "";
-  const editor = pageEditor(content);
+  const editor = pageEditor(content, profile);
   try {
     return markdownOf(editor).trim();
   } finally {
@@ -146,12 +171,13 @@ export function bodyToMarkdown(content: JSONContent | null | undefined): string 
  */
 export function reconcileBodyBlocks(
   previous: JSONContent | null | undefined,
-  next: JSONContent
+  next: JSONContent,
+  profile: DocumentProfile = "page"
 ): JSONContent {
   const before = previous?.content ?? [];
   const after = next.content ?? [];
   if (before.length === 0 || after.length === 0) return next;
-  const editor = pageEditor(previous ?? { type: "doc", content: [] });
+  const editor = pageEditor(previous ?? { type: "doc", content: [] }, profile);
   try {
     const { schema } = editor;
     // `null` when a block cannot be serialized: it then matches nothing.
@@ -238,8 +264,11 @@ export function markdownToPage(markdown: string): PageProjection {
 }
 
 /** The body alone — the counterpart of `bodyToMarkdown`. */
-export function bodyFromMarkdown(markdown: string): JSONContent {
-  const editor = pageEditor(normalizeNotionCalloutPaste(markdown) ?? markdown);
+export function bodyFromMarkdown(
+  markdown: string,
+  profile: DocumentProfile = "page"
+): JSONContent {
+  const editor = pageEditor(normalizeNotionCalloutPaste(markdown) ?? markdown, profile);
   try {
     return stampBlockIds(editor.getJSON());
   } finally {
@@ -319,12 +348,42 @@ function splitHead(markdown: string): {
  * (history, selection, plugins) which it has no use for, and would return two
  * concurrent calls dependent on each other.
  */
-function pageEditor(content: JSONContent | string): Editor {
+function pageEditor(content: JSONContent | string, profile: DocumentProfile = "page"): Editor {
   return new Editor({
     element: document.createElement("div"),
     content,
-    extensions: pageExtensions({ headless: true }),
+    extensions: pageExtensions({ headless: true, ...profileExtensions(profile) }),
   });
+}
+
+/* ── Documents outside pages (MIN-728) ──────────────────────────────────── */
+
+/**
+ * What an editor should open, from the parent's Markdown and the stored
+ * document.
+ *
+ * The Markdown is the authority: every external reader uses it, and an agent,
+ * the forge or an import may have rewritten it without touching the
+ * document. The document is used as stored only while its projection still
+ * says exactly that Markdown. Otherwise its untouched blocks are kept — IDs,
+ * colors, pills — and the changed ones come from the Markdown, the way pages
+ * absorb an agent's edit (`reconcileBodyBlocks`). Without a usable document,
+ * the Markdown itself is what opens.
+ */
+export function documentForEditor(
+  markdown: string,
+  stored: JSONContent | null | undefined,
+  profile: Exclude<DocumentProfile, "page"> = "document"
+): JSONContent | string {
+  if (!stored || stored.type !== "doc") return markdown;
+  try {
+    if (bodyToMarkdown(stored, profile).trim() === markdown.trim()) return stored;
+    return reconcileBodyBlocks(stored, bodyFromMarkdown(markdown, profile), profile);
+  } catch {
+    // A document this schema cannot read (written by a later version, or
+    // damaged) is no reason not to open the text.
+    return markdown;
+  }
 }
 
 function markdownOf(editor: Editor): string {

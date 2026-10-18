@@ -41,8 +41,8 @@ import {
   type EventTranslators,
 } from "@/lib/describe-event";
 import type { TimelineItem } from "@/lib/use-issue-timeline";
-import { MentionTextarea, extractMentions } from "@/components/mention-textarea";
-import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import { CommentEditor, extractMentions } from "@/components/editor/comment-editor";
+import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
@@ -437,7 +437,7 @@ export function CommentBlock({
   /** Members identify authors; the optional mention model expands body chips
       to projects and other entities without coupling this block to queries. */
   ctx: Pick<EventContext, "members">;
-  mentions?: MarkdownEditorMentions;
+  mentions?: DocumentEditorMentions;
   currentUserId: string | null;
   onEdit: (commentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
@@ -649,7 +649,7 @@ export function CommentBlock({
         </p>
       ) : editing && !comment.optimisticEdit ? (
         <div className="flex flex-col gap-2">
-          <MentionTextarea
+          <CommentEditor
             value={draft}
             onChange={setDraft}
             members={ctx.members}
@@ -764,7 +764,7 @@ export function ReplyComposer({
   onReply,
 }: {
   members: Member[];
-  mentions: MarkdownEditorMentions;
+  mentions: DocumentEditorMentions;
   currentUserId: string | null;
   projectId: string;
   rootId: string;
@@ -862,7 +862,7 @@ export function ReplyComposer({
           className="px-3.5 pt-2.5"
         />
       )}
-      <MentionTextarea
+      <CommentEditor
         value={draft}
         onChange={setDraft}
         members={members}
@@ -874,7 +874,7 @@ export function ReplyComposer({
         placeholder={threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder")}
         autoFocus={allowInputAutoFocus()}
         includeNumo
-        className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
+        className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
       />
       <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5">
         {threadIsPublic && (
@@ -933,7 +933,7 @@ function CommentCard({
   ctx: EventContext;
   currentUserId: string | null;
   projectId: string;
-  mentions: MarkdownEditorMentions;
+  mentions: DocumentEditorMentions;
   /** The headband, when the surface has one (see `commentHeader`). */
   header?: React.ReactNode;
   allowAttachments?: boolean;
@@ -1298,7 +1298,7 @@ export function CommentComposer({
           className="px-3.5 pt-2.5"
         />
       )}
-      <MentionTextarea
+      <CommentEditor
         value={draft}
         onChange={setDraft}
         members={members}
@@ -1309,9 +1309,8 @@ export function CommentComposer({
           (isPublic ? t("publicCommentPlaceholder") : t("commentPlaceholder"))
         }
         autoFocus={autoFocus}
-        dropUp
         includeNumo
-        className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-visible:border-0 focus-visible:ring-0"
+        className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
       />
       {/* Dictate sits where the Comment button lives while the composer is
           empty, and slides to its left once there is text to post. */}

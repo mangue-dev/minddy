@@ -8,7 +8,7 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useFo
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => ({}) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/components/markdown", () => ({ Markdown: () => null }));
-vi.mock("@/components/mention-textarea", () => ({ MentionTextarea: () => null, extractMentions: () => [] }));
+vi.mock("@/components/editor/comment-editor", () => ({ CommentEditor: () => null, extractMentions: () => [] }));
 vi.mock("@/components/assistant/tool-call-display", () => ({ toolRunningLabel: () => "" }));
 vi.mock("@/components/actor-avatars", () => ({ AutomationAvatar: () => null, McpAvatar: () => null, NumoAvatar: () => null, SmartAssignAvatar: () => null, SmartFillAvatar: () => null }));
 vi.mock("@/components/resources", () => ({}));

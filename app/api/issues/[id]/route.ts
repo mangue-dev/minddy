@@ -3,8 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 import { decodeIssue } from "@/lib/server/issue-store";
-import { updateIssueFields } from "@/lib/server/update-issue";
+import { MAX_DESCRIPTION_LENGTH, updateIssueFields } from "@/lib/server/update-issue";
 import { softDeleteItem } from "@/lib/server/trash";
+import { takeRichDocumentInput } from "@/lib/server/rich-documents";
 import { decodeGithubIssueMetadata, legacyGithubIssueMetadataSchema } from
   "@/lib/server/git/issue-sync-content";
 
@@ -72,10 +73,21 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
 
+  const input = { ...((body ?? {}) as Record<string, unknown>) };
+  // The editor sends its document (MIN-728); the Markdown every other reader
+  // uses is computed here from it, never taken from the client.
+  const document = await takeRichDocumentInput(input, {
+    document: "description_doc", markdown: "description", maxLength: MAX_DESCRIPTION_LENGTH,
+  });
+  if (!document.ok) {
+    return NextResponse.json({ error: t(document.errorKey) }, { status: 400 });
+  }
+
   const result = await updateIssueFields({
     issueId: id,
     actorId: auth.user.id,
-    input: (body ?? {}) as Record<string, unknown>,
+    input,
+    descriptionDocument: document.content,
   });
   if (!result.ok) {
     const message = result.rawMessage ?? t(result.errorKey ?? "databaseError");

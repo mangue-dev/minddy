@@ -4162,5 +4162,80 @@
         "created_at"
       ]
     }
+  },
+  "rich_documents": {
+    "scope": {
+      "choices": [
+        {
+          "kind": "project",
+          "column": "project_id"
+        },
+        {
+          "kind": "user",
+          "column": "user_id"
+        }
+      ]
+    },
+    "encrypted": [
+      "content"
+    ],
+    "clear": {
+      "operational_configuration": [
+        "kind"
+      ],
+      "routing_identity": [
+        "id",
+        "issue_id",
+        "objective_id",
+        "project_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "materializing_until",
+        "pending_since",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
+      "bounded_metadata": [
+        "materialized_revision",
+        "revision"
+      ],
+      "token_digest": [
+        "materialized_hash"
+      ]
+    }
+  },
+  "rich_document_batches": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "steps"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "base_revision",
+        "step_count"
+      ],
+      "routing_identity": [
+        "author_id",
+        "batch_id",
+        "client_id",
+        "document_id",
+        "project_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
   }
 }

@@ -35,7 +35,7 @@ import {
 } from "@/components/issue-timeline";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { posOfBlockId } from "@/components/pages/block-actions";
-import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import {
   hasOpenDismissibleLayer,
   isInOverlayLayer,
@@ -272,7 +272,7 @@ function ThreadPanel({
   members: Member[];
   currentUserId: string | null;
   projectId: string;
-  mentions: MarkdownEditorMentions;
+  mentions: DocumentEditorMentions;
   canReply: boolean;
   onAdd: (input: {
     body: string;

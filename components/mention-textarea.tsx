@@ -40,7 +40,7 @@ import {
   MentionFigure,
   type MentionOption as EntityMentionOption,
 } from "@/components/mention-suggest";
-import type { MarkdownEditorMentions } from "@/components/markdown-editor";
+import type { DocumentEditorMentions } from "@/components/editor/document-editor";
 import type { AssistantMention } from "@/lib/assistant-types";
 import { splitAssistantMentionTokens } from "@/lib/agent-mentions";
 import {
@@ -398,7 +398,7 @@ export function MentionTextarea({
   onChange: (text: string, mentions: AssistantMention[]) => void;
   members?: Member[];
   /** Full entity mention support for Minddy comments. */
-  mentions?: MarkdownEditorMentions;
+  mentions?: DocumentEditorMentions;
   /** Persisted identities used before live sources when rebuilding saved tokens. */
   hydrationMentions?: AssistantMention[];
   /** Keep DOM occurrence order when homonymous identities must round-trip. */

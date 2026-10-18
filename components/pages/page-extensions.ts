@@ -30,6 +30,7 @@ import {
   PageBlockShortcuts,
   blockExtensions,
   pageColorExtensions,
+  type BlockSet,
 } from "@/components/pages/blocks";
 
 export interface PageExtensionsOptions {
@@ -78,6 +79,14 @@ export interface PageExtensionsOptions {
    * the body adds that paragraph on demand instead (`focusDocumentEnd`).
    */
   trailingNode?: boolean;
+
+  /**
+   * The block catalog (MIN-728). `page` by default; `document` is what issue
+   * and objective descriptions, comments and the notebook mount — the same
+   * engine without the page-tree blocks. The projection of a surface must
+   * mount the same set as its editor, for the reason at the top of this file.
+   */
+  blocks?: BlockSet;
 }
 
 export function pageExtensions(
@@ -90,6 +99,7 @@ export function pageExtensions(
     extensions,
     uniqueIdFilter,
     trailingNode = true,
+    blocks = "page",
   } = options;
 
   return [
@@ -109,7 +119,7 @@ export function pageExtensions(
       ...(trailingNode ? {} : { trailingNode: false }),
     }),
     MarkdownLinkMark,
-    ...blockExtensions({ headless, nodeViews, extensions }),
+    ...blockExtensions({ headless, nodeViews, extensions, set: blocks }),
     ...pageColorExtensions(),
     PageBlockShortcuts,
     mention,

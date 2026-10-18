@@ -95,11 +95,11 @@ import type {
 } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the feedback route —
-// see markdown-editor-lazy.tsx.
+// see components/editor/document-editor-lazy.tsx.
 import {
-  MarkdownEditor,
-  useIdleMarkdownEditorPreload,
-} from "@/components/markdown-editor-lazy";
+  LazyDocumentEditor,
+  useIdleDocumentEditorPreload,
+} from "@/components/editor/document-editor-lazy";
 import { StatusIndicator } from "@/components/issue-indicators";
 import {
   FeedbackStatusBadge,
@@ -613,8 +613,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   // Mounts with the page: warm the deferred editor chunk once painted, so a
-  // team reply never waits on tiptap (markdown-editor-lazy.tsx).
-  useIdleMarkdownEditorPreload();
+  // team reply never waits on tiptap (components/editor/document-editor-lazy.tsx).
+  useIdleDocumentEditorPreload();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const postParam = searchParams.get("post");
@@ -1593,7 +1593,7 @@ function FeedbackDetail({
             className="w-full overflow-hidden bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
             maxLength={200}
           />
-          <MarkdownEditor
+          <LazyDocumentEditor
             key={post.id}
             value={post.body}
             onCommit={(markdown) => {
@@ -2556,7 +2556,7 @@ function InternalFeedbackDialog({
   const [title, setTitle] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [busy, setBusy] = useState(false);
-  // The MarkdownEditor only commits to blur — the ref always carries the
+  // The LazyDocumentEditor only commits to blur — the ref always carries the
   // last committed value, and submit() forces the blur before reading.
   const bodyRef = useRef("");
   const [initialBody, setInitialBody] = useState("");
@@ -2742,7 +2742,7 @@ function InternalFeedbackDialog({
           maxLength={200}
           className="w-full overflow-hidden bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
         />
-        <MarkdownEditor
+        <LazyDocumentEditor
           key={editorKey}
           value={initialBody}
           onCommit={(markdown) => {

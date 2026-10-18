@@ -17,6 +17,7 @@ import {
   mergeServerIssue,
   patchIssueEverywhere,
   removeIssueEverywhere,
+  issueCachePatch,
 } from "./optimistic/issue-writes";
 import { trackEvent } from "./analytics";
 import { buildOptimisticIssue } from "./optimistic-issue";
@@ -176,10 +177,10 @@ export function useIssuesQuery(projectId: string | null) {
       const handle = issueWrites.begin({
         kind: "patch",
         id: issueId,
-        patch: patch as Partial<Issue>,
+        patch: issueCachePatch(patch),
       });
       if (projectId) {
-        patchIssueEverywhere(queryClient, projectId, issueId, patch as Partial<Issue>);
+        patchIssueEverywhere(queryClient, projectId, issueId, issueCachePatch(patch));
       }
       // The final patch (injected assignee included) against the pre-edit issue.
       const request = updateIssueApi(issueId, patch, {

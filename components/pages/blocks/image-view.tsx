@@ -1,5 +1,6 @@
 "use client";
 
+import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ImageNotFound01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useRef, useState } from "react";
@@ -43,6 +44,7 @@ import { usePageUploadsContext } from "@/components/pages/page-uploads";
  * for the same sentence.
  */
 export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }: NodeViewProps) {
+  const editable = useEditorEditable(editor);
   const t = useTranslations("Pages");
   const uploads = usePageUploadsContext();
   const src = (node.attrs.src as string | null) ?? null;
@@ -171,7 +173,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
             </div>
           )}
 
-          {editor.isEditable && src && (
+          {editable && src && (
             // The width handle: on the right edge, revealed on hover.
             // `touch-none` because a swipe would otherwise scroll the
             // page under the handle instead of following it.
@@ -219,10 +221,10 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
         </div>
       )}
 
-      {(editor.isEditable || alt) && src && (
+      {(editable || alt) && src && (
         <input
           value={alt}
-          readOnly={!editor.isEditable}
+          readOnly={!editable}
           placeholder={t("imageCaption")}
           aria-label={t("imageCaption")}
           onChange={(event) => updateAttributes({ alt: event.target.value })}
@@ -248,7 +250,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
         mimeType="image/png"
         open={zoomed}
         onOpenChange={setZoomed}
-        onRemove={editor.isEditable ? deleteNode : undefined}
+        onRemove={editable ? deleteNode : undefined}
       />}
 
     </NodeViewWrapper>

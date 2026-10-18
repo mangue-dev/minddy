@@ -46,7 +46,9 @@ import {
   GUTTER_HOVER,
   GUTTER_WIDTH,
   blockLink,
+  blockClipboard,
   blockRange,
+  copyBlocks,
   styledBox,
   deleteBlocks,
   duplicateBlocks,
@@ -167,6 +169,61 @@ describe("la plage de blocs", () => {
     expect(selectedBlockCount(editor)).toBe(1);
     expect(range.to - range.from).toBe(editor.state.doc.firstChild!.nodeSize);
     editor.destroy();
+  });
+});
+
+describe("copy", () => {
+  it("copies the selected blocks without touching the document", async () => {
+    const editor = await makeIdentifiedEditor(
+      "<ul><li><p>Un</p></li><li><p>Deux</p></li></ul><p>Après</p>"
+    );
+    const before = editor.getJSON();
+    const id = editor.state.doc.child(0).attrs[BLOCK_ID_ATTRIBUTE] as string;
+    selectBlockAt(editor, 0);
+
+    const copied = blockClipboard(editor);
+    expect(copied?.html).toContain("<ul");
+    expect(copied?.html).toContain("Deux");
+    expect(copied?.html).not.toContain("Après");
+    expect(copied?.html).not.toContain(id);
+    expect(copied?.text).toContain("Un");
+    expect(editor.getJSON()).toEqual(before);
+    editor.destroy();
+  });
+
+  it("pastes back as the same blocks", async () => {
+    const editor = await makeIdentifiedEditor("<blockquote><p>Quoted</p></blockquote><p>End</p>");
+    selectBlockAt(editor, 0);
+    const copied = blockClipboard(editor)!;
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    // jsdom has no ClipboardEvent; pasteHTML only needs an event to carry.
+    vi.stubGlobal("ClipboardEvent", class extends Event {});
+    try {
+      editor.view.pasteHTML(copied.html);
+      expect(topLevel(editor).filter((name) => name === "blockquote")).toHaveLength(2);
+    } finally {
+      vi.unstubAllGlobals();
+      editor.destroy();
+    }
+  });
+
+  it("writes HTML and text to the clipboard", async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    class FakeClipboardItem {
+      constructor(readonly items: Record<string, Blob>) {}
+    }
+    vi.stubGlobal("ClipboardItem", FakeClipboardItem);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { write } });
+    const editor = makeEditor("<p>Copied</p>");
+    selectBlockAt(editor, 0);
+    try {
+      expect(await copyBlocks(editor)).toBe(true);
+      const [item] = write.mock.calls[0]![0] as FakeClipboardItem[];
+      expect(Object.keys(item!.items)).toEqual(["text/html", "text/plain"]);
+    } finally {
+      vi.unstubAllGlobals();
+      editor.destroy();
+    }
   });
 });
 
@@ -630,15 +687,17 @@ describe("the gutter hover surface", () => {
     );
   });
 
-  it("n'est pas allumée là où il n'y a pas de gouttière", () => {
-    // The rule is conditional on `[data-gutter]`, which page-editor.tsx does not set
-    // that in edition: a public page or an impression has no reservation
-    // left, and the negative margin there would move the text out of its column.
+  it("stays off where there is no gutter", () => {
+    // The rule is conditional on `[data-gutter]`, which the editor engine only
+    // sets when the block chrome is shown: a public page, a print, a
+    // description or a comment has no reservation on the left, and the
+    // negative margin there would move the text out of its column.
     const editor = readFileSync(
-      join(process.cwd(), "components/pages/page-editor.tsx"),
+      join(process.cwd(), "components/editor/rich-editor.tsx"),
       "utf8"
     );
-    expect(editor).toContain("data-gutter={editor && editable");
+    expect(editor).toContain("const chrome = !!editor && editable && blockChrome;");
+    expect(editor).toContain('data-gutter={chrome ? "" : undefined}');
   });
 
   it("gives the buttons their own narrower width", () => {

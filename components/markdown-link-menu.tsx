@@ -15,6 +15,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useTranslations } from "next-intl";
 
 function shouldShowLinkMenu({ editor }: { editor: Editor }): boolean {
+  // A delayed menu update can run while the view is not mounted (an editor
+  // built during render, a hidden retained tab): reading it would throw.
+  if (!editor.isInitialized || editor.isDestroyed) return false;
   return (
     editor.isEditable &&
     editor.view.hasFocus() &&

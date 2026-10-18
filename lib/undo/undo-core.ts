@@ -124,7 +124,11 @@ export function buildBeforePatch(
   const before: Record<string, unknown> = {};
   let changed = false;
   for (const key of Object.keys(patch) as (keyof IssueUpdateInput)[]) {
-    const prev = (issue[key] as unknown) ?? null;
+    // The editor document travels with its description but is not part of
+    // the issue: undoing restores the Markdown, and the editor reconciles its
+    // document with it on the next open (MIN-728).
+    if (key === "description_doc") continue;
+    const prev = (issue[key as keyof Issue] as unknown) ?? null;
     before[key] = prev;
     if (prev !== ((patch[key] as unknown) ?? null)) changed = true;
   }

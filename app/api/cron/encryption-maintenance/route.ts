@@ -104,6 +104,7 @@ import { backfillApiKeysBatch } from
 import { backfillIntegrationsBatch } from
   "@/lib/server/encryption/integration-backfill";
 import { backfillPushBatch } from "@/lib/server/encryption/push-backfill";
+import { purgeClearRichDocuments } from "@/lib/server/rich-documents";
 import { backfillHistoryBatch } from "@/lib/server/encryption/history-backfill";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -207,6 +208,9 @@ export async function GET(request: NextRequest) {
       contentEnabled ? maintenancePass(() => backfillPushBatch(25, signal)) : Promise.resolve(null),
       maintenancePass(() => backfillForgeAttachmentsBatch(10, signal)),
       maintenancePass(() => rotateForgeAttachmentsBatch(10, signal)),
+      // Editor documents (MIN-728) are not re-encoded: a clear one under a
+      // parent encrypted since is deleted, and rebuilt from the Markdown.
+      maintenancePass(() => purgeClearRichDocuments(200)),
     ] as const;
     await runner.run();
     const outcomes = await Promise.allSettled(passes);
@@ -278,6 +282,8 @@ export async function GET(request: NextRequest) {
       ? outcomes[64].value : { scanned: 0, migrated: 0, failed: 1 };
     const forgeAttachmentRotation = outcomes[65].status === "fulfilled"
       ? outcomes[65].value : { scanned: 0, rotated: 0, failed: 1 };
+    const richDocuments = outcomes[66].status === "fulfilled"
+      ? outcomes[66].value : { removed: 0, failed: true };
     const failed = outcomes.some((outcome) => outcome.status === "rejected") || rotation.failed > 0 ||
       (forgeAttachments?.failed ?? 0) > 0 ||
       (forgeAttachmentRotation?.failed ?? 0) > 0 ||
@@ -292,6 +298,7 @@ export async function GET(request: NextRequest) {
       rotation,
       ...(forgeAttachments ? { forge_attachments: forgeAttachments } : {}),
       ...(forgeAttachmentRotation ? { forge_attachment_rotation: forgeAttachmentRotation } : {}),
+      rich_documents: richDocuments,
       ...(contentEnabled ? {
         comments: comments.status === "fulfilled" ? comments.value : { failed: true },
         page_comments: pageComments.status === "fulfilled" ? pageComments.value : { failed: true },

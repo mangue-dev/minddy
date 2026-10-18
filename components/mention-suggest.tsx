@@ -176,7 +176,11 @@ export function MentionOptionRow({
         e.preventDefault();
         onPick();
       }}
-      onMouseEnter={onHover}
+      // A real movement only: arrows scroll the list under a still pointer,
+      // and the synthetic events that follow must not move the selection.
+      onMouseMove={(event) => {
+        if (event.movementX !== 0 || event.movementY !== 0) onHover();
+      }}
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
         active && "bg-muted",

@@ -33,6 +33,8 @@ import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import { insertNotifications } from "@/lib/server/notifications";
 import { notificationActorSource } from "@/lib/notification-actor";
 import { notifyDescriptionMentions } from "@/lib/server/description-mentions";
+import { syncDescriptionWrite } from "@/lib/server/description-collaboration";
+import type { JSONContent } from "@tiptap/core";
 import { queuePageLinks } from "@/lib/server/page-links";
 import { insertStatEvents, type StatEventRow } from "@/lib/server/stat-events";
 import {
@@ -128,6 +130,8 @@ export async function updateIssueFields({
   forgeSync = null,
   expectedUpdatedAt = null,
   cycleMove = null,
+  descriptionDocument = null,
+  descriptionFromDocument = false,
 }: {
   issueId: string;
   actorId: string;
@@ -160,6 +164,11 @@ export async function updateIssueFields({
    * silently take over an assignment that changed in the meantime.
    */
   cycleMove?: CycleMovePrecondition | null;
+  /** The editor document `input.description` was derived from (MIN-728). */
+  descriptionDocument?: JSONContent | null;
+  /** The write IS the materialization of the live description: its document
+   already holds this text, so it is not sent back to it. */
+  descriptionFromDocument?: boolean;
 }): Promise<UpdateIssueResult> {
   if ("automation_override" in input) {
     return { ok: false, status: 400, rawMessage: "Issue automation overrides were retired. Configure a routine instead." };
@@ -522,6 +531,20 @@ export async function updateIssueFields({
     };
   }
   const data = await decodeIssue(storedData as Record<string, unknown>, actorId);
+
+  // Live descriptions (MIN-728): every description write reaches the editors
+  // connected to it as steps, through the authority, before the answer.
+  if ("description" in updates && !descriptionFromDocument &&
+      ((updates.description ?? null) !== (before.description ?? null) || descriptionDocument)) {
+    await syncDescriptionWrite({
+      kind: "issue",
+      id: issueId,
+      projectId: before.project_id as string,
+      markdown: (updates.description as string | null) ?? "",
+      content: descriptionDocument,
+      authorId: actorId,
+    });
+  }
 
   // THE MOMENT OF THE GESTURE, frozen here: the line has just been written. Events
   // go to `after()` (just below) and would otherwise be timestamped to their

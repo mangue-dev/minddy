@@ -8,6 +8,11 @@ import { FileView } from "./file-view";
 import { ImageView } from "./image-view";
 
 const viewer = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));
+// The view re-reads editability through the engine's subscription; the stub
+// editor here is static.
+vi.mock("@/components/editor/use-editor-editable", () => ({
+  useEditorEditable: (editor: { isEditable: boolean }) => editor.isEditable,
+}));
 vi.mock("@tiptap/react", () => ({
   NodeViewWrapper: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   ReactNodeViewRenderer: () => null,

@@ -1,3 +1,4 @@
+import type { JSONContent } from "@tiptap/core";
 import type { CommentDelivery } from "./comment-delivery";
 import type {
   IssueStatus,
@@ -480,6 +481,8 @@ export interface IssueEvent {
 export interface CreateObjectiveInput {
   name: string;
   description?: string | null;
+  /** The dialog's editor document (MIN-728); the server derives `description`. */
+  description_doc?: JSONContent;
   status?: ObjectiveStatus;
   lead_user_id?: string | null;
   target_date?: string | null;
@@ -508,6 +511,9 @@ export interface ObjectiveDraftPatch {
 export interface ObjectiveUpdateInput {
   name?: string;
   description?: string | null;
+  /** The editor document of `description` (MIN-728): the server derives the
+      Markdown from it and stores both. */
+  description_doc?: JSONContent;
   status?: ObjectiveStatus;
   lead_user_id?: string | null;
   target_date?: string | null;
@@ -1154,6 +1160,9 @@ export interface CreateIssueInput {
   id?: string;
   title: string;
   description?: string | null;
+  /** The creation dialog's editor document (MIN-728): the server derives
+      `description` from it and keeps it for the next edit. */
+  description_doc?: JSONContent;
   plan?: string | null;
   status?: IssueStatus;
   priority?: IssuePriority;
@@ -1208,6 +1217,9 @@ export interface IssueDraftPatch {
 export interface IssueUpdateInput {
   title?: string;
   description?: string | null;
+  /** The editor document of `description` (MIN-728): the server derives the
+      Markdown from it and stores both. */
+  description_doc?: JSONContent;
   plan?: string | null;
   status?: IssueStatus;
   priority?: IssuePriority;

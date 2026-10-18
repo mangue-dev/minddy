@@ -1,4 +1,5 @@
 import { ROUTINE_TRIGGER_SCHEMA, CREATE_ROUTINE_DESCRIPTION, UPDATE_ROUTINE_DESCRIPTION } from "@/lib/server/routine-tool-schema";
+import { materializePendingDescription } from "@/lib/server/description-collaboration";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { issueStore } from "@/lib/server/issue-store";
 import { categoryStore } from "@/lib/server/category-store";
@@ -296,6 +297,9 @@ async function readIssueText(
   | { plan: string; description: string; updatedAt: string }
   | { error: ToolResult }
 > {
+  // Typing a person left pending is written first (MIN-728): an agent edits
+  // the text people see.
+  await materializePendingDescription("issue", issueId, projectId);
   const { data, error } = await issueStore(getServiceClient(), actorId)
     .select("plan, description, updated_at")
     .is("deleted_at", null)

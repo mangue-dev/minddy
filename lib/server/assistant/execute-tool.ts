@@ -1,4 +1,5 @@
 import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
+import { materializePendingDescription } from "@/lib/server/description-collaboration";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
 import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
@@ -1444,6 +1445,9 @@ export async function executeTool(
         if (args.field !== "plan" && args.field !== "description") {
           return toolError('field must be "plan" or "description".');
         }
+        // Typing a person left pending is written first (MIN-728): Numo edits
+        // the text people see.
+        if (field === "description") await materializePendingDescription("issue", issueId, projectId);
         const current = await readIssueText(ctx, issueId);
         if ("error" in current) return toolError(current.error);
 

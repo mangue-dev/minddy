@@ -207,4 +207,26 @@ export interface PageBlock {
   };
 
   markdown: PageBlockMarkdown;
+
+  /**
+   * Where the block exists (MIN-728). Absent = everywhere the editor runs.
+   * `["page"]` keeps it out of the document set that issue and objective
+   * descriptions, comments and the notebook mount: a subpage points into the
+   * page tree, which none of those surfaces belong to.
+   */
+  sets?: readonly BlockSet[];
+
+  /**
+   * The “/” entry inserts through the surface's uploads: an `image`, or any
+   * `file` (pages only). Without such uploads the node stays in the schema,
+   * so stored Markdown keeps reading, but the menu does not offer an
+   * insertion that cannot complete.
+   */
+  needsUploads?: "image" | "file";
 }
+
+/**
+ * The block catalogs an editor can mount (MIN-728): `page` is the whole
+ * registry, `document` everything that is not tied to the page tree.
+ */
+export type BlockSet = "page" | "document";

@@ -1,6 +1,8 @@
 "use client";
 
-// The contextual text toolbar for a page selection.
+// The contextual text toolbar for a selection — on pages, and since MIN-728
+// on every editor of the app (descriptions, comments, the notebook). Only a
+// page adds the comment action.
 //
 // Tiptap's BubbleMenu owns positioning and waits 300 ms after the last selection
 // update before appearing. That delay keeps the toolbar still while the user is
@@ -105,12 +107,23 @@ function ToolbarButton({
   );
 }
 
+/** Marks the toolbar, so a dialog can tell a click on it from a click outside. */
+export const SELECTION_TOOLBAR_ATTR = "data-selection-toolbar";
+
 export function PageCommentBubble({
   editor,
   onComment,
+  floating = false,
 }: {
   editor: Editor;
-  onComment: (anchor: PageCommentAnchor) => void;
+  /** The comment action; absent outside pages. */
+  onComment?: (anchor: PageCommentAnchor) => void;
+  /**
+   * Attach the toolbar to the document body rather than next to the editor:
+   * a comment field or a dialog scrolls, and would clip a toolbar placed
+   * above the first line.
+   */
+  floating?: boolean;
 }) {
   const t = useTranslations("Pages");
   const [editLinkOpen, setEditLinkOpen] = useState(false);
@@ -130,7 +143,7 @@ export function PageCommentBubble({
     const { from, to } = editor.state.selection;
     const quote = editor.state.doc.textBetween(from, to, " ").trim();
     const blockId = anchorBlockId(editor, from);
-    if (!blockId || !quote) return;
+    if (!blockId || !quote || !onComment) return;
     onComment({
       blockId,
       quote: quote.slice(0, MAX_QUOTE_LENGTH),
@@ -145,9 +158,12 @@ export function PageCommentBubble({
         updateDelay={SELECTION_MENU_DELAY_MS}
         shouldShow={shouldShowSelectionMenu}
         options={{ placement: "top", offset: 8 }}
+        appendTo={floating ? () => document.body : undefined}
         data-floating-surface
+        {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
         className={cn(
           "flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 shadow-md",
+          floating && "z-[70]",
         )}
       >
         <ToolbarButton
@@ -195,10 +211,14 @@ export function PageCommentBubble({
             <HugeiconsIcon icon={Unlink01Icon} className="size-4" />
           </ToolbarButton>
         ) : null}
-        <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
-        <ToolbarButton label={t("commentSelection")} onClick={comment}>
-          <HugeiconsIcon icon={MessageAdd01Icon} className="size-4" />
-        </ToolbarButton>
+        {onComment ? (
+          <>
+            <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+            <ToolbarButton label={t("commentSelection")} onClick={comment}>
+              <HugeiconsIcon icon={MessageAdd01Icon} className="size-4" />
+            </ToolbarButton>
+          </>
+        ) : null}
       </BubbleMenu>
       <MarkdownLinkEditDialog
         editor={editor}
