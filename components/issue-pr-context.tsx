@@ -21,6 +21,9 @@ import { usePullRequestReadinessBatchQuery } from "@/lib/use-agent-runs";
 
 /** The readiness endpoint's batch limit. */
 const READINESS_BATCH_MAX = 100;
+/** Each readiness read costs forge API calls per PR; boards poll every five
+    minutes and otherwise follow realtime pull request events. */
+const BOARD_READINESS_POLL_MS = 5 * 60_000;
 
 /**
  * One scoped query supplies the pull request chip of every board card. Each card
@@ -92,11 +95,12 @@ export function IssuePrProvider({
   // request, polling and realtime invalidation as the Code review page rows.
   const livePrIds = useMemo(
     () => [...new Set(Object.values(data?.pullRequests ?? {})
-      .filter((pr) => pr.state === "open" || pr.state === "draft")
+      // Drafts are not up for merge: their chip already says so.
+      .filter((pr) => pr.state === "open")
       .map((pr) => pr.prId))].sort().slice(0, READINESS_BATCH_MAX),
     [data],
   );
-  const { readinessByPrId, unavailablePrIds, error } = usePullRequestReadinessBatchQuery(livePrIds);
+  const { readinessByPrId, unavailablePrIds, error } = usePullRequestReadinessBatchQuery(livePrIds, { minPollMs: BOARD_READINESS_POLL_MS });
   const unavailableKey = error ? livePrIds.join(",") : [...unavailablePrIds].sort().join(",");
   useLayoutEffect(
     () => store.updateReadiness(readinessByPrId, new Set(unavailableKey ? unavailableKey.split(",") : [])),

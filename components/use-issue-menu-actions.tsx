@@ -98,7 +98,10 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
       keywords: ["copy", "copier", "identifier", "identifiant", "id", identifier],
       icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
       onSelect: () => {
-        void navigator.clipboard.writeText(identifier).then(() => toast.success(identifier));
+        void navigator.clipboard.writeText(identifier).then(
+          () => toast.success(identifier),
+          () => toast.error(tPr("copyFailed")),
+        );
       },
     };
     if (readOnly) return [copyId, ...openPr];

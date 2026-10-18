@@ -839,7 +839,7 @@ export const IssueCardBody = memo(function IssueCardBody({
           {pr && isPrWorthShowing(pr) ? (
             <span className="flex items-center gap-0.5">
               <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
-              {prReadiness && (pr.state === "open" || pr.state === "draft") ? (
+              {prReadiness && pr.state === "open" ? (
                 <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable} />
               ) : null}
             </span>

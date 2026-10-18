@@ -218,6 +218,16 @@ export function CommandPalette({
     return () => window.clearTimeout(timer);
   }, [closing, mobile, reset]);
 
+  // While it fades out, the view is still mounted with its document keydown
+  // handlers: a capture listener swallows keys so Enter cannot run a result
+  // the user just dismissed.
+  useEffect(() => {
+    if (!closing) return;
+    const swallow = (event: KeyboardEvent) => event.stopImmediatePropagation();
+    document.addEventListener("keydown", swallow, true);
+    return () => document.removeEventListener("keydown", swallow, true);
+  }, [closing]);
+
   // === Action execution context ===
   const handleClose = useCallback(() => {
     onClose();

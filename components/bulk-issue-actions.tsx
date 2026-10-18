@@ -13,7 +13,10 @@ import {
   type BulkPullRequestLinks,
 } from "@/lib/bulk-actions-context";
 import { useIssuePrStore } from "@/components/issue-pr-context";
-import { useLinkablePullRequests } from "@/components/pull-requests/pr-link-target-picker";
+import { useQueryClient } from "@tanstack/react-query";
+import { linkablePullRequests } from "@/components/pull-requests/pr-link-target-picker";
+import { allPullRequestsQueryOptions } from "@/lib/use-agent-runs";
+import type { PullRequestListItem } from "@/lib/agent-api";
 import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
 import { useLinkIssuesToPullRequest, useUnlinkIssuesFromPullRequests } from "@/lib/use-link-issues-to-pull-request";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
@@ -77,16 +80,30 @@ export function BulkIssueActions({
     });
   }, [members]);
 
-  // Read while the selection lives, so the list is ready when Actions opens.
   const prStore = useIssuePrStore();
+  const queryClient = useQueryClient();
   const selectionProject = issues && new Set(issues.map((issue) => issue.project_id)).size === 1
     ? issues[0].project_id
     : null;
-  const { pullRequests: openPullRequests } = useLinkablePullRequests(selectionProject);
+  // The open pull requests are read when the actions open (or on hover of
+  // Actions), never just because tickets are selected.
+  const openPullRequestsQuery = { ...allPullRequestsQueryOptions("open"), staleTime: 30_000 };
+  const readOpenPullRequests = async (): Promise<PullRequestListItem[]> => {
+    if (!issues?.length) return [];
+    try {
+      const data = await queryClient.fetchQuery(openPullRequestsQuery);
+      return linkablePullRequests(data.pullRequests, selectionProject);
+    } catch {
+      return [];
+    }
+  };
+  const warmPullRequests = () => {
+    if (issues?.length) void queryClient.prefetchQuery(openPullRequestsQuery);
+  };
   const linkIssuesToPullRequest = useLinkIssuesToPullRequest();
   const unlinkIssuesFromPullRequests = useUnlinkIssuesFromPullRequests();
 
-  const pullRequestLinks = (): BulkPullRequestLinks | undefined => {
+  const pullRequestLinks = (openPullRequests: PullRequestListItem[]): BulkPullRequestLinks | undefined => {
     if (!issues?.length) return undefined;
     const links = bulkPullRequestLinks(issues, prStore.get, openPullRequests, prStore.linkedPullRequestIds);
     if (links.options.length === 0 && links.partial.length === 0 && links.unlinkable.length === 0) return undefined;
@@ -99,7 +116,8 @@ export function BulkIssueActions({
     };
   };
 
-  const openActions = () =>
+  const openActions = async () => {
+    const openPullRequests = await readOpenPullRequests();
     requestBulkActions({
       count,
       surface,
@@ -111,15 +129,16 @@ export function BulkIssueActions({
       cycle,
       objectives,
       onLink,
-      pullRequestLinks: pullRequestLinks(),
+      pullRequestLinks: pullRequestLinks(openPullRequests),
     });
+  };
 
   // ⌘K while tickets are selected opens these actions, not the search palette:
   // the pill hands its latest gesture to the launcher for as long as it lives.
   const openActionsRef = useRef(openActions);
   openActionsRef.current = openActions;
   useEffect(() => {
-    registerSelectionActions(() => openActionsRef.current());
+    registerSelectionActions(() => void openActionsRef.current());
     return () => registerSelectionActions(null);
   }, [registerSelectionActions]);
 
@@ -134,7 +153,9 @@ export function BulkIssueActions({
         type="button"
         size="sm"
         className="h-8 gap-1.5 rounded-full px-3 text-xs"
-        onClick={openActions}
+        onClick={() => void openActions()}
+        onPointerEnter={warmPullRequests}
+        onFocus={warmPullRequests}
       >
         <HugeiconsIcon icon={CommandIcon} className="size-3.5" />
         {t("actions")}

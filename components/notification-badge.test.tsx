@@ -2,12 +2,13 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
-import { NotificationBadge, notificationCountLabel } from "./notification-badge";
+import { NotificationBadge } from "./notification-badge";
+import { countLabel } from "./nav-badge";
 
 describe("NotificationBadge", () => {
   it("caps the count at 99+", () => {
-    expect(notificationCountLabel(3)).toBe("3");
-    expect(notificationCountLabel(120)).toBe("99+");
+    expect(countLabel(3)).toBe("3");
+    expect(countLabel(120)).toBe("99+");
   });
 
   it("reads its label to screen readers and renders nothing at zero", () => {

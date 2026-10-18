@@ -2,11 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "mangue-ui";
-
-/** "99+" past two digits, like the other counters. */
-export function notificationCountLabel(count: number): string {
-  return count > 99 ? "99+" : String(count);
-}
+import { countLabel } from "@/components/nav-badge";
 
 /**
  * The unread Inbox count (MIN-727): a filled red pill, unlike the muted
@@ -45,7 +41,7 @@ export function NotificationBadge({
         className,
       )}
     >
-      {notificationCountLabel(count)}
+      {countLabel(count)}
     </motion.span>
   );
 }

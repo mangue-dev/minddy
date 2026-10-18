@@ -41,6 +41,7 @@ import { usePlanGates } from "@/lib/use-billing-query";
 import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
 import { appTabIndicator } from "@/lib/app-tab-indicators";
 import { NotificationBadge } from "./notification-badge";
+import { countLabel } from "./nav-badge";
 import { useNotifications } from "@/lib/use-notifications";
 import { useMyInvitations } from "@/lib/use-invitations-query";
 import { useSmartAssignWarningsQuery } from "@/lib/use-smart-assign-warnings-query";
@@ -119,7 +120,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         aria-label={nav(indicator.label, { count: indicator.count })}
         className="px-1 text-[9px] font-medium leading-3 tabular-nums text-muted-foreground"
       >
-        {indicator.count > 99 ? "99+" : indicator.count}
+        {countLabel(indicator.count)}
       </span>
     );
   };

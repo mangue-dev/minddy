@@ -50,8 +50,10 @@ export function bulkPullRequestLinks(
   const targets = (prId: string): string[] => {
     const projectId = projectOfPr.get(prId);
     if (!projectId) return [];
+    // An issue keeps one live PR: one already holding another is refused by
+    // the server, so it is left out rather than linked and rolled back.
     return issues
-      .filter((issue) => issue.project_id === projectId && prOf(issue.id)?.prId !== prId)
+      .filter((issue) => issue.project_id === projectId && !isLive(prOf(issue.id)))
       .map((issue) => issue.id);
   };
 

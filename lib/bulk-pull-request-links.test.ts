@@ -55,6 +55,16 @@ describe("bulkPullRequestLinks", () => {
     expect(links.targets("pr-447")).toEqual(["other"]);
   });
 
+  it("leaves out a ticket that holds another open pull request", () => {
+    const withOther = (id: string) => (id === "busy" ? { prId: "pr-450", prNumber: 450, state: "open" as const } : prOf(id));
+    const links = bulkPullRequestLinks(
+      [{ id: "linked", project_id: "p1" }, { id: "free", project_id: "p1" }, { id: "busy", project_id: "p1" }],
+      withOther,
+      [openPr("pr-447", 447, "p1"), openPr("pr-450", 450, "p1")],
+    );
+    expect(links.targets("pr-447")).toEqual(["free"]);
+  });
+
   it("offers nothing to extend when every ticket of the project already has the pull request", () => {
     const links = bulkPullRequestLinks([{ id: "linked", project_id: "p1" }], prOf, [openPr("pr-447", 447, "p1")]);
     expect(links.partial).toEqual([]);

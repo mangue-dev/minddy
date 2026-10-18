@@ -104,7 +104,12 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
   };
 }
 
-export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
+export function usePullRequestReadinessBatchQuery(
+  prIds: readonly string[],
+  /** Lower bound on polling: boards read readiness as a hint and rely on
+      realtime invalidation, so they poll far less than the Code review page. */
+  options: { minPollMs?: number } = {},
+) {
   const client = useQueryClient();
   const sortedPrIds = [...new Set(prIds)].sort();
   const enabled = sortedPrIds.length > 0;
@@ -116,10 +121,11 @@ export function usePullRequestReadinessBatchQuery(prIds: readonly string[]) {
     refetchOnMount: "always",
     refetchInterval: (query) => {
       const delay = Math.max(pullRequestReadRetryAt(query.state), pullRequestAccountRetryAt(client)) - Date.now();
-      return delay > 0 ? delay : pullRequestReadinessBatchRefetchInterval(
+      const poll = delay > 0 ? delay : pullRequestReadinessBatchRefetchInterval(
         query.state.data,
         query.state.status === "error",
       );
+      return typeof poll === "number" ? Math.max(poll, options.minPollMs ?? 0) : poll;
     },
   });
   return {
